@@ -18,10 +18,10 @@ export class MixinModule extends ConfigurableModuleClass {
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)
-        }       
+        }
         return {
             ...dynamicModule,
-            providers,
+            providers: [...dynamicModule.providers || [], ...providers],
             exports: [...providers],
         }
     }

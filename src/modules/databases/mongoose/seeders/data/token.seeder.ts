@@ -1,8 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { Seeder } from "nestjs-seeder"
 import { Connection } from "mongoose"
-import { createObjectId, Network } from "@modules/common"
-import { InjectMongoose, TokenId, TokenSchema } from "@modules/databases"
+import { ChainId, createObjectId, Network } from "@modules/common"
+import { TokenSchema } from "../../schemas"
+import { TokenId } from "../../enums"
+import { InjectMongoose } from "../../mongoose.decorators"
 
 @Injectable()
 export class TokenSeeder implements Seeder {
@@ -27,7 +29,8 @@ export class TokenSeeder implements Seeder {
                     "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
                 decimals: 6,
                 coinMarketCapId: "usdc",
-                coinGeckoId: "usdc",
+                coinGeckoId: "usd-coin",
+                chainId: ChainId.Sui,
                 iconUrl:
                     "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png?1547042194",
                 projectUrl: "https://www.centre.io/",
@@ -43,6 +46,7 @@ export class TokenSeeder implements Seeder {
                 decimals: 9,
                 coinMarketCapId: "cetus",
                 coinGeckoId: "cetus-protocol",
+                chainId: ChainId.Sui,
                 iconUrl: "https://assets.coingecko.com/coins/images/32311/large/cetus.png",
                 projectUrl: "https://cetus.zone/",
                 network: Network.Mainnet,
@@ -52,6 +56,7 @@ export class TokenSeeder implements Seeder {
                 name: "SUI",
                 symbol: "SUI",
                 displayId: TokenId.SuiNative,
+                chainId: ChainId.Sui,
                 tokenAddress:
                     "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
                 decimals: 9,
@@ -66,6 +71,7 @@ export class TokenSeeder implements Seeder {
                 name: "IKA",
                 symbol: "IKA",
                 displayId: TokenId.SuiIka,
+                chainId: ChainId.Sui,
                 tokenAddress:
                     "0x7262fb2f7a3a14c888c438a3cd9b912469a58cf60f367352c46584262e8299aa::ika::IKA",
                 decimals: 9,
@@ -80,6 +86,7 @@ export class TokenSeeder implements Seeder {
                 name: "ALKIMI",
                 symbol: "ALKIMI",
                 displayId: TokenId.SuiAlkimi,
+                chainId: ChainId.Sui,
                 tokenAddress:
                     "0x1a8f4bc33f8ef7fbc851f156857aa65d397a6a6fd27a7ac2ca717b51f2fd9489::alkimi::ALKIMI",
                 decimals: 9,
@@ -94,10 +101,11 @@ export class TokenSeeder implements Seeder {
                 name: "WALRUS",
                 symbol: "WALRUS",
                 displayId: TokenId.SuiWalrus,
+                chainId: ChainId.Sui,
                 tokenAddress:
                     "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
                 decimals: 9,
-                coinMarketCapId: "walrus",
+                coinMarketCapId: "walrus-xyz",
                 coinGeckoId: "walrus-2",
                 iconUrl:
                     "https://assets.coingecko.com/coins/images/31453/large/Walrus.png",

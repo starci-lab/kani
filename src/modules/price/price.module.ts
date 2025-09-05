@@ -1,22 +1,21 @@
 // app.module.ts
 import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./axios.module-definition"   
-import { createAxiosProvider } from "./axios.providers"
-import { AxiosService } from "./axios.service"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./price.module-definition"   
+import { CoinMarketCapService } from "./coin-market-cap.service"
+import { CoinGeckoService } from "./coingekco.service"
 
 @Module({})
-export class AxiosModule extends ConfigurableModuleClass {
+export class PriceModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers = [
-            createAxiosProvider(),
-            AxiosService,
+            CoinMarketCapService,
+            CoinGeckoService,
         ]
         return {
             ...dynamicModule,
-            module: AxiosModule,
             providers: [
                 ...dynamicModule.providers || [],
                 ...providers,

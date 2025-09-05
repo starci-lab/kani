@@ -1,24 +1,38 @@
 import { Module } from "@nestjs/common"
 import { EnvModule } from "@modules/env"
 import { AxiosModule } from "@modules/axios"
-import { DatabasesModule } from "@modules/databases"
+import { MongooseModule } from "@modules/databases"
 import { CacheModule } from "@modules/cache"
 import { PriceFetchersModule } from "./price-fetchers"
 import { MixinModule } from "@modules/mixin"
+import { PriceModule } from "@modules/price"
+import { ScheduleModule } from "@nestjs/schedule"
+import { WinstonLevel, WinstonModule } from "@modules/winston"
 
 @Module({
     imports: [
+        ScheduleModule.forRoot(),
         EnvModule.forRoot(),
-        AxiosModule.register({
-            isGlobal: true,
-        }),
         MixinModule.register({
             isGlobal: true,
         }),
-        DatabasesModule.register({
+        AxiosModule.register({
             isGlobal: true,
         }),
+        WinstonModule.register({
+            isGlobal: true,
+            appName: "data-fetcher",
+            level: WinstonLevel.Debug,
+        }),
         CacheModule.register({
+            isGlobal: true,
+        }),
+        MongooseModule.register({
+            withSeeders: true,
+            withMemDb: true,
+            isGlobal: true,
+        }),
+        PriceModule.register({
             isGlobal: true,
         }),
         PriceFetchersModule.register({

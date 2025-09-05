@@ -6,15 +6,30 @@ import { envConfig } from "@modules/env"
 import { Connection } from "mongoose"
 import { normalizeMongoose } from "./plugins"
 import { MongooseStorageHelpersService } from "./mongoose-storage-helpers.service"
+import { SeedersModule } from "./seeders"
+import { MemDbModule } from "./memdb"
 
 @Module({})
 export class MongooseModule extends ConfigurableModuleClass {
-    public static forRoot(options: typeof OPTIONS_TYPE = {}): DynamicModule {
-        const dynamicModule = super.forRoot(options)
+    public static register(options: typeof OPTIONS_TYPE = {}): DynamicModule {
+        const dynamicModule = super.register(options)
 
         const { dbName, host, password, port, username } =
             envConfig().databases.mongoose
         const url = `mongodb://${username}:${password}@${host}:${port}`
+
+        const extraModules: Array<DynamicModule> = []
+        if (options.withSeeders) {
+            extraModules.push(SeedersModule.register({
+                isGlobal: options.isGlobal,
+            }))
+        }
+        if (options.withMemDb) {
+            extraModules.push(MemDbModule.register({
+                isGlobal: options.isGlobal,
+            }))
+        }
+
         return {
             ...dynamicModule,
             imports: [
@@ -28,13 +43,15 @@ export class MongooseModule extends ConfigurableModuleClass {
                         return connection
                     },
                 }),
-                this.forFeature()
+                this.forFeature(),
+                ...extraModules,
             ],
             providers: [
                 MongooseStorageHelpersService
             ],
             exports: [
-                MongooseStorageHelpersService
+                MongooseStorageHelpersService,
+                ...extraModules
             ]
         }
     }

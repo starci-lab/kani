@@ -5,6 +5,9 @@ export const envConfig = () => ({
     frontend: {
         url: process.env.FRONTEND_URL || "http://localhost:3000/callback/google",
     },
+    coinMarketCap: {
+        apiKey: process.env.COIN_MARKET_CAP_API_KEY || "",
+    },
     redis: {
         host: process.env.REDIS_HOST || "localhost",
         port: parseInt(process.env.REDIS_PORT || "6379", 10),
