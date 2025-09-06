@@ -2,6 +2,8 @@ import { DynamicModule, Module } from "@nestjs/common"
 import {
     DexSchema,
     DexSchemaClass,
+    InstanceSchema,
+    InstanceSchemaClass,
     LpPoolSchema,
     LpPoolSchemaClass,
     SessionSchema,
@@ -10,6 +12,12 @@ import {
     StorageSchemaClass,
     TokenSchema,
     TokenSchemaClass,
+    UserAllocationSchema,
+    UserAllocationSchemaClass,
+    UserCummulativeSchema,
+    UserCummulativeSchemaClass,
+    UserDepositSchema,
+    UserDepositSchemaClass,
     UserSchema,
     UserSchemaClass,
     WalletSchema,
@@ -106,6 +114,22 @@ export class MongooseModule extends ConfigurableModuleClass {
                         name: LpPoolSchema.name,
                         useFactory: () => LpPoolSchemaClass,
                     },
+                    {
+                        name: InstanceSchema.name,
+                        useFactory: () => InstanceSchemaClass,
+                    },
+                    {
+                        name: UserAllocationSchema.name,
+                        useFactory: () => UserAllocationSchemaClass,
+                    },
+                    {
+                        name: UserDepositSchema.name,
+                        useFactory: () => UserDepositSchemaClass,
+                    },
+                    {
+                        name: UserCummulativeSchema.name,
+                        useFactory: () => UserCummulativeSchemaClass,
+                    },  
                 ]),
             ],
         }
