@@ -19,11 +19,11 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@modules/*": [
-        "./src/modules/*"
-      ],
       "@apps/*": [
         "./apps/*"
+      ],
+      "@modules/*": [
+        "./src/modules/*"
       ]
     }
   }

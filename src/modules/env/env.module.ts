@@ -13,6 +13,7 @@ export class EnvModule extends ConfigurableModuleClass {
             imports: [
                 ConfigModule.forRoot({
                     isGlobal: true,
+                    //skipProcessEnv: true,
                     load: [envConfig],
                     envFilePath: [".env.local", ".env.secret"]
                 })

@@ -39,7 +39,7 @@ export enum PlatformId {
   Sui = "sui",
 }
 
-export const chainKeyToPlatform = (chainId: ChainId): PlatformId => {
+export const chainIdToPlatform = (chainId: ChainId): PlatformId => {
     switch (chainId) {
     case ChainId.Solana:
         return PlatformId.Solana

@@ -27,6 +27,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/data-fetcher/tsconfig.app.json"
       }
+    },
+    "lp-bot": {
+      "type": "application",
+      "root": "apps/lp-bot",
+      "entryFile": "main",
+      "sourceRoot": "apps/lp-bot/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/lp-bot/tsconfig.app.json"
+      }
     }
   }
 }
