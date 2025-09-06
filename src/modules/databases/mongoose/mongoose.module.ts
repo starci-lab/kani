@@ -1,7 +1,25 @@
 import { DynamicModule, Module } from "@nestjs/common"
-import { SessionSchema, SessionSchemaClass, StorageSchema, StorageSchemaClass, TokenSchema, TokenSchemaClass, UserSchema, UserSchemaClass, WalletSchema, WalletSchemaClass } from "./schemas"
+import {
+    DexSchema,
+    DexSchemaClass,
+    LpPoolSchema,
+    LpPoolSchemaClass,
+    SessionSchema,
+    SessionSchemaClass,
+    StorageSchema,
+    StorageSchemaClass,
+    TokenSchema,
+    TokenSchemaClass,
+    UserSchema,
+    UserSchemaClass,
+    WalletSchema,
+    WalletSchemaClass,
+} from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mongoose.module-definition"
+import {
+    ConfigurableModuleClass,
+    OPTIONS_TYPE,
+} from "./mongoose.module-definition"
 import { envConfig } from "@modules/env"
 import { Connection } from "mongoose"
 import { normalizeMongoose } from "./plugins"
@@ -15,19 +33,23 @@ export class MongooseModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
 
         const { dbName, host, password, port, username } =
-            envConfig().databases.mongoose
+      envConfig().databases.mongoose
         const url = `mongodb://${username}:${password}@${host}:${port}`
 
         const extraModules: Array<DynamicModule> = []
         if (options.withSeeders) {
-            extraModules.push(SeedersModule.register({
-                isGlobal: options.isGlobal,
-            }))
+            extraModules.push(
+                SeedersModule.register({
+                    isGlobal: options.isGlobal,
+                }),
+            )
         }
         if (options.withMemDb) {
-            extraModules.push(MemDbModule.register({
-                isGlobal: options.isGlobal,
-            }))
+            extraModules.push(
+                MemDbModule.register({
+                    isGlobal: options.isGlobal,
+                }),
+            )
         }
 
         return {
@@ -46,13 +68,8 @@ export class MongooseModule extends ConfigurableModuleClass {
                 this.forFeature(),
                 ...extraModules,
             ],
-            providers: [
-                MongooseStorageHelpersService
-            ],
-            exports: [
-                MongooseStorageHelpersService,
-                ...extraModules
-            ]
+            providers: [MongooseStorageHelpersService],
+            exports: [MongooseStorageHelpersService, ...extraModules],
         }
     }
 
@@ -60,31 +77,37 @@ export class MongooseModule extends ConfigurableModuleClass {
         return {
             module: MongooseModule,
             imports: [
-                NestMongooseModule.forFeatureAsync(
-                    [
-                        {
-                            name: StorageSchema.name,
-                            useFactory: () => StorageSchemaClass
-                        },
-                        {
-                            name: UserSchema.name,
-                            useFactory: () => UserSchemaClass
-                        },
-                        {
-                            name: WalletSchema.name,
-                            useFactory: () => WalletSchemaClass
-                        },
-                        {
-                            name: SessionSchema.name,
-                            useFactory: () => SessionSchemaClass
-                        },
-                        {
-                            name: TokenSchema.name,
-                            useFactory: () => TokenSchemaClass
-                        },
-                    ],
-                )
-            ]
+                NestMongooseModule.forFeatureAsync([
+                    {
+                        name: StorageSchema.name,
+                        useFactory: () => StorageSchemaClass,
+                    },
+                    {
+                        name: UserSchema.name,
+                        useFactory: () => UserSchemaClass,
+                    },
+                    {
+                        name: WalletSchema.name,
+                        useFactory: () => WalletSchemaClass,
+                    },
+                    {
+                        name: SessionSchema.name,
+                        useFactory: () => SessionSchemaClass,
+                    },
+                    {
+                        name: TokenSchema.name,
+                        useFactory: () => TokenSchemaClass,
+                    },
+                    {
+                        name: DexSchema.name,
+                        useFactory: () => DexSchemaClass,
+                    },
+                    {
+                        name: LpPoolSchema.name,
+                        useFactory: () => LpPoolSchemaClass,
+                    },
+                ]),
+            ],
         }
     }
 }

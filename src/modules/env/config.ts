@@ -1,3 +1,4 @@
+import { ChainId, Network } from "@modules/common"
 import { join } from "path"
 
 export const envConfig = () => ({
@@ -70,4 +71,14 @@ export const envConfig = () => ({
         accessTokenExpiration: process.env.JWT_ACCESS_TOKEN_EXPIRATION || "1h",
         refreshTokenExpiration: process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d",
     },
+    rpcs: {
+        [ChainId.Sui]: {
+            [Network.Mainnet]: process.env.SUI_RPC_URL || "https://fullnode.mainnet.sui.io:443",
+            [Network.Testnet]: process.env.SUI_RPC_URL_TESTNET || "https://fullnode.testnet.sui.io:443",
+        },
+        [ChainId.Solana]: {
+            [Network.Mainnet]: process.env.SOLANA_RPC_URL || "https://fullnode.mainnet.solana.io:443",
+            [Network.Testnet]: process.env.SOLANA_RPC_URL_TESTNET || "https://fullnode.testnet.solana.io:443",
+        },
+    }
 })

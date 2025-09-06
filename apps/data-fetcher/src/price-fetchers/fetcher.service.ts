@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { CoinMarketCapService } from "@modules/price"
-import { CoinGeckoService } from "@modules/price"
+import { CoinMarketCapService, CoinGeckoService } from "@modules/blockchains"
 import { Cron } from "@nestjs/schedule"
 import { MemDbService } from "@modules/databases"
 import { CacheKeys, InjectRedisCache } from "@modules/cache"

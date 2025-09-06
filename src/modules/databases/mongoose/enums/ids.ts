@@ -62,3 +62,39 @@ registerEnumType(GraphQLTypeTokenId, {
         },
     },
 })
+
+export enum DexId {
+    Cetus = "cetus",
+}
+
+export const GraphQLTypeDexId = createEnumType(DexId)
+
+registerEnumType(GraphQLTypeDexId, {
+    name: "DexId",
+    description: "The name of the dex",
+    valuesMap: {
+        [DexId.Cetus]: {
+            description: "The cetus dex",
+        },
+    },
+})
+
+export enum LpPoolId {
+    CetusSuiIka02 = "cetusSuiIka02",
+    CetusSuiUsdc005 = "cetusSuiUsdc005",  
+}
+
+export const GraphQLTypeLpPoolId = createEnumType(LpPoolId)
+
+registerEnumType(GraphQLTypeLpPoolId, {
+    name: "LpPoolId",
+    description: "The name of the lp pool",
+    valuesMap: {
+        [LpPoolId.CetusSuiIka02]: {
+            description: "The cetus sui ika 0.2 lp pool",
+        },
+        [LpPoolId.CetusSuiUsdc005]: {
+            description: "The cetus sui usdc 0.05 lp pool",
+        },
+    },
+})

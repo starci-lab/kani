@@ -20,7 +20,11 @@
     "test:e2e": "jest --config ./apps/app/test/jest-e2e.json"
   },
   "dependencies": {
+    "@cetusprotocol/aggregator-sdk": "^1.1.5",
+    "@cetusprotocol/cetus-sui-clmm-sdk": "^5.4.0",
+    "@cetusprotocol/sui-clmm-sdk": "^1.1.3",
     "@keyv/redis": "^5.1.1",
+    "@mysten/sui": "^1.37.6",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.0.1",
@@ -30,6 +34,7 @@
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.0.0",
+    "@solana/web3.js": "^1.98.4",
     "axios": "^1.11.0",
     "axios-retry": "^4.5.0",
     "bn.js": "^5.2.2",

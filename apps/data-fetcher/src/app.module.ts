@@ -5,9 +5,10 @@ import { MongooseModule } from "@modules/databases"
 import { CacheModule } from "@modules/cache"
 import { PriceFetchersModule } from "./price-fetchers"
 import { MixinModule } from "@modules/mixin"
-import { PriceModule } from "@modules/price"
+import { PriceModule } from "@modules/blockchains/price"
 import { ScheduleModule } from "@nestjs/schedule"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
+import { LpPoolsModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -33,6 +34,9 @@ import { WinstonLevel, WinstonModule } from "@modules/winston"
             isGlobal: true,
         }),
         PriceModule.register({
+            isGlobal: true,
+        }),
+        LpPoolsModule.register({
             isGlobal: true,
         }),
         PriceFetchersModule.register({

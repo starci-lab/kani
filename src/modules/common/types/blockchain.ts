@@ -101,3 +101,17 @@ registerEnumType(GraphQLTypeNetwork, {
         [Network.Testnet]: { description: "Testnet" },
     },
 })
+
+export enum DexName {
+    Cetus = "cetus",
+}
+
+export const GraphQLTypeDexName = createEnumType(DexName)
+
+registerEnumType(GraphQLTypeDexName, {
+    name: "DexName",
+    description: "The name of the dex",
+    valuesMap: {
+        [DexName.Cetus]: { description: "Cetus" },
+    },
+})
