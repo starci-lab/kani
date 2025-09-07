@@ -29,7 +29,7 @@ export class CacheModule extends ConfigurableModuleClass {
         providers.push(CacheHelpersService)
         return {
             ...dynamicModule,
-            providers,
+            providers: [...dynamicModule.providers || [], ...providers],
             exports: [...providers],
         }
     }

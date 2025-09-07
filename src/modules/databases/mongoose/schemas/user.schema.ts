@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
 import { Field } from "@nestjs/graphql"
-import { OauthProviderName } from "../enums"
+import { OauthProviderName } from "../../enums"
 import { WalletSchema } from "./wallet.schema"
 import { SessionSchema } from "./session.scheam"
 

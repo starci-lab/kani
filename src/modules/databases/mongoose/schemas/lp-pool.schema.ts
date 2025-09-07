@@ -4,8 +4,8 @@ import { GraphQLTypeNetwork, Network } from "@modules/common"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { Field, Float, ObjectType } from "@nestjs/graphql"
-import { GraphQLTypeLpPoolId } from "../enums"
-import { LpPoolId } from "../enums"
+import { GraphQLTypeLpPoolId } from "../../enums"
+import { LpPoolId } from "../../enums"
 import { DexSchema } from "./dex.schema"
 
 @Schema({

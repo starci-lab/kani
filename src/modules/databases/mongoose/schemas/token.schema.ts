@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, Int, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
 import { AbstractSchema } from "./abstract"
-import { GraphQLTypeTokenId, TokenId } from "../enums"
+import { GraphQLTypeTokenId, TokenId } from "../../enums"
 
 @Schema({ timestamps: true, collection: "tokens" })
 @ObjectType({ description: "Represents a blockchain token with metadata such as symbol, address, decimals, and chain information." })

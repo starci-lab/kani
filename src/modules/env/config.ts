@@ -2,6 +2,11 @@ import { ChainId, Network } from "@modules/common"
 import { v4 } from "uuid"
 import { join } from "path"
 
+export enum LpBotType {
+    System = "system",       // bot self run, use own key
+    UserBased = "user-based" // bot get user from DB to run
+  }
+
 export const envConfig = () => ({
     isProduction: process.env.NODE_ENV === "production",
     frontend: {
@@ -83,8 +88,22 @@ export const envConfig = () => ({
         },
     },
     lpBot: {
+        type: process.env.LP_BOT_TYPE || LpBotType.System,
+        recordInstanceId: process.env.LP_BOT_RECORD_INSTANCE_ID,
         appName: process.env.APP_NAME || "lp-bot",
         enablePriceFetcher: process.env.ENABLE_PRICE_FETCHER || false,
+        suiWallet: {
+            accountAddress: process.env.LP_BOT_WALLET_ACCOUNT_ADDRESS || "",
+            encryptedPrivateKey: process.env.LP_BOT_SUI_WALLET_ENCRYPTED_PRIVATE_KEY || "",
+        },
+        evmWallet: {
+            accountAddress: process.env.LP_BOT_EVM_WALLET_ACCOUNT_ADDRESS || "",
+            encryptedPrivateKey: process.env.LP_BOT_EVM_WALLET_ENCRYPTED_PRIVATE_KEY || "",
+        },
+        solanaWallet: {
+            accountAddress: process.env.LP_BOT_SOLANA_WALLET_ACCOUNT_ADDRESS || "",
+            encryptedPrivateKey: process.env.LP_BOT_SOLANA_WALLET_ENCRYPTED_PRIVATE_KEY || "",
+        }
     },
     kafka: {
         clientId: process.env.KAFKA_CLIENT_ID || v4(),

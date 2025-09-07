@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { DexId, GraphQLTypeDexId } from "../enums"
+import { DexId, GraphQLTypeDexId } from "../../enums"
 import { Field } from "@nestjs/graphql"
 
 @Schema({

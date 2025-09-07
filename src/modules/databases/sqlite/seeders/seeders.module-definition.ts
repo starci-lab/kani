@@ -1,15 +1,14 @@
-
-
 import { ConfigurableModuleBuilder } from "@nestjs/common"
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
     new ConfigurableModuleBuilder().setExtras(
         {
-            isGlobal: false
+            isGlobal: false,
         },
         (definition, extras) => ({
             ...definition,
-            global: extras.isGlobal
-        })
-    )
-        .build()
+            global: extras.isGlobal,
+        }),
+    ).build()
+
+

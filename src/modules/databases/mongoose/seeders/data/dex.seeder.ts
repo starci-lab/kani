@@ -3,7 +3,7 @@ import { Seeder } from "nestjs-seeder"
 import { Connection } from "mongoose"
 import { createObjectId } from "@modules/common"
 import { DexSchema } from "../../schemas/dex.schema"
-import { DexId } from "../../enums"
+import { DexId } from "../../../enums"
 import { InjectMongoose } from "../../mongoose.decorators"
 
 @Injectable()

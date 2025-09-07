@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { CoinMarketCapService, CoinGeckoService } from "@modules/blockchains"
 import { Cron } from "@nestjs/schedule"
 import { MemDbService } from "@modules/databases"
-import { CacheKeys, InjectRedisCache } from "@modules/cache"
+import { CacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { createCacheKey } from "@modules/cache"
 import { InjectWinston } from "@modules/winston"
@@ -28,7 +28,7 @@ export class FetcherService {
             this.memdbService.tokens.map((token) => token.coinMarketCapId),
         )
         await this.redisCacheManager.set(
-            createCacheKey(CacheKeys.CoinMarketCapPrices),
+            createCacheKey(CacheKey.CoinMarketCapPrices),
             prices,
         )
         this.logger.info("CoinMarketCapPricesFetched", {
@@ -43,7 +43,7 @@ export class FetcherService {
             this.memdbService.tokens.map((token) => token.coinGeckoId),
         )
         await this.redisCacheManager.set(
-            createCacheKey(CacheKeys.CoinGeckoPrices),
+            createCacheKey(CacheKey.CoinGeckoPrices),
             prices,
         )
         this.logger.info("CoinGeckoPricesFetched", {
