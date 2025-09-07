@@ -6,7 +6,7 @@ import { CetusFetcherService, CetusMetadataService } from "./dexes"
 import { ChainId } from "@modules/common"
 
 @Injectable()
-export class LpPoolService {
+export class LiquidityPoolService {
     constructor(
         private readonly moduleRef: ModuleRef
     ) { }

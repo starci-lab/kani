@@ -3,7 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./app.module-definition"
 import { envConfig, EnvModule, LpBotType } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
-import { PriceModule, LpPoolsModule } from "@modules/blockchains"
+import { PriceModule, LiquidityPoolsModule } from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { MongooseModule, SqliteModule } from "@modules/databases"
@@ -75,7 +75,7 @@ export class AppModule extends ConfigurableModuleClass {
 
         modules.push(
             ...[
-                LpPoolsModule.register({
+                LiquidityPoolsModule.register({
                     isGlobal: true,
                 }),
             ],

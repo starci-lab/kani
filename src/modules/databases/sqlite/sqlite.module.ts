@@ -9,7 +9,7 @@ import { SeedersModule } from "./seeders"
 import {
     TokenEntity,
     DexEntity,
-    LpPoolEntity,
+    LiquidityPoolEntity,
     UserAllocationEntity,
     UserDepositEntity,
     UserCummulativeEntity,
@@ -44,7 +44,7 @@ export class SqliteModule extends ConfigurableModuleClass {
                 TypeOrmModule.forFeature([
                     TokenEntity,
                     DexEntity,
-                    LpPoolEntity,
+                    LiquidityPoolEntity,
                     UserAllocationEntity,
                     UserDepositEntity,
                     UserCummulativeEntity,

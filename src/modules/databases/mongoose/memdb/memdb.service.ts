@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
 import { Connection } from "mongoose"
 import { RetryService } from "@modules/mixin"
 import { Cron, CronExpression } from "@nestjs/schedule"
-import { LpPoolSchema, TokenSchema } from "../schemas"
+import { LiquidityPoolSchema, TokenSchema } from "../schemas"
 import { InjectMongoose } from "../mongoose.decorators"
 import { DexSchema } from "../schemas"
 
@@ -10,7 +10,7 @@ import { DexSchema } from "../schemas"
 export class MemDbService implements OnModuleInit {
     private readonly logger = new Logger(MemDbService.name)
     public tokens: Array<TokenSchema> = []
-    public lpPools: Array<LpPoolSchema> = []
+    public liquidityPools: Array<LiquidityPoolSchema> = []
     public dexes: Array<DexSchema> = []
     constructor(
         private readonly retryService: RetryService,
@@ -27,10 +27,10 @@ export class MemDbService implements OnModuleInit {
                 this.tokens = tokens.map((token) => token.toJSON())
             })(),
             (async () => {
-                const lpPools = await this.connection
-                    .model<LpPoolSchema>(LpPoolSchema.name)
+                const liquidityPools = await this.connection
+                    .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                     .find()
-                this.lpPools = lpPools.map((lpPool) => lpPool.toJSON())
+                this.liquidityPools = liquidityPools.map((lpPool) => lpPool.toJSON())
             })(),
             (async () => {
                 const dexes = await this.connection
@@ -58,8 +58,8 @@ export class MemDbService implements OnModuleInit {
         this.logger.log("Updated memdb")
     }
 
-    public populateLpPools() {
-        return this.lpPools.map((lpPool) => {
+    public populateLiquidityPools() {
+        return this.liquidityPools.map((lpPool) => {
             return {
                 ...lpPool,
                 tokenA: this.tokens.find(

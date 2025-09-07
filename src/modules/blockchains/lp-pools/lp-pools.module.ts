@@ -5,7 +5,7 @@ import { ClientsModule } from "./clients"
 import { DexId } from "@modules/databases"
 
 @Module({})
-export class LpPoolsModule extends ConfigurableModuleClass {
+export class LiquidityPoolsModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

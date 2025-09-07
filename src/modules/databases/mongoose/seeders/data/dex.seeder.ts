@@ -3,8 +3,8 @@ import { Seeder } from "nestjs-seeder"
 import { Connection } from "mongoose"
 import { createObjectId } from "@modules/common"
 import { DexSchema } from "../../schemas/dex.schema"
-import { DexId } from "../../../enums"
 import { InjectMongoose } from "../../mongoose.decorators"
+import { dexData } from "../../../data"
 
 @Injectable()
 export class DexSeeder implements Seeder {
@@ -19,16 +19,10 @@ export class DexSeeder implements Seeder {
         this.logger.debug("Seeding dexes...")
         await this.drop()
 
-        const data: Array<Partial<DexSchema>> = [
-            {
-                _id: createObjectId(DexId.Cetus),
-                name: "Cetus",
-                displayId: DexId.Cetus,
-                description: "Cetus is a decentralized exchange on Sui.",
-                website: "https://cetus.zone/",
-                iconUrl: "https://assets.coingecko.com/coins/images/32311/large/cetus.png",
-            },
-        ]
+        const data: Array<Partial<DexSchema>> = dexData.map(dex => ({
+            _id: createObjectId(dex.displayId),
+            ...dex,
+        }))
 
         try {
             await this.connection

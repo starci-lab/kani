@@ -1,12 +1,12 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
-import { DexSeeder, LpPoolSeeder, TokenSeeder } from "./data"
+import { DexSeeder, LiquidityPoolSeeder, TokenSeeder } from "./data"
 
 @Injectable()
 export class SeedersService implements OnModuleInit {
     constructor(
         private readonly tokenSeeder: TokenSeeder,
         private readonly dexSeeder: DexSeeder,
-        private readonly lpPoolSeeder: LpPoolSeeder,
+        private readonly lpPoolSeeder: LiquidityPoolSeeder,
     ) {}
 
     async onModuleInit() {

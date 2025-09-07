@@ -15,8 +15,8 @@ export class TokenEntity extends AbstractEntity {
     @Column({ type: "text" })
         symbol: string
 
-    @Column({ type: "integer", nullable: true })
-        decimals?: number
+    @Column({ type: "integer" })
+        decimals: number
 
     @Column({ type: "text" })
         tokenAddress: string

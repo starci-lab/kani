@@ -1,11 +1,11 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { GraphQLTypeNetwork, Network } from "@modules/common"
+import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { Field, Float, ObjectType } from "@nestjs/graphql"
-import { GraphQLTypeLpPoolId } from "../../enums"
-import { LpPoolId } from "../../enums"
+import { GraphQLTypeLiquidityPoolId } from "../../enums"
+import { LiquidityPoolId } from "../../enums"
 import { DexSchema } from "./dex.schema"
 
 @Schema({
@@ -13,15 +13,15 @@ import { DexSchema } from "./dex.schema"
     collection: "lp-pools",
 })
 @ObjectType({ description: "Represents a liquidity pool between two tokens on a specific DEX" })
-export class LpPoolSchema extends AbstractSchema {
-    @Field(() => GraphQLTypeLpPoolId, { description: "Unique display identifier for the pool" })
+export class LiquidityPoolSchema extends AbstractSchema {
+    @Field(() => GraphQLTypeLiquidityPoolId, { description: "Unique display identifier for the pool" })
     @Prop({
         unique: true,
         type: String,
         required: true,
-        enum: LpPoolId,
+        enum: LiquidityPoolId,
     })
-        displayId: LpPoolId
+        displayId: LiquidityPoolId
 
     @Field(() => DexSchema, { description: "The DEX this pool belongs to" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: DexSchema.name })
@@ -51,6 +51,15 @@ export class LpPoolSchema extends AbstractSchema {
         default: Network.Mainnet,
     })
         network: Network
+
+    @Field(() => GraphQLTypeChainId, { description: "Chain ID where this pool exists" })
+    @Prop({
+        type: String,
+        enum: ChainId,
+        required: true,
+        default: ChainId.Sui,
+    })
+        chainId: ChainId
 }
 
-export const LpPoolSchemaClass = SchemaFactory.createForClass(LpPoolSchema)
+export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)

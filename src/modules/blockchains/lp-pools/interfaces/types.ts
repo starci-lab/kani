@@ -1,13 +1,13 @@
-import { TokenSchema } from "@modules/databases"
+import { TokenLike } from "@modules/databases"
 
 export interface FetchedPool {
     id: string
     currentTick: number
     currentSqrtPrice: number
     tickSpacing: number
-    token0: TokenSchema
-    token1: TokenSchema
-    rewardTokens: Array<TokenSchema>
+    token0: TokenLike
+    token1: TokenLike
+    rewardTokens: Array<TokenLike>
 }
 
 export interface FetchedPosition {

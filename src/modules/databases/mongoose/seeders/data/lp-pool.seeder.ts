@@ -1,14 +1,14 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { Seeder } from "nestjs-seeder"
 import { Connection } from "mongoose"
-import { createObjectId, Network } from "@modules/common"
-import { LpPoolSchema } from "../../schemas"
-import { DexId, LpPoolId, TokenId } from "../../../enums"
+import { createObjectId } from "@modules/common"
+import { LiquidityPoolSchema } from "../../schemas"
 import { InjectMongoose } from "../../mongoose.decorators"
+import { lpPoolData } from "../../../data"
 
 @Injectable()
-export class LpPoolSeeder implements Seeder {
-    private readonly logger = new Logger(LpPoolSeeder.name)
+export class LiquidityPoolSeeder implements Seeder {
+    private readonly logger = new Logger(LiquidityPoolSeeder.name)
 
     constructor(
         @InjectMongoose()
@@ -19,32 +19,20 @@ export class LpPoolSeeder implements Seeder {
         this.logger.debug("Seeding LP pools...")
         await this.drop()
 
-        const data: Array<Partial<LpPoolSchema>> = [
-            {
-                _id: createObjectId(LpPoolId.CetusSuiIka02),
-                displayId: LpPoolId.CetusSuiIka02,
-                fee: 0.002,
-                poolAddress: "0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789",
-                tokenA: createObjectId(TokenId.SuiIka),
-                tokenB: createObjectId(TokenId.SuiUsdc),
-                network: Network.Mainnet,
-                dex: createObjectId(DexId.Cetus),
-            },
-            {
-                _id: createObjectId(LpPoolId.CetusSuiUsdc005),
-                displayId: LpPoolId.CetusSuiUsdc005,
-                fee: 0.0005,
-                poolAddress: "0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab",
-                tokenA: createObjectId(TokenId.SuiUsdc),
-                tokenB: createObjectId(TokenId.SuiCetus),
-                network: Network.Mainnet,
-                dex: createObjectId(DexId.Cetus),
-            },
-        ]
+        const data: Array<Partial<LiquidityPoolSchema>> = lpPoolData.map(lpPool => ({
+            _id: createObjectId(lpPool.displayId),
+            displayId: lpPool.displayId,
+            fee: lpPool.fee,
+            poolAddress: lpPool.poolAddress,
+            tokenA: createObjectId(lpPool.tokenAId),
+            tokenB: createObjectId(lpPool.tokenBId),
+            network: lpPool.network,
+            dex: createObjectId(lpPool.dexId),
+        }))
 
         try {
             await this.connection
-                .model<LpPoolSchema>(LpPoolSchema.name)
+                .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                 .create(data)
 
             this.logger.log(`Seeded ${data.length} LP pools successfully`)
@@ -56,7 +44,7 @@ export class LpPoolSeeder implements Seeder {
     async drop(): Promise<void> {
         this.logger.verbose("Dropping existing LP pools...")
         const result = await this.connection
-            .model<LpPoolSchema>(LpPoolSchema.name)
+            .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
             .deleteMany({})
         this.logger.log(`Dropped ${result.deletedCount ?? 0} LP pools`)
     }

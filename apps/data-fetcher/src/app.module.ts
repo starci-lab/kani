@@ -8,7 +8,7 @@ import { MixinModule } from "@modules/mixin"
 import { PriceModule } from "@modules/blockchains/price"
 import { ScheduleModule } from "@nestjs/schedule"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
-import { LpPoolsModule } from "@modules/blockchains"
+import { LiquidityPoolsModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -36,7 +36,7 @@ import { LpPoolsModule } from "@modules/blockchains"
         PriceModule.register({
             isGlobal: true,
         }),
-        LpPoolsModule.register({
+        LiquidityPoolsModule.register({
             isGlobal: true,
         }),
         PriceFetchersModule.register({

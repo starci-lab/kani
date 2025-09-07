@@ -1,9 +1,9 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./seeders.module-definition"
 import { SeedersService } from "./seeder.service"
-import { DexSeeder, LpPoolSeeder, TokenSeeder } from "./data"
+import { DexSeeder, LiquidityPoolSeeder, TokenSeeder } from "./data"
 
 @Module({
-    providers: [TokenSeeder, DexSeeder, LpPoolSeeder, SeedersService],
+    providers: [TokenSeeder, DexSeeder, LiquidityPoolSeeder, SeedersService],
 })
 export class SeedersModule extends ConfigurableModuleClass {}

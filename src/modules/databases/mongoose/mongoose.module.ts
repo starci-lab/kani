@@ -4,8 +4,8 @@ import {
     DexSchemaClass,
     InstanceSchema,
     InstanceSchemaClass,
-    LpPoolSchema,
-    LpPoolSchemaClass,
+    LiquidityPoolSchema,
+    LiquidityPoolSchemaClass,
     SessionSchema,
     SessionSchemaClass,
     StorageSchema,
@@ -111,8 +111,8 @@ export class MongooseModule extends ConfigurableModuleClass {
                         useFactory: () => DexSchemaClass,
                     },
                     {
-                        name: LpPoolSchema.name,
-                        useFactory: () => LpPoolSchemaClass,
+                        name: LiquidityPoolSchema.name,
+                        useFactory: () => LiquidityPoolSchemaClass,
                     },
                     {
                         name: InstanceSchema.name,
