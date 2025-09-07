@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cetus.module-definition
 import { createCetusAggregatorSdkProvider, createCetusClmmSdkProvider } from "./cetus.providers"
 import { CetusFetcherService } from "./fetcher.service"
 import { CetusActionService } from "./action.service"
+import { CetusMetadataService } from "./metadata.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -14,7 +15,8 @@ export class CetusModule extends ConfigurableModuleClass {
             createCetusClmmSdkProvider(),
             createCetusAggregatorSdkProvider(),
             CetusFetcherService,
-            CetusActionService
+            CetusActionService,
+            CetusMetadataService
         ]
         return {
             ...dynamicModule,

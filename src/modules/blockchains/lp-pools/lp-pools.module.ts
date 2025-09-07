@@ -16,7 +16,6 @@ export class LpPoolsModule extends ConfigurableModuleClass {
             !options.dexes 
             || options.dexes.includes(DexId.Cetus)
         ) {
-            console.log("Add LP")
             dexModules.push(CetusModule.register({
                 isGlobal: options.isGlobal,
             }))
