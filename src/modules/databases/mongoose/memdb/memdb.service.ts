@@ -30,7 +30,7 @@ export class MemDbService implements OnModuleInit {
                 const liquidityPools = await this.connection
                     .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                     .find()
-                this.liquidityPools = liquidityPools.map((lpPool) => lpPool.toJSON())
+                this.liquidityPools = liquidityPools.map((liquidityPool) => liquidityPool.toJSON())
             })(),
             (async () => {
                 const dexes = await this.connection
@@ -59,14 +59,14 @@ export class MemDbService implements OnModuleInit {
     }
 
     public populateLiquidityPools() {
-        return this.liquidityPools.map((lpPool) => {
+        return this.liquidityPools.map((liquidityPool) => {
             return {
-                ...lpPool,
+                ...liquidityPool,
                 tokenA: this.tokens.find(
-                    (token) => token.id.toString() === lpPool.tokenA.toString(),
+                    (token) => token.id.toString() === liquidityPool.tokenA.toString(),
                 ),
                 tokenB: this.tokens.find(
-                    (token) => token.id.toString() === lpPool.tokenB.toString(),
+                    (token) => token.id.toString() === liquidityPool.tokenB.toString(),
                 ),
             }
         })

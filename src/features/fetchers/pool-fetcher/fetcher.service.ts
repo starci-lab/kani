@@ -19,7 +19,7 @@ export class FetcherService implements OnModuleInit {
     private liquidityPools: Array<LiquidityPoolLike> = []
 
     constructor(
-        private readonly lpPoolService: LiquidityPoolService,
+        private readonly liquidityPoolService: LiquidityPoolService,
         @InjectWinston()
         private readonly logger: Logger,
         @InjectRedisCache()
@@ -75,7 +75,7 @@ export class FetcherService implements OnModuleInit {
             // testnet is not supported
             return
         }
-        const dexes = await this.lpPoolService.getDexs({
+        const dexes = await this.liquidityPoolService.getDexs({
             chainId,
         })
         for (const dex of dexes) {

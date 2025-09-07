@@ -8,14 +8,14 @@ export class MemDbQueryService {
     constructor(private readonly memDbService: MemDbService) {}
 
     public populateLiquidityPools() {
-        return this.memDbService.liquidityPools.map((lpPool) => {
+        return this.memDbService.liquidityPools.map((liquidityPool) => {
             return {
-                ...lpPool,
+                ...liquidityPool,
                 tokenA: this.memDbService.tokens.find(
-                    (token) => token.id.toString() === lpPool.tokenA.toString(),
+                    (token) => token.id.toString() === liquidityPool.tokenA.toString(),
                 ),
                 tokenB: this.memDbService.tokens.find(
-                    (token) => token.id.toString() === lpPool.tokenB.toString(),
+                    (token) => token.id.toString() === liquidityPool.tokenB.toString(),
                 ),
             }
         })
@@ -24,13 +24,13 @@ export class MemDbQueryService {
     public findPoolsByDexId(dexId: DexId) {
         const dex = this.memDbService.dexes.find((dex) => dex.displayId === dexId)
         return this.populateLiquidityPools().filter(
-            (lpPool) => lpPool.dex.toString() === dex?.id.toString(),
+            (liquidityPool) => liquidityPool.dex.toString() === dex?.id.toString(),
         )
     }
 
     public findLiquidityPoolsByIds(poolIds: Array<LiquidityPoolId>) {
-        return this.populateLiquidityPools().filter((lpPool) =>
-            poolIds.includes(lpPool.displayId),
+        return this.populateLiquidityPools().filter((liquidityPool) =>
+            poolIds.includes(liquidityPool.displayId),
         )
     }
 
@@ -48,7 +48,7 @@ export class MemDbQueryService {
 
     public findLiquidityPoolById(poolId: string | Types.ObjectId) {
         return this.populateLiquidityPools().find(
-            (lpPool) => lpPool.id.toString() === poolId.toString(),
+            (liquidityPool) => liquidityPool.id.toString() === poolId.toString(),
         )
     }
 }

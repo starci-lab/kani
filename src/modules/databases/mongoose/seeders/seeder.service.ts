@@ -6,7 +6,7 @@ export class SeedersService implements OnModuleInit {
     constructor(
         private readonly tokenSeeder: TokenSeeder,
         private readonly dexSeeder: DexSeeder,
-        private readonly lpPoolSeeder: LiquidityPoolSeeder,
+        private readonly liquidityPoolSeeder: LiquidityPoolSeeder,
     ) { }
 
     async onModuleInit() {
@@ -21,8 +21,8 @@ export class SeedersService implements OnModuleInit {
                 await this.dexSeeder.seed()
 
                 // re-seed lp pools
-                await this.lpPoolSeeder.drop()
-                await this.lpPoolSeeder.seed()
+                await this.liquidityPoolSeeder.drop()
+                await this.liquidityPoolSeeder.seed()
             })(),
         ])
     }

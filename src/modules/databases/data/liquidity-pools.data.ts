@@ -2,7 +2,7 @@ import { ChainId, Network } from "@modules/common"
 import { DexId, LiquidityPoolId, TokenId } from "@modules/databases/enums"
 import { LiquidityPoolLike } from "@modules/databases/types"
 
-export const lpPoolData: Array<LiquidityPoolLike> = [
+export const liquidityPoolData: Array<LiquidityPoolLike> = [
     {
         id: LiquidityPoolId.CetusSuiIka02,
         displayId: LiquidityPoolId.CetusSuiIka02,

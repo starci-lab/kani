@@ -4,7 +4,7 @@ import { Connection } from "mongoose"
 import { createObjectId } from "@modules/common"
 import { LiquidityPoolSchema } from "../../schemas"
 import { InjectMongoose } from "../../mongoose.decorators"
-import { lpPoolData } from "../../../data"
+import { liquidityPoolData } from "../../../data"
 
 @Injectable()
 export class LiquidityPoolSeeder implements Seeder {
@@ -19,15 +19,15 @@ export class LiquidityPoolSeeder implements Seeder {
         this.logger.debug("Seeding LP pools...")
         await this.drop()
 
-        const data: Array<Partial<LiquidityPoolSchema>> = lpPoolData.map(lpPool => ({
-            _id: createObjectId(lpPool.displayId),
-            displayId: lpPool.displayId,
-            fee: lpPool.fee,
-            poolAddress: lpPool.poolAddress,
-            tokenA: createObjectId(lpPool.tokenAId),
-            tokenB: createObjectId(lpPool.tokenBId),
-            network: lpPool.network,
-            dex: createObjectId(lpPool.dexId),
+        const data: Array<Partial<LiquidityPoolSchema>> = liquidityPoolData.map(liquidityPool => ({
+            _id: createObjectId(liquidityPool.displayId),
+            displayId: liquidityPool.displayId,
+            fee: liquidityPool.fee,
+            poolAddress: liquidityPool.poolAddress,
+            tokenA: createObjectId(liquidityPool.tokenAId),
+            tokenB: createObjectId(liquidityPool.tokenBId),
+            network: liquidityPool.network,
+            dex: createObjectId(liquidityPool.dexId),
         }))
 
         try {

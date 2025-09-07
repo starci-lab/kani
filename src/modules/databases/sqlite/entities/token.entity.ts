@@ -1,12 +1,11 @@
-import { Column, Entity, Index } from "typeorm"
+import { Column, Entity } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network } from "@modules/common"
 import { TokenId } from "@modules/databases/enums"
 
 @Entity({ name: "tokens" })
 export class TokenEntity extends StringAbstractEntity {
-    @Index({ unique: true })
-    @Column({ type: "text" })
+    @Column({ type: "text", unique: true })
         displayId: TokenId
 
     @Column({ type: "text" })
