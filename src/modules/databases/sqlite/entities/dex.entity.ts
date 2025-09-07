@@ -1,9 +1,9 @@
 import { Column, Entity, Index } from "typeorm"
-import { AbstractEntity } from "./abstract"
+import { StringAbstractEntity } from "./abstract"
 import { DexId } from "../../enums"
 
 @Entity({ name: "dexes" })
-export class DexEntity extends AbstractEntity {
+export class DexEntity extends StringAbstractEntity {
     @Index({ unique: true })
     @Column({ type: "text" })
         displayId: DexId

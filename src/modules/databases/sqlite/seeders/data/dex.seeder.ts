@@ -14,8 +14,7 @@ export class DexSeeder {
     }
 
     async drop(): Promise<void> {
-        const repo = this.dataSource.getRepository(DexEntity)
-        await repo.delete({})
+        await this.dataSource.manager.clear(DexEntity)
     }
 }
 

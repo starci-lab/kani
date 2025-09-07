@@ -3,6 +3,7 @@ import { DexLike } from "@modules/databases/types"
 
 export const dexData: Array<DexLike> = [
     {
+        id: DexId.Cetus,
         displayId: DexId.Cetus,
         name: "Cetus",
         description: "Cetus is a decentralized exchange on Sui.",

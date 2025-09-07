@@ -1,12 +1,12 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from "typeorm"
-import { AbstractEntity } from "./abstract"
+import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network } from "@modules/common"
 import { TokenEntity } from "./token.entity"
 import { DexEntity } from "./dex.entity"
 import { DexId, LiquidityPoolId, TokenId } from "../../enums"
 
 @Entity({ name: "lp_pools" })
-export class LiquidityPoolEntity extends AbstractEntity {
+export class LiquidityPoolEntity extends StringAbstractEntity {
     @Index({ unique: true })
     @Column({ type: "text" })
         displayId: LiquidityPoolId

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { DataSource } from "typeorm"
-import { TokenEntity } from "../../entities"
+import { LiquidityPoolEntity, TokenEntity } from "../../entities"
 import { tokenData } from "../../../data"
 
 @Injectable()
@@ -20,7 +20,7 @@ export class TokenSeeder {
     }
 
     async drop(): Promise<void> {
-        await this.dataSource.manager.delete(TokenEntity, {})
+        await this.dataSource.manager.clear(LiquidityPoolEntity)
     }
 }
 

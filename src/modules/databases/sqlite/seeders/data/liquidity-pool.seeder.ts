@@ -37,7 +37,7 @@ export class LiquidityPoolSeeder {
     }
 
     async drop(): Promise<void> {
-        await this.dataSource.manager.delete(LiquidityPoolEntity, {})
+        await this.dataSource.manager.clear(LiquidityPoolEntity)
     }
 }
 

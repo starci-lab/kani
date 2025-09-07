@@ -1,5 +1,5 @@
 import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./lp-pools.module-definition"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./liquidity-pools.module-definition"
 import { CetusModule } from "./dexes"
 import { ClientsModule } from "./clients"
 import { DexId } from "@modules/databases"

@@ -1,12 +1,12 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
-import { AbstractEntity } from "./abstract"
+import { UuidAbstractEntity } from "./abstract"
 import { TokenEntity } from "./token.entity"
 import { UserDepositEntity } from "./user-deposit.entity"
 import { UserCummulativeEntity } from "./user-cummulative.entity"
 import { UserEntity } from "./user.entity"
 
 @Entity({ name: "user_allocations" })
-export class UserAllocationEntity extends AbstractEntity {
+export class UserAllocationEntity extends UuidAbstractEntity {
         @ManyToOne(() => UserEntity, { onDelete: "CASCADE" })
         @JoinColumn({ name: "user_id" })
             user: UserEntity

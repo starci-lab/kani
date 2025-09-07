@@ -1,9 +1,6 @@
-import { CreateDateColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
+import { CreateDateColumn, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
 
 export abstract class AbstractEntity {
-    @PrimaryGeneratedColumn("uuid")
-        id: string
-
     @CreateDateColumn({ name: "created_at" })
         createdAt: Date
 
@@ -11,4 +8,12 @@ export abstract class AbstractEntity {
         updatedAt: Date
 }
 
+export abstract class StringAbstractEntity extends AbstractEntity {
+    @PrimaryColumn({ type: "text" })
+        id: string
+}
 
+export abstract class UuidAbstractEntity extends AbstractEntity {
+    @PrimaryGeneratedColumn("uuid")
+        id: string
+}

@@ -1,9 +1,9 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm"
-import { AbstractEntity } from "./abstract"
+import { UuidAbstractEntity } from "./abstract"
 import { UserAllocationEntity } from "./user-allocation.schema"
 
 @Entity({ name: "user_cummulatives" })
-export class UserCummulativeEntity extends AbstractEntity {
+export class UserCummulativeEntity extends UuidAbstractEntity {
   @Column({ type: "real", default: 0 })
       cumulativeCapital: number
 

@@ -1,3 +1,3 @@
 export * from "./price"
-export * from "./lp-pools"
+export * from "./liquidity-pools"
 export * from "./signers"
