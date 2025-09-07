@@ -1,4 +1,5 @@
 import { ChainId, Network } from "@modules/common"
+import { v4 } from "uuid"
 import { join } from "path"
 
 export const envConfig = () => ({
@@ -80,5 +81,19 @@ export const envConfig = () => ({
             [Network.Mainnet]: process.env.SOLANA_RPC_URL || "https://fullnode.mainnet.solana.io:443",
             [Network.Testnet]: process.env.SOLANA_RPC_URL_TESTNET || "https://fullnode.testnet.solana.io:443",
         },
-    }
+    },
+    lpBot: {
+        appName: process.env.APP_NAME || "lp-bot",
+        enablePriceFetcher: process.env.ENABLE_PRICE_FETCHER || false,
+    },
+    kafka: {
+        clientId: process.env.KAFKA_CLIENT_ID || v4(),
+        host: process.env.KAFKA_BROKER_HOST || "localhost",
+        port: parseInt(process.env.KAFKA_BROKER_PORT || "9092", 10),
+        sasl: {
+            enabled: Boolean(process.env.KAFKA_SASL_ENABLED) || false,
+            username: process.env.KAFKA_SASL_USERNAME || "",
+            password: process.env.KAFKA_SASL_PASSWORD || "",
+        },
+    },
 })

@@ -1,8 +1,8 @@
-import { NestFactory } from '@nestjs/core';
-import { LpBotModule } from './lp-bot.module';
+import { NestFactory } from "@nestjs/core"
+import { AppModule } from "./app.module"
 
-async function bootstrap() {
-  const app = await NestFactory.create(LpBotModule);
-  await app.listen(process.env.port ?? 3000);
+const bootstrap = async () => {
+    const app = await NestFactory.create(AppModule.register({}))
+    await app.listen(process.env.port ?? 3012)
 }
-bootstrap();
+bootstrap()

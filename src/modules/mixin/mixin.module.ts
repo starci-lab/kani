@@ -4,6 +4,8 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mixin.module-definition
 import { RetryService } from "./retry.service"
 import { DayjsService } from "./dayjs.service"
 import { NextJsQueryService } from "./nextjs-query.serivce"
+import { ReadinessWatcherFactoryService } from "./readiness-watcher-factory.service"
+import { InstanceIdService } from "./instance-id.service"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -15,6 +17,8 @@ export class MixinModule extends ConfigurableModuleClass {
             LockService,
             RetryService,
             DayjsService,
+            ReadinessWatcherFactoryService,
+            InstanceIdService
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)
