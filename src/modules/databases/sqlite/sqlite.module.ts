@@ -15,14 +15,13 @@ import {
     UserCummulativeEntity,
     UserEntity,
 } from "./entities"
+import { join } from "path"
 
 @Module({})
 export class SqliteModule extends ConfigurableModuleClass {
     public static register(options: typeof OPTIONS_TYPE = {}): DynamicModule {
         const dynamicModule = super.register(options)
-
-        const filePath = envConfig().volume.data.path + "/app.db"
-
+        const filePath = join(envConfig().volume.data.path, "db.sqlite")
         const extraModules: Array<DynamicModule> = []
         if (options.withSeeders) {
             extraModules.push(

@@ -4,7 +4,6 @@ import { TokenLike } from "@modules/databases/types"
 
 export const tokenData: Array<TokenLike> = [
     {
-        id: TokenId.SuiUsdc,
         displayId: TokenId.SuiUsdc,
         name: "USDC",
         symbol: "USDC",
@@ -20,7 +19,6 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
     },
     {
-        id: TokenId.SuiCetus,
         displayId: TokenId.SuiCetus,
         name: "CETUS",
         symbol: "CETUS",
@@ -35,7 +33,6 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
     },
     {
-        id: TokenId.SuiNative,
         displayId: TokenId.SuiNative,
         name: "SUI",
         symbol: "SUI",
@@ -50,7 +47,6 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
     },
     {
-        id: TokenId.SuiIka,
         displayId: TokenId.SuiIka,
         name: "IKA",
         symbol: "IKA",
@@ -65,7 +61,6 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
     },
     {
-        id: TokenId.SuiAlkimi,
         displayId: TokenId.SuiAlkimi,
         name: "ALKIMI",
         symbol: "ALKIMI",
@@ -80,7 +75,6 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
     },
     {
-        id: TokenId.SuiWalrus,
         displayId: TokenId.SuiWalrus,
         name: "WALRUS",
         symbol: "WALRUS",

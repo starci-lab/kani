@@ -22,6 +22,7 @@ export class LiquidityPoolSeeder {
         await this.dataSource.manager.save(
             LiquidityPoolEntity,
             liquidityPoolData.map((liquidityPool) => ({
+                id: liquidityPool.displayId,
                 displayId: liquidityPool.displayId,
                 fee: liquidityPool.fee,
                 poolAddress: liquidityPool.poolAddress,
@@ -32,6 +33,7 @@ export class LiquidityPoolSeeder {
                 tokenBId: liquidityPool.tokenBId,
                 dexId: liquidityPool.dexId,
                 network: liquidityPool.network,
+                chainId: liquidityPool.chainId,
             })),
         )
     }

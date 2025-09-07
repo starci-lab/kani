@@ -32,7 +32,7 @@ export const envConfig = () => ({
     },
     volume: {
         data: {
-            path: process.env.VOLUME_DATA_PATH || join(process.cwd(), ".volume", "data"),
+            path: process.env.VOLUME_DATA_PATH || join(process.cwd(), ".db"),
         },
     },
     deepseek: {

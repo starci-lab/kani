@@ -15,7 +15,12 @@ export class TokenSeeder {
         this.logger.debug("Seeding tokens...")
         await this.dataSource.manager.save(
             TokenEntity, 
-            tokenData
+            tokenData.map(
+                (token) => ({
+                    ...token,
+                    id: token.displayId,
+                })
+            )
         )
     }
 

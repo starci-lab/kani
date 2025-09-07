@@ -10,7 +10,12 @@ export class DexSeeder {
 
     async seed(): Promise<void> {
         this.logger.debug("Seeding dexes...")
-        await this.dataSource.manager.save(DexEntity, dexData)
+        await this.dataSource.manager.save(DexEntity, dexData.map(
+            (dex) => ({
+                ...dex,
+                id: dex.displayId,                
+            })
+        ))
     }
 
     async drop(): Promise<void> {
