@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { 
     DEFAULT_DB_CONNECTION, 
     InstanceSchema, 
-    UserAllocationSchema
+    UserAllocationLike, 
 } from "@modules/databases"
 import { envConfig, LpBotType } from "@modules/env"
 import { Connection } from "mongoose"
@@ -19,7 +19,7 @@ export class FetcherService {
         }
     }
 
-    async fetchUserAllocations(): Promise<Array<Partial<UserAllocationSchema>>> {
+    async fetchUserAllocations(): Promise<Array<Partial<UserAllocationLike>>> {
         if (envConfig().lpBot.type === LpBotType.System) {
             return [
                 {
@@ -30,7 +30,7 @@ export class FetcherService {
             ]
         }
         const instance = await this.connection.model<InstanceSchema>(InstanceSchema.name).findOne({
-            _id: envConfig().lpBot.recordInstanceId,
+            _id: envConfig().lpBot.instanceId,
         })
         if (!instance) {
             throw new Error("Instance not found")

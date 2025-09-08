@@ -3,7 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./app.module-definition"
 import { envConfig, EnvModule, LpBotType } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
-import { PriceModule, LiquidityPoolsModule } from "@modules/blockchains"
+import { PriceModule, LiquidityPoolsModule, KeypairsModule } from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { MongooseModule, SqliteModule } from "@modules/databases"
@@ -11,6 +11,8 @@ import { EventModule } from "@modules/event"
 import { CacheModule, CacheType } from "@modules/cache"
 import { EventType } from "@modules/event/types"
 import { PriceFetcherModule } from "@features/fetchers"
+import { CryptoModule } from "@modules/crypto"
+import { UserFetcherModule } from "@features/fetchers/user-fetcher"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -31,6 +33,13 @@ export class AppModule extends ConfigurableModuleClass {
                 }),
                 MixinModule.register({
                     isGlobal: true,
+                }),
+                CryptoModule.register({
+                    isGlobal: true,
+                }),
+                KeypairsModule.register({
+                    isGlobal: true,
+                    useGcpKms: envConfig().lpBot.type === LpBotType.UserBased,
                 }),
                 AxiosModule.register({
                     isGlobal: true,
@@ -75,6 +84,9 @@ export class AppModule extends ConfigurableModuleClass {
 
         modules.push(
             ...[
+                UserFetcherModule.register({
+                    isGlobal: true,
+                }),
                 LiquidityPoolsModule.register({
                     isGlobal: true,
                 }),

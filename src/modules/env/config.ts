@@ -44,6 +44,7 @@ export const envConfig = () => ({
     },
     cryptography: {
         sha256Salt: process.env.SHA256_SALT || "ciswipesha256",
+        aesCbcKey: process.env.AES_CBC_KEY || "6E99BDF4DA700D7F002B6185985CEA9C",
     },
     loki: {
         host: process.env.LOKI_HOST || "http://localhost:3100",
@@ -88,8 +89,20 @@ export const envConfig = () => ({
         },
     },
     lpBot: {
+        // Determine bot type:
+        // - System: a local NestJS bot running without external connections.  
+        //   It charges a fixed fee of (1% ROI) for each processed transaction.  
+        // - User-based: a cloud-enabled bot that fetches user info from the DB,  
+        //   used when users want to run their own bots on the cloud.
         type: process.env.LP_BOT_TYPE || LpBotType.System,
-        recordInstanceId: process.env.LP_BOT_RECORD_INSTANCE_ID,
+        // Env for system bot
+        // we use userId to identify the user
+        userId: process.env.LP_BOT_USER_ID,
+        exitToUsdc: Boolean(process.env.LP_BOT_EXIT_TO_USDC) || false,
+        priorityToken: process.env.LP_BOT_PRIORITY_TOKEN,
+        // Env for user-based bot
+        // we use instanceId to identify the instance
+        instanceId: process.env.LP_BOT_INSTANCE_ID,
         appName: process.env.APP_NAME || "lp-bot",
         enablePriceFetcher: process.env.ENABLE_PRICE_FETCHER || false,
         suiWallet: {

@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
-import { UserAllocationEntity } from "./user-allocation.schema"
+import { UserEntity } from "./user.entity"
 
 @Entity({ name: "user_cummulatives" })
 export class UserCummulativeEntity extends UuidAbstractEntity {
@@ -13,7 +13,7 @@ export class UserCummulativeEntity extends UuidAbstractEntity {
   @Column({ type: "real", default: 0, name: "roi" })
       roi: number
 
-  @ManyToOne(() => UserAllocationEntity, (allocation) => allocation.cummulatives, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "allocation_id" })
-      allocation: UserAllocationEntity
+  @ManyToOne(() => UserEntity, (allocation) => allocation.cummulatives, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
+      allocation: UserEntity
 }

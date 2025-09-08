@@ -1,13 +1,13 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
-import { UserAllocationEntity } from "./user-allocation.schema"
+import { UserEntity } from "./user.entity"
 
 @Entity({ name: "user_deposits" })
 export class UserDepositEntity extends UuidAbstractEntity {
     @Column({ type: "real", name: "deposit_amount" })
         depositAmount: number
 
-    @ManyToOne(() => UserAllocationEntity, (allocation) => allocation.deposits, { onDelete: "CASCADE" })
-    @JoinColumn({ name: "allocation_id" })
-        allocation: UserAllocationEntity
+    @ManyToOne(() => UserEntity, (allocation) => allocation.deposits, { onDelete: "CASCADE" })
+    @JoinColumn({ name: "user_id" })
+        user: UserEntity
 }
