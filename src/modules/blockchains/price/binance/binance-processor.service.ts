@@ -11,6 +11,7 @@ import { InjectWinston } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { CexId, TokenId, TokenLike } from "@modules/databases"
+import { EventEmitterService, EventName } from "@modules/event"
 
 @Injectable()
 export class BinanceProcessorService implements OnModuleDestroy {
@@ -22,12 +23,13 @@ export class BinanceProcessorService implements OnModuleDestroy {
     private readonly logger = new NestLogger(BinanceProcessorService.name)
 
     constructor(
-    private readonly rest: BinanceRestService,
-    private readonly ws: BinanceWsService,
-    private readonly cacheHelpersService: CacheHelpersService,
-    // Winston logger (structured logs → Loki/ELK/etc.)
-    @InjectWinston()
-    private readonly winston: Logger,
+        private readonly rest: BinanceRestService,
+        private readonly ws: BinanceWsService,
+        private readonly cacheHelpersService: CacheHelpersService,
+        private readonly eventEmitterService: EventEmitterService,
+        // Winston logger (structured logs → Loki/ELK/etc.)
+        @InjectWinston()
+        private readonly winston: Logger,
     ) {
         this.cacheManager = this.cacheHelpersService.getCacheManager({
             autoSelect: true,
@@ -92,6 +94,14 @@ export class BinanceProcessorService implements OnModuleDestroy {
                 createCacheKey(CacheKey.TokenPriceData, token.displayId),
                 { price: lastPrice },
             )
+            this.eventEmitterService.emit(
+                EventName.PricesUpdated, 
+                [
+                    {
+                        tokenId: token.displayId,
+                        price: lastPrice,
+                    }
+                ])
         })
     }
 
@@ -122,12 +132,12 @@ export class BinanceProcessorService implements OnModuleDestroy {
         })
     }
 
-  /**
-   * Periodically fetch snapshot via REST
-   * - Runs every 3 seconds
-   * - Provides redundancy in case WS connection drops
-   */
-  @Cron("*/3 * * * * *")
+    /**
+     * Periodically fetch snapshot via REST
+     * - Runs every 3 seconds
+     * - Provides redundancy in case WS connection drops
+     */
+    @Cron("*/3 * * * * *")
     async fetchRestSnapshot() {
         if (this.tokens.length === 0) return
         try {
@@ -148,6 +158,15 @@ export class BinanceProcessorService implements OnModuleDestroy {
                     )
                 }
             }
+            this.eventEmitterService.emit(
+                EventName.PricesUpdated,
+                prices.map(price => (
+                    {
+                        tokenId: price.symbol,
+                        price: price.price,
+                    }
+                ))
+            )
             this.winston.debug("Binance.REST.Snapshot", { prices })
         } catch (err) {
             this.winston.error("Binance.REST.Error", {
@@ -157,10 +176,10 @@ export class BinanceProcessorService implements OnModuleDestroy {
         }
     }
 
-  /**
-   * Cleanup WebSocket connections on module shutdown
-   */
-  onModuleDestroy() {
-      this.ws.onModuleDestroy()
-  }
+    /**
+     * Cleanup WebSocket connections on module shutdown
+     */
+    onModuleDestroy() {
+        this.ws.onModuleDestroy()
+    }
 }

@@ -11,6 +11,8 @@ import { InjectWinston } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { CexId, TokenId, TokenLike } from "@modules/databases"
+import { EventEmitterService } from "@modules/event"
+import { EventName } from "@modules/event"
 
 @Injectable()
 export class GateProcessorService implements OnModuleDestroy {
@@ -24,6 +26,7 @@ export class GateProcessorService implements OnModuleDestroy {
     private readonly rest: GateRestService,
     private readonly ws: GateWsService,
     private readonly cacheHelpersService: CacheHelpersService,
+    private readonly eventEmitterService: EventEmitterService,
     @InjectWinston()
     private readonly winston: Logger,
     ) {
@@ -83,6 +86,13 @@ export class GateProcessorService implements OnModuleDestroy {
                 createCacheKey(CacheKey.TokenPriceData, token.displayId),
                 { price: lastPrice },
             )
+            this.eventEmitterService.emit(
+                EventName.PricesUpdated,
+                [{
+                    tokenId: token.displayId,
+                    price: lastPrice,
+                }]
+            )
         })
     }
 
@@ -108,6 +118,15 @@ export class GateProcessorService implements OnModuleDestroy {
                 }
             }
             this.winston.debug("Gate.REST.Snapshot", { prices })
+            this.eventEmitterService.emit(
+                EventName.PricesUpdated,
+                prices.map(
+                    price => 
+                        ({
+                            tokenId: price.symbol,
+                            price: price.price,
+                        }))
+            )
         } catch (err) {
             this.winston.error("Gate.REST.Error", {
                 symbols: this.symbols,

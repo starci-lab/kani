@@ -9,6 +9,7 @@ import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { TrendAnalyzerService } from "./trend-analyzer.service"
 import { CacheModule, CacheType } from "@modules/cache"
 import { GateModule } from "./gate"
+import { EventModule, EventType } from "@modules/event"
 
 @Module({})
 export class PriceModule extends ConfigurableModuleClass {
@@ -28,6 +29,10 @@ export class PriceModule extends ConfigurableModuleClass {
             CacheModule.register({
                 isGlobal: options.isGlobal,
                 types: [CacheType.Memory]
+            }),
+            EventModule.register({
+                isGlobal: options.isGlobal,
+                types: [EventType.Internal]
             })
         ] : []
         const modules = [
