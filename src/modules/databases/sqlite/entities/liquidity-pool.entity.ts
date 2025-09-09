@@ -5,6 +5,7 @@ import { TokenEntity } from "./token.entity"
 import { DexEntity } from "./dex.entity"
 import { DexId, LiquidityPoolId, TokenId } from "../../enums"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
+import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
 
 @Entity({ name: "lp_pools" })
 export class LiquidityPoolEntity extends StringAbstractEntity {
@@ -47,4 +48,7 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
     // Assigned users per chain
     @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.pool)
         assignedUsers: Array<AssignedLiquidityPoolEntity>
+
+    @OneToMany(() => AddedLiquidityPoolEntity, (addedLiquidityPool) => addedLiquidityPool.pool) 
+        addedUsers: Array<AddedLiquidityPoolEntity>
 }

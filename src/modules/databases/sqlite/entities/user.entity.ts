@@ -5,6 +5,8 @@ import { UserCummulativeEntity } from "./user-cummulative.entity"
 import { TokenEntity } from "./token.entity"
 import { TokenId } from "@modules/databases"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
+import { WalletEntity } from "./wallet.entity"
+import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
 
 @Entity({ name: "users" })
 export class UserEntity extends UuidAbstractEntity {
@@ -24,34 +26,21 @@ export class UserEntity extends UuidAbstractEntity {
     @Column({ type: "boolean", default: false, name: "exit_to_usdc" })
         exitToUsdc: boolean
 
-    @Column({ type: "text", nullable: true, name: "sui_wallet_account_address" })
-        suiWalletAccountAddress?: string
-
-    @Column({ type: "text", nullable: true, name: "sui_wallet_encrypted_private_key" })
-        suiWalletEncryptedPrivateKey?: string
-
-    @Column({ type: "text", nullable: true, name: "evm_wallet_account_address" })
-        evmWalletAccountAddress?: string
-
-    @Column({ type: "text", nullable: true, name: "evm_wallet_encrypted_private_key" })
-        evmWalletEncryptedPrivateKey?: string
-
-    @Column({ type: "text", nullable: true, name: "solana_wallet_account_address" })
-        solanaWalletAccountAddress?: string
-
-    @Column({ type: "text", nullable: true, name: "solana_wallet_encrypted_private_key" })
-        solanaWalletEncryptedPrivateKey?: string
+    @OneToMany(() => WalletEntity, (wallet) => wallet.user)
+        wallets: Array<WalletEntity>
 
     @Column({ type: "boolean", default: true, name: "is_active" })
         isActive: boolean
 
-    // assigned pools mean that, when user is created, they will assigned to 3 of the among pools
-    // this can equally distribute the users into various pools
-    @OneToMany(() => AssignedLiquidityPoolEntity, (pool) => pool.suiUser)
-        assignedSuiPools: Array<AssignedLiquidityPoolEntity>
+    @OneToMany(
+        () => AssignedLiquidityPoolEntity,
+        (assignedLiquidityPool) => assignedLiquidityPool.user,
+    )
+        assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>
 
-    @OneToMany(() => AssignedLiquidityPoolEntity, (pool) => pool.solanaUser)
-        assignedSolanaPools: Array<AssignedLiquidityPoolEntity>
+    @OneToMany(
+        () => AddedLiquidityPoolEntity,
+        (addedLiquidityPool) => addedLiquidityPool.user,
+    )
+        addedLiquidityPools: Array<AddedLiquidityPoolEntity>
 }
-
-

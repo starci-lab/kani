@@ -24,3 +24,26 @@ registerEnumType(GraphQLTypeOauthProviderName, {
         }
     }
 })
+
+export enum WalletType {
+    Sui = "sui",
+    Evm = "evm",
+    Solana = "solana",
+}
+export const GraphQLTypeWalletType = createEnumType(WalletType)
+
+registerEnumType(GraphQLTypeWalletType, {
+    name: "WalletType",
+    description: "The type of the wallet",
+    valuesMap: {
+        [WalletType.Sui]: {
+            description: "The sui wallet"
+        },
+        [WalletType.Evm]: {
+            description: "The evm wallet"
+        },
+        [WalletType.Solana]: {
+            description: "The solana wallet"
+        }
+    }
+})
