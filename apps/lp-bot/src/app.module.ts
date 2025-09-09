@@ -3,16 +3,19 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./app.module-definition"
 import { envConfig, EnvModule, LpBotType } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
-import { PriceModule, LiquidityPoolsModule, KeypairsModule } from "@modules/blockchains"
+import { 
+    PriceModule, 
+    LiquidityPoolsModule, 
+    KeypairsModule
+} from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { MongooseModule, SqliteModule } from "@modules/databases"
-import { EventModule } from "@modules/event"
+import { EventModule, EventType } from "@modules/event"
 import { CacheModule, CacheType } from "@modules/cache"
-import { EventType } from "@modules/event/types"
-import { PriceFetcherModule } from "@features/fetchers"
+import { PoolFetcherModule, PriceFetcherModule } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
-import { DataLikeModule, UserFetcherModule } from "@features/fetchers"
+import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -87,15 +90,15 @@ export class AppModule extends ConfigurableModuleClass {
 
         modules.push(
             ...[
-                UserFetcherModule.register({
+                UserLoaderModule.register({
                     isGlobal: true,
                 }),
                 DataLikeModule.register({
                     isGlobal: true,
                 }),
-                // PoolFetcherModule.register({
-                //     isGlobal: true,
-                // }),
+                PoolFetcherModule.register({
+                    isGlobal: true,
+                }),
             ],
         )
         if (envConfig().lpBot.enablePriceFetcher) {

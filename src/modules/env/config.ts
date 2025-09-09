@@ -80,12 +80,20 @@ export const envConfig = () => ({
     },
     rpcs: {
         [ChainId.Sui]: {
-            [Network.Mainnet]: process.env.SUI_RPC_URL || "https://fullnode.mainnet.sui.io:443",
-            [Network.Testnet]: process.env.SUI_RPC_URL_TESTNET || "https://fullnode.testnet.sui.io:443",
+            [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
+                process.env[`SUI_RPC_URL_${i + 1}`] || ""
+            ).filter(Boolean),
+            [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
+                process.env[`SUI_RPC_URL_${i + 1}_TESTNET`] || ""
+            ).filter(Boolean),
         },
         [ChainId.Solana]: {
-            [Network.Mainnet]: process.env.SOLANA_RPC_URL || "https://fullnode.mainnet.solana.io:443",
-            [Network.Testnet]: process.env.SOLANA_RPC_URL_TESTNET || "https://fullnode.testnet.solana.io:443",
+            [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
+                process.env[`SOLANA_RPC_URL_${i + 1}`] || ""
+            ).filter(Boolean),
+            [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
+                process.env[`SOLANA_RPC_URL_${i + 1}_TESTNET`] || ""
+            ).filter(Boolean),
         },
     },
     lpBot: {

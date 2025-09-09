@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { InjectTurbosClmmSdks } from "./turbos.decorators"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, toI32 } from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
 import {
     FetchedPool,
@@ -13,61 +13,63 @@ import { DexId } from "@modules/databases"
 @Injectable()
 export class TurbosFetcherService implements IFetchService {
     constructor(
-        @InjectTurbosClmmSdks()
-        private readonly turbosClmmSdks: Record<Network, TurbosSdk>,
-    ) { }
+    @InjectTurbosClmmSdks()
+    private readonly turbosClmmSdks: Record<Network, TurbosSdk>,
+    ) {}
 
     async fetchPools({
         liquidityPools,
         tokens,
         network = Network.Mainnet,
     }: FetchPoolsParams): Promise<FetchPoolsResponse> {
-        // skip testnet
+    // skip testnet
         if (network === Network.Testnet) {
             throw new Error("Testnet is not supported")
         }
         // liquidity in sui network only
         liquidityPools = liquidityPools.filter(
-            (liquidityPool) => 
-                liquidityPool.dexId === DexId.Turbos
-                && liquidityPool.network === network
-                && liquidityPool.chainId === ChainId.Sui,
+            (liquidityPool) =>
+                liquidityPool.dexId === DexId.Turbos &&
+        liquidityPool.network === network &&
+        liquidityPool.chainId === ChainId.Sui,
         )
         const turbosClmmSdk = this.turbosClmmSdks[network]
         const pools: Array<FetchedPool> = []
-        let fetchedPools = await turbosClmmSdk.pool.getPools()
-        fetchedPools = fetchedPools.filter(
-            (pool) => liquidityPools.some(
-                (liquidityPool) => liquidityPool.poolAddress === pool.id.id
+        for (const liquidityPool of liquidityPools) {
+            const fetchedPool = await turbosClmmSdk.pool.getPool(
+                liquidityPool.poolAddress,
             )
-        )
-        pools.push(
-            ...fetchedPools.map((pool) => ({
-                id: pool.id.id,
-                currentTick: Number(pool.tick_current_index),
-                currentSqrtPrice: Number(pool.sqrt_price),
-                tickSpacing: Number(pool.tick_spacing),
+            pools.push({
+                id: fetchedPool.id.id,
+                currentTick: toI32(fetchedPool.tick_current_index.fields.bits),
+                currentSqrtPrice: Number(fetchedPool.sqrt_price),
+                tickSpacing: Number(fetchedPool.tick_spacing),
+                fee: Number(fetchedPool.fee),
                 token0: tokens.find(
                     (token) =>
-                        token.tokenAddress === pool.coin_a && token.network === network && token.chainId === ChainId.Sui,
+                        token.tokenAddress === fetchedPool.coin_a &&
+            token.network === network &&
+            token.chainId === ChainId.Sui,
                 )!,
                 token1: tokens.find(
                     (token) =>
-                        token.tokenAddress === pool.coin_b && token.network === network && token.chainId === ChainId.Sui,
+                        token.tokenAddress === fetchedPool.coin_b &&
+            token.network === network &&
+            token.chainId === ChainId.Sui
+            
                 )!,
-                rewardTokens: pool.reward_infos
+                rewardTokens: fetchedPool.reward_infos
                     .map((rewarderInfo) => rewarderInfo.fields.vault_coin_type)
                     .map(
                         (rewardTokenAddress) =>
-                            tokens.find(
-                                (token) =>
-                                    token.tokenAddress === rewardTokenAddress &&
-                                    token.network === network,
-                            )!,
+              tokens.find(
+                  (token) =>
+                      token.tokenAddress === rewardTokenAddress &&
+                  token.network === network,
+              )!,
                     ),
-            })),
-        )
-
+            })
+        }
         return { pools }
     }
 }

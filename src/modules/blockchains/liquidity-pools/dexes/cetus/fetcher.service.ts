@@ -8,6 +8,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
+import { DexId } from "@modules/databases"
 
 @Injectable()
 export class CetusFetcherService implements IFetchService {
@@ -28,8 +29,9 @@ export class CetusFetcherService implements IFetchService {
         // liquidity in sui network only
         liquidityPools = liquidityPools.filter(
             (liquidityPool) => 
-                liquidityPool.network === network
-                && liquidityPool.chainId === ChainId.Sui,
+                liquidityPool.dexId === DexId.Cetus
+                && liquidityPool.network === network
+                && liquidityPool.chainId === ChainId.Sui
         )
         const cetusClmmSdk = this.cetusClmmSdks[network]
         const pools: Array<FetchedPool> = []
@@ -38,13 +40,13 @@ export class CetusFetcherService implements IFetchService {
                 (liquidityPool) => liquidityPool.poolAddress,
             )
         )
-
         pools.push(
             ...fetchedPools.map((pool) => ({
                 id: pool.poolAddress,
                 currentTick: Number(pool.current_tick_index),
                 currentSqrtPrice: Number(pool.current_sqrt_price),
                 tickSpacing: Number(pool.tickSpacing),
+                fee: Number(pool.fee_rate),
                 token0: tokens.find(
                     (token) =>
                         token.tokenAddress === pool.coinTypeA && token.network === network && token.chainId === ChainId.Sui,
@@ -53,7 +55,7 @@ export class CetusFetcherService implements IFetchService {
                     (token) =>
                         token.tokenAddress === pool.coinTypeB && token.network === network && token.chainId === ChainId.Sui,
                 )!,
-                rewardTokens: pool.rewarder_infos
+                rewardTokens: (pool.rewarder_infos ?? [])
                     .map((rewarderInfo) => rewarderInfo.coinAddress)
                     .map(
                         (rewardTokenAddress) =>

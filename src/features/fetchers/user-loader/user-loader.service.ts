@@ -17,7 +17,7 @@ import { KeypairsService } from "@modules/blockchains"
 import { ChainId } from "@modules/common"
 
 @Injectable()
-export class UserFetcherService implements OnModuleInit, OnApplicationBootstrap {
+export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
     private connection: Connection
     private dataSource: DataSource
     public users: Array<UserLike> = []

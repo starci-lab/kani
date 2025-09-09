@@ -7,15 +7,17 @@ import { utilities, WinstonModule as NestWinstonModule } from "nest-winston"
 import winston from "winston"
 import LokiTransport from "winston-loki"
 import { envConfig } from "@modules/env"
+import { WinstonLogType } from "./types"
 
 @Module({})
 export class WinstonModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE) {
         const dynamicModule = super.register(options)
-        const winstonModule = NestWinstonModule.forRoot({
-            level: options.level,
-            transports: [
-                // write to console
+        const logTypes = options.logTypes
+        const transports: Array<winston.transport> = []
+
+        if (!logTypes || logTypes.includes(WinstonLogType.Console)) {
+            transports.push(
                 new winston.transports.Console({
                     format: winston.format.combine(
                         winston.format.timestamp(),
@@ -28,7 +30,10 @@ export class WinstonModule extends ConfigurableModuleClass {
                         }),
                     ),
                 }),
-                // write to loki
+            )
+        }
+        if (!logTypes || logTypes.includes(WinstonLogType.Loki)) {
+            transports.push(
                 new LokiTransport({
                     host: envConfig().loki.host,
                     json: true,
@@ -45,7 +50,11 @@ export class WinstonModule extends ConfigurableModuleClass {
                         ? `${envConfig().loki.username}:${envConfig().loki.password}`
                         : undefined,
                 }),
-            ],
+            )
+        }
+        const winstonModule = NestWinstonModule.forRoot({
+            level: options.level,
+            transports
         })
         return {
             ...dynamicModule,

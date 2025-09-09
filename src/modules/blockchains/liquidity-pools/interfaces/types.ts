@@ -7,6 +7,7 @@ export interface FetchedPool {
     tickSpacing: number
     token0: TokenLike
     token1: TokenLike
+    fee: number
     rewardTokens: Array<TokenLike>
 }
 

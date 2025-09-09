@@ -11,7 +11,8 @@ export const createCetusClmmSdkProvider = (): Provider<Record<Network, CetusClmm
     provide: CETUS_CLMM_SDKS,
     useFactory: () => {
         const createClient = (network: Network) => initCetusSDK({
-            fullNodeUrl: envConfig().rpcs[ChainId.Sui][network],
+            // we use default rpc for cetus
+            fullNodeUrl: envConfig().rpcs[ChainId.Sui][network][0],
             network,
         })
         return {

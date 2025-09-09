@@ -1,0 +1,1 @@
+export const toI32 = (bits: number) => bits > 0x7fffffff ? bits - 0x100000000 : bits

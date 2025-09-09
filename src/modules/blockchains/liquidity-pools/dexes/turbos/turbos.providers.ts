@@ -16,7 +16,8 @@ export const createTurbosClmmSdkProvider = (): Provider<
             : TurbosNetwork.testnet
             return new TurbosSdk(turbosNetwork, {
                 network: turbosNetwork,
-                url: envConfig().rpcs[ChainId.Sui][network],
+                // we use zan for turbos
+                url: envConfig().rpcs[ChainId.Sui][network][1],
             })
         }
         return {

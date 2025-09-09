@@ -29,8 +29,8 @@ export class FetcherService {
         this.dataLikeService = this.moduleRef.get(DataLikeService,{strict: false})
     }
 
-    // we fetch pools each 3s
-    @Cron("*/3 * * * * *")
+    // we fetch pools each 5s
+    @Cron("*/5 * * * * *")
     async fetchPools() {
         Object.values(ChainId).flatMap((chainId) =>
             Object.values(Network).map(async (network) => {
@@ -64,7 +64,13 @@ export class FetcherService {
                     chainId,
                     dex: dex.dexId,
                     network,
-                    poolCount: pools.length,
+                    pools: pools.map(
+                        pool => ({
+                            poolAddress: pool.id,
+                            currentSqrtPrice: pool.currentSqrtPrice,
+                            currentTick: pool.currentTick,
+                        })
+                    ),
                 })
             // we store in cache
             await this.cacheManager.set(

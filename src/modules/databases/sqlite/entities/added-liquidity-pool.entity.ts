@@ -32,4 +32,10 @@ export class AddedLiquidityPoolEntity extends UuidAbstractEntity {
 
     @Column({ type: "numeric", nullable: true, name: "amount_to_add" })
         amountToAdd?: string
+
+    @Column({ type: "numeric", nullable: true, name: "price_lower" })
+        priceLower?: string
+
+    @Column({ type: "numeric", nullable: true, name: "price_upper" })
+        priceUpper?: string
 }
