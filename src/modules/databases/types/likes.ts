@@ -125,7 +125,7 @@ export interface AssignedLiquidityPoolLike extends BaseLike {
     pool?: LiquidityPoolLike
 }
 
-export interface UserAllocationLike extends BaseLike {
+export interface UserLike extends BaseLike {
     /** The user who allocated capital */
     userId: string
 
@@ -135,22 +135,14 @@ export interface UserAllocationLike extends BaseLike {
     /** The cumulative capital and PnL of the user */
     cummulatives: Array<UserCummulativeLike>
 
-    /** The token that the user has prioritized */
-    priorityTokenId: TokenId
-    priorityToken?: TokenLike
-
     /** Whether the user wants to auto-exit to USDC when dump is triggered */
     exitToUsdc: boolean
-
     /** The Sui wallet linked to this allocation */
     suiWallet?: UserWalletLike
-
     /** The EVM-compatible wallet (Ethereum, BSC, etc.) linked to this allocation */
     evmWallet?: UserWalletLike
-
     /** The Solana wallet linked to this allocation */
     solanaWallet?: UserWalletLike
-
     /** The pools that the user is assigned to */
     assignedSuiPools: Array<AssignedLiquidityPoolLike>
     assignedSolanaPools: Array<AssignedLiquidityPoolLike>

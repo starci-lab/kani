@@ -1,8 +1,7 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
+import { Column, Entity, OneToMany } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { UserDepositEntity } from "./user-deposit.entity"
 import { UserCummulativeEntity } from "./user-cummulative.entity"
-import { TokenEntity } from "./token.entity"
 import { TokenId } from "@modules/databases"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { WalletEntity } from "./wallet.entity"
@@ -16,17 +15,15 @@ export class UserEntity extends UuidAbstractEntity {
     @OneToMany(() => UserCummulativeEntity, (cum) => cum.allocation)
         cummulatives: Array<UserCummulativeEntity>
 
-    @ManyToOne(() => TokenEntity, { nullable: true })
-    @JoinColumn({ name: "priority_token_id" })
-        priorityToken?: TokenEntity
-
     @Column({ type: "text", nullable: true, name: "priority_token_id" })
         priorityTokenId?: TokenId
 
     @Column({ type: "boolean", default: false, name: "exit_to_usdc" })
         exitToUsdc: boolean
 
-    @OneToMany(() => WalletEntity, (wallet) => wallet.user)
+    @OneToMany(() => WalletEntity, (wallet) => wallet.user, 
+        { cascade: ["insert", "update"] }
+    )
         wallets: Array<WalletEntity>
 
     @Column({ type: "boolean", default: true, name: "is_active" })
@@ -35,6 +32,7 @@ export class UserEntity extends UuidAbstractEntity {
     @OneToMany(
         () => AssignedLiquidityPoolEntity,
         (assignedLiquidityPool) => assignedLiquidityPool.user,
+        { cascade: ["insert", "update"] }
     )
         assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>
 

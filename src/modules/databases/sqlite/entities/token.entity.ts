@@ -28,6 +28,7 @@ export class TokenEntity extends StringAbstractEntity {
 
     @Column({ type: "text", name: "cex_symbols", nullable: true })
         cexSymbolsRaw: string
+        
     @Column({ type: "text", name: "icon_url" })
         iconUrl: string
 

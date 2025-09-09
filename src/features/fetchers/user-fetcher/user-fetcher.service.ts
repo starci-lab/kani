@@ -3,13 +3,14 @@ import {
     InstanceSchema, 
     LiquidityPoolEntity, 
     TokenId, 
-    UserAllocationLike, 
-    UserEntity
+    UserLike, 
+    UserEntity,
+    WalletType
 } from "@modules/databases"
 import { envConfig, LpBotType } from "@modules/env"
 import { Connection } from "mongoose"
 import { ModuleRef } from "@nestjs/core"
-import { DataSource } from "typeorm"
+import { DataSource, DeepPartial, FindOptionsWhere } from "typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
@@ -19,7 +20,7 @@ import { ChainId } from "@modules/common"
 export class UserFetcherService implements OnModuleInit, OnApplicationBootstrap {
     private connection: Connection
     private dataSource: DataSource
-    public userAllocations: Array<UserAllocationLike> = []
+    public users: Array<UserLike> = []
     constructor(
         private readonly keypairsService: KeypairsService,
         private readonly moduleRef: ModuleRef,
@@ -39,27 +40,26 @@ export class UserFetcherService implements OnModuleInit, OnApplicationBootstrap 
     }
 
     async onApplicationBootstrap() {
-        this.userAllocations = await this.fetchUserAllocations()
+        this.users = await this.fetchUsers()
     }
 
-    async fetchUserAllocations(): Promise<Array<UserAllocationLike>> {
+    async fetchUsers(): Promise<Array<UserLike>> {
         if (envConfig().lpBot.type === LpBotType.System) {
             const userId = envConfig().lpBot.userId
-            let user: UserEntity | null = null
+            // we will use this condition to find the user
+            const whereCondition: FindOptionsWhere<UserEntity> = {}
             if (userId) {
-                user = await this.dataSource.manager.findOne(UserEntity, {
-                    where: {
-                        id: userId,
-                    },
-                })
+                whereCondition.id = userId
             } else {
-                //find the active user
-                user = await this.dataSource.manager.findOne(UserEntity, {
-                    where: {
-                        isActive: true,
-                    },
-                })
+                whereCondition.isActive = true
             }
+            let user = await this.dataSource.manager.findOne(UserEntity, {
+                where: whereCondition,
+                relations: {
+                    wallets: true,
+                    assignedLiquidityPools: true,
+                },
+            })
             if (!user) {
                 // create user
                 const keypairs = await this.keypairsService.generateKeypairs()
@@ -71,46 +71,64 @@ export class UserFetcherService implements OnModuleInit, OnApplicationBootstrap 
                         }
                     })
                 const randomSuiPools = suiPools.sort(() => Math.random() - 0.5).slice(0, 3)
+                const userData: DeepPartial<UserEntity> = {
+                    id: userId,
+                    exitToUsdc: envConfig().lpBot.exitToUsdc,
+                    priorityTokenId: envConfig().lpBot.priorityToken as TokenId || TokenId.SuiUsdc,
+                    cummulatives: [],
+                    deposits: [],
+                    wallets: [  
+                        {
+                            type: WalletType.Evm,
+                            accountAddress: keypairs.evmKeypair.publicKey,
+                            encryptedPrivateKey: keypairs.evmKeypair.encryptedPrivateKey,
+                        },
+                        {
+                            type: WalletType.Sui,
+                            accountAddress: keypairs.suiKeypair.publicKey,
+                            encryptedPrivateKey: keypairs.suiKeypair.encryptedPrivateKey,
+                        },
+                        {
+                            type: WalletType.Solana,
+                            accountAddress: keypairs.solanaKeypair.publicKey,
+                            encryptedPrivateKey: keypairs.solanaKeypair.encryptedPrivateKey,
+                        },
+                    ],
+                    isActive: true,
+                    assignedLiquidityPools: 
+                    [
+                        ...randomSuiPools.map((pool) => ({
+                            pool,
+                            chain: ChainId.Sui,
+                        })),
+                    ]
+                }
                 user = await this.dataSource.manager.save(
                     UserEntity,
-                    {
-                        id: userId,
-                        exitToUsdc: envConfig().lpBot.exitToUsdc,
-                        priorityTokenId: envConfig().lpBot.priorityToken as TokenId || TokenId.SuiUsdc,
-                        cummulatives: [],
-                        deposits: [],
-                        evmWalletAccountAddress: keypairs.evmKeypair.publicKey,
-                        evmWalletEncryptedPrivateKey: keypairs.evmKeypair.encryptedPrivateKey,
-                        suiWalletAccountAddress: keypairs.suiKeypair.publicKey,
-                        suiWalletEncryptedPrivateKey: keypairs.suiKeypair.encryptedPrivateKey,
-                        solanaWalletAccountAddress: keypairs.solanaKeypair.publicKey,
-                        solanaWalletEncryptedPrivateKey: keypairs.solanaKeypair.encryptedPrivateKey,
-                        isActive: true,
-                        assignedSuiPools: randomSuiPools,
-                        assignedSolanaPools: [],
-                    })
+                    userData,
+                )
             }
+            const getWallet = (type: WalletType) => user.wallets.find((wallet) => wallet.type === type)
             return [
                 {
                     ...user,
                     solanaWallet: {
-                        accountAddress: user.solanaWalletAccountAddress || "",
-                        encryptedPrivateKey: user.solanaWalletEncryptedPrivateKey || "",
+                        accountAddress: getWallet(WalletType.Solana)?.accountAddress || "",
+                        encryptedPrivateKey: getWallet(WalletType.Solana)?.encryptedPrivateKey || "",
                     },
                     suiWallet: {
-                        accountAddress: user.suiWalletAccountAddress || "",
-                        encryptedPrivateKey: user.suiWalletEncryptedPrivateKey || "",
+                        accountAddress: getWallet(WalletType.Sui)?.accountAddress || "",
+                        encryptedPrivateKey: getWallet(WalletType.Sui)?.encryptedPrivateKey || "",
                     },
                     evmWallet: {
-                        accountAddress: user.evmWalletAccountAddress || "",
-                        encryptedPrivateKey: user.evmWalletEncryptedPrivateKey || "",
+                        accountAddress: getWallet(WalletType.Evm)?.accountAddress || "",
+                        encryptedPrivateKey: getWallet(WalletType.Evm)?.encryptedPrivateKey || "",
                     },
-                    priorityTokenId: user.priorityTokenId || TokenId.SuiUsdc,
                     userId: user.id,
-                    assignedSuiPools: user.assignedSuiPools.map((pool) => ({
+                    assignedSuiPools: user.assignedLiquidityPools.map((pool) => ({
                         poolId: pool.id,
                     })),
-                    assignedSolanaPools: user.assignedSolanaPools.map((pool) => ({
+                    assignedSolanaPools: user.assignedLiquidityPools.map((pool) => ({
                         poolId: pool.id,
                     })),       
                 }

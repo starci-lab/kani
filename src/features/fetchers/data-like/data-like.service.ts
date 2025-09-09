@@ -1,5 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { DexEntity, DexLike, LiquidityPoolEntity, LiquidityPoolLike, MemDbQueryService, MemDbService, TokenEntity, TokenLike } from "@modules/databases"
+import { 
+    DexEntity, 
+    DexLike, 
+    LiquidityPoolEntity, 
+    LiquidityPoolLike, 
+    MemDbQueryService, 
+    MemDbService, 
+    TokenEntity, 
+    TokenLike
+} from "@modules/databases"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { ModuleRef } from "@nestjs/core"
 import { envConfig, LpBotType } from "@modules/env"
