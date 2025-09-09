@@ -35,10 +35,7 @@ export class GateProcessorService implements OnModuleDestroy {
         })
     }
 
-    initialize(
-        tokenIds: Array<TokenId>,
-        tokens: Array<TokenLike>
-    ) {
+    initialize(tokenIds: Array<TokenId>, tokens: Array<TokenLike>) {
         this.tokens = tokens
         this.symbols = tokens
             .map((token) => token.cexSymbols[CexId.Gate])
@@ -86,21 +83,29 @@ export class GateProcessorService implements OnModuleDestroy {
                 createCacheKey(CacheKey.TokenPriceData, token.displayId),
                 { price: lastPrice },
             )
-            this.eventEmitterService.emit(
-                EventName.PricesUpdated,
-                [{
+            this.eventEmitterService.emit(EventName.PricesUpdated, [
+                {
                     tokenId: token.displayId,
                     price: lastPrice,
-                }]
-            )
+                },
+            ])
         })
     }
 
   @Cron("*/3 * * * * *")
     async fetchRestSnapshot() {
         if (this.tokens.length === 0) return
+        const tokens = this.tokens.filter((token) => token.cexSymbols[CexId.Gate])
         try {
-            const prices = await this.rest.getPrices(this.symbols as Array<string>)
+            const prices = await Promise.all(
+                this.symbols.map(async (symbol) => {
+                    const { price } = await this.rest.getPrice(symbol)
+                    return {
+                        symbol,
+                        price: price,
+                    }
+                }),
+            )
 
             if (typeof this.cacheManager.mset === "function") {
                 await this.cacheManager.mset(
@@ -120,16 +125,16 @@ export class GateProcessorService implements OnModuleDestroy {
             this.winston.debug("Gate.REST.Snapshot", { prices })
             this.eventEmitterService.emit(
                 EventName.PricesUpdated,
-                prices.map(
-                    price => 
-                        ({
-                            tokenId: price.symbol,
-                            price: price.price,
-                        }))
+                prices.map((price) => ({
+                    tokenId: tokens.find(
+                        (token) => token.cexSymbols[CexId.Gate] === price.symbol,
+                    )?.displayId,
+                    price: price.price,
+                })),
             )
         } catch (err) {
             this.winston.error("Gate.REST.Error", {
-                symbols: this.symbols,
+                symbols: tokens.map((token) => token.cexSymbols[CexId.Gate]),
                 error: (err as Error).message,
             })
         }
@@ -139,5 +144,3 @@ export class GateProcessorService implements OnModuleDestroy {
       this.ws.onModuleDestroy()
   }
 }
-
-

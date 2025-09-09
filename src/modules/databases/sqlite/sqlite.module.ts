@@ -5,7 +5,7 @@ import {
     OPTIONS_TYPE,
 } from "./sqlite.module-definition"
 import { envConfig } from "@modules/env"
-import { SeedersModule } from "./seeders"
+import { SqliteSeedersModule } from "./seeders"
 import {
     TokenEntity,
     DexEntity,
@@ -28,7 +28,7 @@ export class SqliteModule extends ConfigurableModuleClass {
         const extraModules: Array<DynamicModule> = []
         if (options.withSeeders) {
             extraModules.push(
-                SeedersModule.register({
+                SqliteSeedersModule.register({
                     isGlobal: options.isGlobal,
                 }),
             )

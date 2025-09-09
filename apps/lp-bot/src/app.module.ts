@@ -12,7 +12,7 @@ import { CacheModule, CacheType } from "@modules/cache"
 import { EventType } from "@modules/event/types"
 import { PriceFetcherModule } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
-import { DataLikeModule, PoolFetcherModule, UserFetcherModule } from "@features/fetchers"
+import { DataLikeModule, UserFetcherModule } from "@features/fetchers"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -93,9 +93,9 @@ export class AppModule extends ConfigurableModuleClass {
                 DataLikeModule.register({
                     isGlobal: true,
                 }),
-                PoolFetcherModule.register({
-                    isGlobal: true,
-                }),
+                // PoolFetcherModule.register({
+                //     isGlobal: true,
+                // }),
             ],
         )
         if (envConfig().lpBot.enablePriceFetcher) {

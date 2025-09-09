@@ -22,7 +22,7 @@ export interface WsTicker {
 export class BinanceWsService implements OnModuleDestroy {
     private readonly logger = new Logger(BinanceWsService.name)
     private readonly wsBase = "wss://stream.binance.com:9443/ws"
-    private ws: WebSocket | null = null
+    private sockets: Map<string, WebSocket> = new Map()
 
     /**
    * Subscribe to order book stream with auto-reconnect
@@ -49,17 +49,20 @@ export class BinanceWsService implements OnModuleDestroy {
     }
 
     /**
-   * Handle connection + auto-reconnect
+   * Create and manage a websocket connection for one stream
    */
     private connect<T>(streamName: string, onMessage: (data: T) => void) {
         const url = `${this.wsBase}/${streamName}`
-        this.ws = new WebSocket(url)
+        const ws = new WebSocket(url)
 
-        this.ws.on("open", () => {
-            this.logger.log(`Connected to Binance WS: ${streamName}`)
+        this.sockets.set(streamName, ws)
+
+        ws.on("open", () => {
+            this.logger.log(`✅ Connected to Binance WS: ${streamName}`)
+            this.startHeartbeat(ws)
         })
 
-        this.ws.on("message", (raw: WebSocket.RawData) => {
+        ws.on("message", (raw: WebSocket.RawData) => {
             try {
                 const data = JSON.parse(raw.toString())
                 onMessage(data)
@@ -68,21 +71,40 @@ export class BinanceWsService implements OnModuleDestroy {
             }
         })
 
-        this.ws.on("close", () => {
-            this.logger.warn(`Binance WS closed: ${streamName}, retrying in 1s...`)
+        ws.on("close", () => {
+            this.logger.warn(`❌ Binance WS closed: ${streamName}, retrying in 1s...`)
+            this.sockets.delete(streamName)
             setTimeout(() => this.connect(streamName, onMessage), 1000)
         })
 
-        this.ws.on("error", (err) => {
+        ws.on("error", (err) => {
             this.logger.error(`WS error (${streamName}):`, err)
-            this.ws?.close() // trigger close → reconnect
+            ws.close() // trigger close → reconnect
         })
     }
 
+    /**
+   * Heartbeat to keep connection alive
+   */
+    private startHeartbeat(ws: WebSocket) {
+        const interval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.ping()
+            }
+        }, 30_000)
+
+        ws.on("close", () => clearInterval(interval))
+        ws.on("error", () => clearInterval(interval))
+    }
+
+    /**
+   * Close all sockets when app stops
+   */
     onModuleDestroy() {
-        if (this.ws) {
-            this.ws.close()
-            this.ws = null
+        for (const [streamName, ws] of this.sockets) {
+            this.logger.log(`Closing WS: ${streamName}`)
+            ws.close()
         }
+        this.sockets.clear()
     }
 }

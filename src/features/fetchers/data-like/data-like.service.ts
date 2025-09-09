@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { 
     DexEntity, 
     DexLike, 
@@ -14,25 +14,31 @@ import { ModuleRef } from "@nestjs/core"
 import { envConfig, LpBotType } from "@modules/env"
 
 @Injectable()
-export class DataLikeService {
+export class DataLikeService implements OnApplicationBootstrap {
+    // a boolean to check whether the data is loaded
+    public loaded = false
+
     public tokens: Array<TokenLike> = []
     public dexes: Array<DexLike> = []
     public liquidityPools: Array<LiquidityPoolLike> = []
+
     constructor(
         private readonly moduleRef: ModuleRef,
     ) {}
 
-    async onModuleInit() {
+    async onApplicationBootstrap() {
+        // load data
         switch (envConfig().lpBot.type) {
         case LpBotType.UserBased: {
-            this.loadFromMongo()
+            await this.loadFromMongo()
             break
         }
         case LpBotType.System: {
-            this.loadFromSqlite()
+            await this.loadFromSqlite()
             break
         }
         }
+        this.loaded = true
     }   
 
     private async loadFromMongo() {

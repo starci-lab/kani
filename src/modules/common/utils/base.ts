@@ -10,3 +10,19 @@ export const createObjectId = (id: string = v4()): Types.ObjectId => {
     }
     return new Types.ObjectId(hex)
 }
+
+export const waitUntil = async <T>(
+    condition: () => T|Promise<T>, 
+    timeout: number = 10000
+) => {
+    const startTime = Date.now()
+    while (Date.now() - startTime < timeout) {
+        const result = await condition()
+        if (result) {        
+            return result                  
+        }
+        await new Promise(resolve => setTimeout(resolve, 100)) 
+    }
+    return null                      
+}
+  

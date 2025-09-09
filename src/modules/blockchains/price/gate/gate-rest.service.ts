@@ -22,22 +22,6 @@ export class GateRestService {
     }
 
     /**
-   * Get latest spot prices for multiple symbols
-   * Gate uses base_quote (e.g., "SUI_USDT").
-   */
-    async getPrices(symbols: Array<string>): Promise<GatePriceResponse[]> {
-        const { data } = await this.axios.get(
-            `${this.restBase}/spot/tickers`,
-            { params: { currency_pair: symbols.join(",") } }
-        )
-
-        // Response example: [{ currency_pair: "SUI_USDT", last: "1.2345" }, ...]
-        return (data as Array<{ currency_pair: string; last: string }>)
-            .filter((item) => symbols.includes(item.currency_pair))
-            .map((item) => ({ symbol: item.currency_pair, price: parseFloat(item.last) }))
-    }
-
-    /**
    * Get latest spot price for a single symbol
    */
     async getPrice(symbol: string): Promise<GatePriceResponse> {

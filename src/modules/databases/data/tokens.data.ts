@@ -114,7 +114,7 @@ export const tokenData: Array<TokenLike> = [
         coinMarketCapId: "walrus-xyz",
         coinGeckoId: "walrus-2",
         cexSymbols: {
-            [CexId.Gate]: "WALRUS_USDT",
+            [CexId.Gate]: "WAL_USDT",
         },
         iconUrl:
       "https://assets.coingecko.com/coins/images/31453/large/Walrus.png",

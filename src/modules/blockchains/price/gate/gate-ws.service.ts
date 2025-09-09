@@ -15,52 +15,103 @@ export interface GateWsTicker {
 export class GateWsService implements OnModuleDestroy {
     private readonly logger = new Logger(GateWsService.name)
     private readonly wsBase = "wss://api.gateio.ws/ws/v4/"
-    private ws: WebSocket | null = null
+    private sockets: Map<string, WebSocket> = new Map()
+    private heartbeats: Map<string, NodeJS.Timeout> = new Map()
 
+    /**
+   * Subscribe ticker for one symbol (1 socket per symbol)
+   */
     subscribeTicker(symbol: string, onMessage: (data: GateWsTicker) => void) {
-        const payload = {
-            time: Math.floor(Date.now() / 1000),
-            channel: "spot.tickers",
-            event: "subscribe",
-            payload: [symbol],
+        const key = `spot.tickers:${symbol}`
+        if (this.sockets.has(key)) {
+            this.logger.warn(`Already subscribed: ${symbol}`)
+            return
         }
-        this.connect(payload, onMessage)
-    }
 
-    private connect<T>(subscribeMsg: unknown, onMessage: (data: T) => void) {
-        this.ws = new WebSocket(this.wsBase)
+        const ws = new WebSocket(this.wsBase)
+        this.sockets.set(key, ws)
 
-        this.ws.on("open", () => {
-            this.logger.log("Connected to Gate WS, subscribing...")
-            this.ws?.send(JSON.stringify(subscribeMsg))
+        ws.on("open", () => {
+            this.logger.log(`✅ Connected Gate WS for ${symbol}`)
+            const payload = {
+                time: Math.floor(Date.now() / 1000),
+                channel: "spot.tickers",
+                event: "subscribe",
+                payload: [symbol],
+            }
+            ws.send(JSON.stringify(payload))
+            this.startHeartbeat(key, ws)
         })
 
-        this.ws.on("message", (raw: WebSocket.RawData) => {
+        ws.on("message", (raw: WebSocket.RawData) => {
             try {
                 const data = JSON.parse(raw.toString())
-                onMessage(data)
+                if (data.channel === "spot.tickers") {
+                    onMessage(data)
+                }
             } catch (err) {
-                this.logger.error("WS parse error:", err)
+                this.logger.error(`WS parse error (${symbol}):`, err)
             }
         })
 
-        this.ws.on("close", () => {
-            this.logger.warn("Gate WS closed, retrying in 1s...")
-            setTimeout(() => this.connect(subscribeMsg, onMessage), 1000)
+        ws.on("close", () => {
+            this.logger.warn(`❌ Gate WS closed for ${symbol}, retrying in 1s...`)
+            this.stopHeartbeat(key)
+            this.sockets.delete(key)
+            setTimeout(() => this.subscribeTicker(symbol, onMessage), 1000)
         })
 
-        this.ws.on("error", (err) => {
-            this.logger.error("WS error:", err)
-            this.ws?.close()
+        ws.on("error", (err) => {
+            this.logger.error(`WS error (${symbol}):`, err)
+            ws.close()
         })
     }
 
-    onModuleDestroy() {
-        if (this.ws) {
-            this.ws.close()
-            this.ws = null
+    /**
+   * Unsubscribe (close socket) for one symbol
+   */
+    unsubscribeTicker(symbol: string) {
+        const key = `spot.tickers:${symbol}`
+        const ws = this.sockets.get(key)
+        if (ws) {
+            this.logger.log(`Unsubscribing ${symbol}`)
+            ws.close()
+            this.stopHeartbeat(key)
+            this.sockets.delete(key)
         }
     }
+
+    /**
+   * Heartbeat for each socket
+   */
+    private startHeartbeat(key: string, ws: WebSocket) {
+        this.stopHeartbeat(key)
+        const interval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.ping()
+            }
+        }, 30_000)
+        this.heartbeats.set(key, interval)
+    }
+
+    private stopHeartbeat(key: string) {
+        const interval = this.heartbeats.get(key)
+        if (interval) {
+            clearInterval(interval)
+            this.heartbeats.delete(key)
+        }
+    }
+
+    /**
+   * Cleanup all sockets
+   */
+    onModuleDestroy() {
+        for (const [key, ws] of this.sockets) {
+            this.logger.log(`Closing WS: ${key}`)
+            ws.close()
+            this.stopHeartbeat(key)
+        }
+        this.sockets.clear()
+        this.heartbeats.clear()
+    }
 }
-
-

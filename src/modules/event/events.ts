@@ -4,4 +4,5 @@ export enum EventName {
     PoolsUpdated = "poolsUpdated",
     LiquidityPoolsFetched = "liquidityPoolsFetched",
     PricesUpdated = "pricesUpdated",
+    DataSeeded = "dataSeeded",
 }

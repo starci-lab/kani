@@ -104,7 +104,7 @@ export const envConfig = () => ({
         // we use instanceId to identify the instance
         instanceId: process.env.LP_BOT_INSTANCE_ID,
         appName: process.env.APP_NAME || "lp-bot",
-        enablePriceFetcher: process.env.ENABLE_PRICE_FETCHER || false,
+        enablePriceFetcher: Boolean(process.env.ENABLE_PRICE_FETCHER) || true,
         suiWallet: {
             accountAddress: process.env.LP_BOT_WALLET_ACCOUNT_ADDRESS || "",
             encryptedPrivateKey: process.env.LP_BOT_SUI_WALLET_ENCRYPTED_PRIVATE_KEY || "",

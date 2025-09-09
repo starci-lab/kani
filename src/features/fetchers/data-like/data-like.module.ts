@@ -6,5 +6,8 @@ import { DataLikeService } from "./data-like.service"
     providers: [
         DataLikeService,
     ],
+    exports: [
+        DataLikeService
+    ]
 })
 export class DataLikeModule extends ConfigurableModuleClass {}

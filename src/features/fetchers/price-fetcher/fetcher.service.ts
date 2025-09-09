@@ -3,37 +3,35 @@ import {
     BinanceProcessorService,
     GateProcessorService,
 } from "@modules/blockchains"
-import { CacheHelpersService } from "@modules/cache"
+// import { CacheHelpersService } from "@modules/cache"
 // import { InjectWinston } from "@modules/winston"
 // import { Logger } from "winston"
 // import { EventEmitterService } from "@modules/event"
-import { Cache } from "cache-manager"
+// import { Cache } from "cache-manager"
 import { DataLikeService } from "../data-like"
 import { CexId } from "@modules/databases"
+import { waitUntil } from "@modules/common"
 // import { CoinMarketCapService, CoinGeckoService } from "@modules/blockchains"
 
 @Injectable()
 export class FetcherService implements OnApplicationBootstrap {
-    private readonly cacheManager: Cache
     constructor(
     private readonly dataLikeService: DataLikeService,
     private readonly binanceProcessorService: BinanceProcessorService,
     private readonly gateProcessorService: GateProcessorService,
-    private readonly cacheHelpersService: CacheHelpersService,
+    // private readonly cacheHelpersService: CacheHelpersService,
     // private readonly coinMarketCapService: CoinMarketCapService,
     // private readonly coinGeckoService: CoinGeckoService,
     // @InjectWinston()
     // private readonly logger: Logger,
     // private readonly eventEmitterService: EventEmitterService,
-    ) {
-        this.cacheManager = this.cacheHelpersService.getCacheManager({
-            autoSelect: true,
+    ) { }
+
+    async onApplicationBootstrap() {
+        await waitUntil(() => {
+            return this.dataLikeService.loaded
         })
-    }
-
-    onApplicationBootstrap() {
         const tokens = this.dataLikeService.tokens
-
         // fetch all tokens listed in Binance
         const binanceTokens = tokens.filter(
             (token) => token.whichCex === CexId.Binance,
@@ -42,7 +40,6 @@ export class FetcherService implements OnApplicationBootstrap {
             binanceTokens.map((token) => token.displayId),
             binanceTokens,
         )
-
         // fetch all tokens listed in Gate
         const gateTokens = tokens.filter((token) => token.whichCex === CexId.Gate)
         this.gateProcessorService.initialize(
