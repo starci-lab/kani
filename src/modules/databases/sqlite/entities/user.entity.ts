@@ -4,6 +4,7 @@ import { UserDepositEntity } from "./user-deposit.entity"
 import { UserCummulativeEntity } from "./user-cummulative.entity"
 import { TokenEntity } from "./token.entity"
 import { TokenId } from "@modules/databases"
+import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 
 @Entity({ name: "users" })
 export class UserEntity extends UuidAbstractEntity {
@@ -43,6 +44,14 @@ export class UserEntity extends UuidAbstractEntity {
 
     @Column({ type: "boolean", default: true, name: "is_active" })
         isActive: boolean
+
+    // assigned pools mean that, when user is created, they will assigned to 3 of the among pools
+    // this can equally distribute the users into various pools
+    @OneToMany(() => AssignedLiquidityPoolEntity, (pool) => pool.suiUser)
+        assignedSuiPools: Array<AssignedLiquidityPoolEntity>
+
+    @OneToMany(() => AssignedLiquidityPoolEntity, (pool) => pool.solanaUser)
+        assignedSolanaPools: Array<AssignedLiquidityPoolEntity>
 }
 
 

@@ -9,6 +9,13 @@ export const dexData: Array<DexLike> = [
         website: "https://cetus.zone/",
         iconUrl: "https://assets.coingecko.com/coins/images/32311/large/cetus.png",
     },
+    {
+        displayId: DexId.Turbos,
+        name: "Turbos",
+        description: "Turbos is a decentralized exchange on Sui.",
+        website: "https://turbos.finance/",
+        iconUrl: "https://assets.coingecko.com/coins/images/30671/large/token-turbos.png",
+    }
 ]
 
 

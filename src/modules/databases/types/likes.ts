@@ -1,5 +1,5 @@
 import { ChainId, Network } from "@modules/common"
-import { DexId, LiquidityPoolId, TokenId } from "../enums"
+import { CexId, DexId, LiquidityPoolId, TokenId } from "../enums"
 
 export interface BaseLike {
     id?: string
@@ -40,6 +40,9 @@ export interface TokenLike extends BaseLike {
 
     /** Network where this token is deployed */
     network: Network
+
+    /** Which Cex the token is listed */
+    cexIds: Array<CexId>
 }
 
 export interface DexLike extends BaseLike {
@@ -111,6 +114,12 @@ export interface UserWalletLike extends BaseLike {
     encryptedPrivateKey: string
 }
 
+export interface AssignedLiquidityPoolLike extends BaseLike {
+    /** The liquidity pool that the user is assigned to */
+    poolId: string
+    pool?: LiquidityPoolLike
+}
+
 export interface UserAllocationLike extends BaseLike {
     /** The user who allocated capital */
     userId: string
@@ -136,4 +145,8 @@ export interface UserAllocationLike extends BaseLike {
 
     /** The Solana wallet linked to this allocation */
     solanaWallet?: UserWalletLike
+
+    /** The pools that the user is assigned to */
+    assignedSuiPools: Array<AssignedLiquidityPoolLike>
+    assignedSolanaPools: Array<AssignedLiquidityPoolLike>
 }

@@ -7,8 +7,14 @@ import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./cache.module-definition"
 
 export interface GetOrSetCacheParams<T> {
   key: string;
-  type: CacheType;
+  type?: CacheType;
   action: () => Promise<T>;
+  autoSelect?: boolean;
+}
+
+export interface GetCacheManagerParams {
+  type?: CacheType;
+  autoSelect?: boolean;
 }
 
 @Injectable()
@@ -21,28 +27,40 @@ export class CacheHelpersService {
     private readonly moduleRef: ModuleRef,
     ) {
         if (!this.options.types || this.options.types.includes(CacheType.Memory)) {
-            this.memoryCacheManager = this.moduleRef.get(MEMORY_CACHE_MANAGER)
+            this.memoryCacheManager = this.moduleRef.get(MEMORY_CACHE_MANAGER, { strict: false })
         }
         if (!this.options.types || this.options.types.includes(CacheType.Redis)) {
-            this.redisCacheManager = this.moduleRef.get(REDIS_CACHE_MANAGER)
+            this.redisCacheManager = this.moduleRef.get(REDIS_CACHE_MANAGER, { strict: false })
         }
     }
 
-    private getCacheManager(type: CacheType = CacheType.Redis) {
+    public getCacheManager(
+        { type = CacheType.Redis, autoSelect = false }: GetCacheManagerParams
+    ): Cache {
+        if (autoSelect) {
+            // we prefer redis if available
+            if (!this.options.types || this.options.types.includes(CacheType.Redis)) {
+                return this.redisCacheManager as Cache
+            }
+            if (!this.options.types || this.options.types.includes(CacheType.Memory)) {
+                return this.memoryCacheManager as Cache
+            }
+        }
         switch (type) {
         case CacheType.Memory:
-            return this.memoryCacheManager
+            return this.memoryCacheManager as Cache
         case CacheType.Redis:
-            return this.redisCacheManager
+            return this.redisCacheManager as Cache
         }
     }
 
     public async getOrSetCache<T>({
         key,
         action,
-        type,
+        type = CacheType.Redis,
+        autoSelect = false,
     }: GetOrSetCacheParams<T>): Promise<T> {
-        const cacheManager = this.getCacheManager(type)
+        const cacheManager = this.getCacheManager({ type, autoSelect })
         const cache = await cacheManager?.get<T>(key)
         if (cache) {
             return cache

@@ -2,7 +2,7 @@ import { DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { ModuleRef } from "@nestjs/core"
 import { IFetchService, IMetadataService } from "./interfaces"
-import { CetusFetcherService, CetusMetadataService } from "./dexes"
+import { CetusFetcherService, CetusMetadataService, TurbosFetcherService, TurbosMetadataService } from "./dexes"
 import { ChainId } from "@modules/common"
 
 @Injectable()
@@ -22,6 +22,19 @@ export class LiquidityPoolService {
             case DexId.Cetus: {
                 const fetcher = this.moduleRef.get(CetusFetcherService, { strict: false })
                 const metadata = this.moduleRef.get(CetusMetadataService, { strict: false })
+                if (metadata.metadata().chainId !== chainId) {
+                    continue
+                }
+                dexes.push({
+                    dexId,
+                    fetcher,
+                    metadata
+                })
+                break
+            }
+            case DexId.Turbos: {
+                const fetcher = this.moduleRef.get(TurbosFetcherService, { strict: false })
+                const metadata = this.moduleRef.get(TurbosMetadataService, { strict: false })
                 if (metadata.metadata().chainId !== chainId) {
                     continue
                 }

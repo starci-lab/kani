@@ -1,7 +1,7 @@
 import { Column, Entity } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network } from "@modules/common"
-import { TokenId } from "@modules/databases/enums"
+import { CexId, TokenId } from "@modules/databases/enums"
 
 @Entity({ name: "tokens" })
 export class TokenEntity extends StringAbstractEntity {
@@ -37,6 +37,9 @@ export class TokenEntity extends StringAbstractEntity {
 
     @Column({ type: "text", name: "network" })
         network: Network
+
+    @Column({ type: "simple-json", name: "cex_ids" })
+        cexIds: Array<CexId>
 }
 
 

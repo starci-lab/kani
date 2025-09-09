@@ -13,6 +13,7 @@ import {
     UserDepositEntity,
     UserCummulativeEntity,
     UserEntity,
+    AssignedLiquidityPoolEntity,
 } from "./entities"
 import { join } from "path"
 
@@ -46,6 +47,7 @@ export class SqliteModule extends ConfigurableModuleClass {
                     UserDepositEntity,
                     UserCummulativeEntity,
                     UserEntity,
+                    AssignedLiquidityPoolEntity,
                 ]),
                 ...extraModules,
             ],

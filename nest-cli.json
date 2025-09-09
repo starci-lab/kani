@@ -36,6 +36,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/lp-bot/tsconfig.app.json"
       }
+    },
+    "test-fn": {
+      "type": "application",
+      "root": "apps/test-fn",
+      "entryFile": "main",
+      "sourceRoot": "apps/test-fn/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/test-fn/tsconfig.app.json"
+      }
     }
   }
 }

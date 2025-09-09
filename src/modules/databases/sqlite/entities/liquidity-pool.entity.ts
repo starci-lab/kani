@@ -1,9 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm"
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network } from "@modules/common"
 import { TokenEntity } from "./token.entity"
 import { DexEntity } from "./dex.entity"
 import { DexId, LiquidityPoolId, TokenId } from "../../enums"
+import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 
 @Entity({ name: "lp_pools" })
 export class LiquidityPoolEntity extends StringAbstractEntity {
@@ -27,12 +28,12 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
     @Column({ type: "text", name: "token_a_id" })
         tokenAId: TokenId
 
-    @Column({ type: "text", name: "token_b_id" })
-        tokenBId: TokenId
-
     @ManyToOne(() => TokenEntity)
     @JoinColumn({ name: "token_b_id" })
         tokenB: TokenEntity
+
+    @Column({ type: "text", name: "token_b_id" })
+        tokenBId: TokenId
 
     @Column({ type: "real", name: "fee" })
         fee: number
@@ -42,4 +43,8 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
 
     @Column({ type: "text", name: "chain_id" })
         chainId: ChainId
+
+    // Assigned users per chain
+    @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.pool)
+        assignedUsers: Array<AssignedLiquidityPoolEntity>
 }

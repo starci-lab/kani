@@ -1,4 +1,4 @@
-import { TokenId } from "@modules/databases/enums"
+import { CexId, TokenId } from "@modules/databases/enums"
 import { ChainId, Network } from "@modules/common"
 import { TokenLike } from "@modules/databases/types"
 
@@ -17,6 +17,8 @@ export const tokenData: Array<TokenLike> = [
             "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png?1547042194",
         projectUrl: "https://www.centre.io/",
         network: Network.Mainnet,
+        cexIds: [CexId.Binance, CexId.Gate]
+
     },
     {
         displayId: TokenId.SuiCetus,
@@ -31,6 +33,7 @@ export const tokenData: Array<TokenLike> = [
         iconUrl: "https://assets.coingecko.com/coins/images/32311/large/cetus.png",
         projectUrl: "https://cetus.zone/",
         network: Network.Mainnet,
+        cexIds: [CexId.Gate],
     },
     {
         displayId: TokenId.SuiNative,
@@ -45,6 +48,7 @@ export const tokenData: Array<TokenLike> = [
         iconUrl: "https://assets.coingecko.com/coins/images/18884/large/Sui.png",
         projectUrl: "https://sui.io/",
         network: Network.Mainnet,
+        cexIds: [CexId.Binance, CexId.Gate]
     },
     {
         displayId: TokenId.SuiIka,
@@ -59,6 +63,7 @@ export const tokenData: Array<TokenLike> = [
         iconUrl: "https://assets.coingecko.com/coins/images/31447/large/Ika.png",
         projectUrl: "https://ika.xyz/",
         network: Network.Mainnet,
+        cexIds: [CexId.Gate]
     },
     {
         displayId: TokenId.SuiAlkimi,
@@ -73,6 +78,7 @@ export const tokenData: Array<TokenLike> = [
         iconUrl: "https://assets.coingecko.com/coins/images/32973/large/alkimi.png",
         projectUrl: "https://alkimi.org/",
         network: Network.Mainnet,
+        cexIds: [CexId.Gate]
     },
     {
         displayId: TokenId.SuiWalrus,
@@ -88,6 +94,22 @@ export const tokenData: Array<TokenLike> = [
             "https://assets.coingecko.com/coins/images/31453/large/Walrus.png",
         projectUrl: "https://www.walrus.xyz/",
         network: Network.Mainnet,
+        cexIds: [CexId.Gate]
+    },
+    {
+        displayId: TokenId.SuiDeep,
+        name: "DEEP",
+        symbol: "DEEP",
+        chainId: ChainId.Sui,
+        tokenAddress:
+            "0xdee9f43a24e3ecf35f9581e6ce46f2c826c27ba7d8a88e64e8a1bde4374d8b5e::deep::DEEP",
+        decimals: 9,
+        coinMarketCapId: "deepbook", // tên chuẩn trên CMC
+        coinGeckoId: "deepbook",     // id chuẩn trên CoinGecko
+        iconUrl: "https://assets.coingecko.com/coins/images/31663/large/deep.png",
+        projectUrl: "https://deepbook.org/",
+        network: Network.Mainnet,
+        cexIds: [CexId.Gate]
     },
 ]
 

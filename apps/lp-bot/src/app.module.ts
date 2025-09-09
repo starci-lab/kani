@@ -12,7 +12,7 @@ import { CacheModule, CacheType } from "@modules/cache"
 import { EventType } from "@modules/event/types"
 import { PriceFetcherModule } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
-import { UserFetcherModule } from "@features/fetchers/user-fetcher"
+import { DataLikeModule, PoolFetcherModule, UserFetcherModule } from "@features/fetchers"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -59,6 +59,9 @@ export class AppModule extends ConfigurableModuleClass {
                 PriceModule.register({
                     isGlobal: true,
                 }),
+                LiquidityPoolsModule.register({
+                    isGlobal: true,
+                }),
             ],
         )
 
@@ -87,7 +90,10 @@ export class AppModule extends ConfigurableModuleClass {
                 UserFetcherModule.register({
                     isGlobal: true,
                 }),
-                LiquidityPoolsModule.register({
+                DataLikeModule.register({
+                    isGlobal: true,
+                }),
+                PoolFetcherModule.register({
                     isGlobal: true,
                 }),
             ],

@@ -50,6 +50,10 @@ export class TokenSchema extends AbstractSchema {
     @Field(() => GraphQLTypeNetwork, { description: "Network where this token is deployed" })
     @Prop({ type: String, enum: Network, required: true })
         network: Network
+
+    @Field(() => Boolean, { description: "Whether the token is a native token" })
+    @Prop({ type: Boolean, required: true })
+        isNative: boolean
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)

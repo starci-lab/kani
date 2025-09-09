@@ -9,6 +9,7 @@ export enum TokenId {
     SuiWalrus = "suiWalrus",
     SuiCetus = "suiCetus",
     SuiAlkimi = "suiAlkimi",
+    SuiDeep = "suiDeep",
 
     // --- Solana ---
     SolUsdc = "solUsdc",
@@ -43,7 +44,9 @@ registerEnumType(GraphQLTypeTokenId, {
         [TokenId.SuiAlkimi]: {
             description: "Alkimi token on Sui.",
         },
-
+        [TokenId.SuiDeep]: {
+            description: "Deep token on Sui.",
+        },
         // --- Solana ---
         [TokenId.SolUsdc]: {
             description: "USD Coin stablecoin (USDC) on Solana.",
@@ -65,6 +68,7 @@ registerEnumType(GraphQLTypeTokenId, {
 
 export enum DexId {
     Cetus = "cetus",
+    Turbos = "turbos",
 }
 
 export const GraphQLTypeDexId = createEnumType(DexId)
@@ -76,12 +80,17 @@ registerEnumType(GraphQLTypeDexId, {
         [DexId.Cetus]: {
             description: "The cetus dex",
         },
+        [DexId.Turbos]: {
+            description: "The turbos dex",
+        },
     },
 })
 
 export enum LiquidityPoolId {
     CetusSuiIka02 = "cetusSuiIka02",
     CetusSuiUsdc005 = "cetusSuiUsdc005",  
+    TurbosIkaUsdcIka015 = "turbosIkaUsdcIka015",
+    TurbosDeepUsdc015 = "turbosDeepUsdc015",
 }
 
 export const GraphQLTypeLiquidityPoolId = createEnumType(LiquidityPoolId)
@@ -95,6 +104,35 @@ registerEnumType(GraphQLTypeLiquidityPoolId, {
         },
         [LiquidityPoolId.CetusSuiUsdc005]: {
             description: "The cetus sui usdc 0.05 lp pool",
+        },
+        [LiquidityPoolId.TurbosIkaUsdcIka015]: {
+            description: "The turbos sui ika usdc 0.15 lp pool",
+        },
+        [LiquidityPoolId.TurbosDeepUsdc015]: {
+            description: "The turbos sui deep usdc 0.15 lp pool",
+        },
+    },
+})
+
+export enum CexId {
+    Binance = "binance",
+    Gate = "gate",
+    Bybit = "bybit"
+}
+export const GraphQLTypeCexId = createEnumType(CexId)
+
+registerEnumType(GraphQLTypeCexId, {
+    name: "CexId",
+    description: "The name of the cex",
+    valuesMap: {
+        [CexId.Binance]: {
+            description: "The binance cex",
+        },
+        [CexId.Gate]: {
+            description: "The gate cex",
+        },
+        [CexId.Bybit]: {
+            description: "The bybit cex",
         },
     },
 })
