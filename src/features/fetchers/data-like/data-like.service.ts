@@ -16,17 +16,17 @@ export class DataLikeService {
     async onModuleInit() {
         switch (envConfig().lpBot.type) {
         case LpBotType.UserBased: {
-            this.loadFromSqlite()
+            this.loadFromMongo()
             break
         }
         case LpBotType.System: {
-            this.loadFromMongo()
+            this.loadFromSqlite()
             break
         }
         }
     }   
 
-    private async loadFromSqlite() {
+    private async loadFromMongo() {
         const dataSource = this.moduleRef.get(getDataSourceToken(), {strict: false})
         const dexes = await dataSource.manager.find(DexEntity)
         this.dexes = dexes.map((dex) => ({
@@ -47,14 +47,21 @@ export class DataLikeService {
         }))
     }
 
-    private async loadFromMongo() {
+    private async loadFromSqlite() {
         const dataSource = this.moduleRef.get(getDataSourceToken(), {strict: false})
         const tokens = await dataSource.manager.find(TokenEntity)
         this.tokens = tokens.map((token) => ({
             ...token,
             id: token.id,
-        }))
-        const liquidityPools = await dataSource.manager.find(LiquidityPoolEntity)
+            cexSymbols: token.cexSymbols,
+        }
+        ))
+        const liquidityPools = await dataSource.manager.find(LiquidityPoolEntity, {
+            relations: {
+                tokenA: true,
+                tokenB: true
+            }
+        })
         this.liquidityPools = liquidityPools.map((liquidityPool) => ({
             ...liquidityPool,
             id: liquidityPool.id,

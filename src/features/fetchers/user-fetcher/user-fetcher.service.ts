@@ -112,7 +112,7 @@ export class UserFetcherService implements OnModuleInit, OnApplicationBootstrap 
                     })),
                     assignedSolanaPools: user.assignedSolanaPools.map((pool) => ({
                         poolId: pool.id,
-                    })),
+                    })),       
                 }
             ]
         }

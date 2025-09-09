@@ -4,8 +4,8 @@ import {
     Logger as NestLogger,
 } from "@nestjs/common"
 import { Cron } from "@nestjs/schedule"
-import { BinanceRestService } from "./binance-rest.service"
-import { BinanceWsService, WsTicker, WsOrderBook } from "./binance-ws.service"
+import { GateRestService } from "./gate-rest.service"
+import { GateWsService, GateWsTicker } from "./gate-ws.service"
 import { Logger } from "winston"
 import { InjectWinston } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
@@ -13,19 +13,17 @@ import { Cache } from "cache-manager"
 import { CexId, TokenId, TokenLike } from "@modules/databases"
 
 @Injectable()
-export class BinanceProcessorService implements OnModuleDestroy {
+export class GateProcessorService implements OnModuleDestroy {
     private tokens: Array<TokenLike> = []
     private symbols: Array<string> = []
     private readonly cacheManager: Cache
 
-    // NestJS built-in logger (internal debug)
-    private readonly logger = new NestLogger(BinanceProcessorService.name)
+    private readonly logger = new NestLogger(GateProcessorService.name)
 
     constructor(
-    private readonly rest: BinanceRestService,
-    private readonly ws: BinanceWsService,
+    private readonly rest: GateRestService,
+    private readonly ws: GateWsService,
     private readonly cacheHelpersService: CacheHelpersService,
-    // Winston logger (structured logs → Loki/ELK/etc.)
     @InjectWinston()
     private readonly winston: Logger,
     ) {
@@ -34,56 +32,49 @@ export class BinanceProcessorService implements OnModuleDestroy {
         })
     }
 
-    /**
-   * Initialize processor with a list of trading symbols
-   * - Subscribes to WebSocket streams (ticker + order book)
-   * - Stores symbols for periodic REST polling
-   */
     initialize(
         tokenIds: Array<TokenId>,
         tokens: Array<TokenLike>
     ) {
         this.tokens = tokens
-        this.symbols = tokens.map((token) => token.cexSymbols[CexId.Binance]).filter(
-            (symbol) => symbol !== undefined
-        )
+        this.symbols = tokens
+            .map((token) => token.cexSymbols[CexId.Gate])
+            .filter((symbol): symbol is string => symbol !== undefined)
         for (const tokenId of tokenIds) {
             const token = tokens.find((token) => token.displayId === tokenId)
             if (!token) {
                 this.logger.error(`Token ${tokenId} not found`)
                 continue
             }
-            if (!token.cexSymbols[CexId.Binance]) {
-                this.logger.error(`Token ${tokenId} has no binance symbol`)
+            const symbol = token.cexSymbols[CexId.Gate]
+            if (!symbol) {
+                this.logger.error(`Token ${tokenId} has no gate symbol`)
                 continue
             }
             this.subscribeTicker(token.displayId)
-            // uncomment if you want to subscribe orderbook
-            // this.subscribeOrderBook(symbol)
         }
 
         this.logger.log(
-            `Initialized BinanceProcessorService for: ${tokenIds.join(", ")}`,
+            `Initialized GateProcessorService for: ${tokenIds.join(", ")}`,
         )
     }
 
-    /**
-   * Subscribe to ticker stream and cache prices
-   */
     private subscribeTicker(tokenId: TokenId) {
         const token = this.tokens.find((token) => token.displayId === tokenId)
         if (!token) {
             this.logger.error(`Token ${tokenId} not found`)
             return
         }
-        if (!token.cexSymbols[CexId.Binance]) {
-            this.logger.error(`Token ${tokenId} has no binance symbol`)
+        const symbol = token.cexSymbols[CexId.Gate]
+        if (!symbol) {
+            this.logger.error(`Token ${tokenId} has no gate symbol`)
             return
         }
-        this.ws.subscribeTicker(token.cexSymbols[CexId.Binance], async (data: WsTicker) => {
-            const lastPrice = parseFloat(data.c)
+        this.ws.subscribeTicker(symbol, async (data: GateWsTicker) => {
+            if (!data || data.event !== "update" || !data.result) return
+            const lastPrice = parseFloat(data.result.last)
 
-            this.winston.debug("Binance.WS.Ticker", {
+            this.winston.debug("Gate.WS.Ticker", {
                 id: token.displayId,
                 last: lastPrice,
             })
@@ -95,38 +86,6 @@ export class BinanceProcessorService implements OnModuleDestroy {
         })
     }
 
-    /**
-   * Subscribe to order book stream and cache snapshots
-   */
-    private subscribeOrderBook(tokenId: TokenId) {
-        const token = this.tokens.find((token) => token.displayId === tokenId)
-        if (!token) {
-            this.logger.error(`Token ${tokenId} not found`)
-            return
-        }
-        if (!token.cexSymbols[CexId.Binance]) {
-            this.logger.error(`Token ${tokenId} has no binance symbol`)
-            return
-        }
-        this.ws.subscribeOrderBook(token.symbol, 20, 1000, async (data: WsOrderBook) => {
-            this.winston.debug("Binance.WS.OrderBook", {
-                id: token.displayId,
-                askLength: data.asks.length,
-                bidLength: data.bids.length,
-            })
-
-            await this.cacheManager.set(
-                createCacheKey(CacheKey.BinanceWsOrderBook, token.symbol),
-                data,
-            )
-        })
-    }
-
-  /**
-   * Periodically fetch snapshot via REST
-   * - Runs every 3 seconds
-   * - Provides redundancy in case WS connection drops
-   */
   @Cron("*/3 * * * * *")
     async fetchRestSnapshot() {
         if (this.tokens.length === 0) return
@@ -148,19 +107,18 @@ export class BinanceProcessorService implements OnModuleDestroy {
                     )
                 }
             }
-            this.winston.debug("Binance.REST.Snapshot", { prices })
+            this.winston.debug("Gate.REST.Snapshot", { prices })
         } catch (err) {
-            this.winston.error("Binance.REST.Error", {
+            this.winston.error("Gate.REST.Error", {
                 symbols: this.symbols,
-                error: err.message,
+                error: (err as Error).message,
             })
         }
     }
 
-  /**
-   * Cleanup WebSocket connections on module shutdown
-   */
   onModuleDestroy() {
       this.ws.onModuleDestroy()
   }
 }
+
+

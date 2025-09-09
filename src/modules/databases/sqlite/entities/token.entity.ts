@@ -26,6 +26,8 @@ export class TokenEntity extends StringAbstractEntity {
     @Column({ type: "text", name: "coin_gecko_id" })
         coinGeckoId: string
 
+    @Column({ type: "text", name: "cex_symbols", nullable: true })
+        cexSymbolsRaw: string
     @Column({ type: "text", name: "icon_url" })
         iconUrl: string
 
@@ -38,8 +40,19 @@ export class TokenEntity extends StringAbstractEntity {
     @Column({ type: "text", name: "network" })
         network: Network
 
-    @Column({ type: "simple-json", name: "cex_ids" })
+    @Column({ type: "simple-json", name: "cex_ids", nullable: true })
         cexIds: Array<CexId>
+
+    @Column({ type: "text", name: "whichCex" })
+        whichCex: CexId
+
+    get cexSymbols(): Partial<Record<CexId, string>> {
+        return this.cexSymbolsRaw ? JSON.parse(this.cexSymbolsRaw) : {}
+    }
+
+    set cexSymbols(value: Partial<Record<CexId, string>>) {
+        this.cexSymbolsRaw = JSON.stringify(value ?? {})
+    }
 }
 
 

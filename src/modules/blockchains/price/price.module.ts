@@ -8,6 +8,7 @@ import { AxiosModule } from "@modules/axios"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { TrendAnalyzerService } from "./trend-analyzer.service"
 import { CacheModule, CacheType } from "@modules/cache"
+import { GateModule } from "./gate"
 
 @Module({})
 export class PriceModule extends ConfigurableModuleClass {
@@ -31,6 +32,9 @@ export class PriceModule extends ConfigurableModuleClass {
         ] : []
         const modules = [
             BinanceModule.register({
+                isGlobal: options.isGlobal
+            }),
+            GateModule.register({
                 isGlobal: options.isGlobal
             }),
         ]

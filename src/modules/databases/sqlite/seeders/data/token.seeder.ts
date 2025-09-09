@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { DataSource } from "typeorm"
 import { LiquidityPoolEntity, TokenEntity } from "../../entities"
 import { tokenData } from "../../../data"
+import { CexId } from "@modules/databases/enums"
 
 @Injectable()
 export class TokenSeeder {
@@ -18,6 +19,9 @@ export class TokenSeeder {
             tokenData.map(
                 (token) => ({
                     ...token,
+                    binanceSymbol: token.cexSymbols[CexId.Binance],
+                    bybitSymbol: token.cexSymbols[CexId.Bybit],
+                    gateSymbol: token.cexSymbols[CexId.Gate],
                     id: token.displayId,
                 })
             )

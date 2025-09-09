@@ -1,16 +1,25 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
-import { BinanceProcessorService } from "@modules/blockchains"
+import { BinanceProcessorService, GateProcessorService } from "@modules/blockchains"
+import { TokenId } from "@modules/databases"
+import { tokenData } from "@modules/databases/data"
 
 @Injectable()
 export class AppService implements OnModuleInit {
     constructor(
-    private readonly binanceProcessorService: BinanceProcessorService,
-    ) {}
+        private readonly binanceProcessorService: BinanceProcessorService,
+        private readonly gateProcessorService: GateProcessorService,
+    ) { }
 
     onModuleInit() {
-    // Khởi tạo processor với danh sách symbol muốn theo dõi
-        this.binanceProcessorService.initialize([
-            "SUIUSDT",
-        ])
+        const tokens = tokenData
+        // Initialized
+        // this.binanceProcessorService.initialize([
+        //     TokenId.SuiNative
+        // ],
+        // tokens)
+        this.gateProcessorService.initialize([
+            TokenId.SuiNative
+        ],
+        tokens)
     }
 }

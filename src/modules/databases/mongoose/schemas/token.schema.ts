@@ -2,7 +2,8 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, Int, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
 import { AbstractSchema } from "./abstract"
-import { GraphQLTypeTokenId, TokenId } from "../../enums"
+import { CexId, GraphQLTypeTokenId, TokenId } from "../../enums"
+import GraphQLJSON from "graphql-type-json"
 
 @Schema({ timestamps: true, collection: "tokens" })
 @ObjectType({ description: "Represents a blockchain token with metadata such as symbol, address, decimals, and chain information." })
@@ -54,6 +55,18 @@ export class TokenSchema extends AbstractSchema {
     @Field(() => Boolean, { description: "Whether the token is a native token" })
     @Prop({ type: Boolean, required: true })
         isNative: boolean
+
+    @Field(() => [CexId], { description: "List of CEXs where the token is listed" })
+    @Prop({ type: [String], enum: CexId, required: true, default: [] })
+        cexIds: Array<CexId>
+
+    @Field(() => CexId, { description: "Primary CEX where the token is listed" })
+    @Prop({ type: String, enum: CexId, required: true })
+        whichCex: CexId
+
+    @Field(() => GraphQLJSON, { description: "CEX trading symbols map (CexId -> symbol)" })
+    @Prop({ type: Map, of: String, default: {} })
+        cexSymbols: Record<string, string>
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)
