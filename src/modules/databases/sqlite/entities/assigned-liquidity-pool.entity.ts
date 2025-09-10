@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, JoinColumn, Column } from "typeorm"
+import { Entity, ManyToOne, JoinColumn } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { UserEntity } from "./user.entity"
 import { LiquidityPoolEntity } from "./liquidity-pool.entity"
@@ -16,7 +16,4 @@ export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
     )
     @JoinColumn({ name: "pool_id" })
         pool: LiquidityPoolEntity
-
-    @Column(() => Boolean)
-        priorityAOverB: boolean
 }

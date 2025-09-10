@@ -47,3 +47,25 @@ registerEnumType(GraphQLTypeWalletType, {
         }
     }
 })
+
+export enum FarmType {
+    // Pools where USDC is paired against another token
+    Usdc = "usdc",
+    // Pools where the chain’s native token is paired against another token
+    Native = "native",
+}
+
+export const GraphQLTypeFarmType = createEnumType(FarmType)
+
+registerEnumType(GraphQLTypeFarmType, {
+    name: "FarmType",
+    description: "Classification of farming pools based on the base token they are paired with.",
+    valuesMap: {
+        [FarmType.Usdc]: {
+            description: "Farming pools where USDC is used as the base asset (e.g., USDC/XYZ).",
+        },
+        [FarmType.Native]: {
+            description: "Farming pools where the blockchain’s native token (e.g., SUI, ETH) is used as the base asset.",
+        },
+    },
+})

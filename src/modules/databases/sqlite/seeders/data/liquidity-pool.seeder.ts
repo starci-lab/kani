@@ -34,6 +34,8 @@ export class LiquidityPoolSeeder {
                 dexId: liquidityPool.dexId,
                 network: liquidityPool.network,
                 chainId: liquidityPool.chainId,
+                priorityAOverB: liquidityPool.priorityAOverB,
+                farmTypes: liquidityPool.farmTypes,
             })),
         )
     }

@@ -5,12 +5,13 @@ import {
     TokenId, 
     UserLike, 
     UserEntity,
-    WalletType
+    WalletType,
+    FarmType
 } from "@modules/databases"
 import { envConfig, LpBotType } from "@modules/env"
 import { Connection } from "mongoose"
 import { ModuleRef } from "@nestjs/core"
-import { DataSource, DeepPartial, FindOptionsWhere } from "typeorm"
+import { DataSource, DeepPartial, FindOptionsWhere, Like } from "typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
@@ -64,10 +65,13 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                 // create user
                 const keypairs = await this.keypairsService.generateKeypairs()
                 // we work 
+                const  defaultFarmType = FarmType.Usdc
                 const suiPools = await this.dataSource.manager.find(
                     LiquidityPoolEntity, {
                         where: {
                             chainId: ChainId.Sui,
+                            // type restriction
+                            farmTypes: Like(`%${defaultFarmType}%`) as unknown as FarmType,
                         }
                     })
                 const randomSuiPools = suiPools.sort(() => Math.random() - 0.5).slice(0, 3)
@@ -82,16 +86,19 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                             type: WalletType.Evm,
                             accountAddress: keypairs.evmKeypair.publicKey,
                             encryptedPrivateKey: keypairs.evmKeypair.encryptedPrivateKey,
+                            farmType: defaultFarmType,
                         },
                         {
                             type: WalletType.Sui,
                             accountAddress: keypairs.suiKeypair.publicKey,
                             encryptedPrivateKey: keypairs.suiKeypair.encryptedPrivateKey,
+                            farmType: defaultFarmType,
                         },
                         {
                             type: WalletType.Solana,
                             accountAddress: keypairs.solanaKeypair.publicKey,
                             encryptedPrivateKey: keypairs.solanaKeypair.encryptedPrivateKey,
+                            farmType: defaultFarmType,
                         },
                     ],
                     isActive: true,
@@ -99,7 +106,6 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     [
                         ...randomSuiPools.map((pool) => ({
                             pool,
-                            chain: ChainId.Sui,
                         })),
                     ]
                 }
@@ -108,22 +114,9 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     userData,
                 )
             }
-            const getWallet = (type: WalletType) => user.wallets.find((wallet) => wallet.type === type)
             return [
                 {
                     ...user,
-                    solanaWallet: {
-                        accountAddress: getWallet(WalletType.Solana)?.accountAddress || "",
-                        encryptedPrivateKey: getWallet(WalletType.Solana)?.encryptedPrivateKey || "",
-                    },
-                    suiWallet: {
-                        accountAddress: getWallet(WalletType.Sui)?.accountAddress || "",
-                        encryptedPrivateKey: getWallet(WalletType.Sui)?.encryptedPrivateKey || "",
-                    },
-                    evmWallet: {
-                        accountAddress: getWallet(WalletType.Evm)?.accountAddress || "",
-                        encryptedPrivateKey: getWallet(WalletType.Evm)?.encryptedPrivateKey || "",
-                    },
                     userId: user.id,
                     assignedSuiPools: user.assignedLiquidityPools.map((pool) => ({
                         poolId: pool.id,

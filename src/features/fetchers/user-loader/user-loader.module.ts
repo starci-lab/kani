@@ -6,5 +6,8 @@ import { UserLoaderService } from "./user-loader.service"
     providers: [
         UserLoaderService,
     ],
+    exports: [
+        UserLoaderService,
+    ],
 })
 export class UserLoaderModule extends ConfigurableModuleClass {}

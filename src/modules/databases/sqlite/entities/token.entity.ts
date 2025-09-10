@@ -1,6 +1,6 @@
 import { Column, Entity } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, TokenType } from "@modules/common"
 import { CexId, TokenId } from "@modules/databases/enums"
 
 @Entity({ name: "tokens" })
@@ -46,6 +46,9 @@ export class TokenEntity extends StringAbstractEntity {
 
     @Column({ type: "simple-json", nullable: true })
         cexSymbols: Partial<Record<CexId, string>>
+
+    @Column({ type: "text", name: "type" })
+        type: TokenType
 }
 
 

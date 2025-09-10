@@ -3,7 +3,7 @@ import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network } from "@modules/common"
 import { TokenEntity } from "./token.entity"
 import { DexEntity } from "./dex.entity"
-import { DexId, LiquidityPoolId, TokenId } from "../../enums"
+import { DexId, FarmType, LiquidityPoolId, TokenId } from "../../enums"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
 
@@ -44,6 +44,12 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
 
     @Column({ type: "text", name: "chain_id" })
         chainId: ChainId
+
+    @Column({ type: "boolean", name: "priority_a_over_b", nullable: true })
+        priorityAOverB?: boolean
+
+    @Column({ type: "simple-json", name: "farm_types" })
+        farmTypes: Array<FarmType>
 
     // Assigned users per chain
     @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.pool)

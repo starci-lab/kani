@@ -16,6 +16,7 @@ import { CacheModule, CacheType } from "@modules/cache"
 import { PoolFetcherModule, PriceFetcherModule } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
+import { PoolSelectorModule } from "@features/selectors"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -97,6 +98,9 @@ export class AppModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 PoolFetcherModule.register({
+                    isGlobal: true,
+                }),
+                PoolSelectorModule.register({
                     isGlobal: true,
                 }),
             ],

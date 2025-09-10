@@ -1,5 +1,5 @@
 import { CexId, TokenId } from "@modules/databases/enums"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, TokenType } from "@modules/common"
 import { TokenLike } from "@modules/databases/types"
 
 export const tokenData: Array<TokenLike> = [
@@ -23,6 +23,7 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
+        type: TokenType.StableUsdc,
     },
     {
         displayId: TokenId.SuiCetus,
@@ -43,6 +44,7 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
+        type: TokenType.Wrapper,
     },
     {
         displayId: TokenId.SuiNative,
@@ -63,6 +65,7 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
+        type: TokenType.Native,
     },
     {
         displayId: TokenId.SuiIka,
@@ -82,6 +85,7 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
+        type: TokenType.Wrapper,
     },
     {
         displayId: TokenId.SuiAlkimi,
@@ -102,6 +106,7 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
+        type: TokenType.Wrapper,
     },
     {
         displayId: TokenId.SuiWalrus,
@@ -122,6 +127,7 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
+        type: TokenType.Wrapper,
     },
     {
         displayId: TokenId.SuiDeep,
@@ -141,5 +147,6 @@ export const tokenData: Array<TokenLike> = [
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
+        type: TokenType.Wrapper,
     },
 ]

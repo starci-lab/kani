@@ -1,2 +1,3 @@
 export * from "./data-like.module"
 export * from "./data-like.service"
+export * from "./data-like-query.service"

@@ -6,10 +6,11 @@ import { InjectWinston } from "@modules/winston"
 import { Logger } from "winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { EventEmitterService, EventName } from "@modules/event"
+import { EventEmitterService, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { RandomDelayService } from "@modules/mixin"
 import { ModuleRef } from "@nestjs/core"
 import { DataLikeService } from "../data-like"
+import { FetchedPool } from "@modules/blockchains"
 
 @Injectable()
 export class FetcherService {
@@ -51,42 +52,52 @@ export class FetcherService {
         const dexes = await this.liquidityPoolService.getDexs({
             chainId,
         })
+        const promises: Array<Promise<void>> = []
+        const fetchedPools: Array<FetchedPool> = []
         for (const dex of dexes) {
-            const { pools } = await dex.fetcher.fetchPools({
-                network,
-                liquidityPools: this.dataLikeService.liquidityPools,
-                tokens: this.dataLikeService.tokens,
-            })
-            // we write a log
-            this.logger.info(
-                "FetchedPools", 
+            promises.push((async () => {
+                const { pools } = await dex.fetcher.fetchPools({
+                    network,
+                    liquidityPools: this.dataLikeService.liquidityPools,
+                    tokens: this.dataLikeService.tokens,
+                })
+                fetchedPools.push(...pools)
+                // we write a log
+                this.logger.info(
+                    "FetchedPools", 
+                    {
+                        chainId,
+                        dex: dex.dexId,
+                        network,
+                        pools: pools.map(
+                            pool => ({
+                                poolAddress: pool.id,
+                                currentSqrtPrice: pool.currentSqrtPrice,
+                                currentTick: pool.currentTick,
+                            })
+                        ),
+                    })
+            })())
+        }
+        await Promise.all(promises)
+        // we store in cache
+        await this.cacheManager.set(
+            createCacheKey(
+                CacheKey.LiquidityPools,
                 {
                     chainId,
-                    dex: dex.dexId,
                     network,
-                    pools: pools.map(
-                        pool => ({
-                            poolAddress: pool.id,
-                            currentSqrtPrice: pool.currentSqrtPrice,
-                            currentTick: pool.currentTick,
-                        })
-                    ),
-                })
-            // we store in cache
-            await this.cacheManager.set(
-                createCacheKey(
-                    CacheKey.LiquidityPools,
-                    {
-                        dexId: dex.dexId,
-                        chainId,
-                        network,
-                    }),
-                pools,
-            )
-            // we broadcast the events
-            this.eventEmitterService.emit(EventName.LiquidityPoolsFetched, {
-                pools,
-            })
-        }
+                }),
+            fetchedPools,
+        )
+        // we broadcast the events
+        this.eventEmitterService.emit<LiquidityPoolsFetchedEvent>(
+            EventName.LiquidityPoolsFetched, 
+            {
+                chainId,
+                network,
+                pools: fetchedPools,
+            }
+        )
     }
 }

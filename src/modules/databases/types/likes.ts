@@ -1,5 +1,5 @@
-import { ChainId, Network } from "@modules/common"
-import { CexId, DexId, LiquidityPoolId, TokenId } from "../enums"
+import { ChainId, Network, TokenType } from "@modules/common"
+import { CexId, DexId, FarmType, LiquidityPoolId, TokenId, WalletType } from "../enums"
 
 export interface BaseLike {
     id?: string
@@ -48,6 +48,9 @@ export interface TokenLike extends BaseLike {
 
     /** Primary CEX where the token is listed */
     whichCex: CexId
+
+    /** Type of the token */
+    type: TokenType
 }
 
 export interface DexLike extends BaseLike {
@@ -94,6 +97,12 @@ export interface LiquidityPoolLike extends BaseLike {
 
     /** Chain ID where this pool exists */
     chainId: ChainId
+
+    /** Whether the pool is priority A over B */
+    priorityAOverB?: boolean
+
+    /** The kind of the liquidity pool */
+    farmTypes: Array<FarmType>
 }
 
 export interface UserDepositLike extends BaseLike {
@@ -117,6 +126,10 @@ export interface UserWalletLike extends BaseLike {
     accountAddress: string
     /** Encrypted private key of the wallet */
     encryptedPrivateKey: string
+    /** Type of the wallet */
+    type: WalletType
+    /** Farm type of the wallet */
+    farmType: FarmType
 }
 
 export interface AssignedLiquidityPoolLike extends BaseLike {
@@ -137,12 +150,8 @@ export interface UserLike extends BaseLike {
 
     /** Whether the user wants to auto-exit to USDC when dump is triggered */
     exitToUsdc: boolean
-    /** The Sui wallet linked to this allocation */
-    suiWallet?: UserWalletLike
-    /** The EVM-compatible wallet (Ethereum, BSC, etc.) linked to this allocation */
-    evmWallet?: UserWalletLike
-    /** The Solana wallet linked to this allocation */
-    solanaWallet?: UserWalletLike
+    /** The wallets linked to this allocation */
+    wallets: Array<UserWalletLike>
     /** The pools that the user is assigned to */
     assignedSuiPools: Array<AssignedLiquidityPoolLike>
     assignedSolanaPools: Array<AssignedLiquidityPoolLike>

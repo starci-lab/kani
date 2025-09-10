@@ -56,7 +56,7 @@ export enum TokenType {
   // native token
   Native = "native",
   // stable token
-  Stable = "stable",
+  StableUsdc = "stableUsdc",
   // wrapper token
   Wrapper = "wrapper",
   // non-native token
@@ -72,7 +72,7 @@ registerEnumType(GraphQLTypeTokenType, {
         [TokenType.Native]: {
             description: "The token is native",
         },
-        [TokenType.Stable]: {
+        [TokenType.StableUsdc]: {
             description: "The token is stable",
         },
         [TokenType.Wrapper]: {

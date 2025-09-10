@@ -1,7 +1,7 @@
 import { Column, JoinColumn, Entity, ManyToOne } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { UserEntity } from "./user.entity"
-import { WalletType } from "@modules/databases/enums"
+import { FarmType, WalletType } from "@modules/databases"
 
 @Entity({ name: "wallets" })
 export class WalletEntity extends UuidAbstractEntity {
@@ -16,6 +16,9 @@ export class WalletEntity extends UuidAbstractEntity {
     @Column({ type: "text", name: "account_address" })
         accountAddress: string
 
-    @Column({ type: "text", name: "encrypted_private_key", nullable: true })
-        encryptedPrivateKey?: string    
+    @Column({ type: "text", name: "encrypted_private_key" })
+        encryptedPrivateKey: string    
+
+    @Column({ type: "text", name: "farm_type" })
+        farmType: FarmType
 }
