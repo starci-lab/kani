@@ -1,11 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { FetchedPool } from "@modules/blockchains"
 
 const TICK_ZAP_THREHOLD = 1/3
 
 @Injectable()
 export class TickManagerService {
-    private readonly logger = new Logger(TickManagerService.name)
     constructor() { }
 
     public tickBounds(pool: FetchedPool) {

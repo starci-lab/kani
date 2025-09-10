@@ -5,8 +5,6 @@ import {
     TokenId, 
     UserLike, 
     UserEntity,
-    WalletType,
-    FarmType
 } from "@modules/databases"
 import { envConfig, LpBotType } from "@modules/env"
 import { Connection } from "mongoose"
@@ -15,7 +13,7 @@ import { DataSource, DeepPartial, FindOptionsWhere, Like } from "typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
-import { ChainId } from "@modules/common"
+import { ChainId, TokenType } from "@modules/common"
 
 @Injectable()
 export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
@@ -41,10 +39,10 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
     }
 
     async onApplicationBootstrap() {
-        this.users = await this.fetchUsers()
+        this.users = await this.loadUsers()
     }
 
-    async fetchUsers(): Promise<Array<UserLike>> {
+    async loadUsers(): Promise<Array<UserLike>> {
         if (envConfig().lpBot.type === LpBotType.System) {
             const userId = envConfig().lpBot.userId
             // we will use this condition to find the user
@@ -65,13 +63,13 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                 // create user
                 const keypairs = await this.keypairsService.generateKeypairs()
                 // we work 
-                const  defaultFarmType = FarmType.Usdc
+                const  defaultFarmType = TokenType.StableUsdc
                 const suiPools = await this.dataSource.manager.find(
                     LiquidityPoolEntity, {
                         where: {
                             chainId: ChainId.Sui,
                             // type restriction
-                            farmTypes: Like(`%${defaultFarmType}%`) as unknown as FarmType,
+                            farmTypes: Like(`%${defaultFarmType}%`) as unknown as TokenType,
                         }
                     })
                 const randomSuiPools = suiPools.sort(() => Math.random() - 0.5).slice(0, 3)
@@ -83,19 +81,19 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     deposits: [],
                     wallets: [  
                         {
-                            type: WalletType.Evm,
+                            chainId: ChainId.Monad,
                             accountAddress: keypairs.evmKeypair.publicKey,
                             encryptedPrivateKey: keypairs.evmKeypair.encryptedPrivateKey,
                             farmType: defaultFarmType,
                         },
                         {
-                            type: WalletType.Sui,
+                            chainId: ChainId.Sui,
                             accountAddress: keypairs.suiKeypair.publicKey,
                             encryptedPrivateKey: keypairs.suiKeypair.encryptedPrivateKey,
                             farmType: defaultFarmType,
                         },
                         {
-                            type: WalletType.Solana,
+                            chainId: ChainId.Solana,
                             accountAddress: keypairs.solanaKeypair.publicKey,
                             encryptedPrivateKey: keypairs.solanaKeypair.encryptedPrivateKey,
                             farmType: defaultFarmType,

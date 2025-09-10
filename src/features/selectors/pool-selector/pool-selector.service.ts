@@ -4,7 +4,7 @@ import { Injectable } from "@nestjs/common"
 import { OnEvent } from "@nestjs/event-emitter"
 import { TickManagerService } from "./tick-manager.service"
 import { DataLikeQueryService, UserLoaderService } from "@features/fetchers"
-import { UserLike, WalletType } from "@modules/databases"
+import { UserLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Logger } from "winston"
 import { InjectWinston } from "@modules/winston"
@@ -61,16 +61,21 @@ export class PoolSelectorService {
                 chainId,
                 network,
             })
+            console.log(`pool: ${pool.liquidityPool.poolAddress}, priorityAOverB: ${priorityAOverB}`)
             const canOpenPosition = this.tickManagerService.canOpenPosition(pool, priorityAOverB)
             if (canOpenPosition) {
                 openPositionablePools.push(pool)
             }
         }
         // write a log
-        this.winstonLogger.info("OpenPositionablePools", {
-            userId: user.id,
-            pools: openPositionablePools.map((pool) => pool.liquidityPool.id),
-        })
+        this.winstonLogger.info(
+            "OpenPositionablePools", 
+            {
+                userId: user.id,
+                chainId,
+                network,
+                pools: openPositionablePools.map((pool) => pool.liquidityPool.id),
+            })
         return openPositionablePools
     }
 

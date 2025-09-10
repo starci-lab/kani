@@ -1,5 +1,5 @@
 import { ChainId, Network, TokenType } from "@modules/common"
-import { CexId, DexId, FarmType, LiquidityPoolId, TokenId, WalletType } from "../enums"
+import { CexId, DexId, LiquidityPoolId, TokenId } from "../enums"
 
 export interface BaseLike {
     id?: string
@@ -102,7 +102,7 @@ export interface LiquidityPoolLike extends BaseLike {
     priorityAOverB?: boolean
 
     /** The kind of the liquidity pool */
-    farmTypes: Array<FarmType>
+    farmTypes: Array<TokenType>
 }
 
 export interface UserDepositLike extends BaseLike {
@@ -126,10 +126,10 @@ export interface UserWalletLike extends BaseLike {
     accountAddress: string
     /** Encrypted private key of the wallet */
     encryptedPrivateKey: string
-    /** Type of the wallet */
-    type: WalletType
+    /** Chain ID of the wallet */
+    chainId: ChainId
     /** Farm type of the wallet */
-    farmType: FarmType
+    farmType: TokenType
 }
 
 export interface AssignedLiquidityPoolLike extends BaseLike {

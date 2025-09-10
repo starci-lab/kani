@@ -1,9 +1,9 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, TokenType } from "@modules/common"
 import { TokenEntity } from "./token.entity"
 import { DexEntity } from "./dex.entity"
-import { DexId, FarmType, LiquidityPoolId, TokenId } from "../../enums"
+import { DexId, LiquidityPoolId, TokenId } from "../../enums"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
 
@@ -49,7 +49,7 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
         priorityAOverB?: boolean
 
     @Column({ type: "simple-json", name: "farm_types" })
-        farmTypes: Array<FarmType>
+        farmTypes: Array<TokenType>
 
     // Assigned users per chain
     @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.pool)
