@@ -20,6 +20,10 @@ import {
     UserDepositSchemaClass,
     UserSchema,
     UserSchemaClass,
+    UserWalletSchema,
+    UserWalletSchemaClass,
+    ChainConfigSchema,
+    ChainConfigSchemaClass,
     WalletSchema,
     WalletSchemaClass,
 } from "./schemas"
@@ -97,6 +101,14 @@ export class MongooseModule extends ConfigurableModuleClass {
                     {
                         name: WalletSchema.name,
                         useFactory: () => WalletSchemaClass,
+                    },
+                    {
+                        name: UserWalletSchema.name,
+                        useFactory: () => UserWalletSchemaClass,
+                    },
+                    {
+                        name: ChainConfigSchema.name,
+                        useFactory: () => ChainConfigSchemaClass,
                     },
                     {
                         name: SessionSchema.name,

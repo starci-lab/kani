@@ -1,4 +1,4 @@
-import { ChainId, Network, TokenType } from "@modules/common"
+import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
 import { CexId, DexId, LiquidityPoolId, TokenId } from "../enums"
 
 export interface BaseLike {
@@ -102,7 +102,7 @@ export interface LiquidityPoolLike extends BaseLike {
     priorityAOverB?: boolean
 
     /** The kind of the liquidity pool */
-    farmTypes: Array<TokenType>
+    farmTokenTypes: Array<TokenType>
 }
 
 export interface UserDepositLike extends BaseLike {
@@ -121,15 +121,22 @@ export interface UserCummulativeLike extends BaseLike {
     roi: number
 }
 
+export interface ChainConfigLike extends BaseLike {
+    /** Chain ID of the chain */
+    chainId: ChainId
+    /** Farm token type of the chain */
+    farmTokenType: TokenType
+}
+
 export interface UserWalletLike extends BaseLike {
     /** Account address of the wallet */
     accountAddress: string
     /** Encrypted private key of the wallet */
     encryptedPrivateKey: string
-    /** Chain ID of the wallet */
-    chainId: ChainId
-    /** Farm type of the wallet */
-    farmType: TokenType
+    /** Platform ID of the wallet */
+    platformId: PlatformId
+    /** Chain configs of the wallet */
+    chainConfigs: Array<ChainConfigLike>
 }
 
 export interface AssignedLiquidityPoolLike extends BaseLike {
@@ -153,6 +160,5 @@ export interface UserLike extends BaseLike {
     /** The wallets linked to this allocation */
     wallets: Array<UserWalletLike>
     /** The pools that the user is assigned to */
-    assignedSuiPools: Array<AssignedLiquidityPoolLike>
-    assignedSolanaPools: Array<AssignedLiquidityPoolLike>
+    assignedLiquidityPools: Array<AssignedLiquidityPoolLike>
 }

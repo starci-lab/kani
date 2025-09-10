@@ -17,6 +17,7 @@ import {
     WalletEntity,   
     AddedLiquidityPoolEntity,
     AddedLiquidityPoolHistoryEntity,
+    ChainConfigEntity,
 } from "./entities"
 import { join } from "path"
 
@@ -54,6 +55,7 @@ export class SqliteModule extends ConfigurableModuleClass {
                     WalletEntity,
                     AddedLiquidityPoolEntity,
                     AddedLiquidityPoolHistoryEntity,
+                    ChainConfigEntity,
                 ]),
                 ...extraModules,
             ],

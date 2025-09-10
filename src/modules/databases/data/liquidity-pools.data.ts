@@ -1,5 +1,5 @@
-import { ChainId, Network } from "@modules/common"
-import { DexId, LiquidityPoolId, TokenId, FarmType } from "@modules/databases/enums"
+import { ChainId, Network, TokenType } from "@modules/common"
+import { DexId, LiquidityPoolId, TokenId } from "@modules/databases/enums"
 import { LiquidityPoolLike } from "@modules/databases/types"
 
 export const liquidityPoolData: Array<LiquidityPoolLike> = [
@@ -13,7 +13,7 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         fee: 0.002,
         network: Network.Mainnet,
         chainId: ChainId.Sui,
-        farmTypes: [FarmType.Native],
+        farmTokenTypes: [TokenType.Native],
     },
     // {
     //     displayId: LiquidityPoolId.CetusSuiUsdc005,
@@ -36,7 +36,7 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         priorityAOverB: false,
         network: Network.Mainnet,
         chainId: ChainId.Sui,
-        farmTypes: [FarmType.Usdc],
+        farmTokenTypes: [TokenType.StableUsdc],
     },
     {
         displayId: LiquidityPoolId.TurbosDeepUsdc015,
@@ -48,6 +48,6 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         fee: 0.0015,
         network: Network.Mainnet,
         chainId: ChainId.Sui,
-        farmTypes: [FarmType.Usdc],
+        farmTokenTypes: [TokenType.StableUsdc],
     },
 ]

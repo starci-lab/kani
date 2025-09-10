@@ -48,8 +48,8 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
     @Column({ type: "boolean", name: "priority_a_over_b", nullable: true })
         priorityAOverB?: boolean
 
-    @Column({ type: "simple-json", name: "farm_types" })
-        farmTypes: Array<TokenType>
+    @Column({ type: "simple-json", name: "farm_token_types" })
+        farmTokenTypes: Array<TokenType>
 
     // Assigned users per chain
     @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.pool)

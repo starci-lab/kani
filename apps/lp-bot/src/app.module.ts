@@ -17,6 +17,7 @@ import { PoolFetcherModule, PriceFetcherModule } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 import { PoolSelectorModule } from "@features/selectors"
+import { ApiModule } from "./api"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -108,6 +109,13 @@ export class AppModule extends ConfigurableModuleClass {
         if (envConfig().lpBot.enablePriceFetcher) {
             modules.push(
                 PriceFetcherModule.register({
+                    isGlobal: true,
+                }),
+            )
+        }
+        if (envConfig().lpBot.type === LpBotType.System) {
+            modules.push(
+                ApiModule.register({
                     isGlobal: true,
                 }),
             )

@@ -35,7 +35,7 @@ export class LiquidityPoolSeeder {
                 network: liquidityPool.network,
                 chainId: liquidityPool.chainId,
                 priorityAOverB: liquidityPool.priorityAOverB,
-                farmTypes: liquidityPool.farmTypes,
+                farmTokenTypes: liquidityPool.farmTokenTypes,
             })),
         )
     }

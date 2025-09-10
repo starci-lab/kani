@@ -1,43 +1,50 @@
-import { FarmType, UserLike, WalletType } from "@modules/databases"
+import { UserLike } from "@modules/databases"
 import { FetchedPool } from "@modules/blockchains"
 import { Injectable, NotFoundException } from "@nestjs/common"
-import { ChainId, Network, TokenType } from "@modules/common"
+import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
 import { DataLikeService } from "./data-like.service"
 
 // this service is used to query the data like service
 @Injectable()
 export class DataLikeQueryService {
-    constructor(
-        private readonly dataLikeService: DataLikeService,
-    ) {}
+    constructor(private readonly dataLikeService: DataLikeService) { }
 
-    private getWalletOrThrow(userLike: UserLike, walletType: WalletType) {
-        const wallet = userLike.wallets.find((w) => w.type === walletType)
+    private getWalletOrThrow(userLike: UserLike, platformId: PlatformId) {
+        const wallet = userLike.wallets.find(
+            (wallet) => wallet.platformId === platformId,
+        )
         if (!wallet) {
             throw new NotFoundException(
-                `Wallet with type ${walletType} not found for user ${userLike.id ?? ""}`,
+                `Wallet with type ${platformId} not found for user ${userLike.id ?? ""}`,
             )
         }
         return wallet
     }
 
-    getWallet(userLike: UserLike, walletType: WalletType) {
-        return this.getWalletOrThrow(userLike, walletType)
+    getWallet(userLike: UserLike, platformId: PlatformId) {
+        return this.getWalletOrThrow(userLike, platformId)
     }
 
-    getFarmType(userLike: UserLike, walletType: WalletType) {
-        return this.getWalletOrThrow(userLike, walletType).farmType
+    getFarmTokenType(
+        userLike: UserLike,
+        platformId: PlatformId,
+        chainId: ChainId,
+    ) {
+        return this.getWalletOrThrow(userLike, platformId).chainConfigs.find(
+            (chainConfig) => chainConfig.chainId === chainId,
+        )?.farmTokenType as TokenType
     }
 
     getPoolsMatchingUserFarmType(
         userLike: UserLike,
         fetchedPools: Array<FetchedPool>,
-        walletType: WalletType,
+        platformId: PlatformId,
+        chainId: ChainId,
     ) {
-        const farmType = this.getFarmType(userLike, walletType)
+        const farmTokenType = this.getFarmTokenType(userLike, platformId, chainId)
         return fetchedPools.filter((pool) =>
-            pool.liquidityPool.farmTypes.includes(farmType),
-        )
+            pool.liquidityPool.farmTokenTypes.includes(farmTokenType),
+        ) as Array<FetchedPool>
     }
 
     getNative(chainId: ChainId, network: Network) {
@@ -45,8 +52,8 @@ export class DataLikeQueryService {
         return tokens.find(
             (token) =>
                 token.type === TokenType.Native &&
-        token.chainId === chainId &&
-        token.network === network,
+                token.chainId === chainId &&
+                token.network === network,
         )
     }
 
@@ -55,46 +62,41 @@ export class DataLikeQueryService {
         return tokens.find(
             (token) =>
                 token.type === TokenType.StableUsdc &&
-        token.chainId === chainId &&
-        token.network === network,
+                token.chainId === chainId &&
+                token.network === network,
         )
     }
-    
+
     determinePriorityAOverB(params: DeterminePriorityAOverBParams) {
-        const {
-            pool,
-            user,
-            walletType,
-            chainId,
-            network,
-        } = params
-    
-        let priorityAOverB = pool.liquidityPool.priorityAOverB
-    
+        const { pool, user, platformId, chainId, network } = params
+
+        let priorityAOverB = pool.liquidityPool.priorityAOverB ?? false
+
         if (typeof priorityAOverB === "undefined") {
-            const wallet = this.getWallet(user, walletType)
-            const walletFarmType = wallet.farmType
+            const walletFarmTokenType = this.getFarmTokenType(user, platformId, chainId)
             const nativeToken = this.getNative(chainId, network)
             const stableUsdcToken = this.getStableUsdc(chainId, network)
-    
-            switch (walletFarmType) {
-            case FarmType.Usdc:
-                priorityAOverB = pool.liquidityPool.tokenAId === stableUsdcToken?.displayId
+
+            switch (walletFarmTokenType) {
+            case TokenType.StableUsdc:
+                priorityAOverB =
+                        pool.liquidityPool.tokenAId === stableUsdcToken?.displayId
                 break
-            case FarmType.Native:
-                priorityAOverB = pool.liquidityPool.tokenAId === nativeToken?.displayId
+            case TokenType.Native:
+                priorityAOverB =
+                        pool.liquidityPool.tokenAId === nativeToken?.displayId
                 break
             }
         }
-    
+
         return priorityAOverB
     }
 }
 
 export interface DeterminePriorityAOverBParams {
-    pool: FetchedPool
-    user: UserLike
-    walletType: WalletType
-    chainId: ChainId
-    network: Network
+    pool: FetchedPool;
+    user: UserLike;
+    platformId: PlatformId;
+    chainId: ChainId;
+    network: Network;
 }

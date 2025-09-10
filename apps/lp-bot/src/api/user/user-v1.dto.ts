@@ -1,4 +1,4 @@
-import { ChainId, Network } from "@modules/common"
+import { PlatformId } from "@modules/common"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { ApiProperty } from "@nestjs/swagger"
 
@@ -12,7 +12,7 @@ export class UserWalletResponseDto {
         accountAddress: string
 
     @ApiProperty({
-        description: "User wallet private key (format depends on chain). ⚠️ Do NOT expose in public API",
+        description: "User wallet private key (format depends on chain). Do NOT expose in public API",
         example: "0x4c0883a69102937d6231471b5dbb6204fe512961708279a3c0...",
     })
     @Field(() => String)
@@ -21,6 +21,5 @@ export class UserWalletResponseDto {
 
 // since get request only has path params, we need to define the params here
 export class UserWalletParams {
-    chainId: ChainId
-    network: Network
+    platformId?: PlatformId
 }

@@ -13,7 +13,7 @@ import { DataSource, DeepPartial, FindOptionsWhere, Like } from "typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
-import { ChainId, TokenType } from "@modules/common"
+import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
 
 @Injectable()
 export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
@@ -55,7 +55,9 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
             let user = await this.dataSource.manager.findOne(UserEntity, {
                 where: whereCondition,
                 relations: {
-                    wallets: true,
+                    wallets: {
+                        chainConfigs: true,
+                    },
                     assignedLiquidityPools: true,
                 },
             })
@@ -69,7 +71,7 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                         where: {
                             chainId: ChainId.Sui,
                             // type restriction
-                            farmTypes: Like(`%${defaultFarmType}%`) as unknown as TokenType,
+                            farmTokenTypes: Like(`%${defaultFarmType}%`) as unknown as TokenType,
                         }
                     })
                 const randomSuiPools = suiPools.sort(() => Math.random() - 0.5).slice(0, 3)
@@ -81,22 +83,28 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     deposits: [],
                     wallets: [  
                         {
-                            chainId: ChainId.Monad,
                             accountAddress: keypairs.evmKeypair.publicKey,
                             encryptedPrivateKey: keypairs.evmKeypair.encryptedPrivateKey,
-                            farmType: defaultFarmType,
+                            platformId: PlatformId.Evm,
+                            chainConfigs: [],
                         },
                         {
-                            chainId: ChainId.Sui,
                             accountAddress: keypairs.suiKeypair.publicKey,
                             encryptedPrivateKey: keypairs.suiKeypair.encryptedPrivateKey,
-                            farmType: defaultFarmType,
+                            platformId: PlatformId.Sui,
+                            chainConfigs: [
+                                {
+                                    farmTokenType: defaultFarmType,
+                                    chainId: ChainId.Sui,
+                                    network: Network.Mainnet,
+                                },
+                            ],
                         },
                         {
-                            chainId: ChainId.Solana,
                             accountAddress: keypairs.solanaKeypair.publicKey,
                             encryptedPrivateKey: keypairs.solanaKeypair.encryptedPrivateKey,
-                            farmType: defaultFarmType,
+                            platformId: PlatformId.Solana,
+                            chainConfigs: [],
                         },
                     ],
                     isActive: true,
@@ -116,12 +124,9 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                 {
                     ...user,
                     userId: user.id,
-                    assignedSuiPools: user.assignedLiquidityPools.map((pool) => ({
+                    assignedLiquidityPools: user.assignedLiquidityPools.map((pool) => ({
                         poolId: pool.id,
                     })),
-                    assignedSolanaPools: user.assignedLiquidityPools.map((pool) => ({
-                        poolId: pool.id,
-                    })),       
                 }
             ]
         }

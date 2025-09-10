@@ -5,7 +5,7 @@ import { OnEvent } from "@nestjs/event-emitter"
 import { TickManagerService } from "./tick-manager.service"
 import { DataLikeQueryService, UserLoaderService } from "@features/fetchers"
 import { UserLike } from "@modules/databases"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, PlatformId } from "@modules/common"
 import { Logger } from "winston"
 import { InjectWinston } from "@modules/winston"
 
@@ -25,12 +25,12 @@ export class PoolSelectorService {
     ) {
         const promises: Array<Promise<void>> = []
         for (const user of this.userLoaderService.users) {
-            for (const walletType of Object.values(WalletType)) {
+            for (const platformId of Object.values(PlatformId)) {
                 promises.push((async () => {
                     await this.tryOpenPool({
                         user,
                         pools: event.pools,
-                        walletType,
+                        platformId,
                         chainId: event.chainId,
                         network: event.network,
                     })
@@ -44,7 +44,7 @@ export class PoolSelectorService {
         {
             user,
             pools,
-            walletType,
+            platformId,
             chainId,
             network
         }: GetOpenablePoolsParams
@@ -52,12 +52,12 @@ export class PoolSelectorService {
         const openPositionablePools: Array<FetchedPool> = []
         const fetchingPools = this
             .dataLikeQueryService
-            .getPoolsMatchingUserFarmType(user, pools, walletType)
+            .getPoolsMatchingUserFarmType(user, pools, platformId, chainId)
         for (const pool of fetchingPools) { 
             const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
                 pool,
                 user,
-                walletType,
+                platformId,
                 chainId,
                 network,
             })
@@ -97,7 +97,7 @@ export class PoolSelectorService {
 
 export interface GetOpenablePoolsParams {
     user: UserLike
-    walletType: WalletType
+    platformId: PlatformId
     pools: Array<FetchedPool>
     chainId: ChainId
     network: Network
@@ -105,7 +105,7 @@ export interface GetOpenablePoolsParams {
 
 export interface TryOpenPoolParams {
     user: UserLike
-    walletType: WalletType
+        platformId: PlatformId
     pools: Array<FetchedPool>
     chainId: ChainId
     network: Network

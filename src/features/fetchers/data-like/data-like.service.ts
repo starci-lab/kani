@@ -59,6 +59,7 @@ export class DataLikeService implements OnApplicationBootstrap {
             tokenAId: memDbQueryService.findTokenById(liquidityPool.tokenA.toString())!.displayId,
             tokenBId: memDbQueryService.findTokenById(liquidityPool.tokenB.toString())!.displayId,
             dexId: memDbQueryService.findDexById(liquidityPool.dex.toString())!.displayId,
+            farmTokenTypes: liquidityPool.farmTokenTypes,
         }))
     }
 

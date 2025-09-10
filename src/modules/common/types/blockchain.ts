@@ -39,6 +39,18 @@ export enum PlatformId {
   Sui = "sui",
 }
 
+export const GraphQLTypePlatformId = createEnumType(PlatformId)
+
+registerEnumType(GraphQLTypePlatformId, {
+    name: "PlatformId",
+    description: "The platform ID",
+    valuesMap: {
+        [PlatformId.Evm]: { description: "Evm" },
+        [PlatformId.Solana]: { description: "Solana" },
+        [PlatformId.Sui]: { description: "Sui" },
+    },
+})
+
 export const chainIdToPlatform = (chainId: ChainId): PlatformId => {
     switch (chainId) {
     case ChainId.Solana:
