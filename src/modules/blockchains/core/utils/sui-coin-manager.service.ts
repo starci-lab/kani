@@ -14,12 +14,7 @@ export interface ConsolidateCoinsParams {
 @Injectable()
 export class SuiCoinManagerService {
     constructor() {}
-    /**
-     * Consolidate coins step by step until the required amount is reached.
-     * If the total balance is still insufficient, all available coins will be merged.
-     *
-     * @returns TransactionObjectArgument | null if no coins are available
-     */
+
     public async consolidateCoins(
         {
             suiClient,
@@ -29,22 +24,45 @@ export class SuiCoinManagerService {
             requiredAmount,
         }: ConsolidateCoinsParams
     ): Promise<TransactionObjectArgument | null> {
+        // Fetch all coins of the given type for the owner
         const coins = await suiClient.getCoins({ owner, coinType })
-        if (!coins.data.length) return null
-        // Sort by balance (descending) to minimize merge steps
+        if (!coins.data.length) return null // No coins available
+    
+        // Sort coins by balance in descending order (largest first)
         const sorted = coins.data.sort((a, b) =>
             new BN(b.balance).gt(new BN(a.balance)) ? 1 : -1
         )
-        // Use the largest coin as primary
+    
+        // Case 1: Only one coin exists
+        if (sorted.length === 1) {
+            const balance = new BN(sorted[0].balance)
+            if (balance.lt(requiredAmount)) return null // Not enough balance
+    
+            // Split out exactly the required amount
+            const primaryCoin = txb.object(sorted[0].coinObjectId)
+            const [usedCoin] = txb.splitCoins(primaryCoin, [
+                txb.pure.u64(requiredAmount.toString()),
+            ])
+            return usedCoin
+        }
+    
+        // Case 2: Multiple coins exist -> merge all into the largest one
         const primaryCoin = txb.object(sorted[0].coinObjectId)
         let total = new BN(sorted[0].balance)
-
-        // Merge additional coins until the required amount is met
-        for (let i = 1; i < sorted.length && total.lt(requiredAmount); i++) {
+    
+        for (let i = 1; i < sorted.length; i++) {
             const coin = txb.object(sorted[i].coinObjectId)
             txb.mergeCoins(primaryCoin, [coin])
             total = total.add(new BN(sorted[i].balance))
         }
-        return primaryCoin
+    
+        // If total is still insufficient after merging, return null
+        if (total.lt(requiredAmount)) return null
+    
+        // Split out exactly the required amount from the merged coin
+        const [usedCoin] = txb.splitCoins(primaryCoin, [
+            txb.pure.u64(requiredAmount.toString()),
+        ])
+        return usedCoin
     }
 }

@@ -19,7 +19,7 @@ export class RetryService {
         maxRetries = 5,
         delay = 100,
         factor = 2,
-    }: RetryParams<T>): Promise<T | void> {
+    }: RetryParams<T>): Promise<T> {
         try {
             return await pRetry(action, {
                 retries: maxRetries,
@@ -32,8 +32,8 @@ export class RetryService {
             this.logger.error(
                 `Error retrying action: ${error.message}`,
                 error.stack,
-            )
-            
+            ) 
+            throw error
         }
     }
 }

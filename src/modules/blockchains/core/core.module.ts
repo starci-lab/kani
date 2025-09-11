@@ -11,6 +11,7 @@ import { WinstonLevel, WinstonLogType, WinstonModule } from "@modules/winston"
 import { EnvModule } from "@modules/env"
 import { SignersModule } from "./signers"
 import { CryptoModule } from "@modules/crypto"
+import { TickManagerService } from "./tick-manager.service"
 
 @Module({})
 export class BlockchainCoreModule extends ConfigurableModuleClass {
@@ -20,6 +21,7 @@ export class BlockchainCoreModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const dexModules: Array<DynamicModule> = []
         const providers: Array<Provider> = [
+            TickManagerService,
             LiquidityPoolService
         ]
         if (

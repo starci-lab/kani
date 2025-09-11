@@ -1,10 +1,12 @@
 import { Network } from "@modules/common"
 import { TokenId, TokenLike } from "@modules/databases"
 import BN from "bn.js"
+import { ActionResponse } from "../types"
+import { Transaction } from "@mysten/sui/transactions"
 
 export interface ISwapService {
     quote(params: QuoteParams): Promise<QuoteResponse>
-    swap(params: SwapParams): Promise<SwapResponse>
+    swap(params: SwapParams): Promise<ActionResponse>
 }
 
 export interface QuoteParams {
@@ -22,8 +24,8 @@ export enum SuiRouterId {
 
 export interface QuoteResponse {
     amountOut: BN,
-    // additional serialized data
-    serializedData?: string
+    quoteData?: unknown
+    routerId: SuiRouterId,
 }
 
 export interface SwapParams {
@@ -36,12 +38,8 @@ export interface SwapParams {
     routerId?: SuiRouterId,
     fromAddress: string,
     recipientAddress?: string,
-    // serialized data
-    serializedData?: string
-    // tx
-    serializedTx: string
-}
-
-export interface SwapResponse {
-    txPayload: string,
+    // quote data (if required)
+    quoteData?: unknown
+    // txb (sui only)
+    txb?: Transaction
 }

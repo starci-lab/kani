@@ -3,15 +3,15 @@ import { InjectCetusAggregatorSdks, InjectSevenKAggregatorSdks } from "./swap.de
 import { AggregatorClient, RouterDataV3 } from "@cetusprotocol/aggregator-sdk"
 import SevenK from "@7kprotocol/sdk-ts"
 import { Network } from "@modules/common"
-import { ISwapService, QuoteParams, QuoteResponse, SuiRouterId, SwapParams, SwapResponse } from "./swap.interface"
+import { ISwapService, QuoteParams, QuoteResponse, SuiRouterId, SwapParams } from "./swap.interface"
 import BN from "bn.js"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
-import { Transaction } from "@mysten/sui/transactions"
 import { SuiCoinManagerService } from "../utils"
 import { InjectWinston } from "@modules/winston"
 import { Logger } from "winston"
+import { InjectSuiClients } from "../clients"
+import { SuiClient } from "@mysten/sui/client"
+import { ActionResponse } from "../types"
 
 @Injectable()
 export class SuiSwapService implements ISwapService {
@@ -20,11 +20,11 @@ export class SuiSwapService implements ISwapService {
         private readonly cetusAggregatorSdks: Record<Network, AggregatorClient>,
         @InjectSevenKAggregatorSdks()
         private readonly sevenKAggregatorSdks: Record<Network, typeof SevenK>,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
         private readonly suiCoinManagerService: SuiCoinManagerService,
         @InjectWinston()
         private readonly winstonLogger: Logger,
+        @InjectSuiClients()
+        private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) { }
     
     async quote({
@@ -58,7 +58,7 @@ export class SuiSwapService implements ISwapService {
                 return {
                     amountOut: data?.amountOut ?? new BN(0),
                     routerId: SuiRouterId.Cetus,
-                    serializedData: this.superJson.stringify(data),
+                    quoteData: data,
                 }
             }),
             this.sevenKAggregatorSdks[network].getQuote(
@@ -72,7 +72,7 @@ export class SuiSwapService implements ISwapService {
                     return {
                         amountOut: new BN(data.returnAmountWithDecimal),
                         routerId: SuiRouterId.SevenK,
-                        serializedData: this.superJson.stringify(data),
+                        quoteData: data,
                     }
                 }
             ),
@@ -80,7 +80,7 @@ export class SuiSwapService implements ISwapService {
         const bestQuote = [cetusAmountOut, sevenKAmountOut].reduce((prev, curr) =>
             curr.amountOut.gt(prev.amountOut) ? curr : prev,
         )
-
+        //const bestQuote = sevenKAmountOut
         return bestQuote
     }
 
@@ -91,79 +91,82 @@ export class SuiSwapService implements ISwapService {
         tokenOut,
         tokens,
         amountIn,
-        serializedData,
+        quoteData,
         fromAddress,
         recipientAddress = fromAddress,
-        slippage = 0.05,
-        serializedTx
-    }: SwapParams): Promise<SwapResponse> {
-        let txPayload = ""
+        slippage = 0.01,
+        txb
+    }: SwapParams): Promise<ActionResponse> {
+        const suiClient = this.suiClients[network][0]
+        if (!txb) {
+            throw new Error("Serialized data is required")
+        }
+        const tokenInInstance = tokens.find(
+            token => token.displayId === tokenIn,
+        )
+        const tokenOutInstance = tokens.find(
+            token => token.displayId === tokenOut,
+        )
+        if (!tokenInInstance || !tokenOutInstance) {
+            throw new Error("Token not found")
+        }
+        const mergedCoin = await this.suiCoinManagerService.consolidateCoins({
+            suiClient,
+            txb,
+            owner: fromAddress,
+            coinType: tokenInInstance.tokenAddress,
+            requiredAmount: amountIn,
+        })
         switch (routerId) {
         case SuiRouterId.Cetus:
         {
             const aggregator = this.cetusAggregatorSdks[network]
-            if (!serializedData) {
-                throw new Error("Serialized data is required")
-            }
-            const txb = Transaction.from(serializedTx)
-            if (!txb) {
-                throw new Error("Txb is required")
-            }
-            const tokenInInstance = tokens.find(
-                token => token.displayId === tokenIn,
-            )
-            const tokenOutInstance = tokens.find(
-                token => token.displayId === tokenOut,
-            )
-            if (!tokenInInstance || !tokenOutInstance) {
-                throw new Error("Token not found")
-            }
-            const mergedCoin = await this.suiCoinManagerService.consolidateCoins({
-                suiClient: aggregator.client,
-                txb,
-                owner: fromAddress,
-                coinType: tokenInInstance.tokenAddress,
-                requiredAmount: amountIn,
-            })
             if (!mergedCoin) {
                 this.winstonLogger.error("MergedCoinIsRequired")
                 throw new Error("Merged coin is required")
             }
-            const outputCoin = await this.cetusAggregatorSdks[network].routerSwap({
-                router: this.superJson.parse<RouterDataV3>(serializedData),
+            const outputCoin = await aggregator.routerSwap({
+                router: quoteData as RouterDataV3,
                 slippage,
                 txb,
                 inputCoin: mergedCoin,
             })
-            txb.transferObjects([outputCoin], recipientAddress) 
-            const txPayload = await txb.toJSON()
+            txb.transferObjects([outputCoin], recipientAddress)
             return {
-                txPayload
+                txb
             }
         }
         case SuiRouterId.SevenK:
         {
-            if (!serializedData) {
+            const aggregator = this.sevenKAggregatorSdks[network]
+            if (!quoteData) {
                 throw new Error("Serialized data is required")
             }
             if (!recipientAddress) {
                 throw new Error("Account address is required")
             }
-            const tx = await this.sevenKAggregatorSdks[network].buildTx({
-                quoteResponse: this.superJson.parse<SevenKQuoteResponse>(serializedData),
+            const { coinOut } = await aggregator.buildTx({
+                quoteResponse: quoteData as SevenKQuoteResponse,
                 accountAddress: fromAddress,
                 slippage,
                 commission: {
-                    partner: "",
+                    partner: fromAddress,
                     commissionBps: 0,
-                }
+                },
+                extendTx: {
+                    tx: txb,
+                    // explicit consume this coin object instead of loading all available coin objects from wallet
+                    coinIn: mergedCoin || undefined,
+                },
             })
-            txPayload = this.superJson.stringify(tx)
-            break
+            if (!coinOut) {
+                throw new Error("Coin out is required")
+            }
+            txb.transferObjects([coinOut], recipientAddress) 
+            return {
+                txb
+            }
         }
-        }
-        return {
-            txPayload,
         }
     }
 }   

@@ -1,7 +1,7 @@
 import { LiquidityPoolLike, TokenLike } from "@modules/databases"
 
 export interface FetchedPool {
-    id: string
+    poolAddress: string
     currentTick: number
     currentSqrtPrice: number
     tickSpacing: number

@@ -70,6 +70,17 @@ export interface DexLike extends BaseLike {
     iconUrl?: string
 }
 
+export interface PositionLike extends BaseLike {
+    /** The position ID */
+    positionId: string
+    /** The liquidity of the position */
+    liquidity: string
+    /** The lower tick index of the position */
+    tickLowerIndex: number
+    /** The upper tick index of the position */
+    tickUpperIndex: number
+}
+
 export interface LiquidityPoolLike extends BaseLike {
     /** Unique display identifier for the pool */
     displayId: LiquidityPoolId

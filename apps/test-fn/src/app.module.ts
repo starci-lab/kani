@@ -1,7 +1,7 @@
 import { BlockchainCoreModule, KeypairsModule } from "@modules/blockchains"
 import { Module } from "@nestjs/common"
-import { AppService } from "./app.service"
 import { UserLoaderModule } from "@features/fetchers"
+// import { TestSwapService } from "./test-swap.service"
 import { SqliteModule } from "@modules/databases"
 
 @Module({
@@ -22,6 +22,8 @@ import { SqliteModule } from "@modules/databases"
             isGlobal: true,
         })
     ],
-    providers: [AppService],
+    providers: [
+        //TestSwapService
+    ],
 })
 export class AppModule {}
