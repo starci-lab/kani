@@ -2,7 +2,9 @@ import { PlatformId } from "@modules/common"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { ApiProperty } from "@nestjs/swagger"
 
-@ObjectType({ description: "Represents a user wallet across multiple chains" })
+@ObjectType({ 
+    description: "Represents a user wallet across multiple chains"
+})
 export class UserWalletResponseDto {
     @ApiProperty({
         description: "User wallet account address (format depends on chain)",

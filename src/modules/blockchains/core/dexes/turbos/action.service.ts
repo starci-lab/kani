@@ -13,9 +13,9 @@ export class TurbosActionService implements IActionService {
 
     // open position
     async openPosition({
-        pool
+        pool,
+        network = Network.Mainnet,
     }: OpenPositionParams): Promise<ActionResponse> {
-        console.log(pool)
         return {
             txHash: "0x123",
         }

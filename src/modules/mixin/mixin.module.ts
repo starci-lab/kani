@@ -7,6 +7,7 @@ import { NextJsQueryService } from "./nextjs-query.serivce"
 import { ReadinessWatcherFactoryService } from "./readiness-watcher-factory.service"
 import { InstanceIdService } from "./instance-id.service"
 import { RandomDelayService } from "./random-delay.service"
+import { createSuperJsonServiceProvider } from "./superjson.providers"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -20,7 +21,8 @@ export class MixinModule extends ConfigurableModuleClass {
             DayjsService,
             ReadinessWatcherFactoryService,
             InstanceIdService,
-            RandomDelayService
+            RandomDelayService,
+            createSuperJsonServiceProvider()
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)

@@ -14,10 +14,12 @@ export const createSuiClientsProvider = (): Provider<
             Array.from(
                 { length: 10 },
                 (_, index) =>
-                    new SuiClient({
+                {
+                    return new SuiClient({
                         url: envConfig().rpcs[ChainId.Sui][network][index],
                         network,
-                    }),
+                    })
+                }
             )
         return {
             [Network.Mainnet]: createClients(Network.Mainnet),

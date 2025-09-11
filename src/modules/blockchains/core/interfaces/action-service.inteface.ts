@@ -5,15 +5,17 @@ export interface ActionResponse {
     txHash: string
 }
 
-export interface ClosePositionParams {
-    pool: FetchedPool
-    position: FetchedPosition
+export interface ActionParams {
     network?: Network
 }
 
-export interface OpenPositionParams {
+export interface ClosePositionParams extends ActionParams {
     pool: FetchedPool
-    network?: Network
+    position: FetchedPosition
+}
+
+export interface OpenPositionParams extends ActionParams {
+    pool: FetchedPool
 }
 
 export interface IActionService {

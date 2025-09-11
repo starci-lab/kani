@@ -82,18 +82,18 @@ export const envConfig = () => ({
         [ChainId.Sui]: {
             [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
                 process.env[`SUI_RPC_URL_${i + 1}`] || ""
-            ).filter(Boolean),
+            ).filter((url) => url !== ""),
             [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
                 process.env[`SUI_RPC_URL_${i + 1}_TESTNET`] || ""
-            ).filter(Boolean),
+            ).filter((url) => url !== ""),
         },
         [ChainId.Solana]: {
             [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
                 process.env[`SOLANA_RPC_URL_${i + 1}`] || ""
-            ).filter(Boolean),
+            ).filter((url) => url !== ""),
             [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
                 process.env[`SOLANA_RPC_URL_${i + 1}_TESTNET`] || ""
-            ).filter(Boolean),
+            ).filter((url) => url !== ""),
         },
     },
     lpBot: {

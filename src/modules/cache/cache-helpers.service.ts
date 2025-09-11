@@ -27,10 +27,16 @@ export class CacheHelpersService {
     private readonly moduleRef: ModuleRef,
     ) {
         if (!this.options.types || this.options.types.includes(CacheType.Memory)) {
-            this.memoryCacheManager = this.moduleRef.get(MEMORY_CACHE_MANAGER, { strict: false })
+            this.memoryCacheManager = this.moduleRef.get(
+                MEMORY_CACHE_MANAGER, 
+                { strict: false }
+            )
         }
         if (!this.options.types || this.options.types.includes(CacheType.Redis)) {
-            this.redisCacheManager = this.moduleRef.get(REDIS_CACHE_MANAGER, { strict: false })
+            this.redisCacheManager = this.moduleRef.get(
+                REDIS_CACHE_MANAGER, 
+                { strict: false }
+            )
         }
     }
 

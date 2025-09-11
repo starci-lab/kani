@@ -5,8 +5,8 @@ import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
 import { 
     PriceModule, 
-    LiquidityPoolsModule, 
-    KeypairsModule
+    KeypairsModule,
+    BlockchainCoreModule
 } from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
@@ -64,7 +64,7 @@ export class AppModule extends ConfigurableModuleClass {
                 PriceModule.register({
                     isGlobal: true,
                 }),
-                LiquidityPoolsModule.register({
+                BlockchainCoreModule.register({
                     isGlobal: true,
                 }),
             ],
