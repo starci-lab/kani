@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common"
 import { UserLoaderModule } from "@features/fetchers"
 // import { TestSwapService } from "./test-swap.service"
 import { SqliteModule } from "@modules/databases"
+import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
 
 @Module({
     imports: [
@@ -24,6 +25,7 @@ import { SqliteModule } from "@modules/databases"
     ],
     providers: [
         //TestSwapService
+        TurbosTestLiquidityManangementService
     ],
 })
 export class AppModule {}

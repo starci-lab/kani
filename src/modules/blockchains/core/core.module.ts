@@ -1,9 +1,8 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
+import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./core.module-definition"
 import { CetusModule, TurbosModule } from "./dexes"
 import { ClientsModule } from "./clients"
 import { DexId } from "@modules/databases"
-import { LiquidityPoolService } from "./core.service"
 import { SwapModule } from "./swap"
 import { MixinModule } from "@modules/mixin"
 import { UtilsModule } from "./utils"
@@ -11,8 +10,6 @@ import { WinstonLevel, WinstonLogType, WinstonModule } from "@modules/winston"
 import { EnvModule } from "@modules/env"
 import { SignersModule } from "./signers"
 import { CryptoModule } from "@modules/crypto"
-import { TickManagerService } from "./tick-manager.service"
-import { PriceRatioService } from "./price-ratio.service"
 
 @Module({})
 export class BlockchainCoreModule extends ConfigurableModuleClass {
@@ -21,11 +18,6 @@ export class BlockchainCoreModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const dexModules: Array<DynamicModule> = []
-        const providers: Array<Provider> = [
-            TickManagerService,
-            LiquidityPoolService,
-            PriceRatioService
-        ]
         if (
             !options.dexes 
             || options.dexes.includes(DexId.Cetus)
@@ -84,11 +76,9 @@ export class BlockchainCoreModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [],
-                ...providers,
             ],
             exports: [
                 ...dexModules,
-                ...providers,
             ]
         }
     }

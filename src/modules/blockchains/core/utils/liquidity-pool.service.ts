@@ -1,8 +1,8 @@
 import { DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { ModuleRef } from "@nestjs/core"
-import { IFetchService, IMetadataService } from "./interfaces"
-import { CetusFetcherService, CetusMetadataService, TurbosFetcherService, TurbosMetadataService } from "./dexes"
+import { IFetchService, IMetadataService } from "../interfaces"
+import { CetusFetcherService, CetusMetadataService, TurbosFetcherService, TurbosMetadataService } from "../dexes"
 import { ChainId } from "@modules/common"
 
 @Injectable()

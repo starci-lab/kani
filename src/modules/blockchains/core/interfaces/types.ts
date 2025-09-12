@@ -1,9 +1,10 @@
 import { LiquidityPoolLike, TokenLike } from "@modules/databases"
+import BN from "bn.js"
 
 export interface FetchedPool {
     poolAddress: string
     currentTick: number
-    currentSqrtPrice: number
+    currentSqrtPrice: BN
     tickSpacing: number
     liquidityPool: LiquidityPoolLike
     token0: TokenLike

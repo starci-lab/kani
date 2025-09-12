@@ -4,34 +4,23 @@ import {
     IActionService,
     OpenPositionParams,
 } from "../../interfaces"
-import CetusClmmSDK, {
-} from "@cetusprotocol/cetus-sui-clmm-sdk"
 import BN from "bn.js"
-import { InjectCetusClmmSdks } from "./cetus.decorators"
 import { Network } from "@modules/common"
 import { ActionResponse } from "../../types"
-import { TickManagerService } from "../../tick-manager.service"
-import { FeeToService } from "../../fee-to.service"
+import { TickManagerService } from "../../utils/tick-manager.service"
+import { FeeToService } from "../../utils"
 import { InjectCetusZapSdks } from "./cetus.decorators"
 import CetusZapSDK from "@cetusprotocol/zap-sdk"
-import { PriceRatioService } from "../../price-ratio.service"
-import { SuiCoinManagerService } from "../../utils"
-import { SuiClient } from "@mysten/sui/client"
-import { InjectSuiClients } from "../../clients"
+import { PriceRatioService } from "../../utils"
 
 @Injectable()
 export class CetusActionService implements IActionService {
     constructor(
-    @InjectCetusClmmSdks()
-    private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
     private readonly tickManagerService: TickManagerService,
     private readonly feeToService: FeeToService,
     @InjectCetusZapSdks()
     private readonly cetusZapSdks: Record<Network, CetusZapSDK>,
     private readonly priceRatioService: PriceRatioService,
-    private readonly suiCoinManagerService: SuiCoinManagerService,
-    @InjectSuiClients()
-    private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) {}
 
     // ---------- Open Position ----------

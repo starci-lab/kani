@@ -71,7 +71,7 @@ export class FetcherService {
                         network,
                         pools: pools.map(
                             pool => ({
-                                poolAddress: pool.id,
+                                poolAddress: pool.poolAddress,
                                 currentSqrtPrice: pool.currentSqrtPrice,
                                 currentTick: pool.currentTick,
                             })

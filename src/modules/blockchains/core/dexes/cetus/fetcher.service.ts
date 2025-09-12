@@ -9,6 +9,7 @@ import {
     IFetchService,
 } from "../../interfaces"
 import { DexId } from "@modules/databases"
+import { BN } from "bn.js"
 
 @Injectable()
 export class CetusFetcherService implements IFetchService {
@@ -42,9 +43,9 @@ export class CetusFetcherService implements IFetchService {
         )
         pools.push(
             ...fetchedPools.map((pool) => ({
-                id: pool.poolAddress,
+                poolAddress: pool.poolAddress,
                 currentTick: Number(pool.current_tick_index),
-                currentSqrtPrice: Number(pool.current_sqrt_price),
+                currentSqrtPrice: new BN(pool.current_sqrt_price),
                 tickSpacing: Number(pool.tickSpacing),
                 fee: Number(pool.fee_rate),
                 token0: tokens.find(

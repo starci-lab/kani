@@ -1,6 +1,5 @@
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import JSBI from "jsbi"
 
 export const computePercentage = (
     numerator: number,
@@ -9,6 +8,19 @@ export const computePercentage = (
 ): number => {
     const fixed = ((numerator * 100) / denominator).toFixed(fractionDigits)
     return Number.parseFloat(fixed)
+}
+
+export const computeRatio = (
+    numerator: BN,
+    denominator: BN,
+    fractionDigits: number = 5,
+): number => {
+    const multiplier = new BN(10).pow(new BN(fractionDigits)) // 10^decimals
+    return roundNumber(
+        numerator.mul(multiplier).div(denominator).toNumber() /
+      multiplier.toNumber(),
+        fractionDigits,
+    )
 }
 
 export const computeDenomination = (
@@ -22,8 +34,7 @@ export const computeDenomination = (
     const remainder = amount.mod(divisor)
 
     const result =
-        quotient.toNumber() +
-        remainder.toNumber() / divisor.toNumber()
+    quotient.toNumber() + remainder.toNumber() / divisor.toNumber()
 
     return parseFloat(result.toFixed(fractionDigits))
 }
@@ -32,15 +43,15 @@ export const computeRaw = (
     amount: number,
     decimals = 8,
     fractionDigits = 5,
-): bigint => {
-    const mutiplier = JSBI.BigInt(10 ** decimals)
-    const decimalMultiplier = JSBI.BigInt(10 ** fractionDigits)
-    const result = JSBI.multiply(
-        JSBI.BigInt((amount * 10 ** fractionDigits).toFixed()),
-        mutiplier,
-    )
-    const result2 = JSBI.divide(result, decimalMultiplier)
-    return BigInt(result2.toString())
+): BN => {
+    const multiplier = new BN(10).pow(new BN(decimals)) // 10^decimals
+    const decimalMultiplier = new BN(10).pow(new BN(fractionDigits)) // 10^fractionDigits
+
+    // amount * 10^fractionDigits → làm tròn để tránh số thập phân lẻ
+    const scaled = new BN(Math.round(amount * 10 ** fractionDigits))
+
+    const result = scaled.mul(multiplier).div(decimalMultiplier)
+    return result
 }
 
 export const roundNumber = (amount: number, decimals = 5): number => {
@@ -52,11 +63,13 @@ export const computeFeeTierRaw = (feeTier = 0.003): number => {
 }
 
 export const computeAfterFee = (amount: bigint, feeTier = 0.003): bigint => {
-    const fee =
-    (amount * BigInt(computeFeeTierRaw(feeTier))) / BigInt(1_000_000)
+    const fee = (amount * BigInt(computeFeeTierRaw(feeTier))) / BigInt(1_000_000)
     return amount - fee
 }
 
 export const computeBeforeFee = (amount: bigint, feeTier = 0.003): bigint => {
-    return (amount * BigInt(1_000_000)) / (BigInt(1_000_000) - BigInt(computeFeeTierRaw(feeTier)))
+    return (
+        (amount * BigInt(1_000_000)) /
+    (BigInt(1_000_000) - BigInt(computeFeeTierRaw(feeTier)))
+    )
 }

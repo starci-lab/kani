@@ -9,6 +9,7 @@ import {
     IFetchService,
 } from "../../interfaces"
 import { DexId } from "@modules/databases"
+import { BN } from "bn.js"
 
 @Injectable()
 export class TurbosFetcherService implements IFetchService {
@@ -40,9 +41,9 @@ export class TurbosFetcherService implements IFetchService {
                 liquidityPool.poolAddress,
             )
             pools.push({
-                id: fetchedPool.id.id,
+                poolAddress: fetchedPool.id.id,
                 currentTick: toI32(fetchedPool.tick_current_index.fields.bits),
-                currentSqrtPrice: Number(fetchedPool.sqrt_price),
+                currentSqrtPrice: new BN(fetchedPool.sqrt_price),
                 tickSpacing: Number(fetchedPool.tick_spacing),
                 fee: Number(fetchedPool.fee),
                 liquidity: Number(fetchedPool.liquidity),
