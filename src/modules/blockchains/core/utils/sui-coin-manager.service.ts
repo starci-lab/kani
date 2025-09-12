@@ -5,7 +5,7 @@ import BN from "bn.js"
 
 export interface ConsolidateCoinsParams {
     suiClient: SuiClient
-    txb: Transaction
+    txb?: Transaction
     owner: string
     coinType: string
     requiredAmount: BN
@@ -24,6 +24,7 @@ export class SuiCoinManagerService {
             requiredAmount,
         }: ConsolidateCoinsParams
     ): Promise<TransactionObjectArgument | null> {
+        txb = txb || new Transaction()
         // Fetch all coins of the given type for the owner
         const coins = await suiClient.getCoins({ owner, coinType })
         if (!coins.data.length) return null // No coins available

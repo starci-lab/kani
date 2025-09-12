@@ -1,3 +1,4 @@
+import BN from "bn.js"
 import Decimal from "decimal.js"
 import JSBI from "jsbi"
 
@@ -11,21 +12,20 @@ export const computePercentage = (
 }
 
 export const computeDenomination = (
-    amount: number | bigint,
+    amount: BN,
     decimals = 8,
-    fractionDigits: number = 5,
-) => {
-    if (typeof amount === "number") {
-        const decimalMultiplier = 10 ** fractionDigits
-        const divisor = 10 ** decimals
-        const result = (amount * decimalMultiplier) / divisor
-        return Number((result / decimalMultiplier).toFixed(fractionDigits))
-    } else {
-        const decimalMultiplier = BigInt(10 ** fractionDigits)
-        const divisor = BigInt(10 ** decimals)
-        const result = (amount * decimalMultiplier) / divisor
-        return Number(result) / Number(decimalMultiplier)
-    }
+    fractionDigits = 5,
+): number => {
+    // amount is a BN
+    const divisor = new BN(10).pow(new BN(decimals))
+    const quotient = amount.div(divisor)
+    const remainder = amount.mod(divisor)
+
+    const result =
+        quotient.toNumber() +
+        remainder.toNumber() / divisor.toNumber()
+
+    return parseFloat(result.toFixed(fractionDigits))
 }
 
 export const computeRaw = (

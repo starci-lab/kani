@@ -1,33 +1,37 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
-import { ChainId, Network } from "@modules/common"
 import { ActionResponse } from "../types"
-import { PositionLike } from "@modules/databases"
+import { PositionLike, TokenId, TokenLike } from "@modules/databases"
+import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 
-export interface ActionParams {
+export interface ClosePositionParams {
+    pool: FetchedPool
+    position: PositionLike
     network?: Network
     chainId?: ChainId
+    accountAddress: string
+    priorityAOverB: boolean
+    tokenAId: TokenId
+    tokenBId: TokenId
+    tokens: Array<TokenLike>
     // txb (sui only)
     txb?: Transaction
 }
 
-export interface ClosePositionParams extends ActionParams {
-    pool: FetchedPool
-    position: PositionLike
-    // user who burn the NFT
-    fromAddress: string
-}
-
-export interface OpenPositionParams extends ActionParams {
+export interface OpenPositionParams {
     pool: FetchedPool
     // amount to add
-    amountA: BN
-    amountB: BN
-    // user who receive the NFT
-    toAddress: string
-    // fees
-    fee?: number
+    amount: BN
+    priorityAOverB: boolean
+    tokenAId: TokenId
+    tokenBId: TokenId
+    tokens: Array<TokenLike>
+    network?: Network
+    chainId?: ChainId
+    accountAddress: string
+    // txb (sui only)
+    txb?: Transaction
 }
 
 export interface ClosePositionResponse extends ActionResponse {

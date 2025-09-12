@@ -1,11 +1,11 @@
 import { Provider } from "@nestjs/common"
-import { AggregatorClient } from "@cetusprotocol/aggregator-sdk"
 import { initCetusSDK, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { CETUS_AGGREGATOR_SDKS, CETUS_CLMM_SDKS } from "./cetus.constants"
+import { CETUS_CLMM_SDKS, CETUS_ZAP_SDKS } from "./cetus.constants"
 import { ChainId, Network } from "@modules/common"
 import { envConfig } from "@modules/env"
 import { SUI_CLIENTS } from "../../clients"
 import { SuiClient } from "@mysten/sui/client"
+import CetusZapSDK from "@cetusprotocol/zap-sdk"
 
 export const createCetusClmmSdkProvider = (): Provider<Record<Network, CetusClmmSDK>> => ({
     provide: CETUS_CLMM_SDKS,
@@ -23,12 +23,14 @@ export const createCetusClmmSdkProvider = (): Provider<Record<Network, CetusClmm
 }
 )
 
-export const createCetusAggregatorSdkProvider = (): Provider<Record<Network, AggregatorClient>> => ({
-    provide: CETUS_AGGREGATOR_SDKS,
+export const createCetusZapSdkProvider = (): Provider<
+    Record<Network, CetusZapSDK>
+> => ({
+    provide: CETUS_ZAP_SDKS,
     inject: [SUI_CLIENTS],
-    useFactory: (clients: Record<Network, SuiClient>) => {
-        const createClient = (network: Network) => new AggregatorClient({
-            client: clients[network],
+    useFactory: (clients: Record<Network, Array<SuiClient>>) => {
+        const createClient = (network: Network) => CetusZapSDK.createSDK({
+            sui_client: clients[network][0],
         })
         return {
             [Network.Mainnet]: createClient(Network.Mainnet),

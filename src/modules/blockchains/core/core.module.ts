@@ -12,6 +12,7 @@ import { EnvModule } from "@modules/env"
 import { SignersModule } from "./signers"
 import { CryptoModule } from "@modules/crypto"
 import { TickManagerService } from "./tick-manager.service"
+import { PriceRatioService } from "./price-ratio.service"
 
 @Module({})
 export class BlockchainCoreModule extends ConfigurableModuleClass {
@@ -22,7 +23,8 @@ export class BlockchainCoreModule extends ConfigurableModuleClass {
         const dexModules: Array<DynamicModule> = []
         const providers: Array<Provider> = [
             TickManagerService,
-            LiquidityPoolService
+            LiquidityPoolService,
+            PriceRatioService
         ]
         if (
             !options.dexes 
