@@ -11,15 +11,17 @@ import { Network } from "@modules/common"
 export class PythSolanaService implements IOracleService {
     private connections: Partial<Record<Network, PythConnection>> = {}
     private fetchedPrices: Map<TokenId, Decimal> = new Map()
-
+    private tokens: Array<TokenLike> = []
     constructor(
-        @InjectSolanaClients()
-        private readonly solanaClients: Record<Network, Array<Connection>>,
+    @InjectSolanaClients()
+    private readonly solanaClients: Record<Network, Array<Connection>>,
     ) {
-        Object.values(Network).forEach(network => {
+        Object.values(Network).forEach((network) => {
             this.connections[network] = new PythConnection(
-                this.solanaClients[network][0], 
-                getPythProgramKeyForCluster(network === Network.Mainnet ? "mainnet-beta" : "testnet")
+                this.solanaClients[network][0],
+                getPythProgramKeyForCluster(
+                    network === Network.Mainnet ? "mainnet-beta" : "testnet",
+                ),
             )
         })
     }
@@ -28,11 +30,19 @@ export class PythSolanaService implements IOracleService {
    * Start subscriptions for tokens you want to track.
    * Keeps updating `fetchedPrices` whenever new data arrives.
    */
-    subscribe(tokens: Array<TokenLike>): void {
-        tokens.forEach(token => {
-            this.connections[Network.Mainnet]?.onPriceChange((product) => {
-                if (!product || product.price === undefined) return
-                let price = new Decimal(product.price)
+    subscribe(tokens: Array<TokenLike>, network: Network = Network.Mainnet): void {
+        this.tokens = tokens
+        const connection = this.connections[network]
+        if (!connection) {
+            throw new Error(`No Pyth connection for network ${network}`)
+        }
+
+        tokens.forEach((token) => {
+            if (!token.pythFeedId) return
+            connection.onPriceChange((priceAccount) => {
+                if (!priceAccount || priceAccount.price === undefined) return
+
+                let price = new Decimal(priceAccount.price)
                 if (token.decimals && token.decimals > 0) {
                     price = price.div(new Decimal(10).pow(token.decimals))
                 }
@@ -46,20 +56,20 @@ export class PythSolanaService implements IOracleService {
    */
     async fetchPrices(
         tokenIds: Array<TokenId>,
-        tokens: Array<TokenLike>
     ): Promise<Partial<Record<TokenId, Decimal>>> {
-        const fetchTokens = tokens.filter(t => tokenIds.includes(t.displayId))
+        const fetchTokens = this.tokens.filter((t) => tokenIds.includes(t.displayId))
         if (fetchTokens.length !== tokenIds.length) {
             throw new Error("Some tokens not found")
         }
+
         const result: Partial<Record<TokenId, Decimal>> = {}
-        fetchTokens.forEach(token => {
+        fetchTokens.forEach((token) => {
             const cachedPrice = this.fetchedPrices.get(token.displayId)
-            if (!cachedPrice) {
-                return {}
+            if (cachedPrice) {
+                result[token.displayId] = cachedPrice
             }
-            result[token.displayId] = cachedPrice
         })
+
         return result
     }
 }

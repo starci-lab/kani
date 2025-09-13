@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TokenId, TokenLike } from "@modules/databases"
+import { TokenId } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { PythSuiService } from "./pyth-sui.service"
 import { PythSolanaService } from "./pyth-solana.service"
@@ -7,7 +7,6 @@ import Decimal from "decimal.js"
 
 export interface FetchPricesParams {
   tokenIds: Array<TokenId>;
-  tokens: Array<TokenLike>;
   chainId: ChainId;
   network?: Network;
 }
@@ -21,7 +20,6 @@ export class PythService {
 
     async fetchPrices({
         tokenIds,
-        tokens,
         chainId,
         network,
     }: FetchPricesParams): Promise<Partial<Record<TokenId, Decimal>>> {
@@ -31,9 +29,9 @@ export class PythService {
         }
         switch (chainId) {
         case ChainId.Sui:
-            return this.suiPythService.fetchPrices(tokenIds, tokens)
+            return this.suiPythService.fetchPrices(tokenIds)
         case ChainId.Solana:
-            return this.solanaPythService.fetchPrices(tokenIds, tokens)
+            return this.solanaPythService.fetchPrices(tokenIds)
         default:
         // do nothing
             return {}
@@ -45,11 +43,9 @@ export class PythService {
         tokenBId,
         chainId,
         network,
-        tokens,
     }: ComputeOraclePriceParams) {
         const prices = await this.fetchPrices({
             tokenIds: [tokenAId, tokenBId],
-            tokens,
             chainId,
             network,
         })
@@ -67,5 +63,4 @@ export interface ComputeOraclePriceParams {
   tokenBId: TokenId;
   chainId: ChainId;
   network?: Network;
-  tokens: Array<TokenLike>
 }

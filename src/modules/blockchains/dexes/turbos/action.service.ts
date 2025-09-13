@@ -47,7 +47,6 @@ export class TurbosActionService implements IActionService {
             tokenBId,
             chainId: tokenA.chainId,
             network,
-            tokens,
         })
         const { 
             txb: txbAfterAttachFee, 
