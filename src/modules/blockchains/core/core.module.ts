@@ -10,6 +10,7 @@ import { WinstonLevel, WinstonLogType, WinstonModule } from "@modules/winston"
 import { EnvModule } from "@modules/env"
 import { SignersModule } from "./signers"
 import { CryptoModule } from "@modules/crypto"
+import { PythModule } from "./pyth"
 
 @Module({})
 export class BlockchainCoreModule extends ConfigurableModuleClass {
@@ -71,6 +72,9 @@ export class BlockchainCoreModule extends ConfigurableModuleClass {
                 SignersModule.register({
                     isGlobal: options.isGlobal,
                     useGcpKms: options.useGcpKms,
+                }),
+                PythModule.register({
+                    isGlobal: options.isGlobal,
                 }),
                 ...dexModules,
             ],

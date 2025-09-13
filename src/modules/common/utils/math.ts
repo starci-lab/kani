@@ -10,16 +10,23 @@ export const computePercentage = (
     return Number.parseFloat(fixed)
 }
 
+export const toUnit = (decimals: number = 10): BN => {
+    return new BN(10).pow(new BN(decimals))
+}
+
+export const toUnitDecimal = (decimals: number = 10): Decimal => {
+    return new Decimal(10).pow(new Decimal(decimals))
+}
+
 export const computeRatio = (
     numerator: BN,
     denominator: BN,
-    fractionDigits: number = 5,
-): number => {
+    fractionDigits: number = 10,
+): Decimal => {
     const multiplier = new BN(10).pow(new BN(fractionDigits)) // 10^decimals
-    return roundNumber(
+    return new Decimal(
         numerator.mul(multiplier).div(denominator).toNumber() /
-      multiplier.toNumber(),
-        fractionDigits,
+        multiplier.toNumber(),
     )
 }
 
@@ -73,3 +80,14 @@ export const computeBeforeFee = (amount: bigint, feeTier = 0.003): bigint => {
     (BigInt(1_000_000) - BigInt(computeFeeTierRaw(feeTier)))
     )
 }
+
+export const toScaledBN = (
+    bn: BN,
+    multiplier: Decimal,
+    fractionDigits: number = 10
+): BN => {
+    const decimalMultiplier = new Decimal(10).pow(fractionDigits) // 10^fractionDigits
+    const scale = new BN(multiplier.mul(decimalMultiplier).toFixed(0))
+    return new BN(bn.toString()).mul(scale).div(new BN(decimalMultiplier.toFixed(0)))
+}
+  

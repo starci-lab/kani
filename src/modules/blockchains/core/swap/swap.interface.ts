@@ -17,7 +17,7 @@ export interface QuoteParams {
     network?: Network
 }
 
-export enum SuiRouterId {
+export enum RouterId {
     Cetus = "cetus",
     SevenK = "sevenk",
 }
@@ -25,7 +25,7 @@ export enum SuiRouterId {
 export interface QuoteResponse {
     amountOut: BN,
     quoteData?: unknown
-    routerId: SuiRouterId,
+    routerId: RouterId,
 }
 
 export interface SwapParams {
@@ -35,7 +35,7 @@ export interface SwapParams {
     tokens: Array<TokenLike>,
     slippage?: number,
     network?: Network
-    routerId?: SuiRouterId,
+    routerId?: RouterId,
     fromAddress: string,
     recipientAddress?: string,
     // quote data (if required)

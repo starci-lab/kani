@@ -49,6 +49,9 @@ export class TokenEntity extends StringAbstractEntity {
 
     @Column({ type: "text", name: "type" })
         type: TokenType
+
+    @Column({ type: "text", name: "pyth_feed_id", nullable: true })
+        pythFeedId: string
 }
 
 

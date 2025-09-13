@@ -1,23 +1,23 @@
 import { Injectable } from "@nestjs/common"
 import { ClosePositionParams, IActionService, OpenPositionParams } from "../../interfaces"
 import { InjectTurbosClmmSdks } from "./turbos.decorators"
-import { computeDenomination, computeRatio, computeRaw, Network, ZERO_BN } from "@modules/common"
+import { computeDenomination, computeRatio, computeRaw, Network, toUnit, ZERO_BN } from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
 import { TickManagerService } from "../../utils/tick-manager.service"
 import { ActionResponse } from "../../types"
-import { FeeToService, ZapCalculatorService } from "../../utils"
-import { SuiSwapService } from "../../swap"
+import { FeeToService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
+import { TurbosZapService } from "./zap.service"
 @Injectable()
 export class TurbosActionService implements IActionService {
     constructor(
         @InjectTurbosClmmSdks()
         private readonly turbosClmmSdks: Record<Network, TurbosSdk>,
-        private readonly suiSwapService: SuiSwapService,
         private readonly tickManagerService: TickManagerService,
         private readonly feeToService: FeeToService,
-        private readonly zapCalculatorService: ZapCalculatorService,
+        private readonly tickMathService: TickMathService,
+        private readonly turbosZapService: TurbosZapService,
     ) { }
 
     // open position
@@ -62,22 +62,30 @@ export class TurbosActionService implements IActionService {
             tickLower,
             tickUpper,
         })
-        console.log(`Amount A Remaining: ${remainingAmount.toString()}`)
         const ratio = computeRatio(
-            new BN(amountB).mul(new BN(10).pow(new BN(tokenB.decimals))), 
-            new BN(amountA).mul(new BN(10).pow(new BN(tokenA.decimals)))
+            new BN(amountB).mul(toUnit(tokenA.decimals)), 
+            new BN(amountA).mul(toUnit(tokenB.decimals))
         )
-        const { receiveAmount, remainAmount, swapAmount } = 
-        this.zapCalculatorService.calculateZapAmounts({
+        const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
+            pool.currentSqrtPrice,
+            tokenA.decimals,
+            tokenB.decimals,
+        )
+        const { swapAmount, priceImpact, receiveAmount, remainAmount, routerId, quoteData } = 
+        await this.turbosZapService.computeZapAmounts({
             amountIn: remainingAmount,
             ratio: new Decimal(ratio),
-            currentSqrtPrice: pool.currentSqrtPrice,
+            spotPrice, 
             priorityAOverB,
+            tokenAId,
+            tokenBId,
+            tokens,
+            network,
+            swapSlippage: slippage,
         })
-        // with this ratio, we can calculate the amount of tokenA and tokenB to add
-        // call X is the amount of A => ratio x X is the amount of B
-        // so that amount to add is (amount - X) A, ratio x X B
-        console.log(`swap: ${computeDenomination(swapAmount, tokenB.decimals).toString()}, remain: ${computeDenomination(remainAmount, tokenB.decimals).toString()}, recv: ${computeDenomination(receiveAmount, tokenA.decimals).toString()}`)
+        console.log(
+            `swap: ${computeDenomination(swapAmount, tokenB.decimals).toString()}, priceImpact: ${priceImpact.toString()}, receiveAmount: ${computeDenomination(receiveAmount, tokenA.decimals).toString()}, remainAmount: ${computeDenomination(remainAmount, tokenB.decimals).toString()}, routerId: ${routerId}, quoteData: ${quoteData}`
+        )
         return {
             txb: txbAfterAttachFee
         }

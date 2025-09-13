@@ -4,6 +4,7 @@ import { createTurbosClmmSdkProvider } from "./turbos.providers"
 import { TurbosFetcherService } from "./fetcher.service"
 import { TurbosActionService } from "./action.service"
 import { TurbosMetadataService } from "./metadata.service"
+import { TurbosZapService } from "./zap.service"
 
 @Injectable()
 export class TurbosModule extends ConfigurableModuleClass {
@@ -15,7 +16,8 @@ export class TurbosModule extends ConfigurableModuleClass {
             createTurbosClmmSdkProvider(),
             TurbosFetcherService,
             TurbosActionService,
-            TurbosMetadataService
+            TurbosMetadataService,
+            TurbosZapService
         ]
         return {
             ...dynamicModule,

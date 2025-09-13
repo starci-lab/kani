@@ -2,6 +2,7 @@ import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./swap.module-definition"
 import { createCetusAggregator, createSevenKAggregator } from "./sui-swap.providers"
 import { SuiSwapService } from "./sui-swap.service"
+import { SwapService } from "./swap.service"
 
 @Module({})
 export class SwapModule extends ConfigurableModuleClass {
@@ -13,7 +14,8 @@ export class SwapModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             createCetusAggregator(),
             createSevenKAggregator(),
-            SuiSwapService
+            SuiSwapService,
+            SwapService
         ]
 
         return {

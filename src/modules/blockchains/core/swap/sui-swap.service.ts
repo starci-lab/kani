@@ -3,7 +3,7 @@ import { InjectCetusAggregatorSdks, InjectSevenKAggregatorSdks } from "./swap.de
 import { AggregatorClient, RouterDataV3 } from "@cetusprotocol/aggregator-sdk"
 import SevenK from "@7kprotocol/sdk-ts"
 import { Network } from "@modules/common"
-import { ISwapService, QuoteParams, QuoteResponse, SuiRouterId, SwapParams } from "./swap.interface"
+import { ISwapService, QuoteParams, QuoteResponse, RouterId, SwapParams } from "./swap.interface"
 import BN from "bn.js"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { SuiCoinManagerService } from "../utils"
@@ -57,7 +57,7 @@ export class SuiSwapService implements ISwapService {
             ).then(data => {
                 return {
                     amountOut: data?.amountOut ?? new BN(0),
-                    routerId: SuiRouterId.Cetus,
+                    routerId: RouterId.Cetus,
                     quoteData: data,
                 }
             }),
@@ -71,7 +71,7 @@ export class SuiSwapService implements ISwapService {
                 data => {
                     return {
                         amountOut: new BN(data.returnAmountWithDecimal),
-                        routerId: SuiRouterId.SevenK,
+                        routerId: RouterId.SevenK,
                         quoteData: data,
                     }
                 }
@@ -85,7 +85,7 @@ export class SuiSwapService implements ISwapService {
     }
 
     async swap({
-        routerId = SuiRouterId.Cetus,
+        routerId = RouterId.Cetus,
         network = Network.Mainnet,
         tokenIn,
         tokenOut,
@@ -118,7 +118,7 @@ export class SuiSwapService implements ISwapService {
             requiredAmount: amountIn,
         })
         switch (routerId) {
-        case SuiRouterId.Cetus:
+        case RouterId.Cetus:
         {
             const aggregator = this.cetusAggregatorSdks[network]
             if (!mergedCoin) {
@@ -136,7 +136,7 @@ export class SuiSwapService implements ISwapService {
                 txb
             }
         }
-        case SuiRouterId.SevenK:
+        case RouterId.SevenK:
         {
             const aggregator = this.sevenKAggregatorSdks[network]
             if (!quoteData) {

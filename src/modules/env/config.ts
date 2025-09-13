@@ -124,7 +124,7 @@ export const envConfig = () => ({
         solanaWallet: {
             accountAddress: process.env.LP_BOT_SOLANA_WALLET_ACCOUNT_ADDRESS || "",
             encryptedPrivateKey: process.env.LP_BOT_SOLANA_WALLET_ENCRYPTED_PRIVATE_KEY || "",
-        }
+        },
     },
     kafka: {
         clientId: process.env.KAFKA_CLIENT_ID || v4(),
@@ -136,4 +136,12 @@ export const envConfig = () => ({
             password: process.env.KAFKA_SASL_PASSWORD || "",
         },
     },
+    pyth: {
+        sui: {
+            endpoint: process.env.SUI_PYTH_ENDPOINT || "https://hermes-beta.pyth.network",
+        },
+        solana: {
+            endpoint: process.env.SOLANA_PYTH_ENDPOINT || "https://hermes-beta.pyth.network",
+        },
+    }
 })

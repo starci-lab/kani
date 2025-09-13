@@ -51,6 +51,9 @@ export interface TokenLike extends BaseLike {
 
     /** Type of the token */
     type: TokenType
+
+    /** Pyth feed ID of the token */
+    pythFeedId: string
 }
 
 export interface DexLike extends BaseLike {

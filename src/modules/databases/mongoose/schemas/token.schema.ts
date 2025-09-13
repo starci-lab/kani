@@ -71,6 +71,10 @@ export class TokenSchema extends AbstractSchema {
     @Field(() => GraphQLTypeTokenType, { description: "Type of the token" })
     @Prop({ type: String, enum: TokenType, required: true })
         type: TokenType
+
+    @Field(() => String, { description: "Pyth feed ID of the token" })
+    @Prop({ type: String, required: true })
+        pythFeedId: string
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)

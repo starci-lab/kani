@@ -24,6 +24,7 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
         type: TokenType.StableUsdc,
+        pythFeedId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
     },
     {
         displayId: TokenId.SuiCetus,
@@ -45,6 +46,7 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
+        pythFeedId: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef"
     },
     {
         displayId: TokenId.SuiNative,
@@ -66,6 +68,7 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
         type: TokenType.Native,
+        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744"
     },
     {
         displayId: TokenId.SuiIka,
@@ -86,6 +89,7 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
+        pythFeedId: "0x2b529621fa6e2c8429f623ba705572aa64175d7768365ef829df6a12c9f365f4",
     },
     {
         displayId: TokenId.SuiAlkimi,
@@ -107,6 +111,7 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
+        pythFeedId: "0x1b2deae525b02c52de4a411c4f37139931215d7cc754e57dd6c84387336ccc74",
     },
     {
         displayId: TokenId.SuiWalrus,
@@ -128,6 +133,7 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
+        pythFeedId: "0xeba0732395fae9dec4bae12e52760b35fc1c5671e2da8b449c9af4efe5d54341"
     },
     {
         displayId: TokenId.SuiDeep,
@@ -148,5 +154,6 @@ export const tokenData: Array<TokenLike> = [
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
+        pythFeedId: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff"
     },
 ]
