@@ -14,7 +14,7 @@ import { waitUntil } from "@modules/common"
 // import { CoinMarketCapService, CoinGeckoService } from "@modules/blockchains"
 
 @Injectable()
-export class FetcherService implements OnApplicationBootstrap {
+export class CexFetcherService implements OnApplicationBootstrap {
     constructor(
     private readonly dataLikeService: DataLikeService,
     private readonly binanceProcessorService: BinanceProcessorService,

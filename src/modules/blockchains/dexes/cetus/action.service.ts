@@ -6,12 +6,12 @@ import {
 } from "../../interfaces"
 import BN from "bn.js"
 import { Network } from "@modules/common"
-import { ActionResponse } from "../../types"
 import { TickManagerService } from "../../utils/tick-manager.service"
 import { FeeToService } from "../../utils"
 import { InjectCetusZapSdks } from "./cetus.decorators"
 import CetusZapSDK from "@cetusprotocol/zap-sdk"
 import { PriceRatioService } from "../../utils"
+import { ActionResponse } from "../types"
 
 @Injectable()
 export class CetusActionService implements IActionService {

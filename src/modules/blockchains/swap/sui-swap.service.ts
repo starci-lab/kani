@@ -11,7 +11,7 @@ import { InjectWinston } from "@modules/winston"
 import { Logger } from "winston"
 import { InjectSuiClients } from "../clients"
 import { SuiClient } from "@mysten/sui/client"
-import { ActionResponse } from "../types"
+import { ActionResponse } from "../dexes"
 
 @Injectable()
 export class SuiSwapService implements ISwapService {

@@ -138,7 +138,7 @@ export const envConfig = () => ({
     },
     pyth: {
         sui: {
-            endpoint: process.env.SUI_PYTH_ENDPOINT || "https://hermes-beta.pyth.network",
+            endpoint: process.env.SUI_PYTH_ENDPOINT || "https://hermes.pyth.network",
         },
         solana: {
             endpoint: process.env.SOLANA_PYTH_ENDPOINT || "https://hermes-beta.pyth.network",

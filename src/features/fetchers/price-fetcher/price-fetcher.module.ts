@@ -1,10 +1,13 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./price-fetcher.module-definition"
-import { FetcherService } from "./fetcher.service"
+import { CexFetcherService } from "./cex-fetcher.service"
 
 @Module({
     providers: [
-        FetcherService,
+        CexFetcherService,
+    ],
+    exports: [
+        CexFetcherService,
     ],
 })
 export class PriceFetcherModule extends ConfigurableModuleClass {}

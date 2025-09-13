@@ -1,6 +1,6 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
-import { ActionResponse } from "../types"
+import { ActionResponse } from "../dexes"
 import { PositionLike, TokenId, TokenLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"

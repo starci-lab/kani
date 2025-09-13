@@ -4,11 +4,12 @@ import { InjectTurbosClmmSdks } from "./turbos.decorators"
 import { computeDenomination, computeRatio, computeRaw, Network, toUnit, ZERO_BN } from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
 import { TickManagerService } from "../../utils/tick-manager.service"
-import { ActionResponse } from "../../types"
+import { ActionResponse } from "../../dexes"
 import { FeeToService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
 import { TurbosZapService } from "./zap.service"
+import { PythService } from "@modules/blockchains"
 @Injectable()
 export class TurbosActionService implements IActionService {
     constructor(
@@ -18,6 +19,7 @@ export class TurbosActionService implements IActionService {
         private readonly feeToService: FeeToService,
         private readonly tickMathService: TickMathService,
         private readonly turbosZapService: TurbosZapService,
+        private readonly pythService: PythService,
     ) { }
 
     // open position
@@ -40,6 +42,13 @@ export class TurbosActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
+        const oraclePrice = await this.pythService.computeOraclePrice({
+            tokenAId,
+            tokenBId,
+            chainId: tokenA.chainId,
+            network,
+            tokens,
+        })
         const { 
             txb: txbAfterAttachFee, 
             remainingAmount
@@ -80,6 +89,7 @@ export class TurbosActionService implements IActionService {
             tokenAId,
             tokenBId,
             tokens,
+            oraclePrice,
             network,
             swapSlippage: slippage,
         })

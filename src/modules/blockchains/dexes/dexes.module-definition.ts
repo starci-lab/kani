@@ -1,9 +1,8 @@
-
 import { ConfigurableModuleBuilder } from "@nestjs/common"
-import { LiquidityPoolsOptions } from "./types"
+import { DexesOptions } from "./types"
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
-  new ConfigurableModuleBuilder<LiquidityPoolsOptions>().setExtras(
+  new ConfigurableModuleBuilder<DexesOptions>().setExtras(
       {
           isGlobal: false
       },

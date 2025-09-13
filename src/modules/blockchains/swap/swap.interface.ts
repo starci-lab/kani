@@ -1,7 +1,7 @@
 import { Network } from "@modules/common"
 import { TokenId, TokenLike } from "@modules/databases"
 import BN from "bn.js"
-import { ActionResponse } from "../types"
+import { ActionResponse } from "../dexes"
 import { Transaction } from "@mysten/sui/transactions"
 
 export interface ISwapService {

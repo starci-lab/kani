@@ -7,7 +7,6 @@ import { FeeToService } from "./fee-to.service"
 import { TickManagerService } from "./tick-manager.service"
 import { ZapCalculatorService } from "./zap-calculator.service"
 import { TickMathService } from "./tick-math.service"
-import { LiquidityPoolService } from "./liquidity-pool.service"
 
 @Module({
     providers: [
@@ -18,7 +17,6 @@ import { LiquidityPoolService } from "./liquidity-pool.service"
         TickManagerService,
         ZapCalculatorService,
         TickMathService,
-        LiquidityPoolService
     ],
     exports: [
         SuiCoinManagerService,
@@ -28,7 +26,6 @@ import { LiquidityPoolService } from "./liquidity-pool.service"
         TickManagerService,
         ZapCalculatorService,
         TickMathService,
-        LiquidityPoolService
     ],
 })
 export class UtilsModule extends ConfigurableModuleClass {}

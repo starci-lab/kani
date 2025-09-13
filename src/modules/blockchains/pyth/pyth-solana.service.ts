@@ -5,20 +5,23 @@ import { TokenId, TokenLike } from "@modules/databases"
 import Decimal from "decimal.js"
 import { Injectable } from "@nestjs/common"
 import { InjectSolanaClients } from "../clients"
-import { ChainId } from "@modules/common"
+import { Network } from "@modules/common"
 
 @Injectable()
 export class PythSolanaService implements IOracleService {
-    private connection: PythConnection
+    private connections: Partial<Record<Network, PythConnection>> = {}
     private fetchedPrices: Map<TokenId, Decimal> = new Map()
 
     constructor(
         @InjectSolanaClients()
-        private readonly solanaClients: Record<ChainId, Array<Connection>>,
+        private readonly solanaClients: Record<Network, Array<Connection>>,
     ) {
-        const solanaConn = this.solanaClients[ChainId.Solana][0]
-        const programKey = getPythProgramKeyForCluster("mainnet-beta")
-        this.connection = new PythConnection(solanaConn, programKey)
+        Object.values(Network).forEach(network => {
+            this.connections[network] = new PythConnection(
+                this.solanaClients[network][0], 
+                getPythProgramKeyForCluster(network === Network.Mainnet ? "mainnet-beta" : "testnet")
+            )
+        })
     }
 
     /**
@@ -27,7 +30,7 @@ export class PythSolanaService implements IOracleService {
    */
     subscribe(tokens: Array<TokenLike>): void {
         tokens.forEach(token => {
-            this.connection.onPriceChange((product) => {
+            this.connections[Network.Mainnet]?.onPriceChange((product) => {
                 if (!product || product.price === undefined) return
                 let price = new Decimal(product.price)
                 if (token.decimals && token.decimals > 0) {
@@ -53,7 +56,7 @@ export class PythSolanaService implements IOracleService {
         fetchTokens.forEach(token => {
             const cachedPrice = this.fetchedPrices.get(token.displayId)
             if (!cachedPrice) {
-                throw new Error(`No cached price yet for ${token.displayId}. Did you call subscribeTokens()?`)
+                return {}
             }
             result[token.displayId] = cachedPrice
         })

@@ -4,4 +4,5 @@ export enum CacheKey {
     LiquidityPools = "liquidityPools",
     TokenPriceData = "tokenPriceData",
     BinanceWsOrderBook = "binanceWsOrderBook",
+    OraclePrices = "oraclePrices",
 }
