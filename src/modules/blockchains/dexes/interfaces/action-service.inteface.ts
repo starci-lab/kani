@@ -42,9 +42,23 @@ export interface ClosePositionResponse extends ActionResponse {
     nft: string
 }
 
+export interface ForceSwapParams {
+    pool: FetchedPool
+    network?: Network
+    txb: Transaction
+    accountAddress: string
+    priorityAOverB: boolean
+    tokenAId: TokenId
+    tokenBId: TokenId
+    tokens: Array<TokenLike>
+    slippage?: number
+}
+
 export interface IActionService {
     // close position
     closePosition(params: ClosePositionParams): Promise<ActionResponse>
     // open position
     openPosition(params: OpenPositionParams): Promise<ActionResponse>
+    // force swap
+    forceSwap(params: ForceSwapParams): Promise<ActionResponse>
 }

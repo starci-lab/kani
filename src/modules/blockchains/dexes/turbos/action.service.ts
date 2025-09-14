@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import {
     ClosePositionParams,
+    ForceSwapParams,
     IActionService,
     OpenPositionParams
 } from "../interfaces"
@@ -13,16 +14,15 @@ import { FeeToService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
 import { TurbosZapService } from "./zap.service"
-import { PythService, SuiSwapService } from "@modules/blockchains"
+import { InjectSuiClients, PythService, SuiSwapService } from "@modules/blockchains"
 import { SuiCoinManagerService } from "../../utils"
 import { TransactionObjectArgument } from "@mysten/sui/transactions"
 import { 
     CLOSE_POSITION_SLIPPAGE, 
     OPEN_POSITION_SLIPPAGE, 
-    SWAP_CLOSE_POSITION_SLIPPAGE, 
     SWAP_OPEN_POSITION_SLIPPAGE
 } from "../constants"
-import { ModuleRef } from "@nestjs/core"
+import { SuiClient } from "@mysten/sui/dist/cjs/client"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -36,7 +36,8 @@ export class TurbosActionService implements IActionService {
         private readonly pythService: PythService,
         private readonly suiSwapService: SuiSwapService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
-        private readonly moduleRef: ModuleRef,
+        @InjectSuiClients()
+        private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) { }
 
     // open position
@@ -167,77 +168,96 @@ export class TurbosActionService implements IActionService {
         network = Network.Mainnet,
         txb,
         accountAddress,
-        priorityAOverB,
         tokenAId,
         tokenBId,
         tokens,
         slippage,
-        swapSlippage,
     }: ClosePositionParams): Promise<ActionResponse> {
-        const turbosSdk = this.turbosClmmSdks[network]
         // maximum slippage to ensure the transaction is successful
         slippage = slippage || CLOSE_POSITION_SLIPPAGE
-        swapSlippage = swapSlippage || SWAP_CLOSE_POSITION_SLIPPAGE
-
+        const turbosSdk = this.turbosClmmSdks[network]
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
         const tokenB = tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
-        const tokenIn = priorityAOverB ? tokenA : tokenB
-        const tokenOut = priorityAOverB ? tokenB : tokenA
-        const [
-            estimatedWithdrawAmountA,
-            estimatedWithdrawAmountB
-        ] = turbosSdk.pool.getTokenAmountsFromLiquidity({
-            liquidity: new BN(position.liquidity),
-            currentSqrtPrice: new BN(pool.currentSqrtPrice),
-            lowerSqrtPrice: new BN(turbosSdk.math.tickIndexToSqrtPriceX64(position.tickLower)),
-            upperSqrtPrice: new BN(turbosSdk.math.tickIndexToSqrtPriceX64(position.tickUpper)),
-        })
-        const estimatedNonPriorityWithdrawAmount = priorityAOverB ? estimatedWithdrawAmountB : estimatedWithdrawAmountA
-        const { routerId, quoteData } = await this.suiSwapService.quote({
-            tokenIn: tokenIn.displayId,
-            tokenOut: tokenOut.displayId,
-            amountIn: estimatedNonPriorityWithdrawAmount,
-            tokens,
-        })
         // txb
-        const { txb: txbAfterRemoveLiquidity, coinA, coinB } =
-            await this.turbosClmmSdks[network]
+        const txbAfterRemoveLiquidity =
+            await turbosSdk
                 .pool
-                .removeLiquidityWithReturn({
+                .removeLiquidity({
                     txb,
                     nft: position.positionId,
                     pool: pool.poolAddress,
                     address: accountAddress,
                     amountA: ZERO_BN.toString(),
                     amountB: ZERO_BN.toString(),
-                    slippage: slippage,
+                    slippage: computePercentage(slippage),
                     collectAmountA: ZERO_BN.toString(),
                     collectAmountB: ZERO_BN.toString(),
                     rewardAmounts: [],
                     decreaseLiquidity: position.liquidity
                 })
-        const { txb: txbAfterSwap } = await this.suiSwapService.swap({
-            tokenIn: tokenIn.displayId,
-            tokenOut: tokenOut.displayId,
-            tokens,
-            fromAddress: accountAddress,
-            quoteData,
-            routerId,
-            network,
-            slippage: swapSlippage,
-            inputCoinObj: priorityAOverB ? coinA : coinB,
-            transferCoinObjs: true,
+        return {
             txb: txbAfterRemoveLiquidity,
+        }
+    }
+
+    async forceSwap({
+        network = Network.Mainnet,
+        accountAddress,
+        priorityAOverB,
+        tokenAId,
+        tokenBId,
+        tokens,
+        slippage = CLOSE_POSITION_SLIPPAGE,
+    }: ForceSwapParams): Promise<ActionResponse> {
+        const suiClient = this.suiClients[network][0]
+        const tokenA = tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        if (!tokenA || !tokenB) {
+            throw new Error("Token not found")
+        }
+        const tokenIn = priorityAOverB ? tokenB : tokenA
+        const coinResponse = await this.suiCoinManagerService.fetchAndMergeCoins({
+            suiClient,
+            coinType: tokenIn.tokenAddress,
+            owner: accountAddress,
         })
+        if (!coinResponse) {
+            throw new Error("Coin not found")
+        }
+        const { sourceCoin, totalBalance } = coinResponse
+        if (priorityAOverB) {
+            // Swap all coinB → tokenA
+            const { txb: afterSwap, extraObj } = await this.suiSwapService.swap({
+                tokenIn: tokenB.displayId,
+                tokenOut: tokenA.displayId,
+                inputCoinObj: sourceCoin,
+                transferCoinObjs: false,
+                slippage,
+                fromAddress: accountAddress,
+                tokens,
+            })
+            txbAfter = afterSwap
+            finalCoinA = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+            finalCoinB = undefined
+        } else {
+            // Swap all coinA → tokenB
+            const { txb: txbAfterSwap } = await this.suiSwapService.swap({
+                txb: txbAfter,
+                tokenIn: tokenA.displayId,
+                tokenOut: tokenB.displayId,
+                inputCoinObj: coinA,
+                transferCoinObjs: false,
+                slippage,
+                fromAddress: accountAddress,
+                tokens,
+            })
+        }
+    
         return {
             txb: txbAfterSwap,
-            extraObj: {
-                coinA,
-                coinB,
-            }
         }
     }
 }
