@@ -1,5 +1,5 @@
 import { Network, PlatformId } from "@modules/common"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { SuiCoinManagerService } from "./sui-coin-manager.service"
@@ -32,6 +32,7 @@ export interface AttachSuiFeeParams {
 export interface AttachSuiFeeResponse {
     txb: Transaction
     remainingAmount: BN
+    changeCoin?: TransactionObjectArgument
 }
 
 @Injectable()
@@ -78,20 +79,22 @@ export class FeeToService {
             remainingAmount
         } = this.splitAmount(amount, PlatformId.Sui, network)
         const suiClient = this.suiClients[network][0]
-        const feeToCoin = await this.suiCoinManagerService.consolidateCoins({
+        const coins = await this.suiCoinManagerService.consolidateCoins({
             txb,
             suiClient,
             owner: accountAddress,
             coinType: tokenAddress,
             requiredAmount: feeAmount,
         })
-        if (!feeToCoin) {
-            throw new Error("Fee to coin is required")
+        if (!coins) {
+            throw new Error("Coins are required")
         }
-        txb.transferObjects([feeToCoin], feeToAddress)
+        const { spendCoin, changeCoin } = coins
+        txb.transferObjects([spendCoin], feeToAddress)
         return {
             txb,
             remainingAmount,
+            changeCoin
         }
     }
 

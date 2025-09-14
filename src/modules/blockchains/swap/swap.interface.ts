@@ -2,7 +2,7 @@ import { Network } from "@modules/common"
 import { TokenId, TokenLike } from "@modules/databases"
 import BN from "bn.js"
 import { ActionResponse } from "../dexes"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 
 export interface ISwapService {
     quote(params: QuoteParams): Promise<QuoteResponse>
@@ -42,4 +42,8 @@ export interface SwapParams {
     quoteData?: unknown
     // txb (sui only)
     txb?: Transaction
+    // transfer to user (sui only)
+    transferCoinObjs?: boolean
+    // input coin obj (sui only)
+    inputCoinObj?: TransactionObjectArgument
 }

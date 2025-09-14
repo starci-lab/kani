@@ -52,7 +52,8 @@ export class PythService {
         const tokenAPrice = prices[tokenAId]
         const tokenBPrice = prices[tokenBId]
         if (!tokenAPrice || !tokenBPrice) {
-            throw new Error("Token not found")
+            // we return undefined if the price is not found
+            return undefined
         }
         return tokenAPrice.div(tokenBPrice)
     }

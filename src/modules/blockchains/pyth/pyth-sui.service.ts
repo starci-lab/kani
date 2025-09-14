@@ -14,17 +14,19 @@ export class PythSuiService implements IOracleService {
         this.connection = new SuiPriceServiceConnection(envConfig().pyth.sui.endpoint)
     }
   
-    subscribe(tokenIds: Array<TokenId>, tokens: Array<TokenLike>) {
+    subscribe(
+        tokenIds: Array<TokenId>, 
+        tokens: Array<TokenLike>
+    ) {
         this.tokens = tokens
         const usedTokens = tokens.filter(
             (token) => tokenIds.includes(token.displayId) && token.chainId === ChainId.Sui,
         )
-        const feedIds = usedTokens.map((t) => t.pythFeedId)
-  
+        const feedIds = usedTokens.map((token) => token.pythFeedId)
         this.connection.subscribePriceFeedUpdates(feedIds, (feed) => {
             const priceUnchecked = feed.getPriceUnchecked()
             if (priceUnchecked) {
-                const token = usedTokens.find((t) => t.pythFeedId === feed.id)
+                const token = usedTokens.find((token) => token.pythFeedId === feed.id)
                 if (token) {
                     this.cachedPrices[token.displayId] = new Decimal(
                         computeDenomination(new BN(priceUnchecked.price), priceUnchecked.expo),
@@ -37,10 +39,10 @@ export class PythSuiService implements IOracleService {
     async fetchPrices(
         tokenIds: Array<TokenId>,
     ): Promise<Partial<Record<TokenId, Decimal>>> {
-        const usedTokens = this.tokens.filter(
+        const tokens = this.tokens.filter(
             (token) => tokenIds.includes(token.displayId) && token.chainId === ChainId.Sui,
         )
-        const feedIds = usedTokens.map((t) => t.pythFeedId)
+        const feedIds = tokens.map((token) => token.pythFeedId)
         await this.connection.getLatestPriceFeeds(feedIds)
         return this.cachedPrices
     }

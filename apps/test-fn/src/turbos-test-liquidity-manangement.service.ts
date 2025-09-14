@@ -1,7 +1,9 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import {
+    InjectSuiClients,
     LiquidityPoolService,
-    PythService,
+    SignerService,
+    SuiExecutionService,
     TurbosActionService,
 } from "@modules/blockchains"
 import { ChainId, Network } from "@modules/common"
@@ -13,6 +15,8 @@ import {
     TokenId,
 } from "@modules/databases"
 import BN from "bn.js"
+import { UserLoaderService } from "@features/fetchers"
+import { SuiClient } from "@mysten/sui/client"
 
 @Injectable()
 export class TurbosTestLiquidityManangementService
@@ -21,7 +25,11 @@ implements OnApplicationBootstrap
     constructor(
     private readonly turbosActionService: TurbosActionService,
     private readonly liquidityPoolService: LiquidityPoolService,
-    private readonly pythService: PythService,
+    private readonly suiExecutionService: SuiExecutionService,
+    private readonly signerService: SignerService,
+    private readonly userLoaderService: UserLoaderService,
+    @InjectSuiClients()
+    private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) {}
 
     async onApplicationBootstrap() {
@@ -45,14 +53,7 @@ implements OnApplicationBootstrap
             tokens,
             network: Network.Mainnet,
         })
-        const oraclePrice = await this.pythService.computeOraclePrice({
-            tokenAId: TokenId.SuiIka,
-            tokenBId: TokenId.SuiUsdc,
-            chainId: ChainId.Sui,
-            network: Network.Mainnet,
-        })
-        console.log(oraclePrice)
-        const txb = await this.turbosActionService.openPosition({
+        const { txb } = await this.turbosActionService.openPosition({
             accountAddress:
         "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
             priorityAOverB: false,
@@ -62,6 +63,22 @@ implements OnApplicationBootstrap
             tokenBId: TokenId.SuiUsdc,
             tokens,
         })
-        console.log(txb)
+        if (!txb) {
+            throw new Error("Transaction is required")
+        }
+        const users = await this.userLoaderService.loadUsers()
+        const digest = await this.signerService.withSuiSigner<string>({
+            network: Network.Mainnet,
+            action: async (signer) => {
+                const digest = await this.suiExecutionService.signAndExecuteTransaction({
+                    suiClient: this.suiClients[Network.Mainnet][0],
+                    transaction: txb,
+                    signer,
+                })
+                return digest
+            },
+            user: users[0],
+        })
+        console.log(digest)
     }
 }

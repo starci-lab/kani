@@ -2,12 +2,15 @@ import BN from "bn.js"
 import Decimal from "decimal.js"
 
 export const computePercentage = (
-    numerator: number,
-    denominator: number = 1,
+    numerator: Decimal.Value,
+    denominator: Decimal.Value = 1,
     fractionDigits: number = 2,
 ): number => {
-    const fixed = ((numerator * 100) / denominator).toFixed(fractionDigits)
-    return Number.parseFloat(fixed)
+    const percentage = new Decimal(numerator)
+        .mul(100)
+        .div(denominator)
+        .toDecimalPlaces(fractionDigits, Decimal.ROUND_HALF_UP)
+    return percentage.toNumber()
 }
 
 export const toUnit = (decimals: number = 10): BN => {

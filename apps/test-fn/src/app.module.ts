@@ -1,4 +1,4 @@
-import { ClientsModule, DexesModule, KeypairsModule, PriceModule, PythModule, SwapModule, UtilsModule } from "@modules/blockchains"
+import { ClientsModule, DexesModule, KeypairsModule, PriceModule, PythModule, SignersModule, SwapModule, UtilsModule } from "@modules/blockchains"
 import { Module } from "@nestjs/common"
 import { DataLikeModule, PriceFetcherModule, UserLoaderModule } from "@features/fetchers"
 // import { TestSwapService } from "./test-swap.service"
@@ -45,6 +45,9 @@ import { EventModule, EventType } from "@modules/event"
             isGlobal: true,
         }),
         KeypairsModule.register({
+            isGlobal: true
+        }),
+        SignersModule.register({
             isGlobal: true
         }),
         UserLoaderModule.register({

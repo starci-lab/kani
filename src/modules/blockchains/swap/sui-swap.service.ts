@@ -6,11 +6,8 @@ import { Network } from "@modules/common"
 import { ISwapService, QuoteParams, QuoteResponse, RouterId, SwapParams } from "./swap.interface"
 import BN from "bn.js"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
-import { SuiCoinManagerService } from "../utils"
 import { InjectWinston } from "@modules/winston"
 import { Logger } from "winston"
-import { InjectSuiClients } from "../clients"
-import { SuiClient } from "@mysten/sui/client"
 import { ActionResponse } from "../dexes"
 
 @Injectable()
@@ -20,11 +17,8 @@ export class SuiSwapService implements ISwapService {
         private readonly cetusAggregatorSdks: Record<Network, AggregatorClient>,
         @InjectSevenKAggregatorSdks()
         private readonly sevenKAggregatorSdks: Record<Network, typeof SevenK>,
-        private readonly suiCoinManagerService: SuiCoinManagerService,
         @InjectWinston()
         private readonly winstonLogger: Logger,
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) { }
     
     async quote({
@@ -90,14 +84,17 @@ export class SuiSwapService implements ISwapService {
         tokenIn,
         tokenOut,
         tokens,
-        amountIn,
+        inputCoinObj,
         quoteData,
         fromAddress,
         recipientAddress = fromAddress,
         slippage = 0.01,
-        txb
+        txb,
+        transferCoinObjs,
     }: SwapParams): Promise<ActionResponse> {
-        const suiClient = this.suiClients[network][0]
+        if (!inputCoinObj) {
+            throw new Error("Input coin object is required")
+        }
         if (!txb) {
             throw new Error("Serialized data is required")
         }
@@ -110,18 +107,11 @@ export class SuiSwapService implements ISwapService {
         if (!tokenInInstance || !tokenOutInstance) {
             throw new Error("Token not found")
         }
-        const mergedCoin = await this.suiCoinManagerService.consolidateCoins({
-            suiClient,
-            txb,
-            owner: fromAddress,
-            coinType: tokenInInstance.tokenAddress,
-            requiredAmount: amountIn,
-        })
         switch (routerId) {
         case RouterId.Cetus:
         {
             const aggregator = this.cetusAggregatorSdks[network]
-            if (!mergedCoin) {
+            if (!inputCoinObj) {
                 this.winstonLogger.error("MergedCoinIsRequired")
                 throw new Error("Merged coin is required")
             }
@@ -129,11 +119,16 @@ export class SuiSwapService implements ISwapService {
                 router: quoteData as RouterDataV3,
                 slippage,
                 txb,
-                inputCoin: mergedCoin,
+                inputCoin: inputCoinObj,
             })
-            txb.transferObjects([outputCoin], recipientAddress)
+            if (transferCoinObjs) {
+                txb.transferObjects([outputCoin], recipientAddress) 
+            }
             return {
-                txb
+                txb,
+                extraObj: {
+                    coinOut: outputCoin
+                }
             }
         }
         case RouterId.SevenK:
@@ -156,15 +151,20 @@ export class SuiSwapService implements ISwapService {
                 extendTx: {
                     tx: txb,
                     // explicit consume this coin object instead of loading all available coin objects from wallet
-                    coinIn: mergedCoin || undefined,
+                    coinIn: inputCoinObj || undefined,
                 },
             })
             if (!coinOut) {
                 throw new Error("Coin out is required")
             }
-            txb.transferObjects([coinOut], recipientAddress) 
+            if (transferCoinObjs) {
+                txb.transferObjects([coinOut], recipientAddress) 
+            }
             return {
-                txb
+                txb,
+                extraObj: {
+                    coinOut
+                }
             }
         }
         }
