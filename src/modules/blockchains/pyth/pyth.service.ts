@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { TokenId } from "@modules/databases"
+import { TokenId, TokenLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { PythSuiService } from "./pyth-sui.service"
 import { PythSolanaService } from "./pyth-solana.service"
 import Decimal from "decimal.js"
 
-export interface FetchPricesParams {
+export interface GetPricesParams {
   tokenIds: Array<TokenId>;
   chainId: ChainId;
   network?: Network;
@@ -18,20 +18,20 @@ export class PythService {
     private readonly solanaPythService: PythSolanaService,
     ) {}
 
-    async fetchPrices({
+    async getPrices({
         tokenIds,
         chainId,
         network,
-    }: FetchPricesParams): Promise<Partial<Record<TokenId, Decimal>>> {
+    }: GetPricesParams): Promise<Partial<Record<TokenId, Decimal>>> {
         if (network === Network.Testnet) {
             // do nothing
             return {}
         }
         switch (chainId) {
         case ChainId.Sui:
-            return this.suiPythService.fetchPrices(tokenIds)
+            return this.suiPythService.getPrices(tokenIds)
         case ChainId.Solana:
-            return this.solanaPythService.fetchPrices(tokenIds)
+            return this.solanaPythService.getPrices(tokenIds)
         default:
         // do nothing
             return {}
@@ -44,7 +44,7 @@ export class PythService {
         chainId,
         network,
     }: ComputeOraclePriceParams) {
-        const prices = await this.fetchPrices({
+        const prices = await this.getPrices({
             tokenIds: [tokenAId, tokenBId],
             chainId,
             network,
@@ -56,6 +56,22 @@ export class PythService {
             return undefined
         }
         return tokenAPrice.div(tokenBPrice)
+    }
+
+    initialize(tokens: Array<TokenLike>): void {
+        this.suiPythService.initialize(tokens)
+        this.solanaPythService.initialize(tokens)
+    }
+
+    subscribe(): void {
+        this.suiPythService.subscribe()
+        this.solanaPythService.subscribe()
+    }
+
+    async preloadPrices(): Promise<void> {
+        await Promise.all([
+            this.suiPythService.preloadPrices
+        ])
     }
 }
 

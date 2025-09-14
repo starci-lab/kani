@@ -6,7 +6,11 @@ import { AxiosModule } from "@modules/axios"
 import { 
     PriceModule, 
     KeypairsModule,
-    BlockchainCoreModule
+    DexesModule,
+    ClientsModule,
+    UtilsModule,
+    PythModule,
+    SwapModule
 } from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
@@ -18,6 +22,8 @@ import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 import { PoolSelectorModule } from "@features/selectors"
 import { ApiModule } from "./api"
+import { InitializerModule } from "@modules/initializer"
+import { InitializedService } from "@modules/initializer/services"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -29,6 +35,21 @@ export class AppModule extends ConfigurableModuleClass {
             ...[
                 ScheduleModule.forRoot(),
                 EnvModule.forRoot(),
+                InitializerModule.register({
+                    isGlobal: true,
+                    loadServices: [
+                        InitializedService.PythService
+                    ]
+                }),
+                ClientsModule.register({
+                    isGlobal: true
+                }),
+                UtilsModule.register({
+                    isGlobal: true
+                }),
+                PythModule.register({
+                    isGlobal: true
+                }),
                 EventModule.register({
                     isGlobal: true,
                     types:
@@ -64,7 +85,10 @@ export class AppModule extends ConfigurableModuleClass {
                 PriceModule.register({
                     isGlobal: true,
                 }),
-                BlockchainCoreModule.register({
+                SwapModule.register({
+                    isGlobal: true
+                }),
+                DexesModule.register({
                     isGlobal: true,
                 }),
             ],

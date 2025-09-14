@@ -8,6 +8,7 @@ export enum EventName {
     LiquidityPoolsFetched = "liquidityPoolsFetched",
     PricesUpdated = "pricesUpdated",
     DataSeeded = "dataSeeded",
+    InitializerLoaded = "initializerLoaded",
 }
 
 export interface LiquidityPoolsFetchedEvent {

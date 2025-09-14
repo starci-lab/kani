@@ -37,16 +37,14 @@ export const computeDenomination = (
     amount: BN,
     decimals = 8,
     fractionDigits = 5,
-): number => {
+): Decimal => {
     // amount is a BN
     const divisor = new BN(10).pow(new BN(decimals))
     const quotient = amount.div(divisor)
     const remainder = amount.mod(divisor)
-
     const result =
     quotient.toNumber() + remainder.toNumber() / divisor.toNumber()
-
-    return parseFloat(result.toFixed(fractionDigits))
+    return new Decimal(result.toFixed(fractionDigits))
 }
 
 export const computeRaw = (
