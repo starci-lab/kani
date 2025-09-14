@@ -2,7 +2,7 @@ import { Network, PlatformId } from "@modules/common"
 import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
-import { SuiCoinManagerService } from "./sui-coin-manager.service"
+import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 import { InjectSuiClients } from "../clients"
 import { SuiClient } from "@mysten/sui/client"
 
@@ -14,7 +14,7 @@ const EVM_ADDRESS = "0x9f0204D1163d8C5c057aAb718a04C00E6C5d5790"
 const EVM_ADDRESS_TESTNET = "0x9f0204D1163d8C5c057aAb718a04C00E6C5d5790"
 
 const OPEN_POSITION_FEE_PERCENTAGE = 0.0004 // 0.04%
-
+const PNL_FEE_PERCENTAGE = 0.1 // 10%
 export interface SplitAmountResponse {
     feeAmount: BN
     remainingAmount: BN
@@ -31,6 +31,21 @@ export interface AttachSuiFeeParams {
 }
 
 export interface AttachSuiFeeResponse {
+    txb: Transaction
+    remainingAmount: BN
+    sourceCoin: TransactionObjectArgument
+}
+
+export interface AttachPnlFeeParams {
+    txb?: Transaction
+    amount: BN
+    tokenAddress: string
+    accountAddress: string
+    network: Network
+    sourceCoin?: TransactionObjectArgument
+}
+
+export interface AttachPnlFeeResponse {
     txb: Transaction
     remainingAmount: BN
     sourceCoin: TransactionObjectArgument
@@ -117,6 +132,52 @@ export class FeeToService {
             return network === Network.Mainnet ? SOLANA_ADDRESS : SOLANA_ADDRESS_TESTNET
         case PlatformId.Evm:
             return network === Network.Mainnet ? EVM_ADDRESS : EVM_ADDRESS_TESTNET
+        }
+    }
+
+    public async attachSuiPnlFee({
+        txb,
+        amount,
+        tokenAddress,
+        accountAddress,
+        network,
+        sourceCoin,
+    }: AttachPnlFeeParams): Promise<AttachPnlFeeResponse> {
+        txb = txb || new Transaction()
+
+        if (!sourceCoin) {
+            const response = await this.suiCoinManagerService.fetchAndMergeCoins({
+                suiClient: this.suiClients[network][0],
+                txb,
+                owner: accountAddress,
+                coinType: tokenAddress,
+            })
+            if (!response) {
+                throw new Error("Coins are required")
+            }
+            sourceCoin = response.sourceCoin
+        }
+
+        // fee = amount * PNL_FEE_PERCENTAGE
+        const feeAmount = amount.mul(
+            new BN(Math.floor(PNL_FEE_PERCENTAGE * 1e9))
+        ).div(new BN(1e9))
+
+        const remainingAmount = amount.sub(feeAmount)
+        const feeToAddress = this.getFeeToAddress(PlatformId.Sui, network)
+
+        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+            txb,
+            sourceCoin,
+            requiredAmount: feeAmount,
+        })
+
+        txb.transferObjects([spendCoin], feeToAddress)
+
+        return {
+            txb,
+            remainingAmount,
+            sourceCoin,
         }
     }
 }

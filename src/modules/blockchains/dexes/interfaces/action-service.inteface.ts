@@ -52,6 +52,7 @@ export interface ForceSwapParams {
     tokenBId: TokenId
     tokens: Array<TokenLike>
     slippage?: number
+    pnlAmount: BN
 }
 
 export interface IActionService {
@@ -59,6 +60,4 @@ export interface IActionService {
     closePosition(params: ClosePositionParams): Promise<ActionResponse>
     // open position
     openPosition(params: OpenPositionParams): Promise<ActionResponse>
-    // force swap
-    forceSwap(params: ForceSwapParams): Promise<ActionResponse>
 }

@@ -3,6 +3,9 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./swap.module-definition"
 import { createCetusAggregator, createSevenKAggregator } from "./sui-swap.providers"
 import { SuiSwapService } from "./sui-swap.service"
 import { SwapService } from "./swap.service"
+import { GasSuiSwapUtilsService } from "./gas-sui-swap-utils.service"
+import { FeeToService } from "./fee-to.service"
+import { SuiForceSwapService } from "./sui-force-swap.service"
 
 @Module({})
 export class SwapModule extends ConfigurableModuleClass {
@@ -15,6 +18,9 @@ export class SwapModule extends ConfigurableModuleClass {
             createCetusAggregator(),
             createSevenKAggregator(),
             SuiSwapService,
+            FeeToService,
+            GasSuiSwapUtilsService,
+            SuiForceSwapService,
             SwapService
         ]
 

@@ -1,17 +1,25 @@
-import { Injectable } from "@nestjs/common"
-import {
-    ClosePositionParams,
-    IActionService,
-    OpenPositionParams,
-} from "../interfaces"
-import BN from "bn.js"
-import { Network } from "@modules/common"
-import { TickManagerService } from "../../utils/tick-manager.service"
-import { FeeToService } from "../../utils"
-import { InjectCetusZapSdks } from "./cetus.decorators"
+import { Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import CetusZapSDK from "@cetusprotocol/zap-sdk"
-import { PriceRatioService } from "../../utils"
-import { ActionResponse } from "../types"
+import {
+    ActionResponse,
+    FeeToService,
+    GasSuiSwapUtilsService,
+    IActionService,
+    InjectCetusZapSdks,
+    OpenPositionParams,
+    PriceRatioService,
+    TickManagerService,
+    ClosePositionParams,
+    InjectCetusClmmSdks,
+} from "@modules/blockchains"
+import { Network } from "@modules/common"
+import { Transaction } from "@mysten/sui/transactions"
+import { Injectable } from "@nestjs/common"
+import BN from "bn.js"
+import Decimal from "decimal.js"
+import { OPEN_POSITION_SLIPPAGE } from "../../swap"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -20,7 +28,10 @@ export class CetusActionService implements IActionService {
     private readonly feeToService: FeeToService,
     @InjectCetusZapSdks()
     private readonly cetusZapSdks: Record<Network, CetusZapSDK>,
+    @InjectCetusClmmSdks()
+    private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
     private readonly priceRatioService: PriceRatioService,
+    private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
     ) {}
 
     // ---------- Open Position ----------
@@ -33,49 +44,69 @@ export class CetusActionService implements IActionService {
         tokenAId,
         tokenBId,
         accountAddress,
-        tokens
+        tokens,
+        slippage,
+        swapSlippage
     }: OpenPositionParams): Promise<ActionResponse> {
         const zapSdk = this.cetusZapSdks[network]
-        // get the parameters
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const slippage = 0.001 // accept up to 0.1% price impact
+        slippage = slippage || OPEN_POSITION_SLIPPAGE
+        swapSlippage = swapSlippage || OPEN_POSITION_SLIPPAGE
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
         const tokenB = tokens.find((token) => token.displayId === tokenBId)
-        if (!tokenA || !tokenB) {
-            throw new Error("Token not found")
-        }
-        const { 
-            txb: txbAfterAttachFee, 
-            remainingAmount
-        } = await this.feeToService.attachSuiFee({
+        if (!tokenA || !tokenB) throw new Error("Token not found")
+    
+        // 1. ensure gas (swap sang SUI nếu cần)
+        const {
+            txb: txAfterGas,
+            requireGasSwap,
+            remainingAmount: remainAfterGas,
+        } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             txb,
-            tokenAddress: tokenA.tokenAddress,
-            accountAddress,
             network,
-            amount,
+            accountAddress,
+            tokenInId: priorityAOverB ? tokenA.displayId : tokenB.displayId,
+            tokens,
+            slippage,
         })
-
-        const depositObj = await this.cetusZapSdks[network]
-            .Zap
-            .preCalculateDepositAmount(
-                {
-                    pool_id: pool.poolAddress,
-                    tick_lower: tickLower,
-                    tick_upper: tickUpper,
-                    current_sqrt_price: new BN(pool.currentSqrtPrice).toString(),
-                    slippage,
-                    swap_slippage: slippage,
-                },
-                {
-                    mode: priorityAOverB ? "OnlyCoinA" : "OnlyCoinB",
-                    coin_amount: remainingAmount.toString(),
-                    coin_decimal_a: tokenA.decimals,
-                    coin_type_a: tokenA.tokenAddress,
-                    coin_type_b: tokenB.tokenAddress,
-                    coin_decimal_b: tokenB.decimals,
-                },
-            )
-        // we check that zap is not exceed 60/40 support, to save swap fee
+        if (requireGasSwap) {
+            if (!remainAfterGas) {
+                throw new Error("Remaining amount after gas swap is missing")
+            }
+            amount = remainAfterGas
+        }
+    
+        // 2. attach platform fee
+        const { txb: txAfterFee, remainingAmount } =
+            await this.feeToService.attachSuiFee({
+                txb: txAfterGas,
+                tokenAddress: tokenA.tokenAddress,
+                accountAddress,
+                network,
+                amount,
+            })
+    
+        // 3. calculate deposit via Zap SDK
+        const depositObj = await zapSdk.Zap.preCalculateDepositAmount(
+            {
+                pool_id: pool.poolAddress,
+                tick_lower: tickLower,
+                tick_upper: tickUpper,
+                current_sqrt_price: new BN(pool.currentSqrtPrice).toString(),
+                slippage,
+                swap_slippage: swapSlippage,
+            },
+            {
+                mode: priorityAOverB ? "OnlyCoinA" : "OnlyCoinB",
+                coin_amount: remainingAmount.toString(),
+                coin_decimal_a: tokenA.decimals,
+                coin_type_a: tokenA.tokenAddress,
+                coin_type_b: tokenB.tokenAddress,
+                coin_decimal_b: tokenB.decimals,
+            },
+        )
+    
+        // 4. optional ratio check
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
@@ -87,25 +118,24 @@ export class CetusActionService implements IActionService {
                 amount: new BN(depositObj.amount_b),
             },
         })
-        if (!isZapEligible) {
-            throw new Error("Zap is not eligible at this moment")
-        }
-
-        const txbAfterDeposit = await zapSdk.Zap.buildDepositPayload({
-            deposit_obj: depositObj,
-            pool_id: pool.poolAddress,
-            coin_type_a: tokenA.tokenAddress,
-            coin_type_b: tokenB.tokenAddress,
-            tick_lower: new BN(tickLower).toNumber(),
-            tick_upper: new BN(tickUpper).toNumber(),
-            slippage,
-            swap_slippage: slippage,
-        },
-        txbAfterAttachFee,
+        if (!isZapEligible) throw new Error("Zap not eligible at this moment")
+    
+        // 5. build deposit payload
+        const txbAfterDeposit = await zapSdk.Zap.buildDepositPayload(
+            {
+                deposit_obj: depositObj,
+                pool_id: pool.poolAddress,
+                coin_type_a: tokenA.tokenAddress,
+                coin_type_b: tokenB.tokenAddress,
+                tick_lower: new BN(tickLower).toNumber(),
+                tick_upper: new BN(tickUpper).toNumber(),
+                slippage,
+                swap_slippage: swapSlippage,
+            },
+            txAfterFee,
         )
-        return {
-            txb: txbAfterDeposit,
-        }
+    
+        return { txb: txbAfterDeposit }
     }
 
     // ---------- Close Position ----------
@@ -114,45 +144,58 @@ export class CetusActionService implements IActionService {
         position,
         network = Network.Mainnet,
         txb,
-        priorityAOverB,
         tokenAId,
         tokenBId,
-        tokens
+        tokens,
     }: ClosePositionParams): Promise<ActionResponse> {
-        const zapSdk = this.cetusZapSdks[network]
+        txb = txb ?? new Transaction()
+        const cetusClmmSdk = this.cetusClmmSdks[network]
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
         const tokenB = tokens.find((token) => token.displayId === tokenBId)
-        const slippage = 0.9999 // nearly 1, to ensure the transaction is successful
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
-        const result = await zapSdk.Zap.preCalculateWithdrawAmount({
-            coin_decimal_a: tokenA.decimals,
-            coin_decimal_b: tokenB.decimals,
-            available_liquidity: position.liquidity,
-            coin_type_a: tokenA.tokenAddress,
-            coin_type_b: tokenB.tokenAddress,
-            current_sqrt_price: new BN(pool.currentSqrtPrice).toString(),
-            tick_lower: position.tickLowerIndex,
-            tick_upper: position.tickUpperIndex,
-            mode: priorityAOverB ? "OnlyCoinA" : "OnlyCoinB",
-            pool_id: pool.poolAddress,
-        })
-        const txAfterWithdraw = await zapSdk.Zap.buildWithdrawPayload({
-            withdraw_obj: result,
-            pool_id: pool.poolAddress,
-            pos_id: position.positionId,
-            close_pos: true, // Whether to close the position
-            collect_fee: true, // Whether to collect accumulated fees
-            collect_rewarder_types: [], // Types of rewards to collect
-            coin_type_a: tokenA.tokenAddress,
-            coin_type_b: tokenB.tokenAddress,
-            tick_lower: position.tickLowerIndex,
-            tick_upper: position.tickUpperIndex,
-            slippage,
-        }, txb)
-        return {
-            txb: txAfterWithdraw,
-        }
+    
+        // 1. Compute min_amount based on liquidity and TickMath
+        const lowerTick = Number(position.tickLower)
+        const upperTick = Number(position.tickUpper)
+    
+        const lowerSqrtPrice = TickMath.tickIndexToSqrtPriceX64(lowerTick)
+        const upperSqrtPrice = TickMath.tickIndexToSqrtPriceX64(upperTick)
+    
+        const liquidity = new BN(position.liquidity)
+        const slippageTolerance = Percentage.fromDecimal(new Decimal("0.05")) // 5% slippage tolerance
+        const curSqrtPrice = new BN(pool.currentSqrtPrice)
+    
+        const coinAmounts = ClmmPoolUtil.getCoinAmountFromLiquidity(
+            liquidity,
+            curSqrtPrice,
+            lowerSqrtPrice,
+            upperSqrtPrice,
+            false,
+        )
+    
+        const { tokenMaxA, tokenMaxB } = adjustForCoinSlippage(
+            coinAmounts,
+            slippageTolerance,
+            false,
+        )
+    
+        // 2. Build close position payload
+        const txbAfterClosePosition =
+            await cetusClmmSdk.Position.closePositionTransactionPayload({
+                coinTypeA: tokenA.tokenAddress,
+                coinTypeB: tokenB.tokenAddress,
+                min_amount_a: tokenMaxA.toString(),
+                min_amount_b: tokenMaxB.toString(),
+                rewarder_coin_types: pool.rewardTokens.map(
+                    (rewardToken) => rewardToken.tokenAddress,
+                ),
+                pool_id: pool.poolAddress,
+                pos_id: position.positionId,
+                collect_fee: true,
+            }, txb)
+    
+        return { txb: txbAfterClosePosition }
     }
 }
