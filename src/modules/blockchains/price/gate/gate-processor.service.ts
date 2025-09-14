@@ -7,7 +7,7 @@ import { Cron } from "@nestjs/schedule"
 import { GateRestService } from "./gate-rest.service"
 import { GateWsService, GateWsTicker } from "./gate-ws.service"
 import { Logger } from "winston"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { CexId, TokenId, TokenLike } from "@modules/databases"
@@ -74,7 +74,7 @@ export class GateProcessorService implements OnModuleDestroy {
             if (!data || data.event !== "update" || !data.result) return
             const lastPrice = parseFloat(data.result.last)
 
-            this.winston.debug("Gate.WS.Ticker", {
+            this.winston.debug(WinstonLog.GateWsTicker, {
                 id: token.displayId,
                 last: lastPrice,
             })
@@ -122,7 +122,7 @@ export class GateProcessorService implements OnModuleDestroy {
                     )
                 }
             }
-            this.winston.debug("Gate.REST.Snapshot", { prices })
+            this.winston.debug(WinstonLog.GateRestSnapshot, { prices })
             this.eventEmitterService.emit(
                 EventName.PricesUpdated,
                 prices.map((price) => ({
@@ -133,7 +133,7 @@ export class GateProcessorService implements OnModuleDestroy {
                 })),
             )
         } catch (err) {
-            this.winston.error("Gate.REST.Error", {
+            this.winston.error(WinstonLog.GateRestError, {
                 symbols: tokens.map((token) => token.cexSymbols[CexId.Gate]),
                 error: (err as Error).message,
             })

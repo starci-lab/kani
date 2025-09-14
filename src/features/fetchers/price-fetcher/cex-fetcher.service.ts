@@ -11,6 +11,7 @@ import {
 import { DataLikeService } from "../data-like"
 import { CexId } from "@modules/databases"
 import { waitUntil } from "@modules/common"
+import { InitializerService } from "@modules/initializer"
 // import { CoinMarketCapService, CoinGeckoService } from "@modules/blockchains"
 
 @Injectable()
@@ -19,6 +20,7 @@ export class CexFetcherService implements OnApplicationBootstrap {
     private readonly dataLikeService: DataLikeService,
     private readonly binanceProcessorService: BinanceProcessorService,
     private readonly gateProcessorService: GateProcessorService,
+    private readonly initializeSerivce: InitializerService,
     // private readonly cacheHelpersService: CacheHelpersService,
     // private readonly coinMarketCapService: CoinMarketCapService,
     // private readonly coinGeckoService: CoinGeckoService,
@@ -45,6 +47,13 @@ export class CexFetcherService implements OnApplicationBootstrap {
         this.gateProcessorService.initialize(
             gateTokens.map((token) => token.displayId),
             gateTokens,
+        )
+        await Promise.all([
+            this.binanceProcessorService.fetchRestSnapshot,
+            this.gateProcessorService.fetchRestSnapshot,  
+        ])
+        this.initializeSerivce.loadService(
+            CexFetcherService.name
         )
     }
 

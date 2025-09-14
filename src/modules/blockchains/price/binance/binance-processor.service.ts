@@ -7,7 +7,7 @@ import { Cron } from "@nestjs/schedule"
 import { BinanceRestService } from "./binance-rest.service"
 import { BinanceWsService, WsTicker, WsOrderBook } from "./binance-ws.service"
 import { Logger } from "winston"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { CexId, TokenId, TokenLike } from "@modules/databases"
@@ -85,7 +85,7 @@ export class BinanceProcessorService implements OnModuleDestroy {
         this.ws.subscribeTicker(token.cexSymbols[CexId.Binance], async (data: WsTicker) => {
             const lastPrice = parseFloat(data.c)
 
-            this.winston.debug("Binance.WS.Ticker", {
+            this.winston.debug(WinstonLog.BinanceWsTicker, {
                 id: token.displayId,
                 last: lastPrice,
             })
@@ -119,7 +119,7 @@ export class BinanceProcessorService implements OnModuleDestroy {
             return
         }
         this.ws.subscribeOrderBook(token.symbol, 20, 1000, async (data: WsOrderBook) => {
-            this.winston.debug("Binance.WS.OrderBook", {
+            this.winston.debug(WinstonLog.BinanceWsOrderBook, {
                 id: token.displayId,
                 askLength: data.asks.length,
                 bidLength: data.bids.length,
@@ -167,9 +167,9 @@ export class BinanceProcessorService implements OnModuleDestroy {
                     }
                 ))
             )
-            this.winston.debug("Binance.REST.Snapshot", { prices })
+            this.winston.debug(WinstonLog.BinanceRestSnapshot, { prices })
         } catch (err) {
-            this.winston.error("Binance.REST.Error", {
+            this.winston.error(WinstonLog.BinanceRestError, {
                 symbols: this.symbols,
                 error: err.message,
             })

@@ -7,7 +7,7 @@ import { Cron } from "@nestjs/schedule"
 import { BybitRestService } from "./bybit-rest.service"
 import { BybitWsService, BybitWsTicker } from "./bybit-ws.service"
 import { Logger } from "winston"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { CexId, TokenId, TokenLike } from "@modules/databases"
@@ -51,7 +51,7 @@ export class BybitProcessorService implements OnModuleDestroy {
                     if (!token) return
                     const lastPrice = parseFloat(entry.c)
 
-                    this.winston.debug("Bybit.WS.Ticker", {
+                    this.winston.debug(WinstonLog.BybitWsTicker, {
                         id: token.displayId,
                         last: lastPrice,
                     })
@@ -90,9 +90,9 @@ export class BybitProcessorService implements OnModuleDestroy {
                     )
                 }
             }
-            this.winston.debug("Bybit.REST.Snapshot", { prices })
+            this.winston.debug(WinstonLog.BybitRestSnapshot, { prices })
         } catch (err) {
-            this.winston.error("Bybit.REST.Error", {
+            this.winston.error(WinstonLog.BybitRestError, {
                 symbols: this.symbols,
                 error: (err as Error).message,
             })

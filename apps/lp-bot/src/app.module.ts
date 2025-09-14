@@ -3,27 +3,31 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./app.module-definition"
 import { envConfig, EnvModule, LpBotType } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
-import { 
-    PriceModule, 
+import {
+    PriceModule,
     KeypairsModule,
     DexesModule,
     ClientsModule,
     UtilsModule,
     PythModule,
-    SwapModule
+    SwapModule,
 } from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { MongooseModule, SqliteModule } from "@modules/databases"
 import { EventModule, EventType } from "@modules/event"
 import { CacheModule, CacheType } from "@modules/cache"
-import { PoolFetcherModule, PriceFetcherModule } from "@features/fetchers"
+import {
+    PoolFetcherModule,
+    PriceFetcherModule,
+    CexFetcherService,
+    PythFetcherService,
+} from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 import { PoolSelectorModule } from "@features/selectors"
 import { ApiModule } from "./api"
 import { InitializerModule } from "@modules/initializer"
-import { InitializedService } from "@modules/initializer/services"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -38,17 +42,18 @@ export class AppModule extends ConfigurableModuleClass {
                 InitializerModule.register({
                     isGlobal: true,
                     loadServices: [
-                        InitializedService.PythService
-                    ]
+                        PythFetcherService.name, 
+                        CexFetcherService.name
+                    ],
                 }),
                 ClientsModule.register({
-                    isGlobal: true
+                    isGlobal: true,
                 }),
                 UtilsModule.register({
-                    isGlobal: true
+                    isGlobal: true,
                 }),
                 PythModule.register({
-                    isGlobal: true
+                    isGlobal: true,
                 }),
                 EventModule.register({
                     isGlobal: true,
@@ -73,7 +78,7 @@ export class AppModule extends ConfigurableModuleClass {
                 WinstonModule.register({
                     isGlobal: true,
                     appName: envConfig().lpBot.appName,
-                    level: WinstonLevel.Debug,
+                    level: WinstonLevel.Info,
                 }),
                 CacheModule.register({
                     isGlobal: true,
@@ -86,7 +91,7 @@ export class AppModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 SwapModule.register({
-                    isGlobal: true
+                    isGlobal: true,
                 }),
                 DexesModule.register({
                     isGlobal: true,

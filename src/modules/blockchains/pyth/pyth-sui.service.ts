@@ -35,9 +35,6 @@ export class PythSuiService implements IOracleService, OnModuleInit {
 
     initialize(tokens: Array<TokenLike>): void {
         this.tokens = tokens
-    }
-
-    subscribe(): void {
         for (const network of Object.values(Network)) {
             this.subscribeToNetworkFeeds(network)
         }

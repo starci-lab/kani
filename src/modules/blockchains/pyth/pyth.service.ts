@@ -63,11 +63,6 @@ export class PythService {
         this.solanaPythService.initialize(tokens)
     }
 
-    subscribe(): void {
-        this.suiPythService.subscribe()
-        this.solanaPythService.subscribe()
-    }
-
     async preloadPrices(): Promise<void> {
         await Promise.all([
             () => this.suiPythService.preloadPrices()

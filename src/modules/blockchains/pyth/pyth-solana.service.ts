@@ -36,12 +36,6 @@ export class PythSolanaService implements IOracleService {
 
     initialize(tokens: Array<TokenLike>): void {
         this.tokens = tokens
-    }
-
-    /**
-   * Subscribe to all Solana networks
-   */
-    subscribe(): void {
         for (const network of Object.values(Network)) {
             this.subscribeToNetworkFeeds(network)
         }

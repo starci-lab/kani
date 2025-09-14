@@ -8,5 +8,4 @@ export interface IOracleService {
     getPrices(
         tokenIds: Array<TokenId>
     ): Promise<Partial<Record<TokenId, Decimal>>>;
-    subscribe(): void;
 }

@@ -1,3 +1,13 @@
 export enum WinstonLog {
     PythSuiPricesUpdated = "Pyth.Sui.Prices.Updated",
+    BybitWsTicker = "Bybit.WS.Ticker",
+    BybitRestSnapshot = "Bybit.REST.Snapshot",
+    BybitRestError = "Bybit.REST.Error",
+    BinanceWsTicker = "Binance.WS.Ticker",
+    BinanceWsOrderBook = "Binance.WS.OrderBook",
+    BinanceRestSnapshot = "Binance.REST.Snapshot",
+    BinanceRestError = "Binance.REST.Error",
+    GateWsTicker = "Gate.WS.Ticker",
+    GateRestSnapshot = "Gate.REST.Snapshot",
+    GateRestError = "Gate.REST.Error",
 }
