@@ -3,7 +3,7 @@ import {
     ClosePositionParams,
     IActionService,
     OpenPositionParams,
-} from "../../interfaces"
+} from "../interfaces"
 import BN from "bn.js"
 import { Network } from "@modules/common"
 import { TickManagerService } from "../../utils/tick-manager.service"

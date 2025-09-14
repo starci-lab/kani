@@ -79,9 +79,9 @@ export interface PositionLike extends BaseLike {
     /** The liquidity of the position */
     liquidity: string
     /** The lower tick index of the position */
-    tickLowerIndex: number
+    tickLower: number
     /** The upper tick index of the position */
-    tickUpperIndex: number
+    tickUpper: number
 }
 
 export interface LiquidityPoolLike extends BaseLike {

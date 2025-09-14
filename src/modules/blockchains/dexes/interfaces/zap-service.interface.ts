@@ -2,7 +2,7 @@ import { ChainId, Network } from "@modules/common"
 import { TokenId, TokenLike } from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { RouterId } from "../swap/swap.interface"
+import { RouterId } from "../../swap/swap.interface"
 
 /**
  * Input params for zap calculation

@@ -3,80 +3,95 @@ import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
 
-export interface ConsolidateCoinsParams {
+/**
+ * Response from splitting a coin into spend + change.
+ */
+export interface SplitCoinResponse {
+    spendCoin: TransactionObjectArgument
+    sourceCoin: TransactionObjectArgument
+}
+
+/**
+ * Parameters for fetching and merging all coins of a given type.
+ */
+export interface FetchAndMergeCoinsParams {
     suiClient: SuiClient
     txb?: Transaction
     owner: string
     coinType: string
-    requiredAmount: BN
-    providedCoins?: Array<TransactionObjectArgument>
 }
 
-export interface ConsolidateCoinsResponse {
-    spendCoin: TransactionObjectArgument   // exact amount to be used
-    changeCoin?: TransactionObjectArgument // remaining balance (if any)
+export interface SplitCoinParams {
+    txb?: Transaction
+    sourceCoin: TransactionObjectArgument
+    requiredAmount: BN
+}
+
+/**
+ * Response from fetchAndMergeCoins operation.
+ */
+export interface FetchAndMergeCoinsResponse {
+    sourceCoin: TransactionObjectArgument // Final merged coin object
+    totalBalance: BN                 // Total balance after merging
 }
 
 @Injectable()
 export class SuiCoinManagerService {
     constructor() {}
 
-    public async consolidateCoins({
+    public async splitCoin(
+        {
+            requiredAmount,
+            sourceCoin,
+            txb
+        }: SplitCoinParams
+    ): Promise<SplitCoinResponse> {
+        if (!sourceCoin) {
+            throw new Error("sourceCoin is required to perform splitCoin")
+        }
+        txb = txb || new Transaction()
+        // Split out exactly the required amount into a new coin
+        const [spendCoin] = txb.splitCoins(sourceCoin, [
+            txb.pure.u64(requiredAmount.toString()),
+        ])
+        // Return both spendCoin and the remaining sourceCoin
+        return {
+            spendCoin,
+            sourceCoin,
+        }
+    }
+
+    public async fetchAndMergeCoins({
         suiClient,
         txb,
         owner,
         coinType,
-        requiredAmount,
-        providedCoins,
-    }: ConsolidateCoinsParams): Promise<ConsolidateCoinsResponse | null> {
+    }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResponse | null> {
         txb = txb || new Transaction()
 
-        let sourceCoin: TransactionObjectArgument
-        let total = new BN(0)
+        // Fetch all coin objects of this type
+        const fetchedCoins = await suiClient.getCoins({ owner, coinType })
+        if (!fetchedCoins.data.length) return null
 
-        // Case 1: providedCoins passed in explicitly
-        if (providedCoins && providedCoins.length > 0) {
-            sourceCoin = providedCoins[0]
+        // Sort coins by balance in descending order
+        const sorted = fetchedCoins.data.sort((a, b) =>
+            new BN(b.balance).cmp(new BN(a.balance))
+        )
 
-            // Merge all provided coins into the first one
-            for (let i = 1; i < providedCoins.length; i++) {
-                txb.mergeCoins(sourceCoin, [providedCoins[i]])
-            }
-            // NOTE: In this mode we cannot auto-sum balances because TransactionObjectArgument
-            // does not contain balances — caller should ensure sufficient amount.
-            // We just split blindly and assume requiredAmount is <= total balance.
-        } else {
-            // Case 2: fetch coins directly from the chain
-            const fetchedCoins = await suiClient.getCoins({ owner, coinType })
-            if (!fetchedCoins.data.length) return null // No coins available
+        // Pick the largest coin as the base
+        const baseCoin = txb.object(sorted[0].coinObjectId)
+        let total = new BN(sorted[0].balance)
 
-            // Sort coins by balance in descending order (largest first)
-            const sorted = fetchedCoins.data.sort((a, b) =>
-                new BN(b.balance).cmp(new BN(a.balance))
-            )
-
-            // Use the largest coin as the "source coin"
-            sourceCoin = txb.object(sorted[0].coinObjectId)
-            total = new BN(sorted[0].balance)
-
-            for (let i = 1; i < sorted.length; i++) {
-                const coin = txb.object(sorted[i].coinObjectId)
-                txb.mergeCoins(sourceCoin, [coin])
-                total = total.add(new BN(sorted[i].balance))
-            }
-
-            // If total balance is still less than required, return null
-            if (total.lt(requiredAmount)) return null
+        // Merge smaller coins into the base coin
+        for (let i = 1; i < sorted.length; i++) {
+            const coin = txb.object(sorted[i].coinObjectId)
+            txb.mergeCoins(baseCoin, [coin])
+            total = total.add(new BN(sorted[i].balance))
         }
-        // Split sourceCoin into:
-        // - spendCoin: exact requiredAmount
-        // - changeCoin: remaining balance (if any)
-        const [spendCoin, changeCoin] = txb.splitCoins(sourceCoin, [
-            txb.pure.u64(requiredAmount.toString()),
-        ])
+
         return {
-            spendCoin,
-            changeCoin: total.eq(requiredAmount) ? undefined : changeCoin,
+            sourceCoin: baseCoin,
+            totalBalance: total,
         }
     }
 }

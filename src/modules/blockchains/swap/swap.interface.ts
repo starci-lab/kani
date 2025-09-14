@@ -31,7 +31,9 @@ export interface QuoteResponse {
 export interface SwapParams {
     tokenIn: TokenId,
     tokenOut: TokenId,
-    amountIn: BN,
+    // amount in now optional, since sui require coin obj to swap rather then amountIn
+    // specify amount in in order to swap by yourself
+    amountIn?: BN,
     tokens: Array<TokenLike>,
     slippage?: number,
     network?: Network

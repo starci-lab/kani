@@ -1,6 +1,6 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
-import { ActionResponse } from "../dexes"
+import { ActionResponse } from ".."
 import { PositionLike, TokenId, TokenLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
@@ -15,6 +15,8 @@ export interface ClosePositionParams {
     tokenAId: TokenId
     tokenBId: TokenId
     tokens: Array<TokenLike>
+    slippage?: number
+    swapSlippage?: number
     // txb (sui only)
     txb?: Transaction
 }
@@ -30,6 +32,8 @@ export interface OpenPositionParams {
     network?: Network
     chainId?: ChainId
     accountAddress: string
+    slippage?: number
+    swapSlippage?: number
     // txb (sui only)
     txb?: Transaction
 }

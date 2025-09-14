@@ -7,7 +7,7 @@ import {
     FetchPoolsParams,
     FetchPoolsResponse,
     IFetchService,
-} from "../../interfaces"
+} from "../interfaces"
 import { DexId } from "@modules/databases"
 import { BN } from "bn.js"
 

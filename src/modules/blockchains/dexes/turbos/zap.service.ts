@@ -3,7 +3,7 @@ import {
     ComputeZapAmountsParams,
     ComputeZapAmountsResponse,
     IZapService,
-} from "../../interfaces"
+} from "../interfaces"
 import { ZapCalculatorService } from "../../utils"
 import { SuiSwapService } from "../../swap"
 import { computeRatio, toScaledBN, toUnit } from "@modules/common"
@@ -30,7 +30,7 @@ export class TurbosZapService implements IZapService {
             priorityAOverB,
             ratio,
             slippage = 0.01,
-            swapSlippage = 0.001,
+            swapSlippage = 0.01,
         } = params
 
         const tokenA = tokens.find((token) => token.displayId === tokenAId)

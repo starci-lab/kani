@@ -9,6 +9,7 @@ import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { InjectWinston } from "@modules/winston"
 import { Logger } from "winston"
 import { ActionResponse } from "../dexes"
+import { Transaction } from "@mysten/sui/transactions"
 
 @Injectable()
 export class SuiSwapService implements ISwapService {
@@ -92,11 +93,9 @@ export class SuiSwapService implements ISwapService {
         txb,
         transferCoinObjs,
     }: SwapParams): Promise<ActionResponse> {
+        txb = txb || new Transaction()
         if (!inputCoinObj) {
             throw new Error("Input coin object is required")
-        }
-        if (!txb) {
-            throw new Error("Serialized data is required")
         }
         const tokenInInstance = tokens.find(
             token => token.displayId === tokenIn,
@@ -112,7 +111,6 @@ export class SuiSwapService implements ISwapService {
         {
             const aggregator = this.cetusAggregatorSdks[network]
             if (!inputCoinObj) {
-                this.winstonLogger.error("MergedCoinIsRequired")
                 throw new Error("Merged coin is required")
             }
             const outputCoin = await aggregator.routerSwap({

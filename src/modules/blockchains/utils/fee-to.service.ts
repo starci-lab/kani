@@ -27,12 +27,13 @@ export interface AttachSuiFeeParams {
     tokenAddress: string
     accountAddress: string
     network: Network
+    sourceCoin?: TransactionObjectArgument
 }
 
 export interface AttachSuiFeeResponse {
     txb: Transaction
     remainingAmount: BN
-    changeCoin?: TransactionObjectArgument
+    sourceCoin: TransactionObjectArgument
 }
 
 @Injectable()
@@ -70,31 +71,38 @@ export class FeeToService {
             tokenAddress,
             accountAddress,
             network,
-            amount
+            amount,
+            sourceCoin
         }: AttachSuiFeeParams
     ): Promise<AttachSuiFeeResponse> {
         txb = txb || new Transaction()
-        const { feeAmount, 
+        if (!sourceCoin) {
+            const response = await this.suiCoinManagerService.fetchAndMergeCoins({
+                suiClient: this.suiClients[network][0],
+                txb,
+                owner: accountAddress,
+                coinType: tokenAddress,
+            })
+            if (!response) {
+                throw new Error("Coins are required")
+            }
+            sourceCoin = response.sourceCoin
+        }
+        const { 
+            feeAmount, 
             feeToAddress, 
             remainingAmount
         } = this.splitAmount(amount, PlatformId.Sui, network)
-        const suiClient = this.suiClients[network][0]
-        const coins = await this.suiCoinManagerService.consolidateCoins({
+        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
             txb,
-            suiClient,
-            owner: accountAddress,
-            coinType: tokenAddress,
+            sourceCoin,
             requiredAmount: feeAmount,
         })
-        if (!coins) {
-            throw new Error("Coins are required")
-        }
-        const { spendCoin, changeCoin } = coins
         txb.transferObjects([spendCoin], feeToAddress)
         return {
             txb,
             remainingAmount,
-            changeCoin
+            sourceCoin
         }
     }
 
