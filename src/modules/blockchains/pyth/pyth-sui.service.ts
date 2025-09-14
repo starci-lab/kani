@@ -8,18 +8,24 @@ import BN from "bn.js"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Injectable, OnModuleInit } from "@nestjs/common"
+import { InjectWinston } from "@modules/winston"
+import { Logger } from "winston"
+import { WinstonLog } from "@modules/winston"
 
 @Injectable()
 export class PythSuiService implements IOracleService, OnModuleInit {
     private connection: SuiPriceServiceConnection
     private tokens: Array<TokenLike> = []
     private cacheManager: Cache
-    
+
     constructor(
-        private readonly cacheHelpersService: CacheHelpersService,
+    private readonly cacheHelpersService: CacheHelpersService,
+    @InjectWinston()
+    private readonly logger: Logger,
     ) {
-        this.connection = new SuiPriceServiceConnection(envConfig().pyth.sui.endpoint)
-        
+        this.connection = new SuiPriceServiceConnection(
+            envConfig().pyth.sui.endpoint,
+        )
     }
     onModuleInit() {
         this.cacheManager = this.cacheHelpersService.getCacheManager({
@@ -27,48 +33,47 @@ export class PythSuiService implements IOracleService, OnModuleInit {
         })
     }
 
-    initialize(
-        tokens: Array<TokenLike>
-    ): void {
+    initialize(tokens: Array<TokenLike>): void {
         this.tokens = tokens
     }
 
-    subscribe(): void { 
+    subscribe(): void {
         for (const network of Object.values(Network)) {
             this.subscribeToNetworkFeeds(network)
         }
     }
 
-    subscribeToNetworkFeeds(
-        network: Network
-    ) {
+    subscribeToNetworkFeeds(network: Network) {
         const suiTokens = this.tokens.filter(
-            (token) => token.chainId === ChainId.Sui
-                && token.network === network
+            (token) => token.chainId === ChainId.Sui && token.network === network,
         )
-        const feedIds = this.tokens.map((token) => token.pythFeedId)
-        this.connection.subscribePriceFeedUpdates(
-            feedIds, 
-            async (feed) => {
-                const priceUnchecked = feed.getPriceUnchecked()
-                if (priceUnchecked) {
-                    const token = suiTokens.find((token) => token.pythFeedId === feed.id)
-                    if (!token) {
-                        throw new Error(`Token ${feed.id} not found`)
-                    }
-                    await this.cacheManager.set(
-                        createCacheKey(
-                            CacheKey.PythTokenPrice,
-                            token.displayId,
-                            network
-                        ), 
-                        computeDenomination(
-                            new BN(priceUnchecked.price), 
-                            priceUnchecked.expo
-                        ).toNumber()
-                    )
+        const feedIds = suiTokens.map((token) => token.pythFeedId)
+        this.connection.subscribePriceFeedUpdates(feedIds, async (feed) => {
+            const priceUnchecked = feed.getPriceUnchecked()
+            if (priceUnchecked) {
+                const token = suiTokens.find((token) =>
+                    token.pythFeedId.includes(feed.id),
+                )
+                if (!token) {
+                    throw new Error(`Feed ${feed.id} not found`)
                 }
-            })
+                const price = computeDenomination(
+                    new BN(priceUnchecked.price),
+                    priceUnchecked.expo,
+                ).toNumber()
+                await this.cacheManager.set(
+                    createCacheKey(CacheKey.PythTokenPrice, token.displayId, network),
+                    price,
+                )
+                this.logger.debug(WinstonLog.PythSuiPricesUpdated, [
+                    {
+                        network,
+                        token: token.displayId,
+                        price,
+                    },
+                ])
+            }
+        })
     }
 
     async getPrices(
@@ -91,45 +96,60 @@ export class PythSuiService implements IOracleService, OnModuleInit {
         network: Network,
     ): Promise<Partial<Record<TokenId, Decimal>>> {
         const tokenIds = this.tokens.map((token) => token.displayId)
-        // Lọc tokens đúng chain và network
         const tokens = this.tokens.filter(
             (token) =>
                 tokenIds.includes(token.displayId) &&
-            token.chainId === ChainId.Sui &&
-            token.network === network &&
-            token.pythFeedId,
+        token.chainId === ChainId.Sui &&
+        token.network === network &&
+        token.pythFeedId,
         )
-        const feedIds = tokens.map((feed) => feed.pythFeedId!)
+        const feedIds = tokens.map((feed) => feed.pythFeedId)
         const feeds = (await this.connection.getLatestPriceFeeds(feedIds)) || []
         const result: Partial<Record<TokenId, Decimal>> = {}
-        feeds.forEach((feed) => {
-            const token = tokens.find((token) => token.pythFeedId === feed.id)
-            if (!token) return
+        const entries: Array<[TokenId, number]> = []
+        for (const feed of feeds) {
+            const token = tokens.find((t) => t.pythFeedId === feed.id)
+            if (!token) continue
+
             const priceUnchecked = feed.getPriceUnchecked()
-            if (priceUnchecked) {
-                const price = new Decimal(
-                    computeDenomination(
-                        new BN(priceUnchecked.price),
-                        priceUnchecked.expo,
-                    ),
-                )
-                result[token.displayId] = price
-                this.cacheManager.set(
-                    createCacheKey(CacheKey.PythTokenPrice, token.displayId, network),
-                    price.toNumber(),
-                )
-            }
-        })
+            if (!priceUnchecked) continue
+
+            const price = new Decimal(
+                computeDenomination(new BN(priceUnchecked.price), priceUnchecked.expo),
+            )
+
+            result[token.displayId] = price
+            entries.push([
+                token.displayId,
+                price.toNumber(),
+            ])
+        }
+        await this.cacheManager.mset(
+            entries.map(([key, value]) => ({
+                key: createCacheKey(CacheKey.PythTokenPrice, key, network),
+                value,
+            })),
+        )
+        this.logger.debug(
+            WinstonLog.PythSuiPricesUpdated, 
+            entries.map(
+                ([key, value]) => ({
+                    network,
+                    token: key,
+                    price: value,
+                })
+            ))
         return result
     }
 
-    async preloadPrices(
-    ): Promise<void> {
+    async preloadPrices(): Promise<void> {
         const promises: Array<Promise<void>> = []
         for (const network of Object.values(Network)) {
-            promises.push((async () => {
-                await this.fetchPrices(network)
-            })())
+            promises.push(
+                (async () => {
+                    await this.fetchPrices(network)
+                })(),
+            )
         }
         await Promise.all(promises)
     }

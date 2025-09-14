@@ -3,7 +3,6 @@ import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { DataLikeService } from "../data-like"
 import { waitUntil } from "@modules/common"
 import { InitializedService, InitializerService } from "@modules/initializer"
-import fs from "fs"
 
 @Injectable()
 export class PythFetcherService implements OnApplicationBootstrap {
@@ -25,6 +24,5 @@ export class PythFetcherService implements OnApplicationBootstrap {
         this.initializeSerivce.loadService(
             InitializedService.PythService
         )
-        fs.writeFileSync("pyth-fetcher.json", JSON.stringify(this.dataLikeService.tokens, null, 2))
     }
 }
