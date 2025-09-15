@@ -1,34 +1,36 @@
-import { Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { AddLiquidityFixTokenParams, Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import CetusZapSDK from "@cetusprotocol/zap-sdk"
 import {
     FeeToService,
     PriceRatioService,
+    SuiCoinManagerService,
     TickManagerService,
+    TickMathService,
 } from "../../utils"
 import { ClosePositionParams, IActionService, OpenPositionParams } from "../../interfaces"
-import { Network } from "@modules/common"
-import { Transaction } from "@mysten/sui/transactions"
+import { computeRatio, computeRaw, Network, toUnit } from "@modules/common"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { GasSuiSwapUtilsService, OPEN_POSITION_SLIPPAGE } from "../../swap"
+import { GasSuiSwapUtilsService, OPEN_POSITION_SLIPPAGE, SuiSwapService, SWAP_OPEN_POSITION_SLIPPAGE, ZapService } from "../../swap"
 import { SuiClient } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"
-import { InjectCetusClmmSdks, InjectCetusZapSdks } from "./cetus.decorators"
+import { InjectCetusClmmSdks } from "./cetus.decorators"
 import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
 import { ActionResponse } from "../types"
-    
+import { PythService } from "../../pyth"
+import fs from "fs"
+import { printTransaction } from "@cetusprotocol/aggregator-sdk"
+
 @Injectable()
 export class CetusActionService implements IActionService {
     constructor(
         private readonly tickManagerService: TickManagerService,
         private readonly feeToService: FeeToService,
-        @InjectCetusZapSdks()
-        private readonly cetusZapSdks: Record<Network, CetusZapSDK>,
         @InjectCetusClmmSdks()
         private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
         private readonly priceRatioService: PriceRatioService,
@@ -37,7 +39,12 @@ export class CetusActionService implements IActionService {
         private readonly suiClients: Record<Network, Array<SuiClient>>,
         private readonly suiExecutionService: SuiExecutionService,
         private readonly signerService: SignerService,
-    ) {}
+        private readonly pythService: PythService,
+        private readonly tickMathService: TickMathService,
+        private readonly zapService: ZapService,
+        private readonly suiCoinManagerService: SuiCoinManagerService,
+        private readonly suiSwapService: SuiSwapService,
+    ) { }
 
     // ---------- Open Position ----------
     async openPosition({
@@ -56,102 +63,154 @@ export class CetusActionService implements IActionService {
         suiClient,
         requireZapEligible
     }: OpenPositionParams): Promise<ActionResponse> {
+        const cetusClmmSdk = this.cetusClmmSdks[network]
+        cetusClmmSdk.senderAddress = accountAddress
+        txb = txb ?? new Transaction()
+        slippage = slippage || OPEN_POSITION_SLIPPAGE
+        swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
         if (!user) {
             throw new Error("Sui key pair is required")
         }
-
         suiClient = suiClient || this.suiClients[network][clientIndex]
-        const zapSdk = this.cetusZapSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-
-        slippage = slippage || OPEN_POSITION_SLIPPAGE
-        swapSlippage = swapSlippage || OPEN_POSITION_SLIPPAGE
-
-        const tokenA = tokens.find((t) => t.displayId === tokenAId)
-        const tokenB = tokens.find((t) => t.displayId === tokenBId)
-        if (!tokenA || !tokenB) throw new Error("Token not found")
-
-        // 1. ensure gas (swap sang SUI nếu cần)
+        const tokenA = tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        if (!tokenA || !tokenB) {
+            throw new Error("Token not found")
+        }
+        const tokenIn = priorityAOverB ? tokenA : tokenB
+        const tokenOut = priorityAOverB ? tokenB : tokenA
+        const oraclePrice = await this.pythService.computeOraclePrice({
+            tokenAId,
+            tokenBId,
+            chainId: tokenA.chainId,
+            network,
+        })
         const {
-            txb: txAfterGas,
-            requireGasSwap,
-            remainingAmount: remainAfterGas,
+            txb: txAfterSwapGas,
+            sourceCoin
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
-            txb,
             network,
             accountAddress,
-            tokenInId: priorityAOverB ? tokenA.displayId : tokenB.displayId,
+            tokenInId: tokenIn.displayId,
             tokens,
             slippage,
             suiClient,
+            txb
         })
-
-        if (requireGasSwap) {
-            if (!remainAfterGas) {
-                throw new Error("Remaining amount after gas swap is missing")
-            }
-            amount = remainAfterGas
-        }
-
-        // 2. attach platform fee
-        const { txb: txAfterFee, remainingAmount } =
-            await this.feeToService.attachSuiFee({
-                txb: txAfterGas,
-                tokenAddress: tokenA.tokenAddress,
-                accountAddress,
+        const {
+            txb: txbAfterAttachFee,
+            remainingAmount,
+        } = await this.feeToService.attachSuiFee({
+            txb: txAfterSwapGas,
+            tokenAddress: tokenIn.tokenAddress,
+            accountAddress,
+            network,
+            amount,
+            suiClient,
+            sourceCoin,
+        })
+        // use this to calculate the ratio
+        const quoteAmountA = computeRaw(1, tokenA.decimals)
+        const { coinAmountA, coinAmountB } =
+            ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
+                tickLower,
+                tickUpper,
+                new BN(quoteAmountA.toString()),            // coinAmount must be BN
+                true,                             // isCoinA
+                false,                                      // roundUp
+                slippage,                                   // example 0.01
+                new BN(pool.currentSqrtPrice.toString()),
+            )
+        const ratio = computeRatio(
+            new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
+            new BN(coinAmountA).mul(toUnit(tokenB.decimals))
+        )
+        const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
+            pool.currentSqrtPrice,
+            tokenA.decimals,
+            tokenB.decimals,
+        )
+        const { swapAmount, routerId, quoteData, receiveAmount } =
+            await this.zapService.computeZapAmounts({
+                amountIn: remainingAmount,
+                ratio: new Decimal(ratio),
+                spotPrice,
+                priorityAOverB,
+                tokenAId,
+                tokenBId,
+                tokens,
+                oraclePrice,
                 network,
-                amount,
-                suiClient,
+                swapSlippage,
             })
 
-        // 3. calculate deposit via Zap SDK
-        const depositObj = await zapSdk.Zap.preCalculateDepositAmount(
-            {
-                pool_id: pool.poolAddress,
-                tick_lower: tickLower,
-                tick_upper: tickUpper,
-                current_sqrt_price: new BN(pool.currentSqrtPrice).toString(),
-                slippage,
-                swap_slippage: swapSlippage,
-            },
-            {
-                mode: priorityAOverB ? "OnlyCoinA" : "OnlyCoinB",
-                coin_amount: remainingAmount.toString(),
-                coin_decimal_a: tokenA.decimals,
-                coin_type_a: tokenA.tokenAddress,
-                coin_type_b: tokenB.tokenAddress,
-                coin_decimal_b: tokenB.decimals,
-            },
-        )
-
         // 4. optional ratio check
+        const zapAmountA = priorityAOverB
+            ? new BN(remainingAmount) : new BN(receiveAmount)
+        const zapAmountB = priorityAOverB
+            ? new BN(receiveAmount) : new BN(remainingAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
                 tokenDecimals: tokenA.decimals,
-                amount: new BN(depositObj.amount_a),
+                amount: new BN(zapAmountA),
             },
             tokenB: {
                 tokenDecimals: tokenB.decimals,
-                amount: new BN(depositObj.amount_b),
+                amount: new BN(zapAmountB),
             },
         })
-        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
-        // 5. build deposit payload
-        const txbAfterDeposit = await zapSdk.Zap.buildDepositPayload(
-            {
-                deposit_obj: depositObj,
-                pool_id: pool.poolAddress,
-                coin_type_a: tokenA.tokenAddress,
-                coin_type_b: tokenB.tokenAddress,
-                tick_lower: new BN(tickLower).toNumber(),
-                tick_upper: new BN(tickUpper).toNumber(),
-                slippage,
-                swap_slippage: swapSlippage,
-            },
-            txAfterFee,
+        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment") 
+        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+            txb: txbAfterAttachFee,
+            sourceCoin,
+            requiredAmount: swapAmount,
+        })
+        const { txb: txbAfterSwap, extraObj } = await this.suiSwapService.swap({
+            txb: txbAfterAttachFee,
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenOut.displayId,
+            amountIn: swapAmount,
+            tokens,
+            fromAddress: accountAddress,
+            quoteData,
+            routerId,
+            network,
+            slippage: swapSlippage,
+            inputCoinObj: spendCoin,
+            transferCoinObjs: false,
+        })
+        const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        const providedAmountA = priorityAOverB ? remainingAmount : receiveAmount
+        const providedAmountB = priorityAOverB ? receiveAmount : remainingAmount
+        const addLiquidityPayloadParams: AddLiquidityFixTokenParams = {
+            coinTypeA: tokenA.tokenAddress,
+            coinTypeB: tokenB.tokenAddress,
+            pool_id: pool.poolAddress,
+            tick_lower: tickLower.toString(),
+            tick_upper: tickUpper.toString(),
+            amount_a: providedAmountA.toString(),
+            amount_b: providedAmountB.toString(),
+            rewarder_coin_types: [],
+            collect_fee: false,
+            fix_amount_a: priorityAOverB,   
+            is_open: true,
+            pos_id: "",
+            slippage
+        }
+        if (!txbAfterSwap) {
+            throw new Error("Transaction builder is required")
+        }
+        const inputCoinA = priorityAOverB ? sourceCoin : coinOut
+        const inputCoinB = priorityAOverB ? coinOut : sourceCoin
+        const txbAfterDeposit = await cetusClmmSdk.Position.createAddLiquidityFixTokenPayload(
+            addLiquidityPayloadParams,
+            undefined,
+            txbAfterSwap,
+            inputCoinA,
+            inputCoinB,
         )
-
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
@@ -163,7 +222,6 @@ export class CetusActionService implements IActionService {
                 })
             },
         })
-
         return { txHash }
     }
 
@@ -187,8 +245,8 @@ export class CetusActionService implements IActionService {
         txb = txb ?? new Transaction()
         const cetusClmmSdk = this.cetusClmmSdks[network]
 
-        const tokenA = tokens.find((t) => t.displayId === tokenAId)
-        const tokenB = tokens.find((t) => t.displayId === tokenBId)
+        const tokenA = tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }

@@ -3,7 +3,7 @@ import { Module } from "@nestjs/common"
 import { DataLikeModule, PriceFetcherModule, UserLoaderModule } from "@features/fetchers"
 // import { TestSwapService } from "./test-swap.service"
 import { SqliteModule } from "@modules/databases"
-import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
+import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
 import { CryptoModule } from "@modules/crypto"
 import { EnvModule } from "@modules/env"
 import { MixinModule } from "@modules/mixin"
@@ -83,7 +83,8 @@ import { InitializerModule } from "@modules/initializer"
     ],
     providers: [
         //TestSwapService
-        TurbosTestLiquidityManangementService
+        //TurbosTestLiquidityManangementService
+        CetusTestLiquidityManangementService
     ],
 })
 export class AppModule {}

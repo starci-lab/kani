@@ -1,18 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import {
-    ComputeZapAmountsParams,
-    ComputeZapAmountsResponse,
-    IZapService,
-} from "../../interfaces"
-import { ZapCalculatorService } from "../../utils"
-import { SuiSwapService } from "../../swap"
 import { computeRatio, toScaledBN, toUnit } from "@modules/common"
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import { RetryService } from "@modules/mixin"
+import { ComputeZapAmountsParams, ComputeZapAmountsResponse, IZapService } from "../interfaces"
+import { SuiSwapService } from "./sui-swap.service"
+import { ZapCalculatorService } from "../utils"
 
 @Injectable()
-export class TurbosZapService implements IZapService {
+export class ZapService implements IZapService {
     constructor(
         private readonly suiSwapService: SuiSwapService,
         private readonly zapCalculatorService: ZapCalculatorService,

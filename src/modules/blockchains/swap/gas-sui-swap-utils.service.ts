@@ -61,13 +61,11 @@ export class GasSuiSwapUtilsService {
         suiClient = suiClient || this.suiClients[network][0]
         txb = txb ?? new Transaction()
         slippage = slippage ?? GAS_SUI_SWAP_SLIPPAGE
-
         const tokenNative = tokens.find((token) => token.type === TokenType.Native)
         const tokenIn = tokens.find((token) => token.displayId === tokenInId)
         if (!tokenNative || !tokenIn) {
             throw new Error("Token not found")
         }
-
         if (!sourceCoin) {
             const coinResponse = await this.suiCoinManagerService.fetchAndMergeCoins({
                 owner: accountAddress,
@@ -80,19 +78,25 @@ export class GasSuiSwapUtilsService {
             }
             ({ sourceCoin } = coinResponse)
         }
-
         // --- 1. Check current SUI balance
-        const balance = await suiClient.getBalance({
+        const { totalBalance } = await suiClient.getBalance({
             owner: accountAddress,
             coinType: tokenNative.tokenAddress,
+        }) 
+        const balanceBN = new BN(totalBalance)
+        const gasCoinResponse = await this.suiCoinManagerService.fetchAndMergeCoins({
+            owner: accountAddress,
+            coinType: tokenNative.tokenAddress,
+            txb,
+            suiClient,
         })
-        const balanceBN = new BN(balance.totalBalance)
-
+        if (!gasCoinResponse) {
+            throw new Error("No gas coin found")
+        }
         // If balance >= 0.3 SUI, no swap
         if (balanceBN.gte(SUI_GAS_LIMIT)) {
             return { txb, requireGasSwap: false, sourceCoin }
         }
-
         // --- 2. Fetch oracle price (tokenIn → SUI)
         // mean that 1 sui = oraclePrice  tokenIn
         // requre t sui = t x oraclePrice  tokenIn
@@ -116,7 +120,6 @@ export class GasSuiSwapUtilsService {
         ).div(
             toUnit(tokenNative.decimals)
         )
-        console.log(swapAmount.toString())
         // --- 5. Append swap action
         const { routerId, quoteData } = await this.suiSwapService.quote({
             tokenIn: tokenIn.displayId,

@@ -12,14 +12,14 @@ import { ActionResponse } from "../../dexes"
 import { FeeToService, PriceRatioService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
-import { TurbosZapService } from "./zap.service"
 import { SuiCoinManagerService } from "../../utils"
-import { TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import {
     CLOSE_POSITION_SLIPPAGE,
     OPEN_POSITION_SLIPPAGE,
     SuiSwapService,
-    SWAP_OPEN_POSITION_SLIPPAGE
+    SWAP_OPEN_POSITION_SLIPPAGE,
+    ZapService
 } from "../../swap"
 import { SuiClient } from "@mysten/sui/dist/cjs/client"
 import { GasSuiSwapUtilsService } from "../../swap"
@@ -37,7 +37,7 @@ export class TurbosActionService implements IActionService {
         private readonly tickManagerService: TickManagerService,
         private readonly feeToService: FeeToService,
         private readonly tickMathService: TickMathService,
-        private readonly turbosZapService: TurbosZapService,
+        private readonly zapService: ZapService,
         private readonly pythService: PythService,
         private readonly suiSwapService: SuiSwapService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
@@ -63,8 +63,10 @@ export class TurbosActionService implements IActionService {
         swapSlippage,
         user,
         suiClient,
+        txb,
         requireZapEligible = true
     }: OpenPositionParams): Promise<ActionResponse> {
+        txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
         if (!user) {
@@ -95,7 +97,8 @@ export class TurbosActionService implements IActionService {
             tokenInId: tokenIn.displayId,
             tokens,
             slippage,
-            suiClient
+            suiClient,
+            txb
         })
         const {
             txb: txbAfterAttachFee,
@@ -131,7 +134,7 @@ export class TurbosActionService implements IActionService {
             tokenB.decimals,
         )
         const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
-            await this.turbosZapService.computeZapAmounts({
+            await this.zapService.computeZapAmounts({
                 amountIn: remainingAmount,
                 ratio: new Decimal(ratio),
                 spotPrice,
