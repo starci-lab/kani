@@ -2,15 +2,14 @@ import { Injectable } from "@nestjs/common"
 import { TransactionObjectArgument } from "@mysten/sui/transactions"
 import { Network, ZERO_BN } from "@modules/common"
 import { 
-    SuiClient, 
-} from "@mysten/sui/client"
-import { 
-    SuiSwapService, 
     SuiCoinManagerService, 
     FeeToService, 
-    ForceSwapParams, 
-    ActionResponse 
-} from "@modules/blockchains"
+} from "../utils"
+import { SuiSwapService } from "./sui-swap.service"
+import { ForceSwapParams } from "../interfaces"
+import { ActionResponse } from "../dexes"
+import { InjectSuiClients } from "../clients"
+import { SuiClient } from "@mysten/sui/client"
 
 @Injectable()
 export class SuiForceSwapService {
@@ -18,6 +17,8 @@ export class SuiForceSwapService {
     private readonly suiSwapService: SuiSwapService,
     private readonly suiCoinManagerService: SuiCoinManagerService,
     private readonly feeToService: FeeToService,
+    @InjectSuiClients()
+    private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) {}
 
     /**
@@ -33,8 +34,9 @@ export class SuiForceSwapService {
         slippage,
         pnlAmount,
         suiClient,
-        
-    }: ForceSwapParams & { suiClient: SuiClient }): Promise<ActionResponse> {
+    }: ForceSwapParams): Promise<ActionResponse> {
+        // use first client if not provided
+        suiClient = suiClient || this.suiClients[network][0]
         const tokenA = tokens.find((t) => t.displayId === tokenAId)
         const tokenB = tokens.find((t) => t.displayId === tokenBId)
         if (!tokenA || !tokenB) throw new Error("Token not found")

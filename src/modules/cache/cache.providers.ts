@@ -18,7 +18,7 @@ export const createRedisCacheManagerProvider = (): Provider => ({
         const keyv = new Keyv(new KeyvRedis(client))
         return createCache({
             stores: [keyv],
-            ttl: envConfig().redis.ttl,
+            ttl: envConfig().cache.redisTtl,
         })
     },
 })
@@ -29,7 +29,7 @@ export const createMemoryCacheManagerProvider = (): Provider => ({
         return createCache({
             stores: [
                 new Keyv({
-                    store: new CacheableMemory({ ttl: envConfig().redis.ttl }),
+                    store: new CacheableMemory({ ttl: envConfig().cache.memoryTtl }),
                 }),
             ],
         })

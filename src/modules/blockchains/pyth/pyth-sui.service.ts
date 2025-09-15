@@ -59,13 +59,17 @@ export class PythSuiService implements IOracleService, OnModuleInit {
                     priceUnchecked.expo,
                 ).toNumber()
                 await this.cacheManager.set(
-                    createCacheKey(CacheKey.PythTokenPrice, token.displayId, network),
+                    createCacheKey(
+                        CacheKey.PythTokenPrice, 
+                        token.displayId, 
+                        network
+                    ),
                     price,
                 )
                 this.logger.debug(WinstonLog.PythSuiPricesUpdated, [
                     {
                         network,
-                        token: token.displayId,
+                        tokenId: token.displayId,
                         price,
                     },
                 ])
@@ -76,10 +80,18 @@ export class PythSuiService implements IOracleService, OnModuleInit {
     async getPrices(
         tokenIds: Array<TokenId>,
     ): Promise<Partial<Record<TokenId, Decimal>>> {
-        const keys = tokenIds.map((tokenId) =>
-            createCacheKey(CacheKey.PythTokenPrice, tokenId),
-        )
-        const values = await this.cacheManager.mget<number>(keys)
+        const keys = tokenIds.map((tokenId) => {
+            const token = this.tokens.find((token) => token.displayId === tokenId)
+            if (!token) {
+                throw new Error(`Token ${tokenId} not found`)
+            }
+            const network = token.network
+            return createCacheKey(CacheKey.PythTokenPrice, tokenId, network)
+        })
+        const values = await this.cacheHelpersService.mget<number>({
+            keys,
+            autoSelect: true,
+        })
         const prices: Partial<Record<TokenId, Decimal>> = {}
         tokenIds.forEach((tokenId, index) => {
             if (values[index] != null) {
@@ -96,46 +108,44 @@ export class PythSuiService implements IOracleService, OnModuleInit {
         const tokens = this.tokens.filter(
             (token) =>
                 tokenIds.includes(token.displayId) &&
-        token.chainId === ChainId.Sui &&
-        token.network === network &&
-        token.pythFeedId,
+                token.chainId === ChainId.Sui &&
+                token.network === network &&
+                token.pythFeedId,
         )
         const feedIds = tokens.map((feed) => feed.pythFeedId)
         const feeds = (await this.connection.getLatestPriceFeeds(feedIds)) || []
         const result: Partial<Record<TokenId, Decimal>> = {}
         const entries: Array<[TokenId, number]> = []
         for (const feed of feeds) {
-            const token = tokens.find((t) => t.pythFeedId === feed.id)
+            const token = tokens.find((token) => token.pythFeedId === `0x${feed.id}`)
             if (!token) continue
-
             const priceUnchecked = feed.getPriceUnchecked()
             if (!priceUnchecked) continue
-
             const price = new Decimal(
                 computeDenomination(new BN(priceUnchecked.price), priceUnchecked.expo),
             )
-
             result[token.displayId] = price
-            entries.push([
-                token.displayId,
-                price.toNumber(),
-            ])
+            entries.push([token.displayId, price.toNumber()])
         }
-        await this.cacheManager.mset(
-            entries.map(([key, value]) => ({
-                key: createCacheKey(CacheKey.PythTokenPrice, key, network),
+        await this.cacheHelpersService.mset<number>({
+            entries: entries.map(([tokenId, value]) => ({
+                key: createCacheKey(
+                    CacheKey.PythTokenPrice, 
+                    tokenId, 
+                    network
+                ),
                 value,
             })),
-        )
+            autoSelect: true,
+        })
         this.logger.debug(
-            WinstonLog.PythSuiPricesUpdated, 
-            entries.map(
-                ([key, value]) => ({
-                    network,
-                    token: key,
-                    price: value,
-                })
-            ))
+            WinstonLog.PythSuiPricesUpdated,
+            entries.map(([tokenId, value]) => ({
+                network,
+                tokenId,
+                price: value,
+            })),
+        )
         return result
     }
 

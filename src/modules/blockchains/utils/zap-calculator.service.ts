@@ -33,23 +33,11 @@ export class ZapCalculatorService {
         oraclePrice,
         ratio,
         priorityAOverB
-    }: ZapCalculationParams): ZapCalculationResult {
-        this.logger.debug("Calculating zap amounts", {
-            decimalsA,
-            decimalsB,
-            amountIn: amountIn.toString(),
-            spotPrice: spotPrice.toString(),
-            oraclePrice: oraclePrice?.toString(),
-            ratio: ratio.toString(),
-            priorityAOverB,
-        })
-      
+    }: ZapCalculationParams): ZapCalculationResult { 
         const price = oraclePrice ?? spotPrice
-      
         let swapAmount: BN
         let remainAmount: BN
         let receiveAmount: BN
-      
         if (priorityAOverB) {
             // Input hoàn toàn là A
             // swapA = (ratio * OriginA) / (price + ratio)

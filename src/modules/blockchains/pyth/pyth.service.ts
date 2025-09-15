@@ -65,7 +65,7 @@ export class PythService {
 
     async preloadPrices(): Promise<void> {
         await Promise.all([
-            () => this.suiPythService.preloadPrices()
+            (async () => this.suiPythService.preloadPrices())()
         ])
     }
 }

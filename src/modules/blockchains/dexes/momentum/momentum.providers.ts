@@ -3,11 +3,14 @@ import { MOMENTUM_CLMM_SDKS } from "./momentum.constants"
 import { Network } from "@modules/common"
 import { MmtSDK } from "@mmt-finance/clmm-sdk"
 import { SuiClient } from "@mysten/sui/client"
+import { clientIndex } from "./inner-constants"
+import { SUI_CLIENTS } from "../../clients"
 
 export const createMomentumClmmSdkProvider = (): Provider<
     Record<Network, MmtSDK>
 > => ({
     provide: MOMENTUM_CLMM_SDKS,
+    inject: [SUI_CLIENTS],
     useFactory: (
         clients: Record<Network, Array<SuiClient>>
     ) => {
@@ -15,7 +18,7 @@ export const createMomentumClmmSdkProvider = (): Provider<
             const momentumNetwork = network === Network.Mainnet ? "mainnet" : "testnet"
             return MmtSDK.NEW({
                 network: momentumNetwork,
-                client: clients[2]
+                client: clients[clientIndex]
             })
         }
         return {

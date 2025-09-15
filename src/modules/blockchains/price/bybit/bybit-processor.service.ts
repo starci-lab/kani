@@ -75,21 +75,13 @@ export class BybitProcessorService implements OnModuleDestroy {
         try {
             const prices = await this.rest.getPrices(this.symbols as Array<string>)
 
-            if (typeof this.cacheManager.mset === "function") {
-                await this.cacheManager.mset(
-                    prices.map((price) => ({
-                        key: createCacheKey(CacheKey.TokenPriceData, price.symbol),
-                        value: { price: price.price },
-                    })),
-                )
-            } else {
-                for (const price of prices) {
-                    await this.cacheManager.set(
-                        createCacheKey(CacheKey.TokenPriceData, price.symbol),
-                        { price: price.price },
-                    )
-                }
-            }
+            await this.cacheHelpersService.mset<{ price: number }>({
+                entries: prices.map((price) => ({
+                    key: createCacheKey(CacheKey.TokenPriceData, price.symbol),
+                    value: { price: price.price },
+                })),
+                autoSelect: true,
+            })
             this.winston.debug(WinstonLog.BybitRestSnapshot, { prices })
         } catch (err) {
             this.winston.error(WinstonLog.BybitRestError, {

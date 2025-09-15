@@ -4,7 +4,7 @@ import {
     ClosePositionParams,
     IActionService,
     OpenPositionParams,
-} from "../interfaces"
+} from "../../interfaces"
 import { InjectFlowXClmmSdks } from "./flowx.decorators"
 import { Network } from "../../../common"
 import { ClmmPosition, Percent, CoinAmount } from "@flowx-finance/sdk"

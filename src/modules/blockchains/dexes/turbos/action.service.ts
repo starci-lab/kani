@@ -3,7 +3,7 @@ import {
     ClosePositionParams,
     IActionService,
     OpenPositionParams
-} from "../interfaces"
+} from "../../interfaces"
 import { InjectTurbosClmmSdks } from "./turbos.decorators"
 import { computePercentage, computeRatio, computeRaw, Network, toUnit, ZERO_BN } from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
@@ -62,7 +62,8 @@ export class TurbosActionService implements IActionService {
         slippage,
         swapSlippage,
         user,
-        suiClient
+        suiClient,
+        requireZapEligible = true
     }: OpenPositionParams): Promise<ActionResponse> {
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
@@ -87,8 +88,7 @@ export class TurbosActionService implements IActionService {
         })
         const {
             txb: txAfterSwapGas,
-            requireGasSwap,
-            remainingAmount: remainingAmountAfterSwapGas
+            sourceCoin
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
@@ -97,23 +97,17 @@ export class TurbosActionService implements IActionService {
             slippage,
             suiClient
         })
-        if (requireGasSwap) {
-            if (!remainingAmountAfterSwapGas) {
-                throw new Error("Remaining amount after swap gas is missing")
-            }
-            amount = remainingAmountAfterSwapGas
-        }
         const {
             txb: txbAfterAttachFee,
             remainingAmount,
-            sourceCoin
         } = await this.feeToService.attachSuiFee({
             txb: txAfterSwapGas,
             tokenAddress: tokenIn.tokenAddress,
             accountAddress,
             network,
             amount,
-            suiClient
+            suiClient,
+            sourceCoin
         })
         // use this to calculate the ratio
         const quoteAmountA = computeRaw(1, tokenA.decimals)
@@ -166,8 +160,7 @@ export class TurbosActionService implements IActionService {
                 amount: new BN(zapAmountB),
             },
         })
-        if (!isZapEligible) throw new Error("Zap not eligible at this moment")
-
+        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
         const { spendCoin } = await this.suiCoinManagerService.splitCoin({
             txb: txbAfterAttachFee,
             sourceCoin,

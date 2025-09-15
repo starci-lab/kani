@@ -1,6 +1,7 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import {
     LiquidityPoolService,
+    PythService,
     TurbosActionService,
 } from "@modules/blockchains"
 import { ChainId, Network } from "@modules/common"
@@ -22,11 +23,14 @@ implements OnApplicationBootstrap
     private readonly turbosActionService: TurbosActionService,
     private readonly liquidityPoolService: LiquidityPoolService,
     private readonly userLoaderService: UserLoaderService,
+    private readonly pythService: PythService,
     ) {}
 
     async onApplicationBootstrap() {
         const liquidityPools = liquidityPoolData
         const tokens = tokenData
+        this.pythService.initialize(tokens)
+        await this.pythService.preloadPrices()
         const ikaUsdcLiquidityPool = liquidityPools.find(
             (liquidityPool) =>
                 liquidityPool.displayId === LiquidityPoolId.TurbosIkaUsdcIka015,
@@ -56,6 +60,7 @@ implements OnApplicationBootstrap
             tokenBId: TokenId.SuiUsdc,
             tokens,
             user: users[0],
+            requireZapEligible: false
         })
         console.log(txHash)
     }

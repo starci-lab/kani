@@ -21,6 +21,10 @@ export const envConfig = () => ({
         password: process.env.REDIS_PASSWORD || "Cuong123_A",
         ttl: parseInt(process.env.REDIS_TTL || "3600000", 10), // 3600s
     },
+    cache: {
+        memoryTtl: parseInt(process.env.CACHE_MEMORY_TTL || "3600000", 10), // 3600s
+        redisTtl: parseInt(process.env.CACHE_REDIS_TTL || "3600000", 10), // 3600s
+    },
     databases: {
         mongoose: {
             host: process.env.MONGOOSE_HOST || "localhost",

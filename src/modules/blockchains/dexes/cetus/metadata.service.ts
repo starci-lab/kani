@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IMetadataService, Metadata } from "../interfaces"
+import { IMetadataService, Metadata } from "../../interfaces"
 import { ChainId } from "@modules/common"
 
 @Injectable()

@@ -7,7 +7,7 @@ import {
     PriceRatioService,
     TickManagerService,
 } from "../../utils"
-import { ClosePositionParams, IActionService, OpenPositionParams } from "../interfaces"
+import { ClosePositionParams, IActionService, OpenPositionParams } from "../../interfaces"
 import { Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
@@ -53,7 +53,8 @@ export class CetusActionService implements IActionService {
         slippage,
         swapSlippage,
         user,
-        suiClient
+        suiClient,
+        requireZapEligible
     }: OpenPositionParams): Promise<ActionResponse> {
         if (!user) {
             throw new Error("Sui key pair is required")
@@ -135,8 +136,7 @@ export class CetusActionService implements IActionService {
                 amount: new BN(depositObj.amount_b),
             },
         })
-        if (!isZapEligible) throw new Error("Zap not eligible at this moment")
-
+        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
         // 5. build deposit payload
         const txbAfterDeposit = await zapSdk.Zap.buildDepositPayload(
             {

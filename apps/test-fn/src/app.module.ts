@@ -11,6 +11,7 @@ import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
 import { CacheModule, CacheType } from "@modules/cache"
 import { EventModule, EventType } from "@modules/event"
+import { InitializerModule } from "@modules/initializer"
 
 @Module({
     imports: [
@@ -24,7 +25,7 @@ import { EventModule, EventType } from "@modules/event"
         WinstonModule.register({
             isGlobal: true,
             appName: "test-fn",
-            level: WinstonLevel.Debug,
+            level: WinstonLevel.Info,
         }),
         CacheModule.register({
             isGlobal: true,
@@ -39,6 +40,10 @@ import { EventModule, EventType } from "@modules/event"
         }),
         CryptoModule.register({
             isGlobal: true
+        }),
+        InitializerModule.register({
+            isGlobal: true,
+            loadServices: []
         }),
         SqliteModule.register({
             withSeeders: true,

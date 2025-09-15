@@ -3,7 +3,7 @@ import {
     ClosePositionParams,
     IActionService,
     OpenPositionParams,
-} from "../interfaces"
+} from "../../interfaces"
 import { InjectMomentumClmmSdks } from "./momentum.decorators"
 import { Network, ZERO_BN, computePercentage } from "@modules/common"
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"

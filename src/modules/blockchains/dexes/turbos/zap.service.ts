@@ -3,7 +3,7 @@ import {
     ComputeZapAmountsParams,
     ComputeZapAmountsResponse,
     IZapService,
-} from "../interfaces"
+} from "../../interfaces"
 import { ZapCalculatorService } from "../../utils"
 import { SuiSwapService } from "../../swap"
 import { computeRatio, toScaledBN, toUnit } from "@modules/common"

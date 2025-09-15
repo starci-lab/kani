@@ -3,6 +3,7 @@ import { TURBOS_CLMM_SDKS } from "./turbos.constants"
 import { ChainId, Network } from "@modules/common"
 import { envConfig } from "@modules/env"
 import { Network as TurbosNetwork, TurbosSdk } from "turbos-clmm-sdk"
+import { clientIndex } from "./inner-constants"
 
 export const createTurbosClmmSdkProvider = (): Provider<
   Record<Network, TurbosSdk>
@@ -17,7 +18,7 @@ export const createTurbosClmmSdkProvider = (): Provider<
             return new TurbosSdk(turbosNetwork, {
                 network: turbosNetwork,
                 // we use zan for turbos
-                url: envConfig().rpcs[ChainId.Sui][network][1],
+                url: envConfig().rpcs[ChainId.Sui][network][clientIndex],
             })
         }
         return {

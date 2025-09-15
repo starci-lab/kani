@@ -106,22 +106,13 @@ export class GateProcessorService implements OnModuleDestroy {
                     }
                 }),
             )
-
-            if (typeof this.cacheManager.mset === "function") {
-                await this.cacheManager.mset(
-                    prices.map((price) => ({
-                        key: createCacheKey(CacheKey.TokenPriceData, price.symbol),
-                        value: { price: price.price },
-                    })),
-                )
-            } else {
-                for (const price of prices) {
-                    await this.cacheManager.set(
-                        createCacheKey(CacheKey.TokenPriceData, price.symbol),
-                        { price: price.price },
-                    )
-                }
-            }
+            await this.cacheHelpersService.mset<{ price: number }>({
+                entries: prices.map((price) => ({
+                    key: createCacheKey(CacheKey.TokenPriceData, price.symbol),
+                    value: { price: price.price },
+                })),
+                autoSelect: true,
+            })
             this.winston.debug(WinstonLog.GateRestSnapshot, { prices })
             this.eventEmitterService.emit(
                 EventName.PricesUpdated,
