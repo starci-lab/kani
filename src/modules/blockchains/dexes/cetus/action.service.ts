@@ -13,6 +13,7 @@ import {
     TickManagerService,
     ClosePositionParams,
     InjectCetusClmmSdks,
+    InjectSuiClients,
 } from "@modules/blockchains"
 import { Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
@@ -20,6 +21,8 @@ import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { OPEN_POSITION_SLIPPAGE } from "../../swap"
+import { SuiClient } from "@mysten/sui/client"
+import { clientIndex } from "./inner-constants"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -32,6 +35,8 @@ export class CetusActionService implements IActionService {
     private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
     private readonly priceRatioService: PriceRatioService,
     private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
+    @InjectSuiClients()
+    private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) {}
 
     // ---------- Open Position ----------
@@ -48,6 +53,7 @@ export class CetusActionService implements IActionService {
         slippage,
         swapSlippage
     }: OpenPositionParams): Promise<ActionResponse> {
+        const suiClient = this.suiClients[network][clientIndex]
         const zapSdk = this.cetusZapSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
         slippage = slippage || OPEN_POSITION_SLIPPAGE
@@ -68,6 +74,7 @@ export class CetusActionService implements IActionService {
             tokenInId: priorityAOverB ? tokenA.displayId : tokenB.displayId,
             tokens,
             slippage,
+            suiClient
         })
         if (requireGasSwap) {
             if (!remainAfterGas) {
@@ -84,6 +91,7 @@ export class CetusActionService implements IActionService {
                 accountAddress,
                 network,
                 amount,
+                suiClient
             })
     
         // 3. calculate deposit via Zap SDK

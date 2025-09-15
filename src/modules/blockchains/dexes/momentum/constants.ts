@@ -1,0 +1,1 @@
+export const SUI_CLIENT_INDEX = 3

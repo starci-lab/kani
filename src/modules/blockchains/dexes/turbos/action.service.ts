@@ -9,7 +9,7 @@ import { computePercentage, computeRatio, computeRaw, Network, toUnit, ZERO_BN }
 import { TurbosSdk } from "turbos-clmm-sdk"
 import { TickManagerService } from "../../utils"
 import { ActionResponse } from "../../dexes"
-import { FeeToService, TickMathService } from "../../utils"
+import { FeeToService, PriceRatioService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
 import { TurbosZapService } from "./zap.service"
@@ -20,9 +20,10 @@ import {
     CLOSE_POSITION_SLIPPAGE,
     OPEN_POSITION_SLIPPAGE,
     SWAP_OPEN_POSITION_SLIPPAGE
-} from "../../swap/constants"
+} from "../../swap"
 import { SuiClient } from "@mysten/sui/dist/cjs/client"
 import { GasSuiSwapUtilsService } from "../../swap"
+import { clientIndex } from "./inner-constants"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -37,6 +38,7 @@ export class TurbosActionService implements IActionService {
         private readonly suiSwapService: SuiSwapService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
+        private readonly priceRatioService: PriceRatioService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) { }
@@ -56,6 +58,7 @@ export class TurbosActionService implements IActionService {
     }: OpenPositionParams): Promise<ActionResponse> {
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
+        const suiClient = this.suiClients[network][clientIndex]
         const turbosSdk = this.turbosClmmSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
@@ -81,6 +84,7 @@ export class TurbosActionService implements IActionService {
             tokenInId: tokenIn.displayId,
             tokens,
             slippage,
+            suiClient
         })
         if (requireGasSwap) {
             if (!remainingAmountAfterSwapGas) {
@@ -98,6 +102,7 @@ export class TurbosActionService implements IActionService {
             accountAddress,
             network,
             amount,
+            suiClient
         })
         // use this to calculate the ratio
         const quoteAmountA = computeRaw(1, tokenA.decimals)
@@ -133,6 +138,25 @@ export class TurbosActionService implements IActionService {
                 network,
                 swapSlippage,
             })
+
+        // 4. optional ratio check
+        const zapAmountA = priorityAOverB 
+            ? new BN(remainingAmount) : new BN(receiveAmount)
+        const zapAmountB = priorityAOverB 
+            ? new BN(receiveAmount) : new BN(remainingAmount)
+        const isZapEligible = this.priceRatioService.isZapEligible({
+            priorityAOverB,
+            tokenA: {
+                tokenDecimals: tokenA.decimals,
+                amount: new BN(zapAmountA),
+            },
+            tokenB: {
+                tokenDecimals: tokenB.decimals,
+                amount: new BN(zapAmountB),
+            },
+        })
+        if (!isZapEligible) throw new Error("Zap not eligible at this moment")
+
         const { spendCoin } = await this.suiCoinManagerService.splitCoin({
             txb: txbAfterAttachFee,
             sourceCoin,

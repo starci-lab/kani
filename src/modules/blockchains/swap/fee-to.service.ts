@@ -28,6 +28,7 @@ export interface AttachSuiFeeParams {
     accountAddress: string
     network: Network
     sourceCoin?: TransactionObjectArgument
+    suiClient: SuiClient
 }
 
 export interface AttachSuiFeeResponse {
@@ -43,6 +44,7 @@ export interface AttachPnlFeeParams {
     accountAddress: string
     network: Network
     sourceCoin?: TransactionObjectArgument
+    suiClient: SuiClient
 }
 
 export interface AttachPnlFeeResponse {
@@ -87,13 +89,14 @@ export class FeeToService {
             accountAddress,
             network,
             amount,
-            sourceCoin
+            sourceCoin,
+            suiClient
         }: AttachSuiFeeParams
     ): Promise<AttachSuiFeeResponse> {
         txb = txb || new Transaction()
         if (!sourceCoin) {
             const response = await this.suiCoinManagerService.fetchAndMergeCoins({
-                suiClient: this.suiClients[network][0],
+                suiClient,
                 txb,
                 owner: accountAddress,
                 coinType: tokenAddress,
@@ -142,12 +145,13 @@ export class FeeToService {
         accountAddress,
         network,
         sourceCoin,
+        suiClient,
     }: AttachPnlFeeParams): Promise<AttachPnlFeeResponse> {
         txb = txb || new Transaction()
 
         if (!sourceCoin) {
             const response = await this.suiCoinManagerService.fetchAndMergeCoins({
-                suiClient: this.suiClients[network][0],
+                suiClient,
                 txb,
                 owner: accountAddress,
                 coinType: tokenAddress,

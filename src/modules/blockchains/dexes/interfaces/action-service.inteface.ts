@@ -55,9 +55,23 @@ export interface ForceSwapParams {
     pnlAmount: BN
 }
 
+export interface SwapParams {
+    pool: FetchedPool
+    network?: Network
+    accountAddress: string
+    tokenInId: TokenId
+    tokenOutId: TokenId
+    tokens: Array<TokenLike>
+    amountIn: BN
+    slippage?: number
+    priceLimit?: number
+}
+
 export interface IActionService {
     // close position
     closePosition(params: ClosePositionParams): Promise<ActionResponse>
     // open position
     openPosition(params: OpenPositionParams): Promise<ActionResponse>
+    // swap tokens
+    swap?(params: SwapParams): Promise<ActionResponse>
 }

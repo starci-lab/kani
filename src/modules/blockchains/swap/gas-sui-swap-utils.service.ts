@@ -17,6 +17,7 @@ export interface GasSuiSwapParams {
     slippage?: number
     amountIn?: BN
     autoSwapIfInsufficient?: boolean // default = false
+    suiClient: SuiClient
 }
 
 export interface GasSuiSwapResponse {
@@ -50,11 +51,10 @@ export class GasSuiSwapUtilsService {
         amountIn,
         slippage,
         autoSwapIfInsufficient = false,
+        suiClient
     }: GasSuiSwapParams): Promise<GasSuiSwapResponse> {
         txb = txb ?? new Transaction()
         slippage = slippage ?? GAS_SUI_SWAP_SLIPPAGE
-        const suiClient = this.suiClients[network][0]
-
         const tokenNative = tokens.find((token) => token.type === TokenType.Native)
         const tokenIn = tokens.find((token) => token.displayId === tokenInId)
         if (!tokenNative || !tokenIn) {

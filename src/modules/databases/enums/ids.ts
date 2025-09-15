@@ -69,6 +69,8 @@ registerEnumType(GraphQLTypeTokenId, {
 export enum DexId {
     Cetus = "cetus",
     Turbos = "turbos",
+    Momentum = "momentum",
+    FlowX = "flowx",
 }
 
 export const GraphQLTypeDexId = createEnumType(DexId)
@@ -82,6 +84,12 @@ registerEnumType(GraphQLTypeDexId, {
         },
         [DexId.Turbos]: {
             description: "The turbos dex",
+        },
+        [DexId.Momentum]: {
+            description: "The momentum finance dex",
+        },
+        [DexId.FlowX]: {
+            description: "The flowx dex",
         },
     },
 })

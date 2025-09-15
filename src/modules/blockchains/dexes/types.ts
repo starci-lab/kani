@@ -13,3 +13,4 @@ export interface ActionResponse {
     txb?: Transaction
     extraObj?: unknown
 }
+
