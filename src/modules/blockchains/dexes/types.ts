@@ -9,8 +9,9 @@ export interface DexesOptions extends BaseModuleOptions {
 }
 
 export interface ActionResponse {
-    // txb (sui only)
+    // tx hash returned if the tx is excuted
+    txHash?: string
+    // txb (sui only), in order to connect to the tx
     txb?: Transaction
     extraObj?: unknown
 }
-

@@ -1,6 +1,7 @@
-import { computeDenomination, roundNumber } from "@modules/common"
+import { computeDenomination } from "@modules/common"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
+import Decimal from "decimal.js"
 
 export interface TokenData {
     tokenDecimals: number
@@ -15,7 +16,7 @@ export interface GetAmountRatioParams {
 
 export type IsZapEligibleParams = GetAmountRatioParams
 
-const ZAP_ELIGIBILITY_RATIO_THRESHOLD = 2 / 5
+const ZAP_ELIGIBILITY_RATIO_THRESHOLD = new Decimal(2 / 5)
 
 @Injectable()
 export class PriceRatioService {
@@ -37,9 +38,9 @@ export class PriceRatioService {
             tokenB.tokenDecimals
         )
         if (priorityAOverB) {
-            return roundNumber(denominatedAmountA / denominatedAmountB)
+            return denominatedAmountA.div(denominatedAmountB)
         } else {
-            return roundNumber(denominatedAmountB / denominatedAmountA)
+            return denominatedAmountB.div(denominatedAmountA)
         }
     }
 
@@ -47,6 +48,6 @@ export class PriceRatioService {
         params: IsZapEligibleParams
     ): boolean {
         const ratio = this.getAmountRatio(params)
-        return ratio >= ZAP_ELIGIBILITY_RATIO_THRESHOLD
+        return ratio.gte(ZAP_ELIGIBILITY_RATIO_THRESHOLD)
     }    
 }

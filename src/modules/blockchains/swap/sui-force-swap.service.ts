@@ -33,6 +33,7 @@ export class SuiForceSwapService {
         slippage,
         pnlAmount,
         suiClient,
+        
     }: ForceSwapParams & { suiClient: SuiClient }): Promise<ActionResponse> {
         const tokenA = tokens.find((t) => t.displayId === tokenAId)
         const tokenB = tokens.find((t) => t.displayId === tokenBId)
@@ -75,6 +76,7 @@ export class SuiForceSwapService {
                 accountAddress,
                 network,
                 sourceCoin: coinOut,
+                suiClient
             })
             finalTxb = txbAfterAttachFee
         }

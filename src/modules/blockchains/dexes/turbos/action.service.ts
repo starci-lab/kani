@@ -13,17 +13,21 @@ import { FeeToService, PriceRatioService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
 import { TurbosZapService } from "./zap.service"
-import { InjectSuiClients, PythService, SuiSwapService } from "@modules/blockchains"
 import { SuiCoinManagerService } from "../../utils"
 import { TransactionObjectArgument } from "@mysten/sui/transactions"
 import {
     CLOSE_POSITION_SLIPPAGE,
     OPEN_POSITION_SLIPPAGE,
+    SuiSwapService,
     SWAP_OPEN_POSITION_SLIPPAGE
 } from "../../swap"
 import { SuiClient } from "@mysten/sui/dist/cjs/client"
 import { GasSuiSwapUtilsService } from "../../swap"
 import { clientIndex } from "./inner-constants"
+import { SuiExecutionService } from "../../utils"
+import { PythService } from "../../pyth"
+import { SignerService } from "../../signers"
+import { InjectSuiClients } from "../../clients"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -39,6 +43,8 @@ export class TurbosActionService implements IActionService {
         private readonly suiCoinManagerService: SuiCoinManagerService,
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
         private readonly priceRatioService: PriceRatioService,
+        private readonly suiExecutionService: SuiExecutionService,
+        private readonly signerService: SignerService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
     ) { }
@@ -54,11 +60,16 @@ export class TurbosActionService implements IActionService {
         accountAddress,
         amount,
         slippage,
-        swapSlippage
+        swapSlippage,
+        user,
+        suiClient
     }: OpenPositionParams): Promise<ActionResponse> {
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
-        const suiClient = this.suiClients[network][clientIndex]
+        if (!user) {
+            throw new Error("Sui key pair is required")
+        }
+        suiClient = suiClient || this.suiClients[network][clientIndex]
         const turbosSdk = this.turbosClmmSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
@@ -174,7 +185,7 @@ export class TurbosActionService implements IActionService {
             network,
             slippage: swapSlippage,
             inputCoinObj: spendCoin,
-            transferCoinObjs: false
+            transferCoinObjs: false,
         })
         const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
         // we process add liquidity
@@ -197,8 +208,19 @@ export class TurbosActionService implements IActionService {
             coinAObjectArguments: [providedCoinAmountA],
             coinBObjectArguments: [providedCoinAmountB],
         })
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txbAfterOpenPosition,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
         return {
-            txb: txbAfterOpenPosition
+            txHash,
         }
     }
 
@@ -213,7 +235,13 @@ export class TurbosActionService implements IActionService {
         tokenBId,
         tokens,
         slippage,
+        user,
+        suiClient
     }: ClosePositionParams): Promise<ActionResponse> {
+        if (!user) {
+            throw new Error("Sui key pair is required")
+        }
+        suiClient = suiClient || this.suiClients[network][clientIndex]
         // maximum slippage to ensure the transaction is successful
         slippage = slippage || CLOSE_POSITION_SLIPPAGE
         const turbosSdk = this.turbosClmmSdks[network]
@@ -239,8 +267,19 @@ export class TurbosActionService implements IActionService {
                     rewardAmounts: [],
                     decreaseLiquidity: position.liquidity
                 })
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txbAfterRemoveLiquidity,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
         return {
-            txb: txbAfterRemoveLiquidity,
+            txHash,
         }
     }
 }

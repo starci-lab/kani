@@ -6,7 +6,7 @@ import {
     OpenPositionParams,
 } from "../interfaces"
 import { InjectFlowXClmmSdks } from "./flowx.decorators"
-import { Network } from "@modules/common"
+import { Network } from "../../../common"
 import { ClmmPosition, Percent, CoinAmount } from "@flowx-finance/sdk"
 import { ActionResponse } from "../types"
 import { Transaction } from "@mysten/sui/transactions"
@@ -15,18 +15,17 @@ import {
     FeeToService,
     GasSuiSwapUtilsService,
     OPEN_POSITION_SLIPPAGE,
-} from "@modules/blockchains"
-import { InjectSuiClients } from "@modules/blockchains"
+} from "../../../blockchains"
+import { InjectSuiClients } from "../../clients"
+import { SignerService } from "../../signers"
 import { SuiClient } from "@mysten/sui/client"
-import { suiDexConfig } from "../config"
-import { DexId } from "@modules/databases"
 import BN from "bn.js"
 import { FlowXClmmSdk } from "./flowx.providers"
-const clientIndex = suiDexConfig[DexId.FlowX]?.clientIndex || 3
+import { SuiExecutionService } from "../../utils"
+import { clientIndex } from "./inner-constants"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
-    private readonly suiClient: SuiClient
     constructor(
     @InjectFlowXClmmSdks()
     private readonly flowxClmmSdks: Record<Network, FlowXClmmSdk>,
@@ -35,6 +34,8 @@ export class FlowXActionService implements IActionService {
     private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
     @InjectSuiClients()
     private readonly suiClients: Record<Network, Array<SuiClient>>,
+    private readonly signerService: SignerService,
+    private readonly suiExecutionService: SuiExecutionService,
     ) {}
 
     /**
@@ -51,9 +52,14 @@ export class FlowXActionService implements IActionService {
         slippage,
         txb,
         amount,
+        user,
+        suiClient
     }: OpenPositionParams): Promise<ActionResponse> {
         slippage = slippage || OPEN_POSITION_SLIPPAGE
-        const suiClient = this.suiClients[network][clientIndex]
+        suiClient = suiClient || this.suiClients[network][clientIndex]
+        if (!user) {
+            throw new Error("User is required")
+        }
         txb = txb || new Transaction()
         const flowxSdk = this.flowxClmmSdks[network]
         const positionManager = flowxSdk.positionManager
@@ -126,7 +132,18 @@ export class FlowXActionService implements IActionService {
             txAfterAttachFee as any
         ).increaseLiquidity(position, options)
 
-        return { txb: txAfterAttachFee }
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txAfterAttachFee,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
+        return { txHash }
     }
 
     /**
@@ -138,7 +155,13 @@ export class FlowXActionService implements IActionService {
         network = Network.Mainnet,
         txb,
         accountAddress,
+        user,
+        suiClient
     }: ClosePositionParams): Promise<ActionResponse> {
+        if (!user) {
+            throw new Error("User is required")
+        }
+        suiClient = suiClient || this.suiClients[network][clientIndex]
         txb = txb || new Transaction()
         const flowxSdk = this.flowxClmmSdks[network]
         const positionManager = flowxSdk.positionManager
@@ -182,6 +205,17 @@ export class FlowXActionService implements IActionService {
             .tx(txb as any)
             .closePosition(positionToClose)
 
-        return { txb }
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txb,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
+        return { txHash }
     }
 }

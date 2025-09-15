@@ -9,31 +9,30 @@ import { Network, ZERO_BN, computePercentage } from "@modules/common"
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
 import { ActionResponse } from "../types"
 import { Transaction } from "@mysten/sui/transactions"
-import { 
-    SuiCoinManagerService, 
-    TickManagerService, 
-    FeeToService, 
-    GasSuiSwapUtilsService, 
+import {
+    TickManagerService,
+    FeeToService,
+    GasSuiSwapUtilsService,
     OPEN_POSITION_SLIPPAGE,
-    PriceRatioService
-} from "@modules/blockchains"
-import { InjectSuiClients } from "@modules/blockchains"
+    SuiExecutionService,
+    SignerService
+} from "../../../blockchains"
+import { InjectSuiClients } from "../../../blockchains"
 import { SuiClient } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
-    private readonly suiClient: SuiClient
     constructor(
         @InjectMomentumClmmSdks()
         private readonly momentumClmmSdks: Record<Network, MmtSDK>,
         private readonly tickManagerService: TickManagerService,
-        private readonly suiCoinManagerService: SuiCoinManagerService,
-        private readonly priceRatioService: PriceRatioService,
         private readonly feeToService: FeeToService,
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly signerService: SignerService,
+        private readonly suiExecutionService: SuiExecutionService,
     ) {}
 
     /**
@@ -50,10 +49,15 @@ export class MomentumActionService implements IActionService {
         slippage,
         txb,
         amount, // input capital amount
+        user,
+        suiClient        
     }: OpenPositionParams): Promise<ActionResponse> {
         slippage = slippage || OPEN_POSITION_SLIPPAGE
+        if (!user) {
+            throw new Error("User is required")
+        }
         // we use the correct client for the dex
-        const suiClient = this.suiClients[network][clientIndex]
+        suiClient = suiClient || this.suiClients[network][clientIndex]
         txb = txb || new Transaction()
         const momentumSdk = this.momentumClmmSdks[network]
 
@@ -132,7 +136,18 @@ export class MomentumActionService implements IActionService {
         })
 
         // 10. Return final transaction block
-        return { txb: txAfterAttachFee }
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txAfterAttachFee,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
+        return { txHash }
     }
 
     async closePosition({

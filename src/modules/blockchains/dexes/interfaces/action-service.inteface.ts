@@ -1,9 +1,10 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
 import { ActionResponse } from ".."
-import { PositionLike, TokenId, TokenLike } from "@modules/databases"
+import { PositionLike, TokenId, TokenLike, UserLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
+import { SuiClient } from "@mysten/sui/dist/cjs/client"
 
 export interface ClosePositionParams {
     pool: FetchedPool
@@ -19,6 +20,9 @@ export interface ClosePositionParams {
     swapSlippage?: number
     // txb (sui only)
     txb?: Transaction
+    // user to sign the tx
+    user?: UserLike
+    suiClient?: SuiClient
 }
 
 export interface OpenPositionParams {
@@ -36,6 +40,9 @@ export interface OpenPositionParams {
     swapSlippage?: number
     // txb (sui only)
     txb?: Transaction
+    // user to sign the tx
+    user?: UserLike
+    suiClient?: SuiClient
 }
 
 export interface ClosePositionResponse extends ActionResponse {
@@ -53,6 +60,9 @@ export interface ForceSwapParams {
     tokens: Array<TokenLike>
     slippage?: number
     pnlAmount: BN
+    // user to sign the tx
+    user?: UserLike
+    suiClient?: SuiClient
 }
 
 export interface SwapParams {
@@ -65,6 +75,9 @@ export interface SwapParams {
     amountIn: BN
     slippage?: number
     priceLimit?: number
+    // user to sign the tx
+    user?: UserLike
+    suiClient?: SuiClient
 }
 
 export interface IActionService {

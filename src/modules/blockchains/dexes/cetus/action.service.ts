@@ -3,40 +3,40 @@ import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import CetusZapSDK from "@cetusprotocol/zap-sdk"
 import {
-    ActionResponse,
     FeeToService,
-    GasSuiSwapUtilsService,
-    IActionService,
-    InjectCetusZapSdks,
-    OpenPositionParams,
     PriceRatioService,
     TickManagerService,
-    ClosePositionParams,
-    InjectCetusClmmSdks,
-    InjectSuiClients,
-} from "@modules/blockchains"
+} from "../../utils"
+import { ClosePositionParams, IActionService, OpenPositionParams } from "../interfaces"
 import { Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { OPEN_POSITION_SLIPPAGE } from "../../swap"
+import { GasSuiSwapUtilsService, OPEN_POSITION_SLIPPAGE } from "../../swap"
 import { SuiClient } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
-
+import { SuiExecutionService } from "../../utils"
+import { InjectCetusClmmSdks, InjectCetusZapSdks } from "./cetus.decorators"
+import { InjectSuiClients } from "../../clients"
+import { SignerService } from "../../signers"
+import { ActionResponse } from "../types"
+    
 @Injectable()
 export class CetusActionService implements IActionService {
     constructor(
-    private readonly tickManagerService: TickManagerService,
-    private readonly feeToService: FeeToService,
-    @InjectCetusZapSdks()
-    private readonly cetusZapSdks: Record<Network, CetusZapSDK>,
-    @InjectCetusClmmSdks()
-    private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
-    private readonly priceRatioService: PriceRatioService,
-    private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
-    @InjectSuiClients()
-    private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly tickManagerService: TickManagerService,
+        private readonly feeToService: FeeToService,
+        @InjectCetusZapSdks()
+        private readonly cetusZapSdks: Record<Network, CetusZapSDK>,
+        @InjectCetusClmmSdks()
+        private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
+        private readonly priceRatioService: PriceRatioService,
+        private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
+        @InjectSuiClients()
+        private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly suiExecutionService: SuiExecutionService,
+        private readonly signerService: SignerService,
     ) {}
 
     // ---------- Open Position ----------
@@ -51,17 +51,25 @@ export class CetusActionService implements IActionService {
         accountAddress,
         tokens,
         slippage,
-        swapSlippage
+        swapSlippage,
+        user,
+        suiClient
     }: OpenPositionParams): Promise<ActionResponse> {
-        const suiClient = this.suiClients[network][clientIndex]
+        if (!user) {
+            throw new Error("Sui key pair is required")
+        }
+
+        suiClient = suiClient || this.suiClients[network][clientIndex]
         const zapSdk = this.cetusZapSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
+
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         swapSlippage = swapSlippage || OPEN_POSITION_SLIPPAGE
-        const tokenA = tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+
+        const tokenA = tokens.find((t) => t.displayId === tokenAId)
+        const tokenB = tokens.find((t) => t.displayId === tokenBId)
         if (!tokenA || !tokenB) throw new Error("Token not found")
-    
+
         // 1. ensure gas (swap sang SUI nếu cần)
         const {
             txb: txAfterGas,
@@ -74,15 +82,16 @@ export class CetusActionService implements IActionService {
             tokenInId: priorityAOverB ? tokenA.displayId : tokenB.displayId,
             tokens,
             slippage,
-            suiClient
+            suiClient,
         })
+
         if (requireGasSwap) {
             if (!remainAfterGas) {
                 throw new Error("Remaining amount after gas swap is missing")
             }
             amount = remainAfterGas
         }
-    
+
         // 2. attach platform fee
         const { txb: txAfterFee, remainingAmount } =
             await this.feeToService.attachSuiFee({
@@ -91,9 +100,9 @@ export class CetusActionService implements IActionService {
                 accountAddress,
                 network,
                 amount,
-                suiClient
+                suiClient,
             })
-    
+
         // 3. calculate deposit via Zap SDK
         const depositObj = await zapSdk.Zap.preCalculateDepositAmount(
             {
@@ -113,7 +122,7 @@ export class CetusActionService implements IActionService {
                 coin_decimal_b: tokenB.decimals,
             },
         )
-    
+
         // 4. optional ratio check
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
@@ -127,7 +136,7 @@ export class CetusActionService implements IActionService {
             },
         })
         if (!isZapEligible) throw new Error("Zap not eligible at this moment")
-    
+
         // 5. build deposit payload
         const txbAfterDeposit = await zapSdk.Zap.buildDepositPayload(
             {
@@ -142,8 +151,20 @@ export class CetusActionService implements IActionService {
             },
             txAfterFee,
         )
-    
-        return { txb: txbAfterDeposit }
+
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txbAfterDeposit,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
+
+        return { txHash }
     }
 
     // ---------- Close Position ----------
@@ -155,26 +176,34 @@ export class CetusActionService implements IActionService {
         tokenAId,
         tokenBId,
         tokens,
+        user,
+        suiClient
     }: ClosePositionParams): Promise<ActionResponse> {
+        if (!user) {
+            throw new Error("Sui key pair is required")
+        }
+
+        suiClient = suiClient || this.suiClients[network][clientIndex]
         txb = txb ?? new Transaction()
         const cetusClmmSdk = this.cetusClmmSdks[network]
-        const tokenA = tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+
+        const tokenA = tokens.find((t) => t.displayId === tokenAId)
+        const tokenB = tokens.find((t) => t.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
-    
+
         // 1. Compute min_amount based on liquidity and TickMath
         const lowerTick = Number(position.tickLower)
         const upperTick = Number(position.tickUpper)
-    
+
         const lowerSqrtPrice = TickMath.tickIndexToSqrtPriceX64(lowerTick)
         const upperSqrtPrice = TickMath.tickIndexToSqrtPriceX64(upperTick)
-    
+
         const liquidity = new BN(position.liquidity)
-        const slippageTolerance = Percentage.fromDecimal(new Decimal("0.05")) // 5% slippage tolerance
+        const slippageTolerance = Percentage.fromDecimal(new Decimal("0.05")) // 5%
         const curSqrtPrice = new BN(pool.currentSqrtPrice)
-    
+
         const coinAmounts = ClmmPoolUtil.getCoinAmountFromLiquidity(
             liquidity,
             curSqrtPrice,
@@ -182,28 +211,43 @@ export class CetusActionService implements IActionService {
             upperSqrtPrice,
             false,
         )
-    
+
         const { tokenMaxA, tokenMaxB } = adjustForCoinSlippage(
             coinAmounts,
             slippageTolerance,
             false,
         )
-    
+
         // 2. Build close position payload
         const txbAfterClosePosition =
-            await cetusClmmSdk.Position.closePositionTransactionPayload({
-                coinTypeA: tokenA.tokenAddress,
-                coinTypeB: tokenB.tokenAddress,
-                min_amount_a: tokenMaxA.toString(),
-                min_amount_b: tokenMaxB.toString(),
-                rewarder_coin_types: pool.rewardTokens.map(
-                    (rewardToken) => rewardToken.tokenAddress,
-                ),
-                pool_id: pool.poolAddress,
-                pos_id: position.positionId,
-                collect_fee: true,
-            }, txb)
-    
-        return { txb: txbAfterClosePosition }
+            await cetusClmmSdk.Position.closePositionTransactionPayload(
+                {
+                    coinTypeA: tokenA.tokenAddress,
+                    coinTypeB: tokenB.tokenAddress,
+                    min_amount_a: tokenMaxA.toString(),
+                    min_amount_b: tokenMaxB.toString(),
+                    rewarder_coin_types: pool.rewardTokens.map(
+                        (rewardToken) => rewardToken.tokenAddress,
+                    ),
+                    pool_id: pool.poolAddress,
+                    pos_id: position.positionId,
+                    collect_fee: true,
+                },
+                txb,
+            )
+
+        const txHash = await this.signerService.withSuiSigner({
+            user,
+            network,
+            action: async (signer) => {
+                return await this.suiExecutionService.signAndExecuteTransaction({
+                    transaction: txbAfterClosePosition,
+                    suiClient,
+                    signer,
+                })
+            },
+        })
+
+        return { txHash }
     }
 }
