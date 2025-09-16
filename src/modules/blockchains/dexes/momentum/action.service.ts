@@ -5,21 +5,33 @@ import {
     OpenPositionParams,
 } from "../../interfaces"
 import { InjectMomentumClmmSdks } from "./momentum.decorators"
-import { Network, ZERO_BN, computePercentage } from "@modules/common"
+import { Network, ZERO_BN, computeRatio, computeRaw, toUnit } from "@modules/common"
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
 import { ActionResponse } from "../types"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import {
     TickManagerService,
     FeeToService,
     GasSuiSwapUtilsService,
     OPEN_POSITION_SLIPPAGE,
     SuiExecutionService,
-    SignerService
+    SignerService,
+    SWAP_OPEN_POSITION_SLIPPAGE,
+    PriceRatioService,
+    SuiCoinManagerService,
+    SuiSwapService,
+    ZapService,
+    TickMathService,
+    PythService
 } from "../../../blockchains"
 import { InjectSuiClients } from "../../../blockchains"
 import { SuiClient } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
+import { 
+    estLiquidityAndcoinAmountFromOneAmounts,
+} from "@mmt-finance/clmm-sdk/dist/utils/poolUtils"
+import BN from "bn.js"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -33,6 +45,12 @@ export class MomentumActionService implements IActionService {
         private readonly suiClients: Record<Network, Array<SuiClient>>,
         private readonly signerService: SignerService,
         private readonly suiExecutionService: SuiExecutionService,
+        private readonly pythService: PythService,
+        private readonly tickMathService: TickMathService,
+        private readonly zapService: ZapService,
+        private readonly suiSwapService: SuiSwapService,
+        private readonly suiCoinManagerService: SuiCoinManagerService,
+        private readonly priceRatioService: PriceRatioService,
     ) {}
 
     /**
@@ -50,64 +68,146 @@ export class MomentumActionService implements IActionService {
         txb,
         amount, // input capital amount
         user,
-        suiClient        
+        suiClient,
+        swapSlippage,
+        requireZapEligible  
     }: OpenPositionParams): Promise<ActionResponse> {
+        txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
+        swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
         if (!user) {
-            throw new Error("User is required")
+            throw new Error("Sui key pair is required")
         }
-        // we use the correct client for the dex
         suiClient = suiClient || this.suiClients[network][clientIndex]
-        txb = txb || new Transaction()
-        const momentumSdk = this.momentumClmmSdks[network]
-
-        // 1. Locate tokens
+        const mmtSdk = this.momentumClmmSdks[network]
+        const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
         const tokenB = tokens.find((token) => token.displayId === tokenBId)
-        if (!tokenA || !tokenB) throw new Error("Token not found")
-
-        // 2. Ensure enough gas: swap some token into SUI if necessary
+        if (!tokenA || !tokenB) {
+            throw new Error("Token not found")
+        }
+        const tokenIn = priorityAOverB ? tokenA : tokenB
+        const tokenOut = priorityAOverB ? tokenB : tokenA
+        const oraclePrice = await this.pythService.computeOraclePrice({
+            tokenAId,
+            tokenBId,
+            chainId: tokenA.chainId,
+            network,
+        })
         const {
             txb: txAfterSwapGas,
-            requireGasSwap,
-            remainingAmount: remainingAmountAfterSwapGas
+            sourceCoin
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
-            tokenInId: priorityAOverB ? tokenA.displayId : tokenB.displayId,
+            tokenInId: tokenIn.displayId,
             tokens,
-            txb,
             slippage,
-            suiClient
+            suiClient,
+            txb
         })
-        if (requireGasSwap) {
-            if (!remainingAmountAfterSwapGas) {
-                throw new Error("Remaining amount after swap gas is missing")
-            }
-            amount = remainingAmountAfterSwapGas
-        }
-
-        // 3. Attach platform fee (deduct in SUI)
         const {
-            txb: txAfterAttachFee,
-            sourceCoin,
+            txb: txbAfterAttachFee,
+            remainingAmount,
         } = await this.feeToService.attachSuiFee({
             txb: txAfterSwapGas,
-            tokenAddress: (priorityAOverB ? tokenA : tokenB).tokenAddress,
+            tokenAddress: tokenIn.tokenAddress,
             accountAddress,
             network,
             amount,
-            suiClient
+            suiClient,
+            sourceCoin
         })
+        // use this to calculate the ratio
+        const lowerSqrtPrice = TickMath.tickIndexToSqrtPriceX64WithTickSpacing(
+            tickLower, 
+            pool.tickSpacing
+        )
+        const upperSqrtPrice = TickMath.tickIndexToSqrtPriceX64WithTickSpacing(
+            tickUpper, 
+            pool.tickSpacing
+        )
+        const quoteAmountA = computeRaw(1, tokenA.decimals)
+        const { coinAmountA, coinAmountB } = estLiquidityAndcoinAmountFromOneAmounts (
+            tickLower,
+            tickUpper,
+            quoteAmountA,
+            true,
+            true,
+            slippage,
+            pool.currentSqrtPrice
+        )
+        const ratio = computeRatio(
+            new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
+            new BN(coinAmountA).mul(toUnit(tokenB.decimals))
+        )
+        console.log(ratio)
+        const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
+            pool.currentSqrtPrice,
+            tokenA.decimals,
+            tokenB.decimals,
+        )
+        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
+            await this.zapService.computeZapAmounts({
+                amountIn: remainingAmount,
+                ratio: new Decimal(ratio),
+                spotPrice,
+                priorityAOverB,
+                tokenAId,
+                tokenBId,
+                tokens,
+                oraclePrice,
+                network,
+                swapSlippage,
+            })
 
-        // 4. Compute tick bounds and sqrt prices
-        const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const lowerSqrtPrice = TickMath.tickIndexToSqrtPriceX64(tickLower)
-        const upperSqrtPrice = TickMath.tickIndexToSqrtPriceX64(tickUpper)
-
-        // 8. Open position → returns NFT object
-        const position = momentumSdk.Position.openPosition(
-            txAfterAttachFee,
+        // 4. optional ratio check
+        const zapAmountA = priorityAOverB 
+            ? new BN(remainAmount) : new BN(receiveAmount)
+        const zapAmountB = priorityAOverB 
+            ? new BN(receiveAmount) : new BN(remainAmount)
+        const isZapEligible = this.priceRatioService.isZapEligible({
+            priorityAOverB,
+            tokenA: {
+                tokenDecimals: tokenA.decimals,
+                amount: new BN(zapAmountA),
+            },
+            tokenB: {
+                tokenDecimals: tokenB.decimals,
+                amount: new BN(zapAmountB),
+            },
+        })
+        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
+        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+            txb: txbAfterAttachFee,
+            sourceCoin,
+            requiredAmount: swapAmount,
+        })
+        const { txb: txbAfterSwap, extraObj } = await this.suiSwapService.swap({
+            txb: txbAfterAttachFee,
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenOut.displayId,
+            amountIn: swapAmount,
+            tokens,
+            fromAddress: accountAddress,
+            quoteData,
+            routerId,
+            network,
+            slippage: swapSlippage,
+            inputCoinObj: spendCoin,
+            transferCoinObjs: false,
+        })
+        const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        if (!txbAfterSwap) {
+            throw new Error("Transaction is required")
+        }
+        if (!coinOut) {
+            throw new Error("Coin out or change coin is missing")
+        }
+        const providedCoinAmountA = priorityAOverB ? sourceCoin : coinOut
+        const providedCoinAmountB = priorityAOverB ? coinOut : sourceCoin
+        const position = mmtSdk.Position.openPosition(
+            txbAfterSwap, 
             {
                 objectId: pool.poolAddress,
                 tokenXType: tokenA.tokenAddress,
@@ -117,37 +217,36 @@ export class MomentumActionService implements IActionService {
             lowerSqrtPrice.toString(),
             upperSqrtPrice.toString(),
         )
-
-        // 9. Add liquidity (single sided)
-        await momentumSdk.Pool.addLiquiditySingleSidedV2({
-            txb: txAfterAttachFee,
-            isXtoY: priorityAOverB,
-            pool: {
+        mmtSdk.Pool.addLiquidity(
+            txbAfterSwap,
+            {
+                objectId: pool.poolAddress,
                 tokenXType: tokenA.tokenAddress,
                 tokenYType: tokenB.tokenAddress,
-                objectId: pool.poolAddress,
                 tickSpacing: pool.tickSpacing,
             },
-            position,
-            inputCoin: sourceCoin,
-            transferToAddress: accountAddress,
-            slippagePercentage: computePercentage(slippage),
-            useMvr: false,
-        })
-
-        // 10. Return final transaction block
+            position, // Position from previous tx
+            providedCoinAmountA,
+            providedCoinAmountB,
+            BigInt(0), // Min a added
+            BigInt(0), // Min b added
+            accountAddress,
+        )
+        txbAfterSwap.transferObjects([position], accountAddress)
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
             action: async (signer) => {
                 return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txAfterAttachFee,
+                    transaction: txbAfterSwap,
                     suiClient,
                     signer,
                 })
             },
         })
-        return { txHash }
+        return {
+            txHash,
+        }
     }
 
     async closePosition({

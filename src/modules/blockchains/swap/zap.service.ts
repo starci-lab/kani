@@ -6,13 +6,16 @@ import { RetryService } from "@modules/mixin"
 import { ComputeZapAmountsParams, ComputeZapAmountsResponse, IZapService } from "../interfaces"
 import { SuiSwapService } from "./sui-swap.service"
 import { ZapCalculatorService } from "../utils"
-
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger } from "winston"
 @Injectable()
 export class ZapService implements IZapService {
     constructor(
         private readonly suiSwapService: SuiSwapService,
         private readonly zapCalculatorService: ZapCalculatorService,
         private readonly retryService: RetryService,
+        @InjectWinston()
+        private readonly logger: Logger,
     ) { }
 
     async computeZapAmounts(
@@ -82,10 +85,16 @@ export class ZapService implements IZapService {
                         new BN(amountBFinal.toString()).mul(toUnit(tokenA.decimals)),
                         new BN(amountAFinal.toString()).mul(toUnit(tokenB.decimals)),
                     )
-
                     // Price impact
                     const priceImpact = new Decimal(ratio).sub(actualRatio).div(ratio)
                     if (priceImpact.gt(slippage)) {
+                        this.logger.error(
+                            WinstonLog.PriceImpactTooHigh,
+                            {
+                                got: priceImpact.toString(),
+                                min: slippage.toString()
+                            }
+                        )
                         throw new Error("Price impact too high")
                     }
                     return { finalReceive, routerId, quoteData, priceImpact }

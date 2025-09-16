@@ -2,6 +2,8 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./momentum.module-definition"
 import { createMomentumClmmSdkProvider } from "./momentum.providers"
 import { MomentumActionService } from "./action.service"
+import { MomentumMetadataService } from "./metadata.service"
+import { MomentumFetcherService } from "./fetcher.service"
 
 @Injectable()
 export class MomentumModule extends ConfigurableModuleClass {
@@ -11,6 +13,8 @@ export class MomentumModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             createMomentumClmmSdkProvider(),
+            MomentumMetadataService,
+            MomentumFetcherService,
             MomentumActionService
         ]
         return {

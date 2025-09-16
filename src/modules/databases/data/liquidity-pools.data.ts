@@ -62,4 +62,31 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.StableUsdc],
     },
+    {
+        displayId: LiquidityPoolId.MomentumWalSui02,
+        dexId: DexId.Momentum,
+        poolAddress: "0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
+        tokenAId: TokenId.SuiWalrus,
+        tokenBId: TokenId.SuiNative,
+        priorityAOverB: true,
+        fee: 0.002,
+        network: Network.Mainnet,
+        chainId: ChainId.Sui,
+        farmTokenTypes: [TokenType.Native],
+    },
+    {
+        displayId: LiquidityPoolId.MomentumSuiUsdc0175,
+        dexId: DexId.Momentum,
+        poolAddress: "0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388",
+        tokenAId: TokenId.SuiNative,
+        tokenBId: TokenId.SuiUsdc,
+        priorityAOverB: true,
+        fee: 0.00175,
+        network: Network.Mainnet,
+        chainId: ChainId.Sui,
+        farmTokenTypes: [
+            TokenType.StableUsdc, 
+            TokenType.Native
+        ],
+    },
 ]

@@ -15,7 +15,14 @@ export const dexData: Array<DexLike> = [
         description: "Turbos is a decentralized exchange on Sui.",
         website: "https://turbos.finance/",
         iconUrl: "https://assets.coingecko.com/coins/images/30671/large/token-turbos.png",
-    }
+    },
+    {
+        displayId: DexId.Momentum,
+        name: "Momentum",
+        description: "Momentum is a decentralized exchange on Sui.",
+        website: "https://momentum.xyz/",
+        iconUrl: "https://assets.coingecko.com/coins/images/32311/large/cetus.png",
+    },
 ]
 
 

@@ -10,4 +10,5 @@ export enum WinstonLog {
     GateWsTicker = "Gate.WS.Ticker",
     GateRestSnapshot = "Gate.REST.Snapshot",
     GateRestError = "Gate.REST.Error",
+    PriceImpactTooHigh = "Price.Impact.Too.High",
 }

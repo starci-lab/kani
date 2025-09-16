@@ -49,9 +49,10 @@ export class FetcherService {
             // testnet is not supported
             return
         }
-        const dexes = await this.liquidityPoolService.getDexs({
+        const dexes 
+        = await this.liquidityPoolService.getDexs({
             chainId,
-        })
+        }) || []
         const promises: Array<Promise<void>> = []
         const fetchedPools: Array<FetchedPool> = []
         for (const dex of dexes) {

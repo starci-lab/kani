@@ -84,9 +84,27 @@ export class GasSuiSwapUtilsService {
             coinType: tokenNative.tokenAddress,
         }) 
         const balanceBN = new BN(totalBalance)
+        // if we use native token as input
         // If balance >= 0.3 SUI, no swap
         if (balanceBN.gte(SUI_GAS_LIMIT)) {
+            // case we use native token as input
+            if (tokenIn.type === TokenType.Native) {
+                const actualBalance = balanceBN.sub(SUI_GAS_LIMIT)
+                const splitCoinResponse = await this.suiCoinManagerService.splitCoin({
+                    requiredAmount: actualBalance,
+                    sourceCoin,
+                    txb,
+                })
+                if (!splitCoinResponse) {
+                    throw new Error("Failed to split coin")
+                }
+                return { txb, requireGasSwap: false, sourceCoin: splitCoinResponse.spendCoin }
+            }
             return { txb, requireGasSwap: false, sourceCoin }
+        }
+        // if we use native token as input and the balance we have is less than 0.3 SUI
+        if (tokenIn.type === TokenType.Native) {
+            throw new Error("Not enough SUI balance")
         }
         // --- 2. Fetch oracle price (tokenIn → SUI)
         // mean that 1 sui = oraclePrice  tokenIn

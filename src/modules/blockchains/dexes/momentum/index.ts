@@ -1,5 +1,7 @@
 export * from "./action.service"
+export * from "./fetcher.service"
 export * from "./momentum.constants"
 export * from "./momentum.decorators"
 export * from "./momentum.module"
 export * from "./momentum.providers"
+export * from "./metadata.service"

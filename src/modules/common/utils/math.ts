@@ -28,7 +28,7 @@ export const computeRatio = (
 ): Decimal => {
     const multiplier = new BN(10).pow(new BN(fractionDigits)) // 10^decimals
     return new Decimal(
-        numerator.mul(multiplier).div(denominator).toNumber() /
+        (numerator.mul(multiplier).div(denominator)).toNumber() /
         multiplier.toNumber(),
     )
 }

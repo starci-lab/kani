@@ -3,7 +3,6 @@ import { Module } from "@nestjs/common"
 import { DataLikeModule, PriceFetcherModule, UserLoaderModule } from "@features/fetchers"
 // import { TestSwapService } from "./test-swap.service"
 import { SqliteModule } from "@modules/databases"
-import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
 import { CryptoModule } from "@modules/crypto"
 import { EnvModule } from "@modules/env"
 import { MixinModule } from "@modules/mixin"
@@ -12,6 +11,7 @@ import { AxiosModule } from "@modules/axios"
 import { CacheModule, CacheType } from "@modules/cache"
 import { EventModule, EventType } from "@modules/event"
 import { InitializerModule } from "@modules/initializer"
+import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
 
 @Module({
     imports: [
@@ -84,7 +84,8 @@ import { InitializerModule } from "@modules/initializer"
     providers: [
         //TestSwapService
         //TurbosTestLiquidityManangementService
-        CetusTestLiquidityManangementService
+        //CetusTestLiquidityManangementService
+        MmtTestLiquidityManangementService
     ],
 })
 export class AppModule {}

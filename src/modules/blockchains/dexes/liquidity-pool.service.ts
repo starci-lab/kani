@@ -4,6 +4,8 @@ import { ModuleRef } from "@nestjs/core"
 import { IFetchService, IMetadataService } from "../interfaces"
 import { CetusFetcherService, CetusMetadataService, TurbosFetcherService, TurbosMetadataService } from "."
 import { ChainId } from "@modules/common"
+import { MomentumFetcherService } from "./momentum"
+import { MomentumMetadataService } from "./momentum"
 
 @Injectable()
 export class LiquidityPoolService {
@@ -45,9 +47,22 @@ export class LiquidityPoolService {
                 })
                 break
             }
+            case DexId.Momentum: {
+                const fetcher = this.moduleRef.get(MomentumFetcherService, { strict: false })
+                const metadata = this.moduleRef.get(MomentumMetadataService, { strict: false })
+                if (metadata.metadata().chainId !== chainId) {
+                    continue
+                }
+                dexes.push({
+                    dexId,
+                    fetcher,
+                    metadata
+                })
+                break
+            }
             default: {
                 throw new Error(`Dex ${dexId} not found`)
-            }
+            }   
             }
         }
         return dexes

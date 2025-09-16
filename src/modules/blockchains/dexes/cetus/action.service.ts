@@ -114,11 +114,11 @@ export class CetusActionService implements IActionService {
             ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
                 tickLower,
                 tickUpper,
-                new BN(quoteAmountA.toString()),            // coinAmount must be BN
+                quoteAmountA,            // coinAmount must be BN
                 true,                             // isCoinA
                 false,                                      // roundUp
                 slippage,                                   // example 0.01
-                new BN(pool.currentSqrtPrice.toString()),
+                pool.currentSqrtPrice,
             )
         const ratio = computeRatio(
             new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
@@ -129,7 +129,7 @@ export class CetusActionService implements IActionService {
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount } =
+        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
             await this.zapService.computeZapAmounts({
                 amountIn: remainingAmount,
                 ratio: new Decimal(ratio),
@@ -179,8 +179,8 @@ export class CetusActionService implements IActionService {
             transferCoinObjs: false,
         })
         const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
-        const providedAmountA = priorityAOverB ? remainingAmount : receiveAmount
-        const providedAmountB = priorityAOverB ? receiveAmount : remainingAmount
+        const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
+        const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
         const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
             pool.currentSqrtPrice,
             tickLower,
