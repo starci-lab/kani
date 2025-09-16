@@ -56,7 +56,7 @@ export class CetusFetcherService implements IFetchService {
                     (token) =>
                         token.tokenAddress === pool.coinTypeB && token.network === network && token.chainId === ChainId.Sui,
                 )!,
-                liquidity: Number(pool.liquidity),
+                liquidity: new BN(pool.liquidity),
                 liquidityPool: liquidityPools.find(
                     (liquidityPool) => liquidityPool.poolAddress === pool.poolAddress,
                 )!,

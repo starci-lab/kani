@@ -11,7 +11,7 @@ export interface FetchedPool {
     liquidityPool: LiquidityPoolLike
     token0: TokenLike
     token1: TokenLike
-    liquidity: number
+    liquidity: BN
     fee: number
     rewardTokens: Array<TokenLike>
     //extra required obj

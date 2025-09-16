@@ -46,7 +46,7 @@ export class TurbosFetcherService implements IFetchService {
                 currentSqrtPrice: new BN(fetchedPool.sqrt_price),
                 tickSpacing: Number(fetchedPool.tick_spacing),
                 fee: Number(fetchedPool.fee),
-                liquidity: Number(fetchedPool.liquidity),
+                liquidity: new BN(fetchedPool.liquidity),
                 liquidityPool,
                 token0: tokens.find(
                     (token) =>

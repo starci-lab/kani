@@ -50,4 +50,16 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.StableUsdc],
     },
+    {
+        displayId: LiquidityPoolId.CetusUsdcEth025,
+        dexId: DexId.Cetus,
+        poolAddress: "0x9e59de50d9e5979fc03ac5bcacdb581c823dbd27d63a036131e17b391f2fac88",
+        tokenAId: TokenId.SuiUsdc,
+        tokenBId: TokenId.SuiEth,
+        priorityAOverB: true,
+        fee: 0.0025,
+        network: Network.Mainnet,
+        chainId: ChainId.Sui,
+        farmTokenTypes: [TokenType.StableUsdc],
+    },
 ]

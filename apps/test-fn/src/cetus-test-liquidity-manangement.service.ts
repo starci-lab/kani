@@ -31,11 +31,11 @@ implements OnApplicationBootstrap
         const tokens = tokenData
         this.pythService.initialize(tokens)
         await this.pythService.preloadPrices()
-        const suiUsdcLiquidityPool = liquidityPools.find(
+        const cetusUsdcEth025Pool = liquidityPools.find(
             (liquidityPool) =>
                 liquidityPool.displayId === LiquidityPoolId.CetusSuiUsdc005,
         )
-        if (!suiUsdcLiquidityPool) {
+        if (!cetusUsdcEth025Pool) {
             throw new Error("Sui usdc pool liquidity pool not found")
         }
         const [{ fetcher }] = await this.liquidityPoolService.getDexs({
@@ -45,7 +45,7 @@ implements OnApplicationBootstrap
         const {
             pools: [fetchedPool],
         } = await fetcher.fetchPools({
-            liquidityPools: [suiUsdcLiquidityPool],
+            liquidityPools: [cetusUsdcEth025Pool],
             tokens,
             network: Network.Mainnet,
         })
@@ -55,7 +55,7 @@ implements OnApplicationBootstrap
             "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
             priorityAOverB: true,
             pool: fetchedPool,
-            amount: new BN("5000000"), // 5 usdc
+            amount: new BN("1000000"), // 1 usdc
             tokenAId: TokenId.SuiUsdc,
             tokenBId: TokenId.SuiNative,
             tokens,

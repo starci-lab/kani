@@ -84,15 +84,6 @@ export class GasSuiSwapUtilsService {
             coinType: tokenNative.tokenAddress,
         }) 
         const balanceBN = new BN(totalBalance)
-        const gasCoinResponse = await this.suiCoinManagerService.fetchAndMergeCoins({
-            owner: accountAddress,
-            coinType: tokenNative.tokenAddress,
-            txb,
-            suiClient,
-        })
-        if (!gasCoinResponse) {
-            throw new Error("No gas coin found")
-        }
         // If balance >= 0.3 SUI, no swap
         if (balanceBN.gte(SUI_GAS_LIMIT)) {
             return { txb, requireGasSwap: false, sourceCoin }

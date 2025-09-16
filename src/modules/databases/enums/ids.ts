@@ -10,6 +10,7 @@ export enum TokenId {
     SuiCetus = "suiCetus",
     SuiAlkimi = "suiAlkimi",
     SuiDeep = "suiDeep",
+    SuiEth = "suiEth",
 
     // --- Solana ---
     SolUsdc = "solUsdc",
@@ -46,6 +47,9 @@ registerEnumType(GraphQLTypeTokenId, {
         },
         [TokenId.SuiDeep]: {
             description: "Deep token on Sui.",
+        },
+        [TokenId.SuiEth]: {
+            description: "ETH token on Sui.",
         },
         // --- Solana ---
         [TokenId.SolUsdc]: {
@@ -97,6 +101,7 @@ registerEnumType(GraphQLTypeDexId, {
 export enum LiquidityPoolId {
     CetusSuiIka02 = "cetusSuiIka02",
     CetusSuiUsdc005 = "cetusSuiUsdc005",  
+    CetusUsdcEth025 = "cetusUsdcEth025",
     TurbosIkaUsdcIka015 = "turbosIkaUsdcIka015",
     TurbosDeepUsdc015 = "turbosDeepUsdc015",
 }
@@ -112,6 +117,9 @@ registerEnumType(GraphQLTypeLiquidityPoolId, {
         },
         [LiquidityPoolId.CetusSuiUsdc005]: {
             description: "The cetus sui usdc 0.05 lp pool",
+        },
+        [LiquidityPoolId.CetusUsdcEth025]: {
+            description: "The cetus usdc eth 0.25 lp pool",
         },
         [LiquidityPoolId.TurbosIkaUsdcIka015]: {
             description: "The turbos sui ika usdc 0.15 lp pool",

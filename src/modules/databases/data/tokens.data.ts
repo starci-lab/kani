@@ -156,4 +156,26 @@ export const tokenData: Array<TokenLike> = [
         type: TokenType.Wrapper,
         pythFeedId: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff"
     },
+    {
+        displayId: TokenId.SuiEth,
+        name: "ETH",
+        symbol: "ETH",
+        chainId: ChainId.Sui,
+        tokenAddress:
+      "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH",
+        decimals: 8,
+        coinMarketCapId: "ethereum",
+        coinGeckoId: "ethereum",
+        cexSymbols: {
+            [CexId.Binance]: "ETHUSDT",
+            [CexId.Gate]: "ETH_USDT",
+        },
+        iconUrl: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+        projectUrl: "https://ethereum.org/",
+        network: Network.Mainnet,
+        cexIds: [CexId.Binance, CexId.Gate],
+        whichCex: CexId.Binance,
+        type: TokenType.Wrapper,
+        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744"
+    },
 ]

@@ -1,4 +1,4 @@
-import { AddLiquidityFixTokenParams, Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { AddLiquidityParams, Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
@@ -23,8 +23,6 @@ import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
 import { ActionResponse } from "../types"
 import { PythService } from "../../pyth"
-import fs from "fs"
-import { printTransaction } from "@cetusprotocol/aggregator-sdk"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -144,7 +142,6 @@ export class CetusActionService implements IActionService {
                 network,
                 swapSlippage,
             })
-
         // 4. optional ratio check
         const zapAmountA = priorityAOverB
             ? new BN(remainingAmount) : new BN(receiveAmount)
@@ -184,29 +181,35 @@ export class CetusActionService implements IActionService {
         const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
         const providedAmountA = priorityAOverB ? remainingAmount : receiveAmount
         const providedAmountB = priorityAOverB ? receiveAmount : remainingAmount
-        const addLiquidityPayloadParams: AddLiquidityFixTokenParams = {
+        const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
+            pool.currentSqrtPrice,
+            tickLower,
+            tickUpper,
+            {
+                coinA: providedAmountA,
+                coinB: providedAmountB,
+            }
+        )
+        const addLiquidityPayloadParams: AddLiquidityParams = {
             coinTypeA: tokenA.tokenAddress,
             coinTypeB: tokenB.tokenAddress,
             pool_id: pool.poolAddress,
             tick_lower: tickLower.toString(),
             tick_upper: tickUpper.toString(),
-            amount_a: providedAmountA.toString(),
-            amount_b: providedAmountB.toString(),
+            max_amount_b: providedAmountB.toString(),
+            max_amount_a: providedAmountA.toString(),
             rewarder_coin_types: [],
             collect_fee: false,
-            fix_amount_a: priorityAOverB,   
-            is_open: true,
+            delta_liquidity: liquidity.toString(),
             pos_id: "",
-            slippage
         }
         if (!txbAfterSwap) {
             throw new Error("Transaction builder is required")
         }
         const inputCoinA = priorityAOverB ? sourceCoin : coinOut
         const inputCoinB = priorityAOverB ? coinOut : sourceCoin
-        const txbAfterDeposit = await cetusClmmSdk.Position.createAddLiquidityFixTokenPayload(
+        const txbAfterAddLiquidity = await cetusClmmSdk.Position.createAddLiquidityPayload(
             addLiquidityPayloadParams,
-            undefined,
             txbAfterSwap,
             inputCoinA,
             inputCoinB,
@@ -216,7 +219,7 @@ export class CetusActionService implements IActionService {
             network,
             action: async (signer) => {
                 return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txbAfterDeposit,
+                    transaction: txbAfterAddLiquidity,
                     suiClient,
                     signer,
                 })
