@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectCetusClmmSdks } from "./cetus.decorators"
-import { ChainId, isSameAddress, Network } from "@modules/common"
-import { CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { ChainId, Network } from "@modules/common"
 import {
     FetchedPool,
     FetchPoolsParams,
@@ -10,12 +8,14 @@ import {
 } from "../../interfaces"
 import { DexId } from "@modules/databases"
 import { BN } from "bn.js"
+import { InjectFlowXClmmSdks } from "./flowx.decorators"
+import { FlowXClmmSdk } from "./flowx.providers"
 
 @Injectable()
-export class CetusFetcherService implements IFetchService {
+export class FlowXFetcherService implements IFetchService {
     constructor(
-        @InjectCetusClmmSdks()
-        private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
+        @InjectFlowXClmmSdks()
+        private readonly flowxClmmSdks: Record<Network, FlowXClmmSdk>,
     ) { }
 
     async fetchPools({
@@ -34,14 +34,9 @@ export class CetusFetcherService implements IFetchService {
                 && liquidityPool.network === network
                 && liquidityPool.chainId === ChainId.Sui
         )
-        const cetusClmmSdk = this.cetusClmmSdks[network]
+        const flowxClmmSdk = this.flowxClmmSdks[network]
         const pools: Array<FetchedPool> = []
-        const fetchedPools = await cetusClmmSdk.Pool.getPools(
-            liquidityPools.map(
-                (liquidityPool) => 
-                    liquidityPool.poolAddress
-            )
-        )
+        const fetchedPools = await flowxClmmSdk.poolManager.getPools()
         const displayId = (poolAddress: string) => {
             return liquidityPools.find(
                 (liquidityPool) => liquidityPool.poolAddress === poolAddress,
@@ -49,36 +44,37 @@ export class CetusFetcherService implements IFetchService {
         }
         pools.push(
             ...fetchedPools.map((pool) => ({
-                poolAddress: pool.poolAddress,
-                displayId: displayId(pool.poolAddress),
-                currentTick: Number(pool.current_tick_index),
-                currentSqrtPrice: new BN(pool.current_sqrt_price),
+                poolAddress: pool.id,
+                displayId: displayId(pool.id),
+                currentTick: Number(pool.tickCurrent),
+                currentSqrtPrice: new BN(pool.sqrtPriceX64),
                 tickSpacing: Number(pool.tickSpacing),
-                fee: Number(pool.fee_rate),
+                fee: Number(pool.fee),
                 token0: tokens.find(
                     (token) =>
-                        isSameAddress(token.tokenAddress, pool.coinTypeA) && token.network === network && token.chainId === ChainId.Sui,
+                        token.tokenAddress === pool.coinX.coinType && token.network === network && token.chainId === ChainId.Sui,
                 )!,
                 token1: tokens.find(
                     (token) =>
-                        isSameAddress(token.tokenAddress, pool.coinTypeB) && token.network === network && token.chainId === ChainId.Sui,
+                        token.tokenAddress === pool.coinY.coinType && token.network === network && token.chainId === ChainId.Sui,
                 )!,
                 liquidity: new BN(pool.liquidity),
                 liquidityPool: liquidityPools.find(
-                    (liquidityPool) => liquidityPool.poolAddress === pool.poolAddress,
+                    (liquidityPool) => liquidityPool.poolAddress === pool.id,
                 )!,
-                rewardTokens: (pool.rewarder_infos ?? [])
-                    .map((rewarderInfo) => rewarderInfo.coinAddress)
+                rewardTokens: (pool.poolRewards ?? [])
+                    .map((rewarderInfo) => rewarderInfo.coin.coinType)
                     .map(
                         (rewardTokenAddress) =>
                             tokens.find(
                                 (token) =>
-                                    isSameAddress(token.tokenAddress, rewardTokenAddress) &&
+                                    token.tokenAddress === rewardTokenAddress &&
                                     token.network === network,
                             )!,
                     ),
             })),
         )
+
         return { pools }
     }
 }

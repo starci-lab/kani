@@ -50,18 +50,18 @@ implements OnApplicationBootstrap
             network: Network.Mainnet,
         })
         const users = await this.userLoaderService.loadUsers()
-        const { txHash } = await this.cetusActionService.openPosition({
+        const { txHash, positionId } = await this.cetusActionService.openPosition({
             accountAddress:
             "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
-            priorityAOverB: true,
             pool: fetchedPool,
-            amount: new BN("1000000"), // 1 usdc
+            amount: new BN("100000000"), // 0.1 sui
             tokenAId: TokenId.SuiUsdc,
             tokenBId: TokenId.SuiNative,
             tokens,
+            priorityAOverB: true,
             user: users[0],
             requireZapEligible: false
         })
-        console.log(txHash)
+        console.log(txHash, positionId)
     }
 }

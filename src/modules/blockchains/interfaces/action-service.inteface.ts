@@ -81,9 +81,17 @@ export interface ForceSwapParams {
     suiClient?: SuiClient
 }
 
+export interface OpenPositionResponse extends ActionResponse {
+    tickLower: number
+    tickUpper: number
+    liquidity: BN
+    provisionAmount: BN
+    positionId: string
+}
+
 export interface IActionService {
     // close position
     closePosition(params: ClosePositionParams): Promise<ActionResponse>
     // open position
-    openPosition(params: OpenPositionParams): Promise<ActionResponse>
+    openPosition(params: OpenPositionParams): Promise<OpenPositionResponse>
 }

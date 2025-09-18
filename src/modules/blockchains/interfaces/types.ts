@@ -1,10 +1,11 @@
 import { Rewarder } from "@mmt-finance/clmm-sdk/dist/types"
 import { ClmmPool } from "@flowx-finance/sdk"
-import { LiquidityPoolLike, TokenLike } from "@modules/databases"
+import { LiquidityPoolId, LiquidityPoolLike, TokenLike } from "@modules/databases"
 import BN from "bn.js"
 
 export interface FetchedPool {
     poolAddress: string
+    displayId: LiquidityPoolId
     currentTick: number
     currentSqrtPrice: BN
     tickSpacing: number

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common"
-import { DevInspectResults, SuiClient } from "@mysten/sui/client"
+import { DevInspectResults, SuiClient, SuiObjectChange, TransactionEffects } from "@mysten/sui/client"
 import { Transaction } from "@mysten/sui/transactions"
 import { Signer } from "@mysten/sui/cryptography"
 import { RetryService } from "@modules/mixin"
@@ -10,7 +10,9 @@ export interface SignAndExecuteTransactionParams {
     suiClient: SuiClient
     transaction: Transaction
     signer: Signer
-    handleInspectResult?: (inspectResult: DevInspectResults) => Promise<void>
+    handleInspectResult?: (inspectResult: DevInspectResults) => Promise<void> | void
+    handleEffects?: (effects: TransactionEffects) => Promise<void> | void
+    handleObjectChanges?: (objectChanges: Array<SuiObjectChange>) => Promise<void> | void
 }
 @Injectable()
 export class SuiExecutionService {
@@ -26,6 +28,8 @@ export class SuiExecutionService {
             signer,
             suiClient,
             handleInspectResult,
+            handleEffects,
+            handleObjectChanges,
         }: SignAndExecuteTransactionParams
     ): Promise<string> {
         return await this.retryService.retry({
@@ -37,10 +41,28 @@ export class SuiExecutionService {
                     })
                     await handleInspectResult(inspectResult)
                 }
-                const { digest, effects } =  await suiClient.signAndExecuteTransaction({
+               
+                const { digest, effects, objectChanges } =  await suiClient.signAndExecuteTransaction({
                     transaction,
                     signer,
+                    options: {
+                        showEffects: true,
+                        showObjectChanges: true,
+                        showBalanceChanges: true
+                    }
                 })
+                if (handleEffects) {
+                    if (!effects) {
+                        throw new Error("Effects not found")
+                    }
+                    await handleEffects(effects)
+                }
+                if (handleObjectChanges) {
+                    if (!objectChanges) {
+                        throw new Error("Object changes not found")
+                    }
+                    await handleObjectChanges(objectChanges)
+                }
                 if (effects?.status.status === "failure") {
                     this.winstonLogger.error(
                         "TransactionFailed", {

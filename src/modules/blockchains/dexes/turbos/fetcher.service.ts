@@ -41,6 +41,7 @@ export class TurbosFetcherService implements IFetchService {
                 liquidityPool.poolAddress,
             )
             pools.push({
+                displayId: liquidityPool.displayId,
                 poolAddress: fetchedPool.id.id,
                 currentTick: toI32(fetchedPool.tick_current_index.fields.bits),
                 currentSqrtPrice: new BN(fetchedPool.sqrt_price),

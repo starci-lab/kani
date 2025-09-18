@@ -17,9 +17,10 @@ export interface GasSuiSwapParams {
     tokenInId: TokenId
     tokens: Array<TokenLike>
     slippage?: number
-    amountIn?: BN
+    // this is a variable that indicate amount in
+    // will ignore it if your priority token is not SUI
+    amountIn: BN
     suiClient?: SuiClient
-    sourceCoin?: TransactionObjectArgument
 }
 
 export interface GasSuiSwapResponse {
@@ -56,7 +57,6 @@ export class GasSuiSwapUtilsService {
         amountIn,
         slippage,
         suiClient,
-        sourceCoin,
     }: GasSuiSwapParams): Promise<GasSuiSwapResponse> {
         suiClient = suiClient || this.suiClients[network][0]
         txb = txb ?? new Transaction()
@@ -66,18 +66,18 @@ export class GasSuiSwapUtilsService {
         if (!tokenNative || !tokenIn) {
             throw new Error("Token not found")
         }
-        if (!sourceCoin) {
-            const coinResponse = await this.suiCoinManagerService.fetchAndMergeCoins({
-                owner: accountAddress,
-                coinType: tokenIn.tokenAddress,
-                txb,
-                suiClient,
-            })
-            if (!coinResponse) {
-                throw new Error("No coin found")
-            }
-            ({ sourceCoin } = coinResponse)
-        }
+        const { 
+            sourceCoin
+        } = await this.suiCoinManagerService.fetchAndMergeCoins({
+            owner: accountAddress,
+            coinType: tokenIn.tokenAddress,
+            txb,
+            suiClient,
+            // we need to reserve gas for the swap
+            // if the amount in is not sui, ignore this
+            suiGasAmount: SUI_GAS_LIMIT,
+            suiGasInUsed: amountIn,
+        })
         // --- 1. Check current SUI balance
         const { totalBalance } = await suiClient.getBalance({
             owner: accountAddress,
@@ -89,18 +89,25 @@ export class GasSuiSwapUtilsService {
         if (balanceBN.gte(SUI_GAS_LIMIT)) {
             // case we use native token as input
             if (tokenIn.type === TokenType.Native) {
-                const actualBalance = balanceBN.sub(SUI_GAS_LIMIT)
-                const splitCoinResponse = await this.suiCoinManagerService.splitCoin({
-                    requiredAmount: actualBalance,
+                let diff = balanceBN.sub(amountIn)
+                if (diff.lt(SUI_GAS_LIMIT)) {
+                    // adjust amountIn to be the exact amount of balance
+                    amountIn = balanceBN.sub(SUI_GAS_LIMIT)
+                    diff = SUI_GAS_LIMIT
+                }
+                const sourceCoinResponse = this.suiCoinManagerService.splitCoin({
+                    requiredAmount: amountIn,
                     sourceCoin,
                     txb,
                 })
-                if (!splitCoinResponse) {
-                    throw new Error("Failed to split coin")
-                }
-                return { txb, requireGasSwap: false, sourceCoin: splitCoinResponse.spendCoin }
+                return { 
+                    txb, 
+                    requireGasSwap: false, 
+                    sourceCoin: sourceCoinResponse.spendCoin,
+                    remainingAmount: amountIn,
+                }   
             }
-            return { txb, requireGasSwap: false, sourceCoin }
+            return { txb, requireGasSwap: false, sourceCoin, remainingAmount: amountIn }
         }
         // if we use native token as input and the balance we have is less than 0.3 SUI
         if (tokenIn.type === TokenType.Native) {
@@ -121,7 +128,7 @@ export class GasSuiSwapUtilsService {
         // --- 3. Compute how much SUI is missing to reach 0.6
         const neededSui = SUI_GAS_TARGET.sub(balanceBN)
         if (neededSui.lte(new BN(0))) {
-            return { txb, requireGasSwap: false, sourceCoin }
+            return { txb, requireGasSwap: false, sourceCoin, remainingAmount: amountIn }
         }
         const swapAmount = toScaledBN(
             neededSui.mul(toUnit(tokenIn.decimals)),
@@ -137,7 +144,7 @@ export class GasSuiSwapUtilsService {
             tokens,
         })
 
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
             requiredAmount: swapAmount,
             sourceCoin,
             txb,
@@ -157,7 +164,7 @@ export class GasSuiSwapUtilsService {
             routerId,
         })
 
-        const remainingAmount = amountIn ? amountIn.sub(swapAmount) : undefined
+        const remainingAmount = amountIn.sub(swapAmount)
         return {
             txb: txbAfterSwap || txb,
             remainingAmount,

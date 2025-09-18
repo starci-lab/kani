@@ -4,10 +4,11 @@ import {
     ClosePositionParams,
     IActionService,
     OpenPositionParams,
+    OpenPositionResponse,
 } from "../../interfaces"
 import { InjectFlowXClmmSdks } from "./flowx.decorators"
-import { Network } from "../../../common"
-import { ClmmPosition, Percent, CoinAmount } from "@flowx-finance/sdk"
+import { computeRatio, computeRaw, Network, toUnit } from "../../../common"
+import { Percent, CoinAmount } from "@flowx-finance/sdk"
 import { ActionResponse } from "../types"
 import { Transaction } from "@mysten/sui/transactions"
 import {
@@ -15,14 +16,21 @@ import {
     FeeToService,
     GasSuiSwapUtilsService,
     OPEN_POSITION_SLIPPAGE,
+    SWAP_OPEN_POSITION_SLIPPAGE,
+    PythService,
+    SuiSwapService,
+    ZapService,
+    PriceRatioService,
 } from "../../../blockchains"
 import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
-import { SuiClient } from "@mysten/sui/client"
+import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
 import BN from "bn.js"
 import { FlowXClmmSdk } from "./flowx.providers"
-import { SuiExecutionService } from "../../utils"
+import { SuiCoinManagerService, SuiExecutionService, TickMathService } from "../../utils"
 import { clientIndex } from "./inner-constants"
+import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -36,6 +44,12 @@ export class FlowXActionService implements IActionService {
     private readonly suiClients: Record<Network, Array<SuiClient>>,
     private readonly signerService: SignerService,
     private readonly suiExecutionService: SuiExecutionService,
+    private readonly pythService: PythService,
+    private readonly tickMathService: TickMathService,
+    private readonly zapService: ZapService,
+    private readonly suiCoinManagerService: SuiCoinManagerService,
+    private readonly suiSwapService: SuiSwapService, 
+    private readonly priceRatioService: PriceRatioService,
     ) {}
 
     /**
@@ -43,107 +57,206 @@ export class FlowXActionService implements IActionService {
    */
     async openPosition({
         pool,
+        txb,
         network = Network.Mainnet,
+        priorityAOverB = false,
+        amount,
         tokenAId,
         tokenBId,
-        tokens,
-        priorityAOverB,
         accountAddress,
+        tokens,
         slippage,
-        txb,
-        amount,
+        swapSlippage,
         user,
-        suiClient
-    }: OpenPositionParams): Promise<ActionResponse> {
+        suiClient,
+        requireZapEligible
+    }: OpenPositionParams): Promise<OpenPositionResponse> {
+        // const flowXClmmSdk = this.flowxClmmSdks[network]
+        txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
-        suiClient = suiClient || this.suiClients[network][clientIndex]
+        swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
         if (!user) {
-            throw new Error("User is required")
+            throw new Error("Sui key pair is required")
         }
-        txb = txb || new Transaction()
-        const flowxSdk = this.flowxClmmSdks[network]
-        const positionManager = flowxSdk.positionManager
-
-        const tokenA = tokens.find((t) => t.displayId === tokenAId)
-        const tokenB = tokens.find((t) => t.displayId === tokenBId)
-        if (!tokenA || !tokenB) throw new Error("Token not found")
-        if (!pool.flowXClmmPool) throw new Error("FlowX CLMM pool not found")
-
-        // Ensure gas for transaction
+        suiClient = suiClient || this.suiClients[network][clientIndex]
+        const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
+        const tokenA = tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        if (!tokenA || !tokenB) {
+            throw new Error("Token not found")
+        }
+        const tokenIn = priorityAOverB ? tokenA : tokenB
+        const tokenOut = priorityAOverB ? tokenB : tokenA
+        const oraclePrice = await this.pythService.computeOraclePrice({
+            tokenAId,
+            tokenBId,
+            chainId: tokenA.chainId,
+            network,
+        })
         const {
             txb: txAfterSwapGas,
-            requireGasSwap,
-            remainingAmount,
+            sourceCoin,
+            remainingAmount: remainingAmountAfterGasSuiSwap
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
-            tokenInId: priorityAOverB ? tokenA.displayId : tokenB.displayId,
+            tokenInId: tokenIn.displayId,
             tokens,
-            txb,
+            amountIn: amount,
             slippage,
             suiClient,
+            txb
         })
-        if (requireGasSwap && !remainingAmount) {
-            throw new Error("Remaining amount after swap gas is missing")
-        }
-
-        // Attach platform fee
-        const { txb: txAfterAttachFee } = await this.feeToService.attachSuiFee({
+        const {
+            txb: txbAfterAttachFee,
+            remainingAmount,
+        } = await this.feeToService.attachSuiFee({
             txb: txAfterSwapGas,
-            tokenAddress: (priorityAOverB ? tokenA : tokenB).tokenAddress,
+            tokenAddress: tokenIn.tokenAddress,
             accountAddress,
             network,
-            amount: remainingAmount || amount,
+            amount,
             suiClient,
+            sourceCoin,
         })
-
-        // Tick bounds
-        const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-
-        // Build position (single-sided)
-        let position: ClmmPosition
-        if (priorityAOverB) {
-            position = ClmmPosition.fromAmountX({
-                owner: accountAddress,
-                pool: pool.flowXClmmPool,
+        // use this to calculate the ratio
+        const quoteAmountA = computeRaw(1, tokenA.decimals)
+        const { coinAmountA, coinAmountB } =
+            ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
                 tickLower,
                 tickUpper,
-                amountX: new BN((remainingAmount || amount).toString()),
-                useFullPrecision: true,
+                quoteAmountA,            // coinAmount must be BN
+                true,                             // isCoinA
+                false,                                      // roundUp
+                slippage,                                   // example 0.01
+                pool.currentSqrtPrice,
+            )
+        const ratio = computeRatio(
+            new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
+            new BN(coinAmountA).mul(toUnit(tokenB.decimals))
+        )
+        const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
+            pool.currentSqrtPrice,
+            tokenA.decimals,
+            tokenB.decimals,
+        )
+        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
+            await this.zapService.computeZapAmounts({
+                amountIn: remainingAmount,
+                ratio: new Decimal(ratio),
+                spotPrice,
+                priorityAOverB,
+                tokenAId,
+                tokenBId,
+                tokens,
+                oraclePrice,
+                network,
+                swapSlippage,
             })
-        } else {
-            position = ClmmPosition.fromAmountY({
-                owner: accountAddress,
-                pool: pool.flowXClmmPool,
-                tickLower,
-                tickUpper,
-                amountY: new BN((remainingAmount || amount).toString()),
-                useFullPrecision: true,
-            })
+        // 4. optional ratio check
+        const zapAmountA = priorityAOverB
+            ? new BN(remainingAmount) : new BN(receiveAmount)
+        const zapAmountB = priorityAOverB
+            ? new BN(receiveAmount) : new BN(remainingAmount)
+        const isZapEligible = this.priceRatioService.isZapEligible({
+            priorityAOverB,
+            tokenA: {
+                tokenDecimals: tokenA.decimals,
+                amount: new BN(zapAmountA),
+            },
+            tokenB: {
+                tokenDecimals: tokenB.decimals,
+                amount: new BN(zapAmountB),
+            },
+        })
+        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment") 
+        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+            txb: txbAfterAttachFee,
+            sourceCoin,
+            requiredAmount: swapAmount,
+        })
+        const { txb: txbAfterSwap } = await this.suiSwapService.swap({
+            txb: txbAfterAttachFee,
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenOut.displayId,
+            amountIn: swapAmount,
+            tokens,
+            fromAddress: accountAddress,
+            quoteData,
+            routerId,
+            network,
+            slippage: swapSlippage,
+            inputCoinObj: spendCoin,
+            transferCoinObjs: false,
+        })
+        // const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
+        const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
+        const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
+            pool.currentSqrtPrice,
+            tickLower,
+            tickUpper,
+            {
+                coinA: providedAmountA,
+                coinB: providedAmountB,
+            }
+        )
+        if (!txbAfterSwap) {
+            throw new Error("Transaction builder is required")
         }
-
-        // Increase liquidity
-        const options = {
-            slippageTolerance: new Percent(Math.floor(slippage * 100), 10000),
-            deadline: Date.now() + 3600 * 1000,
-            createPosition: true,
+        // const inputCoinA = priorityAOverB ? sourceCoin : coinOut
+        // const inputCoinB = priorityAOverB ? coinOut : sourceCoin
+        // if (!pool.flowXClmmPool) {
+        //     throw new Error("FlowX CLMM pool is required")
+        // }
+        // const txbAfterAddLiquidity = flowXClmmSdk.positionManager.openPosition(
+        //     new ClmmPosition({
+        //         owner: accountAddress,
+        //         pool: pool.flowXClmmPool,
+        //         tickLower,
+        //         tickUpper,
+        //         liquidity,
+        //         coinsOwedX: 0,
+        //         coinsOwedY: 0,
+        //         feeGrowthInsideXLast: 0,
+        //         feeGrowthInsideYLast: 0,
+        //         rewardInfos: []
+        //     })
+        // )
+        let positionId = ""
+        const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
+            const [positionObjId] = objectChanges
+                .filter(
+                    (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
+                        obj.type === "created" &&
+                obj.objectType.endsWith("::position::Position") &&
+                typeof obj.owner === "object" &&
+                "AddressOwner" in obj.owner &&
+                obj.owner.AddressOwner.toLowerCase() === accountAddress.toLowerCase()
+                )
+                .map((obj) => obj.objectId)   
+            positionId = positionObjId
         }
-        positionManager.tx(
-            txAfterAttachFee as any
-        ).increaseLiquidity(position, options)
-
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
             action: async (signer) => {
                 return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txAfterAttachFee,
+                    transaction: txbAfterSwap,
                     suiClient,
                     signer,
+                    handleObjectChanges
                 })
             },
         })
-        return { txHash }
+        return { 
+            txHash, 
+            tickLower, 
+            tickUpper, 
+            liquidity, 
+            positionId,
+            provisionAmount: remainingAmountAfterGasSuiSwap || amount
+        }
     }
 
     /**

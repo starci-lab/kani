@@ -1,10 +1,13 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./pool-fetcher.module-definition"
-import { FetcherService } from "./fetcher.service"
+import { PoolFetcherService } from "./fetcher.service"
 
 @Module({
     providers: [
-        FetcherService,
+        PoolFetcherService,
     ],
+    exports: [
+        PoolFetcherService
+    ]
 })
 export class PoolFetcherModule extends ConfigurableModuleClass {}

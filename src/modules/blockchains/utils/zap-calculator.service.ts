@@ -34,6 +34,15 @@ export class ZapCalculatorService {
         ratio,
         priorityAOverB
     }: ZapCalculationParams): ZapCalculationResult { 
+        console.log({
+            decimalsA,
+            decimalsB,
+            amountIn,
+            spotPrice,
+            oraclePrice,
+            ratio,
+            priorityAOverB
+        })
         const price = oraclePrice ?? spotPrice
         let swapAmount: BN
         let remainAmount: BN
@@ -57,7 +66,7 @@ export class ZapCalculatorService {
       
             swapAmount = new BN(swapB.mul(new Decimal(10).pow(decimalsB)).toFixed(0))
             remainAmount = amountIn.sub(swapAmount)
-      
+
             const receiveA = swapB.div(price)
             receiveAmount = new BN(receiveA.mul(new Decimal(10).pow(decimalsA)).toFixed(0))
         }

@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common"
 import {
     ClosePositionParams,
     IActionService,
-    OpenPositionParams
+    OpenPositionParams,
+    OpenPositionResponse
 } from "../../interfaces"
 import { InjectTurbosClmmSdks } from "./turbos.decorators"
 import { computePercentage, computeRatio, computeRaw, Network, toUnit, ZERO_BN } from "@modules/common"
@@ -21,13 +22,14 @@ import {
     SWAP_OPEN_POSITION_SLIPPAGE,
     ZapService
 } from "../../swap"
-import { SuiClient } from "@mysten/sui/dist/cjs/client"
+import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
 import { GasSuiSwapUtilsService } from "../../swap"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"
 import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
+import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -65,7 +67,7 @@ export class TurbosActionService implements IActionService {
         suiClient,
         txb,
         requireZapEligible = true
-    }: OpenPositionParams): Promise<ActionResponse> {
+    }: OpenPositionParams): Promise<OpenPositionResponse> {
         txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
@@ -90,10 +92,12 @@ export class TurbosActionService implements IActionService {
         })
         const {
             txb: txAfterSwapGas,
-            sourceCoin
+            sourceCoin,
+            remainingAmount: remainingAmountAfterGasSuiSwap
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
+            amountIn: amount,
             tokenInId: tokenIn.displayId,
             tokens,
             slippage,
@@ -148,9 +152,9 @@ export class TurbosActionService implements IActionService {
             })
 
         // 4. optional ratio check
-        const zapAmountA = priorityAOverB 
+        const zapAmountA = priorityAOverB
             ? new BN(remainingAmount) : new BN(receiveAmount)
-        const zapAmountB = priorityAOverB 
+        const zapAmountB = priorityAOverB
             ? new BN(receiveAmount) : new BN(remainingAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
@@ -192,6 +196,17 @@ export class TurbosActionService implements IActionService {
         }
         const providedCoinAmountA = priorityAOverB ? sourceCoin : coinOut
         const providedCoinAmountB = priorityAOverB ? coinOut : sourceCoin
+        // we use cetus lib to determine turbos lib
+        // since (maybe) the CLMM concepts use the same fomular
+        const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
+            pool.currentSqrtPrice,
+            tickLower,
+            tickUpper,
+            {
+                coinA: providedAmountA,
+                coinB: providedAmountB,
+            }
+        )
         const txbAfterOpenPosition = await turbosSdk.pool.addLiquidityByAmountObject({
             pool: pool.poolAddress,
             address: accountAddress,
@@ -204,6 +219,20 @@ export class TurbosActionService implements IActionService {
             coinAObjectArguments: [providedCoinAmountA],
             coinBObjectArguments: [providedCoinAmountB],
         })
+        let positionId = ""
+        const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
+            const [positionObjId] = objectChanges
+                .filter(
+                    (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
+                        obj.type === "created" &&
+                obj.objectType.endsWith("::position_nft::TurbosPositionNFT") &&
+                typeof obj.owner === "object" &&
+                "AddressOwner" in obj.owner &&
+                obj.owner.AddressOwner.toLowerCase() === accountAddress.toLowerCase()
+                )
+                .map((obj) => obj.objectId)   
+            positionId = positionObjId
+        }
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
@@ -212,11 +241,17 @@ export class TurbosActionService implements IActionService {
                     transaction: txbAfterOpenPosition,
                     suiClient,
                     signer,
+                    handleObjectChanges
                 })
             },
         })
         return {
             txHash,
+            tickLower,
+            tickUpper,
+            liquidity,
+            positionId,
+            provisionAmount: remainingAmountAfterGasSuiSwap || amount
         }
     }
 

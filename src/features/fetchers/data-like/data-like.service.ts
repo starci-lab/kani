@@ -12,6 +12,7 @@ import {
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { ModuleRef } from "@nestjs/core"
 import { envConfig, LpBotType } from "@modules/env"
+import fs from "fs"
 
 @Injectable()
 export class DataLikeService implements OnApplicationBootstrap {
@@ -72,6 +73,7 @@ export class DataLikeService implements OnApplicationBootstrap {
             cexSymbols: token.cexSymbols,
         }
         ))
+        fs.writeFileSync("tokens.json", JSON.stringify(tokens, null, 2))
         const liquidityPools = await dataSource.manager.find(LiquidityPoolEntity, {
             relations: {
                 tokenA: true,

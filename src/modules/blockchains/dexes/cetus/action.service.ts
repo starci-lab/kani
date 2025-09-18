@@ -8,14 +8,14 @@ import {
     TickManagerService,
     TickMathService,
 } from "../../utils"
-import { ClosePositionParams, IActionService, OpenPositionParams } from "../../interfaces"
+import { ClosePositionParams, IActionService, OpenPositionParams, OpenPositionResponse } from "../../interfaces"
 import { computeRatio, computeRaw, Network, toUnit } from "@modules/common"
 import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { GasSuiSwapUtilsService, OPEN_POSITION_SLIPPAGE, SuiSwapService, SWAP_OPEN_POSITION_SLIPPAGE, ZapService } from "../../swap"
-import { SuiClient } from "@mysten/sui/client"
+import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"
 import { InjectCetusClmmSdks } from "./cetus.decorators"
@@ -49,7 +49,6 @@ export class CetusActionService implements IActionService {
         pool,
         txb,
         network = Network.Mainnet,
-        priorityAOverB = false,
         amount,
         tokenAId,
         tokenBId,
@@ -58,9 +57,10 @@ export class CetusActionService implements IActionService {
         slippage,
         swapSlippage,
         user,
+        priorityAOverB,
         suiClient,
         requireZapEligible
-    }: OpenPositionParams): Promise<ActionResponse> {
+    }: OpenPositionParams): Promise<OpenPositionResponse> {
         const cetusClmmSdk = this.cetusClmmSdks[network]
         cetusClmmSdk.senderAddress = accountAddress
         txb = txb ?? new Transaction()
@@ -86,12 +86,14 @@ export class CetusActionService implements IActionService {
         })
         const {
             txb: txAfterSwapGas,
-            sourceCoin
+            sourceCoin,
+            remainingAmount: remainingAmountAfterGasSuiSwap
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
             tokenInId: tokenIn.displayId,
             tokens,
+            amountIn: amount,
             slippage,
             suiClient,
             txb
@@ -115,9 +117,9 @@ export class CetusActionService implements IActionService {
                 tickLower,
                 tickUpper,
                 quoteAmountA,            // coinAmount must be BN
-                true,                             // isCoinA
-                false,                                      // roundUp
-                slippage,                                   // example 0.01
+                true,                    // isCoinA
+                false,                   // roundUp
+                slippage,                // example 0.01
                 pool.currentSqrtPrice,
             )
         const ratio = computeRatio(
@@ -214,6 +216,20 @@ export class CetusActionService implements IActionService {
             inputCoinA,
             inputCoinB,
         )
+        let positionId = ""
+        const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
+            const [positionObjId] = objectChanges
+                .filter(
+                    (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
+                        obj.type === "created" &&
+                obj.objectType.endsWith("::position::Position") &&
+                typeof obj.owner === "object" &&
+                "AddressOwner" in obj.owner &&
+                obj.owner.AddressOwner.toLowerCase() === accountAddress.toLowerCase()
+                )
+                .map((obj) => obj.objectId)   
+            positionId = positionObjId
+        }
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
@@ -222,10 +238,18 @@ export class CetusActionService implements IActionService {
                     transaction: txbAfterAddLiquidity,
                     suiClient,
                     signer,
+                    handleObjectChanges
                 })
             },
         })
-        return { txHash }
+        return { 
+            txHash, 
+            tickLower, 
+            tickUpper, 
+            liquidity, 
+            positionId,
+            provisionAmount: remainingAmountAfterGasSuiSwap || amount
+        }
     }
 
     // ---------- Close Position ----------

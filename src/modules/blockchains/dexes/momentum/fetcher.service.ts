@@ -61,9 +61,6 @@ export class MomentumFetcherService implements IFetchService {
                                 && token.network === network
                                 && token.chainId === ChainId.Sui,
                             )
-                            console.log(`Fee: ${targetPool.fee === feeDecimals.toNumber()}`)
-                            console.log(`Target TokenA: ${targetPool.tokenAId}, ${tokenA?.displayId}`)
-                            console.log(`Target TokenB: ${targetPool.tokenBId}, ${tokenB?.displayId}`)
                             return targetPool.fee === feeDecimals.toNumber()
                             && targetPool.tokenAId === tokenA?.displayId
                             && targetPool.tokenBId === tokenB?.displayId
@@ -84,9 +81,14 @@ export class MomentumFetcherService implements IFetchService {
                     token.network === network &&
                     token.chainId === ChainId.Sui,
                 )
-
+                const displayId = (poolAddress: string) => {
+                    return targetPools.find(
+                        (lp) => lp.poolAddress === poolAddress,
+                    )!.displayId
+                }
                 return {
                     poolAddress: pool.poolId,
+                    displayId: displayId(pool.poolId),
                     currentTick: Number(pool.currentTickIndex),
                     currentSqrtPrice: new BN(pool.currentSqrtPrice),
                     tickSpacing: pool.tickSpacing,

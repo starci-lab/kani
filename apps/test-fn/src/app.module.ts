@@ -1,6 +1,6 @@
 import { ClientsModule, DexesModule, KeypairsModule, PriceModule, PythModule, SignersModule, SwapModule, UtilsModule } from "@modules/blockchains"
 import { Module } from "@nestjs/common"
-import { DataLikeModule, PriceFetcherModule, UserLoaderModule } from "@features/fetchers"
+import { DataLikeModule, PoolFetcherModule, PriceFetcherModule, UserLoaderModule } from "@features/fetchers"
 // import { TestSwapService } from "./test-swap.service"
 import { SqliteModule } from "@modules/databases"
 import { CryptoModule } from "@modules/crypto"
@@ -78,6 +78,9 @@ import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager
             isGlobal: true,
         }),
         PriceFetcherModule.register({
+            isGlobal: true
+        }),
+        PoolFetcherModule.register({
             isGlobal: true
         })
     ],

@@ -11,4 +11,6 @@ export enum WinstonLog {
     GateRestSnapshot = "Gate.REST.Snapshot",
     GateRestError = "Gate.REST.Error",
     PriceImpactTooHigh = "Price.Impact.Too.High",
+    FetchedPools = "Fetched.Pools",
+    PositionWritten = "Position.Written",
 }

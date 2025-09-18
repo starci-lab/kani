@@ -13,17 +13,17 @@ import {
     TokenId,
 } from "@modules/databases"
 import BN from "bn.js"
-import { UserLoaderService } from "@features/fetchers"
+import { PoolFetcherService, UserLoaderService } from "@features/fetchers"
 
 @Injectable()
-export class TurbosTestLiquidityManangementService
-implements OnApplicationBootstrap
+export class TurbosTestLiquidityManangementService implements OnApplicationBootstrap
 {
     constructor(
     private readonly turbosActionService: TurbosActionService,
     private readonly liquidityPoolService: LiquidityPoolService,
     private readonly userLoaderService: UserLoaderService,
     private readonly pythService: PythService,
+    private readonly poolFetcherService: PoolFetcherService
     ) {}
 
     async onApplicationBootstrap() {

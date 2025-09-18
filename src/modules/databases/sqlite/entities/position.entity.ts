@@ -1,18 +1,17 @@
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm"
-import { StringAbstractEntity } from "./abstract"
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne } from "typeorm"
+import { UuidAbstractEntity } from "./abstract"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 /**
  * LP Position: track full lifecycle (open -> close) with PnL
  */
 @Entity({ name: "positions" })
-export class PositionEntity extends StringAbstractEntity {
+export class PositionEntity extends UuidAbstractEntity {
     @ManyToOne(() => AssignedLiquidityPoolEntity, 
         (assignedLiquidityPool) => assignedLiquidityPool.positions, 
         { onDelete: "CASCADE" }
     )
     @JoinColumn({ name: "liquidity_pool_id" })
         pool: AssignedLiquidityPoolEntity
-
     // When opening position
     @Column({ type: "decimal", precision: 40, scale: 18, name: "amount_open" })
         amountOpen: string
@@ -23,15 +22,27 @@ export class PositionEntity extends StringAbstractEntity {
     @Column({ type: "text", name: "open_tx_hash" })
         openTxHash: string
 
-    @Column({ type: "bigint", name: "open_block_number" })
-        openBlockNumber: string
-
     @Column({ type: "text", name: "close_tx_hash", nullable: true })
         closeTxHash?: string
 
-    @Column({ type: "bigint", name: "close_block_number", nullable: true })
-        closeBlockNumber?: string
-
     @Column({ type: "decimal", precision: 40, scale: 18, name: "roi", nullable: true })
         roi?: string
+
+    @Column({ type: "int", name: "tick_lower" })
+        tickLower: number
+
+    @Column({ type: "int", name: "tick_upper" })
+        tickUpper: number
+
+    @Column({ type: "text", name: "liquidity" })
+        liquidity: string
+
+    @CreateDateColumn({ name: "open_at" })
+        openAt: Date
+        
+    @Column({ name: "close_at", type: "datetime", nullable: true })
+        closeAt?: Date
+
+    @Column({ type: "text", name: "position_id" })
+        positionId: string
 }

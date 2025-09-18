@@ -48,7 +48,6 @@ export class ZapService implements IZapService {
                 decimalsA: tokenA.decimals,
                 decimalsB: tokenB.decimals,
             })
-
         // Retry quote with deviation & slippage check
         const { finalReceive, routerId, quoteData, priceImpact } =
             await this.retryService.retry({
@@ -63,7 +62,6 @@ export class ZapService implements IZapService {
                             tokens,
                             network,
                         })
-
                     const minAmountOut = toScaledBN(
                         receiveAmount,
                         new Decimal(1).minus(swapSlippage),
@@ -91,6 +89,8 @@ export class ZapService implements IZapService {
                         this.logger.error(
                             WinstonLog.PriceImpactTooHigh,
                             {
+                                swapAmount: swapAmount.toString(),
+                                amountOut: amountOut.toString(),
                                 got: priceImpact.toString(),
                                 min: slippage.toString()
                             }

@@ -1,21 +1,20 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, OnModuleInit } from "@nestjs/common"
 import { Cron } from "@nestjs/schedule"
 import { LiquidityPoolService } from "@modules/blockchains"
-import { ChainId, Network } from "@modules/common"
-import { InjectWinston } from "@modules/winston"
+import { ChainId, Network, waitUntil } from "@modules/common"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger } from "winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { EventEmitterService, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
-import { RandomDelayService } from "@modules/mixin"
-import { ModuleRef } from "@nestjs/core"
+import { InjectSuperJson, RandomDelayService } from "@modules/mixin"
 import { DataLikeService } from "../data-like"
 import { FetchedPool } from "@modules/blockchains"
+import SuperJSON from "superjson"
 
 @Injectable()
-export class FetcherService {
+export class PoolFetcherService implements OnModuleInit {
     private cacheManager: Cache
-    private dataLikeService: DataLikeService
 
     constructor(
         private readonly liquidityPoolService: LiquidityPoolService,
@@ -24,21 +23,26 @@ export class FetcherService {
         private readonly cacheHelpersService: CacheHelpersService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly randomDelayService: RandomDelayService,
-        private readonly moduleRef: ModuleRef,
-    ) {
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
+        private readonly dataLikeService: DataLikeService,
+    ) {}
+
+    onModuleInit() {
         this.cacheManager = this.cacheHelpersService.getCacheManager({ autoSelect: true })
-        this.dataLikeService = this.moduleRef.get(DataLikeService,{strict: false})
     }
 
     // we fetch pools each 5s
     @Cron("*/5 * * * * *")
     async fetchPools() {
-        Object.values(ChainId).flatMap((chainId) =>
+        await waitUntil(() => this.dataLikeService.loaded)
+        const promises = Object.values(ChainId).flatMap((chainId) =>
             Object.values(Network).map(async (network) => {
                 await this.randomDelayService.waitRandom()
                 return this.fetchPoolsByChain(chainId, network)
             }),
         )
+        await Promise.all(promises)
     }
 
     private async fetchPoolsByChain(
@@ -65,7 +69,7 @@ export class FetcherService {
                 fetchedPools.push(...pools)
                 // we write a log
                 this.logger.info(
-                    "FetchedPools", 
+                    WinstonLog.FetchedPools, 
                     {
                         chainId,
                         dex: dex.dexId,
@@ -89,7 +93,7 @@ export class FetcherService {
                     chainId,
                     network,
                 }),
-            fetchedPools,
+            this.superjson.stringify(fetchedPools),
         )
         // we broadcast the events
         this.eventEmitterService.emit<LiquidityPoolsFetchedEvent>(
@@ -97,7 +101,7 @@ export class FetcherService {
             {
                 chainId,
                 network,
-                pools: fetchedPools,
+                pools: this.superjson.stringify(fetchedPools),
             }
         )
     }

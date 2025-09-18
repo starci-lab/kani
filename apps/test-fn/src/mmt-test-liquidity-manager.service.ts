@@ -1,67 +1,36 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import {
-    LiquidityPoolService,
     PythService,
 } from "@modules/blockchains"
-import { ChainId, Network } from "@modules/common"
-import {
-    DexId,
-    liquidityPoolData,
-    LiquidityPoolId,
-    tokenData,
-    TokenId,
-} from "@modules/databases"
+import { ChainId, waitUntil } from "@modules/common"
+import { DataLikeService, PoolFetcherService } from "@features/fetchers"
+import { PositionRecordManagerService } from "@features/fetchers"
+import { DexId, LiquidityPoolId } from "@modules/databases"
 import BN from "bn.js"
-import { UserLoaderService } from "@features/fetchers"
-import { MomentumActionService } from "@modules/blockchains"
 
 @Injectable()
-export class MmtTestLiquidityManangementService
-implements OnApplicationBootstrap
+export class MmtTestLiquidityManangementService implements OnApplicationBootstrap
 {
     constructor(
-    private readonly momentumActionService: MomentumActionService,
-    private readonly liquidityPoolService: LiquidityPoolService,
-    private readonly userLoaderService: UserLoaderService,
     private readonly pythService: PythService,
+    private readonly dataLikeService: DataLikeService,
+    private readonly positionRecordManagerService: PositionRecordManagerService,
+    private readonly poolFetcherService: PoolFetcherService,
     ) {}
 
     async onApplicationBootstrap() {
-        const liquidityPools = liquidityPoolData
-        const tokens = tokenData
-        this.pythService.initialize(tokens)
-        await this.pythService.preloadPrices()
-        const cetusUsdcEth025Pool = liquidityPools.find(
-            (liquidityPool) =>
-                liquidityPool.displayId === LiquidityPoolId.MomentumSuiUsdc0175,
-        )
-        if (!cetusUsdcEth025Pool) {
-            throw new Error("Sui usdc pool liquidity pool not found")
-        }
-        const [{ fetcher }] = await this.liquidityPoolService.getDexs({
+        await waitUntil(() => this.dataLikeService.loaded)
+        this.pythService.initialize(this.dataLikeService.tokens)
+        //await this.pythService.preloadPrices()
+        await this.poolFetcherService.fetchPools()
+        await this.positionRecordManagerService.writePosition({
+            dexId: DexId.Cetus,
+            poolId: LiquidityPoolId.CetusSuiUsdc005,
             chainId: ChainId.Sui,
-            dexIds: [DexId.Momentum],
-        })
-        const {
-            pools: [fetchedPool],
-        } = await fetcher.fetchPools({
-            liquidityPools: [cetusUsdcEth025Pool],
-            tokens,
-            network: Network.Mainnet,
-        })
-        const users = await this.userLoaderService.loadUsers()
-        const { txHash } = await this.momentumActionService.openPosition({
-            accountAddress:
-            "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+            accountAddress: "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+            amount: new BN("100000000"), // 1 u
             priorityAOverB: false,
-            pool: fetchedPool,
-            amount: new BN("1000000"), // 1 usdc
-            tokenAId: TokenId.SuiNative,
-            tokenBId: TokenId.SuiUsdc,
-            tokens,
-            user: users[0],
-            requireZapEligible: false
+            userId: "56a1ba22-92d2-4292-a38b-8ffae29ad508",
         })
-        console.log(txHash)
     }
 }

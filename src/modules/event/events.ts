@@ -1,4 +1,3 @@
-import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@modules/common"
 
 export enum EventName {
@@ -14,5 +13,5 @@ export enum EventName {
 export interface LiquidityPoolsFetchedEvent {
     chainId: ChainId
     network: Network
-    pools: Array<FetchedPool>
+    pools: string // serialized
 }

@@ -8,6 +8,8 @@ import { UserLike } from "@modules/databases"
 import { ChainId, Network, PlatformId } from "@modules/common"
 import { Logger } from "winston"
 import { InjectWinston } from "@modules/winston"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class PoolSelectorService {
@@ -15,6 +17,8 @@ export class PoolSelectorService {
         private readonly tickManagerService: TickManagerService,
         private readonly dataLikeQueryService: DataLikeQueryService,
         private readonly userLoaderService: UserLoaderService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         @InjectWinston()
         private readonly winstonLogger: Logger
     ) { }
@@ -29,7 +33,7 @@ export class PoolSelectorService {
                 promises.push((async () => {
                     await this.tryOpenPool({
                         user,
-                        pools: event.pools,
+                        pools: this.superjson.parse(event.pools),
                         platformId,
                         chainId: event.chainId,
                         network: event.network,
