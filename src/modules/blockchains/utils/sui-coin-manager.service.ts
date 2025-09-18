@@ -1,15 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import { CoinStruct, SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
-import { isSuiCoin } from "@modules/common"
+import { isSuiCoin } from "@modules/common" 
+import { CoinAsset } from "../types"
 
 /**
  * Response from splitting a coin into spend + change.
  */
 export interface SplitCoinResponse {
-    spendCoin: TransactionObjectArgument
-    sourceCoin: TransactionObjectArgument
+    spendCoin: CoinAsset
+    sourceCoin: CoinAsset
 }
 
 /**
@@ -26,7 +27,7 @@ export interface FetchAndMergeCoinsParams {
 
 export interface SplitCoinParams {
     txb?: Transaction
-    sourceCoin: TransactionObjectArgument
+    sourceCoin: CoinAsset
     requiredAmount: BN
 }
 
@@ -34,27 +35,21 @@ export interface SplitCoinParams {
  * Response from fetchAndMergeCoins operation.
  */
 export interface FetchAndMergeCoinsResponse {
-    sourceCoin: TransactionObjectArgument // Final merged coin object
-    totalBalance: BN                 // Total balance after merging
+    sourceCoin: CoinAsset // Final merged coin object
 }
 
 export interface SelectCoinAssetGreaterThanOrEqualParams {
-    coins: Array<CoinStruct>
+    coins: Array<CoinAsset>
     amount: BN
-    exclude: Array<string>
+    exclude: Array<CoinAsset>
 }
 
 
 export interface SelectCoinAssetGreaterThanOrEqualResponse {
-    selectedCoins: Array<CoinStruct>
-    remainingCoins: Array<CoinStruct>
-    excessCoin?: CoinStruct   // The last coin that caused overshoot (needs split)
+    selectedCoins: Array<CoinAsset>
+    remainingCoins: Array<CoinAsset>
+    excessCoin?: CoinAsset   // The last coin that caused overshoot (needs split)
     excessAmount?: BN         // The extra amount to split off from excessCoin
-}
-
-export interface UsedCoin {
-    balance: BN
-    coin: TransactionObjectArgument
 }
 
 @Injectable()
@@ -72,14 +67,24 @@ export class SuiCoinManagerService {
             throw new Error("sourceCoin is required to perform splitCoin")
         }
         txb = txb || new Transaction()
+        if (sourceCoin.coinAmount.lt(requiredAmount)) {
+            throw new Error("sourceCoin amount is less than requiredAmount")
+        }
         // Split out exactly the required amount into a new coin
-        const [spendCoin] = txb.splitCoins(sourceCoin, [
-            txb.pure.u64(requiredAmount.toString()),
-        ])
+        const [spendCoin] = txb.splitCoins(
+            sourceCoin.coinObj, [
+                txb.pure.u64(requiredAmount.toString()),
+            ])
         // Return both spendCoin and the remaining sourceCoin
         return {
-            spendCoin,
-            sourceCoin,
+            spendCoin: {
+                coinAmount: requiredAmount,
+                coinObj: spendCoin,
+            },
+            sourceCoin: {
+                coinAmount: sourceCoin.coinAmount.sub(requiredAmount),
+                coinObj: sourceCoin.coinObj,
+            },
         }
     }
 
@@ -98,9 +103,9 @@ export class SuiCoinManagerService {
         if (!fetchedCoins.data.length) throw new Error("No coin found")
       
         // Wrap all coins into UsedCoin
-        let usedCoins: Array<UsedCoin> = fetchedCoins.data.map((coin) => ({
-            balance: new BN(coin.balance),
-            coin: txb.object(coin.coinObjectId),
+        let usedCoins: Array<CoinAsset> = fetchedCoins.data.map((coin) => ({
+            coinAmount: new BN(coin.balance),
+            coinObj: txb.object(coin.coinObjectId),
         }))
       
         // special handling for SUI coin → reserve gas
@@ -110,14 +115,17 @@ export class SuiCoinManagerService {
         
             const { selectedCoins, remainingCoins, excessAmount, excessCoin } =
                 this.selectCoinAssetGreaterThanOrEqual({
-                    coins: fetchedCoins.data,
+                    coins: fetchedCoins.data.map((coin) => ({
+                        coinAmount: new BN(coin.balance),
+                        coinObj: txb.object(coin.coinObjectId),
+                    })),
                     amount: suiGasAmount,
                     exclude: [],
                 })
             // set gas payment
             txb.setGasPayment(
                 selectedCoins.map((coin) => ({
-                    objectId: coin.coinObjectId,
+                    objectId: coin.coinObj.coinObjectId,
                     version: coin.version,
                     digest: coin.digest,
                 }))

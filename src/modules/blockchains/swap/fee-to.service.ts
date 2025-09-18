@@ -5,6 +5,7 @@ import BN from "bn.js"
 import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 import { InjectSuiClients } from "../clients"
 import { SuiClient } from "@mysten/sui/client"
+import { CoinAsset } from "../types"
 
 const SUI_ADDRESS = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
 const SUI_ADDRESS_TESTNET = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
@@ -34,7 +35,7 @@ export interface AttachSuiFeeParams {
 export interface AttachSuiFeeResponse {
     txb: Transaction
     remainingAmount: BN
-    sourceCoin: TransactionObjectArgument
+    sourceCoin: CoinAsset
 }
 
 export interface AttachPnlFeeParams {

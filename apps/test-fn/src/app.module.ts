@@ -12,6 +12,7 @@ import { CacheModule, CacheType } from "@modules/cache"
 import { EventModule, EventType } from "@modules/event"
 import { InitializerModule } from "@modules/initializer"
 import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
+import { TestSwapService } from "./test-swap.service"
 
 @Module({
     imports: [
@@ -85,10 +86,10 @@ import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager
         })
     ],
     providers: [
-        //TestSwapService
+        TestSwapService
         //TurbosTestLiquidityManangementService
         //CetusTestLiquidityManangementService
-        MmtTestLiquidityManangementService
+        //MmtTestLiquidityManangementService
     ],
 })
 export class AppModule {}

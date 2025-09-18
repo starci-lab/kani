@@ -189,8 +189,7 @@ export class CetusActionService implements IActionService {
             transferCoinObjs: false,
         })
         const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
-        console.log(remainAmount.toString())
-        const { liquidityAmount, coinAmountA, coinAmountB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
+        const { liquidityAmount, tokenMaxA, tokenMaxB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
             tickLower,
             tickUpper,
             remainAmount,
@@ -199,6 +198,8 @@ export class CetusActionService implements IActionService {
             slippage,
             pool.currentSqrtPrice
         )
+        const providedAmountA = priorityAOverB ? remainAmount.toString() : Number(tokenMaxA)
+        const providedAmountB = priorityAOverB ? Number(tokenMaxB) : remainAmount.toString()
         const addLiquidityFixTokenParams: AddLiquidityFixTokenParams = {
             is_open: true,
             slippage,
@@ -207,10 +208,10 @@ export class CetusActionService implements IActionService {
             pool_id: pool.poolAddress,
             tick_lower: tickLower.toString(),
             tick_upper: tickUpper.toString(),
-            amount_a: coinAmountA.toString(),
-            amount_b: coinAmountB.toString(),
+            amount_a: providedAmountA.toString(),
+            amount_b: providedAmountB.toString(),
             rewarder_coin_types: [],
-            collect_fee: false,
+            collect_fee: true,
             fix_amount_a: priorityAOverB,
             pos_id: "",
         }

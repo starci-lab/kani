@@ -16,10 +16,3 @@ export interface ActionResponse {
     txb?: Transaction
     extraObj?: unknown
 }
-
-// we use this interface to extend the coin object with the amount
-// to ensure the amount is correct
-export interface ExtendedCoinObj {
-    coinObj: TransactionObjectArgument
-    coinAmount: BN
-}

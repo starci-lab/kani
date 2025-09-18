@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import { ChainId, Network, TokenType, toScaledBN, toUnit } from "@modules/common"
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
@@ -9,6 +9,7 @@ import { SuiSwapService } from "./sui-swap.service"
 import { PythService } from "../pyth"
 import { InjectSuiClients } from "../clients"
 import { SuiCoinManagerService } from "../utils"
+import { CoinAsset } from "../dexes"
 
 export interface GasSuiSwapParams {
     txb?: Transaction
@@ -27,7 +28,7 @@ export interface GasSuiSwapResponse {
     txb: Transaction
     remainingAmount: BN
     requireGasSwap: boolean
-    sourceCoin: TransactionObjectArgument
+    sourceCoin: CoinAsset
 }
 
 const SUI_GAS_LIMIT = new BN(300_000_000) // 0.3 SUI in mist units
@@ -95,7 +96,7 @@ export class GasSuiSwapUtilsService {
                     amountIn = balanceBN.sub(SUI_GAS_LIMIT)
                     diff = SUI_GAS_LIMIT
                 }
-                const sourceCoinResponse = this.suiCoinManagerService.splitCoin({
+                this.suiCoinManagerService.splitCoin({
                     requiredAmount: amountIn,
                     sourceCoin,
                     txb,
@@ -103,7 +104,10 @@ export class GasSuiSwapUtilsService {
                 return { 
                     txb, 
                     requireGasSwap: false, 
-                    sourceCoin: sourceCoinResponse.spendCoin,
+                    sourceCoin: {
+                        coinObj: sourceCoin,
+                        coinAmount: amountIn,
+                    },
                     remainingAmount: amountIn,
                 }   
             }
