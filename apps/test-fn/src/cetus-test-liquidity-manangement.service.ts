@@ -54,11 +54,11 @@ implements OnApplicationBootstrap
             accountAddress:
             "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
             pool: fetchedPool,
-            amount: new BN("100000000"), // 0.1 sui
+            amount: new BN("1000000"), // 1 u
             tokenAId: TokenId.SuiUsdc,
             tokenBId: TokenId.SuiNative,
             tokens,
-            priorityAOverB: true,
+            priorityAOverB: false,
             user: users[0],
             requireZapEligible: false
         })

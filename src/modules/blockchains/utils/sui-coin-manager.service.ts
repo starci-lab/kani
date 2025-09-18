@@ -114,10 +114,6 @@ export class SuiCoinManagerService {
                     amount: suiGasAmount,
                     exclude: [],
                 })
-            console.log("selectedCoins", selectedCoins.map(coin => coin.coinObjectId).join(", "))
-            console.log("remainingCoins", remainingCoins.map(coin => coin.coinObjectId).join(", "))
-            console.log("excessAmount", excessAmount?.toString())
-            console.log("excessCoin", excessCoin?.coinObjectId)
             // set gas payment
             txb.setGasPayment(
                 selectedCoins.map((coin) => ({

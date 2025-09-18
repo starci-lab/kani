@@ -111,7 +111,7 @@ export class FeeToService {
             feeToAddress, 
             remainingAmount
         } = this.splitAmount(amount, PlatformId.Sui, network)
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
             requiredAmount: feeAmount,

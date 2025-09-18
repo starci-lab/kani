@@ -37,11 +37,10 @@ export class SuiExecutionService {
                 if (handleInspectResult) {
                     const inspectResult = await suiClient.devInspectTransactionBlock({
                         sender: signer.toSuiAddress(),
-                        transactionBlock: transaction
+                        transactionBlock: transaction,
                     })
                     await handleInspectResult(inspectResult)
                 }
-               
                 const { digest, effects, objectChanges } =  await suiClient.signAndExecuteTransaction({
                     transaction,
                     signer,

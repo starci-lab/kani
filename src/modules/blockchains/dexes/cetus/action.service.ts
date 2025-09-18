@@ -1,4 +1,4 @@
-import { AddLiquidityParams, Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { AddLiquidityFixTokenParams, Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
@@ -98,6 +98,8 @@ export class CetusActionService implements IActionService {
             suiClient,
             txb
         })
+        // we reset the amount to the remaining amount after gas sui swap
+        amount = remainingAmountAfterGasSuiSwap
         const {
             txb: txbAfterAttachFee,
             remainingAmount,
@@ -112,7 +114,7 @@ export class CetusActionService implements IActionService {
         })
         // use this to calculate the ratio
         const quoteAmountA = computeRaw(1, tokenA.decimals)
-        const { coinAmountA, coinAmountB } =
+        const { coinAmountA: estCoinAmountA, coinAmountB: estCoinAmountB } =
             ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
                 tickLower,
                 tickUpper,
@@ -123,15 +125,21 @@ export class CetusActionService implements IActionService {
                 pool.currentSqrtPrice,
             )
         const ratio = computeRatio(
-            new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
-            new BN(coinAmountA).mul(toUnit(tokenB.decimals))
+            new BN(estCoinAmountB).mul(toUnit(tokenA.decimals)),
+            new BN(estCoinAmountA).mul(toUnit(tokenB.decimals))
         )
         const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
             pool.currentSqrtPrice,
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
+        const { 
+            swapAmount, 
+            routerId, 
+            quoteData, 
+            receiveAmount, 
+            remainAmount
+        } =
             await this.zapService.computeZapAmounts({
                 amountIn: remainingAmount,
                 ratio: new Decimal(ratio),
@@ -161,7 +169,7 @@ export class CetusActionService implements IActionService {
             },
         })
         if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment") 
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb: txbAfterAttachFee,
             sourceCoin,
             requiredAmount: swapAmount,
@@ -181,28 +189,29 @@ export class CetusActionService implements IActionService {
             transferCoinObjs: false,
         })
         const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
-        const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
-        const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
-        const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
-            pool.currentSqrtPrice,
+        console.log(remainAmount.toString())
+        const { liquidityAmount, coinAmountA, coinAmountB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
             tickLower,
             tickUpper,
-            {
-                coinA: providedAmountA,
-                coinB: providedAmountB,
-            }
+            remainAmount,
+            priorityAOverB,
+            false,
+            slippage,
+            pool.currentSqrtPrice
         )
-        const addLiquidityPayloadParams: AddLiquidityParams = {
+        const addLiquidityFixTokenParams: AddLiquidityFixTokenParams = {
+            is_open: true,
+            slippage,
             coinTypeA: tokenA.tokenAddress,
             coinTypeB: tokenB.tokenAddress,
             pool_id: pool.poolAddress,
             tick_lower: tickLower.toString(),
             tick_upper: tickUpper.toString(),
-            max_amount_b: providedAmountB.toString(),
-            max_amount_a: providedAmountA.toString(),
+            amount_a: coinAmountA.toString(),
+            amount_b: coinAmountB.toString(),
             rewarder_coin_types: [],
             collect_fee: false,
-            delta_liquidity: liquidity.toString(),
+            fix_amount_a: priorityAOverB,
             pos_id: "",
         }
         if (!txbAfterSwap) {
@@ -210,8 +219,9 @@ export class CetusActionService implements IActionService {
         }
         const inputCoinA = priorityAOverB ? sourceCoin : coinOut
         const inputCoinB = priorityAOverB ? coinOut : sourceCoin
-        const txbAfterAddLiquidity = await cetusClmmSdk.Position.createAddLiquidityPayload(
-            addLiquidityPayloadParams,
+        const txbAfterAddLiquidity = await cetusClmmSdk.Position.createAddLiquidityFixTokenPayload(
+            addLiquidityFixTokenParams,
+            undefined,
             txbAfterSwap,
             inputCoinA,
             inputCoinB,
@@ -246,7 +256,7 @@ export class CetusActionService implements IActionService {
             txHash, 
             tickLower, 
             tickUpper, 
-            liquidity, 
+            liquidity: liquidityAmount, 
             positionId,
             provisionAmount: remainingAmountAfterGasSuiSwap || amount
         }

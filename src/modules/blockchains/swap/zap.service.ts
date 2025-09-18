@@ -28,7 +28,6 @@ export class ZapService implements IZapService {
             network,
             priorityAOverB,
             ratio,
-            slippage = 0.01,
             swapSlippage = 0.01,
         } = params
 
@@ -84,15 +83,16 @@ export class ZapService implements IZapService {
                         new BN(amountAFinal.toString()).mul(toUnit(tokenB.decimals)),
                     )
                     // Price impact
-                    const priceImpact = new Decimal(ratio).sub(actualRatio).div(ratio)
-                    if (priceImpact.gt(slippage)) {
+                    const ratioDiff = priorityAOverB ? ratio.sub(actualRatio) : actualRatio.sub(ratio)
+                    const priceImpact = ratioDiff.div(ratio)
+                    if (priceImpact.gt(swapSlippage)) {
                         this.logger.error(
                             WinstonLog.PriceImpactTooHigh,
                             {
                                 swapAmount: swapAmount.toString(),
                                 amountOut: amountOut.toString(),
                                 got: priceImpact.toString(),
-                                min: slippage.toString()
+                                min: swapSlippage.toString()
                             }
                         )
                         throw new Error("Price impact too high")

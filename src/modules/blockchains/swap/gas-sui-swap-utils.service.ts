@@ -25,7 +25,7 @@ export interface GasSuiSwapParams {
 
 export interface GasSuiSwapResponse {
     txb: Transaction
-    remainingAmount?: BN
+    remainingAmount: BN
     requireGasSwap: boolean
     sourceCoin: TransactionObjectArgument
 }
