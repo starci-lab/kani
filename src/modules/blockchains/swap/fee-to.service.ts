@@ -1,11 +1,11 @@
-import { Network, PlatformId } from "@modules/common"
+import { Network, PlatformId, toScaledBN } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
-import { InjectSuiClients } from "../clients"
-import { SuiClient } from "@mysten/sui/client"
 import { CoinArgument } from "../types"
+import { TokenId, TokenLike } from "@modules/databases"
+import Decimal from "decimal.js"
 
 const SUI_ADDRESS = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
 const SUI_ADDRESS_TESTNET = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
@@ -16,6 +16,7 @@ const EVM_ADDRESS_TESTNET = "0x9f0204D1163d8C5c057aAb718a04C00E6C5d5790"
 
 const OPEN_POSITION_FEE_PERCENTAGE = 0.0004 // 0.04%
 const PNL_FEE_PERCENTAGE = 0.1 // 10%
+
 export interface SplitAmountResponse {
     feeAmount: BN
     remainingAmount: BN
@@ -25,57 +26,45 @@ export interface SplitAmountResponse {
 export interface AttachSuiFeeParams {
     txb?: Transaction
     amount: BN
-    tokenAddress: string
-    accountAddress: string
+    tokenId: TokenId
+    tokens: Array<TokenLike>
+    sourceCoin: CoinArgument
     network: Network
-    sourceCoin?: CoinArgument
-    suiClient: SuiClient
 }
 
 export interface AttachSuiFeeResponse {
-    txb: Transaction
-    remainingAmount: BN
     sourceCoin: CoinArgument
 }
 
 export interface AttachPnlFeeParams {
     txb?: Transaction
     amount: BN
-    tokenAddress: string
-    accountAddress: string
+    tokenId: TokenId
+    tokens: Array<TokenLike>
+    sourceCoin: CoinArgument
     network: Network
-    sourceCoin?: CoinArgument
-    suiClient: SuiClient
 }
 
 export interface AttachPnlFeeResponse {
-    txb: Transaction
-    remainingAmount: BN
     sourceCoin: CoinArgument
 }
 
 @Injectable()
 export class FeeToService {
     constructor(
-        private readonly suiCoinManagerService: SuiCoinManagerService,
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly suiCoinManagerService: SuiCoinManagerService
     ) { }
 
     private splitAmount(
         amount: BN,
+        decimals: number,
         platform: PlatformId,
         network: Network
     ): SplitAmountResponse {
         const feeToAddress = this.getFeeToAddress(platform, network)
-
         // fee = amount * percentage
-        const feeAmount = amount.mul(
-            new BN(Math.floor(OPEN_POSITION_FEE_PERCENTAGE * 1e9))
-        ).div(new BN(1e9))
-
+        const feeAmount = toScaledBN(amount, new Decimal(OPEN_POSITION_FEE_PERCENTAGE))
         const remainingAmount = amount.sub(feeAmount)
-
         return {
             feeAmount,
             remainingAmount,
@@ -86,30 +75,22 @@ export class FeeToService {
     public async attachSuiFee(
         {
             txb,
-            tokenAddress,
-            accountAddress,
-            network,
+            tokenId,
+            tokens,
             amount,
             sourceCoin,
-            suiClient
+            network,
         }: AttachSuiFeeParams
     ): Promise<AttachSuiFeeResponse> {
         txb = txb || new Transaction()
-        if (!sourceCoin) {
-            const response = await this.suiCoinManagerService.fetchAndMergeCoins({
-                suiClient,
-                txb,
-                owner: accountAddress,
-                coinType: tokenAddress,
-                requiredAmount: amount,
-            })
-            sourceCoin = response.sourceCoin
+        const token = tokens.find(token => token.displayId === tokenId)
+        if (!token) {
+            throw new Error("Token not found")
         }
         const { 
             feeAmount, 
             feeToAddress, 
-            remainingAmount
-        } = this.splitAmount(amount, PlatformId.Sui, network)
+        } = this.splitAmount(amount, token.decimals, PlatformId.Sui, network)
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
@@ -117,9 +98,7 @@ export class FeeToService {
         })
         txb.transferObjects([spendCoin.coinArg], feeToAddress)
         return {
-            txb,
-            remainingAmount,
-            sourceCoin
+            sourceCoin,
         }
     }
 
@@ -140,42 +119,30 @@ export class FeeToService {
     public async attachSuiPnlFee({
         txb,
         amount,
-        tokenAddress,
-        accountAddress,
+        tokenId,
+        tokens,
         network,
         sourceCoin,
-        suiClient,
     }: AttachPnlFeeParams): Promise<AttachPnlFeeResponse> {
         txb = txb || new Transaction()
-
-        if (!sourceCoin) {
-            const response = await this.suiCoinManagerService.fetchAndMergeCoins({
-                suiClient,
-                txb,
-                owner: accountAddress,
-                coinType: tokenAddress,
-                requiredAmount: amount,
-            })
-            sourceCoin = response.sourceCoin
+        const token = tokens.find(token => token.displayId === tokenId)
+        if (!token) {
+            throw new Error("Token not found")
         }
-
         // fee = amount * PNL_FEE_PERCENTAGE
         const feeAmount = amount.mul(
             new BN(Math.floor(PNL_FEE_PERCENTAGE * 1e9))
         ).div(new BN(1e9))
 
-        const remainingAmount = amount.sub(feeAmount)
         const feeToAddress = this.getFeeToAddress(PlatformId.Sui, network)
 
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
             requiredAmount: feeAmount,
         })
         txb.transferObjects([spendCoin.coinArg], feeToAddress)
         return {
-            txb,
-            remainingAmount,
             sourceCoin,
         }
     }

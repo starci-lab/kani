@@ -14,6 +14,7 @@ import {
 import BN from "bn.js"
 import { UserLoaderService } from "@features/fetchers"
 import { CetusActionService } from "@modules/blockchains/dexes/cetus/action.service"
+import { RetryService } from "@modules/mixin"
 
 @Injectable()
 export class CetusTestLiquidityManangementService
@@ -24,6 +25,7 @@ implements OnApplicationBootstrap
     private readonly liquidityPoolService: LiquidityPoolService,
     private readonly userLoaderService: UserLoaderService,
     private readonly pythService: PythService,
+    private readonly retryService: RetryService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -50,18 +52,24 @@ implements OnApplicationBootstrap
             network: Network.Mainnet,
         })
         const users = await this.userLoaderService.loadUsers()
-        const { txHash, positionId } = await this.cetusActionService.openPosition({
-            accountAddress:
-            "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
-            pool: fetchedPool,
-            amount: new BN("1000000"), // 1 u
-            tokenAId: TokenId.SuiUsdc,
-            tokenBId: TokenId.SuiNative,
-            tokens,
-            priorityAOverB: false,
-            user: users[0],
-            requireZapEligible: false
+        const digest = await this.retryService.retry({
+            action: async () => {
+                return await this.cetusActionService.openPosition({
+                    accountAddress:
+                    "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+                    pool: fetchedPool,
+                    amount: new BN(1_000_000_000), // 1 sui
+                    tokenAId: TokenId.SuiUsdc,
+                    tokenBId: TokenId.SuiNative,
+                    tokens,
+                    priorityAOverB: false,
+                    user: users[0],
+                    requireZapEligible: false
+                })
+            },
+            maxRetries: 10,
+            delay: 100,
         })
-        console.log(txHash, positionId)
+        console.log(digest)
     }
 }

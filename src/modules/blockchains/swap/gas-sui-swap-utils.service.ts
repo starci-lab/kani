@@ -31,8 +31,6 @@ export interface GasSuiSwapParams {
 }
 
 export interface GasSuiSwapResponse {
-    txb: Transaction;
-    remainingAmount: BN;
     requireGasSwap: boolean;
     sourceCoin: CoinArgument;
 }
@@ -71,7 +69,7 @@ export class GasSuiSwapUtilsService {
             throw new Error("Token not found")
         }
         const {
-            sourceCoin
+            sourceCoin,
         } = await this.suiCoinManagerService.fetchAndMergeCoins({
             owner: accountAddress,
             coinType: tokenIn.tokenAddress,
@@ -86,69 +84,74 @@ export class GasSuiSwapUtilsService {
         // case we use native token as input
         if (tokenIn.type === TokenType.Native) {
             return {
-                txb,
                 requireGasSwap: false,
                 sourceCoin: sourceCoin,
-                remainingAmount: amountIn,
             }
         }
-        // // --- 2. Fetch oracle price (tokenIn → SUI)
-        // // mean that 1 sui = oraclePrice  tokenIn
-        // // requre t sui = t x oraclePrice  tokenIn
-        // const oraclePrice = await this.pythService.computeOraclePrice({
-        //     tokenAId: tokenNative.displayId,
-        //     tokenBId: tokenIn.displayId,
-        //     chainId: ChainId.Sui,
-        //     network,
-        // })
-        // if (!oraclePrice || oraclePrice.lte(0)) {
-        //     throw new Error("Invalid oracle price")
-        // }
-        // // --- 3. Compute how much SUI is missing to reach 0.6
-        // const neededSui = SUI_GAS_TARGET.sub(sourceCoin.coinAmount)
-        // if (neededSui.lte(new BN(0))) {
-        //     return {
-        //         txb,
-        //         requireGasSwap: false,
-        //         sourceCoin,
-        //         remainingAmount: amountIn,
-        //     }
-        // }
-        // const swapAmount = toScaledBN(
-        //     neededSui.mul(toUnit(tokenIn.decimals)),
-        //     oraclePrice,
-        // ).div(toUnit(tokenNative.decimals))
-        // // --- 5. Append swap action
-        // const { routerId, quoteData } = await this.suiSwapService.quote({
-        //     tokenIn: tokenIn.displayId,
-        //     tokenOut: tokenNative.displayId,
-        //     amountIn: swapAmount,
-        //     tokens,
-        // })
-
-        // const { spendCoin } = this.suiCoinManagerService.splitCoin({
-        //     requiredAmount: swapAmount,
-        //     sourceCoin,
-        //     txb,
-        // })
-        // const { txb: txbAfterSwap } = await this.suiSwapService.swap({
-        //     txb,
-        //     tokenIn: tokenIn.displayId,
-        //     tokenOut: tokenNative.displayId,
-        //     amountIn: swapAmount,
-        //     tokens,
-        //     fromAddress: accountAddress,
-        //     slippage,
-        //     transferCoinObjs: true,
-        //     inputCoin: spendCoin,
-        //     quoteData,
-        //     routerId,
-        // })
-
-        // const remainingAmount = amountIn.sub(swapAmount)
-        return {
+        // --- 2. Fetch oracle price (tokenIn → SUI)
+        // mean that 1 sui = oraclePrice  tokenIn
+        // requre t sui = t x oraclePrice  tokenIn
+        // --- 3. Compute how much SUI is missing to reach 0.6
+        const { totalBalance } = await suiClient.getBalance({
+            owner: accountAddress,
+            coinType: tokenNative.tokenAddress,
+        })
+        const suiBalance = new BN(totalBalance)
+        if (suiBalance.gte(SUI_GAS_LIMIT)) {
+            return {
+                requireGasSwap: false,
+                sourceCoin,
+            }
+        }
+        const neededSui = SUI_GAS_TARGET.sub(suiBalance)
+        if (neededSui.lte(new BN(0))) {
+            return {
+                requireGasSwap: false,
+                sourceCoin,
+            }
+        }
+        const oraclePrice = await this.pythService.computeOraclePrice({
+            tokenAId: tokenNative.displayId,
+            tokenBId: tokenIn.displayId,
+            chainId: ChainId.Sui,
+            network,
+        })
+        if (!oraclePrice || oraclePrice.lte(0)) {
+            throw new Error("Invalid oracle price")
+        }
+        const swapAmount = toScaledBN(
+            neededSui.mul(toUnit(tokenIn.decimals)),
+            oraclePrice,
+        ).div(toUnit(tokenNative.decimals))
+        // --- 5. Append swap action
+        const { routerId, quoteData } = await this.suiSwapService.quote({
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenNative.displayId,
+            amountIn: swapAmount,
+            tokens,
+        })
+        if (sourceCoin.coinAmount.lt(swapAmount)) {
+            throw new Error("Source coin amount is less than swap amount")
+        }
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
+            requiredAmount: swapAmount,
+            sourceCoin,
             txb,
-            remainingAmount: amountIn,
+        })
+        await this.suiSwapService.swap({
+            txb,
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenNative.displayId,
+            amountIn: swapAmount,
+            tokens,
+            fromAddress: accountAddress,
+            slippage,
+            transferCoinObjs: true,
+            inputCoin: spendCoin,
+            quoteData,
+            routerId,
+        })
+        return {
             sourceCoin,
             requireGasSwap: true,
         }

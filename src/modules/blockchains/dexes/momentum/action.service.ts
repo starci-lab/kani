@@ -10,28 +10,17 @@ import { Network, ZERO_BN, computeRatio, computeRaw, toUnit } from "@modules/com
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
 import { ActionResponse } from "../types"
 import { Transaction } from "@mysten/sui/transactions"
-import {
-    TickManagerService,
-    FeeToService,
-    GasSuiSwapUtilsService,
-    OPEN_POSITION_SLIPPAGE,
-    SuiExecutionService,
-    SignerService,
-    SWAP_OPEN_POSITION_SLIPPAGE,
-    PriceRatioService,
-    SuiCoinManagerService,
-    SuiSwapService,
-    ZapService,
-    TickMathService,
-    PythService
-} from "../../../blockchains"
-import { InjectSuiClients } from "../../../blockchains"
+import { InjectSuiClients } from "../../clients"
 import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { estLiquidityAndcoinAmountFromOneAmounts } from "@mmt-finance/clmm-sdk/dist/utils/poolUtils"
-import { CoinArgument } from "../../types"
+import { FeeToService, GasSuiSwapUtilsService, ZapService, SuiSwapService, OPEN_POSITION_SLIPPAGE, SWAP_OPEN_POSITION_SLIPPAGE } from "../../swap"
+import { SignerService } from "../../signers"
+import { PythService } from "../../pyth"
+import { SuiCoinManagerService } from "../../utils"
+import { PriceRatioService, TickMathService, SuiExecutionService, TickManagerService } from "../../utils"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -95,9 +84,7 @@ export class MomentumActionService implements IActionService {
             network,
         })
         const {
-            txb: txAfterSwapGas,
             sourceCoin,
-            remainingAmount: remainingAmountAfterGasSuiSwap
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             amountIn: amount,
@@ -108,16 +95,12 @@ export class MomentumActionService implements IActionService {
             suiClient,
             txb
         })
-        const {
-            txb: txbAfterAttachFee,
-            remainingAmount,
-        } = await this.feeToService.attachSuiFee({
-            txb: txAfterSwapGas,
-            tokenAddress: tokenIn.tokenAddress,
-            accountAddress,
+        await this.feeToService.attachSuiFee({
+            txb,
+            tokenId: tokenIn.displayId,
+            tokens,
             network,
             amount,
-            suiClient,
             sourceCoin
         })
         // use this to calculate the ratio
@@ -148,9 +131,9 @@ export class MomentumActionService implements IActionService {
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
+        const { swapAmount, routerId, quoteData, receiveAmount } =
             await this.zapService.computeZapAmounts({
-                amountIn: remainingAmount,
+                amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
                 spotPrice,
                 priorityAOverB,
@@ -163,9 +146,9 @@ export class MomentumActionService implements IActionService {
             })
         // 4. optional ratio check
         const zapAmountA = priorityAOverB 
-            ? new BN(remainAmount) : new BN(receiveAmount)
+            ? new BN(sourceCoin.coinAmount) : new BN(receiveAmount)
         const zapAmountB = priorityAOverB 
-            ? new BN(receiveAmount) : new BN(remainAmount)
+            ? new BN(receiveAmount) : new BN(sourceCoin.coinAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
@@ -178,13 +161,13 @@ export class MomentumActionService implements IActionService {
             },
         })
         if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
-            txb: txbAfterAttachFee,
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
+            txb,
             sourceCoin,
             requiredAmount: swapAmount,
         })
-        const { txb: txbAfterSwap, extraObj } = await this.suiSwapService.swap({
-            txb: txbAfterAttachFee,
+        const { coinOut } = await this.suiSwapService.swap({
+            txb,
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             amountIn: swapAmount,
@@ -197,17 +180,13 @@ export class MomentumActionService implements IActionService {
             inputCoin: spendCoin,
             transferCoinObjs: false,
         })
-        const coinOut = (extraObj as { coinOut: CoinArgument }).coinOut
-        if (!txbAfterSwap) {
-            throw new Error("Transaction is required")
-        }
         if (!coinOut) {
             throw new Error("Coin out or change coin is missing")
         }
         const providedCoinA = priorityAOverB ? sourceCoin : coinOut
         const providedCoinB = priorityAOverB ? coinOut : sourceCoin
         const position = mmtSdk.Position.openPosition(
-            txbAfterSwap, 
+            txb, 
             {
                 objectId: pool.poolAddress,
                 tokenXType: tokenA.tokenAddress,
@@ -218,7 +197,7 @@ export class MomentumActionService implements IActionService {
             upperSqrtPrice.toString(),
         )
         mmtSdk.Pool.addLiquidity(
-            txbAfterSwap,
+            txb,
             {
                 objectId: pool.poolAddress,
                 tokenXType: tokenA.tokenAddress,
@@ -232,7 +211,7 @@ export class MomentumActionService implements IActionService {
             BigInt(0), // Min b added
             accountAddress,
         )
-        txbAfterSwap.transferObjects([position], accountAddress)
+        txb.transferObjects([position], accountAddress)
         let positionId = ""
         const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
             const [positionObjId] = objectChanges
@@ -252,7 +231,7 @@ export class MomentumActionService implements IActionService {
             network,
             action: async (signer) => {
                 return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txbAfterSwap,
+                    transaction: txb,
                     suiClient,
                     signer,
                     handleObjectChanges
@@ -265,7 +244,7 @@ export class MomentumActionService implements IActionService {
             tickUpper,
             liquidity: liquidityAmount,
             positionId,
-            provisionAmount: remainingAmountAfterGasSuiSwap || amount
+            provisionAmount: amount
         }
     }
 

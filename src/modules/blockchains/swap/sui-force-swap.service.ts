@@ -1,15 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { TransactionObjectArgument } from "@mysten/sui/transactions"
-import { Network, ZERO_BN } from "@modules/common"
+import { Network } from "@modules/common"
 import { 
-    SuiCoinManagerService, 
-    FeeToService, 
+    SuiCoinManagerService,  
 } from "../utils"
 import { SuiSwapService } from "./sui-swap.service"
 import { ForceSwapParams } from "../interfaces"
 import { ActionResponse } from "../dexes"
 import { InjectSuiClients } from "../clients"
 import { SuiClient } from "@mysten/sui/client"
+import { FeeToService } from "./fee-to.service"
 
 @Injectable()
 export class SuiForceSwapService {
@@ -53,7 +52,7 @@ export class SuiForceSwapService {
         })
 
         // 2. Swap all tokenIn → tokenOut
-        const { txb: txbAfterSwap, extraObj } = await this.suiSwapService.swap({
+        const { coinOut } = await this.suiSwapService.swap({
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             inputCoin: sourceCoin,
@@ -63,28 +62,25 @@ export class SuiForceSwapService {
             tokens,
         })
 
-        const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
         if (!coinOut) throw new Error("Swap result coinOut is missing")
 
-        let finalTxb = txbAfterSwap
-
         // 3. Attach PnL fee nếu có
-        if (pnlAmount && pnlAmount.gt(ZERO_BN)) {
-            const { txb: txbAfterAttachFee } = await this.feeToService.attachSuiPnlFee({
-                txb: finalTxb,
-                amount: pnlAmount,
-                tokenAddress: tokenOut.tokenAddress, // thu phí trên tokenOut
-                accountAddress,
-                network,
-                sourceCoin: {
-                    coinArg: coinOut,
-                    coinAmount: pnlAmount,
-                },
-                suiClient
-            })
-            finalTxb = txbAfterAttachFee
-        }
+        // if (pnlAmount && pnlAmount.gt(ZERO_BN)) {
+        //     const { sourceCoin } = await this.feeToService.attachSuiPnlFee({
+        //         txb: finalTxb,
+        //         amount: pnlAmount,
+        //         tokenId: tokenOut.displayId,
+        //         tokens,
+        //         network,
+        //         sourceCoin: {
+        //             coinArg: coinOut,
+        //             coinAmount: pnlAmount,
+        //         },
+        //         network,
+        //     })
+        //     finalTxb = txbAfterSwap
+        // }
 
-        return { txb: finalTxb }
+        return { }
     }
 }

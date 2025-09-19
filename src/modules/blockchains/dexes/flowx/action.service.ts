@@ -94,9 +94,7 @@ export class FlowXActionService implements IActionService {
             network,
         })
         const {
-            txb: txAfterSwapGas,
             sourceCoin,
-            remainingAmount: remainingAmountAfterGasSuiSwap
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
@@ -107,16 +105,12 @@ export class FlowXActionService implements IActionService {
             suiClient,
             txb
         })
-        const {
-            txb: txbAfterAttachFee,
-            remainingAmount,
-        } = await this.feeToService.attachSuiFee({
-            txb: txAfterSwapGas,
-            tokenAddress: tokenIn.tokenAddress,
-            accountAddress,
+        await this.feeToService.attachSuiFee({
+            txb,
+            tokenId: tokenIn.displayId,
+            tokens,
             network,
             amount,
-            suiClient,
             sourceCoin,
         })
         // use this to calculate the ratio
@@ -142,7 +136,7 @@ export class FlowXActionService implements IActionService {
         )
         const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
             await this.zapService.computeZapAmounts({
-                amountIn: remainingAmount,
+                amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
                 spotPrice,
                 priorityAOverB,
@@ -155,9 +149,9 @@ export class FlowXActionService implements IActionService {
             })
         // 4. optional ratio check
         const zapAmountA = priorityAOverB
-            ? new BN(remainingAmount) : new BN(receiveAmount)
+            ? new BN(sourceCoin.coinAmount) : new BN(receiveAmount)
         const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount) : new BN(remainingAmount)
+            ? new BN(receiveAmount) : new BN(sourceCoin.coinAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
@@ -170,13 +164,13 @@ export class FlowXActionService implements IActionService {
             },
         })
         if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment") 
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
-            txb: txbAfterAttachFee,
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
+            txb,
             sourceCoin,
             requiredAmount: swapAmount,
         })
         const { txb: txbAfterSwap } = await this.suiSwapService.swap({
-            txb: txbAfterAttachFee,
+            txb,
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             amountIn: swapAmount,
@@ -255,7 +249,7 @@ export class FlowXActionService implements IActionService {
             tickUpper, 
             liquidity, 
             positionId,
-            provisionAmount: remainingAmountAfterGasSuiSwap || amount
+            provisionAmount: amount
         }
     }
 

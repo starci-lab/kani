@@ -10,7 +10,7 @@ import { computePercentage, computeRatio, computeRaw, Network, toUnit, ZERO_BN }
 import { TurbosSdk } from "turbos-clmm-sdk"
 import { TickManagerService } from "../../utils"
 import { ActionResponse } from "../../dexes"
-import { FeeToService, PriceRatioService, TickMathService } from "../../utils"
+import { PriceRatioService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
 import { SuiCoinManagerService } from "../../utils"
@@ -30,7 +30,7 @@ import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
 import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { CoinArgument } from "../../types"
+import { FeeToService } from "../../swap"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -92,9 +92,7 @@ export class TurbosActionService implements IActionService {
             network,
         })
         const {
-            txb: txAfterSwapGas,
             sourceCoin,
-            remainingAmount: remainingAmountAfterGasSuiSwap
         } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
@@ -105,16 +103,12 @@ export class TurbosActionService implements IActionService {
             suiClient,
             txb
         })
-        const {
-            txb: txbAfterAttachFee,
-            remainingAmount,
-        } = await this.feeToService.attachSuiFee({
-            txb: txAfterSwapGas,
-            tokenAddress: tokenIn.tokenAddress,
-            accountAddress,
+        await this.feeToService.attachSuiFee({
+            txb,
+            tokenId: tokenIn.displayId,
+            tokens,
             network,
             amount,
-            suiClient,
             sourceCoin
         })
         // use this to calculate the ratio
@@ -140,7 +134,7 @@ export class TurbosActionService implements IActionService {
         )
         const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
             await this.zapService.computeZapAmounts({
-                amountIn: remainingAmount,
+                amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
                 spotPrice,
                 priorityAOverB,
@@ -154,9 +148,9 @@ export class TurbosActionService implements IActionService {
 
         // 4. optional ratio check
         const zapAmountA = priorityAOverB
-            ? new BN(remainingAmount) : new BN(receiveAmount)
+            ? new BN(sourceCoin.coinAmount) : new BN(receiveAmount)
         const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount) : new BN(remainingAmount)
+            ? new BN(receiveAmount) : new BN(sourceCoin.coinAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
@@ -169,13 +163,13 @@ export class TurbosActionService implements IActionService {
             },
         })
         if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
-        const { spendCoin } = await this.suiCoinManagerService.splitCoin({
-            txb: txbAfterAttachFee,
+        const { spendCoin } = this.suiCoinManagerService.splitCoin({
+            txb,
             sourceCoin,
             requiredAmount: swapAmount,
         })
-        const { txb: txbAfterSwap, extraObj } = await this.suiSwapService.swap({
-            txb: txbAfterAttachFee,
+        const { coinOut } = await this.suiSwapService.swap({
+            txb,
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             amountIn: swapAmount,
@@ -188,7 +182,9 @@ export class TurbosActionService implements IActionService {
             inputCoin: spendCoin,
             transferCoinObjs: false,
         })
-        const coinOut = (extraObj as { coinOut: CoinArgument }).coinOut
+        if (!coinOut) {
+            throw new Error("Coin out is required")
+        }
         // we process add liquidity
         const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
         const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
@@ -216,7 +212,7 @@ export class TurbosActionService implements IActionService {
             tickLower,
             tickUpper,
             slippage: computePercentage(slippage),
-            txb: txbAfterSwap,
+            txb,
             coinAObjectArguments: [providedCoinAmountA.coinArg],
             coinBObjectArguments: [providedCoinAmountB.coinArg],
         })
@@ -252,7 +248,7 @@ export class TurbosActionService implements IActionService {
             tickUpper,
             liquidity,
             positionId,
-            provisionAmount: remainingAmountAfterGasSuiSwap || amount
+            provisionAmount: amount
         }
     }
 

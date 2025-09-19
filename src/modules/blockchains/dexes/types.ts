@@ -1,8 +1,8 @@
 
 import { BaseModuleOptions } from "@modules/common"
 import { DexId } from "@modules/databases"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
-import BN from "bn.js"
+import { CoinArgument } from "../types"
+import { Transaction } from "@mysten/sui/transactions"
 
 export interface DexesOptions extends BaseModuleOptions {
     dexes?: Array<DexId>
@@ -12,7 +12,6 @@ export interface DexesOptions extends BaseModuleOptions {
 export interface ActionResponse {
     // tx hash returned if the tx is excuted
     txHash?: string
-    // txb (sui only), in order to connect to the tx
+    coinOut?: CoinArgument
     txb?: Transaction
-    extraObj?: unknown
 }

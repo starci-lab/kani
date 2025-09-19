@@ -4,7 +4,7 @@ import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
 import { CoinArgument, CoinAsset } from "../types"
 import { isSuiCoin } from "@modules/common"
-import { toCoinArguments } from "../converter"
+import { toCoinArguments } from "../convert"
 
 export interface SplitCoinResponse {
     spendCoin: CoinArgument
@@ -27,6 +27,7 @@ export interface SplitCoinParams {
 
 export interface FetchAndMergeCoinsResponse {
     sourceCoin: CoinArgument
+    balance: BN
 }
 
 export interface SelectCoinAssetGreaterThanOrEqualParams {
@@ -68,12 +69,11 @@ export class SuiCoinManagerService {
             )
             throw new Error("sourceCoin amount is less than requiredAmount")
         }
-
         const [spendCoin] = txb.splitCoins(
             sourceCoin.coinArg,
             [txb.pure.u64(requiredAmount.toString())]
         )
-
+        sourceCoin.coinAmount = sourceCoin.coinAmount.sub(requiredAmount)
         return {
             spendCoin: {
                 coinAmount: requiredAmount,
@@ -130,22 +130,28 @@ export class SuiCoinManagerService {
                     coinAmount: coinAmount,
                     coinArg: sourceCoin,
                 },
+                balance: userBalance,
             }
         }
 
         // If only one coin exists, return it directly
+        // Select coins to cover the required amount
+        const coinAmount = BN.min(userBalance, requiredAmount)
+
         if (coins.length === 1) {
-            const coin = coins[0]
+            const [ coin ] = coins
+            const spendCoin = txb.splitCoins(txb.object(coin.coinRef.objectId), [
+                txb.pure.u64(coinAmount.toString()),
+            ])
             return {
                 sourceCoin: {
-                    coinAmount: coin.coinAmount,
-                    coinArg: txb.object(coin.coinRef.objectId),
+                    coinAmount,
+                    coinArg: txb.object(spendCoin),
                 },
+                balance: userBalance,
             }
         }
 
-        // Select coins to cover the required amount
-        const coinAmount = BN.min(userBalance, requiredAmount)
         const response = this.selectCoinAssetGreaterThanOrEqual({
             coins,
             amount: coinAmount,
@@ -162,7 +168,7 @@ export class SuiCoinManagerService {
             requiredAmount: coinAmount,
             txb,
         })
-        return { sourceCoin: spendCoin }
+        return { sourceCoin: spendCoin, balance: userBalance }
     }
 
     /**

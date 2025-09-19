@@ -10,6 +10,7 @@ export interface SignAndExecuteTransactionParams {
     suiClient: SuiClient
     transaction: Transaction
     signer: Signer
+    stimulateOnly?: boolean
     handleInspectResult?: (inspectResult: DevInspectResults) => Promise<void> | void
     handleEffects?: (effects: TransactionEffects) => Promise<void> | void
     handleObjectChanges?: (objectChanges: Array<SuiObjectChange>) => Promise<void> | void
@@ -27,6 +28,7 @@ export class SuiExecutionService {
             transaction,
             signer,
             suiClient,
+            stimulateOnly,
             handleInspectResult,
             handleEffects,
             handleObjectChanges,
@@ -34,12 +36,15 @@ export class SuiExecutionService {
     ): Promise<string> {
         return await this.retryService.retry({
             action: async () => { 
-                if (handleInspectResult) {
+                if (handleInspectResult || stimulateOnly) {
                     const inspectResult = await suiClient.devInspectTransactionBlock({
                         sender: signer.toSuiAddress(),
                         transactionBlock: transaction,
                     })
-                    await handleInspectResult(inspectResult)
+                    if (handleInspectResult) {
+                        await handleInspectResult(inspectResult)
+                    }
+                    return inspectResult.effects.transactionDigest
                 }
                 const { digest, effects, objectChanges } =  await suiClient.signAndExecuteTransaction({
                     transaction,
@@ -80,7 +85,7 @@ export class SuiExecutionService {
                     })
                 return digest
             },
-            maxRetries: 10,
+            maxRetries: 1,
             delay: 100,
         })
     }

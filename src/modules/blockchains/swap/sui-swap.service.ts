@@ -119,13 +119,12 @@ export class SuiSwapService implements ISwapService {
             if (transferCoinObjs) {
                 txb.transferObjects([outputCoin], recipientAddress) 
             }
+            // reduce input coin amount
+            inputCoin.coinAmount = inputCoin.coinAmount.sub(_quoteData.amountIn)
             return {
-                txb,
-                extraObj: {
-                    coinOut: {
-                        coinAmount: new BN(_quoteData.amountOut),
-                        coinArg: outputCoin,
-                    }
+                coinOut: {
+                    coinAmount: new BN(_quoteData.amountOut),
+                    coinArg: outputCoin,
                 }
             }
         }
@@ -159,13 +158,12 @@ export class SuiSwapService implements ISwapService {
             if (transferCoinObjs) {
                 txb.transferObjects([coinOut], recipientAddress) 
             }
+            // reduce input coin amount
+            inputCoin.coinAmount = inputCoin.coinAmount.sub(new BN(_quoteData.swapAmountWithDecimal))
             return {
-                txb,
-                extraObj: {
-                    coinOut: {
-                        coinAmount: new BN(_quoteData.returnAmountWithDecimal),
-                        coinArg: coinOut,
-                    }
+                coinOut: {
+                    coinAmount: new BN(_quoteData.returnAmountWithDecimal),
+                    coinArg: coinOut,
                 }
             }
         }
