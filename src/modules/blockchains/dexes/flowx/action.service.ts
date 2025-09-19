@@ -9,8 +9,8 @@ import {
 import { InjectFlowXClmmSdks } from "./flowx.decorators"
 import { computeRatio, computeRaw, Network, toUnit } from "../../../common"
 import { Percent, CoinAmount } from "@flowx-finance/sdk"
-import { ActionResponse } from "../types"
 import { Transaction } from "@mysten/sui/transactions"
+import { ActionResponse } from "../types"
 import {
     TickManagerService,
     FeeToService,
@@ -186,10 +186,10 @@ export class FlowXActionService implements IActionService {
             routerId,
             network,
             slippage: swapSlippage,
-            inputCoinObj: spendCoin,
+            inputCoin: spendCoin,
             transferCoinObjs: false,
         })
-        // const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        // const coinOut = (extraObj as { coinOut: CoinAsset }).coinOut
         const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
         const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
         const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(

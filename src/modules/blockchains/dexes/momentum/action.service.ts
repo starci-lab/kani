@@ -9,7 +9,7 @@ import { InjectMomentumClmmSdks } from "./momentum.decorators"
 import { Network, ZERO_BN, computeRatio, computeRaw, toUnit } from "@modules/common"
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
 import { ActionResponse } from "../types"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import {
     TickManagerService,
     FeeToService,
@@ -31,6 +31,7 @@ import { clientIndex } from "./inner-constants"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { estLiquidityAndcoinAmountFromOneAmounts } from "@mmt-finance/clmm-sdk/dist/utils/poolUtils"
+import { CoinArgument } from "../../types"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -193,10 +194,10 @@ export class MomentumActionService implements IActionService {
             routerId,
             network,
             slippage: swapSlippage,
-            inputCoinObj: spendCoin,
+            inputCoin: spendCoin,
             transferCoinObjs: false,
         })
-        const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        const coinOut = (extraObj as { coinOut: CoinArgument }).coinOut
         if (!txbAfterSwap) {
             throw new Error("Transaction is required")
         }
@@ -225,8 +226,8 @@ export class MomentumActionService implements IActionService {
                 tickSpacing: pool.tickSpacing,
             },
             position, // Position from previous tx
-            providedCoinA,
-            providedCoinB,
+            providedCoinA.coinArg,
+            providedCoinB.coinArg,
             BigInt(0), // Min a added
             BigInt(0), // Min b added
             accountAddress,

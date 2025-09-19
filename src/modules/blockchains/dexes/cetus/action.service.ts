@@ -10,7 +10,7 @@ import {
 } from "../../utils"
 import { ClosePositionParams, IActionService, OpenPositionParams, OpenPositionResponse } from "../../interfaces"
 import { computeRatio, computeRaw, Network, toUnit } from "@modules/common"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
@@ -23,6 +23,7 @@ import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
 import { ActionResponse } from "../types"
 import { PythService } from "../../pyth"
+import { CoinArgument } from "../../types"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -185,10 +186,10 @@ export class CetusActionService implements IActionService {
             routerId,
             network,
             slippage: swapSlippage,
-            inputCoinObj: spendCoin,
+            inputCoin: spendCoin,
             transferCoinObjs: false,
         })
-        const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        const coinOut = (extraObj as { coinOut: CoinArgument }).coinOut
         const { liquidityAmount, tokenMaxA, tokenMaxB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
             tickLower,
             tickUpper,
@@ -224,8 +225,8 @@ export class CetusActionService implements IActionService {
             addLiquidityFixTokenParams,
             undefined,
             txbAfterSwap,
-            inputCoinA,
-            inputCoinB,
+            inputCoinA.coinArg,
+            inputCoinB.coinArg,
         )
         let positionId = ""
         const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {

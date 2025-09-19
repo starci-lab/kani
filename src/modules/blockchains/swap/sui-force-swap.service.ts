@@ -45,19 +45,18 @@ export class SuiForceSwapService {
         const tokenOut = priorityAOverB ? tokenA : tokenB
 
         // 1. Merge all tokenIn coins
-        const coinResponse = await this.suiCoinManagerService.fetchAndMergeCoins({
+        const { sourceCoin } = await this.suiCoinManagerService.fetchAndMergeCoins({
             suiClient,
             coinType: tokenIn.tokenAddress,
             owner: accountAddress,
+            requiredAmount: pnlAmount,
         })
-        if (!coinResponse) throw new Error("Coin not found")
-        const { sourceCoin } = coinResponse
 
         // 2. Swap all tokenIn → tokenOut
         const { txb: txbAfterSwap, extraObj } = await this.suiSwapService.swap({
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
-            inputCoinObj: sourceCoin,
+            inputCoin: sourceCoin,
             transferCoinObjs: false,
             slippage,
             fromAddress: accountAddress,
@@ -77,7 +76,10 @@ export class SuiForceSwapService {
                 tokenAddress: tokenOut.tokenAddress, // thu phí trên tokenOut
                 accountAddress,
                 network,
-                sourceCoin: coinOut,
+                sourceCoin: {
+                    coinArg: coinOut,
+                    coinAmount: pnlAmount,
+                },
                 suiClient
             })
             finalTxb = txbAfterAttachFee

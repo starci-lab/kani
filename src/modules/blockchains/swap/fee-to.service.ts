@@ -1,11 +1,11 @@
 import { Network, PlatformId } from "@modules/common"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 import { InjectSuiClients } from "../clients"
 import { SuiClient } from "@mysten/sui/client"
-import { CoinAsset } from "../types"
+import { CoinArgument } from "../types"
 
 const SUI_ADDRESS = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
 const SUI_ADDRESS_TESTNET = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
@@ -28,14 +28,14 @@ export interface AttachSuiFeeParams {
     tokenAddress: string
     accountAddress: string
     network: Network
-    sourceCoin?: TransactionObjectArgument
+    sourceCoin?: CoinArgument
     suiClient: SuiClient
 }
 
 export interface AttachSuiFeeResponse {
     txb: Transaction
     remainingAmount: BN
-    sourceCoin: CoinAsset
+    sourceCoin: CoinArgument
 }
 
 export interface AttachPnlFeeParams {
@@ -44,14 +44,14 @@ export interface AttachPnlFeeParams {
     tokenAddress: string
     accountAddress: string
     network: Network
-    sourceCoin?: TransactionObjectArgument
+    sourceCoin?: CoinArgument
     suiClient: SuiClient
 }
 
 export interface AttachPnlFeeResponse {
     txb: Transaction
     remainingAmount: BN
-    sourceCoin: TransactionObjectArgument
+    sourceCoin: CoinArgument
 }
 
 @Injectable()
@@ -101,10 +101,8 @@ export class FeeToService {
                 txb,
                 owner: accountAddress,
                 coinType: tokenAddress,
+                requiredAmount: amount,
             })
-            if (!response) {
-                throw new Error("Coins are required")
-            }
             sourceCoin = response.sourceCoin
         }
         const { 
@@ -117,7 +115,7 @@ export class FeeToService {
             sourceCoin,
             requiredAmount: feeAmount,
         })
-        txb.transferObjects([spendCoin], feeToAddress)
+        txb.transferObjects([spendCoin.coinArg], feeToAddress)
         return {
             txb,
             remainingAmount,
@@ -156,10 +154,8 @@ export class FeeToService {
                 txb,
                 owner: accountAddress,
                 coinType: tokenAddress,
+                requiredAmount: amount,
             })
-            if (!response) {
-                throw new Error("Coins are required")
-            }
             sourceCoin = response.sourceCoin
         }
 
@@ -176,9 +172,7 @@ export class FeeToService {
             sourceCoin,
             requiredAmount: feeAmount,
         })
-
-        txb.transferObjects([spendCoin], feeToAddress)
-
+        txb.transferObjects([spendCoin.coinArg], feeToAddress)
         return {
             txb,
             remainingAmount,

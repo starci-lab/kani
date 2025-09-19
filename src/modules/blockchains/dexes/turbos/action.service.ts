@@ -14,7 +14,7 @@ import { FeeToService, PriceRatioService, TickMathService } from "../../utils"
 import { BN } from "bn.js"
 import Decimal from "decimal.js"
 import { SuiCoinManagerService } from "../../utils"
-import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import {
     CLOSE_POSITION_SLIPPAGE,
     OPEN_POSITION_SLIPPAGE,
@@ -30,6 +30,7 @@ import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
 import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { CoinArgument } from "../../types"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -184,10 +185,10 @@ export class TurbosActionService implements IActionService {
             routerId,
             network,
             slippage: swapSlippage,
-            inputCoinObj: spendCoin,
+            inputCoin: spendCoin,
             transferCoinObjs: false,
         })
-        const coinOut = (extraObj as { coinOut: TransactionObjectArgument }).coinOut
+        const coinOut = (extraObj as { coinOut: CoinArgument }).coinOut
         // we process add liquidity
         const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
         const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
@@ -216,8 +217,8 @@ export class TurbosActionService implements IActionService {
             tickUpper,
             slippage: computePercentage(slippage),
             txb: txbAfterSwap,
-            coinAObjectArguments: [providedCoinAmountA],
-            coinBObjectArguments: [providedCoinAmountB],
+            coinAObjectArguments: [providedCoinAmountA.coinArg],
+            coinBObjectArguments: [providedCoinAmountB.coinArg],
         })
         let positionId = ""
         const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {

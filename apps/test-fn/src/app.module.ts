@@ -11,8 +11,9 @@ import { AxiosModule } from "@modules/axios"
 import { CacheModule, CacheType } from "@modules/cache"
 import { EventModule, EventType } from "@modules/event"
 import { InitializerModule } from "@modules/initializer"
-import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
-import { TestSwapService } from "./test-swap.service"
+import { TestFlowService } from "./test-flow.service"
+// import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
+// import { TestSwapService } from "./test-swap.service"
 
 @Module({
     imports: [
@@ -86,7 +87,8 @@ import { TestSwapService } from "./test-swap.service"
         })
     ],
     providers: [
-        TestSwapService
+        TestFlowService,
+        //TestSwapService
         //TurbosTestLiquidityManangementService
         //CetusTestLiquidityManangementService
         //MmtTestLiquidityManangementService

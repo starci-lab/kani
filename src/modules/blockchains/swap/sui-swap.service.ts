@@ -6,8 +6,6 @@ import { Network } from "@modules/common"
 import { ISwapService, QuoteParams, QuoteResponse, RouterId, SwapParams } from "./swap.interface"
 import BN from "bn.js"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
-import { InjectWinston } from "@modules/winston"
-import { Logger } from "winston"
 import { ActionResponse } from "../dexes"
 import { Transaction } from "@mysten/sui/transactions"
 
@@ -18,8 +16,6 @@ export class SuiSwapService implements ISwapService {
         private readonly cetusAggregatorSdks: Record<Network, AggregatorClient>,
         @InjectSevenKAggregatorSdks()
         private readonly sevenKAggregatorSdks: Record<Network, typeof SevenK>,
-        @InjectWinston()
-        private readonly winstonLogger: Logger,
     ) { }
     
     async quote({
@@ -85,7 +81,7 @@ export class SuiSwapService implements ISwapService {
         tokenIn,
         tokenOut,
         tokens,
-        inputCoinObj,
+        inputCoin,
         quoteData,
         fromAddress,
         recipientAddress = fromAddress,
@@ -94,7 +90,7 @@ export class SuiSwapService implements ISwapService {
         transferCoinObjs,
     }: SwapParams): Promise<ActionResponse> {
         txb = txb || new Transaction()
-        if (!inputCoinObj) {
+        if (!inputCoin) {
             throw new Error("Input coin object is required")
         }
         const tokenInInstance = tokens.find(
@@ -110,14 +106,15 @@ export class SuiSwapService implements ISwapService {
         case RouterId.Cetus:
         {
             const aggregator = this.cetusAggregatorSdks[network]
-            if (!inputCoinObj) {
+            if (!inputCoin.coinArg) {
                 throw new Error("Merged coin is required")
             }
+            const _quoteData = quoteData as RouterDataV3
             const outputCoin = await aggregator.routerSwap({
-                router: quoteData as RouterDataV3,
+                router: _quoteData,
                 slippage,
                 txb,
-                inputCoin: inputCoinObj,
+                inputCoin: inputCoin.coinArg,
             })
             if (transferCoinObjs) {
                 txb.transferObjects([outputCoin], recipientAddress) 
@@ -125,7 +122,10 @@ export class SuiSwapService implements ISwapService {
             return {
                 txb,
                 extraObj: {
-                    coinOut: outputCoin
+                    coinOut: {
+                        coinAmount: new BN(_quoteData.amountOut),
+                        coinArg: outputCoin,
+                    }
                 }
             }
         }
@@ -138,8 +138,9 @@ export class SuiSwapService implements ISwapService {
             if (!recipientAddress) {
                 throw new Error("Account address is required")
             }
+            const _quoteData = quoteData as SevenKQuoteResponse
             const { coinOut } = await aggregator.buildTx({
-                quoteResponse: quoteData as SevenKQuoteResponse,
+                quoteResponse: _quoteData,
                 accountAddress: fromAddress,
                 slippage,
                 commission: {
@@ -149,7 +150,7 @@ export class SuiSwapService implements ISwapService {
                 extendTx: {
                     tx: txb,
                     // explicit consume this coin object instead of loading all available coin objects from wallet
-                    coinIn: inputCoinObj || undefined,
+                    coinIn: inputCoin.coinArg || undefined,
                 },
             })
             if (!coinOut) {
@@ -161,7 +162,10 @@ export class SuiSwapService implements ISwapService {
             return {
                 txb,
                 extraObj: {
-                    coinOut
+                    coinOut: {
+                        coinAmount: new BN(_quoteData.returnAmountWithDecimal),
+                        coinArg: coinOut,
+                    }
                 }
             }
         }
