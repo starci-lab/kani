@@ -143,7 +143,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                             amountOpen: provisionAmount.toString(),
                             tickLower,
                             tickUpper,
-                            liquidity: liquidity.toString(),
+                            liquidity: liquidity?.toString(),
                             positionId,
                         }
                     ])

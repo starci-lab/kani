@@ -12,7 +12,9 @@ import { CacheModule, CacheType } from "@modules/cache"
 import { EventModule, EventType } from "@modules/event"
 import { InitializerModule } from "@modules/initializer"
 // import { TestFlowService } from "./test-flow.service"
-import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
+// import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
+// import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
+import { Mmt2TestLiquidityManangementService } from "./mmt-test-liquidity-manager-2.service"
 // import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
 // import { TestSwapService } from "./test-swap.service"
 
@@ -91,7 +93,8 @@ import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-man
         //TestFlowService,
         //TestSwapService
         //TurbosTestLiquidityManangementService
-        CetusTestLiquidityManangementService
+        Mmt2TestLiquidityManangementService
+        //CetusTestLiquidityManangementService
         //MmtTestLiquidityManangementService
     ],
 })

@@ -24,12 +24,18 @@ export const toUnitDecimal = (decimals: number = 10): Decimal => {
 export const computeRatio = (
     numerator: BN,
     denominator: BN,
-    fractionDigits: number = 10,
+    fractionDigits = 10,
 ): Decimal => {
     const multiplier = new BN(10).pow(new BN(fractionDigits)) // 10^decimals
     return new Decimal(
-        (numerator.mul(multiplier).div(denominator)).toNumber() /
-        multiplier.toNumber(),
+        new Decimal(
+            numerator
+                .mul(multiplier)
+                .div(denominator)
+                .toString()
+        ).div(
+            new Decimal(multiplier.toString())
+        )
     )
 }
 
@@ -85,10 +91,23 @@ export const computeBeforeFee = (amount: bigint, feeTier = 0.003): bigint => {
 export const toScaledBN = (
     bn: BN,
     multiplier: Decimal,
-    fractionDigits: number = 10
+    fractionDigits: number = 10,
 ): BN => {
     const decimalMultiplier = new Decimal(10).pow(fractionDigits) // 10^fractionDigits
     const scale = new BN(multiplier.mul(decimalMultiplier).toFixed(0))
-    return new BN(bn.toString()).mul(scale).div(new BN(decimalMultiplier.toFixed(0)))
+    return new BN(bn.toString())
+        .mul(scale)
+        .div(new BN(decimalMultiplier.toFixed(0)))
 }
-  
+
+export const adjustSlippage = (
+    bn: BN,
+    slippage: Decimal,
+    fractionDigits: number = 10,
+): BN => {
+    return toScaledBN(
+        bn,
+        new Decimal(1).minus(slippage),
+        fractionDigits,
+    )
+}

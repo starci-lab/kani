@@ -29,7 +29,6 @@ import { SuiExecutionService } from "../../utils"
 import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
-import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { FeeToService } from "../../swap"
 
 @Injectable()
@@ -195,16 +194,7 @@ export class TurbosActionService implements IActionService {
         const providedCoinAmountB = priorityAOverB ? coinOut : sourceCoin
         // we use cetus lib to determine turbos lib
         // since (maybe) the CLMM concepts use the same fomular
-        const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
-            pool.currentSqrtPrice,
-            tickLower,
-            tickUpper,
-            {
-                coinA: providedAmountA,
-                coinB: providedAmountB,
-            }
-        )
-        const txbAfterOpenPosition = await turbosSdk.pool.addLiquidityByAmountObject({
+        const txbAfterOpenPosition = await turbosSdk.pool.addLiquidity({
             pool: pool.poolAddress,
             address: accountAddress,
             amountA: providedAmountA.toString(),
@@ -246,7 +236,6 @@ export class TurbosActionService implements IActionService {
             txHash,
             tickLower,
             tickUpper,
-            liquidity,
             positionId,
             provisionAmount: amount
         }

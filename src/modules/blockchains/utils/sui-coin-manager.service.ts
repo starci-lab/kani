@@ -151,17 +151,8 @@ export class SuiCoinManagerService {
                 balance: userBalance,
             }
         }
-
-        const response = this.selectCoinAssetGreaterThanOrEqual({
-            coins,
-            amount: coinAmount,
-            exclude: [],
-        })
-        const selectedCoins = toCoinArguments(response.selectedCoins, txb)
-
         // Merge into a single coin
-        const mergedCoin = this.mergeCoins(txb, selectedCoins)
-
+        const mergedCoin = this.mergeCoins(txb, toCoinArguments(coins, txb))
         // Split out exactly the required amount
         const { spendCoin } = this.splitCoin({
             sourceCoin: mergedCoin,
@@ -170,7 +161,6 @@ export class SuiCoinManagerService {
         })
         return { sourceCoin: spendCoin, balance: userBalance }
     }
-
     /**
      * Greedy selection of coins to cover at least `amount`.
      * Returns selected coins and the remaining coins.

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, toI32 } from "@modules/common"
 import {
     FetchedPool,
     FetchPoolsParams,
@@ -89,7 +89,7 @@ export class MomentumFetcherService implements IFetchService {
                 return {
                     poolAddress: pool.poolId,
                     displayId: displayId(pool.poolId),
-                    currentTick: Number(pool.currentTickIndex),
+                    currentTick: toI32(Number(pool.currentTickIndex)),
                     currentSqrtPrice: new BN(pool.currentSqrtPrice),
                     tickSpacing: pool.tickSpacing,
                     fee: Number(pool.lpFeesPercent),

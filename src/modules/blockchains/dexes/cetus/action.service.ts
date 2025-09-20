@@ -111,7 +111,7 @@ export class CetusActionService implements IActionService {
                 tickUpper,
                 quoteAmountA,            // coinAmount must be BN
                 true,                    // isCoinA
-                false,                   // roundUp
+                true,                   // roundUp
                 slippage,                // example 0.01
                 pool.currentSqrtPrice,
             )

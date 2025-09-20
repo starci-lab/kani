@@ -84,7 +84,7 @@ export interface ForceSwapParams {
 export interface OpenPositionResponse extends ActionResponse {
     tickLower: number
     tickUpper: number
-    liquidity: BN
+    liquidity?: BN
     provisionAmount: BN
     positionId: string
 }

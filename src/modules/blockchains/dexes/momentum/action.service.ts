@@ -6,7 +6,7 @@ import {
     OpenPositionResponse,
 } from "../../interfaces"
 import { InjectMomentumClmmSdks } from "./momentum.decorators"
-import { Network, ZERO_BN, computeRatio, computeRaw, toUnit } from "@modules/common"
+import { Network, ZERO_BN, adjustSlippage, computeRatio, computeRaw, toUnit } from "@modules/common"
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
 import { ActionResponse } from "../types"
 import { Transaction } from "@mysten/sui/transactions"
@@ -113,18 +113,21 @@ export class MomentumActionService implements IActionService {
             pool.tickSpacing
         )
         const quoteAmountA = computeRaw(1, tokenA.decimals)
-        const { coinAmountA, coinAmountB, liquidityAmount } = estLiquidityAndcoinAmountFromOneAmounts (
+        const { 
+            coinAmountA,
+            coinAmountB
+        } = estLiquidityAndcoinAmountFromOneAmounts(
             tickLower,
             tickUpper,
-            quoteAmountA,
-            true,
-            true,
-            slippage,
-            pool.currentSqrtPrice
+            quoteAmountA,            // coinAmount must be BN
+            true,                    // isCoinA
+            true,                   // roundUp
+            slippage,                // example 0.01
+            pool.currentSqrtPrice,
         )
         const ratio = computeRatio(
-            new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
-            new BN(coinAmountA).mul(toUnit(tokenB.decimals))
+            coinAmountB.mul(toUnit(tokenA.decimals)),
+            coinAmountA.mul(toUnit(tokenB.decimals))
         )
         const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
             pool.currentSqrtPrice,
@@ -196,6 +199,10 @@ export class MomentumActionService implements IActionService {
             lowerSqrtPrice.toString(),
             upperSqrtPrice.toString(),
         )
+        console.log(`providedCoinA.coinAmount: ${providedCoinA.coinAmount.toString()}`)
+        console.log(`providedCoinB.coinAmount: ${providedCoinB.coinAmount.toString()}`)
+        console.log(`adjusted slippage A: ${adjustSlippage(providedCoinA.coinAmount, new Decimal(slippage)).toString()}`)
+        console.log(`adjusted slippage B: ${adjustSlippage(providedCoinB.coinAmount, new Decimal(slippage)).toString()}`)
         mmtSdk.Pool.addLiquidity(
             txb,
             {
@@ -207,8 +214,16 @@ export class MomentumActionService implements IActionService {
             position, // Position from previous tx
             providedCoinA.coinArg,
             providedCoinB.coinArg,
-            BigInt(0), // Min a added
-            BigInt(0), // Min b added
+            BigInt(
+                adjustSlippage(
+                    providedCoinA.coinAmount, 
+                    new Decimal(slippage)).toString()
+            ), // Min a added
+            BigInt(
+                adjustSlippage(
+                    providedCoinB.coinAmount, 
+                    new Decimal(slippage)).toString()
+            ), // Min b added
             accountAddress,
         )
         txb.transferObjects([position], accountAddress)
@@ -242,7 +257,6 @@ export class MomentumActionService implements IActionService {
             txHash,
             tickLower,
             tickUpper,
-            liquidity: liquidityAmount,
             positionId,
             provisionAmount: amount
         }
