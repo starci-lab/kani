@@ -13,6 +13,7 @@ import {
     adjustSlippage,
     computeRatio,
     computeRaw,
+    incrementBnMap,
     toUnit,
 } from "@modules/common"
 import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
@@ -344,32 +345,29 @@ export class MomentumActionService implements IActionService {
         )
         // // 4. Close position NFT
         momentumSdk.Position.closePosition(txb, position.positionId)
-        const fees: Partial<Record<TokenId, BN>> = {}
-        const rewards: Partial<Record<TokenId, BN>> = {}
-        const withdrawed: Partial<Record<TokenId, BN>> = {}
+        const suiTokenOuts: Partial<Record<TokenId, BN>> = {}
         const handleEvents = (events: Array<SuiEvent>) => {
             for (const event of events) {
                 if (event.type.includes("::collect::FeeCollectedEvent")) {
                     const { amount_x, amount_y } = event.parsedJson as 
                     { amount_x: string, amount_y: string }
-                    fees[tokenAId] = new BN(amount_x)
-                    fees[tokenBId] = new BN(amount_y)
+                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_x))
+                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_y))
                 }
                 if (event.type.includes("::collect::CollectPoolRewardEvent")) {
                     const { amount, reward_coin_type } = event.parsedJson as 
                     { amount: string, reward_coin_type: { name: string} }
-                    console.log(reward_coin_type.name)
                     const token = tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
                     if (!token) {
                         throw new Error("Token not found")
                     }
-                    rewards[token.displayId] = new BN(amount)
+                    incrementBnMap(suiTokenOuts, token.displayId, new BN(amount))
                 }
                 if (event.type.includes("::liquidity::RemoveLiquidityEvent")) {
                     const { amount_x, amount_y } = event.parsedJson as
                     { amount_x: string, amount_y: string }
-                    withdrawed[tokenAId] = new BN(amount_x)
-                    withdrawed[tokenBId] = new BN(amount_y)
+                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_x))
+                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_y))
                 }
             }
         }
@@ -388,9 +386,7 @@ export class MomentumActionService implements IActionService {
         })
         return {
             txHash,
-            fees,
-            rewards,
-            withdrawed
+            suiTokenOuts,
         }
     }
 }

@@ -5,7 +5,6 @@ import { PositionLike, TokenId, TokenLike, UserLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
-import { CoinAsset } from "../types"
 
 export interface ClosePositionParams {
     pool: FetchedPool
@@ -48,9 +47,7 @@ export interface OpenPositionParams {
 }
 
 export interface ClosePositionResponse extends ActionResponse {
-    fees: Partial<Record<TokenId, BN>>
-    rewards: Partial<Record<TokenId, BN>>
-    withdrawed: Partial<Record<TokenId, BN>>
+    suiTokenOuts?: Partial<Record<TokenId, BN>>
 }
 
 export interface SwapParams {
@@ -72,7 +69,7 @@ export interface SuiFlexibleSwapParams {
     network?: Network
     txb?: Transaction
     accountAddress: string
-    suiTokenIns: Partial<Record<TokenId, Array<CoinAsset>>>
+    suiTokenIns: Partial<Record<TokenId, BN>>
     tokenOut: TokenId
     tokens: Array<TokenLike>
     slippage?: number
@@ -98,7 +95,7 @@ export interface OpenPositionResponse extends ActionResponse {
 
 export interface IActionService {
     // close position
-    closePosition(params: ClosePositionParams): Promise<ActionResponse>
+    closePosition(params: ClosePositionParams): Promise<ClosePositionResponse>
     // open position
     openPosition(params: OpenPositionParams): Promise<OpenPositionResponse>
 }

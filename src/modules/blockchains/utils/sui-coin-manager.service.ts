@@ -3,7 +3,7 @@ import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
 import { CoinArgument, CoinAsset } from "../types"
-import { isSuiCoin } from "@modules/common"
+import { isSuiCoin, ZERO_BN } from "@modules/common"
 import { toCoinArguments } from "../convert"
 
 export interface SplitCoinResponse {
@@ -114,9 +114,7 @@ export class SuiCoinManagerService {
 
         // Special handling for SUI gas
         if (isSuiCoin(coinType)) {
-            if (!suiGasAmount) {
-                throw new Error("suiGasAmount is required")
-            }
+            suiGasAmount = suiGasAmount || ZERO_BN
             const coinAmount = BN.min(
                 userBalance.sub(suiGasAmount),
                 requiredAmount
@@ -133,7 +131,6 @@ export class SuiCoinManagerService {
                 balance: userBalance,
             }
         }
-
         // If only one coin exists, return it directly
         // Select coins to cover the required amount
         const coinAmount = BN.min(userBalance, requiredAmount)

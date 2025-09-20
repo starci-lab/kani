@@ -1,3 +1,4 @@
+import BN from "bn.js"
 import { Types } from "mongoose"
 import { v4 } from "uuid"
 
@@ -26,3 +27,10 @@ export const waitUntil = async <T>(
     return null                      
 }
   
+export const incrementBnMap = (obj: object, key: string, value: BN) => {
+    if (obj[key]) {
+        obj[key] = obj[key].add(value)
+    } else {
+        obj[key] = value
+    }
+}

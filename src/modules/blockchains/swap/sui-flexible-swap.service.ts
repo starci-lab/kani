@@ -7,7 +7,6 @@ import {
 import { SuiSwapService } from "./sui-swap.service"
 import { SuiFlexibleSwapParams, SuiFlexibleSwapResponse } from "../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
-import { toCoinArguments } from "../convert"
 import { TokenId } from "@modules/databases"
 import { CoinArgument } from "../types"
 import { FeeToService } from "./fee-to.service"
@@ -42,7 +41,8 @@ export class SuiFlexibleSwapService {
         depositAmount,
         user,
         suiClient
-    }: SuiFlexibleSwapParams): Promise<SuiFlexibleSwapResponse> {
+    }: SuiFlexibleSwapParams
+    ): Promise<SuiFlexibleSwapResponse> {
         // use first client if not provided
         // we will iterate through all suiTokenIns and swap them to tokenOut
         txb = txb || new Transaction()
@@ -54,35 +54,47 @@ export class SuiFlexibleSwapService {
         const coinOuts: Array<CoinArgument> = []
         for (const tokenId of Object.keys(suiTokenIns)) {
             const _tokenId = tokenId as TokenId
-            const tokenIns = suiTokenIns[_tokenId]
-            if (!tokenIns) {
-                throw new Error("Token ins is required")
+            const amountIn = suiTokenIns[_tokenId]
+            if (!amountIn) {
+                throw new Error("Amount in is required")
+            }
+            const token = tokens.find(token => token.displayId === _tokenId)
+            if (!token) {
+                throw new Error("Token not found")
             }
             if (_tokenId === tokenOut) {
                 // if the tokenId is the tokenOut, we will add the amount of the tokenIns to the estimated amount out
                 estimatedAmountOut = 
                 estimatedAmountOut
-                    .add(tokenIns.reduce((acc, tokenIns) => acc.add(tokenIns.coinAmount), ZERO_BN))
+                    .add(
+                        amountIn
+                    )
                 continue
             }
-            const mergedCoin = this.suiCoinManagerService.mergeCoins(txb, toCoinArguments(tokenIns,txb))
+            const { sourceCoin } = await this.suiCoinManagerService.fetchAndMergeCoins({
+                txb,
+                coinType: token.tokenAddress,
+                suiClient,
+                owner: accountAddress,
+                requiredAmount: amountIn,
+            })
             const { routerId, quoteData, amountOut } = await this.suiSwapService.quote({
                 tokenIn: _tokenId,
                 tokenOut,
                 tokens,
-                amountIn: mergedCoin.coinAmount,
+                amountIn: sourceCoin.coinAmount,
                 network
             })
             const { coinOut } = await this.suiSwapService.swap({
                 tokenIn: _tokenId,
                 tokenOut,
                 tokens,
-                amountIn: mergedCoin.coinAmount,
+                amountIn: sourceCoin.coinAmount,
                 network,
                 fromAddress: accountAddress,
                 txb,
                 slippage,
-                inputCoin: mergedCoin,
+                inputCoin: sourceCoin,
                 quoteData,
                 routerId,
                 transferCoinObjs: false,
