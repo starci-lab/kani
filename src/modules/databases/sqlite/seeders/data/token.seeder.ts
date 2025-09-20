@@ -19,9 +19,9 @@ export class TokenSeeder {
             tokenData.map(
                 (token) => ({
                     ...token,
-                    binanceSymbol: token.cexSymbols[CexId.Binance],
-                    bybitSymbol: token.cexSymbols[CexId.Bybit],
-                    gateSymbol: token.cexSymbols[CexId.Gate],
+                    binanceSymbol: token.cexSymbols?.[CexId.Binance],
+                    bybitSymbol: token.cexSymbols?.[CexId.Bybit],
+                    gateSymbol: token.cexSymbols?.[CexId.Gate],
                     id: token.displayId,
                 })
             )

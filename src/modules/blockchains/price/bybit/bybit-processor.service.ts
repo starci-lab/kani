@@ -36,9 +36,9 @@ export class BybitProcessorService implements OnModuleDestroy {
         tokenIds: Array<TokenId>,
         tokens: Array<TokenLike>
     ) {
-        this.tokens = tokens
+        this.tokens = tokens.filter((token) => !!token.cexSymbols && !!token.cexSymbols[CexId.Bybit])
         this.symbols = tokens
-            .map((token) => token.cexSymbols[CexId.Bybit])
+            .map((token) => token.cexSymbols![CexId.Bybit])
             .filter((symbol): symbol is string => symbol !== undefined)
 
         // subscribe tickers in batch (bybit supports multi-subscribe)
@@ -47,7 +47,7 @@ export class BybitProcessorService implements OnModuleDestroy {
                 if (data?.topic?.startsWith("tickers.")) {
                     const entry = data.data?.[0]
                     if (!entry) return
-                    const token = this.tokens.find((t) => t.cexSymbols[CexId.Bybit] === entry.s)
+                    const token = this.tokens.find((token) => token.cexSymbols![CexId.Bybit] === entry.s)
                     if (!token) return
                     const lastPrice = parseFloat(entry.c)
 

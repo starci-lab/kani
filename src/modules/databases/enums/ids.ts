@@ -11,6 +11,7 @@ export enum TokenId {
     SuiAlkimi = "suiAlkimi",
     SuiDeep = "suiDeep",
     SuiEth = "suiEth",
+    SuiXStakedSui = "suiXStakedSui",
 
     // --- Solana ---
     SolUsdc = "solUsdc",
@@ -50,6 +51,9 @@ registerEnumType(GraphQLTypeTokenId, {
         },
         [TokenId.SuiEth]: {
             description: "ETH token on Sui.",
+        },
+        [TokenId.SuiXStakedSui]: {
+            description: "X Staked SUI token on Sui.",
         },
         // --- Solana ---
         [TokenId.SolUsdc]: {

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common"
-import { DevInspectResults, SuiClient, SuiObjectChange, TransactionEffects } from "@mysten/sui/client"
+import { DevInspectResults, SuiClient, SuiObjectChange, TransactionEffects, SuiEvent } from "@mysten/sui/client"
 import { Transaction } from "@mysten/sui/transactions"
 import { Signer } from "@mysten/sui/cryptography"
 import { RetryService } from "@modules/mixin"
@@ -14,6 +14,7 @@ export interface SignAndExecuteTransactionParams {
     handleInspectResult?: (inspectResult: DevInspectResults) => Promise<void> | void
     handleEffects?: (effects: TransactionEffects) => Promise<void> | void
     handleObjectChanges?: (objectChanges: Array<SuiObjectChange>) => Promise<void> | void
+    handleEvents?: (events: Array<SuiEvent>) => Promise<void> | void
 }
 @Injectable()
 export class SuiExecutionService {
@@ -32,6 +33,7 @@ export class SuiExecutionService {
             handleInspectResult,
             handleEffects,
             handleObjectChanges,
+            handleEvents,
         }: SignAndExecuteTransactionParams
     ): Promise<string> {
         return await this.retryService.retry({
@@ -44,16 +46,26 @@ export class SuiExecutionService {
                     if (handleInspectResult) {
                         await handleInspectResult(inspectResult)
                     }
+                    if (handleEvents && stimulateOnly) {
+                        if (!inspectResult.events) {
+                            throw new Error("Events not found")
+                        }
+                        await handleEvents(inspectResult.events)
+                    }
                     return inspectResult.effects.transactionDigest
                 }
-                const { digest, effects, objectChanges } =  await suiClient.signAndExecuteTransaction({
+                const { digest, effects, objectChanges, events } =  await suiClient.signAndExecuteTransaction({
                     transaction,
                     signer,
                     options: {
                         showEffects: true,
                         showObjectChanges: true,
-                        showBalanceChanges: true
+                        showBalanceChanges: true,
+                        showEvents: true
                     }
+                })
+                await suiClient.waitForTransaction({
+                    digest,
                 })
                 if (handleEffects) {
                     if (!effects) {
@@ -66,6 +78,12 @@ export class SuiExecutionService {
                         throw new Error("Object changes not found")
                     }
                     await handleObjectChanges(objectChanges)
+                }
+                if (handleEvents) {
+                    if (!events) {
+                        throw new Error("Events not found")
+                    }
+                    await handleEvents(events)
                 }
                 if (effects?.status.status === "failure") {
                     this.winstonLogger.error(

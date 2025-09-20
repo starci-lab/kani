@@ -178,4 +178,19 @@ export const tokenData: Array<TokenLike> = [
         type: TokenType.Wrapper,
         pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744"
     },
+    {
+        displayId: TokenId.SuiXStakedSui,
+        name: "X Staked SUI",
+        symbol: "xSUI",
+        chainId: ChainId.Sui,
+        tokenAddress:
+    "0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI",
+        decimals: 8,
+        coinMarketCapId: "ethereum",
+        coinGeckoId: "ethereum",
+        iconUrl: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+        projectUrl: "https://ethereum.org/",
+        network: Network.Mainnet,
+        type: TokenType.LiquidStaking,
+    },
 ]

@@ -4,7 +4,8 @@ import { ActionResponse } from "../dexes"
 import { PositionLike, TokenId, TokenLike, UserLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
-import { SuiClient } from "@mysten/sui/dist/cjs/client"
+import { SuiClient } from "@mysten/sui/client"
+import { CoinAsset } from "../types"
 
 export interface ClosePositionParams {
     pool: FetchedPool
@@ -47,7 +48,9 @@ export interface OpenPositionParams {
 }
 
 export interface ClosePositionResponse extends ActionResponse {
-    nft: string
+    fees: Partial<Record<TokenId, BN>>
+    rewards: Partial<Record<TokenId, BN>>
+    withdrawed: Partial<Record<TokenId, BN>>
 }
 
 export interface SwapParams {
@@ -65,20 +68,24 @@ export interface SwapParams {
     suiClient?: SuiClient
 }
 
-export interface ForceSwapParams {
-    pool: FetchedPool
+export interface SuiFlexibleSwapParams {
     network?: Network
-    txb: Transaction
+    txb?: Transaction
     accountAddress: string
-    priorityAOverB: boolean
-    tokenAId: TokenId
-    tokenBId: TokenId
+    suiTokenIns: Partial<Record<TokenId, Array<CoinAsset>>>
+    tokenOut: TokenId
     tokens: Array<TokenLike>
     slippage?: number
-    pnlAmount: BN
     // user to sign the tx
     user?: UserLike
     suiClient?: SuiClient
+    // deposit amount
+    depositAmount: BN
+}
+
+export interface SuiFlexibleSwapResponse extends ActionResponse {
+    receivedAmountOut: BN
+    roiAmount: BN
 }
 
 export interface OpenPositionResponse extends ActionResponse {

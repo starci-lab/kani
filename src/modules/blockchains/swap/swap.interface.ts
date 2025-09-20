@@ -2,7 +2,8 @@ import { Network } from "@modules/common"
 import { TokenId, TokenLike } from "@modules/databases"
 import BN from "bn.js"
 import { ActionResponse } from "../dexes"
-import { Transaction } from "@mysten/sui/transactions"
+import { SuiClient } from "@mysten/sui/client"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import { CoinArgument } from "../types"
 
 export interface ISwapService {
@@ -49,4 +50,19 @@ export interface SwapParams {
     transferCoinObjs?: boolean
     // input coin obj (sui only)
     inputCoin?: CoinArgument
+}
+
+export interface FlexibleInputSwapParams {
+    tokenIn: TokenId,
+    tokenOut: TokenId,
+    tokens: Array<TokenLike>,
+    network?: Network
+    inputCoinArgs: Array<TransactionObjectArgument>
+    slippage?: number
+    txb?: Transaction
+    suiClient?: SuiClient
+}
+
+export interface FlexibleInputSwapResponse {
+    coinOutArg: TransactionObjectArgument
 }

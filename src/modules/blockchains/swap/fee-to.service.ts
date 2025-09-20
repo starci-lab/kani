@@ -15,7 +15,7 @@ const EVM_ADDRESS = "0x9f0204D1163d8C5c057aAb718a04C00E6C5d5790"
 const EVM_ADDRESS_TESTNET = "0x9f0204D1163d8C5c057aAb718a04C00E6C5d5790"
 
 const OPEN_POSITION_FEE_PERCENTAGE = 0.0004 // 0.04%
-const PNL_FEE_PERCENTAGE = 0.1 // 10%
+const ROI_FEE_PERCENTAGE = 0.1 // 10%
 
 export interface SplitAmountResponse {
     feeAmount: BN
@@ -32,21 +32,13 @@ export interface AttachSuiFeeParams {
     network: Network
 }
 
-export interface AttachSuiFeeResponse {
-    sourceCoin: CoinArgument
-}
-
-export interface AttachPnlFeeParams {
+export interface AttachSuiRoiFeeParams {
     txb?: Transaction
     amount: BN
     tokenId: TokenId
     tokens: Array<TokenLike>
     sourceCoin: CoinArgument
     network: Network
-}
-
-export interface AttachPnlFeeResponse {
-    sourceCoin: CoinArgument
 }
 
 @Injectable()
@@ -57,13 +49,13 @@ export class FeeToService {
 
     private splitAmount(
         amount: BN,
-        decimals: number,
+        percentage: number,
         platform: PlatformId,
         network: Network
     ): SplitAmountResponse {
         const feeToAddress = this.getFeeToAddress(platform, network)
         // fee = amount * percentage
-        const feeAmount = toScaledBN(amount, new Decimal(OPEN_POSITION_FEE_PERCENTAGE))
+        const feeAmount = toScaledBN(amount, new Decimal(percentage))
         const remainingAmount = amount.sub(feeAmount)
         return {
             feeAmount,
@@ -81,7 +73,7 @@ export class FeeToService {
             sourceCoin,
             network,
         }: AttachSuiFeeParams
-    ): Promise<AttachSuiFeeResponse> {
+    ) {
         txb = txb || new Transaction()
         const token = tokens.find(token => token.displayId === tokenId)
         if (!token) {
@@ -90,16 +82,13 @@ export class FeeToService {
         const { 
             feeAmount, 
             feeToAddress, 
-        } = this.splitAmount(amount, token.decimals, PlatformId.Sui, network)
+        } = this.splitAmount(amount, OPEN_POSITION_FEE_PERCENTAGE, PlatformId.Sui, network)
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
             requiredAmount: feeAmount,
         })
         txb.transferObjects([spendCoin.coinArg], feeToAddress)
-        return {
-            sourceCoin,
-        }
     }
 
     private getFeeToAddress(
@@ -116,34 +105,29 @@ export class FeeToService {
         }
     }
 
-    public async attachSuiPnlFee({
+    public async attachSuiRoiFee({
         txb,
         amount,
         tokenId,
         tokens,
         network,
         sourceCoin,
-    }: AttachPnlFeeParams): Promise<AttachPnlFeeResponse> {
+    }: AttachSuiRoiFeeParams) {
         txb = txb || new Transaction()
         const token = tokens.find(token => token.displayId === tokenId)
         if (!token) {
             throw new Error("Token not found")
         }
         // fee = amount * PNL_FEE_PERCENTAGE
-        const feeAmount = amount.mul(
-            new BN(Math.floor(PNL_FEE_PERCENTAGE * 1e9))
-        ).div(new BN(1e9))
-
-        const feeToAddress = this.getFeeToAddress(PlatformId.Sui, network)
-
+        const { 
+            feeAmount, 
+            feeToAddress, 
+        } = this.splitAmount(amount, ROI_FEE_PERCENTAGE, PlatformId.Sui, network)
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
             requiredAmount: feeAmount,
         })
         txb.transferObjects([spendCoin.coinArg], feeToAddress)
-        return {
-            sourceCoin,
-        }
     }
 }

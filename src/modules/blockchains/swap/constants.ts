@@ -4,3 +4,4 @@ export const SWAP_OPEN_POSITION_SLIPPAGE = 0.001 // 0.1%
 export const SWAP_CLOSE_POSITION_SLIPPAGE = 0.9999 // 99.99%
 export const FORCE_SWAP_SLIPPAGE = 0.9999 // 99.99%
 export const GAS_SUI_SWAP_SLIPPAGE = 0.001 // 0.1%
+export const FLEXIBLE_INPUT_SWAP_SLIPPAGE = 0.001 // 0.1%

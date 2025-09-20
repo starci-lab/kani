@@ -73,6 +73,8 @@ export enum TokenType {
   Wrapper = "wrapper",
   // non-native token
   Regular = "regular",
+  // liquid staking token
+  LiquidStaking = "liquidStaking",
 }
 
 export const GraphQLTypeTokenType = createEnumType(TokenType)
@@ -92,6 +94,9 @@ registerEnumType(GraphQLTypeTokenType, {
         },
         [TokenType.Regular]: {
             description: "The token is regular",
+        },
+        [TokenType.LiquidStaking]: {
+            description: "The token is liquid staking",
         },
     },
 })

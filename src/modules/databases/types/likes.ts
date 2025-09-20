@@ -29,7 +29,7 @@ export interface TokenLike extends BaseLike {
     /** CoinGecko ID of the token (e.g. 'sui', 'solana', 'bitcoin') */
     coinGeckoId: string
 
-    cexSymbols: Partial<Record<CexId, string>>
+    cexSymbols?: Partial<Record<CexId, string>>
 
     /** URL of the token icon */
     iconUrl: string
@@ -44,16 +44,16 @@ export interface TokenLike extends BaseLike {
     network: Network
 
     /** List of CEXs where the token is listed */
-    cexIds: Array<CexId>
+    cexIds?: Array<CexId>
 
     /** Primary CEX where the token is listed */
-    whichCex: CexId
+    whichCex?: CexId
 
     /** Type of the token */
     type: TokenType
 
     /** Pyth feed ID of the token */
-    pythFeedId: string
+    pythFeedId?: string
 }
 
 export interface DexLike extends BaseLike {

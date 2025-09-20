@@ -39,19 +39,19 @@ export class TokenEntity extends StringAbstractEntity {
         network: Network
 
     @Column({ type: "simple-json", name: "cex_ids", nullable: true })
-        cexIds: Array<CexId>
+        cexIds?: Array<CexId>
 
-    @Column({ type: "text", name: "whichCex" })
-        whichCex: CexId
+    @Column({ type: "text", name: "whichCex", nullable: true })
+        whichCex?: CexId
 
     @Column({ type: "simple-json", nullable: true })
-        cexSymbols: Partial<Record<CexId, string>>
+        cexSymbols?: Partial<Record<CexId, string>>
 
     @Column({ type: "text", name: "type" })
         type: TokenType
 
     @Column({ type: "text", name: "pyth_feed_id", nullable: true })
-        pythFeedId: string
+        pythFeedId?: string
 }
 
 

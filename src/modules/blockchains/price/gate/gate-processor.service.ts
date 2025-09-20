@@ -36,9 +36,9 @@ export class GateProcessorService implements OnModuleDestroy {
     }
 
     initialize(tokenIds: Array<TokenId>, tokens: Array<TokenLike>) {
-        this.tokens = tokens
+        this.tokens = tokens.filter((token) => !!token.cexSymbols && !!token.cexSymbols[CexId.Gate])
         this.symbols = tokens
-            .map((token) => token.cexSymbols[CexId.Gate])
+            .map((token) => token.cexSymbols![CexId.Gate])
             .filter((symbol): symbol is string => symbol !== undefined)
         for (const tokenId of tokenIds) {
             const token = tokens.find((token) => token.displayId === tokenId)
@@ -46,7 +46,7 @@ export class GateProcessorService implements OnModuleDestroy {
                 this.logger.error(`Token ${tokenId} not found`)
                 continue
             }
-            const symbol = token.cexSymbols[CexId.Gate]
+            const symbol = token.cexSymbols![CexId.Gate]
             if (!symbol) {
                 this.logger.error(`Token ${tokenId} has no gate symbol`)
                 continue
@@ -65,7 +65,7 @@ export class GateProcessorService implements OnModuleDestroy {
             this.logger.error(`Token ${tokenId} not found`)
             return
         }
-        const symbol = token.cexSymbols[CexId.Gate]
+        const symbol = token.cexSymbols![CexId.Gate]
         if (!symbol) {
             this.logger.error(`Token ${tokenId} has no gate symbol`)
             return
@@ -95,7 +95,7 @@ export class GateProcessorService implements OnModuleDestroy {
   @Cron("*/3 * * * * *")
     async fetchRestSnapshot() {
         if (this.tokens.length === 0) return
-        const tokens = this.tokens.filter((token) => token.cexSymbols[CexId.Gate])
+        const tokens = this.tokens.filter((token) => token.cexSymbols![CexId.Gate])
         try {
             const prices = await Promise.all(
                 this.symbols.map(async (symbol) => {
@@ -118,14 +118,14 @@ export class GateProcessorService implements OnModuleDestroy {
                 EventName.PricesUpdated,
                 prices.map((price) => ({
                     tokenId: tokens.find(
-                        (token) => token.cexSymbols[CexId.Gate] === price.symbol,
+                        (token) => token.cexSymbols![CexId.Gate] === price.symbol,
                     )?.displayId,
                     price: price.price,
                 })),
             )
         } catch (err) {
             this.winston.error(WinstonLog.GateRestError, {
-                symbols: tokens.map((token) => token.cexSymbols[CexId.Gate]),
+                symbols: tokens.map((token) => token.cexSymbols![CexId.Gate]),
                 error: (err as Error).message,
             })
         }

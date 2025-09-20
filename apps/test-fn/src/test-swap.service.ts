@@ -32,7 +32,7 @@ export class TestSwapService implements OnModuleInit {
         })
  
         const txb = new Transaction()
-        const { txb: txbAfter } = await this.suiSwapService.swap({
+        await this.suiSwapService.swap({
             routerId: quote.routerId,
             quoteData: quote.quoteData,
             fromAddress: "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
@@ -42,11 +42,8 @@ export class TestSwapService implements OnModuleInit {
             tokens: tokenData,
             txb
         })
-        if (!txbAfter) {
-            throw new Error("Transaction is required")
-        }
-        const [coin] = txbAfter.splitCoins(txbAfter.gas, [txbAfter.pure.u64(1000)])
-        txbAfter.transferObjects(
+        const [coin] = txb.splitCoins(txb.gas, [txb.pure.u64(1000)])
+        txb.transferObjects(
             [coin],
             "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
         )   
@@ -57,7 +54,7 @@ export class TestSwapService implements OnModuleInit {
             action: async (signer) => {
                 const digest = await this.suiExecutionService.signAndExecuteTransaction({
                     suiClient,
-                    transaction: txbAfter,
+                    transaction: txb,
                     signer,
                 })
                 return digest

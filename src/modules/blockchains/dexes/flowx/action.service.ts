@@ -169,7 +169,7 @@ export class FlowXActionService implements IActionService {
             sourceCoin,
             requiredAmount: swapAmount,
         })
-        const { txb: txbAfterSwap } = await this.suiSwapService.swap({
+        await this.suiSwapService.swap({
             txb,
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
@@ -195,9 +195,6 @@ export class FlowXActionService implements IActionService {
                 coinB: providedAmountB,
             }
         )
-        if (!txbAfterSwap) {
-            throw new Error("Transaction builder is required")
-        }
         // const inputCoinA = priorityAOverB ? sourceCoin : coinOut
         // const inputCoinB = priorityAOverB ? coinOut : sourceCoin
         // if (!pool.flowXClmmPool) {
@@ -236,7 +233,7 @@ export class FlowXActionService implements IActionService {
             network,
             action: async (signer) => {
                 return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txbAfterSwap,
+                    transaction: txb,
                     suiClient,
                     signer,
                     handleObjectChanges

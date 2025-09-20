@@ -42,39 +42,45 @@ export class PythSuiService implements IOracleService, OnModuleInit {
 
     subscribeToNetworkFeeds(network: Network) {
         const suiTokens = this.tokens.filter(
-            (token) => token.chainId === ChainId.Sui && token.network === network,
+            (token) => token.chainId === ChainId.Sui 
+            && token.network === network 
+            && !!token.pythFeedId,
         )
-        const feedIds = suiTokens.map((token) => token.pythFeedId)
-        this.connection.subscribePriceFeedUpdates(feedIds, async (feed) => {
-            const priceUnchecked = feed.getPriceUnchecked()
-            if (priceUnchecked) {
-                const token = suiTokens.find((token) =>
-                    token.pythFeedId.includes(feed.id),
-                )
-                if (!token) {
-                    throw new Error(`Feed ${feed.id} not found`)
+        const feedIds = suiTokens.map((token) => token.pythFeedId!) 
+        this.connection.subscribePriceFeedUpdates(
+            feedIds, 
+            async (feed) => {
+                try {
+                    const priceUnchecked = feed.getPriceUnchecked()
+                    if (priceUnchecked) {
+                        const token = suiTokens.find((token) => token.pythFeedId === feed.id)
+                        if (!token) {
+                            throw new Error(`Feed ${feed.id} not found`)
+                        }
+                        const price = computeDenomination(
+                            new BN(priceUnchecked.price),
+                            priceUnchecked.expo,
+                        ).toNumber()
+                        await this.cacheManager.set(
+                            createCacheKey(
+                                CacheKey.PythTokenPrice, 
+                                token.displayId, 
+                                network
+                            ),
+                            price,
+                        )
+                        this.logger.debug(WinstonLog.PythSuiPricesUpdated, [
+                            {
+                                network,
+                                tokenId: token.displayId,
+                                price,
+                            },
+                        ])
+                    }
+                } catch { 
+                    //
                 }
-                const price = computeDenomination(
-                    new BN(priceUnchecked.price),
-                    priceUnchecked.expo,
-                ).toNumber()
-                await this.cacheManager.set(
-                    createCacheKey(
-                        CacheKey.PythTokenPrice, 
-                        token.displayId, 
-                        network
-                    ),
-                    price,
-                )
-                this.logger.debug(WinstonLog.PythSuiPricesUpdated, [
-                    {
-                        network,
-                        tokenId: token.displayId,
-                        price,
-                    },
-                ])
-            }
-        })
+            })
     }
 
     async getPrices(
@@ -105,19 +111,19 @@ export class PythSuiService implements IOracleService, OnModuleInit {
         network: Network,
     ): Promise<Partial<Record<TokenId, Decimal>>> {
         const tokenIds = this.tokens.map((token) => token.displayId)
-        const tokens = this.tokens.filter(
+        const suiTokens = this.tokens.filter(
             (token) =>
                 tokenIds.includes(token.displayId) &&
                 token.chainId === ChainId.Sui &&
                 token.network === network &&
-                token.pythFeedId,
+                !!token.pythFeedId,
         )
-        const feedIds = tokens.map((feed) => feed.pythFeedId)
+        const feedIds = suiTokens.map((token) => token.pythFeedId!)
         const feeds = (await this.connection.getLatestPriceFeeds(feedIds)) || []
         const result: Partial<Record<TokenId, Decimal>> = {}
         const entries: Array<[TokenId, number]> = []
         for (const feed of feeds) {
-            const token = tokens.find((token) => token.pythFeedId === `0x${feed.id}`)
+            const token = suiTokens.find((token) => token.pythFeedId === `0x${feed.id}`)
             if (!token) continue
             const priceUnchecked = feed.getPriceUnchecked()
             if (!priceUnchecked) continue

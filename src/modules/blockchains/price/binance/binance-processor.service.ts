@@ -45,8 +45,8 @@ export class BinanceProcessorService implements OnModuleDestroy {
         tokenIds: Array<TokenId>,
         tokens: Array<TokenLike>
     ) {
-        this.tokens = tokens
-        this.symbols = tokens.map((token) => token.cexSymbols[CexId.Binance]).filter(
+        this.tokens = tokens.filter((token) => !!token.cexSymbols && !!token.cexSymbols[CexId.Binance])
+        this.symbols = this.tokens.map((token) => token.cexSymbols![CexId.Binance]).filter(
             (symbol) => symbol !== undefined
         )
         for (const tokenId of tokenIds) {
@@ -55,7 +55,7 @@ export class BinanceProcessorService implements OnModuleDestroy {
                 this.logger.error(`Token ${tokenId} not found`)
                 continue
             }
-            if (!token.cexSymbols[CexId.Binance]) {
+            if (!token.cexSymbols![CexId.Binance]) {
                 this.logger.error(`Token ${tokenId} has no binance symbol`)
                 continue
             }
@@ -78,11 +78,11 @@ export class BinanceProcessorService implements OnModuleDestroy {
             this.logger.error(`Token ${tokenId} not found`)
             return
         }
-        if (!token.cexSymbols[CexId.Binance]) {
+        if (!token.cexSymbols![CexId.Binance]) {
             this.logger.error(`Token ${tokenId} has no binance symbol`)
             return
         }
-        this.ws.subscribeTicker(token.cexSymbols[CexId.Binance], async (data: WsTicker) => {
+        this.ws.subscribeTicker(token.cexSymbols![CexId.Binance], async (data: WsTicker) => {
             const lastPrice = parseFloat(data.c)
 
             this.winston.debug(WinstonLog.BinanceWsTicker, {
@@ -114,7 +114,7 @@ export class BinanceProcessorService implements OnModuleDestroy {
             this.logger.error(`Token ${tokenId} not found`)
             return
         }
-        if (!token.cexSymbols[CexId.Binance]) {
+        if (!token.cexSymbols![CexId.Binance]) {
             this.logger.error(`Token ${tokenId} has no binance symbol`)
             return
         }
