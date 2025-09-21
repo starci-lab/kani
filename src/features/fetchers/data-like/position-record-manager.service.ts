@@ -1,8 +1,17 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
-import { DexId, LiquidityPoolId, PositionEntity } from "@modules/databases"
+import {
+    DexId,
+    LiquidityPoolId,
+    PositionEntity,
+    UserLike,
+} from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import BN from "bn.js"
-import { FetchedPool, LiquidityPoolService, OpenPositionResponse, PythService } from "@modules/blockchains"
+import {
+    FetchedPool,
+    LiquidityPoolService,
+    SuiFlexibleSwapService,
+} from "@modules/blockchains"
 import { Cache } from "cache-manager"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { ModuleRef } from "@nestjs/core"
@@ -14,22 +23,51 @@ import { getConnectionToken } from "@nestjs/mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger } from "winston"
 import { DataLikeService } from "./data-like.service"
-import { UserLoaderService } from "../user-loader"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
+import { DataLikePositionService } from "./data-like-position.service"
+import { RetryService } from "@modules/mixin"
+import { DataLikeQueryService } from "./data-like-query.service"
 
-export interface OpenPositionParams {
-    dexId: DexId
-    poolId: LiquidityPoolId
-    chainId: ChainId
-    accountAddress: string
-    amount: BN
-    priorityAOverB?: boolean
-    network?: Network
-    userId: string 
+export interface OpenPositionInternalParams {
+    dexId: DexId;
+    poolId: LiquidityPoolId;
+    chainId: ChainId;
+    accountAddress: string;
+    amount: BN;
+    priorityAOverB?: boolean;
+    network?: Network;
+    user: UserLike;
 }
 
-export type WritePositionParams = OpenPositionParams
+export interface OpenPositionInternalResponse {
+    txHash: string;
+    liquidity: BN;
+    depositAmount: BN;
+    tickLower: number;
+    tickUpper: number;
+    positionId: string;
+}
+
+export type OpenPositionParams = OpenPositionInternalParams
+
+export interface ClosePositionInternalParams {
+    dexId: DexId;
+    poolId: LiquidityPoolId;
+    chainId: ChainId;
+    accountAddress: string;
+    network?: Network;
+    user: UserLike;
+}
+
+export interface ClosePositionInternalResponse {
+    receivedAmountOut: BN;
+    roiAmount: BN;
+    closePositionTxHash: string;
+    flexibleSwapTxHash: string;
+}
+
+export type ClosePositionParams = ClosePositionInternalParams
 
 @Injectable()
 export class PositionRecordManagerService implements OnModuleInit {
@@ -38,11 +76,13 @@ export class PositionRecordManagerService implements OnModuleInit {
     private mongoDbConnection: Connection
     constructor(
         private readonly liquidityPoolService: LiquidityPoolService,
-        private readonly pythService: PythService,
         private readonly dataLikeService: DataLikeService,
         private readonly cacheHelpersService: CacheHelpersService,
-        private readonly userLoaderService: UserLoaderService,
         private readonly moduleRef: ModuleRef,
+        private readonly suiFlexibleSwapService: SuiFlexibleSwapService,
+        private readonly dataLikePositionService: DataLikePositionService,
+        private readonly retryService: RetryService,
+        private readonly dataLikeQueryService: DataLikeQueryService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
@@ -51,15 +91,21 @@ export class PositionRecordManagerService implements OnModuleInit {
 
     onModuleInit() {
         // get the proper cache manager
-        this.cacheManager = this.cacheHelpersService.getCacheManager({ autoSelect: true })
+        this.cacheManager = this.cacheHelpersService.getCacheManager({
+            autoSelect: true,
+        })
         // get the proper data source
         switch (envConfig().lpBot.type) {
         case LpBotType.UserBased: {
-            this.mongoDbConnection = this.moduleRef.get(getConnectionToken(), { strict: false })
+            this.mongoDbConnection = this.moduleRef.get(getConnectionToken(), {
+                strict: false,
+            })
             break
         }
         case LpBotType.System: {
-            this.sqliteDataSource = this.moduleRef.get(getDataSourceToken(), { strict: false })
+            this.sqliteDataSource = this.moduleRef.get(getDataSourceToken(), {
+                strict: false,
+            })
             break
         }
         }
@@ -68,7 +114,7 @@ export class PositionRecordManagerService implements OnModuleInit {
     /**
    * Open a new LP position on any supported DEX
    */
-    private async openPosition({
+    private async openPositionInternal({
         dexId,
         poolId,
         chainId,
@@ -76,39 +122,44 @@ export class PositionRecordManagerService implements OnModuleInit {
         amount,
         priorityAOverB = true,
         network = Network.Mainnet,
-        userId,
-    }: OpenPositionParams): Promise<OpenPositionResponse> {
-        // init tokens + pyth
-        this.pythService.initialize(this.dataLikeService.tokens)
-        await this.pythService.preloadPrices()
+        user,
+    }: OpenPositionInternalParams): Promise<OpenPositionInternalResponse> {
         //find liquidity pools
         const liquidityPools = this.dataLikeService.liquidityPools
-        const pool = liquidityPools.find((liquidityPool) => liquidityPool.displayId === poolId)
+        const pool = liquidityPools.find(
+            (liquidityPool) => liquidityPool.displayId === poolId,
+        )
         if (!pool) throw new Error(`LiquidityPool ${poolId} not found`)
         // fetch live pool state
         const sertializedFetchedPools = await this.cacheManager.get<string>(
-            createCacheKey(
-                CacheKey.LiquidityPools,
-                {
-                    chainId,
-                    network,
-                }),
+            createCacheKey(CacheKey.LiquidityPools, {
+                chainId,
+                network,
+            }),
         )
         if (!sertializedFetchedPools) throw new Error("FetchedPools not found")
-        const fetchedPools = this.superjson.parse<Array<FetchedPool>>(sertializedFetchedPools)
-        const fetchedPool = fetchedPools.find((fetchedPool) => fetchedPool.displayId === pool.displayId)
-        if (!fetchedPool) throw new Error(`FetchedPool ${pool.displayId} not found`)
-        // load user
-        const users = await this.userLoaderService.loadUsers()
-        const user = users.find((user) => user.id === userId)
-        if (!user) throw new Error(`User ${userId} not found`)
+        const fetchedPools = this.superjson.parse<Array<FetchedPool>>(
+            sertializedFetchedPools,
+        )
+        const fetchedPool = fetchedPools.find(
+            (fetchedPool) => fetchedPool.displayId === pool.displayId,
+        )
+        if (!fetchedPool)
+            throw new Error(`FetchedPool ${pool.displayId} not found`)
         const [{ action }] = await this.liquidityPoolService.getDexs({
             dexIds: [dexId],
-            chainId
+            chainId,
         })
         const tokenAId = pool.tokenAId
         const tokenBId = pool.tokenBId
-        return await action.openPosition({
+        const {
+            depositAmount,
+            liquidity,
+            positionId,
+            tickLower,
+            tickUpper,
+            txHash,
+        } = await action.openPosition({
             accountAddress,
             priorityAOverB,
             pool: fetchedPool,
@@ -118,63 +169,206 @@ export class PositionRecordManagerService implements OnModuleInit {
             tokens: this.dataLikeService.tokens,
             user,
             chainId,
-            network
+            network,
+        })
+        return {
+            txHash: txHash || "",
+            liquidity,
+            depositAmount,
+            tickLower,
+            tickUpper,
+            positionId,
+        }
+    }
+
+    private async closePositionInternal({
+        dexId,
+        poolId,
+        chainId,
+        accountAddress,
+        network = Network.Mainnet,
+        user,
+    }: ClosePositionInternalParams): Promise<ClosePositionInternalResponse> {
+        //find liquidity pools
+        const liquidityPools = this.dataLikeService.liquidityPools
+        const liquidityPool = liquidityPools.find(
+            (liquidityPool) => liquidityPool.displayId === poolId,
+        )
+        if (!liquidityPool) throw new Error(`LiquidityPool ${poolId} not found`)
+        // fetch live pool state
+        const sertializedFetchedPools = await this.cacheManager.get<string>(
+            createCacheKey(CacheKey.LiquidityPools, {
+                chainId,
+                network,
+            }),
+        )
+        if (!sertializedFetchedPools) throw new Error("FetchedPools not found")
+        const fetchedPools = this.superjson.parse<Array<FetchedPool>>(
+            sertializedFetchedPools,
+        )
+        const fetchedPool = fetchedPools.find(
+            (fetchedPool) => fetchedPool.displayId === liquidityPool.displayId,
+        )
+        if (!fetchedPool)
+            throw new Error(`FetchedPool ${liquidityPool.displayId} not found`)
+        const [{ action }] = await this.liquidityPoolService.getDexs({
+            dexIds: [dexId],
+            chainId,
+        })
+        const tokenAId = liquidityPool.tokenAId
+        const tokenBId = liquidityPool.tokenBId
+        if (!user.id) throw new Error("User ID is required")
+        const position = await this.dataLikePositionService.loadPosition({
+            liquidityPoolId: poolId,
+            userId: user.id,
+        })
+        const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
+            liquidityPool,
+            user,
+            chainId,
+            network,
+        })
+        const tokenOut = priorityAOverB ? tokenAId : tokenBId
+        const { suiTokenOuts, txHash: closePositionTxHash } =
+            await action.closePosition({
+                accountAddress,
+                pool: fetchedPool,
+                tokenAId,
+                tokenBId,
+                tokens: this.dataLikeService.tokens,
+                user,
+                chainId,
+                network,
+                position,
+                priorityAOverB,
+            })
+        const {
+            receivedAmountOut,
+            roiAmount,
+            txHash: flexibleSwapTxHash,
+        } = await this.suiFlexibleSwapService.suiFlexibleSwap({
+            suiTokenIns: suiTokenOuts || {},
+            accountAddress,
+            depositAmount: new BN(position.depositAmount),
+            tokenOut,
+            tokens: this.dataLikeService.tokens,
+            network,
+            user,
+        })
+        return {
+            receivedAmountOut,
+            roiAmount,
+            closePositionTxHash: closePositionTxHash || "",
+            flexibleSwapTxHash: flexibleSwapTxHash || "",
+        }
+    }
+
+    private async sqliteOpenPosition(params: OpenPositionParams) {
+        const { user } = params
+        if (!user.id) throw new Error("User ID is required")
+        await this.sqliteDataSource.transaction(async (manager) => {
+            // we try open position first
+            const {
+                txHash,
+                liquidity,
+                depositAmount,
+                tickLower,
+                tickUpper,
+                positionId,
+            } = await this.openPositionInternal(params)
+            await manager.insert(
+                PositionEntity, [
+                    {
+                        userId: user.id,
+                        openTxHash: txHash,
+                        depositAmount: depositAmount.toString(),
+                        tickLower,
+                        tickUpper,
+                        liquidity: liquidity.toString(),
+                        positionId,
+                    },
+                ])
+            this.logger.info(WinstonLog.PositionWritten, {
+                positionId,
+                txHash,
+                depositAmount: depositAmount.toString(),
+            })
         })
     }
 
-    private async writeSqlitePosition(
-        params: WritePositionParams,
-    ) {
-        await this.sqliteDataSource.transaction(
-            async (manager) => {
-                // we try open position first
-                const { 
-                    txHash, 
-                    liquidity, 
-                    depositAmount, 
-                    tickLower, 
-                    tickUpper, 
-                    positionId
-                } = await this.openPosition(params)
-                await manager.insert(PositionEntity,
-                    [
-                        {
-                            openTxHash: txHash,
-                            amountOpen: depositAmount.toString(),
-                            tickLower,
-                            tickUpper,
-                            liquidity: liquidity?.toString(),
-                            positionId,
-                        }
-                    ])
-                this.logger.info(WinstonLog.PositionWritten, {
-                    positionId,
-                    txHash,
-                    depositAmount: depositAmount.toString(),
-                })
-            }
-        )   
+    private async sqliteClosePosition(params: ClosePositionParams) {
+        await this.sqliteDataSource.transaction(async (manager) => {
+            const {
+                receivedAmountOut,
+                roiAmount,
+                closePositionTxHash,
+                flexibleSwapTxHash,
+            } = await this.closePositionInternal(params)
+            if (!params.user.id) throw new Error("User ID is required")
+            const position = await this.dataLikePositionService.loadPosition({
+                userId: params.user.id,
+                liquidityPoolId: params.poolId,
+            })
+            await manager.update(
+                PositionEntity,
+                { positionId: position.positionId },
+                { 
+                    closeTxHash: closePositionTxHash, 
+                    flexibleSwapTxHash,
+                    roi: roiAmount.toString(),
+                    withdrawalAmount: receivedAmountOut.toString(),
+                },
+            )
+        })
     }
 
-    private async writeMongoDbPosition(
-        params: WritePositionParams,
-    ) {
+    private async mongoDbOpenPosition(params: OpenPositionParams) {
         console.log("writeMongoDbPosition", params)
         throw new Error("Not implemented")
     }
 
-    public async writePosition(
-        params: WritePositionParams,
-    ) {
-        switch (envConfig().lpBot.type) {
-        case LpBotType.UserBased: {
-            await this.writeMongoDbPosition(params)
-            break
-        }
-        case LpBotType.System: {
-            await this.writeSqlitePosition(params)
-            break
-        }
-        }
+    private async mongoDbClosePosition(params: ClosePositionParams) {
+        console.log("writeMongoDbClosePosition", params)
+        throw new Error("Not implemented")
+    }
+
+    public async openPosition(params: OpenPositionParams) {
+        await this.retryService.retry({
+            action: async () => {
+                switch (envConfig().lpBot.type) {
+                case LpBotType.UserBased: {
+                    await this.mongoDbOpenPosition(params)
+                    break
+                }
+                case LpBotType.System: {
+                    await this.sqliteOpenPosition(params)
+                    break
+                }
+                }
+            },
+            // 10 times retry to ensure the position is opened
+            maxRetries: 10,
+            delay: 100
+        })
+        
+    }
+
+    public async closePosition(params: ClosePositionParams) {
+        await this.retryService.retry({
+            action: async () => {
+                switch (envConfig().lpBot.type) {
+                case LpBotType.UserBased: {
+                    await this.mongoDbClosePosition(params)
+                    break
+                }
+                case LpBotType.System: {
+                    await this.sqliteClosePosition(params)
+                    break
+                }
+                }
+            },
+            delay: 100,
+            maxRetries: 10
+        })
     }
 }

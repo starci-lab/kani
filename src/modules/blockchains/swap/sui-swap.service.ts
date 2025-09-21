@@ -8,7 +8,6 @@ import BN from "bn.js"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { ActionResponse } from "../dexes"
 import { Transaction } from "@mysten/sui/transactions"
-import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 
 @Injectable()
 export class SuiSwapService implements ISwapService {
@@ -17,7 +16,6 @@ export class SuiSwapService implements ISwapService {
         private readonly cetusAggregatorSdks: Record<Network, AggregatorClient>,
         @InjectSevenKAggregatorSdks()
         private readonly sevenKAggregatorSdks: Record<Network, typeof SevenK>,
-        private readonly suiCoinManagerService: SuiCoinManagerService,
     ) { }
     
     async quote({

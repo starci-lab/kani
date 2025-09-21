@@ -82,6 +82,8 @@ export interface PositionLike extends BaseLike {
     tickLower: number
     /** The upper tick index of the position */
     tickUpper: number
+    /** The deposit amount of the position */
+    depositAmount: string
 }
 
 export interface LiquidityPoolLike extends BaseLike {
@@ -160,7 +162,7 @@ export interface UserWalletLike extends BaseLike {
 export interface AssignedLiquidityPoolLike extends BaseLike {
     /** The liquidity pool that the user is assigned to */
     poolId: string
-    pool?: LiquidityPoolLike
+    liquidityPool?: LiquidityPoolLike
 }
 
 export interface UserLike extends BaseLike {

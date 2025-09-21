@@ -1,7 +1,7 @@
-import { UserLike } from "@modules/databases"
+import { LiquidityPoolLike, UserLike } from "@modules/databases"
 import { FetchedPool } from "@modules/blockchains"
 import { Injectable, NotFoundException } from "@nestjs/common"
-import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
+import { ChainId, chainIdToPlatform, Network, PlatformId, TokenType } from "@modules/common"
 import { DataLikeService } from "./data-like.service"
 
 // this service is used to query the data like service
@@ -68,9 +68,9 @@ export class DataLikeQueryService {
     }
 
     determinePriorityAOverB(params: DeterminePriorityAOverBParams) {
-        const { pool, user, platformId, chainId, network } = params
-
-        let priorityAOverB = pool.liquidityPool.priorityAOverB ?? false
+        const { liquidityPool, user, chainId, network } = params
+        const platformId = chainIdToPlatform(chainId)
+        let priorityAOverB = liquidityPool.priorityAOverB ?? false
 
         if (typeof priorityAOverB === "undefined") {
             const walletFarmTokenType = this.getFarmTokenType(user, platformId, chainId)
@@ -80,11 +80,11 @@ export class DataLikeQueryService {
             switch (walletFarmTokenType) {
             case TokenType.StableUsdc:
                 priorityAOverB =
-                        pool.liquidityPool.tokenAId === stableUsdcToken?.displayId
+                        liquidityPool.tokenAId === stableUsdcToken?.displayId
                 break
             case TokenType.Native:
                 priorityAOverB =
-                        pool.liquidityPool.tokenAId === nativeToken?.displayId
+                        liquidityPool.tokenAId === nativeToken?.displayId
                 break
             }
         }
@@ -94,9 +94,8 @@ export class DataLikeQueryService {
 }
 
 export interface DeterminePriorityAOverBParams {
-    pool: FetchedPool;
+    liquidityPool: LiquidityPoolLike;
     user: UserLike;
-    platformId: PlatformId;
     chainId: ChainId;
     network: Network;
 }

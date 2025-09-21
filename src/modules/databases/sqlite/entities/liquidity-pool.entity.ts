@@ -7,6 +7,7 @@ import { DexId, LiquidityPoolId, TokenId } from "../../enums"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
 import { RewardTokenEntity } from "./reward-token.entity"
+import { PositionEntity } from "./position.entity"
 
 @Entity({ name: "lp_pools" })
 export class LiquidityPoolEntity extends StringAbstractEntity {
@@ -53,8 +54,8 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
         farmTokenTypes: Array<TokenType>
 
     // Assigned users per chain
-    @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.pool)
-        assignedUsers: Array<AssignedLiquidityPoolEntity>
+    @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.liquidityPool)
+        assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>
 
     @OneToMany(() => AddedLiquidityPoolEntity, (addedLiquidityPool) => addedLiquidityPool.pool) 
         addedUsers: Array<AddedLiquidityPoolEntity>
@@ -66,4 +67,7 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
 
     @RelationId((liquidityPool: LiquidityPoolEntity) => liquidityPool.rewardTokens)
         rewardTokenIds: Array<TokenId>
+
+    @OneToMany(() => PositionEntity, (position) => position.assignedLiquidityPool)
+        positions: Array<PositionEntity>
 }

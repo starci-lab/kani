@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { 
     DexEntity, 
     DexLike, 
@@ -12,10 +12,14 @@ import {
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { ModuleRef } from "@nestjs/core"
 import { envConfig, LpBotType } from "@modules/env"
-import fs from "fs"
+import { DataSource } from "typeorm"
+import { Connection } from "mongoose"
+import { getConnectionToken } from "@nestjs/mongoose"
 
 @Injectable()
-export class DataLikeService implements OnApplicationBootstrap {
+export class DataLikeService implements OnModuleInit, OnApplicationBootstrap {
+    private sqliteDataSource: DataSource
+    private mongoDbConnection: Connection
     // a boolean to check whether the data is loaded
     public loaded = false
 
@@ -26,6 +30,19 @@ export class DataLikeService implements OnApplicationBootstrap {
     constructor(
         private readonly moduleRef: ModuleRef,
     ) {}
+
+    onModuleInit() {
+        switch (envConfig().lpBot.type) {
+        case LpBotType.UserBased: {
+            this.mongoDbConnection = this.moduleRef.get(getConnectionToken(), { strict: false })
+            break
+        }
+        case LpBotType.System: {
+            this.sqliteDataSource = this.moduleRef.get(getDataSourceToken(), { strict: false })
+            break
+        }
+        }
+    }
 
     async onApplicationBootstrap() {
         // load data
@@ -43,8 +60,7 @@ export class DataLikeService implements OnApplicationBootstrap {
     }   
 
     private async loadFromMongo() {
-        const dataSource = this.moduleRef.get(getDataSourceToken(), {strict: false})
-        const dexes = await dataSource.manager.find(DexEntity)
+        const dexes = await this.mongoDbConnection.model(DexEntity.name).find()
         this.dexes = dexes.map((dex) => ({
             ...dex,
             id: dex.id,
@@ -66,16 +82,14 @@ export class DataLikeService implements OnApplicationBootstrap {
     }
 
     private async loadFromSqlite() {
-        const dataSource = this.moduleRef.get(getDataSourceToken(), {strict: false})
-        const tokens = await dataSource.manager.find(TokenEntity)
+        const tokens = await this.sqliteDataSource.manager.find(TokenEntity)
         this.tokens = tokens.map((token) => ({
             ...token,
             id: token.id,
             cexSymbols: token.cexSymbols,
         }
         ))
-        fs.writeFileSync("tokens.json", JSON.stringify(tokens, null, 2))
-        const liquidityPools = await dataSource.manager.find(LiquidityPoolEntity, {
+        const liquidityPools = await this.sqliteDataSource.manager.find(LiquidityPoolEntity, {
             relations: {
                 tokenA: true,
                 tokenB: true,
@@ -92,7 +106,7 @@ export class DataLikeService implements OnApplicationBootstrap {
             })),
             id: liquidityPool.id,
         }))
-        const dexes = await dataSource.manager.find(DexEntity)
+        const dexes = await this.sqliteDataSource.manager.find(DexEntity)
         this.dexes = dexes.map((dex) => ({
             ...dex,
             id: dex.id,

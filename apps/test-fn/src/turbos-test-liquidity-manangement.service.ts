@@ -85,7 +85,7 @@ export class TurbosTestLiquidityManangementService implements OnApplicationBoots
                 return await this.turbosActionService.openPosition({
                     pool: fetchedPool,
                     accountAddress: "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
-                    amount: new BN(3_000_000), // 1 u
+                    amount: new BN(3_000_000), // 3 u
                     tokenAId: TokenId.SuiIka,
                     tokenBId: TokenId.SuiUsdc,
                     tokens,

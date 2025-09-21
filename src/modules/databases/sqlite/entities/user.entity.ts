@@ -2,7 +2,7 @@ import { Column, Entity, OneToMany } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { UserDepositEntity } from "./user-deposit.entity"
 import { UserCummulativeEntity } from "./user-cummulative.entity"
-import { TokenId } from "@modules/databases"
+import { PositionEntity, TokenId } from "@modules/databases"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { WalletEntity } from "./wallet.entity"
 import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
@@ -41,4 +41,7 @@ export class UserEntity extends UuidAbstractEntity {
         (addedLiquidityPool) => addedLiquidityPool.user,
     )
         addedLiquidityPools: Array<AddedLiquidityPoolEntity>
+
+    @OneToMany(() => PositionEntity, (position) => position.user)
+        positions: Array<PositionEntity>    
 }

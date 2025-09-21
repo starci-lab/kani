@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, JoinColumn, OneToMany } from "typeorm"
+import { Entity, ManyToOne, JoinColumn, OneToMany, Column } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { UserEntity } from "./user.entity"
 import { LiquidityPoolEntity } from "./liquidity-pool.entity"
@@ -12,12 +12,15 @@ export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
     @JoinColumn({ name: "user_id" })
         user: UserEntity
 
-    @ManyToOne(() => LiquidityPoolEntity, (pool) => pool.assignedUsers, 
+    @ManyToOne(() => LiquidityPoolEntity, (pool) => pool.assignedLiquidityPools, 
         { onDelete: "CASCADE" }
     )
-    @JoinColumn({ name: "pool_id" })
-        pool: LiquidityPoolEntity
+    @JoinColumn({ name: "liquidity_pool_id" })
+        liquidityPool: LiquidityPoolEntity
 
-    @OneToMany(() => PositionEntity, (position) => position.pool)
+    @Column({ type: "text", name: "liquidity_pool_id" })
+        liquidityPoolId: string
+
+    @OneToMany(() => PositionEntity, (position) => position.assignedLiquidityPool)
         positions: Array<PositionEntity>
 }
