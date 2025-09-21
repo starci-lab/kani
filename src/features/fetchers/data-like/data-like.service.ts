@@ -61,6 +61,7 @@ export class DataLikeService implements OnApplicationBootstrap {
             tokenBId: memDbQueryService.findTokenById(liquidityPool.tokenB.toString())!.displayId,
             dexId: memDbQueryService.findDexById(liquidityPool.dex.toString())!.displayId,
             farmTokenTypes: liquidityPool.farmTokenTypes,
+            rewardTokenIds: [],
         }))
     }
 
@@ -77,11 +78,18 @@ export class DataLikeService implements OnApplicationBootstrap {
         const liquidityPools = await dataSource.manager.find(LiquidityPoolEntity, {
             relations: {
                 tokenA: true,
-                tokenB: true
+                tokenB: true,
+                rewardTokens: {
+                    token: true
+                }
             }
         })
         this.liquidityPools = liquidityPools.map((liquidityPool) => ({
             ...liquidityPool,
+            rewardTokens: liquidityPool.rewardTokens.map((rewardToken) => ({
+                ...rewardToken.token,
+                id: rewardToken.id,
+            })),
             id: liquidityPool.id,
         }))
         const dexes = await dataSource.manager.find(DexEntity)

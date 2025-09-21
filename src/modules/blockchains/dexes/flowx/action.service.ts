@@ -246,7 +246,7 @@ export class FlowXActionService implements IActionService {
             tickUpper, 
             liquidity, 
             positionId,
-            provisionAmount: amount
+            depositAmount: amount
         }
     }
 

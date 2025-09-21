@@ -1,17 +1,25 @@
 import { Injectable } from "@nestjs/common"
 import {
     ClosePositionParams,
+    ClosePositionResponse,
     IActionService,
     OpenPositionParams,
-    OpenPositionResponse
+    OpenPositionResponse,
 } from "../../interfaces"
 import { InjectTurbosClmmSdks } from "./turbos.decorators"
-import { computePercentage, computeRatio, computeRaw, Network, toUnit, ZERO_BN } from "@modules/common"
+import {
+    computePercentage,
+    computeRatio,
+    computeRaw,
+    incrementBnMap,
+    MAX_UINT_64,
+    Network,
+    toUnit,
+} from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
 import { TickManagerService } from "../../utils"
-import { ActionResponse } from "../../dexes"
 import { PriceRatioService, TickMathService } from "../../utils"
-import { BN } from "bn.js"
+import BN from "bn.js"
 import Decimal from "decimal.js"
 import { SuiCoinManagerService } from "../../utils"
 import { Transaction } from "@mysten/sui/transactions"
@@ -20,9 +28,9 @@ import {
     OPEN_POSITION_SLIPPAGE,
     SuiSwapService,
     SWAP_OPEN_POSITION_SLIPPAGE,
-    ZapService
+    ZapService,
 } from "../../swap"
-import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
+import { SuiClient, SuiEvent, SuiObjectChange } from "@mysten/sui/client"
 import { GasSuiSwapUtilsService } from "../../swap"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"
@@ -30,6 +38,8 @@ import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
 import { FeeToService } from "../../swap"
+import { TokenId } from "@modules/databases"
+import { DayjsService } from "@modules/mixin"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -49,6 +59,7 @@ export class TurbosActionService implements IActionService {
         private readonly signerService: SignerService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly dayjsService: DayjsService,
     ) { }
 
     // open position
@@ -66,7 +77,7 @@ export class TurbosActionService implements IActionService {
         user,
         suiClient,
         txb,
-        requireZapEligible = true
+        requireZapEligible = true,
     }: OpenPositionParams): Promise<OpenPositionResponse> {
         txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
@@ -90,9 +101,7 @@ export class TurbosActionService implements IActionService {
             chainId: tokenA.chainId,
             network,
         })
-        const {
-            sourceCoin,
-        } = await this.gasSuiSwapUtilsService.gasSuiSwap({
+        const { sourceCoin } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
             amountIn: amount,
@@ -100,7 +109,7 @@ export class TurbosActionService implements IActionService {
             tokens,
             slippage,
             suiClient,
-            txb
+            txb,
         })
         await this.feeToService.attachSuiFee({
             txb,
@@ -108,14 +117,11 @@ export class TurbosActionService implements IActionService {
             tokens,
             network,
             amount,
-            sourceCoin
+            sourceCoin,
         })
         // use this to calculate the ratio
         const quoteAmountA = computeRaw(1, tokenA.decimals)
-        const [
-            amountA,
-            amountB
-        ] = turbosSdk.pool.estimateAmountsFromOneAmount({
+        const [amountA, amountB] = turbosSdk.pool.estimateAmountsFromOneAmount({
             amount: quoteAmountA.toString(),
             isAmountA: true,
             sqrtPrice: pool.currentSqrtPrice.toString(),
@@ -124,14 +130,14 @@ export class TurbosActionService implements IActionService {
         })
         const ratio = computeRatio(
             new BN(amountB).mul(toUnit(tokenA.decimals)),
-            new BN(amountA).mul(toUnit(tokenB.decimals))
+            new BN(amountA).mul(toUnit(tokenB.decimals)),
         )
         const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
             pool.currentSqrtPrice,
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
+        const { swapAmount, routerId, quoteData, receiveAmount } =
             await this.zapService.computeZapAmounts({
                 amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
@@ -144,12 +150,13 @@ export class TurbosActionService implements IActionService {
                 network,
                 swapSlippage,
             })
-
         // 4. optional ratio check
         const zapAmountA = priorityAOverB
-            ? new BN(sourceCoin.coinAmount) : new BN(receiveAmount)
+            ? new BN(sourceCoin.coinAmount)
+            : new BN(receiveAmount)
         const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount) : new BN(sourceCoin.coinAmount)
+            ? new BN(receiveAmount)
+            : new BN(sourceCoin.coinAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
@@ -161,7 +168,8 @@ export class TurbosActionService implements IActionService {
                 amount: new BN(zapAmountB),
             },
         })
-        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment")
+        if (requireZapEligible && !isZapEligible)
+            throw new Error("Zap not eligible at this moment")
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
@@ -185,40 +193,79 @@ export class TurbosActionService implements IActionService {
             throw new Error("Coin out is required")
         }
         // we process add liquidity
-        const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
-        const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
-        if (!coinOut) {
-            throw new Error("Coin out or change coin is missing")
-        }
-        const providedCoinAmountA = priorityAOverB ? sourceCoin : coinOut
-        const providedCoinAmountB = priorityAOverB ? coinOut : sourceCoin
+        const providedCoinA = priorityAOverB ? sourceCoin : coinOut
+        const providedCoinB = priorityAOverB ? coinOut : sourceCoin
         // we use cetus lib to determine turbos lib
         // since (maybe) the CLMM concepts use the same fomular
+        let [computedAmountA, computedAmountB] =
+            turbosSdk.pool.estimateAmountsFromOneAmount({
+                sqrtPrice: pool.currentSqrtPrice.toString(),
+                tickLower,
+                tickUpper,
+                amount: priorityAOverB
+                    ? providedCoinA.coinAmount.toString()
+                    : providedCoinB.coinAmount.toString(),
+                isAmountA: priorityAOverB,
+            })
+        if (priorityAOverB) {
+            if (new BN(computedAmountB).gt(providedCoinB.coinAmount)) {
+                computedAmountA = new BN(computedAmountA)
+                    .mul(providedCoinB.coinAmount)
+                    .div(new BN(computedAmountB))
+                    .toString()
+                computedAmountB = providedCoinB.coinAmount.toString()
+            }
+        } else {
+            if (new BN(computedAmountA).gt(providedCoinA.coinAmount)) {
+                computedAmountB = new BN(computedAmountB)
+                    .mul(providedCoinA.coinAmount)
+                    .div(new BN(computedAmountA))
+                    .toString()
+                computedAmountA = providedCoinA.coinAmount.toString()
+            }
+        }
         const txbAfterOpenPosition = await turbosSdk.pool.addLiquidity({
             pool: pool.poolAddress,
             address: accountAddress,
-            amountA: providedAmountA.toString(),
-            amountB: providedAmountB.toString(),
+            amountA: computedAmountA,
+            amountB: computedAmountB,
             tickLower,
             tickUpper,
+            deadline: this.dayjsService.now().add(1, "hour").toDate().getTime(),
             slippage: computePercentage(slippage),
             txb,
-            coinAObjectArguments: [providedCoinAmountA.coinArg],
-            coinBObjectArguments: [providedCoinAmountB.coinArg],
+            coinAObjectArguments: [providedCoinA.coinArg],
+            coinBObjectArguments: [providedCoinB.coinArg],
         })
         let positionId = ""
         const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
+            console.log(objectChanges)
             const [positionObjId] = objectChanges
                 .filter(
                     (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
                         obj.type === "created" &&
-                obj.objectType.endsWith("::position_nft::TurbosPositionNFT") &&
-                typeof obj.owner === "object" &&
-                "AddressOwner" in obj.owner &&
-                obj.owner.AddressOwner.toLowerCase() === accountAddress.toLowerCase()
+                        obj.objectType.endsWith("::position_nft::TurbosPositionNFT") &&
+                        typeof obj.owner === "object" &&
+                        "AddressOwner" in obj.owner &&
+                        obj.owner.AddressOwner.toLowerCase() ===
+                        accountAddress.toLowerCase(),
                 )
-                .map((obj) => obj.objectId)   
+                .map((obj) => obj.objectId)
             positionId = positionObjId
+        }
+        let liquidity = new BN(0)
+        const handleEvents = (events: Array<SuiEvent>) => {
+            for (const event of events) {
+                if (events.some((event) =>
+                    event.type.includes("::position_manager::IncreaseLiquidityEvent")
+                    && event.transactionModule === "position_manager"
+                )) {
+                    const { liquidity: liquidityString } = event.parsedJson as {
+                        liquidity: string;
+                    }
+                    liquidity = new BN(liquidityString)
+                }
+            }
         }
         const txHash = await this.signerService.withSuiSigner({
             user,
@@ -228,7 +275,8 @@ export class TurbosActionService implements IActionService {
                     transaction: txbAfterOpenPosition,
                     suiClient,
                     signer,
-                    handleObjectChanges
+                    handleObjectChanges,
+                    handleEvents,
                 })
             },
         })
@@ -237,7 +285,8 @@ export class TurbosActionService implements IActionService {
             tickLower,
             tickUpper,
             positionId,
-            provisionAmount: amount
+            depositAmount: amount,
+            liquidity,
         }
     }
 
@@ -253,37 +302,72 @@ export class TurbosActionService implements IActionService {
         tokens,
         slippage,
         user,
-        suiClient
-    }: ClosePositionParams): Promise<ActionResponse> {
+        suiClient,
+    }: ClosePositionParams): Promise<ClosePositionResponse> {
         if (!user) {
             throw new Error("Sui key pair is required")
         }
         suiClient = suiClient || this.suiClients[network][clientIndex]
         // maximum slippage to ensure the transaction is successful
         slippage = slippage || CLOSE_POSITION_SLIPPAGE
+        txb = txb || new Transaction()
         const turbosSdk = this.turbosClmmSdks[network]
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
         const tokenB = tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
-        // txb
-        const txbAfterRemoveLiquidity =
-            await turbosSdk
-                .pool
-                .removeLiquidity({
-                    txb,
-                    nft: position.positionId,
-                    pool: pool.poolAddress,
-                    address: accountAddress,
-                    amountA: ZERO_BN.toString(),
-                    amountB: ZERO_BN.toString(),
-                    slippage: computePercentage(slippage),
-                    collectAmountA: ZERO_BN.toString(),
-                    collectAmountB: ZERO_BN.toString(),
-                    rewardAmounts: [],
-                    decreaseLiquidity: position.liquidity
-                })
+        const positionFields = await turbosSdk.position.getPositionFields(
+            position.positionId,
+        )
+        const txbAfterRemoveLiquidity = await turbosSdk.pool.removeLiquidity({
+            txb,
+            nft: position.positionId,
+            pool: pool.poolAddress,
+            address: accountAddress,
+            amountA: positionFields.tokens_owed_a,
+            amountB: positionFields.tokens_owed_b,
+            slippage: computePercentage(slippage),
+            collectAmountA: MAX_UINT_64.toString(),
+            collectAmountB: MAX_UINT_64.toString(),
+            rewardAmounts: pool.rewardTokens.map(() => MAX_UINT_64.toString()),
+            decreaseLiquidity: positionFields.liquidity,
+            deadline: this.dayjsService.now().add(1, "hour").toDate().getTime(),
+        })
+        txbAfterRemoveLiquidity.setSender(accountAddress)
+        const suiTokenOuts: Partial<Record<TokenId, BN>> = {}
+        const handleEvents = (events: Array<SuiEvent>) => {
+            for (const event of events) {
+                if (event.type.includes("::position_manager::DecreaseLiquidityEvent")) {
+                    const { amount_a, amount_b } = event.parsedJson as {
+                        amount_a: string;
+                        amount_b: string;
+                    }
+                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_a))
+                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_b))
+                }
+                if (event.type.includes("::pool::CollectEventV2")) {
+                    const { amount_a, amount_b } = event.parsedJson as {
+                        amount_a: string;
+                        amount_b: string;
+                    }
+                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_a))
+                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_b))
+                }
+                if (event.type.includes("::pool::CollectRewardEventV2")) {
+                    const { amount, reward_type } = event.parsedJson as {
+                        amount: string;
+                        reward_type: { name: string };
+                    }
+                    const token = tokens.find((token) =>
+                        token.tokenAddress.includes(reward_type.name),
+                    )
+                    if (token) {
+                        incrementBnMap(suiTokenOuts, token.displayId, new BN(amount))
+                    }
+                }
+            }
+        }
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
@@ -292,11 +376,14 @@ export class TurbosActionService implements IActionService {
                     transaction: txbAfterRemoveLiquidity,
                     suiClient,
                     signer,
+                    stimulateOnly: true,
+                    handleEvents,
                 })
             },
         })
         return {
             txHash,
+            suiTokenOuts,
         }
     }
 }

@@ -14,6 +14,10 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         network: Network.Mainnet,
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.Native],
+        rewardTokenIds: [
+            TokenId.SuiIka,
+            TokenId.SuiCetus,
+        ],
     },
     {
         displayId: LiquidityPoolId.CetusSuiUsdc005,
@@ -25,9 +29,12 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         network: Network.Mainnet,
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.Native, TokenType.StableUsdc],
+        rewardTokenIds: [
+            TokenId.SuiCetus
+        ]
     },
     {
-        displayId: LiquidityPoolId.TurbosIkaUsdcIka015,
+        displayId: LiquidityPoolId.TurbosIkaUsdc015,
         dexId: DexId.Turbos,
         poolAddress: "0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
         tokenAId: TokenId.SuiIka,
@@ -37,6 +44,10 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         network: Network.Mainnet,
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.StableUsdc],
+        rewardTokenIds: [
+            TokenId.SuiIka,
+            TokenId.SuiUsdc
+        ]
     },
     {
         displayId: LiquidityPoolId.TurbosDeepUsdc015,
@@ -49,6 +60,10 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         network: Network.Mainnet,
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.StableUsdc],
+        rewardTokenIds: [
+            TokenId.SuiDeep,
+            TokenId.SuiUsdc
+        ]
     },
     {
         displayId: LiquidityPoolId.CetusUsdcEth025,
@@ -61,6 +76,10 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         network: Network.Mainnet,
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.StableUsdc],
+        rewardTokenIds: [
+            TokenId.SuiCetus,
+            TokenId.SuiNative
+        ]
     },
     {
         displayId: LiquidityPoolId.MomentumWalSui02,
@@ -73,6 +92,10 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         network: Network.Mainnet,
         chainId: ChainId.Sui,
         farmTokenTypes: [TokenType.Native],
+        rewardTokenIds: [
+            TokenId.SuiXStakedSui,
+            TokenId.SuiWalrus
+        ]
     },
     {
         displayId: LiquidityPoolId.MomentumSuiUsdc0175,
@@ -88,5 +111,8 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
             TokenType.StableUsdc, 
             TokenType.Native
         ],
+        rewardTokenIds: [
+            TokenId.SuiXStakedSui,
+        ]
     },
 ]

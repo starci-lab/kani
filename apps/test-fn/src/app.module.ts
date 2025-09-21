@@ -14,7 +14,9 @@ import { InitializerModule } from "@modules/initializer"
 // import { TestFlowService } from "./test-flow.service"
 // import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
 // import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
-import { Mmt2TestLiquidityManangementService } from "./mmt-test-liquidity-manager-2.service"
+// import { Mmt2TestLiquidityManangementService } from "./mmt-test-liquidity-manager-2.service"
+import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
+import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
 // import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
 // import { TestSwapService } from "./test-swap.service"
 
@@ -92,8 +94,8 @@ import { Mmt2TestLiquidityManangementService } from "./mmt-test-liquidity-manage
     providers: [
         //TestFlowService,
         //TestSwapService
-        //TurbosTestLiquidityManangementService
-        Mmt2TestLiquidityManangementService
+        TurbosTestLiquidityManangementService
+        // Mmt2TestLiquidityManangementService
         //CetusTestLiquidityManangementService
         //MmtTestLiquidityManangementService
     ],

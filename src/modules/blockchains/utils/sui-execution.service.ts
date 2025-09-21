@@ -43,6 +43,9 @@ export class SuiExecutionService {
                         sender: signer.toSuiAddress(),
                         transactionBlock: transaction,
                     })
+                    if (inspectResult.effects.status.status === "failure") {
+                        throw new Error(inspectResult.effects.status.error)
+                    }
                     if (handleInspectResult) {
                         await handleInspectResult(inspectResult)
                     }

@@ -1,4 +1,8 @@
-import { AddLiquidityParams, Percentage, TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import {
+    AddLiquidityParams,
+    Percentage,
+    TickMath,
+} from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
@@ -7,21 +11,41 @@ import {
     TickManagerService,
     TickMathService,
 } from "../../utils"
-import { ClosePositionParams, IActionService, OpenPositionParams, OpenPositionResponse } from "../../interfaces"
-import { computeRatio, computeRaw, Network, toUnit } from "@modules/common"
+import {
+    ClosePositionParams,
+    ClosePositionResponse,
+    IActionService,
+    OpenPositionParams,
+    OpenPositionResponse,
+} from "../../interfaces"
+import {
+    computeRatio,
+    computeRaw,
+    incrementBnMap,
+    Network,
+    toUnit,
+} from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { FeeToService, GasSuiSwapUtilsService, OPEN_POSITION_SLIPPAGE, SuiSwapService, SWAP_OPEN_POSITION_SLIPPAGE, ZapService } from "../../swap"
-import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
+import {
+    CLOSE_POSITION_SLIPPAGE,
+    FeeToService,
+    GasSuiSwapUtilsService,
+    OPEN_POSITION_SLIPPAGE,
+    SuiSwapService,
+    SWAP_OPEN_POSITION_SLIPPAGE,
+    ZapService,
+} from "../../swap"
+import { SuiClient, SuiEvent, SuiObjectChange } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"
 import { InjectCetusClmmSdks } from "./cetus.decorators"
 import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
-import { ActionResponse } from "../types"
 import { PythService } from "../../pyth"
+import { TokenId } from "@modules/databases"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -58,7 +82,7 @@ export class CetusActionService implements IActionService {
         user,
         priorityAOverB,
         suiClient,
-        requireZapEligible
+        requireZapEligible,
     }: OpenPositionParams): Promise<OpenPositionResponse> {
         const cetusClmmSdk = this.cetusClmmSdks[network]
         cetusClmmSdk.senderAddress = accountAddress
@@ -83,9 +107,7 @@ export class CetusActionService implements IActionService {
             chainId: tokenA.chainId,
             network,
         })
-        const {
-            sourceCoin,
-        } = await this.gasSuiSwapUtilsService.gasSuiSwap({
+        const { sourceCoin } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,
             tokenInId: tokenIn.displayId,
@@ -93,7 +115,7 @@ export class CetusActionService implements IActionService {
             amountIn: amount,
             slippage,
             suiClient,
-            txb
+            txb,
         })
         await this.feeToService.attachSuiFee({
             txb,
@@ -109,27 +131,22 @@ export class CetusActionService implements IActionService {
             ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
                 tickLower,
                 tickUpper,
-                quoteAmountA,            // coinAmount must be BN
-                true,                    // isCoinA
-                true,                   // roundUp
-                slippage,                // example 0.01
+                quoteAmountA, // coinAmount must be BN
+                true, // isCoinA
+                true, // roundUp
+                slippage, // example 0.01
                 pool.currentSqrtPrice,
             )
         const ratio = computeRatio(
             new BN(estCoinAmountB).mul(toUnit(tokenA.decimals)),
-            new BN(estCoinAmountA).mul(toUnit(tokenB.decimals))
+            new BN(estCoinAmountA).mul(toUnit(tokenB.decimals)),
         )
         const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
             pool.currentSqrtPrice,
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { 
-            swapAmount, 
-            routerId, 
-            quoteData, 
-            receiveAmount, 
-        } =
+        const { swapAmount, routerId, quoteData, receiveAmount } =
             await this.zapService.computeZapAmounts({
                 amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
@@ -144,9 +161,11 @@ export class CetusActionService implements IActionService {
             })
         // 4. optional ratio check
         const zapAmountA = priorityAOverB
-            ? new BN(sourceCoin.coinAmount) : new BN(receiveAmount)
+            ? new BN(sourceCoin.coinAmount)
+            : new BN(receiveAmount)
         const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount) : new BN(sourceCoin.coinAmount)
+            ? new BN(receiveAmount)
+            : new BN(sourceCoin.coinAmount)
         const isZapEligible = this.priceRatioService.isZapEligible({
             priorityAOverB,
             tokenA: {
@@ -158,7 +177,8 @@ export class CetusActionService implements IActionService {
                 amount: new BN(zapAmountB),
             },
         })
-        if (requireZapEligible && !isZapEligible) throw new Error("Zap not eligible at this moment") 
+        if (requireZapEligible && !isZapEligible)
+            throw new Error("Zap not eligible at this moment")
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
@@ -181,24 +201,28 @@ export class CetusActionService implements IActionService {
         if (!coinOut) {
             throw new Error("Coin out is required")
         }
-        const providedAmountA = priorityAOverB ? sourceCoin.coinAmount : coinOut.coinAmount
-        const providedAmountB = priorityAOverB ? coinOut.coinAmount : sourceCoin.coinAmount
+        const providedCoinA = priorityAOverB
+            ? sourceCoin
+            : coinOut
+        const providedCoinB = priorityAOverB
+            ? coinOut
+            : sourceCoin
         const liquidityAmount = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
             pool.currentSqrtPrice,
             tickLower,
             tickUpper,
             {
-                coinA: providedAmountA,
-                coinB: providedAmountB,
+                coinA: providedCoinA.coinAmount,
+                coinB: providedCoinB.coinAmount,
             },
-        ) 
+        )
         const addLiquidityParams: AddLiquidityParams = {
             delta_liquidity: liquidityAmount.toString(),
             coinTypeA: tokenA.tokenAddress,
             coinTypeB: tokenB.tokenAddress,
             collect_fee: true,
-            max_amount_a: providedAmountA.toString(),
-            max_amount_b: providedAmountB.toString()    ,
+            max_amount_a: providedCoinA.coinAmount.toString(),
+            max_amount_b: providedCoinB.coinAmount.toString(),
             pool_id: pool.poolAddress,
             tick_lower: tickLower.toString(),
             tick_upper: tickUpper.toString(),
@@ -207,24 +231,26 @@ export class CetusActionService implements IActionService {
         }
         const inputCoinA = priorityAOverB ? sourceCoin : coinOut
         const inputCoinB = priorityAOverB ? coinOut : sourceCoin
-        const txbAfterOpenPosition = await cetusClmmSdk.Position.createAddLiquidityPayload(
-            addLiquidityParams,
-            txb,
-            inputCoinA?.coinArg,
-            inputCoinB?.coinArg,
-        )
+        const txbAfterOpenPosition =
+            await cetusClmmSdk.Position.createAddLiquidityPayload(
+                addLiquidityParams,
+                txb,
+                inputCoinA?.coinArg,
+                inputCoinB?.coinArg,
+            )
         let positionId = ""
         const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
             const [positionObjId] = objectChanges
                 .filter(
                     (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
                         obj.type === "created" &&
-                obj.objectType.endsWith("::position::Position") &&
-                typeof obj.owner === "object" &&
-                "AddressOwner" in obj.owner &&
-                obj.owner.AddressOwner.toLowerCase() === accountAddress.toLowerCase()
+                        obj.objectType.endsWith("::position::Position") &&
+                        typeof obj.owner === "object" &&
+                        "AddressOwner" in obj.owner &&
+                        obj.owner.AddressOwner.toLowerCase() ===
+                        accountAddress.toLowerCase(),
                 )
-                .map((obj) => obj.objectId)   
+                .map((obj) => obj.objectId)
             positionId = positionObjId
         }
         const txHash = await this.signerService.withSuiSigner({
@@ -235,19 +261,20 @@ export class CetusActionService implements IActionService {
                     transaction: txbAfterOpenPosition,
                     suiClient,
                     signer,
-                    handleObjectChanges
+                    handleObjectChanges,
                 })
             },
         })
-        return { 
-            txHash, 
-            tickLower, 
-            tickUpper, 
-            liquidity: liquidityAmount, 
+        return {
+            txHash,
+            tickLower,
+            tickUpper,
+            liquidity: liquidityAmount,
             positionId,
-            provisionAmount: amount
+            depositAmount: amount,
         }
     }
+
     // ---------- Close Position ----------
     async closePosition({
         pool,
@@ -258,15 +285,18 @@ export class CetusActionService implements IActionService {
         tokenBId,
         tokens,
         user,
-        suiClient
-    }: ClosePositionParams): Promise<ActionResponse> {
+        suiClient,
+        slippage,
+        accountAddress,
+    }: ClosePositionParams): Promise<ClosePositionResponse> {
         if (!user) {
             throw new Error("Sui key pair is required")
         }
-
+        slippage = slippage || CLOSE_POSITION_SLIPPAGE
         suiClient = suiClient || this.suiClients[network][clientIndex]
         txb = txb ?? new Transaction()
         const cetusClmmSdk = this.cetusClmmSdks[network]
+        cetusClmmSdk.senderAddress = accountAddress
 
         const tokenA = tokens.find((token) => token.displayId === tokenAId)
         const tokenB = tokens.find((token) => token.displayId === tokenBId)
@@ -282,7 +312,7 @@ export class CetusActionService implements IActionService {
         const upperSqrtPrice = TickMath.tickIndexToSqrtPriceX64(upperTick)
 
         const liquidity = new BN(position.liquidity)
-        const slippageTolerance = Percentage.fromDecimal(new Decimal("0.05")) // 5%
+        const slippageTolerance = Percentage.fromDecimal(new Decimal(slippage)) // 5%
         const curSqrtPrice = new BN(pool.currentSqrtPrice)
 
         const coinAmounts = ClmmPoolUtil.getCoinAmountFromLiquidity(
@@ -292,13 +322,11 @@ export class CetusActionService implements IActionService {
             upperSqrtPrice,
             false,
         )
-
         const { tokenMaxA, tokenMaxB } = adjustForCoinSlippage(
             coinAmounts,
             slippageTolerance,
             false,
         )
-
         // 2. Build close position payload
         const txbAfterClosePosition =
             await cetusClmmSdk.Position.closePositionTransactionPayload(
@@ -317,6 +345,43 @@ export class CetusActionService implements IActionService {
                 txb,
             )
 
+        const suiTokenOuts: Partial<Record<TokenId, BN>> = {}
+        const handleEvents = (events: Array<SuiEvent>) => {
+            for (const event of events) {
+                if (
+                    event.type.includes("::pool::CollectFeeEvent")
+                    && event.transactionModule === "pool_script_v2"
+                ) {
+                    const { amount_a, amount_b } = event.parsedJson as {
+                        amount_a: string;
+                        amount_b: string;
+                    }
+                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_a))
+                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_b))
+                }
+                if (event.type.includes("::pool::RemoveLiquidityEvent")) {
+                    const { amount_a, amount_b } = event.parsedJson as {
+                        amount_a: string;
+                        amount_b: string;
+                    }
+                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_a))
+                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_b))
+                }
+                if (event.type.includes("::pool::CollectRewardV2Event")) {
+                    const { amount, rewarder_type } = event.parsedJson as {
+                        amount: string;
+                        rewarder_type: { name: string };
+                    }
+                    const token = tokens.find((token) =>
+                        token.tokenAddress.includes(rewarder_type.name),
+                    )
+                    if (!token) {
+                        throw new Error("Token not found")
+                    }
+                    incrementBnMap(suiTokenOuts, token.displayId, new BN(amount))
+                }
+            }
+        }
         const txHash = await this.signerService.withSuiSigner({
             user,
             network,
@@ -324,11 +389,11 @@ export class CetusActionService implements IActionService {
                 return await this.suiExecutionService.signAndExecuteTransaction({
                     transaction: txbAfterClosePosition,
                     suiClient,
+                    handleEvents,
                     signer,
                 })
             },
         })
-
-        return { txHash }
+        return { txHash, suiTokenOuts }
     }
 }

@@ -278,7 +278,7 @@ export class MomentumActionService implements IActionService {
             tickLower,
             tickUpper,
             positionId,
-            provisionAmount: amount,
+            depositAmount: amount,
             liquidity: new BN(liquidity),
         }
     }
@@ -356,7 +356,7 @@ export class MomentumActionService implements IActionService {
                 }
                 if (event.type.includes("::collect::CollectPoolRewardEvent")) {
                     const { amount, reward_coin_type } = event.parsedJson as 
-                    { amount: string, reward_coin_type: { name: string} }
+                    { amount: string, reward_coin_type: { name: string } }
                     const token = tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
                     if (!token) {
                         throw new Error("Token not found")
@@ -379,7 +379,6 @@ export class MomentumActionService implements IActionService {
                     transaction: txb,
                     suiClient,
                     signer,
-                    stimulateOnly: true,
                     handleEvents,
                 })
             },

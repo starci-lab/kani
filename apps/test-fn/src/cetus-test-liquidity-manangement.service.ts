@@ -11,7 +11,6 @@ import {
     tokenData,
     TokenId,
 } from "@modules/databases"
-import BN from "bn.js"
 import { UserLoaderService } from "@features/fetchers"
 import { CetusActionService } from "@modules/blockchains/dexes/cetus/action.service"
 import { RetryService } from "@modules/mixin"
@@ -52,24 +51,48 @@ implements OnApplicationBootstrap
             network: Network.Mainnet,
         })
         const users = await this.userLoaderService.loadUsers()
-        const digest = await this.retryService.retry({
+        // const digest = await this.retryService.retry({
+        //     action: async () => {
+        //         return await this.cetusActionService.openPosition({
+        //             accountAddress:
+        //             "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+        //             pool: fetchedPool,
+        //             amount: new BN(1_000_000_000), // 1 sui
+        //             tokenAId: TokenId.SuiUsdc,
+        //             tokenBId: TokenId.SuiNative,
+        //             tokens,
+        //             priorityAOverB: false,
+        //             user: users[0],
+        //             requireZapEligible: false
+        //         })
+        //     },
+        //     maxRetries: 10,
+        //     delay: 100,
+        // })
+        // console.log(digest)
+        const { suiTokenOuts } = await this.retryService.retry({
             action: async () => {
-                return await this.cetusActionService.openPosition({
-                    accountAddress:
-                    "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+                return await this.cetusActionService.closePosition({
                     pool: fetchedPool,
-                    amount: new BN(1_000_000_000), // 1 sui
+                    position: {
+                        positionId: "0xfbc5f0ae30ae8932fb705fd94e73207793e68ba72d5466b2affa09dc84a6c0f0",
+                        liquidity: "121139323485",
+                        tickLower: 56070,
+                        tickUpper: 56080,
+                    },
+                    accountAddress: "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+                    priorityAOverB: true,
                     tokenAId: TokenId.SuiUsdc,
                     tokenBId: TokenId.SuiNative,
                     tokens,
-                    priorityAOverB: false,
                     user: users[0],
-                    requireZapEligible: false
                 })
             },
             maxRetries: 10,
             delay: 100,
         })
-        console.log(digest)
+        console.log((Object.entries(suiTokenOuts || {})).map(
+            ([tokenId, amount]) => `${tokenId}: ${amount.toString()}`
+        ))
     }
 }

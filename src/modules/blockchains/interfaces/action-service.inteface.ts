@@ -88,8 +88,8 @@ export interface SuiFlexibleSwapResponse extends ActionResponse {
 export interface OpenPositionResponse extends ActionResponse {
     tickLower: number
     tickUpper: number
-    liquidity?: BN
-    provisionAmount: BN
+    liquidity: BN
+    depositAmount: BN
     positionId: string
 }
 

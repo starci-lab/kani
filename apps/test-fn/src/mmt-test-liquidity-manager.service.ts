@@ -25,7 +25,7 @@ export class MmtTestLiquidityManangementService implements OnApplicationBootstra
         await this.poolFetcherService.fetchPools()
         await this.positionRecordManagerService.writePosition({
             dexId: DexId.Cetus,
-            poolId: LiquidityPoolId.TurbosIkaUsdcIka015,
+            poolId: LiquidityPoolId.TurbosIkaUsdc015,
             chainId: ChainId.Sui,
             accountAddress: "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
             amount: new BN("1000000"), // 1 u

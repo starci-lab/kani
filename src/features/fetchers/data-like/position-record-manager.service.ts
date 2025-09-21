@@ -131,7 +131,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                 const { 
                     txHash, 
                     liquidity, 
-                    provisionAmount, 
+                    depositAmount, 
                     tickLower, 
                     tickUpper, 
                     positionId
@@ -140,7 +140,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                     [
                         {
                             openTxHash: txHash,
-                            amountOpen: provisionAmount.toString(),
+                            amountOpen: depositAmount.toString(),
                             tickLower,
                             tickUpper,
                             liquidity: liquidity?.toString(),
@@ -150,7 +150,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                 this.logger.info(WinstonLog.PositionWritten, {
                     positionId,
                     txHash,
-                    provisionAmount: provisionAmount.toString(),
+                    depositAmount: depositAmount.toString(),
                 })
             }
         )   

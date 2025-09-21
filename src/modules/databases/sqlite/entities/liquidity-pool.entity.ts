@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm"
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, RelationId } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network, TokenType } from "@modules/common"
 import { TokenEntity } from "./token.entity"
@@ -6,6 +6,7 @@ import { DexEntity } from "./dex.entity"
 import { DexId, LiquidityPoolId, TokenId } from "../../enums"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
+import { RewardTokenEntity } from "./reward-token.entity"
 
 @Entity({ name: "lp_pools" })
 export class LiquidityPoolEntity extends StringAbstractEntity {
@@ -57,4 +58,12 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
 
     @OneToMany(() => AddedLiquidityPoolEntity, (addedLiquidityPool) => addedLiquidityPool.pool) 
         addedUsers: Array<AddedLiquidityPoolEntity>
+
+    @OneToMany(() => RewardTokenEntity, (rewardToken) => rewardToken.liquidityPool, {
+        cascade: true,
+    })
+        rewardTokens: Array<RewardTokenEntity>
+
+    @RelationId((liquidityPool: LiquidityPoolEntity) => liquidityPool.rewardTokens)
+        rewardTokenIds: Array<TokenId>
 }

@@ -117,6 +117,10 @@ export interface LiquidityPoolLike extends BaseLike {
 
     /** The kind of the liquidity pool */
     farmTokenTypes: Array<TokenType>
+
+    /** The reward tokens of the pool */
+    rewardTokenIds: Array<TokenId>
+    rewardTokens?: Array<TokenLike>
 }
 
 export interface UserDepositLike extends BaseLike {

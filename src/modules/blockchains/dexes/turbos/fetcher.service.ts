@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { InjectTurbosClmmSdks } from "./turbos.decorators"
-import { ChainId, Network, toI32 } from "@modules/common"
+import { ChainId, Network } from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
 import {
     FetchedPool,
@@ -27,6 +27,7 @@ export class TurbosFetcherService implements IFetchService {
         if (network === Network.Testnet) {
             throw new Error("Testnet is not supported")
         }
+        const turbosSdk = this.turbosClmmSdks[network]  
         // liquidity in sui network only
         liquidityPools = liquidityPools.filter(
             (liquidityPool) =>
@@ -34,16 +35,17 @@ export class TurbosFetcherService implements IFetchService {
                 liquidityPool.network === network &&
                 liquidityPool.chainId === ChainId.Sui,
         )
-        const turbosClmmSdk = this.turbosClmmSdks[network]
         const pools: Array<FetchedPool> = []
         for (const liquidityPool of liquidityPools) {
-            const fetchedPool = await turbosClmmSdk.pool.getPool(
+            const fetchedPool = await turbosSdk.pool.getPool(
                 liquidityPool.poolAddress,
             )
             pools.push({
                 displayId: liquidityPool.displayId,
                 poolAddress: fetchedPool.id.id,
-                currentTick: toI32(fetchedPool.tick_current_index.fields.bits),
+                currentTick: turbosSdk.math.sqrtPriceX64ToTickIndex(
+                    new BN(fetchedPool.sqrt_price),
+                ),
                 currentSqrtPrice: new BN(fetchedPool.sqrt_price),
                 tickSpacing: Number(fetchedPool.tick_spacing),
                 fee: Number(fetchedPool.fee),

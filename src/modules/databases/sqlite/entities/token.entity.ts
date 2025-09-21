@@ -1,7 +1,8 @@
-import { Column, Entity } from "typeorm"
+import { Column, Entity, OneToMany, RelationId } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
 import { ChainId, Network, TokenType } from "@modules/common"
 import { CexId, TokenId } from "@modules/databases/enums"
+import { RewardTokenEntity } from "./reward-token.entity"
 
 @Entity({ name: "tokens" })
 export class TokenEntity extends StringAbstractEntity {
@@ -52,6 +53,12 @@ export class TokenEntity extends StringAbstractEntity {
 
     @Column({ type: "text", name: "pyth_feed_id", nullable: true })
         pythFeedId?: string
+
+    @OneToMany(() => RewardTokenEntity, (rewardToken) => rewardToken.token)
+        rewardTokens: Array<RewardTokenEntity>
+
+    @RelationId((token: TokenEntity) => token.rewardTokens)
+        rewardTokenIds: Array<TokenId>
 }
 
 
