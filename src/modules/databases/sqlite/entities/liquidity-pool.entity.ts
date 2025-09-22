@@ -53,7 +53,10 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
         farmTokenTypes: Array<TokenType>
 
     // Assigned users per chain
-    @OneToMany(() => AssignedLiquidityPoolEntity, (assignedLiquidityPool) => assignedLiquidityPool.liquidityPool)
+    @OneToMany(
+        () => AssignedLiquidityPoolEntity, 
+        (assignedLiquidityPool) => assignedLiquidityPool.liquidityPool
+    )
         assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>
 
     @OneToMany(() => RewardTokenEntity, (rewardToken) => rewardToken.liquidityPool, {

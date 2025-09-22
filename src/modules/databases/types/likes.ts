@@ -160,15 +160,14 @@ export interface UserWalletLike extends BaseLike {
 }
 
 export interface AssignedLiquidityPoolLike extends BaseLike {
+    /** The ID of the assigned liquidity pool */
+    id?: string
     /** The liquidity pool that the user is assigned to */
-    poolId: LiquidityPoolId
+    liquidityPoolId: LiquidityPoolId
     liquidityPool?: LiquidityPoolLike
 }
 
 export interface UserLike extends BaseLike {
-    /** The user who allocated capital */
-    userId: string
-
     /** List of all deposit transactions this user has made */
     deposits: Array<UserDepositLike>
 

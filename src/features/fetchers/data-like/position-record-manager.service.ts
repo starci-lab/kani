@@ -5,7 +5,7 @@ import {
     PositionEntity,
     UserLike,
 } from "@modules/databases"
-import { ChainId, Network, PlatformId } from "@modules/common"
+import { ChainId, computePercentage, computeRatio, Network, PlatformId } from "@modules/common"
 import BN from "bn.js"
 import {
     FetchedPool,
@@ -23,7 +23,7 @@ import { getConnectionToken } from "@nestjs/mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger } from "winston"
 import { DataLikeService } from "./data-like.service"
-import { InjectSuperJson } from "@modules/mixin"
+import { DayjsService, InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { DataLikePositionService } from "./data-like-position.service"
 import { RetryService } from "@modules/mixin"
@@ -49,7 +49,7 @@ export interface OpenPositionInternalResponse {
     positionId: string;
 }
 
-export type OpenPositionParams = OpenPositionInternalParams
+export type OpenPositionParams = OpenPositionInternalParams;
 
 export interface ClosePositionInternalParams {
     dexId: DexId;
@@ -62,12 +62,13 @@ export interface ClosePositionInternalParams {
 
 export interface ClosePositionInternalResponse {
     receivedAmountOut: BN;
-    roiAmount: BN;
+    profitAmount: BN;
     closePositionTxHash: string;
     flexibleSwapTxHash: string;
+    stimulateOnly: boolean;
 }
 
-export type ClosePositionParams = ClosePositionInternalParams
+export type ClosePositionParams = ClosePositionInternalParams;
 
 @Injectable()
 export class PositionRecordManagerService implements OnModuleInit {
@@ -83,6 +84,7 @@ export class PositionRecordManagerService implements OnModuleInit {
         private readonly dataLikePositionService: DataLikePositionService,
         private readonly retryService: RetryService,
         private readonly dataLikeQueryService: DataLikeQueryService,
+        private readonly dayjsService: DayjsService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
@@ -152,7 +154,9 @@ export class PositionRecordManagerService implements OnModuleInit {
         })
         const tokenAId = pool.tokenAId
         const tokenBId = pool.tokenBId
-        const suiWallet = user.wallets.find((wallet) => wallet.platformId === PlatformId.Sui)
+        const suiWallet = user.wallets.find(
+            (wallet) => wallet.platformId === PlatformId.Sui,
+        )
         if (!suiWallet) throw new Error("Sui wallet not found")
         const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
             liquidityPool: pool,
@@ -198,8 +202,7 @@ export class PositionRecordManagerService implements OnModuleInit {
         network = Network.Mainnet,
         user,
         stimulateOnly = false,
-    }: ClosePositionInternalParams
-    ): Promise<ClosePositionInternalResponse> {
+    }: ClosePositionInternalParams): Promise<ClosePositionInternalResponse> {
         //find liquidity pools
         const liquidityPools = this.dataLikeService.liquidityPools
         const liquidityPool = liquidityPools.find(
@@ -228,7 +231,9 @@ export class PositionRecordManagerService implements OnModuleInit {
         })
         const tokenAId = liquidityPool.tokenAId
         const tokenBId = liquidityPool.tokenBId
-        const suiWallet = user.wallets.find((wallet) => wallet.platformId === PlatformId.Sui)
+        const suiWallet = user.wallets.find(
+            (wallet) => wallet.platformId === PlatformId.Sui,
+        )
         if (!suiWallet) throw new Error("Sui wallet not found")
         if (!user.id) throw new Error("User ID is required")
         const position = await this.dataLikePositionService.loadPosition({
@@ -258,7 +263,7 @@ export class PositionRecordManagerService implements OnModuleInit {
             })
         const {
             receivedAmountOut,
-            roiAmount,
+            profitAmount,
             txHash: flexibleSwapTxHash,
         } = await this.suiFlexibleSwapService.suiFlexibleSwap({
             suiTokenIns: suiTokenOuts || {},
@@ -267,17 +272,21 @@ export class PositionRecordManagerService implements OnModuleInit {
             tokenOut,
             tokens: this.dataLikeService.tokens,
             network,
+            stimulateOnly,
             user,
         })
         return {
             receivedAmountOut,
-            roiAmount,
+            profitAmount,
             closePositionTxHash: closePositionTxHash || "",
             flexibleSwapTxHash: flexibleSwapTxHash || "",
+            stimulateOnly,
         }
     }
 
-    private async sqliteOpenPosition(params: OpenPositionParams) {
+    private async sqliteOpenPosition(
+        params: OpenPositionParams
+    ) {
         const { user } = params
         if (!user.id) throw new Error("User ID is required")
         await this.sqliteDataSource.transaction(async (manager) => {
@@ -292,12 +301,17 @@ export class PositionRecordManagerService implements OnModuleInit {
             } = await this.openPositionInternal(params)
             try {
                 if (!user.id) throw new Error("User ID is required")
-                const assignedLiquidityPool = user.assignedLiquidityPools.find((pool) => pool.poolId === params.poolId)
-                if (!assignedLiquidityPool) throw new Error(`Assigned liquidity pool not found for pool ${params.poolId} and user ${user.id}`)
-                await manager.insert(
+                const assignedLiquidityPool = user.assignedLiquidityPools.find(
+                    (assignedLiquidityPool) =>
+                        assignedLiquidityPool.liquidityPoolId === params.poolId,
+                )
+                if (!assignedLiquidityPool)
+                    throw new Error(
+                        `Assigned liquidity pool not found for pool ${params.poolId} and user ${user.id}`,
+                    )
+                await manager.save(
                     PositionEntity, [
                         {
-                            userId: user.id,
                             openTxHash: txHash,
                             depositAmount: depositAmount.toString(),
                             tickLower,
@@ -313,41 +327,64 @@ export class PositionRecordManagerService implements OnModuleInit {
                     depositAmount: depositAmount.toString(),
                 })
             } catch (error) {
-                this.logger.error(
-                    WinstonLog.OpenPositionFailed, {
-                        error: error.message,
-                        stack: error.stack,
-                    })
+                this.logger.error(WinstonLog.OpenPositionFailed, {
+                    error: error.message,
+                    stack: error.stack,
+                })
                 throw error
             }
         })
-
     }
 
-    private async sqliteClosePosition(params: ClosePositionParams) {
-        await this.sqliteDataSource.transaction(async (manager) => {
-            const {
-                receivedAmountOut,
-                roiAmount,
-                closePositionTxHash,
-                flexibleSwapTxHash,
-            } = await this.closePositionInternal(params)
-            if (!params.user.id) throw new Error("User ID is required")
-            const position = await this.dataLikePositionService.loadPosition({
-                userId: params.user.id,
-                liquidityPoolId: params.poolId,
+    private async sqliteClosePosition(
+        params: ClosePositionParams
+    ) {
+        try {
+            await this.sqliteDataSource.transaction(
+                async (manager) => {
+                    const {
+                        receivedAmountOut,
+                        profitAmount,
+                        closePositionTxHash,
+                        flexibleSwapTxHash,
+                    } = await this.closePositionInternal(params)
+                    if (!params.user.id) throw new Error("User ID is required")
+                    const position = await this.dataLikePositionService.loadPosition({
+                        userId: params.user.id,
+                        liquidityPoolId: params.poolId,
+                    })
+                    const roi = computePercentage(
+                        computeRatio(profitAmount,
+                            new BN(position.depositAmount)
+                        ).toNumber(),
+                    )
+                    await manager.update(
+                        PositionEntity,
+                        { positionId: position.positionId },
+                        {
+                            closeTxHash: closePositionTxHash,
+                            flexibleSwapTxHash,
+                            profitAmount: profitAmount.toString(),
+                            roi,
+                            withdrawalAmount: receivedAmountOut.toString(),
+                            closeAt: this.dayjsService.now().toDate(),
+                        },
+                    )
+                    this.logger.info(WinstonLog.ClosePositionSuccess, {
+                        closePositionTxHash,
+                        flexibleSwapTxHash,
+                        receivedAmountOut: receivedAmountOut.toString(),
+                        profitAmount: profitAmount.toString(),
+                        roi,
+                    })
+                })
+        } catch (error) {
+            this.logger.error(WinstonLog.ClosePositionFailed, {
+                error: error.message,
+                stack: error.stack,
             })
-            await manager.update(
-                PositionEntity,
-                { positionId: position.positionId },
-                { 
-                    closeTxHash: closePositionTxHash, 
-                    flexibleSwapTxHash,
-                    roi: roiAmount.toString(),
-                    withdrawalAmount: receivedAmountOut.toString(),
-                },
-            )
-        })
+            throw error
+        }
     }
 
     private async mongoDbOpenPosition(params: OpenPositionParams) {
@@ -360,7 +397,9 @@ export class PositionRecordManagerService implements OnModuleInit {
         throw new Error("Not implemented")
     }
 
-    public async openPosition(params: OpenPositionParams) {
+    public async openPosition(
+        params: OpenPositionParams
+    ) {
         await this.retryService.retry({
             action: async () => {
                 switch (envConfig().lpBot.type) {
@@ -376,12 +415,13 @@ export class PositionRecordManagerService implements OnModuleInit {
             },
             // 10 times retry to ensure the position is opened
             maxRetries: 10,
-            delay: 100
+            delay: 100,
         })
-        
     }
 
-    public async closePosition(params: ClosePositionParams) {
+    public async closePosition(
+        params: ClosePositionParams
+    ) {
         await this.retryService.retry({
             action: async () => {
                 switch (envConfig().lpBot.type) {
@@ -396,7 +436,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                 }
             },
             delay: 100,
-            maxRetries: 10
+            maxRetries: 10,
         })
     }
 }

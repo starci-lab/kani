@@ -56,21 +56,22 @@ export class DataLikePositionService implements OnModuleInit {
         liquidityPoolId, 
         userId
     }: LoadPositionParams): Promise<PositionLike> {
-        const position = await this.sqliteDataSource.manager.findOne(PositionEntity, {
-            where: {
-                assignedLiquidityPool: {
-                    liquidityPool: {
-                        displayId: liquidityPoolId
-                    }
+        const position = await this.sqliteDataSource.manager.findOne(
+            PositionEntity, {
+                where: {
+                    assignedLiquidityPool: {
+                        liquidityPool: {
+                            displayId: liquidityPoolId
+                        },
+                        userId
+                    },
                 },
-                userId
-            },
-            relations: {
-                assignedLiquidityPool: {
-                    liquidityPool: true,
-                },
-            }
-        })
+                relations: {
+                    assignedLiquidityPool: {
+                        liquidityPool: true,
+                    },
+                }
+            })
         if (!position) 
             throw new Error(`Position not found for liquidity pool ${liquidityPoolId} and user ${userId}`)
         return {

@@ -40,6 +40,7 @@ export class SuiFlexibleSwapService {
         suiTokenIns,
         depositAmount,
         user,
+        stimulateOnly = false,
         suiClient
     }: SuiFlexibleSwapParams
     ): Promise<SuiFlexibleSwapResponse> {
@@ -129,13 +130,14 @@ export class SuiFlexibleSwapService {
                 return await this.suiExecutionService.signAndExecuteTransaction({
                     transaction: txb,
                     suiClient,
+                    stimulateOnly,
                     signer,
                 })
             },
         })
         return { 
             receivedAmountOut: estimatedAmountOut, 
-            roiAmount: estimatedAmountOut.sub(depositAmount),
+            profitAmount: estimatedAmountOut.sub(depositAmount),
             txHash
         }
     }

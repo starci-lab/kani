@@ -80,11 +80,12 @@ export interface SuiFlexibleSwapParams {
     suiClient?: SuiClient
     // deposit amount
     depositAmount: BN
+    stimulateOnly?: boolean
 }
 
 export interface SuiFlexibleSwapResponse extends ActionResponse {
     receivedAmountOut: BN
-    roiAmount: BN
+    profitAmount: BN
 }
 
 export interface OpenPositionResponse extends ActionResponse {

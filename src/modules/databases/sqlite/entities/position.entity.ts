@@ -1,7 +1,6 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
-import { UserEntity } from "./user.entity"
 /**
  * LP Position: track full lifecycle (open -> close) with PnL
  */
@@ -17,13 +16,6 @@ export class PositionEntity extends UuidAbstractEntity {
     @Column({ type: "text", name: "assigned_liquidity_pool_id" })
         assignedLiquidityPoolId: string
 
-    @ManyToOne(() => UserEntity, (user) => user.positions, { onDelete: "CASCADE" })
-    @JoinColumn({ name: "user_id" })
-        user: UserEntity
-
-    @Column({ type: "text", name: "user_id" })
-        userId: string
-
     @Column({ type: "text", name: "open_tx_hash" })
         openTxHash: string
 
@@ -34,7 +26,10 @@ export class PositionEntity extends UuidAbstractEntity {
         flexibleSwapTxHash?: string
 
     @Column({ type: "decimal", precision: 40, scale: 18, name: "roi", nullable: true })
-        roi?: string
+        roi?: number
+
+    @Column({ type: "text", name: "profit_amount", nullable: true })
+        profitAmount?: string
 
     @Column({ type: "int", name: "tick_lower" })
         tickLower: number

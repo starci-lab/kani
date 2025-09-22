@@ -43,5 +43,34 @@
     }
   ],
   "isActive": true,
-  "assignedLiquidityPools": []
+  "assignedLiquidityPools": [
+    {
+      "createdAt": "2025-09-22T09:57:23.000Z",
+      "updatedAt": "2025-09-22T09:57:23.000Z",
+      "id": "08f3775d-b532-42e9-9b0e-e5dd600750d7",
+      "userId": "56a1ba22-92d2-4292-a38b-8ffae29ad508",
+      "liquidityPool": {
+        "createdAt": "2025-09-22T09:56:31.000Z",
+        "updatedAt": "2025-09-22T09:56:31.000Z",
+        "id": "turbosIkaUsdc015",
+        "displayId": "turbosIkaUsdc015",
+        "dexId": "turbos",
+        "poolAddress": "0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
+        "tokenAId": "suiIka",
+        "tokenBId": "suiUsdc",
+        "fee": 0.0015,
+        "network": "mainnet",
+        "chainId": "sui",
+        "priorityAOverB": false,
+        "farmTokenTypes": [
+          "stableUsdc"
+        ],
+        "rewardTokenIds": [
+          "a6aabe6d-39ae-4f1a-a50f-f06f1e7d3c82",
+          "a99c73d9-d44c-42e3-9118-468a940c47db"
+        ]
+      },
+      "liquidityPoolId": "turbosIkaUsdc015"
+    }
+  ]
 }

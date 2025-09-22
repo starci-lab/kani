@@ -21,14 +21,19 @@ export class TestPositionService implements OnApplicationBootstrap {
         await this.pythService.preloadPrices()
         const users = await this.userLoaderService.loadUsers()
         await this.poolFetcherService.fetchPools()
-        await this.positionRecordManagerService.openPosition({
+        // await this.positionRecordManagerService.openPosition({
+        //     dexId: DexId.Turbos,
+        //     chainId: ChainId.Sui,
+        //     poolId: LiquidityPoolId.TurbosIkaUsdc015,
+        //     amount: new BN(1_000_000), // 1u
+        //     user: users[0],
+        //     requireZapEligible: false,
+        // })
+        await this.positionRecordManagerService.closePosition({
             dexId: DexId.Turbos,
             chainId: ChainId.Sui,
             poolId: LiquidityPoolId.TurbosIkaUsdc015,
-            amount: new BN(1_000_000), // 1u
             user: users[0],
-            requireZapEligible: false,
-            stimulateOnly: true,
         })
         // await this.positionRecordManagerService.closePosition({
         //     dexId: DexId.Turbos,

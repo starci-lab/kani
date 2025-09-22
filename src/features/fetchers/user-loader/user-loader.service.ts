@@ -14,7 +14,6 @@ import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
 import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
-import fs from "fs"
 
 @Injectable()
 export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
@@ -65,7 +64,6 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                         },
                     },
                 })
-            fs.writeFileSync("user.json", JSON.stringify(user, null, 2))
             if (!user) {
                 // create user
                 const keypairs = await this.keypairsService.generateKeypairs()
@@ -129,11 +127,12 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
             return [
                 {
                     ...user,
-                    userId: user.id,
+                    id: user.id,
                     assignedLiquidityPools: user
                         .assignedLiquidityPools
                         .map((assignedLiquidityPool) => ({
-                            poolId: assignedLiquidityPool.liquidityPool.displayId,
+                            id: assignedLiquidityPool.id,
+                            liquidityPoolId: assignedLiquidityPool.liquidityPool.displayId,
                         })),
                 }
             ]

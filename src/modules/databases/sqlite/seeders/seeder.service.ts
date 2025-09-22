@@ -12,17 +12,17 @@ export class SqliteSeedersService implements OnModuleInit {
     ) {}
 
     async onModuleInit() {
-        this.logger.debug("Dropping existing data...")
-        await this.liquidityPoolSeeder.drop()
-        await this.tokenSeeder.drop()
-        await this.dexSeeder.drop()
-        this.logger.debug("Dropped existing data...")
+        // this.logger.debug("Dropping existing data...")
+        // await this.liquidityPoolSeeder.drop()
+        // await this.tokenSeeder.drop()
+        // await this.dexSeeder.drop()
+        // this.logger.debug("Dropped existing data...")
         // seed
-        this.logger.debug("Seeding data...")
-        await this.tokenSeeder.seed()
-        await this.dexSeeder.seed()
-        await this.liquidityPoolSeeder.seed()
-        this.logger.debug("Seeded data...")
+        // this.logger.debug("Seeding data...")
+        // await this.tokenSeeder.seed()
+        // await this.dexSeeder.seed()
+        // await this.liquidityPoolSeeder.seed()
+        // this.logger.debug("Seeded data...")
         this.seeded = true
     }
 

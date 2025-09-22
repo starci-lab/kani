@@ -32,7 +32,6 @@ export class TestFlowService implements OnApplicationBootstrap {
             tokenInId: TokenId.SuiUsdc,
             tokens: this.dataLikeService.tokens,
             amountIn: new BN("3000000"),
-            //amountIn: new BN("400000000"),
         })
         await this.feeToService.attachSuiFee({
             txb,
