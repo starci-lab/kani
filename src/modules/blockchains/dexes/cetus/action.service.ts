@@ -81,6 +81,7 @@ export class CetusActionService implements IActionService {
         swapSlippage,
         user,
         priorityAOverB,
+        stimulateOnly = false,
         suiClient,
         requireZapEligible,
     }: OpenPositionParams): Promise<OpenPositionResponse> {
@@ -261,6 +262,7 @@ export class CetusActionService implements IActionService {
                     transaction: txbAfterOpenPosition,
                     suiClient,
                     signer,
+                    stimulateOnly,
                     handleObjectChanges,
                 })
             },
@@ -288,6 +290,7 @@ export class CetusActionService implements IActionService {
         suiClient,
         slippage,
         accountAddress,
+        stimulateOnly = false,
     }: ClosePositionParams): Promise<ClosePositionResponse> {
         if (!user) {
             throw new Error("Sui key pair is required")
@@ -389,6 +392,7 @@ export class CetusActionService implements IActionService {
                 return await this.suiExecutionService.signAndExecuteTransaction({
                     transaction: txbAfterClosePosition,
                     suiClient,
+                    stimulateOnly,
                     handleEvents,
                     signer,
                 })

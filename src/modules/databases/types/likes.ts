@@ -161,7 +161,7 @@ export interface UserWalletLike extends BaseLike {
 
 export interface AssignedLiquidityPoolLike extends BaseLike {
     /** The liquidity pool that the user is assigned to */
-    poolId: string
+    poolId: LiquidityPoolId
     liquidityPool?: LiquidityPoolLike
 }
 

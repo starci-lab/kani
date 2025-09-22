@@ -5,7 +5,7 @@ import {
     PositionEntity,
     UserLike,
 } from "@modules/databases"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network, PlatformId } from "@modules/common"
 import BN from "bn.js"
 import {
     FetchedPool,
@@ -33,11 +33,11 @@ export interface OpenPositionInternalParams {
     dexId: DexId;
     poolId: LiquidityPoolId;
     chainId: ChainId;
-    accountAddress: string;
     amount: BN;
-    priorityAOverB?: boolean;
     network?: Network;
     user: UserLike;
+    requireZapEligible?: boolean;
+    stimulateOnly?: boolean;
 }
 
 export interface OpenPositionInternalResponse {
@@ -55,9 +55,9 @@ export interface ClosePositionInternalParams {
     dexId: DexId;
     poolId: LiquidityPoolId;
     chainId: ChainId;
-    accountAddress: string;
     network?: Network;
     user: UserLike;
+    stimulateOnly?: boolean;
 }
 
 export interface ClosePositionInternalResponse {
@@ -118,11 +118,11 @@ export class PositionRecordManagerService implements OnModuleInit {
         dexId,
         poolId,
         chainId,
-        accountAddress,
         amount,
-        priorityAOverB = true,
         network = Network.Mainnet,
         user,
+        requireZapEligible = true,
+        stimulateOnly = false,
     }: OpenPositionInternalParams): Promise<OpenPositionInternalResponse> {
         //find liquidity pools
         const liquidityPools = this.dataLikeService.liquidityPools
@@ -152,6 +152,14 @@ export class PositionRecordManagerService implements OnModuleInit {
         })
         const tokenAId = pool.tokenAId
         const tokenBId = pool.tokenBId
+        const suiWallet = user.wallets.find((wallet) => wallet.platformId === PlatformId.Sui)
+        if (!suiWallet) throw new Error("Sui wallet not found")
+        const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
+            liquidityPool: pool,
+            user,
+            chainId,
+            network,
+        })
         const {
             depositAmount,
             liquidity,
@@ -160,7 +168,7 @@ export class PositionRecordManagerService implements OnModuleInit {
             tickUpper,
             txHash,
         } = await action.openPosition({
-            accountAddress,
+            accountAddress: suiWallet.accountAddress,
             priorityAOverB,
             pool: fetchedPool,
             amount,
@@ -168,8 +176,10 @@ export class PositionRecordManagerService implements OnModuleInit {
             tokenBId,
             tokens: this.dataLikeService.tokens,
             user,
+            requireZapEligible,
             chainId,
             network,
+            stimulateOnly,
         })
         return {
             txHash: txHash || "",
@@ -185,10 +195,11 @@ export class PositionRecordManagerService implements OnModuleInit {
         dexId,
         poolId,
         chainId,
-        accountAddress,
         network = Network.Mainnet,
         user,
-    }: ClosePositionInternalParams): Promise<ClosePositionInternalResponse> {
+        stimulateOnly = false,
+    }: ClosePositionInternalParams
+    ): Promise<ClosePositionInternalResponse> {
         //find liquidity pools
         const liquidityPools = this.dataLikeService.liquidityPools
         const liquidityPool = liquidityPools.find(
@@ -217,6 +228,8 @@ export class PositionRecordManagerService implements OnModuleInit {
         })
         const tokenAId = liquidityPool.tokenAId
         const tokenBId = liquidityPool.tokenBId
+        const suiWallet = user.wallets.find((wallet) => wallet.platformId === PlatformId.Sui)
+        if (!suiWallet) throw new Error("Sui wallet not found")
         if (!user.id) throw new Error("User ID is required")
         const position = await this.dataLikePositionService.loadPosition({
             liquidityPoolId: poolId,
@@ -231,7 +244,7 @@ export class PositionRecordManagerService implements OnModuleInit {
         const tokenOut = priorityAOverB ? tokenAId : tokenBId
         const { suiTokenOuts, txHash: closePositionTxHash } =
             await action.closePosition({
-                accountAddress,
+                accountAddress: suiWallet.accountAddress,
                 pool: fetchedPool,
                 tokenAId,
                 tokenBId,
@@ -241,6 +254,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                 network,
                 position,
                 priorityAOverB,
+                stimulateOnly,
             })
         const {
             receivedAmountOut,
@@ -248,7 +262,7 @@ export class PositionRecordManagerService implements OnModuleInit {
             txHash: flexibleSwapTxHash,
         } = await this.suiFlexibleSwapService.suiFlexibleSwap({
             suiTokenIns: suiTokenOuts || {},
-            accountAddress,
+            accountAddress: suiWallet.accountAddress,
             depositAmount: new BN(position.depositAmount),
             tokenOut,
             tokens: this.dataLikeService.tokens,
@@ -276,24 +290,38 @@ export class PositionRecordManagerService implements OnModuleInit {
                 tickUpper,
                 positionId,
             } = await this.openPositionInternal(params)
-            await manager.insert(
-                PositionEntity, [
-                    {
-                        userId: user.id,
-                        openTxHash: txHash,
-                        depositAmount: depositAmount.toString(),
-                        tickLower,
-                        tickUpper,
-                        liquidity: liquidity.toString(),
-                        positionId,
-                    },
-                ])
-            this.logger.info(WinstonLog.PositionWritten, {
-                positionId,
-                txHash,
-                depositAmount: depositAmount.toString(),
-            })
+            try {
+                if (!user.id) throw new Error("User ID is required")
+                const assignedLiquidityPool = user.assignedLiquidityPools.find((pool) => pool.poolId === params.poolId)
+                if (!assignedLiquidityPool) throw new Error(`Assigned liquidity pool not found for pool ${params.poolId} and user ${user.id}`)
+                await manager.insert(
+                    PositionEntity, [
+                        {
+                            userId: user.id,
+                            openTxHash: txHash,
+                            depositAmount: depositAmount.toString(),
+                            tickLower,
+                            tickUpper,
+                            liquidity: liquidity.toString(),
+                            positionId,
+                            assignedLiquidityPoolId: assignedLiquidityPool.id,
+                        },
+                    ])
+                this.logger.info(WinstonLog.OpenPositionSuccess, {
+                    positionId,
+                    txHash,
+                    depositAmount: depositAmount.toString(),
+                })
+            } catch (error) {
+                this.logger.error(
+                    WinstonLog.OpenPositionFailed, {
+                        error: error.message,
+                        stack: error.stack,
+                    })
+                throw error
+            }
         })
+
     }
 
     private async sqliteClosePosition(params: ClosePositionParams) {

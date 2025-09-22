@@ -54,9 +54,9 @@ export class PositionEntity extends UuidAbstractEntity {
     @Column({ type: "text", name: "position_id" })
         positionId: string
 
-    @Column({ type: "text", name: "deposit_amount" })
+    @Column({ type: "text", name: "deposit_amount", default: 0 })
         depositAmount: string
 
-    @Column({ type: "text", name: "withdrawal_amount"})
-        withdrawalAmount: string
+    @Column({ type: "text", name: "withdrawal_amount", nullable: true })
+        withdrawalAmount?: string
 }

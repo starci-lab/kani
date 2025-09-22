@@ -11,12 +11,13 @@ import { AxiosModule } from "@modules/axios"
 import { CacheModule, CacheType } from "@modules/cache"
 import { EventModule, EventType } from "@modules/event"
 import { InitializerModule } from "@modules/initializer"
+import { TestPositionService } from "./test-position.service"
 // import { TestFlowService } from "./test-flow.service"
 // import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
 // import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
 // import { Mmt2TestLiquidityManangementService } from "./mmt-test-liquidity-manager-2.service"
-import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
-import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
+// import { CetusTestLiquidityManangementService } from "./cetus-test-liquidity-manangement.service"
+// import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-manangement.service"
 // import { MmtTestLiquidityManangementService } from "./mmt-test-liquidity-manager.service"
 // import { TestSwapService } from "./test-swap.service"
 
@@ -94,7 +95,8 @@ import { TurbosTestLiquidityManangementService } from "./turbos-test-liquidity-m
     providers: [
         //TestFlowService,
         //TestSwapService
-        TurbosTestLiquidityManangementService
+        TestPositionService,
+        // TurbosTestLiquidityManangementService
         // Mmt2TestLiquidityManangementService
         //CetusTestLiquidityManangementService
         //MmtTestLiquidityManangementService

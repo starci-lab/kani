@@ -12,6 +12,9 @@ export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
     @JoinColumn({ name: "user_id" })
         user: UserEntity
 
+    @Column({ type: "text", name: "user_id" })
+        userId: string
+
     @ManyToOne(() => LiquidityPoolEntity, (pool) => pool.assignedLiquidityPools, 
         { onDelete: "CASCADE" }
     )

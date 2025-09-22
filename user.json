@@ -1,0 +1,47 @@
+{
+  "createdAt": "2025-09-10T10:52:48.000Z",
+  "updatedAt": "2025-09-10T10:52:48.000Z",
+  "id": "56a1ba22-92d2-4292-a38b-8ffae29ad508",
+  "priorityTokenId": "suiUsdc",
+  "exitToUsdc": false,
+  "wallets": [
+    {
+      "createdAt": "2025-09-10T10:52:48.000Z",
+      "updatedAt": "2025-09-10T10:52:48.000Z",
+      "id": "702fda93-5cae-40fd-9d43-1c95a3ebaf3f",
+      "platformId": "evm",
+      "accountAddress": "0x580481e57326dE6B2EfA916B040cACB24765A51A",
+      "encryptedPrivateKey": "HHUu0TYR8l4kicbqURbEsQ==:J7EuuzSt5Fq86ImLjgyPaUJCBXSVoMdmfUMQvuKRi2i4PxAD7dQabyayaD7O8KMa48kTwiFpDlo7QWFXsKrR2x79rX5rtiadL7kEoTcS2pM=",
+      "chainConfigs": []
+    },
+    {
+      "createdAt": "2025-09-10T10:52:48.000Z",
+      "updatedAt": "2025-09-10T10:52:48.000Z",
+      "id": "95922741-55a9-4fb1-b382-405e1593ef80",
+      "platformId": "sui",
+      "accountAddress": "0xe97cf602373664de9b84ada70a7daff557f7797f33da03586408c21b9f1a6579",
+      "encryptedPrivateKey": "oHW9cM6CD+GGVZyRxZrxjw==:AO6c4DmRkl6UyLqgR0n6Kf7rLlc4IQO9JoMv/hiI0m7nozyH5J/4fbR42B2c8uEUHMPYMcmeDqZwvI4QIOPtSuogHKDr75SaSHjqB1zryNA=",
+      "chainConfigs": [
+        {
+          "createdAt": "2025-09-10T10:52:48.000Z",
+          "updatedAt": "2025-09-10T10:52:48.000Z",
+          "id": "6d13ac5a-45bf-4e9b-8d90-b48fc858b034",
+          "chainId": "sui",
+          "network": "mainnet",
+          "farmTokenType": "stableUsdc"
+        }
+      ]
+    },
+    {
+      "createdAt": "2025-09-10T10:52:48.000Z",
+      "updatedAt": "2025-09-10T10:52:48.000Z",
+      "id": "df97ded6-656f-4ab3-88a2-c691153d30fe",
+      "platformId": "solana",
+      "accountAddress": "7zL4gYFZukNjwpha3Ha6HigEgK12cd2JWgkMZCw5dASV",
+      "encryptedPrivateKey": "CU5sM8U3cy6KjysMNQM7rg==:SPgGtSHaKVLb8a/RgXi3bNCuHAjlXY0FIBrJJJybzJUJ+186fdtF5lyg9kK4xDr2ZRIR6ZyoHMG10PNMGmzpitouFggZYSBAs2fxT2Z3nAPDzPau96MAWmzwVoW3KY8Y",
+      "chainConfigs": []
+    }
+  ],
+  "isActive": true,
+  "assignedLiquidityPools": []
+}

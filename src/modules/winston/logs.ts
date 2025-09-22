@@ -12,5 +12,8 @@ export enum WinstonLog {
     GateRestError = "Gate.REST.Error",
     PriceImpactTooHigh = "Price.Impact.Too.High",
     FetchedPools = "Fetched.Pools",
-    PositionWritten = "Position.Written",
+    OpenPositionSuccess = "Open.Position.Success",
+    OpenPositionFailed = "Open.Position.Failed",
+    ClosePositionSuccess = "Close.Position.Success",
+    ClosePositionFailed = "Close.Position.Failed",
 }

@@ -5,7 +5,6 @@ import { UserCummulativeEntity } from "./user-cummulative.entity"
 import { PositionEntity, TokenId } from "@modules/databases"
 import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { WalletEntity } from "./wallet.entity"
-import { AddedLiquidityPoolEntity } from "./added-liquidity-pool.entity"
 
 @Entity({ name: "users" })
 export class UserEntity extends UuidAbstractEntity {
@@ -32,15 +31,9 @@ export class UserEntity extends UuidAbstractEntity {
     @OneToMany(
         () => AssignedLiquidityPoolEntity,
         (assignedLiquidityPool) => assignedLiquidityPool.user,
-        { cascade: ["insert", "update"] }
+        { cascade: true }
     )
         assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>
-
-    @OneToMany(
-        () => AddedLiquidityPoolEntity,
-        (addedLiquidityPool) => addedLiquidityPool.user,
-    )
-        addedLiquidityPools: Array<AddedLiquidityPoolEntity>
 
     @OneToMany(() => PositionEntity, (position) => position.user)
         positions: Array<PositionEntity>    

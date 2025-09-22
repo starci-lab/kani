@@ -78,6 +78,7 @@ export class TurbosActionService implements IActionService {
         suiClient,
         txb,
         requireZapEligible = true,
+        stimulateOnly = false,
     }: OpenPositionParams): Promise<OpenPositionResponse> {
         txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
@@ -239,7 +240,6 @@ export class TurbosActionService implements IActionService {
         })
         let positionId = ""
         const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
-            console.log(objectChanges)
             const [positionObjId] = objectChanges
                 .filter(
                     (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
@@ -275,6 +275,7 @@ export class TurbosActionService implements IActionService {
                     transaction: txbAfterOpenPosition,
                     suiClient,
                     signer,
+                    stimulateOnly,
                     handleObjectChanges,
                     handleEvents,
                 })
@@ -302,6 +303,7 @@ export class TurbosActionService implements IActionService {
         tokens,
         slippage,
         user,
+        stimulateOnly,
         suiClient,
     }: ClosePositionParams): Promise<ClosePositionResponse> {
         if (!user) {
@@ -376,7 +378,7 @@ export class TurbosActionService implements IActionService {
                     transaction: txbAfterRemoveLiquidity,
                     suiClient,
                     signer,
-                    stimulateOnly: true,
+                    stimulateOnly,
                     handleEvents,
                 })
             },

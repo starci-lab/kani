@@ -23,6 +23,7 @@ export interface ClosePositionParams {
     // user to sign the tx
     user?: UserLike
     suiClient?: SuiClient
+    stimulateOnly?: boolean
 }
 
 export interface OpenPositionParams {
@@ -39,6 +40,7 @@ export interface OpenPositionParams {
     slippage?: number
     swapSlippage?: number
     requireZapEligible?: boolean
+    stimulateOnly?: boolean
     // txb (sui only)
     txb?: Transaction
     // user to sign the tx

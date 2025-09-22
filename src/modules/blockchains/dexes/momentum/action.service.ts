@@ -81,6 +81,7 @@ export class MomentumActionService implements IActionService {
         suiClient,
         swapSlippage,
         requireZapEligible,
+        stimulateOnly = false
     }: OpenPositionParams): Promise<OpenPositionResponse> {
         txb = txb ?? new Transaction()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
@@ -268,6 +269,7 @@ export class MomentumActionService implements IActionService {
                     transaction: txb,
                     suiClient,
                     signer,
+                    stimulateOnly,
                     handleObjectChanges,
                 })
             },
@@ -294,6 +296,7 @@ export class MomentumActionService implements IActionService {
         tokenBId,
         suiClient,
         tokens,
+        stimulateOnly
     }: ClosePositionParams): Promise<ClosePositionResponse> {
         txb = txb || new Transaction()
         if (!user) {
@@ -379,6 +382,7 @@ export class MomentumActionService implements IActionService {
                     transaction: txb,
                     suiClient,
                     signer,
+                    stimulateOnly,
                     handleEvents,
                 })
             },

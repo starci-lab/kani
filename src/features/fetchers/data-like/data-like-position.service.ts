@@ -6,8 +6,6 @@ import { envConfig, LpBotType } from "@modules/env"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { 
-    AssignedLiquidityPoolEntity, 
-    AssignedLiquidityPoolLike, 
     LiquidityPoolId, 
     PositionEntity, 
     PositionLike 
@@ -65,10 +63,13 @@ export class DataLikePositionService implements OnModuleInit {
                         displayId: liquidityPoolId
                     }
                 },
-                user: {
-                    id: userId
-                }
+                userId
             },
+            relations: {
+                assignedLiquidityPool: {
+                    liquidityPool: true,
+                },
+            }
         })
         if (!position) 
             throw new Error(`Position not found for liquidity pool ${liquidityPoolId} and user ${userId}`)
@@ -91,51 +92,6 @@ export class DataLikePositionService implements OnModuleInit {
         }
         default:
             throw new Error("Invalid LP bot type")
-        }
-    }
-
-    public async loadAssignedLiquidityPool(
-        { liquidityPoolId, userId }: 
-        LoadAssignedLiquidityPoolParams): 
-        Promise<AssignedLiquidityPoolLike> {
-        switch (envConfig().lpBot.type) {
-        case LpBotType.UserBased: {
-            return await this.loadAssignedLiquidityPoolFromMongo({ liquidityPoolId, userId })
-        }
-        case LpBotType.System: {
-            return await this.loadAssignedLiquidityPoolFromSqlite({ liquidityPoolId, userId })
-        }
-        default:
-            throw new Error("Invalid LP bot type")
-        }
-    }
-
-    private async loadAssignedLiquidityPoolFromMongo(
-        { liquidityPoolId, userId }: LoadAssignedLiquidityPoolParams
-    ): Promise<AssignedLiquidityPoolLike> {
-        console.log(liquidityPoolId, userId)
-        throw new Error("Not implemented")
-    }
-
-    private async loadAssignedLiquidityPoolFromSqlite(
-        { liquidityPoolId, userId }: LoadAssignedLiquidityPoolParams
-    ): Promise<AssignedLiquidityPoolLike> {
-        const assignedLiquidityPool = await this.sqliteDataSource.manager.findOne(
-            AssignedLiquidityPoolEntity, {
-                where: {
-                    liquidityPool: {
-                        displayId: liquidityPoolId
-                    },
-                    user: {
-                        id: userId
-                    }
-                },
-            })
-        if (!assignedLiquidityPool) 
-            throw new Error(`Assigned liquidity pool not found for liquidity pool ${liquidityPoolId} and user ${userId}`)
-        return {
-            id: assignedLiquidityPool.id,
-            poolId: assignedLiquidityPool.liquidityPoolId,
         }
     }
 }

@@ -15,8 +15,6 @@ import {
     UserEntity,
     AssignedLiquidityPoolEntity,
     WalletEntity,   
-    AddedLiquidityPoolEntity,
-    AddedLiquidityPoolHistoryEntity,
     ChainConfigEntity,
     PositionEntity,
     RewardTokenEntity
@@ -55,8 +53,6 @@ export class SqliteModule extends ConfigurableModuleClass {
                     UserEntity,
                     AssignedLiquidityPoolEntity,
                     WalletEntity,
-                    AddedLiquidityPoolEntity,
-                    AddedLiquidityPoolHistoryEntity,
                     ChainConfigEntity,
                     PositionEntity,
                     RewardTokenEntity

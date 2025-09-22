@@ -14,6 +14,7 @@ import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
 import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
+import fs from "fs"
 
 @Injectable()
 export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
@@ -52,15 +53,19 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
             } else {
                 whereCondition.isActive = true
             }
-            let user = await this.dataSource.manager.findOne(UserEntity, {
-                where: whereCondition,
-                relations: {
-                    wallets: {
-                        chainConfigs: true,
+            let user = await this.dataSource.manager.findOne(
+                UserEntity, {
+                    where: whereCondition,
+                    relations: {
+                        wallets: {
+                            chainConfigs: true,
+                        },
+                        assignedLiquidityPools: {
+                            liquidityPool: true,
+                        },
                     },
-                    assignedLiquidityPools: true,
-                },
-            })
+                })
+            fs.writeFileSync("user.json", JSON.stringify(user, null, 2))
             if (!user) {
                 // create user
                 const keypairs = await this.keypairsService.generateKeypairs()
@@ -108,10 +113,11 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                         },
                     ],
                     isActive: true,
-                    assignedLiquidityPools: 
-                    [
-                        ...randomSuiPools.map((pool) => ({
-                            pool,
+                    assignedLiquidityPools: [
+                        ...randomSuiPools.map((liquidityPool) => ({
+                            liquidityPoolId: liquidityPool.displayId,
+                            userId: userData.id,
+                            liquidityPool,
                         })),
                     ]
                 }
@@ -124,9 +130,11 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                 {
                     ...user,
                     userId: user.id,
-                    assignedLiquidityPools: user.assignedLiquidityPools.map((pool) => ({
-                        poolId: pool.id,
-                    })),
+                    assignedLiquidityPools: user
+                        .assignedLiquidityPools
+                        .map((assignedLiquidityPool) => ({
+                            poolId: assignedLiquidityPool.liquidityPool.displayId,
+                        })),
                 }
             ]
         }

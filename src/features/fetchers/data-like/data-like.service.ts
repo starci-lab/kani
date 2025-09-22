@@ -89,15 +89,16 @@ export class DataLikeService implements OnModuleInit, OnApplicationBootstrap {
             cexSymbols: token.cexSymbols,
         }
         ))
-        const liquidityPools = await this.sqliteDataSource.manager.find(LiquidityPoolEntity, {
-            relations: {
-                tokenA: true,
-                tokenB: true,
-                rewardTokens: {
-                    token: true
+        const liquidityPools = await this.sqliteDataSource.manager.find(
+            LiquidityPoolEntity, {
+                relations: {
+                    tokenA: true,
+                    tokenB: true,
+                    rewardTokens: {
+                        token: true
+                    }
                 }
-            }
-        })
+            })
         this.liquidityPools = liquidityPools.map((liquidityPool) => ({
             ...liquidityPool,
             rewardTokens: liquidityPool.rewardTokens.map((rewardToken) => ({
