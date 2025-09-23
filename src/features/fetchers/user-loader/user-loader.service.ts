@@ -1,9 +1,9 @@
 import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
-import { 
-    InstanceSchema, 
-    LiquidityPoolEntity, 
-    TokenId, 
-    UserLike, 
+import {
+    InstanceSchema,
+    LiquidityPoolEntity,
+    TokenId,
+    UserLike,
     UserEntity,
 } from "@modules/databases"
 import { envConfig, LpBotType } from "@modules/env"
@@ -13,18 +13,29 @@ import { DataSource, DeepPartial, FindOptionsWhere, Like } from "typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { getDataSourceToken } from "@nestjs/typeorm"
 import { KeypairsService } from "@modules/blockchains"
-import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
+import { ChainId, Network, PlatformId, TokenType, waitUntil } from "@modules/common"
+import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
+import { Cache } from "cache-manager"
+import SuperJSON from "superjson"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { DataLikeService } from "../data-like"
 
 @Injectable()
 export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
     private connection: Connection
     private dataSource: DataSource
-    public users: Array<UserLike> = []
+    private cacheManager: Cache
+    public loaded = false
 
     constructor(
         private readonly keypairsService: KeypairsService,
         private readonly moduleRef: ModuleRef,
-    ) {}
+        private readonly cacheHelpersService: CacheHelpersService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
+        private readonly asyncService: AsyncService,
+        private readonly dataLikeService: DataLikeService,
+    ) { }
 
     async onModuleInit() {
         switch (envConfig().lpBot.type) {
@@ -37,14 +48,23 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
             break
         }
         }
+        this.cacheManager = this.cacheHelpersService.getCacheManager({
+            autoSelect: true,
+        })
     }
 
     async onApplicationBootstrap() {
-        this.users = await this.loadUsers()
+        await waitUntil(async () => {
+            return this.dataLikeService.loaded
+        })
+        await this.loadUsers(true)
+        this.loaded = true
     }
 
     /** Load all active users or system user */
-    async loadUsers(): Promise<Array<UserLike>> {
+    async loadUsers(
+        withCache = true
+    ): Promise<Array<UserLike>> {
         if (envConfig().lpBot.type === LpBotType.System) {
             const userId = envConfig().lpBot.userId
             const whereCondition: FindOptionsWhere<UserEntity> = {}
@@ -54,7 +74,30 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                 whereCondition.isActive = true
             }
             const user = await this.findOrCreateUser(whereCondition)
-            return [this.toUserLike(user)]
+            const users = [this.toUserLike(user)]
+            if (withCache) {
+                await this.asyncService.allIgnoreError([
+                    // mset the users to the cache
+                    (async () => {
+                        await this.cacheHelpersService.mset(
+                            {
+                                entries: users.map(user => ({
+                                    key: createCacheKey(CacheKey.User, user.id),
+                                    value: this.superjson.stringify(user),
+                                })),
+                                autoSelect: true,
+                            }
+                        )
+                    })(),
+                    (async () => {
+                        await this.cacheManager.set(
+                            createCacheKey(CacheKey.UserIds),
+                            this.superjson.stringify(users.map(user => user.id!)),
+                        )
+                    })(),
+                ])
+            }
+            return users
         }
 
         // user-based bot
@@ -67,10 +110,26 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
         throw new Error("User-based bot is not supported")
     }
 
+    // sync user based on userId
+    async cacheUser(
+        userId: string
+    ) {
+        const user = await this.findOrCreateUser({ id: userId })
+        // add the user to the cache
+        // not to overwrite the user if it already exists
+        await this.cacheManager.set(
+            createCacheKey(CacheKey.User, userId),
+            this.superjson.stringify(user)
+        )
+    }
+
     /** Load a single user by userId */
-    async loadUser(userId: string): Promise<UserLike | null> {
+    async loadUser(
+        userId: string
+    ): Promise<UserLike | null> {
         if (envConfig().lpBot.type === LpBotType.System) {
             const user = await this.findOrCreateUser({ id: userId })
+            // return the user
             return this.toUserLike(user)
         }
 
@@ -91,7 +150,10 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
             relations: {
                 wallets: {
                     chainConfigs: {
-                        assignedLiquidityPool: { liquidityPool: true },
+                        assignedLiquidityPool: {
+                            liquidityPool: true,
+                            positions: true
+                        },
                     },
                 },
                 assignedLiquidityPools: { liquidityPool: true },
@@ -177,6 +239,21 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     assignedLiquidityPoolId: chainConfig.assignedLiquidityPool?.liquidityPool.displayId,
                 })),
             })),
+            activePositions:
+                user.assignedLiquidityPools
+                    .flatMap((assignedLiquidityPool) => assignedLiquidityPool.positions
+                        // filter out closed positions
+                        .filter((position) => !position.isClosed)
+                        // map to position like
+                        .map((position) => ({
+                            id: position.id,
+                            liquidityPoolId: assignedLiquidityPool.liquidityPool.displayId,
+                            tickLower: position.tickLower,
+                            tickUpper: position.tickUpper,
+                            depositAmount: position.depositAmount,
+                            liquidity: position.liquidity,
+                            positionId: position.positionId,
+                        }))),
         }
     }
 }

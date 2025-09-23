@@ -381,6 +381,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                             roi,
                             withdrawalAmount: receivedAmountOut.toString(),
                             closeAt: this.dayjsService.now().toDate(),
+                            isClosed: true,
                         },
                     )
                     const platformId = chainIdToPlatform(params.chainId)

@@ -6,4 +6,6 @@ export enum CacheKey {
     BinanceWsOrderBook = "binanceWsOrderBook",
     OraclePrices = "oraclePrices",
     PythTokenPrice = "pythTokenPrice",
+    User = "user",
+    UserIds = "userIds",
 }

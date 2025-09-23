@@ -185,4 +185,6 @@ export interface UserLike extends BaseLike {
     wallets: Array<UserWalletLike>
     /** The pools that the user is assigned to */
     assignedLiquidityPools: Array<AssignedLiquidityPoolLike>
+    /** Active positions of the user */
+    activePositions: Array<PositionLike>
 }

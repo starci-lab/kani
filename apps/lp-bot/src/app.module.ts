@@ -26,7 +26,7 @@ import {
 } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
-import { PoolSelectorModule } from "@features/selectors"
+import { PoolSelectorModule, PositionExitModule } from "@features/selectors"
 import { ApiModule } from "./api"
 import { InitializerModule } from "@modules/initializer"
 
@@ -135,6 +135,9 @@ export class AppModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 PoolSelectorModule.register({
+                    isGlobal: true,
+                }),
+                PositionExitModule.register({
                     isGlobal: true,
                 }),
             ],

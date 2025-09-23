@@ -3,7 +3,7 @@ import { DevInspectResults, SuiClient, SuiObjectChange, TransactionEffects, SuiE
 import { Transaction } from "@mysten/sui/transactions"
 import { Signer } from "@mysten/sui/cryptography"
 import { RetryService } from "@modules/mixin"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { ChainId, Network } from "@modules/common"
 
 export interface SignAndExecuteTransactionParams {
@@ -90,7 +90,7 @@ export class SuiExecutionService {
                 }
                 if (effects?.status.status === "failure") {
                     this.winstonLogger.error(
-                        "TransactionFailed", {
+                        WinstonLog.TransactionFailed, {
                             txHash: digest,
                             chainId: ChainId.Sui,
                             network: Network.Mainnet,
@@ -99,7 +99,7 @@ export class SuiExecutionService {
                     throw new Error(effects.status.error)
                 }
                 this.winstonLogger.log(
-                    "TransactionExecuted", {
+                    WinstonLog.TransactionExecuted, {
                         txHash: digest,
                         chainId: ChainId.Sui,
                         network: Network.Mainnet,

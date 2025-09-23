@@ -54,4 +54,7 @@ export class PositionEntity extends UuidAbstractEntity {
 
     @Column({ type: "text", name: "withdrawal_amount", nullable: true })
         withdrawalAmount?: string
+
+    @Column({ type: "boolean", name: "is_closed", default: false })
+        isClosed: boolean
 }

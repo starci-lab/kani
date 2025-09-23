@@ -49,7 +49,7 @@ export class PoolSelectorService {
         const promises: Array<Promise<void>> = []
         // Load all users to ensure we are using new set of users
         // We load all users to reduce the number of database queries
-        const users = await this.userLoaderService.loadUsers()
+        const users = await this.userLoaderService.loadUsers(true)
         for (const user of users) {
             promises.push(
                 (async () => {
@@ -211,6 +211,13 @@ export class PoolSelectorService {
                         timestamp: this.dayjsService.now().unix(),
                     }
                 )
+                // cache the user
+                // to let other services to use the latest user
+                if (!user.id) {
+                    throw new Error("User ID is required")
+                }
+                // sync the user
+                await this.userLoaderService.cacheUser(user.id)
                 // Stop after successfully opening the first eligible pool
                 break
             } else {
