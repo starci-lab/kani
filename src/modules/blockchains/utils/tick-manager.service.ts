@@ -48,9 +48,19 @@ export class TickManagerService {
     public canOpenPosition(
         pool: FetchedPool,
         priorityAOverB: boolean
-    ) {
+    ): CanOpenPositionResponse {
         const tickDistance = this.tickDistanceBetweenNotPriorityBound(pool, priorityAOverB)
         const tickMaxDeviation = this.computeTickDeviation(pool)
-        return tickDistance <= tickMaxDeviation
+        return {
+            canOpenPosition: tickDistance <= tickMaxDeviation,
+            tickDistance,
+            tickMaxDeviation,
+        }
     }
+}
+
+export interface CanOpenPositionResponse {
+    canOpenPosition: boolean
+    tickDistance: number
+    tickMaxDeviation: number
 }

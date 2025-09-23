@@ -3,6 +3,7 @@ import { FetchedPool } from "@modules/blockchains"
 import { Injectable, NotFoundException } from "@nestjs/common"
 import { ChainId, chainIdToPlatform, Network, PlatformId, TokenType } from "@modules/common"
 import { DataLikeService } from "./data-like.service"
+import { shuffleArray } from "@modules/common"
 
 // this service is used to query the data like service
 @Injectable()
@@ -27,24 +28,38 @@ export class DataLikeQueryService {
 
     getFarmTokenType(
         userLike: UserLike,
-        platformId: PlatformId,
         chainId: ChainId,
+        network: Network,
     ) {
+        const platformId = chainIdToPlatform(chainId)
         return this.getWalletOrThrow(userLike, platformId).chainConfigs.find(
-            (chainConfig) => chainConfig.chainId === chainId,
+            (chainConfig) => chainConfig.chainId === chainId && chainConfig.network === network,
         )?.farmTokenType as TokenType
     }
 
     getPoolsMatchingUserFarmType(
-        userLike: UserLike,
+        user: UserLike,
         fetchedPools: Array<FetchedPool>,
-        platformId: PlatformId,
         chainId: ChainId,
+        network: Network,
     ) {
-        const farmTokenType = this.getFarmTokenType(userLike, platformId, chainId)
-        return fetchedPools.filter((pool) =>
-            pool.liquidityPool.farmTokenTypes.includes(farmTokenType),
-        ) as Array<FetchedPool>
+        const farmTokenType = this.getFarmTokenType(user, chainId, network)
+        const assignedLiquidityPoolIds = user.assignedLiquidityPools.map(
+            (assignedLiquidityPool) =>
+                assignedLiquidityPool.liquidityPoolId
+        )
+        const unsuffledPools = fetchedPools
+            // filter out pools that are already assigned to the user
+            .filter((pool) =>
+                assignedLiquidityPoolIds.includes(
+                    pool.liquidityPool.displayId
+                ),
+            )
+            // filter out pools that do not match the user's farm token type
+            .filter((pool) =>
+                pool.liquidityPool.farmTokenTypes.includes(farmTokenType),
+            ) as Array<FetchedPool>
+        return shuffleArray(unsuffledPools)
     }
 
     getNative(chainId: ChainId, network: Network) {
@@ -67,13 +82,18 @@ export class DataLikeQueryService {
         )
     }
 
-    determinePriorityAOverB(params: DeterminePriorityAOverBParams) {
-        const { liquidityPool, user, chainId, network } = params
-        const platformId = chainIdToPlatform(chainId)
+    determinePriorityAOverB(
+        { 
+            liquidityPool, 
+            user, 
+            chainId, 
+            network
+        }: 
+    DeterminePriorityAOverBParams) {
         let priorityAOverB = liquidityPool.priorityAOverB ?? false
 
         if (typeof priorityAOverB === "undefined") {
-            const walletFarmTokenType = this.getFarmTokenType(user, platformId, chainId)
+            const walletFarmTokenType = this.getFarmTokenType(user, chainId, network)
             const nativeToken = this.getNative(chainId, network)
             const stableUsdcToken = this.getStableUsdc(chainId, network)
 

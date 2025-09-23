@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import {
     ClosePositionParams,
     ClosePositionResponse,
@@ -18,7 +18,7 @@ import {
 } from "@modules/common"
 import { TurbosSdk } from "turbos-clmm-sdk"
 import { TickManagerService } from "../../utils"
-import { PriceRatioService, TickMathService } from "../../utils"
+import { TickMathService } from "../../utils"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { SuiCoinManagerService } from "../../utils"
@@ -39,10 +39,12 @@ import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
 import { FeeToService } from "../../swap"
 import { TokenId } from "@modules/databases"
-import { DayjsService } from "@modules/mixin"
+import { DayjsService } from "@modules/mixin"   
+import { ZapProtectionService } from "../../utils"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
+    private readonly logger = new Logger(TurbosActionService.name)
     constructor(
         @InjectTurbosClmmSdks()
         private readonly turbosClmmSdks: Record<Network, TurbosSdk>,
@@ -54,7 +56,7 @@ export class TurbosActionService implements IActionService {
         private readonly suiSwapService: SuiSwapService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
-        private readonly priceRatioService: PriceRatioService,
+        private readonly zapProtectionService: ZapProtectionService,
         private readonly suiExecutionService: SuiExecutionService,
         private readonly signerService: SignerService,
         @InjectSuiClients()
@@ -112,14 +114,18 @@ export class TurbosActionService implements IActionService {
             suiClient,
             txb,
         })
+        this.logger.debug(`Source coin after gas swap: ${sourceCoin.coinAmount.toString()}`)
+        // this is the deposit amount
+        const depositAmount = sourceCoin.coinAmount
         await this.feeToService.attachSuiFee({
             txb,
             tokenId: tokenIn.displayId,
             tokens,
             network,
-            amount,
+            amount: sourceCoin.coinAmount,
             sourceCoin,
         })
+        this.logger.debug(`Source coin after fee to: ${sourceCoin.coinAmount.toString()}`)
         // use this to calculate the ratio
         const quoteAmountA = computeRaw(1, tokenA.decimals)
         const [amountA, amountB] = turbosSdk.pool.estimateAmountsFromOneAmount({
@@ -138,7 +144,7 @@ export class TurbosActionService implements IActionService {
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount } =
+        const { swapAmount, routerId, quoteData } =
             await this.zapService.computeZapAmounts({
                 amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
@@ -151,26 +157,17 @@ export class TurbosActionService implements IActionService {
                 network,
                 swapSlippage,
             })
-        // 4. optional ratio check
-        const zapAmountA = priorityAOverB
-            ? new BN(sourceCoin.coinAmount)
-            : new BN(receiveAmount)
-        const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount)
-            : new BN(sourceCoin.coinAmount)
-        const isZapEligible = this.priceRatioService.isZapEligible({
-            priorityAOverB,
-            tokenA: {
-                tokenDecimals: tokenA.decimals,
-                amount: new BN(zapAmountA),
-            },
-            tokenB: {
-                tokenDecimals: tokenB.decimals,
-                amount: new BN(zapAmountB),
-            },
+        // zap protection
+        if (!user.id) {
+            throw new Error("User id is required")
+        }
+        this.zapProtectionService.ensureZapEligible({
+            amountOriginal: sourceCoin.coinAmount,
+            amountZapped: swapAmount,
+            liquidityPoolId: pool.displayId,
+            userId: user.id,
+            requireZapEligible,
         })
-        if (requireZapEligible && !isZapEligible)
-            throw new Error("Zap not eligible at this moment")
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
@@ -193,6 +190,9 @@ export class TurbosActionService implements IActionService {
         if (!coinOut) {
             throw new Error("Coin out is required")
         }
+        this.logger.debug(`Swap amount: ${swapAmount.toString()}`)
+        this.logger.debug(`Source coin after swap: ${sourceCoin.coinAmount.toString()}`)
+        this.logger.debug(`Coin out after swap: ${coinOut.coinAmount.toString()}`)
         // we process add liquidity
         const providedCoinA = priorityAOverB ? sourceCoin : coinOut
         const providedCoinB = priorityAOverB ? coinOut : sourceCoin
@@ -225,6 +225,10 @@ export class TurbosActionService implements IActionService {
                 computedAmountA = providedCoinA.coinAmount.toString()
             }
         }
+        this.logger.debug(`Computed amount A: ${computedAmountA}`)
+        this.logger.debug(`Computed amount B: ${computedAmountB}`)
+        this.logger.debug(`Provided coin A: ${providedCoinA.coinAmount.toString()}`)
+        this.logger.debug(`Provided coin B: ${providedCoinB.coinAmount.toString()}`)
         const txbAfterOpenPosition = await turbosSdk.pool.addLiquidity({
             pool: pool.poolAddress,
             address: accountAddress,
@@ -286,7 +290,7 @@ export class TurbosActionService implements IActionService {
             tickLower,
             tickUpper,
             positionId,
-            depositAmount: amount,
+            depositAmount,
             liquidity,
         }
     }

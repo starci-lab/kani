@@ -103,7 +103,6 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
         poolAddress: "0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388",
         tokenAId: TokenId.SuiNative,
         tokenBId: TokenId.SuiUsdc,
-        priorityAOverB: true,
         fee: 0.00175,
         network: Network.Mainnet,
         chainId: ChainId.Sui,

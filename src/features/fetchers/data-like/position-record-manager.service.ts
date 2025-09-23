@@ -1,11 +1,11 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import {
-    DexId,
+    ChainConfigEntity,
     LiquidityPoolId,
     PositionEntity,
     UserLike,
 } from "@modules/databases"
-import { ChainId, computePercentage, computeRatio, Network, PlatformId } from "@modules/common"
+import { ChainId, chainIdToPlatform, computePercentage, computeRatio, Network, PlatformId } from "@modules/common"
 import BN from "bn.js"
 import {
     FetchedPool,
@@ -30,10 +30,9 @@ import { RetryService } from "@modules/mixin"
 import { DataLikeQueryService } from "./data-like-query.service"
 
 export interface OpenPositionInternalParams {
-    dexId: DexId;
     poolId: LiquidityPoolId;
     chainId: ChainId;
-    amount: BN;
+    amount?: BN;
     network?: Network;
     user: UserLike;
     requireZapEligible?: boolean;
@@ -43,7 +42,7 @@ export interface OpenPositionInternalParams {
 export interface OpenPositionInternalResponse {
     txHash: string;
     liquidity: BN;
-    depositAmount: BN;
+    depositAmount?: BN;
     tickLower: number;
     tickUpper: number;
     positionId: string;
@@ -52,7 +51,6 @@ export interface OpenPositionInternalResponse {
 export type OpenPositionParams = OpenPositionInternalParams;
 
 export interface ClosePositionInternalParams {
-    dexId: DexId;
     poolId: LiquidityPoolId;
     chainId: ChainId;
     network?: Network;
@@ -117,7 +115,6 @@ export class PositionRecordManagerService implements OnModuleInit {
    * Open a new LP position on any supported DEX
    */
     private async openPositionInternal({
-        dexId,
         poolId,
         chainId,
         amount,
@@ -149,7 +146,7 @@ export class PositionRecordManagerService implements OnModuleInit {
         if (!fetchedPool)
             throw new Error(`FetchedPool ${pool.displayId} not found`)
         const [{ action }] = await this.liquidityPoolService.getDexs({
-            dexIds: [dexId],
+            dexIds: [pool.dexId],
             chainId,
         })
         const tokenAId = pool.tokenAId
@@ -196,7 +193,6 @@ export class PositionRecordManagerService implements OnModuleInit {
     }
 
     private async closePositionInternal({
-        dexId,
         poolId,
         chainId,
         network = Network.Mainnet,
@@ -226,7 +222,7 @@ export class PositionRecordManagerService implements OnModuleInit {
         if (!fetchedPool)
             throw new Error(`FetchedPool ${liquidityPool.displayId} not found`)
         const [{ action }] = await this.liquidityPoolService.getDexs({
-            dexIds: [dexId],
+            dexIds: [liquidityPool.dexId],
             chainId,
         })
         const tokenAId = liquidityPool.tokenAId
@@ -313,7 +309,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                     PositionEntity, [
                         {
                             openTxHash: txHash,
-                            depositAmount: depositAmount.toString(),
+                            depositAmount: depositAmount?.toString(),
                             tickLower,
                             tickUpper,
                             liquidity: liquidity.toString(),
@@ -321,10 +317,27 @@ export class PositionRecordManagerService implements OnModuleInit {
                             assignedLiquidityPoolId: assignedLiquidityPool.id,
                         },
                     ])
+                const platformId = chainIdToPlatform(params.chainId)
+                const wallet = user.wallets.find(
+                    (wallet) => wallet.platformId === platformId,
+                )
+                if (!wallet) throw new Error(`${platformId} wallet not found`)
+                // update user chain config
+                await manager.update(
+                    ChainConfigEntity,
+                    {  
+                        walletId: wallet.id,
+                        chainId: params.chainId,
+                        network: params.network,
+                    },
+                    {
+                        assignedLiquidityPoolId: assignedLiquidityPool.id,
+                    },
+                )
                 this.logger.info(WinstonLog.OpenPositionSuccess, {
                     positionId,
                     txHash,
-                    depositAmount: depositAmount.toString(),
+                    depositAmount: depositAmount?.toString(),
                 })
             } catch (error) {
                 this.logger.error(WinstonLog.OpenPositionFailed, {
@@ -370,6 +383,22 @@ export class PositionRecordManagerService implements OnModuleInit {
                             closeAt: this.dayjsService.now().toDate(),
                         },
                     )
+                    const platformId = chainIdToPlatform(params.chainId)
+                    const wallet = params.user.wallets.find(
+                        (wallet) => wallet.platformId === platformId,
+                    )
+                    if (!wallet) throw new Error(`${platformId} wallet not found`)
+                    await manager.update(
+                        ChainConfigEntity,
+                        {
+                            walletId: wallet.id,
+                            chainId: params.chainId,
+                            network: params.network,
+                        },
+                        {
+                            assignedLiquidityPoolId: () => "NULL",
+                        },
+                    )
                     this.logger.info(WinstonLog.ClosePositionSuccess, {
                         closePositionTxHash,
                         flexibleSwapTxHash,
@@ -400,43 +429,64 @@ export class PositionRecordManagerService implements OnModuleInit {
     public async openPosition(
         params: OpenPositionParams
     ) {
-        await this.retryService.retry({
-            action: async () => {
-                switch (envConfig().lpBot.type) {
-                case LpBotType.UserBased: {
-                    await this.mongoDbOpenPosition(params)
-                    break
-                }
-                case LpBotType.System: {
-                    await this.sqliteOpenPosition(params)
-                    break
-                }
-                }
-            },
-            // 10 times retry to ensure the position is opened
-            maxRetries: 10,
-            delay: 100,
-        })
+        try {
+            await this.retryService.retry({
+                action: async () => {
+                    switch (envConfig().lpBot.type) {
+                    case LpBotType.UserBased: {
+                        await this.mongoDbOpenPosition(params)
+                        break
+                    }
+                    case LpBotType.System: {
+                        await this.sqliteOpenPosition(params)
+                        break
+                    }
+                    }
+                },
+                // 10 times retry to ensure the position is opened
+                maxRetries: 10,
+                delay: 100,
+            })
+        } catch (error) {
+            this.logger.error(
+                WinstonLog.OpenPositionRetryFailed, 
+                {
+                    error: error.message,
+                    stack: error.stack,
+                })
+            throw error
+        }
     }
 
     public async closePosition(
         params: ClosePositionParams
     ) {
-        await this.retryService.retry({
-            action: async () => {
-                switch (envConfig().lpBot.type) {
-                case LpBotType.UserBased: {
-                    await this.mongoDbClosePosition(params)
-                    break
-                }
-                case LpBotType.System: {
-                    await this.sqliteClosePosition(params)
-                    break
-                }
-                }
-            },
-            delay: 100,
-            maxRetries: 10,
-        })
+        try {
+            await this.retryService.retry({
+                action: async () => {
+                    switch (envConfig().lpBot.type) {
+                    case LpBotType.UserBased: {
+                        await this.mongoDbClosePosition(params)
+                        break
+                    }
+                    case LpBotType.System: {
+                        await this.sqliteClosePosition(params)
+                        break
+                    }
+                    }
+                },
+                delay: 100,
+                maxRetries: 10,
+            })
+        } catch (error) {
+            // if the error is not a retryable error, we throw it
+            this.logger.error(
+                WinstonLog.ClosePositionRetryFailed, 
+                {
+                    error: error.message,
+                    stack: error.stack,
+                })
+            throw error
+        }
     }
 }

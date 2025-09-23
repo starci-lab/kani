@@ -3,7 +3,6 @@ import { PythService } from "@modules/blockchains"
 import { ChainId, waitUntil } from "@modules/common"
 import { DexId, LiquidityPoolId } from "@modules/databases"
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import BN from "bn.js"
 
 @Injectable()
 export class TestPositionService implements OnApplicationBootstrap {
@@ -30,7 +29,6 @@ export class TestPositionService implements OnApplicationBootstrap {
         //     requireZapEligible: false,
         // })
         await this.positionRecordManagerService.closePosition({
-            dexId: DexId.Turbos,
             chainId: ChainId.Sui,
             poolId: LiquidityPoolId.TurbosIkaUsdc015,
             user: users[0],

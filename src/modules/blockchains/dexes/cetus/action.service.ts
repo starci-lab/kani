@@ -6,7 +6,7 @@ import {
 import { ClmmPoolUtil, CetusClmmSDK } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { adjustForCoinSlippage } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
-    PriceRatioService,
+    ZapProtectionService,
     SuiCoinManagerService,
     TickManagerService,
     TickMathService,
@@ -54,7 +54,6 @@ export class CetusActionService implements IActionService {
         private readonly feeToService: FeeToService,
         @InjectCetusClmmSdks()
         private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
-        private readonly priceRatioService: PriceRatioService,
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
@@ -65,6 +64,7 @@ export class CetusActionService implements IActionService {
         private readonly zapService: ZapService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
         private readonly suiSwapService: SuiSwapService,
+        private readonly zapProtectionService: ZapProtectionService,
     ) { }
 
     // ---------- Open Position ----------
@@ -118,12 +118,13 @@ export class CetusActionService implements IActionService {
             suiClient,
             txb,
         })
+        const depositAmount = sourceCoin.coinAmount
         await this.feeToService.attachSuiFee({
             txb,
             tokenId: tokenIn.displayId,
             tokens,
             network,
-            amount,
+            amount: sourceCoin.coinAmount,
             sourceCoin,
         })
         // use this to calculate the ratio
@@ -147,7 +148,7 @@ export class CetusActionService implements IActionService {
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount } =
+        const { swapAmount, routerId, quoteData } =
             await this.zapService.computeZapAmounts({
                 amountIn: sourceCoin.coinAmount,
                 ratio: new Decimal(ratio),
@@ -160,26 +161,17 @@ export class CetusActionService implements IActionService {
                 network,
                 swapSlippage,
             })
-        // 4. optional ratio check
-        const zapAmountA = priorityAOverB
-            ? new BN(sourceCoin.coinAmount)
-            : new BN(receiveAmount)
-        const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount)
-            : new BN(sourceCoin.coinAmount)
-        const isZapEligible = this.priceRatioService.isZapEligible({
-            priorityAOverB,
-            tokenA: {
-                tokenDecimals: tokenA.decimals,
-                amount: new BN(zapAmountA),
-            },
-            tokenB: {
-                tokenDecimals: tokenB.decimals,
-                amount: new BN(zapAmountB),
-            },
+        // zap protection
+        if (!user.id) {
+            throw new Error("User id is required")
+        }
+        this.zapProtectionService.ensureZapEligible({
+            amountOriginal: sourceCoin.coinAmount,
+            amountZapped: swapAmount,
+            liquidityPoolId: pool.displayId,
+            userId: user.id,
+            requireZapEligible,
         })
-        if (requireZapEligible && !isZapEligible)
-            throw new Error("Zap not eligible at this moment")
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
@@ -273,7 +265,7 @@ export class CetusActionService implements IActionService {
             tickUpper,
             liquidity: liquidityAmount,
             positionId,
-            depositAmount: amount,
+            depositAmount,
         }
     }
 

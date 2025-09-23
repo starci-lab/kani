@@ -8,6 +8,7 @@ import BN from "bn.js"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { ActionResponse } from "../dexes"
 import { Transaction } from "@mysten/sui/transactions"
+import { AsyncService } from "@modules/mixin/async.service"
 
 @Injectable()
 export class SuiSwapService implements ISwapService {
@@ -16,6 +17,7 @@ export class SuiSwapService implements ISwapService {
         private readonly cetusAggregatorSdks: Record<Network, AggregatorClient>,
         @InjectSevenKAggregatorSdks()
         private readonly sevenKAggregatorSdks: Record<Network, typeof SevenK>,
+        private readonly asyncService: AsyncService,
     ) { }
     
     async quote({
@@ -37,7 +39,7 @@ export class SuiSwapService implements ISwapService {
         const [ 
             cetusAmountOut, 
             sevenKAmountOut 
-        ] = await Promise.all([
+        ] = await this.asyncService.allIgnoreError([
             this.cetusAggregatorSdks[network].findRouters(
                 {
                     from: tokenInInstance.tokenAddress,
@@ -66,11 +68,14 @@ export class SuiSwapService implements ISwapService {
                         quoteData: data,
                     }
                 }
-            ),
+            )
         ])
-        const bestQuote = [cetusAmountOut, sevenKAmountOut].reduce((prev, curr) =>
-            curr.amountOut.gt(prev.amountOut) ? curr : prev,
-        )
+        const bestQuote = [cetusAmountOut, sevenKAmountOut]
+            .filter(
+                quote => quote !== null,
+            ).reduce((prev, curr) =>
+                curr.amountOut.gt(prev.amountOut) ? curr : prev,
+            )
         //const bestQuote = sevenKAmountOut
         return bestQuote
     }

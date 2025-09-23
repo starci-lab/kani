@@ -8,6 +8,7 @@ import { ReadinessWatcherFactoryService } from "./readiness-watcher-factory.serv
 import { InstanceIdService } from "./instance-id.service"
 import { RandomDelayService } from "./random-delay.service"
 import { createSuperJsonServiceProvider } from "./superjson.providers"
+import { AsyncService } from "./async.service"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -22,7 +23,8 @@ export class MixinModule extends ConfigurableModuleClass {
             ReadinessWatcherFactoryService,
             InstanceIdService,
             RandomDelayService,
-            createSuperJsonServiceProvider()
+            createSuperJsonServiceProvider(),
+            AsyncService
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)

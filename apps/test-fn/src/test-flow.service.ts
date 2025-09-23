@@ -2,7 +2,12 @@ import { DataLikeService } from "@features/fetchers"
 import { Network, waitUntil } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { FeeToService, GasSuiSwapUtilsService, InjectSuiClients, SuiExecutionService } from "@modules/blockchains"
+import { 
+    FeeToService, 
+    GasSuiSwapUtilsService, 
+    InjectSuiClients, 
+    SuiExecutionService
+} from "@modules/blockchains"
 import { SignerService } from "@modules/blockchains"
 import { UserLoaderService } from "@features/fetchers"
 import { SuiClient } from "@mysten/sui/client"

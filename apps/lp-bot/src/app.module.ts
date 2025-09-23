@@ -11,6 +11,7 @@ import {
     UtilsModule,
     PythModule,
     SwapModule,
+    SignersModule,
 } from "@modules/blockchains"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
@@ -86,6 +87,9 @@ export class AppModule extends ConfigurableModuleClass {
             envConfig().lpBot.type === LpBotType.UserBased
                 ? [CacheType.Memory, CacheType.Redis]
                 : [CacheType.Memory],
+                }),
+                SignersModule.register({
+                    isGlobal: true,
                 }),
                 PriceModule.register({
                     isGlobal: true,

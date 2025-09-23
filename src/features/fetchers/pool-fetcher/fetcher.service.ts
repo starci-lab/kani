@@ -7,7 +7,7 @@ import { Logger } from "winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { EventEmitterService, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
-import { InjectSuperJson, RandomDelayService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson, RandomDelayService } from "@modules/mixin"
 import { DataLikeService } from "../data-like"
 import { FetchedPool } from "@modules/blockchains"
 import SuperJSON from "superjson"
@@ -23,6 +23,7 @@ export class PoolFetcherService implements OnModuleInit {
         private readonly cacheHelpersService: CacheHelpersService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly randomDelayService: RandomDelayService,
+        private readonly asyncService: AsyncService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly dataLikeService: DataLikeService,
@@ -61,30 +62,42 @@ export class PoolFetcherService implements OnModuleInit {
         const fetchedPools: Array<FetchedPool> = []
         for (const dex of dexes) {
             promises.push((async () => {
-                const { pools } = await dex.fetcher.fetchPools({
-                    network,
-                    liquidityPools: this.dataLikeService.liquidityPools,
-                    tokens: this.dataLikeService.tokens,
-                })
-                fetchedPools.push(...pools)
-                // we write a log
-                this.logger.info(
-                    WinstonLog.FetchedPools, 
-                    {
-                        chainId,
-                        dex: dex.dexId,
+                try {
+                    const { pools } = await dex.fetcher.fetchPools({
                         network,
-                        pools: pools.map(
-                            pool => ({
-                                poolAddress: pool.poolAddress,
-                                currentSqrtPrice: pool.currentSqrtPrice,
-                                currentTick: pool.currentTick,
-                            })
-                        ),
+                        liquidityPools: this.dataLikeService.liquidityPools,
+                        tokens: this.dataLikeService.tokens,
                     })
+                    fetchedPools.push(...pools)
+                    // we write a log
+                    this.logger.debug(
+                        WinstonLog.FetchedPools, 
+                        {
+                            chainId,
+                            dex: dex.dexId,
+                            network,
+                            pools: pools.map(
+                                pool => ({
+                                    poolAddress: pool.poolAddress,
+                                    currentSqrtPrice: pool.currentSqrtPrice,
+                                    currentTick: pool.currentTick,
+                                })
+                            ),
+                        })
+                } catch (error) {
+                    this.logger.error(
+                        WinstonLog.FetchedPoolsError,
+                        {
+                            chainId,
+                            dex: dex.dexId,
+                            network,
+                            message: error.message,
+                            stack: error.stack,
+                        })
+                }
             })())
         }
-        await Promise.all(promises)
+        await this.asyncService.allIgnoreError(promises)
         // we store in cache
         await this.cacheManager.set(
             createCacheKey(

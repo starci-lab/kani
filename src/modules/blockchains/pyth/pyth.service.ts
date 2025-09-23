@@ -4,6 +4,7 @@ import { ChainId, Network } from "@modules/common"
 import { PythSuiService } from "./pyth-sui.service"
 import { PythSolanaService } from "./pyth-solana.service"
 import Decimal from "decimal.js"
+import { AsyncService } from "@modules/mixin/async.service"
 
 export interface GetPricesParams {
   tokenIds: Array<TokenId>;
@@ -16,6 +17,7 @@ export class PythService {
     constructor(
     private readonly suiPythService: PythSuiService,
     private readonly solanaPythService: PythSolanaService,
+    private readonly asyncService: AsyncService,
     ) {}
 
     async getPrices({
@@ -64,10 +66,10 @@ export class PythService {
     }
 
     async preloadPrices(): Promise<void> {
-        await Promise.all([
+        await this.asyncService.allIgnoreError([
             (async () => this.suiPythService.preloadPrices())()
         ])
-    }
+    } 
 }
 
 export interface ComputeOraclePriceParams {

@@ -1,14 +1,28 @@
-import { FetchedPool } from "@modules/blockchains"
-import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { 
+    FetchedPool, 
+    TickManagerService
+} from "@modules/blockchains"
+import { 
+    EventName, 
+    LiquidityPoolsFetchedEvent 
+} from "@modules/event"
 import { Injectable } from "@nestjs/common"
 import { OnEvent } from "@nestjs/event-emitter"
-import { TickManagerService } from "./tick-manager.service"
-import { DataLikeQueryService, UserLoaderService } from "@features/fetchers"
-import { UserLike } from "@modules/databases"
-import { ChainId, Network, PlatformId } from "@modules/common"
-import { Logger } from "winston"
-import { InjectWinston } from "@modules/winston"
-import { InjectSuperJson } from "@modules/mixin"
+import { 
+    DataLikeQueryService, 
+    PositionRecordManagerService, 
+    UserLoaderService
+} from "@features/fetchers"
+import { DexId, UserLike } from "@modules/databases"
+import { ChainId, Network } from "@modules/common"
+import { Logger as WinstonLogger } from "winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { 
+    InjectSuperJson, 
+    AsyncService, 
+    DayjsService,
+    LockService
+} from "@modules/mixin"
 import SuperJSON from "superjson"
 
 @Injectable()
@@ -17,91 +31,209 @@ export class PoolSelectorService {
         private readonly tickManagerService: TickManagerService,
         private readonly dataLikeQueryService: DataLikeQueryService,
         private readonly userLoaderService: UserLoaderService,
+        private readonly dayjsService: DayjsService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
-        private readonly winstonLogger: Logger
+        private readonly winstonLogger: WinstonLogger,
+        private readonly asyncService: AsyncService,
+        private readonly positionRecordManagerService: PositionRecordManagerService,
+        private readonly lockService: LockService,
     ) { }
+
 
     @OnEvent(EventName.LiquidityPoolsFetched)
     async handleLiquidityPoolsFetched(
         event: LiquidityPoolsFetchedEvent
     ) {
         const promises: Array<Promise<void>> = []
-        for (const user of this.userLoaderService.users) {
-            for (const platformId of Object.values(PlatformId)) {
-                promises.push((async () => {
-                    await this.tryOpenPool({
-                        user,
-                        pools: this.superjson.parse(event.pools),
-                        platformId,
-                        chainId: event.chainId,
-                        network: event.network,
+        // Load all users to ensure we are using new set of users
+        // We load all users to reduce the number of database queries
+        const users = await this.userLoaderService.loadUsers()
+        for (const user of users) {
+            promises.push(
+                (async () => {
+                    const lockKey = `pool-selector-${user.id}-${event.chainId}-${event.network}`
+                    await this.lockService.withLocks({
+                        blockedKeys: [lockKey],
+                        acquiredKeys: [lockKey],
+                        releaseKeys: [lockKey],
+                        callback: async () => {
+                            // Check if the user has already opened a position
+                            const { alreadyOpened, liquidityPoolId } =
+                            this.checkAlreadyOpened(user, event.chainId, event.network)
+                            // If the user has already opened a position, skip
+                            if (alreadyOpened) {
+                                this.winstonLogger.debug(
+                                    WinstonLog.PoolAlreadyOpened,
+                                    {
+                                        userId: user.id,
+                                        chainId: event.chainId,
+                                        network: event.network,
+                                        liquidityPoolId,
+                                    }
+                                )
+                                return
+                            }
+
+                            // Try to open pools for each user using event data
+                            await this.tryOpenPool({
+                                user,
+                                fetchedPools: this.superjson.parse(event.pools),
+                                chainId: event.chainId,
+                                network: event.network,
+                            })
+                        },
                     })
-                })())
-            }
+                })()
+            )
         }
-        await Promise.all(promises)
+        // Wait for all open attempts to finish, ignoring errors
+        await this.asyncService.allIgnoreError(promises)
+    }
+
+    private checkAlreadyOpened(
+        user: UserLike,
+        chainId: ChainId,
+        network: Network,
+    ): CheckAlreadyOpenedResponse {
+        const chainConfig = user
+            .wallets
+            .flatMap((wallet) => wallet.chainConfigs)
+            .find((chainConfig) => chainConfig.chainId === chainId && chainConfig.network === network)
+        return {
+            alreadyOpened: !!(chainConfig?.assignedLiquidityPoolId),
+            liquidityPoolId: chainConfig?.assignedLiquidityPoolId,
+        }
     }
 
     private async getOpenablePools(
         {
             user,
             pools,
-            platformId,
             chainId,
             network
         }: GetOpenablePoolsParams
     ) {
         const openPositionablePools: Array<FetchedPool> = []
+        // Filter pools matching user's farm token type
         const fetchingPools = this
             .dataLikeQueryService
-            .getPoolsMatchingUserFarmType(user, pools, platformId, chainId)
-        for (const pool of fetchingPools) { 
-            const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
-                pool,
-                user,
-                platformId,
-                chainId,
-                network,
-            })
-            console.log(`pool: ${pool.liquidityPool.poolAddress}, priorityAOverB: ${priorityAOverB}`)
-            const canOpenPosition = this.tickManagerService.canOpenPosition(pool, priorityAOverB)
-            if (canOpenPosition) {
-                openPositionablePools.push(pool)
-            }
+            .getPoolsMatchingUserFarmType(user, pools, chainId, network)
+            // this is a temporary to ensure opening position on Turbos pools
+            //.filter((pool) => pool.liquidityPool.dexId === DexId.Turbos)  
+            .filter((pool) => pool.liquidityPool.dexId === DexId.Momentum)  
+        // Iterate over the matching pools
+        for (const pool of fetchingPools) {
+            // Here you could add additional filtering logic if needed
+            openPositionablePools.push(pool)
         }
-        // write a log
-        this.winstonLogger.info(
-            "OpenPositionablePools", 
-            {
-                userId: user.id,
-                chainId,
-                network,
-                pools: openPositionablePools.map((pool) => pool.liquidityPool.id),
-            })
         return openPositionablePools
     }
 
     private async tryOpenPool(
-        params: TryOpenPoolParams
+        {
+            network,
+            user,
+            chainId,
+            fetchedPools
+        }: TryOpenPoolParams
     ) {
-        // const {
-        //     pool,
-        //     user,
-        //     walletType,
-        //     chainId,
-        //     network,
-        // } = params
-        await this.getOpenablePools(params)
-        // we pick a random pool from the openable pools
-        // const randomPool = openablePools[Math.floor(Math.random() * openablePools.length)]
+        // Get list of pools that can potentially be opened
+        const openablePools = await this.getOpenablePools({
+            user,
+            pools: fetchedPools,
+            chainId,
+            network,
+        })
+        if (!openablePools.length) {
+            // Log if no pools are openable for the user
+            this.winstonLogger.debug(
+                WinstonLog.NoOpenablePools, {
+                    userId: user.id,
+                    chainId,
+                    network,
+                    timestamp: this.dayjsService.now().unix(),
+                })
+            return
+        }
+        // Attempt to open the first eligible pool from the filtered list
+        await this.openFirstEligiblePool({
+            user,
+            fetchedPools: openablePools,
+            chainId,
+            network,
+        })
+    }
+
+    private async openFirstEligiblePool(
+        { 
+            user, 
+            fetchedPools, 
+            chainId, 
+            network
+        }: OpenFirstEligiblePoolParams
+    ) {
+        // Iterate over the candidate pools
+        for (const pool of fetchedPools) {
+            // Determine priority between pools (custom business logic)
+            const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
+                liquidityPool: pool.liquidityPool,
+                user,
+                network,
+                chainId,
+            })
+            // Check if the pool can be opened given the priority
+            const {
+                canOpenPosition,
+                tickDistance, 
+                tickMaxDeviation,
+            } = this.tickManagerService.canOpenPosition(pool, priorityAOverB)
+            if (!canOpenPosition) {
+                // Open position on the pool
+                await this.positionRecordManagerService.openPosition({
+                    user,
+                    requireZapEligible: false,
+                    poolId: pool.liquidityPool.displayId,
+                    chainId,
+                    network,
+                })
+                // Log success event
+                this.winstonLogger.info(
+                    WinstonLog.PoolOpened,
+                    {
+                        userId: user.id,
+                        liquidityPoolId: pool.liquidityPool.displayId,
+                        chainId,
+                        network,
+                        tickDistance,
+                        tickMaxDeviation,
+                        timestamp: this.dayjsService.now().unix(),
+                    }
+                )
+                // Stop after successfully opening the first eligible pool
+                break
+            } else {
+                // Log that this pool was not openable
+                this.winstonLogger.warn(
+                    WinstonLog.PoolNotOpenable,
+                    {
+                        userId: user.id,
+                        liquidityPoolId: pool.liquidityPool.displayId,
+                        chainId,
+                        network,
+                        tickDistance,
+                        tickMaxDeviation,
+                        timestamp: this.dayjsService.now().unix(),
+                    }
+                )
+            }
+        }
     }
 }
 
 export interface GetOpenablePoolsParams {
     user: UserLike
-    platformId: PlatformId
     pools: Array<FetchedPool>
     chainId: ChainId
     network: Network
@@ -109,8 +241,19 @@ export interface GetOpenablePoolsParams {
 
 export interface TryOpenPoolParams {
     user: UserLike
-        platformId: PlatformId
-    pools: Array<FetchedPool>
+    fetchedPools: Array<FetchedPool>
     chainId: ChainId
     network: Network
+}
+
+export interface OpenFirstEligiblePoolParams {
+    user: UserLike
+    fetchedPools: Array<FetchedPool>
+    chainId: ChainId
+    network: Network
+}
+
+export interface CheckAlreadyOpenedResponse {
+    alreadyOpened: boolean
+    liquidityPoolId?: string
 }

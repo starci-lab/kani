@@ -3,6 +3,7 @@ import { UuidAbstractEntity } from "./abstract"
 import { UserEntity } from "./user.entity"
 import { LiquidityPoolEntity } from "./liquidity-pool.entity"
 import { PositionEntity } from "./position.entity"
+import { ChainConfigEntity } from "./chain-config.entity"
 
 @Entity({ name: "assigned_liquidity_pools" })
 export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
@@ -26,4 +27,13 @@ export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
 
     @OneToMany(() => PositionEntity, (position) => position.assignedLiquidityPool)
         positions: Array<PositionEntity>
+
+    @Column({ type: "text", name: "deposit_amount_limit", nullable: true })
+        depositAmountLimit?: string
+
+    @OneToMany(
+        () => ChainConfigEntity, 
+        (chainConfig) => chainConfig.assignedLiquidityPool
+    )
+        chainConfigs: Array<ChainConfigEntity>
 }

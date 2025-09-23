@@ -146,6 +146,11 @@ export interface ChainConfigLike extends BaseLike {
     chainId: ChainId
     /** Farm token type of the chain */
     farmTokenType: TokenType
+    /** Network of the chain */
+    network: Network
+    /** Assigned liquidity pool of the chain config */
+    assignedLiquidityPoolId?: LiquidityPoolId
+    assignedLiquidityPool?: AssignedLiquidityPoolLike
 }
 
 export interface UserWalletLike extends BaseLike {

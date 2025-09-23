@@ -16,7 +16,8 @@ export interface FetchAndMergeCoinsParams {
     owner: string
     coinType: string
     suiGasAmount?: BN
-    requiredAmount: BN
+    // if not specified, will use the balance of the account
+    requiredAmount?: BN
 }
 
 export interface SplitCoinParams {
@@ -106,18 +107,15 @@ export class SuiCoinManagerService {
                 digest: coin.digest,
             },
         }))
-
-        const userBalance = coins.reduce(
-            (acc, coin) => acc.add(coin.coinAmount),
-            new BN(0)
-        )
-
+        const { totalBalance } = await suiClient.getBalance({ owner, coinType })
+        const userBalance = new BN(totalBalance)
+        requiredAmount = requiredAmount || userBalance
         // Special handling for SUI gas
         if (isSuiCoin(coinType)) {
             suiGasAmount = suiGasAmount || ZERO_BN
             const coinAmount = BN.min(
                 userBalance.sub(suiGasAmount),
-                requiredAmount
+                requiredAmount || userBalance
             )
             txb.setGasPayment(coins.map((coin) => coin.coinRef))
             const [sourceCoin] = txb.splitCoins(txb.gas, [
@@ -133,7 +131,7 @@ export class SuiCoinManagerService {
         }
         // If only one coin exists, return it directly
         // Select coins to cover the required amount
-        const coinAmount = BN.min(userBalance, requiredAmount)
+        const coinAmount = requiredAmount ? BN.min(userBalance, requiredAmount) : userBalance
 
         if (coins.length === 1) {
             const [ coin ] = coins

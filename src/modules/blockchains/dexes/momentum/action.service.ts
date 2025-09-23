@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import {
     ClosePositionParams,
     ClosePositionResponse,
@@ -36,7 +36,7 @@ import { SignerService } from "../../signers"
 import { PythService } from "../../pyth"
 import { SuiCoinManagerService } from "../../utils"
 import {
-    PriceRatioService,
+    ZapProtectionService,
     TickMathService,
     SuiExecutionService,
     TickManagerService,
@@ -45,6 +45,7 @@ import { TokenId } from "@modules/databases"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
+    private readonly logger = new Logger(MomentumActionService.name)
     constructor(
     @InjectMomentumClmmSdks()
     private readonly momentumClmmSdks: Record<Network, MmtSDK>,
@@ -60,7 +61,7 @@ export class MomentumActionService implements IActionService {
     private readonly zapService: ZapService,
     private readonly suiSwapService: SuiSwapService,
     private readonly suiCoinManagerService: SuiCoinManagerService,
-    private readonly priceRatioService: PriceRatioService,
+    private readonly zapProtectionService: ZapProtectionService,
     ) {}
 
     /**
@@ -115,14 +116,18 @@ export class MomentumActionService implements IActionService {
             suiClient,
             txb,
         })
+        this.logger.debug(`Source coin after gas swap: ${sourceCoin.coinAmount.toString()}`)
+        const depositAmount = sourceCoin.coinAmount
+        
         await this.feeToService.attachSuiFee({
             txb,
             tokenId: tokenIn.displayId,
             tokens,
             network,
-            amount,
+            amount: sourceCoin.coinAmount,
             sourceCoin,
         })
+        this.logger.debug(`Source coin after fee to: ${sourceCoin.coinAmount.toString()}`)
         // use this to calculate the ratio
         const lowerSqrtPrice = TickMath.tickIndexToSqrtPriceX64WithTickSpacing(
             tickLower,
@@ -152,7 +157,7 @@ export class MomentumActionService implements IActionService {
             tokenA.decimals,
             tokenB.decimals,
         )
-        const { swapAmount, routerId, quoteData, receiveAmount } =
+        const { swapAmount, routerId, quoteData } =
       await this.zapService.computeZapAmounts({
           amountIn: sourceCoin.coinAmount,
           ratio: new Decimal(ratio),
@@ -166,25 +171,16 @@ export class MomentumActionService implements IActionService {
           swapSlippage,
       })
         // 4. optional ratio check
-        const zapAmountA = priorityAOverB
-            ? new BN(sourceCoin.coinAmount)
-            : new BN(receiveAmount)
-        const zapAmountB = priorityAOverB
-            ? new BN(receiveAmount)
-            : new BN(sourceCoin.coinAmount)
-        const isZapEligible = this.priceRatioService.isZapEligible({
-            priorityAOverB,
-            tokenA: {
-                tokenDecimals: tokenA.decimals,
-                amount: new BN(zapAmountA),
-            },
-            tokenB: {
-                tokenDecimals: tokenB.decimals,
-                amount: new BN(zapAmountB),
-            },
+        if (!user.id) {
+            throw new Error("User id is required")
+        }
+        this.zapProtectionService.ensureZapEligible({
+            amountOriginal: sourceCoin.coinAmount,
+            amountZapped: swapAmount,
+            liquidityPoolId: pool.displayId,
+            userId: user.id,
+            requireZapEligible,
         })
-        if (requireZapEligible && !isZapEligible)
-            throw new Error("Zap not eligible at this moment")
         const { spendCoin } = this.suiCoinManagerService.splitCoin({
             txb,
             sourceCoin,
@@ -207,6 +203,9 @@ export class MomentumActionService implements IActionService {
         if (!coinOut) {
             throw new Error("Coin out or change coin is missing")
         }
+        this.logger.debug(`Coin out after swap: ${coinOut.coinAmount.toString()}`)
+        this.logger.debug(`Swap amount: ${swapAmount.toString()}`)
+        this.logger.debug(`Source coin after swap: ${sourceCoin.coinAmount.toString()}`)
         const providedCoinA = priorityAOverB ? sourceCoin : coinOut
         const providedCoinB = priorityAOverB ? coinOut : sourceCoin
         const position = mmtSdk.Position.openPosition(
@@ -280,7 +279,7 @@ export class MomentumActionService implements IActionService {
             tickLower,
             tickUpper,
             positionId,
-            depositAmount: amount,
+            depositAmount,
             liquidity: new BN(liquidity),
         }
     }

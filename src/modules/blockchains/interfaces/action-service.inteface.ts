@@ -29,7 +29,7 @@ export interface ClosePositionParams {
 export interface OpenPositionParams {
     pool: FetchedPool
     // amount to add
-    amount: BN
+    amount?: BN
     priorityAOverB: boolean
     tokenAId: TokenId
     tokenBId: TokenId

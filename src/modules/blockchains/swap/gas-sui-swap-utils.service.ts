@@ -26,7 +26,8 @@ export interface GasSuiSwapParams {
     slippage?: number;
     // this is a variable that indicate amount in
     // will ignore it if your priority token is not SUI
-    amountIn: BN;
+    // if not specified, will use the balance of the account
+    amountIn?: BN;
     suiClient?: SuiClient;
 }
 

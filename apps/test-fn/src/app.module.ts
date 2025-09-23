@@ -95,7 +95,7 @@ import { TestPositionService } from "./test-position.service"
     providers: [
         //TestFlowService,
         //TestSwapService
-        TestPositionService,
+        //TestPositionService,
         // TurbosTestLiquidityManangementService
         // Mmt2TestLiquidityManangementService
         //CetusTestLiquidityManangementService

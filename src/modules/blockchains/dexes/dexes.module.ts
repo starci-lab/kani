@@ -57,11 +57,11 @@ export class DexesModule extends ConfigurableModuleClass {
 
             ],
             providers: [
-                LiquidityPoolService
+                LiquidityPoolService,
             ],
             exports: [
                 ...dexModules,
-                LiquidityPoolService
+                LiquidityPoolService,
             ]
         }
     } 
