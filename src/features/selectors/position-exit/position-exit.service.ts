@@ -2,7 +2,8 @@ import {
     TickManagerService
 } from "@modules/blockchains"
 import { 
-    EventName, 
+    EventName,
+    PythSuiPricesUpdatedEvent, 
 } from "@modules/event"
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
 import { OnEvent } from "@nestjs/event-emitter"
@@ -20,9 +21,8 @@ import {
     LockService
 } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
+import { CacheHelpersService,  } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { UserLike } from "@modules/databases"
 
 // a service to exit position
 // we use fomular to exit position
@@ -51,33 +51,36 @@ export class PositionExitService implements OnModuleInit {
         })
     }
 
-    @OnEvent(EventName.PricesUpdated)
-    async handlePricesUpdated() 
+    @OnEvent(EventName.PythSuiPricesUpdated)
+    async handlePythSuiPricesUpdated(
+        { network, price, tokenId}: PythSuiPricesUpdatedEvent
+    ) 
     {      
-        const serializedUserIds = await this.cacheManager.get<string>(createCacheKey(CacheKey.UserIds))
-        if (!serializedUserIds) {
-            this.logger.debug("No user ids found")
-            return
-        }
-        const userIds = this.superjson.parse<Array<string>>(serializedUserIds)
-        if (!userIds) {
-            return
-        }
-        console.log(userIds)
-        const serializedUsers = await this.cacheManager.mget<string>(userIds.map(userId => createCacheKey(CacheKey.User, userId)))
-        if (!serializedUsers) {
-            return
-        }
-        console.log(serializedUsers)
-        // filter out undefined users
-        const users = serializedUsers
-            .filter(serializedUser => serializedUser !== undefined)
-            .map(serializedUser => this.superjson.parse<UserLike>(serializedUser))
+        console.log(network, price, tokenId)
+        // const serializedUserIds = await this.cacheManager.get<string>(createCacheKey(CacheKey.UserIds))
+        // if (!serializedUserIds) {
+        //     this.logger.debug("No user ids found")
+        //     return
+        // }
+        // const userIds = this.superjson.parse<Array<string>>(serializedUserIds)
+        // if (!userIds) {
+        //     return
+        // }
+        // console.log(userIds)
+        // const serializedUsers = await this.cacheManager.mget<string>(userIds.map(userId => createCacheKey(CacheKey.User, userId)))
+        // if (!serializedUsers) {
+        //     return
+        // }
+        // console.log(serializedUsers)
+        // // filter out undefined users
+        // const users = serializedUsers
+        //     .filter(serializedUser => serializedUser !== undefined)
+        //     .map(serializedUser => this.superjson.parse<UserLike>(serializedUser))
 
-        for (const user of users) {
-            // exit position for each user
-            const activePositions = user.activePositions
-            console.log(activePositions.length)
-        }
+        // for (const user of users) {
+        //     // exit position for each user
+        //     const activePositions = user.activePositions
+        //     console.log(activePositions.length)
+        // }
     }
 }

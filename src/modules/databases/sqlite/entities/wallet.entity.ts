@@ -11,6 +11,9 @@ export class WalletEntity extends UuidAbstractEntity {
     @JoinColumn({ name: "user_id" })
         user: UserEntity
 
+    @Column({ type: "text", name: "user_id" })
+        userId: string
+
     @Column({ type: "text", name: "chain_id" })
         platformId: PlatformId
 

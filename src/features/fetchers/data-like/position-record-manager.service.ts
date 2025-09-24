@@ -83,6 +83,7 @@ export class PositionRecordManagerService implements OnModuleInit {
         private readonly retryService: RetryService,
         private readonly dataLikeQueryService: DataLikeQueryService,
         private readonly dayjsService: DayjsService,
+
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
@@ -283,7 +284,11 @@ export class PositionRecordManagerService implements OnModuleInit {
     private async sqliteOpenPosition(
         params: OpenPositionParams
     ) {
-        const { user } = params
+        const { 
+            user, 
+            chainId, 
+            network = Network.Mainnet,
+        } = params
         if (!user.id) throw new Error("User ID is required")
         await this.sqliteDataSource.transaction(async (manager) => {
             // we try open position first
@@ -297,26 +302,28 @@ export class PositionRecordManagerService implements OnModuleInit {
             } = await this.openPositionInternal(params)
             try {
                 if (!user.id) throw new Error("User ID is required")
-                const assignedLiquidityPool = user.assignedLiquidityPools.find(
-                    (assignedLiquidityPool) =>
-                        assignedLiquidityPool.liquidityPoolId === params.poolId,
+                const assignedLiquidityPools = this.dataLikeQueryService.getAssignedLiquidityPools(
+                    user, 
+                    chainId, 
+                    network
+                )
+                const assignedLiquidityPool = assignedLiquidityPools.find(
+                    (assignedLiquidityPool) => assignedLiquidityPool.liquidityPoolId === params.poolId,
                 )
                 if (!assignedLiquidityPool)
                     throw new Error(
                         `Assigned liquidity pool not found for pool ${params.poolId} and user ${user.id}`,
                     )
                 await manager.save(
-                    PositionEntity, [
-                        {
-                            openTxHash: txHash,
-                            depositAmount: depositAmount?.toString(),
-                            tickLower,
-                            tickUpper,
-                            liquidity: liquidity.toString(),
-                            positionId,
-                            assignedLiquidityPoolId: assignedLiquidityPool.id,
-                        },
-                    ])
+                    PositionEntity, {
+                        openTxHash: txHash,
+                        depositAmount: depositAmount?.toString(),
+                        tickLower,
+                        tickUpper,
+                        liquidity: liquidity.toString(),
+                        positionId,
+                        assignedLiquidityPoolId: assignedLiquidityPool.id,
+                    })
                 const platformId = chainIdToPlatform(params.chainId)
                 const wallet = user.wallets.find(
                     (wallet) => wallet.platformId === platformId,
@@ -331,7 +338,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                         network: params.network,
                     },
                     {
-                        assignedLiquidityPoolId: assignedLiquidityPool.id,
+                        providedAssignedLiquidityPoolId: assignedLiquidityPool.id,
                     },
                 )
                 this.logger.info(WinstonLog.OpenPositionSuccess, {
@@ -397,7 +404,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                             network: params.network,
                         },
                         {
-                            assignedLiquidityPoolId: () => "NULL",
+                            providedAssignedLiquidityPoolId: () => "NULL",
                         },
                     )
                     this.logger.info(WinstonLog.ClosePositionSuccess, {

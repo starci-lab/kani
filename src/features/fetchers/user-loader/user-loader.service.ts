@@ -150,13 +150,16 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
             relations: {
                 wallets: {
                     chainConfigs: {
-                        assignedLiquidityPool: {
+                        assignedLiquidityPools: {
                             liquidityPool: true,
-                            positions: true
+                            positions: {
+                                assignedLiquidityPool: {
+                                    liquidityPool: true,
+                                }
+                            }
                         },
                     },
                 },
-                assignedLiquidityPools: { liquidityPool: true },
             },
         })
 
@@ -194,6 +197,12 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                                 farmTokenType: defaultFarmType,
                                 chainId: ChainId.Sui,
                                 network: Network.Mainnet,
+                                assignedLiquidityPools: [
+                                    ...randomSuiPools.map((liquidityPool) => ({
+                                        liquidityPoolId: liquidityPool.id,
+                                        positions: [],
+                                    })),
+                                ]
                             },
                         ],
                     },
@@ -205,11 +214,6 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     },
                 ],
                 isActive: true,
-                assignedLiquidityPools: [
-                    ...randomSuiPools.map((liquidityPool) => ({
-                        liquidityPoolId: liquidityPool.id,
-                    })),
-                ],
             }
             user = await this.dataSource.manager.save(UserEntity, userData)
         }
@@ -222,10 +226,6 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
         return {
             ...user,
             id: user.id,
-            assignedLiquidityPools: user.assignedLiquidityPools.map((assignedLiquidityPool) => ({
-                id: assignedLiquidityPool.id,
-                liquidityPoolId: assignedLiquidityPool.liquidityPool.displayId,
-            })),
             wallets: user.wallets.map((wallet) => ({
                 id: wallet.id,
                 accountAddress: wallet.accountAddress,
@@ -236,24 +236,32 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
                     chainId: chainConfig.chainId,
                     farmTokenType: chainConfig.farmTokenType,
                     network: chainConfig.network,
-                    assignedLiquidityPoolId: chainConfig.assignedLiquidityPool?.liquidityPool.displayId,
+                    assignedLiquidityPoolIds: chainConfig.assignedLiquidityPools.map((assignedLiquidityPool) => assignedLiquidityPool.liquidityPool.displayId),
+                    providedAssignedLiquidityPoolId: chainConfig.providedAssignedLiquidityPoolId,
+                    assignedLiquidityPools: chainConfig.assignedLiquidityPools.map((assignedLiquidityPool) => ({
+                        id: assignedLiquidityPool.id,
+                        liquidityPoolId: assignedLiquidityPool.liquidityPool.displayId,
+                    })),
                 })),
             })),
             activePositions:
-                user.assignedLiquidityPools
-                    .flatMap((assignedLiquidityPool) => assignedLiquidityPool.positions
-                        // filter out closed positions
-                        .filter((position) => !position.isClosed)
-                        // map to position like
-                        .map((position) => ({
-                            id: position.id,
-                            liquidityPoolId: assignedLiquidityPool.liquidityPool.displayId,
-                            tickLower: position.tickLower,
-                            tickUpper: position.tickUpper,
-                            depositAmount: position.depositAmount,
-                            liquidity: position.liquidity,
-                            positionId: position.positionId,
-                        }))),
+                user
+                    .wallets
+                    .flatMap((wallet) => wallet.chainConfigs
+                        .flatMap((chainConfig) => chainConfig.assignedLiquidityPools
+                            .flatMap((assignedLiquidityPool) => assignedLiquidityPool.positions)))
+                    // filter out closed positions
+                    .filter((position) => !position.isClosed)
+                    // map to position like
+                    .map((position) => ({
+                        id: position.id,
+                        liquidityPoolId: position.assignedLiquidityPool.liquidityPool.displayId,
+                        tickLower: position.tickLower,
+                        tickUpper: position.tickUpper,
+                        depositAmount: position.depositAmount,
+                        liquidity: position.liquidity,
+                        positionId: position.positionId,
+                    })),
         }
     }
 }

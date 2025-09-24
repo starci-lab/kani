@@ -1,21 +1,11 @@
-import { Entity, ManyToOne, JoinColumn, OneToMany, Column } from "typeorm"
+import { Entity, ManyToOne, JoinColumn, OneToMany, Column, OneToOne } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
-import { UserEntity } from "./user.entity"
 import { LiquidityPoolEntity } from "./liquidity-pool.entity"
 import { PositionEntity } from "./position.entity"
 import { ChainConfigEntity } from "./chain-config.entity"
 
 @Entity({ name: "assigned_liquidity_pools" })
 export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
-    @ManyToOne(() => UserEntity, (user) => user.assignedLiquidityPools, 
-        { onDelete: "CASCADE" }
-    )
-    @JoinColumn({ name: "user_id" })
-        user: UserEntity
-
-    @Column({ type: "text", name: "user_id" })
-        userId: string
-
     @ManyToOne(() => LiquidityPoolEntity, (pool) => pool.assignedLiquidityPools, 
         { onDelete: "CASCADE" }
     )
@@ -31,9 +21,20 @@ export class AssignedLiquidityPoolEntity extends UuidAbstractEntity {
     @Column({ type: "text", name: "deposit_amount_limit", nullable: true })
         depositAmountLimit?: string
 
-    @OneToMany(
+    @ManyToOne(
         () => ChainConfigEntity, 
-        (chainConfig) => chainConfig.assignedLiquidityPool
+        { onDelete: "CASCADE" },
     )
-        chainConfigs: Array<ChainConfigEntity>
+    @JoinColumn({ name: "chain_config_id" })
+        chainConfig: ChainConfigEntity
+
+    @Column({ type: "text", name: "chain_config_id" })
+        chainConfigId: string
+
+    @OneToOne(
+        () => ChainConfigEntity,
+        (chainConfig) => chainConfig.providedAssignedLiquidityPool,
+        { nullable: true },
+    )
+        providedChainConfig?: ChainConfigEntity
 }

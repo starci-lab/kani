@@ -1,4 +1,4 @@
-import { LiquidityPoolLike, UserLike } from "@modules/databases"
+import { AssignedLiquidityPoolLike, ChainConfigLike, LiquidityPoolLike, UserLike } from "@modules/databases"
 import { FetchedPool } from "@modules/blockchains"
 import { Injectable, NotFoundException } from "@nestjs/common"
 import { ChainId, chainIdToPlatform, Network, PlatformId, TokenType } from "@modules/common"
@@ -37,6 +37,38 @@ export class DataLikeQueryService {
         )?.farmTokenType as TokenType
     }
 
+    getAssignedLiquidityPools(
+        userLike: UserLike,
+        chainId: ChainId,
+        network: Network
+    ): Array<AssignedLiquidityPoolLike> {
+        return userLike
+            .wallets
+            .flatMap((wallet) => wallet.chainConfigs
+                .filter(
+                    (chainConfig) =>
+                        chainConfig.chainId === chainId && chainConfig.network === network
+                )
+                .flatMap(
+                    (chainConfig) =>
+                        chainConfig?.assignedLiquidityPools
+                )
+            )
+            .filter((assignedLiquidityPool) => assignedLiquidityPool !== undefined)
+    }
+
+    getChainConfig(
+        user: UserLike,
+        chainId: ChainId,
+        network: Network,
+    ): ChainConfigLike {
+        const chainConfig = user.wallets.flatMap((wallet) => wallet.chainConfigs).find((chainConfig) => chainConfig.chainId === chainId && chainConfig.network === network)
+        if (!chainConfig) {
+            throw new NotFoundException(`Chain config not found for user ${user.id ?? ""} on chain ${chainId} and network ${network}`)
+        }
+        return chainConfig
+    }
+
     getPoolsMatchingUserFarmType(
         user: UserLike,
         fetchedPools: Array<FetchedPool>,
@@ -44,9 +76,9 @@ export class DataLikeQueryService {
         network: Network,
     ) {
         const farmTokenType = this.getFarmTokenType(user, chainId, network)
-        const assignedLiquidityPoolIds = user.assignedLiquidityPools.map(
+        const assignedLiquidityPoolIds = this.getAssignedLiquidityPools(user, chainId, network).map(
             (assignedLiquidityPool) =>
-                assignedLiquidityPool.liquidityPoolId
+                assignedLiquidityPool.liquidityPoolId,
         )
         const unsuffledPools = fetchedPools
             // filter out pools that are already assigned to the user
@@ -83,13 +115,13 @@ export class DataLikeQueryService {
     }
 
     determinePriorityAOverB(
-        { 
-            liquidityPool, 
-            user, 
-            chainId, 
+        {
+            liquidityPool,
+            user,
+            chainId,
             network
-        }: 
-    DeterminePriorityAOverBParams) {
+        }:
+            DeterminePriorityAOverBParams) {
         let priorityAOverB = liquidityPool.priorityAOverB ?? false
 
         if (typeof priorityAOverB === "undefined") {

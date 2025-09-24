@@ -13,7 +13,7 @@ import {
     PositionRecordManagerService, 
     UserLoaderService
 } from "@features/fetchers"
-import { UserLike } from "@modules/databases"
+import { DexId, UserLike } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -97,13 +97,10 @@ export class PoolSelectorService {
         chainId: ChainId,
         network: Network,
     ): CheckAlreadyOpenedResponse {
-        const chainConfig = user
-            .wallets
-            .flatMap((wallet) => wallet.chainConfigs)
-            .find((chainConfig) => chainConfig.chainId === chainId && chainConfig.network === network)
+        const chainConfig = this.dataLikeQueryService.getChainConfig(user, chainId, network)
         return {
-            alreadyOpened: !!(chainConfig?.assignedLiquidityPoolId),
-            liquidityPoolId: chainConfig?.assignedLiquidityPoolId,
+            alreadyOpened: !!(chainConfig?.providedAssignedLiquidityPoolId),
+            liquidityPoolId: chainConfig?.providedAssignedLiquidityPoolId,
         }
     }
 
@@ -122,7 +119,7 @@ export class PoolSelectorService {
             .getPoolsMatchingUserFarmType(user, pools, chainId, network)
             // this is a temporary to ensure opening position on Turbos pools
             //.filter((pool) => pool.liquidityPool.dexId === DexId.Turbos)  
-            //.filter((pool) => pool.liquidityPool.dexId === DexId.Momentum)  
+            .filter((pool) => pool.liquidityPool.dexId === DexId.Momentum)  
         // Iterate over the matching pools
         for (const pool of fetchingPools) {
             // Here you could add additional filtering logic if needed
@@ -193,7 +190,6 @@ export class PoolSelectorService {
                 // Open position on the pool
                 await this.positionRecordManagerService.openPosition({
                     user,
-                    requireZapEligible: false,
                     poolId: pool.liquidityPool.displayId,
                     chainId,
                     network,

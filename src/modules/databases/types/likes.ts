@@ -148,9 +148,13 @@ export interface ChainConfigLike extends BaseLike {
     farmTokenType: TokenType
     /** Network of the chain */
     network: Network
-    /** Assigned liquidity pool of the chain config */
-    assignedLiquidityPoolId?: LiquidityPoolId
-    assignedLiquidityPool?: AssignedLiquidityPoolLike
+    /** Assigned liquidity pool IDs of the chain config */
+    assignedLiquidityPoolIds?: Array<LiquidityPoolId>
+    assignedLiquidityPools?: Array<AssignedLiquidityPoolLike>
+
+    /** Provided assigned liquidity pool ID of the chain config */
+    providedAssignedLiquidityPoolId?: string
+    providedAssignedLiquidityPool?: AssignedLiquidityPoolLike
 }
 
 export interface UserWalletLike extends BaseLike {
@@ -183,8 +187,6 @@ export interface UserLike extends BaseLike {
     exitToUsdc: boolean
     /** The wallets linked to this allocation */
     wallets: Array<UserWalletLike>
-    /** The pools that the user is assigned to */
-    assignedLiquidityPools: Array<AssignedLiquidityPoolLike>
     /** Active positions of the user */
     activePositions: Array<PositionLike>
 }

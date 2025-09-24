@@ -61,14 +61,21 @@ export class DataLikePositionService implements OnModuleInit {
                 where: {
                     assignedLiquidityPool: {
                         liquidityPool: {
-                            displayId: liquidityPoolId
+                            displayId: liquidityPoolId,
                         },
-                        userId
+                        chainConfig: {
+                            wallet: {
+                                userId
+                            }
+                        }
                     },
                 },
                 relations: {
                     assignedLiquidityPool: {
                         liquidityPool: true,
+                        chainConfig: {
+                            wallet: true,
+                        }
                     },
                 }
             })

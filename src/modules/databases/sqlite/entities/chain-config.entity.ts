@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm"
+import { Column, Entity, ManyToOne, OneToMany, OneToOne, RelationId, JoinColumn } from "typeorm"
 import { UuidAbstractEntity } from "./abstract"
 import { ChainId, Network, TokenType } from "@modules/common"
 import { WalletEntity } from "./wallet.entity"
@@ -21,23 +21,24 @@ export class ChainConfigEntity extends UuidAbstractEntity {
 
     @Column({ type: "text", name: "wallet_id", nullable: true })
         walletId: string
-    // this foreign key is used to link the chain config to the assigned liquidity pool
-    // which mean current chain config is used for this assigned liquidity pool
-    // if assigned liquidity pool is null, it means this chain config is used for the wallet
-    @ManyToOne(
+    // this one to many is used to link the chain config to the assigned liquidity pools
+    @OneToMany(
         () => AssignedLiquidityPoolEntity, 
-        (assignedLiquidityPool) => assignedLiquidityPool.chainConfigs,
-        { nullable: true }
+        (assignedLiquidityPool) => assignedLiquidityPool.chainConfig,
     )
-    @JoinColumn({ 
-        name: "assigned_liquidity_pool_id"
-    })
-        assignedLiquidityPool?: AssignedLiquidityPoolEntity
+        assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>
 
-    @Column({ 
-        type: "text", 
-        name: "assigned_liquidity_pool_id", 
-        nullable: true
-    })
-        assignedLiquidityPoolId?: string
+    @RelationId((chainConfig: ChainConfigEntity) => chainConfig.assignedLiquidityPools)
+        assignedLiquidityPoolIds: Array<string>
+
+    @OneToOne(
+        () => AssignedLiquidityPoolEntity,
+        (assignedLiquidityPool) => assignedLiquidityPool.chainConfig,
+        { nullable: true },
+    )
+    @JoinColumn({ name: "provided_assigned_liquidity_pool_id" })
+        providedAssignedLiquidityPool?: AssignedLiquidityPoolEntity
+
+    @Column({ type: "text", name: "provided_assigned_liquidity_pool_id", nullable: true })
+        providedAssignedLiquidityPoolId?: string
 }

@@ -3,7 +3,6 @@ import { UuidAbstractEntity } from "./abstract"
 import { UserDepositEntity } from "./user-deposit.entity"
 import { UserCummulativeEntity } from "./user-cummulative.entity"
 import { TokenId } from "@modules/databases"
-import { AssignedLiquidityPoolEntity } from "./assigned-liquidity-pool.entity"
 import { WalletEntity } from "./wallet.entity"
 
 @Entity({ name: "users" })
@@ -27,11 +26,4 @@ export class UserEntity extends UuidAbstractEntity {
 
     @Column({ type: "boolean", default: true, name: "is_active" })
         isActive: boolean
-
-    @OneToMany(
-        () => AssignedLiquidityPoolEntity,
-        (assignedLiquidityPool) => assignedLiquidityPool.user,
-        { cascade: true }
-    )
-        assignedLiquidityPools: Array<AssignedLiquidityPoolEntity>  
 }

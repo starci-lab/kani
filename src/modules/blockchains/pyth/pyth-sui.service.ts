@@ -11,6 +11,7 @@ import { Injectable, OnModuleInit } from "@nestjs/common"
 import { InjectWinston } from "@modules/winston"
 import { Logger } from "winston"
 import { WinstonLog } from "@modules/winston"
+import { EventEmitterService, EventName, PythSuiPricesUpdatedEvent } from "@modules/event"
 
 @Injectable()
 export class PythSuiService implements IOracleService, OnModuleInit {
@@ -22,6 +23,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
     private readonly cacheHelpersService: CacheHelpersService,
     @InjectWinston()
     private readonly logger: Logger,
+    private readonly eventEmitterService: EventEmitterService,
     ) {
         this.connection = new SuiPriceServiceConnection(
             envConfig().pyth.sui.endpoint,
@@ -69,13 +71,22 @@ export class PythSuiService implements IOracleService, OnModuleInit {
                             ),
                             price,
                         )
-                        this.logger.debug(WinstonLog.PythSuiPricesUpdated, [
-                            {
-                                network,
-                                tokenId: token.displayId,
-                                price,
-                            },
-                        ])
+                        this.eventEmitterService
+                            .emit<PythSuiPricesUpdatedEvent>(
+                                EventName.PythSuiPricesUpdated, 
+                                {
+                                    network,
+                                    tokenId: token.displayId,
+                                    price,
+                                })
+                        this.logger.debug(
+                            WinstonLog.PythSuiPricesUpdated, [
+                                {
+                                    network,
+                                    tokenId: token.displayId,
+                                    price,
+                                },
+                            ])
                     }
                 } catch { 
                     //

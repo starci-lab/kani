@@ -1,4 +1,5 @@
 import { ChainId, Network } from "@modules/common"
+import { TokenId } from "@modules/databases"
 
 export enum EventName {
     CoinMarketCapPricesFetched = "coinMarketCapPricesFetched",
@@ -8,10 +9,17 @@ export enum EventName {
     PricesUpdated = "pricesUpdated",
     DataSeeded = "dataSeeded",
     InitializerLoaded = "initializerLoaded",
+    PythSuiPricesUpdated = "pythSuiPricesUpdated",
 }
 
 export interface LiquidityPoolsFetchedEvent {
     chainId: ChainId
     network: Network
     pools: string // serialized
+}
+
+export interface PythSuiPricesUpdatedEvent {
+    network: Network
+    tokenId: TokenId
+    price: number
 }
