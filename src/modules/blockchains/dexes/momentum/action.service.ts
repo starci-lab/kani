@@ -13,6 +13,7 @@ import {
     adjustSlippage,
     computeRatio,
     computeRaw,
+    filterOutBnZero,
     incrementBnMap,
     toUnit,
 } from "@modules/common"
@@ -331,7 +332,7 @@ export class MomentumActionService implements IActionService {
                 },
                 pool.mmtRewarders,
                 position.positionId,
-                undefined,
+                accountAddress,
             )
         }
         // // 3. Collect fees
@@ -388,7 +389,7 @@ export class MomentumActionService implements IActionService {
         })
         return {
             txHash,
-            suiTokenOuts,
+            suiTokenOuts: filterOutBnZero(suiTokenOuts),
         }
     }
 }

@@ -84,6 +84,8 @@ export interface PositionLike extends BaseLike {
     tickUpper: number
     /** The deposit amount of the position */
     depositAmount: string
+    /** The liquidity pool ID of the position */
+    liquidityPoolId: LiquidityPoolId
 }
 
 export interface LiquidityPoolLike extends BaseLike {

@@ -1,6 +1,7 @@
 import BN from "bn.js"
 import { Types } from "mongoose"
 import { v4 } from "uuid"
+import _ from "lodash"
 
 export const createObjectId = (id: string = v4()): Types.ObjectId => {
     let hex = Buffer.from(id, "utf-8").toString("hex")
@@ -33,4 +34,8 @@ export const incrementBnMap = (obj: object, key: string, value: BN) => {
     } else {
         obj[key] = value
     }
+}
+
+export const filterOutBnZero = <T extends Record<string, BN>>(obj: T): Partial<T> => {
+    return _.pickBy(obj, (v) => v && !v.isZero()) as Partial<T>
 }

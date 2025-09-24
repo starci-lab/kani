@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { Cron } from "@nestjs/schedule"
 import { LiquidityPoolService } from "@modules/blockchains"
 import { ChainId, Network, waitUntil } from "@modules/common"
@@ -13,7 +13,7 @@ import { FetchedPool } from "@modules/blockchains"
 import SuperJSON from "superjson"
 
 @Injectable()
-export class PoolFetcherService implements OnModuleInit {
+export class PoolFetcherService implements OnModuleInit, OnApplicationBootstrap {
     private cacheManager: Cache
 
     constructor(
@@ -31,6 +31,11 @@ export class PoolFetcherService implements OnModuleInit {
 
     onModuleInit() {
         this.cacheManager = this.cacheHelpersService.getCacheManager({ autoSelect: true })
+    }
+
+    // we fetch pools when the application bootstraps
+    onApplicationBootstrap() {
+        this.fetchPools()
     }
 
     // we fetch pools each 5s

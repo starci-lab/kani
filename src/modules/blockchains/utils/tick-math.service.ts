@@ -31,4 +31,20 @@ export class TickMathService {
             .pow(2)
             .div(toUnitDecimal(decimalsB - decimalsA))
     }
+
+    public tickIndexToPrice(
+        tickIndex: number,
+        decimalsA: number,
+        decimalsB: number,
+    ): Decimal {
+        // sqrtPrice = 1.0001^(tickIndex / 2)
+        const sqrtPrice = new Decimal("1.0001").pow(tickIndex).sqrt()
+        // convert to Q64.64 fixed-point
+        const sqrtPriceX64 = sqrtPrice.mul(this.Q64).floor()
+        return this.sqrtPriceX64ToPrice(
+            new BN(sqrtPriceX64.toFixed(0)),
+            decimalsA,
+            decimalsB,
+        )
+    }
 }

@@ -55,7 +55,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
                 try {
                     const priceUnchecked = feed.getPriceUnchecked()
                     if (priceUnchecked) {
-                        const token = suiTokens.find((token) => token.pythFeedId === feed.id)
+                        const token = suiTokens.find((token) => token.pythFeedId?.includes(feed.id))
                         if (!token) {
                             throw new Error(`Feed ${feed.id} not found`)
                         }
@@ -78,6 +78,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
                                     network,
                                     tokenId: token.displayId,
                                     price,
+                                    chainId: token.chainId,
                                 })
                         this.logger.debug(
                             WinstonLog.PythSuiPricesUpdated, [
@@ -85,11 +86,19 @@ export class PythSuiService implements IOracleService, OnModuleInit {
                                     network,
                                     tokenId: token.displayId,
                                     price,
+                                    chainId: token.chainId,
                                 },
                             ])
                     }
-                } catch { 
+                } catch (error) { 
                     //
+                    this.logger.error(
+                        WinstonLog.PythPriceUpdatedError, {
+                            network,
+                            feedId: feed.id,
+                            message: error.message,
+                            stack: error.stack,
+                        })
                 }
             })
     }

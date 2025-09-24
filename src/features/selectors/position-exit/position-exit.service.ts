@@ -1,5 +1,5 @@
 import { 
-    TickManagerService
+    TickMathService
 } from "@modules/blockchains"
 import { 
     EventName,
@@ -10,19 +10,19 @@ import { OnEvent } from "@nestjs/event-emitter"
 import { 
     DataLikeQueryService, 
     PositionRecordManagerService, 
-    UserLoaderService
 } from "@features/fetchers"
 import { Logger as WinstonLogger } from "winston"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { 
     InjectSuperJson, 
     AsyncService, 
-    DayjsService,
     LockService
 } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { CacheHelpersService,  } from "@modules/cache"
+import { CacheHelpersService, CacheKey, createCacheKey,  } from "@modules/cache"
 import { Cache } from "cache-manager"
+import { UserLike } from "@modules/databases"
+import { Decimal } from "decimal.js"
 
 // a service to exit position
 // we use fomular to exit position
@@ -31,10 +31,7 @@ export class PositionExitService implements OnModuleInit {
     private readonly logger = new Logger(PositionExitService.name)
     private cacheManager: Cache
     constructor(
-        private readonly tickManagerService: TickManagerService,
-        private readonly dataLikeQueryService: DataLikeQueryService,
-        private readonly userLoaderService: UserLoaderService,
-        private readonly dayjsService: DayjsService,
+        private readonly tickMathService: TickMathService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
@@ -42,6 +39,7 @@ export class PositionExitService implements OnModuleInit {
         private readonly asyncService: AsyncService,
         private readonly positionRecordManagerService: PositionRecordManagerService,
         private readonly lockService: LockService,
+        private readonly dataLikeQueryService: DataLikeQueryService,
         private readonly cacheHelpersService: CacheHelpersService,  
     ) { }
 
@@ -53,34 +51,159 @@ export class PositionExitService implements OnModuleInit {
 
     @OnEvent(EventName.PythSuiPricesUpdated)
     async handlePythSuiPricesUpdated(
-        { network, price, tokenId}: PythSuiPricesUpdatedEvent
+        { network, tokenId, chainId }: PythSuiPricesUpdatedEvent
     ) 
     {      
-        console.log(network, price, tokenId)
-        // const serializedUserIds = await this.cacheManager.get<string>(createCacheKey(CacheKey.UserIds))
-        // if (!serializedUserIds) {
-        //     this.logger.debug("No user ids found")
-        //     return
-        // }
-        // const userIds = this.superjson.parse<Array<string>>(serializedUserIds)
-        // if (!userIds) {
-        //     return
-        // }
-        // console.log(userIds)
-        // const serializedUsers = await this.cacheManager.mget<string>(userIds.map(userId => createCacheKey(CacheKey.User, userId)))
-        // if (!serializedUsers) {
-        //     return
-        // }
-        // console.log(serializedUsers)
-        // // filter out undefined users
-        // const users = serializedUsers
-        //     .filter(serializedUser => serializedUser !== undefined)
-        //     .map(serializedUser => this.superjson.parse<UserLike>(serializedUser))
+        try {
+            const serializedUserIds = await this.cacheManager.get<string>(createCacheKey(CacheKey.UserIds))
+            if (!serializedUserIds) {
+                this.logger.debug("No user ids found")
+                return
+            }
+            const userIds = this.superjson.parse<Array<string>>(serializedUserIds)
+            const serializedUsers = await this.cacheManager.mget<string>(
+                userIds.map(userId => createCacheKey(CacheKey.User, userId))
+            )
+            if (!serializedUsers) {
+                this.logger.debug("No users found")
+                return
+            }
+            // filter out undefined users
+            const users = serializedUsers
+                .filter(serializedUser => serializedUser !== undefined)
+                .map(serializedUser => this.superjson.parse<UserLike>(serializedUser))
 
-        // for (const user of users) {
-        //     // exit position for each user
-        //     const activePositions = user.activePositions
-        //     console.log(activePositions.length)
-        // }
+            const promises: Array<Promise<void>> = []
+            for (const user of users) {
+                promises.push(
+                    (async () => {
+                        const lockKey = `position-exit-${user.id}-${chainId}-${network}`
+                        await this.lockService.withLocks({
+                            acquiredKeys: [lockKey],
+                            blockedKeys: [lockKey],
+                            releaseKeys: [lockKey],
+                            callback: async () => {
+                                // exit position for each user
+                                for (const position of user.activePositions) {
+                                    const liquidityPool = this.dataLikeQueryService.getLiquidityPoolFromPosition(position)
+                                    if (liquidityPool.chainId !== chainId) {
+                                        this.logger.debug("Liquidity pool chain id does not match")
+                                        continue
+                                    }
+                                    const tokenA = liquidityPool.tokenA
+                                    const tokenB = liquidityPool.tokenB
+                                    if (!tokenA || !tokenB) {
+                                        this.logger.debug("No tokenA or tokenB found")
+                                        continue
+                                    }
+                                    if ([tokenA.displayId, tokenB.displayId].includes(tokenId)) {
+                                    // fetch prices
+                                        const [priceA, priceB] = await this.cacheHelpersService.mget<number>({
+                                            keys: [
+                                                createCacheKey(CacheKey.PythTokenPrice, tokenA.displayId, network),
+                                                createCacheKey(CacheKey.PythTokenPrice, tokenB.displayId, network),
+                                            ],
+                                            autoSelect: true
+                                        })
+                                        if (!priceA || !priceB) {
+                                            this.logger.debug("No price found")
+                                            continue
+                                        }
+          
+                                        const oraclePrice = new Decimal(priceA).div(new Decimal(priceB))
+                                        const priceLower = this.tickMathService.tickIndexToPrice(position.tickLower, tokenA.decimals, tokenB.decimals)
+                                        const priceUpper = this.tickMathService.tickIndexToPrice(position.tickUpper, tokenA.decimals, tokenB.decimals)
+          
+                                        const effectivePriceLower = priceLower.mul(new Decimal(1).plus(liquidityPool.fee))
+                                        const effectivePriceUpper = priceUpper.mul(new Decimal(1).minus(liquidityPool.fee))
+          
+                                        this.winstonLogger.debug(
+                                            WinstonLog.OracleLiquidityRangeValidation,
+                                            {
+                                                oraclePrice: oraclePrice.toString(),
+                                                priceLower: priceLower.toString(),
+                                                priceUpper: priceUpper.toString(),
+                                                effectivePriceLower: effectivePriceLower.toString(),
+                                                effectivePriceUpper: effectivePriceUpper.toString(),
+                                                liquidityPoolId: liquidityPool.displayId,
+                                            }
+                                        )
+          
+                                        if (oraclePrice.gte(effectivePriceLower) && oraclePrice.lte(effectivePriceUpper)) {
+                                            this.winstonLogger.debug(WinstonLog.OracleLiquidityRangeWithin, {
+                                                oraclePrice: oraclePrice.toString(),
+                                                effectiveLower: effectivePriceLower.toString(),
+                                                effectiveUpper: effectivePriceUpper.toString(),
+                                            })
+                                            continue
+                                        }
+          
+                                        const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
+                                            liquidityPool,
+                                            user,
+                                            chainId,
+                                            network
+                                        })
+          
+                                        const mustExit = priorityAOverB ? oraclePrice.gt(effectivePriceUpper) : oraclePrice.lt(effectivePriceLower)
+                                        if (mustExit) {
+                                            this.winstonLogger.info(WinstonLog.OracleLiquidityRangeMustExit, {
+                                                priorityAOverB,
+                                                oraclePrice: oraclePrice.toString(),
+                                                effectivePriceLower: effectivePriceLower.toString(),
+                                                effectivePriceUpper: effectivePriceUpper.toString(),
+                                            })
+                                            this.positionRecordManagerService.closePosition({
+                                                poolId: liquidityPool.displayId,
+                                                user,
+                                                chainId,
+                                                network
+                                            })
+                                            continue
+                                        }
+          
+                                        const priceDiff = effectivePriceUpper.minus(effectivePriceLower).div(2)
+                                        const upperExitThreshold = effectivePriceUpper.plus(priceDiff)
+                                        const lowerExitThreshold = effectivePriceLower.minus(priceDiff)
+          
+                                        const isExitConditionMet = priorityAOverB
+                                            ? oraclePrice.lte(lowerExitThreshold)
+                                            : oraclePrice.gte(upperExitThreshold)
+          
+                                        if (isExitConditionMet) {
+                                            this.winstonLogger.info(WinstonLog.OracleLiquidityRangeExitConditionMet, {
+                                                priorityAOverB,
+                                                oraclePrice: oraclePrice.toString(),
+                                                upperExitThreshold: upperExitThreshold.toString(),
+                                                lowerExitThreshold: lowerExitThreshold.toString(),
+                                            })
+                                            this.positionRecordManagerService.closePosition({
+                                                poolId: liquidityPool.displayId,
+                                                user,
+                                                chainId,
+                                                network
+                                            })
+                                            continue
+                                        }
+          
+                                        this.winstonLogger.info(WinstonLog.OracleLiquidityRangeOutButNotExit, {
+                                            oraclePrice: oraclePrice.toString(),
+                                            upperExitThreshold: upperExitThreshold.toString(),
+                                            lowerExitThreshold: lowerExitThreshold.toString(),
+                                        })
+                                    }
+                                }
+                            }
+                        })
+                    })()
+                )
+            }
+            await this.asyncService.allIgnoreError(promises)
+        } catch (error) {
+            this.winstonLogger.error(WinstonLog.PositionExitError, {
+                error: error.message,
+                stack: error.stack,
+            })
+        }
     }
 }

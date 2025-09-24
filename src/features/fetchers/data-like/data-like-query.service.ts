@@ -1,4 +1,4 @@
-import { AssignedLiquidityPoolLike, ChainConfigLike, LiquidityPoolLike, UserLike } from "@modules/databases"
+import { AssignedLiquidityPoolLike, ChainConfigLike, LiquidityPoolLike, PositionLike, UserLike } from "@modules/databases"
 import { FetchedPool } from "@modules/blockchains"
 import { Injectable, NotFoundException } from "@nestjs/common"
 import { ChainId, chainIdToPlatform, Network, PlatformId, TokenType } from "@modules/common"
@@ -142,6 +142,18 @@ export class DataLikeQueryService {
         }
 
         return priorityAOverB
+    }
+
+    getLiquidityPoolFromPosition(
+        position: PositionLike
+    ): LiquidityPoolLike {
+        const liquidityPool = this.dataLikeService.liquidityPools.find(
+            (liquidityPool) => liquidityPool.displayId === position.liquidityPoolId,
+        )
+        if (!liquidityPool) {
+            throw new NotFoundException(`Liquidity pool not found for position ${position.liquidityPoolId}`)
+        }
+        return liquidityPool
     }
 }
 

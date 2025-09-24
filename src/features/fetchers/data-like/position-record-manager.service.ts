@@ -25,7 +25,6 @@ import { Logger } from "winston"
 import { DataLikeService } from "./data-like.service"
 import { DayjsService, InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { DataLikePositionService } from "./data-like-position.service"
 import { RetryService } from "@modules/mixin"
 import { DataLikeQueryService } from "./data-like-query.service"
 
@@ -79,7 +78,6 @@ export class PositionRecordManagerService implements OnModuleInit {
         private readonly cacheHelpersService: CacheHelpersService,
         private readonly moduleRef: ModuleRef,
         private readonly suiFlexibleSwapService: SuiFlexibleSwapService,
-        private readonly dataLikePositionService: DataLikePositionService,
         private readonly retryService: RetryService,
         private readonly dataLikeQueryService: DataLikeQueryService,
         private readonly dayjsService: DayjsService,
@@ -233,10 +231,10 @@ export class PositionRecordManagerService implements OnModuleInit {
         )
         if (!suiWallet) throw new Error("Sui wallet not found")
         if (!user.id) throw new Error("User ID is required")
-        const position = await this.dataLikePositionService.loadPosition({
-            liquidityPoolId: poolId,
-            userId: user.id,
-        })
+        const position = user.activePositions.find(
+            (position) => position.liquidityPoolId === poolId,
+        )
+        if (!position) throw new Error(`Position not found for pool ${poolId} and user ${user.id}`)
         const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
             liquidityPool,
             user,
@@ -290,16 +288,17 @@ export class PositionRecordManagerService implements OnModuleInit {
             network = Network.Mainnet,
         } = params
         if (!user.id) throw new Error("User ID is required")
+        // we try open position first
+        const {
+            txHash,
+            liquidity,
+            depositAmount,
+            tickLower,
+            tickUpper,
+            positionId,
+        } = await this.openPositionInternal(params)
+        // begin a transaction to update the position
         await this.sqliteDataSource.transaction(async (manager) => {
-            // we try open position first
-            const {
-                txHash,
-                liquidity,
-                depositAmount,
-                tickLower,
-                tickUpper,
-                positionId,
-            } = await this.openPositionInternal(params)
             try {
                 if (!user.id) throw new Error("User ID is required")
                 const assignedLiquidityPools = this.dataLikeQueryService.getAssignedLiquidityPools(
@@ -360,19 +359,27 @@ export class PositionRecordManagerService implements OnModuleInit {
         params: ClosePositionParams
     ) {
         try {
+            // close position first
+            const {
+                receivedAmountOut,
+                profitAmount,
+                closePositionTxHash,
+                flexibleSwapTxHash,
+            } = await this.closePositionInternal(params)
+            // begin a transaction to update the position
             await this.sqliteDataSource.transaction(
-                async (manager) => {
+                async (manager) => {     
                     const {
-                        receivedAmountOut,
-                        profitAmount,
-                        closePositionTxHash,
-                        flexibleSwapTxHash,
-                    } = await this.closePositionInternal(params)
-                    if (!params.user.id) throw new Error("User ID is required")
-                    const position = await this.dataLikePositionService.loadPosition({
-                        userId: params.user.id,
-                        liquidityPoolId: params.poolId,
-                    })
+                        user,
+                        poolId,
+                        chainId,
+                        network = Network.Mainnet,
+                    } = params
+                    if (!user.id) throw new Error("User ID is required")
+                    const position = user.activePositions.find(
+                        (position) => position.liquidityPoolId === poolId,
+                    )
+                    if (!position) throw new Error(`Position not found for pool ${poolId} and user ${user.id}`)
                     const roi = computePercentage(
                         computeRatio(profitAmount,
                             new BN(position.depositAmount)
@@ -391,8 +398,8 @@ export class PositionRecordManagerService implements OnModuleInit {
                             isClosed: true,
                         },
                     )
-                    const platformId = chainIdToPlatform(params.chainId)
-                    const wallet = params.user.wallets.find(
+                    const platformId = chainIdToPlatform(chainId)
+                    const wallet = user.wallets.find(
                         (wallet) => wallet.platformId === platformId,
                     )
                     if (!wallet) throw new Error(`${platformId} wallet not found`)
@@ -400,20 +407,21 @@ export class PositionRecordManagerService implements OnModuleInit {
                         ChainConfigEntity,
                         {
                             walletId: wallet.id,
-                            chainId: params.chainId,
-                            network: params.network,
+                            chainId: chainId,
+                            network: network,
                         },
                         {
                             providedAssignedLiquidityPoolId: () => "NULL",
                         },
                     )
-                    this.logger.info(WinstonLog.ClosePositionSuccess, {
-                        closePositionTxHash,
-                        flexibleSwapTxHash,
-                        receivedAmountOut: receivedAmountOut.toString(),
-                        profitAmount: profitAmount.toString(),
-                        roi,
-                    })
+                    this.logger.info(
+                        WinstonLog.ClosePositionSuccess, {
+                            closePositionTxHash,
+                            flexibleSwapTxHash,
+                            receivedAmountOut: receivedAmountOut.toString(),
+                            profitAmount: profitAmount.toString(),
+                            roi,
+                        })
                 })
         } catch (error) {
             this.logger.error(WinstonLog.ClosePositionFailed, {

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import { ModuleRef } from "@nestjs/core"
-import { DataSource } from "typeorm"
+import { DataSource, EntityManager } from "typeorm"
 import { Connection } from "mongoose"
 import { envConfig, LpBotType } from "@modules/env"
 import { getDataSourceToken } from "@nestjs/typeorm"
@@ -15,6 +15,7 @@ import { DataLikeQueryService } from "./data-like-query.service"
 export interface LoadPositionParams {
     userId: string
     liquidityPoolId: LiquidityPoolId
+    manager?: EntityManager
 }
 
 export interface LoadAssignedLiquidityPoolParams {
@@ -54,9 +55,11 @@ export class DataLikePositionService implements OnModuleInit {
 
     private async loadPositionFromSqlite({ 
         liquidityPoolId, 
-        userId
+        userId,
+        manager
     }: LoadPositionParams): Promise<PositionLike> {
-        const position = await this.sqliteDataSource.manager.findOne(
+        manager = manager || this.sqliteDataSource.manager  
+        const position = await manager.findOne(
             PositionEntity, {
                 where: {
                     assignedLiquidityPool: {
@@ -87,6 +90,7 @@ export class DataLikePositionService implements OnModuleInit {
             tickUpper: position.tickUpper,
             positionId: position.positionId,
             depositAmount: position.depositAmount,
+            liquidityPoolId: position.assignedLiquidityPool.liquidityPool.displayId,
         }
     }
 

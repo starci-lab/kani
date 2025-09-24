@@ -22,4 +22,5 @@ export interface PythSuiPricesUpdatedEvent {
     network: Network
     tokenId: TokenId
     price: number
+    chainId: ChainId
 }

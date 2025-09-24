@@ -11,6 +11,7 @@ import {
     computePercentage,
     computeRatio,
     computeRaw,
+    filterOutBnZero,
     incrementBnMap,
     MAX_UINT_64,
     Network,
@@ -389,7 +390,7 @@ export class TurbosActionService implements IActionService {
         })
         return {
             txHash,
-            suiTokenOuts,
+            suiTokenOuts: filterOutBnZero(suiTokenOuts),
         }
     }
 }

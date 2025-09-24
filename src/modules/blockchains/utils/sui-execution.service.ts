@@ -1,10 +1,11 @@
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { DevInspectResults, SuiClient, SuiObjectChange, TransactionEffects, SuiEvent } from "@mysten/sui/client"
 import { Transaction } from "@mysten/sui/transactions"
 import { Signer } from "@mysten/sui/cryptography"
 import { RetryService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { ChainId, Network } from "@modules/common"
+import { Logger as WinstonLogger } from "winston"
 
 export interface SignAndExecuteTransactionParams {
     suiClient: SuiClient
@@ -21,7 +22,7 @@ export class SuiExecutionService {
     constructor(
         private readonly retryService: RetryService,
         @InjectWinston()
-        private readonly winstonLogger: Logger,
+        private readonly winstonLogger: WinstonLogger,
     ) {}
 
     public async signAndExecuteTransaction(
@@ -98,7 +99,7 @@ export class SuiExecutionService {
                         })
                     throw new Error(effects.status.error)
                 }
-                this.winstonLogger.log(
+                this.winstonLogger.info(
                     WinstonLog.TransactionExecuted, {
                         txHash: digest,
                         chainId: ChainId.Sui,

@@ -21,6 +21,7 @@ import {
 import {
     computeRatio,
     computeRaw,
+    filterOutBnZero,
     incrementBnMap,
     Network,
     toUnit,
@@ -390,6 +391,6 @@ export class CetusActionService implements IActionService {
                 })
             },
         })
-        return { txHash, suiTokenOuts }
+        return { txHash, suiTokenOuts: filterOutBnZero(suiTokenOuts) }
     }
 }
