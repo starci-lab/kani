@@ -1,4 +1,4 @@
-import { SuiPriceServiceConnection } from "@pythnetwork/pyth-sui-js"
+import { PriceFeed, SuiPriceServiceConnection } from "@pythnetwork/pyth-sui-js"
 import { IOracleService } from "./i-oracle.interface"
 import { envConfig } from "@modules/env"
 import { TokenId, TokenLike } from "@modules/databases"
@@ -49,58 +49,60 @@ export class PythSuiService implements IOracleService, OnModuleInit {
             && !!token.pythFeedId,
         )
         const feedIds = suiTokens.map((token) => token.pythFeedId!) 
+        const callback = async (feed: PriceFeed) => {
+            try {
+                const priceUnchecked = feed.getPriceUnchecked()
+                if (priceUnchecked) {
+                    const token = suiTokens.find((token) => token.pythFeedId?.includes(feed.id))
+                    if (!token) {
+                        throw new Error(`Feed ${feed.id} not found`)
+                    }
+                    const price = computeDenomination(
+                        new BN(priceUnchecked.price),
+                        priceUnchecked.expo,
+                    ).toNumber()
+                    await this.cacheManager.set(
+                        createCacheKey(
+                            CacheKey.PythTokenPrice, 
+                            token.displayId, 
+                            network
+                        ),
+                        price,
+                    )
+                    this.eventEmitterService
+                        .emit<PythSuiPricesUpdatedEvent>(
+                            EventName.PythSuiPricesUpdated, 
+                            {
+                                network,
+                                tokenId: token.displayId,
+                                price,
+                                chainId: token.chainId,
+                            })
+                    this.logger.debug(
+                        WinstonLog.PythSuiPricesUpdated, [
+                            {
+                                network,
+                                tokenId: token.displayId,
+                                price,
+                                chainId: token.chainId,
+                            },
+                        ])
+                }
+            } catch (error) { 
+                //
+                this.logger.error(
+                    WinstonLog.PythPriceUpdatedError, {
+                        network,
+                        feedId: feed.id,
+                        message: error.message,
+                        stack: error.stack,
+                    })
+            }
+        }
         this.connection.subscribePriceFeedUpdates(
             feedIds, 
-            async (feed) => {
-                try {
-                    const priceUnchecked = feed.getPriceUnchecked()
-                    if (priceUnchecked) {
-                        const token = suiTokens.find((token) => token.pythFeedId?.includes(feed.id))
-                        if (!token) {
-                            throw new Error(`Feed ${feed.id} not found`)
-                        }
-                        const price = computeDenomination(
-                            new BN(priceUnchecked.price),
-                            priceUnchecked.expo,
-                        ).toNumber()
-                        await this.cacheManager.set(
-                            createCacheKey(
-                                CacheKey.PythTokenPrice, 
-                                token.displayId, 
-                                network
-                            ),
-                            price,
-                        )
-                        this.eventEmitterService
-                            .emit<PythSuiPricesUpdatedEvent>(
-                                EventName.PythSuiPricesUpdated, 
-                                {
-                                    network,
-                                    tokenId: token.displayId,
-                                    price,
-                                    chainId: token.chainId,
-                                })
-                        this.logger.debug(
-                            WinstonLog.PythSuiPricesUpdated, [
-                                {
-                                    network,
-                                    tokenId: token.displayId,
-                                    price,
-                                    chainId: token.chainId,
-                                },
-                            ])
-                    }
-                } catch (error) { 
-                    //
-                    this.logger.error(
-                        WinstonLog.PythPriceUpdatedError, {
-                            network,
-                            feedId: feed.id,
-                            message: error.message,
-                            stack: error.stack,
-                        })
-                }
-            })
+            callback,
+        )
     }
 
     async getPrices(

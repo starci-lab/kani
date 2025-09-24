@@ -22,11 +22,12 @@ import { getDataSourceToken } from "@nestjs/typeorm"
 import { getConnectionToken } from "@nestjs/mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger } from "winston"
-import { DataLikeService } from "./data-like.service"
+import { DataLikeService } from "../data-like"
 import { DayjsService, InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { RetryService } from "@modules/mixin"
-import { DataLikeQueryService } from "./data-like-query.service"
+import { DataLikeQueryService } from "../data-like"
+import { UserLoaderService } from "../user-loader"
 
 export interface OpenPositionInternalParams {
     poolId: LiquidityPoolId;
@@ -81,11 +82,11 @@ export class PositionRecordManagerService implements OnModuleInit {
         private readonly retryService: RetryService,
         private readonly dataLikeQueryService: DataLikeQueryService,
         private readonly dayjsService: DayjsService,
-
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
         private readonly logger: Logger,
+        private readonly userLoaderService: UserLoaderService,
     ) { }
 
     onModuleInit() {
@@ -353,6 +354,8 @@ export class PositionRecordManagerService implements OnModuleInit {
                 throw error
             }
         })
+        // cache user after open position
+        await this.userLoaderService.cacheUser(user.id)
     }
 
     private async sqliteClosePosition(
@@ -367,15 +370,15 @@ export class PositionRecordManagerService implements OnModuleInit {
                 flexibleSwapTxHash,
             } = await this.closePositionInternal(params)
             // begin a transaction to update the position
+            const { user } = params
+            if (!user.id) throw new Error("User ID is required")
             await this.sqliteDataSource.transaction(
                 async (manager) => {     
                     const {
-                        user,
                         poolId,
                         chainId,
                         network = Network.Mainnet,
                     } = params
-                    if (!user.id) throw new Error("User ID is required")
                     const position = user.activePositions.find(
                         (position) => position.liquidityPoolId === poolId,
                     )
@@ -423,6 +426,9 @@ export class PositionRecordManagerService implements OnModuleInit {
                             roi,
                         })
                 })
+            
+            // cache user after close position
+            await this.userLoaderService.cacheUser(user.id)
         } catch (error) {
             this.logger.error(WinstonLog.ClosePositionFailed, {
                 error: error.message,

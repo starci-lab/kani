@@ -1,5 +1,5 @@
 import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
-import { Cron } from "@nestjs/schedule"
+import { Interval } from "@nestjs/schedule"
 import { LiquidityPoolService } from "@modules/blockchains"
 import { ChainId, Network, waitUntil } from "@modules/common"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -7,10 +7,11 @@ import { Logger } from "winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { EventEmitterService, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
-import { AsyncService, InjectSuperJson, RandomDelayService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson, LockService, RandomDelayService } from "@modules/mixin"
 import { DataLikeService } from "../data-like"
 import { FetchedPool } from "@modules/blockchains"
 import SuperJSON from "superjson"
+import { UserLoaderService } from "../user-loader"
 
 @Injectable()
 export class PoolFetcherService implements OnModuleInit, OnApplicationBootstrap {
@@ -27,6 +28,8 @@ export class PoolFetcherService implements OnModuleInit, OnApplicationBootstrap 
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly dataLikeService: DataLikeService,
+        private readonly userLoaderService: UserLoaderService,
+        private readonly lockService: LockService,
     ) {}
 
     onModuleInit() {
@@ -39,16 +42,24 @@ export class PoolFetcherService implements OnModuleInit, OnApplicationBootstrap 
     }
 
     // we fetch pools each 5s
-    @Cron("*/5 * * * * *")
+    @Interval(5000)
     async fetchPools() {
-        await waitUntil(() => this.dataLikeService.loaded)
-        const promises = Object.values(ChainId).flatMap((chainId) =>
-            Object.values(Network).map(async (network) => {
-                await this.randomDelayService.waitRandom()
-                return this.fetchPoolsByChain(chainId, network)
-            }),
-        )
-        await Promise.all(promises)
+        const lockKey = "pool-fetcher"
+        await this.lockService.withLocks({
+            blockedKeys: [lockKey],
+            acquiredKeys: [lockKey],
+            releaseKeys: [lockKey],
+            callback: async () => {
+                await waitUntil(() => this.dataLikeService.loaded && this.userLoaderService.loaded)
+                const promises = Object.values(ChainId).flatMap((chainId) =>
+                    Object.values(Network).map(async (network) => {
+                        await this.randomDelayService.waitRandom()
+                        await this.fetchPoolsByChain(chainId, network)
+                    }),
+                )
+                await this.asyncService.allIgnoreError(promises)
+            }
+        })
     }
 
     private async fetchPoolsByChain(

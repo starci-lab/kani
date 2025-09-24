@@ -54,47 +54,47 @@ export class PositionExitService implements OnModuleInit {
         { network, tokenId, chainId }: PythSuiPricesUpdatedEvent
     ) 
     {      
-        try {
-            const serializedUserIds = await this.cacheManager.get<string>(createCacheKey(CacheKey.UserIds))
-            if (!serializedUserIds) {
-                this.logger.debug("No user ids found")
-                return
-            }
-            const userIds = this.superjson.parse<Array<string>>(serializedUserIds)
-            const serializedUsers = await this.cacheManager.mget<string>(
-                userIds.map(userId => createCacheKey(CacheKey.User, userId))
-            )
-            if (!serializedUsers) {
-                this.logger.debug("No users found")
-                return
-            }
-            // filter out undefined users
-            const users = serializedUsers
-                .filter(serializedUser => serializedUser !== undefined)
-                .map(serializedUser => this.superjson.parse<UserLike>(serializedUser))
+        const lockKey = `position-exit-${chainId}-${network}-${tokenId}`
+        await this.lockService.withLocks({
+            acquiredKeys: [lockKey],
+            blockedKeys: [lockKey],
+            releaseKeys: [lockKey],
+            callback: async () => {
+                try {
+                    const serializedUserIds = await this.cacheManager.get<string>(createCacheKey(CacheKey.UserIds))
+                    if (!serializedUserIds) {
+                        this.logger.debug("No user ids found")
+                        return
+                    }
+                    const userIds = this.superjson.parse<Array<string>>(serializedUserIds)
+                    const serializedUsers = await this.cacheManager.mget<string>(
+                        userIds.map(userId => createCacheKey(CacheKey.User, userId))
+                    )
+                    if (!serializedUsers) {
+                        this.logger.debug("No users found")
+                        return
+                    }
+                    // filter out undefined users
+                    const users = serializedUsers
+                        .filter(serializedUser => serializedUser !== undefined)
+                        .map(serializedUser => this.superjson.parse<UserLike>(serializedUser))
 
-            const promises: Array<Promise<void>> = []
-            for (const user of users) {
-                promises.push(
-                    (async () => {
-                        const lockKey = `position-exit-${user.id}-${chainId}-${network}`
-                        await this.lockService.withLocks({
-                            acquiredKeys: [lockKey],
-                            blockedKeys: [lockKey],
-                            releaseKeys: [lockKey],
-                            callback: async () => {
+                    const promises: Array<Promise<void>> = []
+                    for (const user of users) {
+                        promises.push(
+                            (async () => {
                                 // exit position for each user
                                 for (const position of user.activePositions) {
                                     const liquidityPool = this.dataLikeQueryService.getLiquidityPoolFromPosition(position)
                                     if (liquidityPool.chainId !== chainId) {
                                         this.logger.debug("Liquidity pool chain id does not match")
-                                        continue
+                                        return
                                     }
                                     const tokenA = liquidityPool.tokenA
                                     const tokenB = liquidityPool.tokenB
                                     if (!tokenA || !tokenB) {
                                         this.logger.debug("No tokenA or tokenB found")
-                                        continue
+                                        return
                                     }
                                     if ([tokenA.displayId, tokenB.displayId].includes(tokenId)) {
                                     // fetch prices
@@ -107,7 +107,7 @@ export class PositionExitService implements OnModuleInit {
                                         })
                                         if (!priceA || !priceB) {
                                             this.logger.debug("No price found")
-                                            continue
+                                            return
                                         }
           
                                         const oraclePrice = new Decimal(priceA).div(new Decimal(priceB))
@@ -130,14 +130,13 @@ export class PositionExitService implements OnModuleInit {
                                         )
           
                                         if (oraclePrice.gte(effectivePriceLower) && oraclePrice.lte(effectivePriceUpper)) {
-                                            this.winstonLogger.debug(WinstonLog.OracleLiquidityRangeWithin, {
+                                            this.winstonLogger.info(WinstonLog.OracleLiquidityRangeWithin, {
                                                 oraclePrice: oraclePrice.toString(),
                                                 effectiveLower: effectivePriceLower.toString(),
                                                 effectiveUpper: effectivePriceUpper.toString(),
                                             })
-                                            continue
+                                            return
                                         }
-          
                                         const priorityAOverB = this.dataLikeQueryService.determinePriorityAOverB({
                                             liquidityPool,
                                             user,
@@ -157,9 +156,9 @@ export class PositionExitService implements OnModuleInit {
                                                 poolId: liquidityPool.displayId,
                                                 user,
                                                 chainId,
-                                                network
+                                                network,
                                             })
-                                            continue
+                                            return
                                         }
           
                                         const priceDiff = effectivePriceUpper.minus(effectivePriceLower).div(2)
@@ -183,7 +182,7 @@ export class PositionExitService implements OnModuleInit {
                                                 chainId,
                                                 network
                                             })
-                                            continue
+                                            return
                                         }
           
                                         this.winstonLogger.info(WinstonLog.OracleLiquidityRangeOutButNotExit, {
@@ -193,17 +192,17 @@ export class PositionExitService implements OnModuleInit {
                                         })
                                     }
                                 }
-                            }
-                        })
-                    })()
-                )
+                            })()
+                        )
+                    }
+                    await this.asyncService.allIgnoreError(promises)
+                } catch (error) {
+                    this.winstonLogger.error(WinstonLog.PositionExitError, {
+                        error: error.message,
+                        stack: error.stack,
+                    })
+                }
             }
-            await this.asyncService.allIgnoreError(promises)
-        } catch (error) {
-            this.winstonLogger.error(WinstonLog.PositionExitError, {
-                error: error.message,
-                stack: error.stack,
-            })
-        }
+        })
     }
 }

@@ -23,12 +23,14 @@ import {
     PriceFetcherModule,
     CexFetcherService,
     PythFetcherService,
+    PositionManagerModule,
 } from "@features/fetchers"
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 import { PoolSelectorModule, PositionExitModule } from "@features/selectors"
 import { ApiModule } from "./api"
 import { InitializerModule } from "@modules/initializer"
+import { EventEmitterModule } from "@nestjs/event-emitter"
 
 @Module({})
 export class AppModule extends ConfigurableModuleClass {
@@ -56,6 +58,7 @@ export class AppModule extends ConfigurableModuleClass {
                 PythModule.register({
                     isGlobal: true,
                 }),
+                EventEmitterModule.forRoot(),
                 EventModule.register({
                     isGlobal: true,
                     types:
@@ -129,6 +132,9 @@ export class AppModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 DataLikeModule.register({
+                    isGlobal: true,
+                }),
+                PositionManagerModule.register({
                     isGlobal: true,
                 }),
                 PoolFetcherModule.register({
