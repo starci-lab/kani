@@ -26,6 +26,10 @@ export const computeRatio = (
     denominator: BN,
     fractionDigits = 10,
 ): Decimal => {
+    if (denominator.isZero()) {
+        // we treat zero denominator as 100
+        return new Decimal(100)
+    }
     const multiplier = new BN(10).pow(new BN(fractionDigits)) // 10^decimals
     return new Decimal(
         new Decimal(

@@ -28,7 +28,7 @@ import {
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 import { PoolSelectorModule, PositionExitModule } from "@features/selectors"
-import { ApiModule } from "./api"
+import { ApiModule } from "@features/api"
 import { InitializerModule } from "@modules/initializer"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 

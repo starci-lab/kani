@@ -86,12 +86,10 @@ export class PoolFetcherService implements OnModuleInit, OnApplicationBootstrap 
                       })
                   },
                   // five times retry with 1 second delay, to ensure the fetcher is always successful and not rate limited
-                  maxRetries: 5,
-                  delay: 1000,
+                  maxRetries: 10,
+                  delay: 500,
               })
-
               fetchedPools.push(...pools)
-
               this.logger.debug(WinstonLog.FetchedPools, {
                   chainId,
                   dex: dex.dexId,

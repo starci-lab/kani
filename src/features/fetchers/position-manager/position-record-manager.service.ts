@@ -168,19 +168,25 @@ export class PositionRecordManagerService implements OnModuleInit {
             tickLower,
             tickUpper,
             txHash,
-        } = await action.openPosition({
-            accountAddress: suiWallet.accountAddress,
-            priorityAOverB,
-            pool: fetchedPool,
-            amount,
-            tokenAId,
-            tokenBId,
-            tokens: this.dataLikeService.tokens,
-            user,
-            requireZapEligible,
-            chainId,
-            network,
-            stimulateOnly,
+        } = await this.retryService.retry({
+            action: async () => {
+                return await action.openPosition({
+                    accountAddress: suiWallet.accountAddress,
+                    priorityAOverB,
+                    pool: fetchedPool,
+                    amount,
+                    tokenAId,
+                    tokenBId,
+                    tokens: this.dataLikeService.tokens,
+                    user,
+                    requireZapEligible,
+                    chainId,
+                    network,
+                    stimulateOnly,
+                })
+            },
+            maxRetries: 10,
+            delay: 500,
         })
         return {
             txHash: txHash || "",
@@ -216,11 +222,16 @@ export class PositionRecordManagerService implements OnModuleInit {
         const fetchedPools = this.superjson.parse<Array<FetchedPool>>(
             sertializedFetchedPools,
         )
+        this.logger.info(WinstonLog.FetchedPools, {
+            fetchedPools: fetchedPools.map((fetchedPool) => fetchedPool.displayId),
+        })
         const fetchedPool = fetchedPools.find(
             (fetchedPool) => fetchedPool.displayId === liquidityPool.displayId,
         )
         if (!fetchedPool)
+        {
             throw new Error(`FetchedPool ${liquidityPool.displayId} not found`)
+        }
         const [{ action }] = await this.liquidityPoolService.getDexs({
             dexIds: [liquidityPool.dexId],
             chainId,
@@ -244,32 +255,44 @@ export class PositionRecordManagerService implements OnModuleInit {
         })
         const tokenOut = priorityAOverB ? tokenAId : tokenBId
         const { suiTokenOuts, txHash: closePositionTxHash } =
-            await action.closePosition({
-                accountAddress: suiWallet.accountAddress,
-                pool: fetchedPool,
-                tokenAId,
-                tokenBId,
-                tokens: this.dataLikeService.tokens,
-                user,
-                chainId,
-                network,
-                position,
-                priorityAOverB,
-                stimulateOnly,
-            })
+        await this.retryService.retry({
+            action: async () => {
+                return await action.closePosition({
+                    accountAddress: suiWallet.accountAddress,
+                    pool: fetchedPool,
+                    tokenAId,
+                    tokenBId,
+                    tokens: this.dataLikeService.tokens,
+                    user,
+                    chainId,
+                    network,
+                    position,
+                    priorityAOverB,
+                    stimulateOnly,
+                })
+            },
+            maxRetries: 10,
+            delay: 500,
+        })
         const {
             receivedAmountOut,
             profitAmount,
             txHash: flexibleSwapTxHash,
-        } = await this.suiFlexibleSwapService.suiFlexibleSwap({
-            suiTokenIns: suiTokenOuts || {},
-            accountAddress: suiWallet.accountAddress,
-            depositAmount: new BN(position.depositAmount),
-            tokenOut,
-            tokens: this.dataLikeService.tokens,
-            network,
-            stimulateOnly,
-            user,
+        } = await this.retryService.retry({
+            action: async () => {
+                return await this.suiFlexibleSwapService.suiFlexibleSwap({
+                    suiTokenIns: suiTokenOuts || {},
+                    accountAddress: suiWallet.accountAddress,
+                    depositAmount: new BN(position.depositAmount),
+                    tokenOut,
+                    tokens: this.dataLikeService.tokens,
+                    network,
+                    stimulateOnly,
+                    user,
+                })
+            },
+            maxRetries: 10,
+            delay: 500,
         })
         return {
             receivedAmountOut,
@@ -452,30 +475,21 @@ export class PositionRecordManagerService implements OnModuleInit {
         params: OpenPositionParams
     ) {
         try {
-            await this.retryService.retry({
-                action: async () => {
-                    switch (envConfig().lpBot.type) {
-                    case LpBotType.UserBased: {
-                        await this.mongoDbOpenPosition(params)
-                        break
-                    }
-                    case LpBotType.System: {
-                        await this.sqliteOpenPosition(params)
-                        break
-                    }
-                    }
-                },
-                // 10 times retry to ensure the position is opened
-                maxRetries: 10,
-                delay: 500,
-            })
+            switch (envConfig().lpBot.type) {
+            case LpBotType.UserBased: {
+                await this.mongoDbOpenPosition(params)
+                break
+            }
+            case LpBotType.System: {
+                await this.sqliteOpenPosition(params)
+                break
+            }
+            }
         } catch (error) {
-            this.logger.error(
-                WinstonLog.OpenPositionRetryFailed, 
-                {
-                    error: error.message,
-                    stack: error.stack,
-                })
+            this.logger.error(WinstonLog.OpenPositionFailed, {
+                error: error.message,
+                stack: error.stack,
+            })
             throw error
         }
     }
@@ -484,30 +498,21 @@ export class PositionRecordManagerService implements OnModuleInit {
         params: ClosePositionParams
     ) {
         try {
-            await this.retryService.retry({
-                action: async () => {
-                    switch (envConfig().lpBot.type) {
-                    case LpBotType.UserBased: {
-                        await this.mongoDbClosePosition(params)
-                        break
-                    }
-                    case LpBotType.System: {
-                        await this.sqliteClosePosition(params)
-                        break
-                    }
-                    }
-                },
-                delay: 500,
-                maxRetries: 10,
-            })
+            switch (envConfig().lpBot.type) {
+            case LpBotType.UserBased: {
+                await this.mongoDbClosePosition(params)
+                break
+            }
+            case LpBotType.System: {
+                await this.sqliteClosePosition(params)
+                break
+            }
+            }
         } catch (error) {
-            // if the error is not a retryable error, we throw it
-            this.logger.error(
-                WinstonLog.ClosePositionRetryFailed, 
-                {
-                    error: error.message,
-                    stack: error.stack,
-                })
+            this.logger.error(WinstonLog.ClosePositionFailed, {
+                error: error.message,
+                stack: error.stack,
+            })
             throw error
         }
     }

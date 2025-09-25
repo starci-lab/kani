@@ -152,7 +152,6 @@ export class PositionExitService implements OnModuleInit {
                             this.logger.debug("No price found")
                             return
                         }
-      
                         // --- Oracle price calculation ---
                         const oraclePrice = new Decimal(priceA).div(new Decimal(priceB))
                         const priceLower = this.tickMathService.tickIndexToPrice(position.tickLower, tokenA.decimals, tokenB.decimals)
