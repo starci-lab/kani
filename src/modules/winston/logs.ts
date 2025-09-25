@@ -30,8 +30,9 @@ export enum WinstonLog {
     PythPriceUpdatedError = "Pyth.Price.Updated.Error",
     OracleLiquidityRangeValidation = "Oracle.Liquidity.Range.Validation",
     OracleLiquidityRangeWithin = "Oracle.Liquidity.Range.Within",
-    OracleLiquidityRangeMustExit = "Oracle.Liquidity.Range.Must.Exit",
-    OracleLiquidityRangeExitConditionMet = "Oracle.Liquidity.Range.Exit.Condition.Met",
-    OracleLiquidityRangeOutButNotExit = "Oracle.Liquidity.Range.Out.But.Not.Exit",
+    OracleLiquidityRangeExitNonPriority = "Oracle.Liquidity.Range.Exit.NonPriority",
+    OracleLiquidityRangeExitPriority    = "Oracle.Liquidity.Range.Exit.Priority",
+    OracleLiquidityRangeAcceptableOut = "Oracle.Liquidity.Range.Acceptable.Out",
     PositionExitError = "Position.Exit.Error",
+    PositionExitEnd = "Position.Exit.End",
 }

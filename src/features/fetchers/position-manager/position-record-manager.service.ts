@@ -467,7 +467,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                 },
                 // 10 times retry to ensure the position is opened
                 maxRetries: 10,
-                delay: 100,
+                delay: 500,
             })
         } catch (error) {
             this.logger.error(
@@ -497,7 +497,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                     }
                     }
                 },
-                delay: 100,
+                delay: 500,
                 maxRetries: 10,
             })
         } catch (error) {

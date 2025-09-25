@@ -110,7 +110,6 @@ export class UserLoaderService implements OnModuleInit, OnApplicationBootstrap {
         throw new Error("User-based bot is not supported")
     }
 
-    // sync user based on userId
     async cacheUser(
         userId: string
     ) {

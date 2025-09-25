@@ -64,7 +64,7 @@ export class PoolSelectorService {
                             this.checkAlreadyOpened(user, event.chainId, event.network)
                             // If the user has already opened a position, skip
                             if (alreadyOpened) {
-                                this.winstonLogger.debug(
+                                this.winstonLogger.info(
                                     WinstonLog.PoolAlreadyOpened,
                                     {
                                         userId: user.id,

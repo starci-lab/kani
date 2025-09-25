@@ -6,7 +6,7 @@ import { apiReference  } from "@scalar/nestjs-api-reference"
 
 const bootstrap = async () => {
     const app = await NestFactory.create(AppModule.register({}), {
-        logger: ["log", "error", "warn"],
+        logger: ["log"],
     })
     const options = new DocumentBuilder()
         .setTitle("Liquidity Pool Bot Specification")
