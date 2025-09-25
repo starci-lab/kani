@@ -33,22 +33,22 @@ export const liquidityPoolData: Array<LiquidityPoolLike> = [
             TokenId.SuiCetus
         ]
     },
-    {
-        displayId: LiquidityPoolId.TurbosIkaUsdc015,
-        dexId: DexId.Turbos,
-        poolAddress: "0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
-        tokenAId: TokenId.SuiIka,
-        tokenBId: TokenId.SuiUsdc,
-        fee: 0.0015,
-        priorityAOverB: false,
-        network: Network.Mainnet,
-        chainId: ChainId.Sui,
-        farmTokenTypes: [TokenType.StableUsdc],
-        rewardTokenIds: [
-            TokenId.SuiIka,
-            TokenId.SuiUsdc
-        ]
-    },
+    // {
+    //     displayId: LiquidityPoolId.TurbosIkaUsdc015,
+    //     dexId: DexId.Turbos,
+    //     poolAddress: "0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
+    //     tokenAId: TokenId.SuiIka,
+    //     tokenBId: TokenId.SuiUsdc,
+    //     fee: 0.0015,
+    //     priorityAOverB: false,
+    //     network: Network.Mainnet,
+    //     chainId: ChainId.Sui,
+    //     farmTokenTypes: [TokenType.StableUsdc],
+    //     rewardTokenIds: [
+    //         TokenId.SuiIka,
+    //         TokenId.SuiUsdc
+    //     ]
+    // },
     {
         displayId: LiquidityPoolId.TurbosDeepUsdc015,
         dexId: DexId.Turbos,
