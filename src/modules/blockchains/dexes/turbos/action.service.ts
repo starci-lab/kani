@@ -345,7 +345,7 @@ export class TurbosActionService implements IActionService {
         const suiTokenOuts: Partial<Record<TokenId, BN>> = {}
         const handleEvents = (events: Array<SuiEvent>) => {
             for (const event of events) {
-                if (event.type.includes("::position_manager::DecreaseLiquidityEvent")) {
+                if (event.type.includes("::pool::BurnEvent")) {
                     const { amount_a, amount_b } = event.parsedJson as {
                         amount_a: string;
                         amount_b: string;
