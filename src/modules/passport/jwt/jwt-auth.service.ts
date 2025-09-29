@@ -33,7 +33,9 @@ export class JwtAuthService {
 
     // generate access token and refresh token for authentication
     public async generate(
-        { id }: UserLike
+        {
+            id,
+        }: UserLike
     ): Promise<AuthCredentials> {
         if (!id) {
             throw new Error("User ID is required")

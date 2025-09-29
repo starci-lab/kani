@@ -19,3 +19,9 @@ export class UserNotFoundException extends NotFoundException {
         super(message || "User not found")
     }
 }
+
+export class UserTotpSecretNotFoundException extends NotFoundException {
+    constructor(message?: string) {
+        super(message || "User TOTP secret not found")
+    }
+}

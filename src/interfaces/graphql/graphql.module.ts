@@ -5,6 +5,7 @@ import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo"
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default"
 import { GraphQLJSON } from "graphql-type-json"
 import { QueriesModule } from "./queries"
+import { MutationsModule } from "./mutations"
 
 @Module({})
 export class GraphQLModule extends ConfigurableModuleClass {
@@ -32,6 +33,7 @@ export class GraphQLModule extends ConfigurableModuleClass {
         // register all resolvers
         if (registerAllResolvers) {
             imports.push(QueriesModule.register(options))
+            imports.push(MutationsModule.register(options))
         }
         return {
             module: GraphQLModule,

@@ -12,6 +12,8 @@ import { CryptoModule } from "@modules/crypto"
 import { CodeModule } from "@modules/code"
 import { TotpModule } from "@modules/totp"
 import { GraphQLModule } from "@interfaces/graphql"
+import { ThrottlerBehindProxyGuard, ThrottlerModule } from "@modules/throttler"
+import { APP_GUARD } from "@nestjs/core"
 
 @Module({
     imports: [
@@ -19,6 +21,10 @@ import { GraphQLModule } from "@interfaces/graphql"
         EnvModule.forRoot(),
         // Shared mixins/utilities
         MixinModule.register({
+            isGlobal: true,
+        }),
+        // Throttler module
+        ThrottlerModule.register({
             isGlobal: true,
         }),
         // Code generator modules
@@ -74,6 +80,12 @@ import { GraphQLModule } from "@interfaces/graphql"
             // register all resolvers
             registerAllResolvers: true,
         }),
+    ],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: ThrottlerBehindProxyGuard,
+        },
     ],
 })
 export class AppModule {}
