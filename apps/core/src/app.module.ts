@@ -10,6 +10,8 @@ import { MixinModule } from "@modules/mixin"
 import { KeypairsModule, UtilsModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { CodeModule } from "@modules/code"
+import { TotpModule } from "@modules/totp"
+import { GraphQLModule } from "@interfaces/graphql"
 
 @Module({
     imports: [
@@ -48,6 +50,11 @@ import { CodeModule } from "@modules/code"
         CryptoModule.register({
             isGlobal: true,
         }),
+        // TOTP modules
+        TotpModule.register({
+            isGlobal: true,
+            appName: "Kani",
+        }),
         // Blockchain-related modules
         UtilsModule.register({
             isGlobal: true,
@@ -58,6 +65,14 @@ import { CodeModule } from "@modules/code"
         // HTTP API layer
         HttpModule.register({
             isGlobal: true,
+        }),
+        // GraphQL module
+        GraphQLModule.register({
+            isGlobal: true,
+            // no federation
+            useFederation: false,
+            // register all resolvers
+            registerAllResolvers: true,
         }),
     ],
 })

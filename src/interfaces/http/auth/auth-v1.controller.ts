@@ -57,4 +57,6 @@ If successful, extracts user information and continues authentication flow.`
         url.searchParams.set("temporaryAccessToken", temporaryAccessToken)
         res.redirect(url.toString())
     }
+
+    
 }

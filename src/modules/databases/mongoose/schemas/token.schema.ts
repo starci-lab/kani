@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, Int, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, GraphQLTypeTokenType, Network, TokenType } from "@modules/common"
 import { AbstractSchema } from "./abstract"
-import { CexId, GraphQLTypeTokenId, TokenId } from "../../enums"
+import { CexId, GraphQLTypeCexId, GraphQLTypeTokenId, TokenId } from "../../enums"
 import GraphQLJSON from "graphql-type-json"
 
 @Schema({ timestamps: true, collection: "tokens" })
@@ -56,11 +56,11 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: Boolean, required: true })
         isNative: boolean
 
-    @Field(() => [CexId], { description: "List of CEXs where the token is listed" })
+    @Field(() => [GraphQLTypeCexId], { description: "List of CEXs where the token is listed" })
     @Prop({ type: [String], enum: CexId, required: true, default: [] })
         cexIds: Array<CexId>
 
-    @Field(() => CexId, { description: "Primary CEX where the token is listed" })
+    @Field(() => GraphQLTypeCexId, { description: "Primary CEX where the token is listed" })
     @Prop({ type: String, enum: CexId, required: true })
         whichCex: CexId
 

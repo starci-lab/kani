@@ -20,8 +20,7 @@ export class WalletSchema {
 
     @Field(() => GraphQLTypePlatformId, { nullable: true })
     @Prop({ type: String, enum: PlatformId, required: true })
-        platformId?: PlatformId
-    
+        platformId: PlatformId
 }
 
 export const WalletSchemaClass = SchemaFactory.createForClass(WalletSchema)

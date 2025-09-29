@@ -9,6 +9,7 @@ import { KeypairsOptions } from "./types"
 import { ModuleRef } from "@nestjs/core"
 import { GcpKmsService } from "@modules/gcp"
 import { EncryptionService } from "@modules/crypto"
+import { PlatformId } from "@modules/common"
 
 export interface Keypairs {
     evmKeypair: WalletSchema
@@ -50,15 +51,18 @@ export class KeypairsService {
         return {
             evmKeypair: {
                 publicKey: evmWallet.address,
-                encryptedPrivateKey: evmEncryptedPrivateKey
+                encryptedPrivateKey: evmEncryptedPrivateKey,
+                platformId: PlatformId.Evm
             },
             suiKeypair: {
                 publicKey: suiWallet.getPublicKey().toSuiAddress(),
-                encryptedPrivateKey: suiEncryptedPrivateKey
+                encryptedPrivateKey: suiEncryptedPrivateKey,
+                platformId: PlatformId.Sui
             },
             solanaKeypair: {
                 publicKey: solanaWallet.publicKey.toBase58(),
-                encryptedPrivateKey: solanaEncryptedPrivateKey
+                encryptedPrivateKey: solanaEncryptedPrivateKey,
+                platformId: PlatformId.Solana
             }
         }
     }

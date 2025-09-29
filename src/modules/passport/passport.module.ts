@@ -3,6 +3,7 @@ import {
     GoogleAuthStrategy,
     JwtAccessTokenStrategy,
     JwtRefreshTokenStrategy,
+    JwtTemporaryAccessTokenStrategy,
 } from "./strategies"
 import { PassportModule as NestPassportModule } from "@nestjs/passport"
 import { ConfigurableModuleClass } from "./passport.module-definition"
@@ -18,6 +19,7 @@ import { JwtAuthService } from "./jwt/jwt-auth.service"
         GoogleAuthStrategy,
         JwtAccessTokenStrategy,
         JwtRefreshTokenStrategy,
+        JwtTemporaryAccessTokenStrategy,
         JwtAuthService,
     ],
     exports: [JwtAuthService],
