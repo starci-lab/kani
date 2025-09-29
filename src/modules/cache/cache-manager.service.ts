@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { InjectRedisCache, InjectMemoryCache } from "./cache.decorators"
 import { Cache } from "cache-manager"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
 
 interface SetParams<T> {
   key: string
@@ -24,87 +25,100 @@ export class CacheManagerService {
     @InjectRedisCache()
     private readonly redisCacheManager: Cache,
 
-    // Memory = secondary cache (faster, in-memory)
+    // Memory = secondary cache (fast)
     @InjectMemoryCache()
     private readonly memoryCacheManager: Cache,
 
-    private readonly asyncService: AsyncService
+    private readonly asyncService: AsyncService,
+
+    @InjectSuperJson()
+    private readonly superjson: SuperJSON
     ) {}
 
     /**
+   * Serialize a value into a string using SuperJSON.
+   */
+    private serialize<T>(value: T): string {
+    // superjson.serialize() returns { json, meta }
+        return this.superjson.stringify(value)
+    }
+
+    /**
+   * Deserialize a cached string back to its original value.
+   */
+    private deserialize<T>(value: string): T {
+        return this.superjson.parse<T>(value)
+    }
+
+    /**
    * Set a single key-value pair in both Redis and memory cache.
-   * If one of them fails, the error is ignored.
    */
     public async set<T>({ key, value, ttl }: SetParams<T>): Promise<void> {
+        const serialized = this.serialize(value)
         await this.asyncService.allIgnoreError([
-            this.redisCacheManager.set(key, value, ttl),
-            this.memoryCacheManager.set(key, value, ttl),
+            this.redisCacheManager.set(key, serialized, ttl),
+            this.memoryCacheManager.set(key, serialized, ttl),
         ])
     }
 
     /**
    * Get a single key from cache.
-   * - First tries memory (fastest)
-   * - If not found, falls back to Redis
-   * - If found in Redis, re-warms memory cache
+   * - Memory first (fast)
+   * - Redis fallback
+   * - Rewarm memory if hit in Redis
    */
     public async get<T>(key: string): Promise<T | null> {
-        // try to get from memory cache
-        const memoryValue = await this.memoryCacheManager.get<T>(key)
-        if (memoryValue !== null && memoryValue !== undefined) {
-            return memoryValue
+    // Memory layer
+        const memoryRaw = await this.memoryCacheManager.get<string>(key)
+        if (memoryRaw != null) {
+            return this.deserialize<T>(memoryRaw)
         }
 
-        // try to get from redis cache
-        const redisValue = await this.redisCacheManager.get<T>(key)
-        if (redisValue !== null && redisValue !== undefined) {
-            // Re-populate memory cache for faster subsequent reads
+        // Redis layer
+        const redisRaw = await this.redisCacheManager.get<string>(key)
+        if (redisRaw != null) {
+            // Rewarm memory
             await this.asyncService.allIgnoreError([
-                this.memoryCacheManager.set(key, redisValue),
+                this.memoryCacheManager.set(key, redisRaw),
             ])
+            return this.deserialize<T>(redisRaw)
         }
 
-        // return null if not found in both caches
-        return redisValue ?? null
+        return null
     }
 
     /**
    * Get multiple keys from cache in parallel.
-   * - Checks memory first for all keys
-   * - For missing keys, fetches from Redis in parallel
-   * - Warms memory for keys found in Redis
-   * Returns an array of results in the same order as the input keys.
+   * Memory first, Redis fallback for missing keys.
    */
-    public async mget<T>(keys: Array<string>): Promise<(T | null)[]> {
+    public async mget<T>(keys: Array<string>): Promise<Array<T | null>> {
         const results: Array<T | null> = new Array(keys.length).fill(null)
 
-        // Step 1: Try memory for all keys
+        // Step 1: Memory lookup
         const memoryValues = await this.asyncService.allIgnoreError(
-            keys.map(key => this.memoryCacheManager.get<T>(key))
+            keys.map(key => this.memoryCacheManager.get<string>(key))
         )
 
-        // Step 2: Fill results from memory & collect missing indexes
-        const missingIndexes: Array<number> = []
+        const missingIndexes: number[] = []
         memoryValues.forEach((val, idx) => {
             if (val != null) {
-                results[idx] = val
+                results[idx] = this.deserialize<T>(val)
             } else {
                 missingIndexes.push(idx)
             }
         })
 
-        // Step 3: Fetch missing keys from Redis
+        // Step 2: Redis lookup for missing
         if (missingIndexes.length > 0) {
             const redisValues = await this.asyncService.allIgnoreError(
-                missingIndexes.map(idx => this.redisCacheManager.get<T>(keys[idx]))
+                missingIndexes.map(idx => this.redisCacheManager.get<string>(keys[idx]))
             )
 
-            // Step 4: Update results & warm memory for redis hits
             await this.asyncService.allIgnoreError(
                 redisValues.map(async (val, i) => {
                     const idx = missingIndexes[i]
                     if (val != null) {
-                        results[idx] = val
+                        results[idx] = this.deserialize<T>(val)
                         await this.memoryCacheManager.set(keys[idx], val)
                     }
                 })
@@ -116,15 +130,16 @@ export class CacheManagerService {
 
     /**
    * Set multiple key-value pairs in both Redis and memory cache.
-   * Runs all operations in parallel.
-   * Ignores errors from either layer.
    */
     public async mset<T>({ entries }: MSetParams<T>): Promise<void> {
         await this.asyncService.allIgnoreError(
-            entries.flatMap(({ key, value, ttl }) => [
-                this.redisCacheManager.set(key, value, ttl),
-                this.memoryCacheManager.set(key, value, ttl),
-            ])
+            entries.flatMap(({ key, value, ttl }) => {
+                const serialized = this.serialize(value)
+                return [
+                    this.redisCacheManager.set(key, serialized, ttl),
+                    this.memoryCacheManager.set(key, serialized, ttl),
+                ]
+            })
         )
     }
 }

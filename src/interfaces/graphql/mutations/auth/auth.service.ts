@@ -1,15 +1,17 @@
 import { Injectable } from "@nestjs/common"
-import { InjectMongoose, UserSchema } from "@modules/databases"
+import { InjectMongoose, SessionSchema, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
-import { ConfirmTotpRequest, ConfirmTotpResponse } from "./auth.dto"
-import { JwtAuthService, UserLike } from "@modules/passport"
+import { ConfirmTotpRequest, ConfirmTotpResponseData, RefreshResponseData } from "./auth.dto"
+import { JwtAuthService, UserJwtLike } from "@modules/passport"
 import { 
     UserNotFoundException, 
     UserTotpSecretNotFoundException, 
-    TOTPCodeNotVerifiedException 
+    TOTPCodeNotVerifiedException,
+    SessionNotFoundException
 } from "@modules/errors"
 import { TotpService } from "@modules/totp"
 import { EncryptionService } from "@modules/crypto"
+import { CacheKey, CacheManagerService, createCacheKey } from "@modules/cache"
 
 @Injectable()
 export class AuthService {
@@ -19,12 +21,13 @@ export class AuthService {
         private readonly jwtAuthService: JwtAuthService,
         private readonly totpService: TotpService,
         private readonly encryptionService: EncryptionService,
+        private readonly cacheManagerService: CacheManagerService,
     ) {}
 
     async confirmTotp(
         request: ConfirmTotpRequest,
-        userLike: UserLike,
-    ): Promise<ConfirmTotpResponse> {
+        userLike: UserJwtLike,
+    ): Promise<ConfirmTotpResponseData> {
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
             .findById(userLike.id)
@@ -43,6 +46,31 @@ export class AuthService {
         if (!verified) {
             throw new TOTPCodeNotVerifiedException()
         }
-        return this.jwtAuthService.generate(userLike)
+        return this.jwtAuthService.generate({
+            id: user.id,
+            totpVerified: true,
+        })
+    }
+
+    async refresh(
+        userLike: UserJwtLike,
+    ): Promise<RefreshResponseData> {
+        // try first in cache
+        const sessionCheck = await this.cacheManagerService.get<boolean>(
+            createCacheKey(CacheKey.SessionId, userLike.id),
+        )
+        // if not found, try in database
+        if (!sessionCheck) {
+            const sessionExists = await this.connection
+                .model<SessionSchema>(SessionSchema.name)
+                .exists({ user: userLike.id })
+            if (!sessionExists) {
+                throw new SessionNotFoundException()
+            }
+        }
+        return this.jwtAuthService.generate({
+            id: userLike.id,
+            totpVerified: userLike.totpVerified,
+        }) 
     }
 }

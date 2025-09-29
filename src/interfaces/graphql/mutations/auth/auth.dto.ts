@@ -1,4 +1,6 @@
 import { Field, InputType, ObjectType } from "@nestjs/graphql"
+import { AbstractGraphQLResponse, AbstractGraphQLResponseInterface } from "../../abstract"
+import { IsJWT } from "class-validator"
 
 @InputType({
     description: "Input payload for verifying a TOTP code during 2FA confirmation.",
@@ -11,16 +13,50 @@ export class ConfirmTotpRequest {
 }
 
 @ObjectType({
-    description: "Response returned after successfully confirming a TOTP code.",
+    description: "Response data returned after successfully confirming a TOTP code.",
 })
-export class ConfirmTotpResponse {
+export class ConfirmTotpResponseData {
     @Field(() => String, {
         description: "A short-lived JWT access token issued upon successful TOTP verification.",
     })
         accessToken: string
+    // non graphql field
+    refreshToken?: string
+}
 
-    @Field(() => String, {
-        description: "A long-lived refresh token that can be used to obtain new access tokens.",
+@ObjectType({
+    description: "Response returned after successfully confirming a TOTP code.",
+})
+export class ConfirmTotpResponse
+    extends AbstractGraphQLResponse
+    implements AbstractGraphQLResponseInterface<ConfirmTotpResponseData> {
+    @Field(() => ConfirmTotpResponseData, {
+        description: "The data returned after successfully confirming a TOTP code.",
     })
-        refreshToken: string
+        data: ConfirmTotpResponseData
+}
+
+@ObjectType({
+    description: "Contains the newly issued JWT tokens after a successful refresh operation.",
+})
+export class RefreshResponseData {
+    @IsJWT()
+    @Field(() => String, {
+        description: "The newly generated short-lived JWT access token used to authenticate API requests.",
+    })
+        accessToken: string
+    // non graphql field
+    refreshToken?: string
+}
+
+@ObjectType({
+    description: "Represents the GraphQL response returned when refreshing an expired or soon-to-expire JWT access token.",
+})
+export class RefreshResponse
+    extends AbstractGraphQLResponse
+    implements AbstractGraphQLResponseInterface<RefreshResponseData> {
+    @Field(() => RefreshResponseData, {
+        description: "The payload containing the new access and refresh tokens.",
+    })
+        data: RefreshResponseData
 }

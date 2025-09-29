@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core"
 import { AppModule } from "./app.module"
 import { envConfig } from "@modules/env"
 import { swaggerBuilder } from "@modules/docs"
+import { setupCors } from "@modules/cors"
 
 const bootstrap = async () => {
     const app = await NestFactory.create(AppModule)
@@ -22,6 +23,7 @@ for powering Kani's applications and integrations.",
         authenticationName: "Authorization",
         enableVersioning: true,
     })
+    setupCors(app)
     // start the app
     await app.listen(envConfig().port.core)
 }

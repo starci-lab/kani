@@ -81,6 +81,15 @@ export class UserSchema extends AbstractSchema {
     })
     @Prop({ type: String, required: false })
         referralCode?: string
+    
+    @Prop({ type: Boolean, default: false })
+        totpVerified?: boolean
+    
+    @Field(() => String, {
+        description: "A temporary token used to complete TOTP verification during the first login step.",
+        nullable: true,
+    })
+        temporaryTotpToken?: string
 }
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)

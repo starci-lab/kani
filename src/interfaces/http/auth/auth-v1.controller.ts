@@ -49,14 +49,12 @@ If successful, extracts user information and continues authentication flow.`
     async handleGoogleCallback(
         @GoogleUser() user: UserGoogleLike, @Res() res: Response,
     ) {
-        const { temporaryAccessToken, destinationUrl } = await this.authV1Service.handleGoogleCallbackV1(user)
+        const { accessToken, destinationUrl } = await this.authV1Service.handleGoogleCallbackV1(user)
         if (!destinationUrl) {
             throw new DestinationUrlNotFoundException()
         }
         const url = new URL(destinationUrl)
-        url.searchParams.set("temporaryAccessToken", temporaryAccessToken)
+        url.searchParams.set("accessToken", accessToken)
         res.redirect(url.toString())
     }
-
-    
 }

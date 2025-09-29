@@ -59,12 +59,14 @@ export class AuthV1Service {
                 throw new CannotCreateUserException()
             }
         }
-
         // Generate a temporary access token so the user can continue the authentication flow
-        const temporaryAccessToken = await this.jwtAuthService.generateTemporaryAccessToken(userLike)
+        const { accessToken } = await this.jwtAuthService.generate({
+            id: user.id,
+            totpVerified: userLike.totpVerified,
+        })
 
         return {
-            temporaryAccessToken,
+            accessToken,
             destinationUrl: userLike.destinationUrl,
         }
     }

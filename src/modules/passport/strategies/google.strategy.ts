@@ -82,7 +82,8 @@ export class GoogleAuthStrategy extends PassportStrategy(Strategy) {
             picture: photos?.at(0)?.value || "",
             referralCode: state.referralCode,
             oauthProviderId: id,
-            destinationUrl: state.destinationUrl
+            destinationUrl: state.destinationUrl,
+            totpVerified: false,
         }
         // return user
         done(null, user)

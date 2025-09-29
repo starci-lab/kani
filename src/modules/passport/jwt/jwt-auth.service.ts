@@ -2,12 +2,18 @@ import { Injectable } from "@nestjs/common"
 import { JwtService as NestJwtService } from "@nestjs/jwt"
 import { v4 as uuidv4 } from "uuid"
 import { envConfig } from "@modules/env"
-import { UserLike, AuthCredentials, JwtPayload } from "../types"
+import { AuthCredentials, JwtRefreshTokenPayload, JwtAccessTokenPayload } from "../types"
 import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectMongoose, SessionSchema } from "@modules/databases"
-import { Connection } from "mongoose"
+import { ClientSession, Connection } from "mongoose"
 import { CacheKey, CacheManagerService, createCacheKey } from "@modules/cache"
 import { MsService } from "@modules/mixin"
+
+export interface GenerateParams {
+    id: string
+    totpVerified: boolean
+    session?: ClientSession
+}
 
 @Injectable()
 export class JwtAuthService {
@@ -21,21 +27,13 @@ export class JwtAuthService {
         private readonly asyncService: AsyncService
     ) { }
 
-    // generate temporary access token for authentication
-    public async generateTemporaryAccessToken(
-        { id }: UserLike
-    ): Promise<string> {
-        return await this.jwtService.signAsync({ id }, {
-            secret: envConfig().jwt.temporaryAccessToken.secret,
-            expiresIn: envConfig().jwt.temporaryAccessToken.expiration
-        })
-    }
-
     // generate access token and refresh token for authentication
     public async generate(
         {
             id,
-        }: UserLike
+            totpVerified,
+            session,
+        }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
             throw new Error("User ID is required")
@@ -43,23 +41,26 @@ export class JwtAuthService {
         // generate sessionId
         const sessionId = uuidv4()
         // generate accessToken
-        const accessToken = await this.jwtService.signAsync({ id }, {
+        const accessToken = await this.jwtService.signAsync({ id, totpVerified }, {
             secret: envConfig().jwt.accessToken.secret,
             expiresIn: envConfig().jwt.accessToken.expiration
         })
+        let refreshToken: string | undefined
+        if (totpVerified) {
         // generate refreshToken
-        const refreshToken = await this.jwtService.signAsync(
-            {
+            refreshToken = await this.jwtService.signAsync(
+                {
                 // we need id to determine the user
-                id,
-                // we need sessionId to identify the session
-                sessionId
-            },
-            {
-                secret: envConfig().jwt.refreshToken.secret,
-                expiresIn: envConfig().jwt.refreshToken.expiration
-            }
-        )
+                    id,
+                    // we need sessionId to identify the session
+                    sessionId,
+                },
+                {
+                    secret: envConfig().jwt.refreshToken.secret,
+                    expiresIn: envConfig().jwt.refreshToken.expiration
+                }
+            )
+        }
         // Persist sessionId and refreshToken in DB and/or cache here
         await this.asyncService.allIgnoreError([
             // Persist sessionId in DB or cache here
@@ -79,7 +80,7 @@ export class JwtAuthService {
             (async () => {
                 await this.connection.model(
                     SessionSchema.name
-                ).create([
+                ).insertOne(
                     {
                         sessionId,
                         user: id,
@@ -87,8 +88,11 @@ export class JwtAuthService {
                         expiresAt: this.dayjsService.fromMs(
                             envConfig().jwt.refreshToken.expiration
                         ).toDate()
+                    },
+                    {
+                        session
                     }
-                ])
+                )
             })()
         ])
         return {
@@ -98,9 +102,9 @@ export class JwtAuthService {
     }
 
     // verify access token
-    public async verifyAccessToken(token: string): Promise<UserLike | null> {
+    public async verifyAccessToken(token: string): Promise<JwtAccessTokenPayload | null> {
         try {
-            return await this.jwtService.verifyAsync<UserLike>(token, {
+            return await this.jwtService.verifyAsync<JwtAccessTokenPayload>(token, {
                 secret: envConfig().jwt.accessToken.secret
             })
         } catch {
@@ -111,14 +115,14 @@ export class JwtAuthService {
     // verify refresh token
     public async verifyRefreshToken(
         token: string
-    ): Promise<JwtPayload | null> {
+    ): Promise<JwtRefreshTokenPayload | null> {
         try {
-            const decoded = await this.jwtService.verifyAsync<JwtPayload>(token, {
+            const decoded = await this.jwtService.verifyAsync<JwtRefreshTokenPayload>(token, {
                 secret: envConfig().jwt.refreshToken.secret
             })
             return {
                 sessionId: decoded.sessionId,
-                id: decoded.id
+                id: decoded.id,
             }
         } catch {
             return null
@@ -126,7 +130,10 @@ export class JwtAuthService {
     }
 
     // decode token
-    public async decodeToken(token: string): Promise<JwtPayload | null> {
-        return this.jwtService.decode(token)
+    public async decodeToken<
+    T extends JwtAccessTokenPayload | JwtRefreshTokenPayload
+    >(token: string): Promise<T | null> {
+        return this.jwtService.decode<T>(token)
     }
 }
+

@@ -2,7 +2,7 @@ import { Query, Resolver } from "@nestjs/graphql"
 import { UsersService } from "./users.service"
 import { UserSchema } from "@modules/databases"
 import { UseGuards } from "@nestjs/common"
-import { JwtAccessTokenAuthGuard, GraphQLUser } from "@modules/passport"
+import { GraphQLJwtAccessTokenAuthGuard, GraphQLUser } from "@modules/passport"
 
 @Resolver()
 export class UsersResolvers {
@@ -10,7 +10,7 @@ export class UsersResolvers {
         private readonly usersService: UsersService,
     ) {}
 
-    @UseGuards(JwtAccessTokenAuthGuard)
+    @UseGuards(GraphQLJwtAccessTokenAuthGuard)
     @Query(() => UserSchema, {
         description: "Fetch a single user by their unique ID.",
     })

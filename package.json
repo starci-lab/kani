@@ -111,6 +111,7 @@
     "@types/lodash": "^4.17.20",
     "@types/node": "^22.10.7",
     "@types/passport-google-oauth20": "^2.0.16",
+    "@types/passport-jwt": "^4.0.1",
     "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.34.0",

@@ -99,10 +99,6 @@ export const envConfig = () => ({
             secret: process.env.JWT_REFRESH_TOKEN_SECRET || "Cuong123_A",
             expiration: (process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d") as ms.StringValue,
         },
-        temporaryAccessToken: {
-            secret: process.env.JWT_TEMPORARY_ACCESS_TOKEN_SECRET || "Cuong123_A",
-            expiration: (process.env.JWT_TEMPORARY_ACCESS_TOKEN_EXPIRATION || "10m") as ms.StringValue,
-        },
     },
     rpcs: {
         [ChainId.Sui]: {

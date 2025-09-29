@@ -1,25 +1,29 @@
-export interface UserLike {
+export interface UserGoogleLike {
     email: string
     username: string
     picture: string
-    id?: string
-    sessionId?: string
+    totpVerified: boolean
     referralCode?: string
-}
-
-export interface UserGoogleLike extends UserLike {
     oauthProviderId: string
     destinationUrl?: string
 }
 
-export type UserJwtLike = UserLike
+export interface UserJwtLike {
+    id: string
+    totpVerified: boolean
+}
 
 export interface AuthCredentials {
     accessToken: string
-    refreshToken: string
+    refreshToken?: string
 }
 
-export interface JwtPayload {
+export interface JwtAccessTokenPayload {
     id: string
+    totpVerified: boolean
+}
+
+export interface JwtRefreshTokenPayload {
     sessionId: string
+    id: string
 }

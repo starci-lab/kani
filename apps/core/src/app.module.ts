@@ -14,6 +14,7 @@ import { TotpModule } from "@modules/totp"
 import { GraphQLModule } from "@interfaces/graphql"
 import { ThrottlerBehindProxyGuard, ThrottlerModule } from "@modules/throttler"
 import { APP_GUARD } from "@nestjs/core"
+import { CookieModule } from "@modules/cookie"
 
 @Module({
     imports: [
@@ -54,6 +55,10 @@ import { APP_GUARD } from "@nestjs/core"
         }),
         // Crypto modules
         CryptoModule.register({
+            isGlobal: true,
+        }),
+        // Cookie modules
+        CookieModule.register({
             isGlobal: true,
         }),
         // TOTP modules
