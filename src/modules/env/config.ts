@@ -1,6 +1,7 @@
 import { ChainId, Network } from "@modules/common"
 import { v4 } from "uuid"
 import { join } from "path"
+import ms from "ms"
 
 export enum LpBotType {
     System = "system",       // bot self run, use own key
@@ -9,11 +10,23 @@ export enum LpBotType {
 
 export const envConfig = () => ({
     isProduction: process.env.NODE_ENV === "production",
+    port: {
+        core: process.env.CORE_PORT || 3010,
+    },
     frontend: {
         url: process.env.FRONTEND_URL || "http://localhost:3000/callback/google",
     },
     coinMarketCap: {
         apiKey: process.env.COIN_MARKET_CAP_API_KEY || "",
+    },
+    totp: {
+        logo: process.env.TOTP_LOGO || "https://scontent.fsgn8-4.fna.fbcdn.net/v/t39.30808-1/534136898_749293854666581_1584213272352607870_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=1d2534&_nc_eui2=AeFqh_r3g1VaKKx2wFccqASXzBUDs9FLWU_MFQOz0UtZT0Pflcmod5znN1RtZH6geE4rZxAs1W7G0U1ZjE0oRwUb&_nc_ohc=HZoHHQaSGX0Q7kNvwFfrVZq&_nc_oc=Adk2goBox0pzD9vSz44dUTtPLaDeFbqBwz4c5LW3gaIyi5a8zCQvMSsKPV_0n2FR_q0&_nc_zt=24&_nc_ht=scontent.fsgn8-4.fna&_nc_gid=v9zPPrhoxGVDOHOHmPQtdw&oh=00_Afbr9TMLXtHZ_BxLmnjH1AVQeq3Q4QJCq5Wtsan6LC5tqg&oe=68DF1667",
+        color: process.env.TOTP_COLOR || "#4267b2",
+        backgroundColor: process.env.TOTP_BACKGROUND_COLOR || "#e9ebee",
+    },
+    sentry: {
+        dsn: process.env.SENTRY_DSN || "https://4b08d10ac2853aaf7c60950ad2eb6114@o4510097305042944.ingest.de.sentry.io/4510097307074640",
+        version: process.env.VERSION || "0.0.1",
     },
     redis: {
         host: process.env.REDIS_HOST || "localhost",
@@ -78,9 +91,18 @@ export const envConfig = () => ({
         },
     },
     jwt: {
-        secret: process.env.JWT_SECRET || "",
-        accessTokenExpiration: process.env.JWT_ACCESS_TOKEN_EXPIRATION || "1h",
-        refreshTokenExpiration: process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d",
+        accessToken: {
+            secret: process.env.JWT_ACCESS_TOKEN_SECRET || "Cuong123_A",
+            expiration: (process.env.JWT_ACCESS_TOKEN_EXPIRATION || "1h") as ms.StringValue,
+        },
+        refreshToken: {
+            secret: process.env.JWT_REFRESH_TOKEN_SECRET || "Cuong123_A",
+            expiration: (process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d") as ms.StringValue,
+        },
+        temporaryAccessToken: {
+            secret: process.env.JWT_TEMPORARY_ACCESS_TOKEN_SECRET || "Cuong123_A",
+            expiration: (process.env.JWT_TEMPORARY_ACCESS_TOKEN_EXPIRATION || "10m") as ms.StringValue,
+        },
     },
     rpcs: {
         [ChainId.Sui]: {

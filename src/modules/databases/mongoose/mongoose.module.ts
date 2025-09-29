@@ -6,8 +6,6 @@ import {
     InstanceSchemaClass,
     LiquidityPoolSchema,
     LiquidityPoolSchemaClass,
-    SessionSchema,
-    SessionSchemaClass,
     StorageSchema,
     StorageSchemaClass,
     TokenSchema,
@@ -26,6 +24,8 @@ import {
     ChainConfigSchemaClass,
     WalletSchema,
     WalletSchemaClass,
+    SessionSchema,
+    SessionSchemaClass,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {

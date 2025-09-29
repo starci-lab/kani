@@ -9,6 +9,7 @@ import { InstanceIdService } from "./instance-id.service"
 import { RandomDelayService } from "./random-delay.service"
 import { createSuperJsonServiceProvider } from "./superjson.providers"
 import { AsyncService } from "./async.service"
+import { MsService } from "./ms.service"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -24,7 +25,8 @@ export class MixinModule extends ConfigurableModuleClass {
             InstanceIdService,
             RandomDelayService,
             createSuperJsonServiceProvider(),
-            AsyncService
+            AsyncService,
+            MsService
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)

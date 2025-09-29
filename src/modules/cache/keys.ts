@@ -8,4 +8,5 @@ export enum CacheKey {
     PythTokenPrice = "pythTokenPrice",
     User = "user",
     UserIds = "userIds",
+    SessionId = "sessionId",
 }

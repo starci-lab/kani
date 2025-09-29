@@ -11,4 +11,15 @@ export class AsyncService {
           [K in keyof T]: T[K] | null;
         }
     }
+
+    // go-like async resolve tuple
+    async resolveTuple<T>(
+        promise: Promise<T>
+    ): Promise<[T | null, Error | null]> {
+        try {
+            return [await promise, null]
+        } catch (error) {
+            return [null, error]
+        }
+    }   
 }

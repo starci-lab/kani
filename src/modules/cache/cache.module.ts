@@ -10,6 +10,7 @@ import {
 } from "./cache.providers"
 import { CacheHelpersService } from "./cache-helpers.service"
 import { CacheType } from "./types"
+import { CacheManagerService } from "./cache-manager.service"
 
 @Module({})
 export class CacheModule extends ConfigurableModuleClass {
@@ -27,6 +28,7 @@ export class CacheModule extends ConfigurableModuleClass {
             }
         })
         providers.push(CacheHelpersService)
+        providers.push(CacheManagerService)
         return {
             ...dynamicModule,
             providers: [...dynamicModule.providers || [], ...providers],

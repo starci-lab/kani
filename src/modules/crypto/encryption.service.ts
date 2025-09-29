@@ -6,8 +6,8 @@ import crypto from "crypto"
 export class EncryptionService {
     private readonly aesCbcKey = envConfig().cryptography.aesCbcKey
     private readonly ivLength = 16 // AES block size
-
-    constructor() { }
+    
+    constructor() {}
 
     // Encrypt AES-CBC
     encrypt(

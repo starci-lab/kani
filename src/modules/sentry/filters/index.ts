@@ -1,0 +1,1 @@
+export * from "./sentry-catch-all.filter"

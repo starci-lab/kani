@@ -3,7 +3,6 @@ import { AbstractSchema } from "./abstract"
 import { Field } from "@nestjs/graphql"
 import { OauthProviderName } from "../../enums"
 import { WalletSchema } from "./wallet.schema"
-import { SessionSchema } from "./session.scheam"
 
 @Schema({
     timestamps: true,
@@ -42,9 +41,13 @@ export class UserSchema extends AbstractSchema {
     @Prop({ type: WalletSchema, required: false })
         evm?: WalletSchema
 
-    @Field(() => [SessionSchema])
-    @Prop({ type: [SessionSchema], required: true, default: [] })
-        sessions?: Array<SessionSchema>
+    @Field(() => String, { nullable: true })
+    @Prop({ type: String, required: false })
+        encryptedTotpSecret?: string
+
+    @Field(() => String, { nullable: true })
+    @Prop({ type: String, required: false })
+        referralCode?: string
 }
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)
