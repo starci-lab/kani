@@ -108,4 +108,24 @@ export class KeypairsService {
             }
         }
     }
+
+    public async getPrivateKey(
+        platformId: PlatformId, 
+        encryptedPrivateKey: string
+    ): Promise<string> {
+        switch (platformId) {
+        case PlatformId.Evm:
+            return this.options.useGcpKms ? 
+                Buffer.from(await this.gcpKmsService.decrypt(encryptedPrivateKey)).toString("utf8")
+                : this.encryptionService.decrypt(encryptedPrivateKey)
+        case PlatformId.Sui:
+            return this.options.useGcpKms ? 
+                Buffer.from(await this.gcpKmsService.decrypt(encryptedPrivateKey)).toString("utf8")
+                : this.encryptionService.decrypt(encryptedPrivateKey)
+        case PlatformId.Solana:
+            return this.options.useGcpKms ? 
+                Buffer.from(await this.gcpKmsService.decrypt(encryptedPrivateKey)).toString("utf8")
+                : this.encryptionService.decrypt(encryptedPrivateKey)
+        }
+    }
 }

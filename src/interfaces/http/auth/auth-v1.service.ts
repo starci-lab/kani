@@ -63,6 +63,7 @@ export class AuthV1Service {
         const { accessToken } = await this.jwtAuthService.generate({
             id: user.id,
             totpVerified: userLike.totpVerified,
+            encryptedTotpSecret: user.encryptedTotpSecret,
         })
         return {
             accessToken,

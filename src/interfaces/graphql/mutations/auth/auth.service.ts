@@ -1,17 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import { InjectMongoose, SessionSchema, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
-import { ConfirmTotpRequest, ConfirmTotpResponseData, RefreshResponseData } from "./auth.dto"
+import { ConfirmTotpResponseData, RefreshResponseData } from "./auth.dto"
 import { JwtAuthService, UserJwtLike } from "@modules/passport"
 import { 
-    UserNotFoundException, 
-    UserTotpSecretNotFoundException, 
-    TOTPCodeNotVerifiedException,
+    UserNotFoundException,
+    UserTotpSecretNotFoundException,
     SessionNotFoundException
 } from "@modules/errors"
-import { TotpService } from "@modules/totp"
-import { EncryptionService } from "@modules/crypto"
-import { CacheKey, CacheManagerService, createCacheKey } from "@modules/cache"
 
 @Injectable()
 export class AuthService {
@@ -19,13 +15,9 @@ export class AuthService {
         @InjectMongoose()
         private readonly connection: Connection,
         private readonly jwtAuthService: JwtAuthService,
-        private readonly totpService: TotpService,
-        private readonly encryptionService: EncryptionService,
-        private readonly cacheManagerService: CacheManagerService,
     ) {}
 
     async confirmTotp(
-        request: ConfirmTotpRequest,
         userLike: UserJwtLike,
     ): Promise<ConfirmTotpResponseData> {
         const user = await this.connection
@@ -47,16 +39,10 @@ export class AuthService {
                 },
             })
         }
-        const verified = this.totpService.verifyTotp(
-            request.totpCode,
-            this.encryptionService.decrypt(user.encryptedTotpSecret),
-        )
-        if (!verified) {
-            throw new TOTPCodeNotVerifiedException()
-        }
         const { accessToken, refreshToken } = await this.jwtAuthService.generate({
             id: user.id,
             totpVerified: true,
+            encryptedTotpSecret: user.encryptedTotpSecret,
         })
         return { accessToken, refreshToken }
     }
@@ -65,21 +51,26 @@ export class AuthService {
         userLike: UserJwtLike,
     ): Promise<RefreshResponseData> {
         // try first in cache
-        const sessionCheck = await this.cacheManagerService.get<boolean>(
-            createCacheKey(CacheKey.SessionId, userLike.id),
-        )
+        const user = await this.connection
+            .model<UserSchema>(UserSchema.name)
+            .findById(userLike.id)
+        if (!user) {
+            throw new UserNotFoundException()
+        }
         // if not found, try in database
-        if (!sessionCheck) {
-            const sessionExists = await this.connection
-                .model<SessionSchema>(SessionSchema.name)
-                .exists({ user: userLike.id })
-            if (!sessionExists) {
-                throw new SessionNotFoundException()
-            }
+        if (!user.encryptedTotpSecret) {
+            throw new UserTotpSecretNotFoundException()
+        }
+        const sessionExists = await this.connection
+            .model<SessionSchema>(SessionSchema.name)
+            .exists({ user: userLike.id })
+        if (!sessionExists) {
+            throw new SessionNotFoundException()
         }
         return this.jwtAuthService.generate({
-            id: userLike.id,
-            totpVerified: userLike.totpVerified,
+            id: user.id,
+            totpVerified: user.totpVerified || false,
+            encryptedTotpSecret: user.encryptedTotpSecret,
         }) 
     }
 }

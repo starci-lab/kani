@@ -13,7 +13,7 @@ export class UsersService {
         private readonly encryptionService: EncryptionService,
     ) {}
 
-    async queryUser(id: string): Promise<UserSchema> {
+    async user(id: string): Promise<UserSchema> {
         const user = await this.connection.model<UserSchema>(UserSchema.name).findById(id)
         // set the temporary totp token if the user is not verified
         if (!user) {

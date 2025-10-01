@@ -12,6 +12,7 @@ import { MsService } from "@modules/mixin"
 export interface GenerateParams {
     id: string
     totpVerified: boolean
+    encryptedTotpSecret?: string
     session?: ClientSession
 }
 
@@ -32,6 +33,7 @@ export class JwtAuthService {
         {
             id,
             totpVerified,
+            encryptedTotpSecret,
             session,
         }: GenerateParams,
     ): Promise<AuthCredentials> {
@@ -41,7 +43,14 @@ export class JwtAuthService {
         // generate sessionId
         const sessionId = uuidv4()
         // generate accessToken
-        const accessToken = await this.jwtService.signAsync({ id, totpVerified }, {
+        const accessToken = await this.jwtService.signAsync({ 
+            // user id to determine the user
+            id, 
+            // whether the user has verified their TOTP
+            totpVerified, 
+            // encrypted TOTP secret
+            encryptedTotpSecret
+        }, {
             secret: envConfig().jwt.accessToken.secret,
             expiresIn: envConfig().jwt.accessToken.expiration
         })
@@ -50,7 +59,7 @@ export class JwtAuthService {
         // generate refreshToken
             refreshToken = await this.jwtService.signAsync(
                 {
-                // we need id to determine the user
+                    // we need id to determine the user
                     id,
                     // we need sessionId to identify the session
                     sessionId,

@@ -11,6 +11,7 @@ export interface UserGoogleLike {
 export interface UserJwtLike {
     id: string
     totpVerified: boolean
+    encryptedTotpSecret?: string
 }
 
 export interface AuthCredentials {
