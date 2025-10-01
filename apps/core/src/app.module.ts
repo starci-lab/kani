@@ -54,6 +54,8 @@ import { GcpModule } from "@modules/gcp"
         // Database (Mongoose)
         MongooseModule.register({
             isGlobal: true,
+            withMemDb: true,
+            withSeeders: true,
         }),
         // Caching (Redis / Memory)
         CacheModule.register({

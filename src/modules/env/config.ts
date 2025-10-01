@@ -118,6 +118,10 @@ export const envConfig = () => ({
             ).filter((url) => url !== ""),
         },
     },
+    bullmq: {
+        completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
+        failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
+    },
     cors: {
         origins: Array.from({ length: 10 }, (_, i) =>
             process.env[`CORS_ORIGIN_${i + 1}`] || ""
