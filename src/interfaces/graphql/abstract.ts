@@ -8,19 +8,27 @@ import { IsBoolean, IsString } from "class-validator"
 export abstract class AbstractGraphQLResponse {
     @IsBoolean()
     @Field(() => Boolean, {
-        description: "The status of the response.",
+        description: "The success of the response.",
     })
-        status: boolean
+        success: boolean
 
     @IsString()
     @Field(() => String, {
         description: "The message of the response.",
     })
         message: string
+
+    @IsString()
+    @Field(() => String, {
+        nullable: true,
+        description: "The error of the response.",
+    })
+        error?: string
 }
 
-export interface AbstractGraphQLResponseInterface<T> {
-    status: boolean
+export interface IAbstractGraphQLResponse<T> {
+    success: boolean
     message: string
-    data: T
+    data?: T
+    error?: string
 }

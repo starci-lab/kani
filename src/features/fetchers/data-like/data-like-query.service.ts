@@ -1,7 +1,7 @@
 import { AssignedLiquidityPoolLike, ChainConfigLike, LiquidityPoolLike, PositionLike, UserLike } from "@modules/databases"
 import { FetchedPool } from "@modules/blockchains"
 import { Injectable, NotFoundException } from "@nestjs/common"
-import { ChainId, chainIdToPlatform, Network, PlatformId, TokenType } from "@modules/common"
+import { ChainId, chainIdToPlatformId, Network, PlatformId, TokenType } from "@modules/common"
 import { DataLikeService } from "./data-like.service"
 import { shuffleArray } from "@modules/common"
 
@@ -31,7 +31,7 @@ export class DataLikeQueryService {
         chainId: ChainId,
         network: Network,
     ) {
-        const platformId = chainIdToPlatform(chainId)
+        const platformId = chainIdToPlatformId(chainId)
         return this.getWalletOrThrow(userLike, platformId).chainConfigs.find(
             (chainConfig) => chainConfig.chainId === chainId && chainConfig.network === network,
         )?.farmTokenType as TokenType

@@ -1,5 +1,5 @@
 import { Field, InputType, ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, AbstractGraphQLResponseInterface } from "../../abstract"
+import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
 import { IsJWT } from "class-validator"
 
 @InputType({
@@ -29,8 +29,9 @@ export class ConfirmTotpResponseData {
 })
 export class ConfirmTotpResponse
     extends AbstractGraphQLResponse
-    implements AbstractGraphQLResponseInterface<ConfirmTotpResponseData> {
+    implements IAbstractGraphQLResponse<ConfirmTotpResponseData> {
     @Field(() => ConfirmTotpResponseData, {
+        nullable: true,
         description: "The data returned after successfully confirming a TOTP code.",
     })
         data: ConfirmTotpResponseData
@@ -54,7 +55,7 @@ export class RefreshResponseData {
 })
 export class RefreshResponse
     extends AbstractGraphQLResponse
-    implements AbstractGraphQLResponseInterface<RefreshResponseData> {
+    implements IAbstractGraphQLResponse<RefreshResponseData> {
     @Field(() => RefreshResponseData, {
         description: "The payload containing the new access and refresh tokens.",
     })

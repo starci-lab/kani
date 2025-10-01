@@ -118,6 +118,11 @@ export const envConfig = () => ({
             ).filter((url) => url !== ""),
         },
     },
+    cors: {
+        origins: Array.from({ length: 10 }, (_, i) =>
+            process.env[`CORS_ORIGIN_${i + 1}`] || ""
+        ).filter((url) => url !== ""),
+    },
     lpBot: {
         // Determine bot type:
         // - System: a local NestJS bot running without external connections.  

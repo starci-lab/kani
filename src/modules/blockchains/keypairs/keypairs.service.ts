@@ -5,7 +5,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import base58 from "bs58"
 import { WalletSchema } from "@modules/databases"
 import { MODULE_OPTIONS_TOKEN } from "./keypairs.module-definition"
-import { KeypairsOptions } from "./types"
+import { GeneratedKeypair, KeypairsOptions } from "./types"
 import { ModuleRef } from "@nestjs/core"
 import { GcpKmsService } from "@modules/gcp"
 import { EncryptionService } from "@modules/crypto"
@@ -32,22 +32,64 @@ export class KeypairsService {
             this.encryptionService = this.moduleRef.get(EncryptionService, { strict: false })
         }
     }
-    
+
+    public async generateKeypair(
+        platformId: PlatformId,
+    ): Promise<GeneratedKeypair> {
+        switch (platformId) {
+        case PlatformId.Evm:
+        {
+            const evmWallet = Wallet.createRandom()
+            const evmEncryptedPrivateKey = this.options.useGcpKms ? 
+                await this.gcpKmsService.encrypt(evmWallet.privateKey)
+                : this.encryptionService.encrypt(evmWallet.privateKey)
+            
+            return { 
+                accountAddress: evmWallet.address, 
+                encryptedPrivateKey: evmEncryptedPrivateKey 
+            }
+        }
+        case PlatformId.Sui:
+        {
+            const suiWallet = Ed25519Keypair.generate()
+            const suiEncryptedPrivateKey = this.options.useGcpKms ? 
+                await this.gcpKmsService.encrypt(suiWallet.getSecretKey())
+                : this.encryptionService.encrypt(suiWallet.getSecretKey())
+            
+            return { 
+                accountAddress: suiWallet.getPublicKey().toSuiAddress(), 
+                encryptedPrivateKey: suiEncryptedPrivateKey 
+            }
+        }
+        case PlatformId.Solana:
+        {
+            const solanaWallet = SolanaKeypair.generate()
+            const solanaEncryptedPrivateKey = this.options.useGcpKms ? 
+                await this.gcpKmsService.encrypt(base58.encode(solanaWallet.secretKey))
+                : this.encryptionService.encrypt(base58.encode(solanaWallet.secretKey))
+            return { 
+                accountAddress: solanaWallet.publicKey.toBase58(), 
+                encryptedPrivateKey: solanaEncryptedPrivateKey 
+            }
+        }
+        }
+    }
+
     public async generateKeypairs(): Promise<Keypairs> {
         const evmWallet = Wallet.createRandom()
         const suiWallet = Ed25519Keypair.generate()
         const solanaWallet = SolanaKeypair.generate()
         const [evmEncryptedPrivateKey, suiEncryptedPrivateKey, solanaEncryptedPrivateKey] =
-        this.options.useGcpKms ? await Promise.all([
-            this.gcpKmsService.encrypt(evmWallet.privateKey),
-            this.gcpKmsService.encrypt(suiWallet.getSecretKey()),
-            this.gcpKmsService.encrypt(base58.encode(solanaWallet.secretKey))
-        ]) : [
-            this.encryptionService.encrypt(evmWallet.privateKey),
-            this.encryptionService.encrypt(suiWallet.getSecretKey()),
-            this.encryptionService.encrypt(base58.encode(solanaWallet.secretKey))
-        ]
-        
+            this.options.useGcpKms ? await Promise.all([
+                this.gcpKmsService.encrypt(evmWallet.privateKey),
+                this.gcpKmsService.encrypt(suiWallet.getSecretKey()),
+                this.gcpKmsService.encrypt(base58.encode(solanaWallet.secretKey))
+            ]) : [
+                this.encryptionService.encrypt(evmWallet.privateKey),
+                this.encryptionService.encrypt(suiWallet.getSecretKey()),
+                this.encryptionService.encrypt(base58.encode(solanaWallet.secretKey))
+            ]
+
         return {
             evmKeypair: {
                 publicKey: evmWallet.address,

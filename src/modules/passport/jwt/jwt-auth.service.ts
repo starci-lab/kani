@@ -36,7 +36,7 @@ export class JwtAuthService {
         }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
-            throw new Error("User ID is required")
+            throw new Error("User ID is required to generate access token and refresh token")
         }
         // generate sessionId
         const sessionId = uuidv4()

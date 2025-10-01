@@ -1,5 +1,3 @@
-
-
 import { ConfigurableModuleBuilder } from "@nestjs/common"
 import { GraphQLModuleOptions } from "./types"
 

@@ -64,7 +64,6 @@ export class AuthV1Service {
             id: user.id,
             totpVerified: userLike.totpVerified,
         })
-
         return {
             accessToken,
             destinationUrl: userLike.destinationUrl,

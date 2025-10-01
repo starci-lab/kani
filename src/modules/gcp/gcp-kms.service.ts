@@ -15,7 +15,7 @@ export class GcpKmsService {
       typeof plaintext === "string"
           ? Buffer.from(plaintext, "utf8")
           : plaintext
-
+        
         const [result] = await this.kmsClient.encrypt({
             name: envConfig().googleCloud.kms.keyName,
             plaintext: rawData,

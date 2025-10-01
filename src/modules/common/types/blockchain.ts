@@ -51,7 +51,7 @@ registerEnumType(GraphQLTypePlatformId, {
     },
 })
 
-export const chainIdToPlatform = (chainId: ChainId): PlatformId => {
+export const chainIdToPlatformId = (chainId: ChainId): PlatformId => {
     switch (chainId) {
     case ChainId.Solana:
         return PlatformId.Solana

@@ -1,7 +1,7 @@
-import { Args, Mutation, Resolver } from "@nestjs/graphql"
+import { Args, Context, Mutation, Resolver } from "@nestjs/graphql"
 import { AuthService } from "./auth.service"
-import { UseGuards, UseInterceptors, Res } from "@nestjs/common"
-import { GraphQLUser, GraphQLJwtRefreshTokenAuthGuard, UserJwtLike } from "@modules/passport"
+import { UseGuards, UseInterceptors } from "@nestjs/common"
+import { GraphQLUser, GraphQLJwtRefreshTokenAuthGuard, UserJwtLike, GraphQLJwtAccessTokenAuthGuard } from "@modules/passport"
 import { ConfirmTotpRequest, ConfirmTotpResponse, ConfirmTotpResponseData, RefreshResponse, RefreshResponseData } from "./auth.dto"
 import { ThrottlerConfig } from "@modules/throttler"
 import { UseThrottler } from "@modules/throttler/throttler.decorators"
@@ -19,14 +19,14 @@ export class AuthResolvers {
     @GraphQLSuccessMessage("TOTP code confirmed successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtRefreshTokenAuthGuard)
+    @UseGuards(GraphQLJwtAccessTokenAuthGuard)
     @Mutation(() => ConfirmTotpResponse, {
         description: "Confirm a TOTP code for authentication.",
     })
     async confirmTotp(
         @Args("request", { description: "The request to confirm the TOTP." }) request: ConfirmTotpRequest,  
         @GraphQLUser() user: UserJwtLike,
-        @Res() res: Response,
+        @Context("res") res: Response,
     ): Promise<ConfirmTotpResponseData> {
         const { accessToken, refreshToken } = await this.authService.confirmTotp(request, user)
         if (!refreshToken) {
@@ -46,7 +46,7 @@ export class AuthResolvers {
     })
     async refresh(
         @GraphQLUser() user: UserJwtLike,
-        @Res() res: Response,
+        @Context("res") res: Response,
     ): Promise<RefreshResponseData> {
         const { accessToken, refreshToken } = await this.authService.refresh(user)
         if (!refreshToken) {

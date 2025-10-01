@@ -16,6 +16,7 @@ export class GraphQLModule extends ConfigurableModuleClass {
             useFederation = false,
             registerAllResolvers = true,
         } = options
+
         const imports: Array<DynamicModule> = []
         // register apollo graphql module
         if (useFederation) {
@@ -28,6 +29,7 @@ export class GraphQLModule extends ConfigurableModuleClass {
                     autoSchemaFile: true,
                     plugins: [ApolloServerPluginLandingPageLocalDefault()],
                     resolvers: { JSON: GraphQLJSON },
+                    context: ({ req, res }) => ({ req, res }),
                 }),)
         }
         // register all resolvers
@@ -36,7 +38,7 @@ export class GraphQLModule extends ConfigurableModuleClass {
             imports.push(MutationsModule.register(options))
         }
         return {
-            module: GraphQLModule,
+            ...dynamicModule,
             imports,
             providers: [...dynamicModule.providers || []],
         }

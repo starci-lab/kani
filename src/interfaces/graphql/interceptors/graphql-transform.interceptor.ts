@@ -21,11 +21,10 @@ implements NestInterceptor<T, GraphQLResponse<T>>
     constructor(private readonly reflector: Reflector) {}
 
     intercept(context: ExecutionContext, next: CallHandler<T>): Observable<GraphQLResponse<T>> {
-    // Get custom message from metadata (resolver/handler level)
+        // Get custom message from metadata (resolver/handler level)
         const message =
-      this.reflector.get<string>( SUCCESS_MESSAGE_METADATA, context.getHandler()) ??
+      this.reflector.get<string>(SUCCESS_MESSAGE_METADATA, context.getHandler()) ??
       this.reflector.get<string>(SUCCESS_MESSAGE_METADATA, context.getClass())
-
         return next.handle().pipe(
             map((data): GraphQLResponse<T> => {
                 return {
@@ -36,6 +35,9 @@ implements NestInterceptor<T, GraphQLResponse<T>>
             }),
             catchError((err) => {
                 return new Observable<GraphQLResponse<T>>((observer) => {
+                    console.log("err", err)
+                    console.log("err.message", err.message)
+                    console.log("err.name", err.name)
                     observer.next({
                         success: false,
                         message: err.message,

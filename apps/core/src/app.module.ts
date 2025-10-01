@@ -15,11 +15,17 @@ import { GraphQLModule } from "@interfaces/graphql"
 import { ThrottlerBehindProxyGuard, ThrottlerModule } from "@modules/throttler"
 import { APP_GUARD } from "@nestjs/core"
 import { CookieModule } from "@modules/cookie"
+import { SentryModule } from "@modules/sentry"
+import { GcpModule } from "@modules/gcp"
 
 @Module({
     imports: [
         // Load environment variables
         EnvModule.forRoot(),
+        // Sentry module
+        SentryModule.register({
+            isGlobal: true,
+        }),
         // Shared mixins/utilities
         MixinModule.register({
             isGlobal: true,
@@ -70,8 +76,13 @@ import { CookieModule } from "@modules/cookie"
         UtilsModule.register({
             isGlobal: true,
         }),
+        // GCP modules
+        GcpModule.register({
+            isGlobal: true,
+        }),
         KeypairsModule.register({
             isGlobal: true,
+            useGcpKms: true,
         }),
         // HTTP API layer
         HttpModule.register({

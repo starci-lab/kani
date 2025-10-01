@@ -31,13 +31,21 @@ export class AuthService {
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
             .findById(userLike.id)
-            .select("encryptedTotpSecret")
-            .lean()
         if (!user) {
             throw new UserNotFoundException()
         }
         if (!user.encryptedTotpSecret) {
             throw new UserTotpSecretNotFoundException()
+        }
+        // if the user not verified, set the totpVerified to true
+        if (!user.totpVerified) {
+            await this.connection.model<UserSchema>(UserSchema.name).updateOne({
+                id: userLike.id,
+            }, {
+                $set: {
+                    totpVerified: true,
+                },
+            })
         }
         const verified = this.totpService.verifyTotp(
             request.totpCode,
@@ -46,10 +54,11 @@ export class AuthService {
         if (!verified) {
             throw new TOTPCodeNotVerifiedException()
         }
-        return this.jwtAuthService.generate({
+        const { accessToken, refreshToken } = await this.jwtAuthService.generate({
             id: user.id,
             totpVerified: true,
         })
+        return { accessToken, refreshToken }
     }
 
     async refresh(

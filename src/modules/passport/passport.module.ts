@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import {
     GoogleAuthStrategy,
     JwtAccessTokenStrategy,
+    JwtAccessTokenOnlyVerifiedTOTPStrategy,
     JwtRefreshTokenStrategy,
 } from "./strategies"
 import { PassportModule as NestPassportModule } from "@nestjs/passport"
@@ -17,6 +18,7 @@ import { JwtAuthService } from "./jwt/jwt-auth.service"
     providers: [
         GoogleAuthStrategy,
         JwtAccessTokenStrategy,
+        JwtAccessTokenOnlyVerifiedTOTPStrategy,
         JwtRefreshTokenStrategy,
         JwtAuthService,
     ],

@@ -5,7 +5,7 @@ import {
     PositionEntity,
     UserLike,
 } from "@modules/databases"
-import { ChainId, chainIdToPlatform, computePercentage, computeRatio, Network, PlatformId } from "@modules/common"
+import { ChainId, chainIdToPlatformId, computePercentage, computeRatio, Network, PlatformId } from "@modules/common"
 import BN from "bn.js"
 import {
     FetchedPool,
@@ -347,7 +347,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                         positionId,
                         assignedLiquidityPoolId: assignedLiquidityPool.id,
                     })
-                const platformId = chainIdToPlatform(params.chainId)
+                const platformId = chainIdToPlatformId(params.chainId)
                 const wallet = user.wallets.find(
                     (wallet) => wallet.platformId === platformId,
                 )
@@ -424,7 +424,7 @@ export class PositionRecordManagerService implements OnModuleInit {
                             isClosed: true,
                         },
                     )
-                    const platformId = chainIdToPlatform(chainId)
+                    const platformId = chainIdToPlatformId(chainId)
                     const wallet = user.wallets.find(
                         (wallet) => wallet.platformId === platformId,
                     )
