@@ -4,12 +4,14 @@ import { UseGuards, UseInterceptors } from "@nestjs/common"
 import {
     GraphQLUser,
     UserJwtLike,
-    GraphQLJwtOnlyVerifiedTOTPAuthGuard
+    GraphQLJwtOnlyVerifiedTOTPAuthGuard,
 } from "@modules/passport"
 import {
     AddLiquidityProvisionBotRequest,
     AddLiquidityProvisionBotResponse,
-    AddLiquidityProvisionBotResponseData
+    AddLiquidityProvisionBotResponseData,
+    InitializeLiquidityProvisionBotRequest,
+    InitializeLiquidityProvisionBotResponse
 } from "./liquidity-provision.dto"
 import { ThrottlerConfig } from "@modules/throttler"
 import { UseThrottler } from "@modules/throttler/throttler.decorators"
@@ -42,5 +44,21 @@ export class LiquidityProvisionResolver {
         @GraphQLUser() user: UserJwtLike,
     ): Promise<AddLiquidityProvisionBotResponseData> {
         return await this.liquidityProvisionService.addLiquidityProvisionBot(request, user)
+    }
+
+    @GraphQLSuccessMessage("Liquidity provision bot initialized successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @UseThrottler(ThrottlerConfig.Strict)
+    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @Mutation(() => InitializeLiquidityProvisionBotResponse, {
+        description: "Initializes a liquidity provision bot for the authenticated user."
+    })
+    async initializeLiquidityProvisionBot(
+        @Args("request", { description: "The request payload for initializing a liquidity provision bot." })
+            request: InitializeLiquidityProvisionBotRequest,
+
+        @GraphQLUser() user: UserJwtLike,
+    ) {
+        return await this.liquidityProvisionService.initializeLiquidityProvisionBot(request, user)
     }
 }

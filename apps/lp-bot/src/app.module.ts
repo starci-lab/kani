@@ -28,7 +28,7 @@ import {
 import { CryptoModule } from "@modules/crypto"
 import { DataLikeModule, UserLoaderModule } from "@features/fetchers"
 import { PoolSelectorModule, PositionExitModule } from "@features/selectors"
-import { ApiModule } from "@interfaces/http"
+import { HttpModule } from "@interfaces/http"
 import { InitializerModule } from "@modules/initializer"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 
@@ -157,7 +157,7 @@ export class AppModule extends ConfigurableModuleClass {
         }
         if (envConfig().lpBot.type === LpBotType.System) {
             modules.push(
-                ApiModule.register({
+                HttpModule.register({
                     isGlobal: true,
                 }),
             )

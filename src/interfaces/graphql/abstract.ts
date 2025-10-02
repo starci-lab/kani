@@ -26,9 +26,10 @@ export abstract class AbstractGraphQLResponse {
         error?: string
 }
 
-export interface IAbstractGraphQLResponse<T> {
+export interface IAbstractGraphQLResponse<T = undefined> {
     success: boolean
     message: string
     data?: T
     error?: string
 }
+

@@ -6,3 +6,4 @@ export class LiquidityProvisionBotNotFoundException extends NotFoundException {
         this.name = "LIQUIDITY_PROVISION_BOT_NOT_FOUND_EXCEPTION"
     }
 }
+

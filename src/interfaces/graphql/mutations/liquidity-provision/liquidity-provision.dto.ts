@@ -1,7 +1,8 @@
-import { Field, InputType, ObjectType } from "@nestjs/graphql"
+import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
 import { IsEnum } from "class-validator"
 import { ChainId, GraphQLTypeChainId } from "@modules/common"
 import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
+import { GraphQLTypeLiquidityPoolId, GraphQLTypeTokenId, LiquidityPoolId, TokenId } from "@modules/databases/enums"
 
 /**
  * GraphQL input type representing the data required to
@@ -50,3 +51,35 @@ export class AddLiquidityProvisionBotResponse
     })
         data?: AddLiquidityProvisionBotResponseData
 }
+
+@InputType({
+    description: "Input data required to initialize a liquidity provision bot.",
+})
+export class InitializeLiquidityProvisionBotRequest {
+    @Field(() => ID, {
+        description: "The ID of the liquidity provision bot to initialize",
+    })
+        id: string
+
+    @Field(() => String, {
+        description: "Human-readable name of the bot, used for identification and management",
+    })
+        name: string
+
+    @Field(() => GraphQLTypeTokenId, {
+        description: "The token that the bot will prioritize when managing liquidity positions",
+    })
+        priorityTokenId: TokenId
+
+    @Field(() => [GraphQLTypeLiquidityPoolId], {
+        description: "List of liquidity pools where the bot will actively provide and manage liquidity.",
+    })
+        liquidityPoolIds: Array<LiquidityPoolId>
+}
+
+@ObjectType({
+    description: "Defines the payload returned after successfully initializing a new liquidity provision bot.",
+})
+export class InitializeLiquidityProvisionBotResponse 
+    extends AbstractGraphQLResponse 
+    implements IAbstractGraphQLResponse {}
