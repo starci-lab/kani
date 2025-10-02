@@ -24,10 +24,10 @@ export interface TokenLike extends BaseLike {
     tokenAddress: string
 
     /** CoinMarketCap ID of the token (e.g. 'sui', 'solana', 'bitcoin') */
-    coinMarketCapId: string
+    coinMarketCapId?: string
 
     /** CoinGecko ID of the token (e.g. 'sui', 'solana', 'bitcoin') */
-    coinGeckoId: string
+    coinGeckoId?: string
 
     cexSymbols?: Partial<Record<CexId, string>>
 
@@ -54,6 +54,9 @@ export interface TokenLike extends BaseLike {
 
     /** Pyth feed ID of the token */
     pythFeedId?: string
+
+    /** Whether the token is selectable for yield farming */
+    selectable: boolean
 }
 
 export interface DexLike extends BaseLike {

@@ -1,0 +1,1 @@
+export * from "./authenticated-redis-io-adapter"

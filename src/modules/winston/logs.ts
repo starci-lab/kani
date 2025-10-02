@@ -35,4 +35,6 @@ export enum WinstonLog {
     OracleLiquidityRangeAcceptableOut = "Oracle.Liquidity.Range.Acceptable.Out",
     PositionExitError = "Position.Exit.Error",
     PositionExitEnd = "Position.Exit.End",
+    SocketIoClientConnected = "Socket.Io.Client.Connected",
+    SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
 }

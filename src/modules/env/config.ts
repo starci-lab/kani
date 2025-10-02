@@ -11,7 +11,7 @@ export enum LpBotType {
 export const envConfig = () => ({
     isProduction: process.env.NODE_ENV === "production",
     port: {
-        core: process.env.CORE_PORT || 3010,
+        core: Number(process.env.CORE_PORT) || 3010,
     },
     frontend: {
         url: process.env.FRONTEND_URL || "http://localhost:3000/callback/google",

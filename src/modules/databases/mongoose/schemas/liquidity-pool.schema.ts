@@ -3,14 +3,14 @@ import { AbstractSchema } from "./abstract"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, GraphQLTypeTokenType, Network, TokenType } from "@modules/common"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
-import { Field, Float, ObjectType } from "@nestjs/graphql"
+import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
 import { GraphQLTypeLiquidityPoolId } from "../../enums"
 import { LiquidityPoolId } from "../../enums"
 import { DexSchema } from "./dex.schema"
 
 @Schema({
     timestamps: true,
-    collection: "lp-pools",
+    collection: "liquidity_pools",
 })
 @ObjectType({ description: "Represents a liquidity pool between two tokens on a specific DEX" })
 export class LiquidityPoolSchema extends AbstractSchema {
@@ -23,7 +23,7 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
         displayId: LiquidityPoolId
 
-    @Field(() => DexSchema, { description: "The DEX this pool belongs to" })
+    @Field(() => ID, { description: "The DEX this pool belongs to" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: DexSchema.name })
         dex: DexSchema | Types.ObjectId
 
@@ -31,11 +31,11 @@ export class LiquidityPoolSchema extends AbstractSchema {
     @Prop({ type: String })
         poolAddress: string
 
-    @Field(() => TokenSchema, { description: "First token in the pool" })
+    @Field(() => ID, { description: "First token in the pool" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
         tokenA: TokenSchema | Types.ObjectId
 
-    @Field(() => TokenSchema, { description: "Second token in the pool" })
+    @Field(() => ID, { description: "Second token in the pool" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
         tokenB: TokenSchema | Types.ObjectId
 

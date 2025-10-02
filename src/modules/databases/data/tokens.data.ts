@@ -18,13 +18,14 @@ export const tokenData: Array<TokenLike> = [
         },
         chainId: ChainId.Sui,
         iconUrl:
-      "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png?1547042194",
+      "https://r2.starci.net/tokens/usdc.png",
         projectUrl: "https://www.centre.io/",
         network: Network.Mainnet,
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
         type: TokenType.StableUsdc,
         pythFeedId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiCetus,
@@ -40,13 +41,14 @@ export const tokenData: Array<TokenLike> = [
             [CexId.Gate]: "CETUS_USDT",
         },
         chainId: ChainId.Sui,
-        iconUrl: "https://assets.coingecko.com/coins/images/32311/large/cetus.png",
+        iconUrl: "https://r2.starci.net/tokens/cetus.png",
         projectUrl: "https://cetus.zone/",
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef"
+        pythFeedId: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiNative,
@@ -62,13 +64,14 @@ export const tokenData: Array<TokenLike> = [
             [CexId.Binance]: "SUIUSDT",
             [CexId.Gate]: "SUI_USDT",
         },
-        iconUrl: "https://assets.coingecko.com/coins/images/18884/large/Sui.png",
+        iconUrl: "https://r2.starci.net/tokens/sui.png",
         projectUrl: "https://sui.io/",
         network: Network.Mainnet,
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
         type: TokenType.Native,
-        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744"
+        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiIka,
@@ -83,13 +86,14 @@ export const tokenData: Array<TokenLike> = [
         cexSymbols: {
             [CexId.Gate]: "IKA_USDT",
         },
-        iconUrl: "https://assets.coingecko.com/coins/images/31447/large/Ika.png",
+        iconUrl: "https://r2.starci.net/tokens/ika.png",
         projectUrl: "https://ika.xyz/",
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
         pythFeedId: "0x2b529621fa6e2c8429f623ba705572aa64175d7768365ef829df6a12c9f365f4",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiAlkimi,
@@ -105,13 +109,14 @@ export const tokenData: Array<TokenLike> = [
             [CexId.Gate]: "ALKIMI_USDT",
         },
         iconUrl:
-      "https://assets.coingecko.com/coins/images/32973/large/alkimi.png",
+      "https://r2.starci.net/tokens/alkimi.png",
         projectUrl: "https://alkimi.org/",
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
         pythFeedId: "0x1b2deae525b02c52de4a411c4f37139931215d7cc754e57dd6c84387336ccc74",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiWalrus,
@@ -127,13 +132,14 @@ export const tokenData: Array<TokenLike> = [
             [CexId.Gate]: "WAL_USDT",
         },
         iconUrl:
-      "https://assets.coingecko.com/coins/images/31453/large/Walrus.png",
+      "https://r2.starci.net/tokens/walrus.png",
         projectUrl: "https://www.walrus.xyz/",
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0xeba0732395fae9dec4bae12e52760b35fc1c5671e2da8b449c9af4efe5d54341"
+        pythFeedId: "0xeba0732395fae9dec4bae12e52760b35fc1c5671e2da8b449c9af4efe5d54341",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiDeep,
@@ -148,13 +154,14 @@ export const tokenData: Array<TokenLike> = [
         cexSymbols: {
             [CexId.Gate]: "DEEP_USDT",
         },
-        iconUrl: "https://assets.coingecko.com/coins/images/31663/large/deep.png",
+        iconUrl: "https://r2.starci.net/tokens/deep.png",
         projectUrl: "https://deepbook.org/",
         network: Network.Mainnet,
         cexIds: [CexId.Gate],
         whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff"
+        pythFeedId: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff",
+        selectable: true,
     },
     {
         displayId: TokenId.SuiEth,
@@ -170,13 +177,14 @@ export const tokenData: Array<TokenLike> = [
             [CexId.Binance]: "ETHUSDT",
             [CexId.Gate]: "ETH_USDT",
         },
-        iconUrl: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+        iconUrl: "https://r2.starci.net/tokens/eth.png",
         projectUrl: "https://ethereum.org/",
         network: Network.Mainnet,
         cexIds: [CexId.Binance, CexId.Gate],
         whichCex: CexId.Binance,
         type: TokenType.Wrapper,
-        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744"
+        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744", 
+        selectable: true,
     },
     {
         displayId: TokenId.SuiXStakedSui,
@@ -186,11 +194,10 @@ export const tokenData: Array<TokenLike> = [
         tokenAddress:
     "0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI",
         decimals: 8,
-        coinMarketCapId: "ethereum",
-        coinGeckoId: "ethereum",
-        iconUrl: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+        iconUrl: "https://r2.starci.net/tokens/x_sui.webp",
         projectUrl: "https://ethereum.org/",
         network: Network.Mainnet,
         type: TokenType.LiquidStaking,
+        selectable: false,
     },
 ]

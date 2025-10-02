@@ -17,6 +17,10 @@ import { APP_GUARD } from "@nestjs/core"
 import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
 import { GcpModule } from "@modules/gcp"
+import { PythModule } from "@modules/blockchains"
+import { EventEmitterModule } from "@nestjs/event-emitter"
+import { EventModule } from "@modules/event"
+import { SocketIoModule } from "@interfaces/socketio"
 
 @Module({
     imports: [
@@ -86,8 +90,22 @@ import { GcpModule } from "@modules/gcp"
             isGlobal: true,
             useGcpKms: true,
         }),
+        // Event modules
+        EventEmitterModule.forRoot(),
+        // Event modules
+        EventModule.register({
+            isGlobal: true,
+        }),     
+        // Pyth modules
+        PythModule.register({
+            isGlobal: true,
+        }),
         // HTTP API layer
         HttpModule.register({
+            isGlobal: true,
+        }),
+        // Socketio modules
+        SocketIoModule.register({
             isGlobal: true,
         }),
         // GraphQL module

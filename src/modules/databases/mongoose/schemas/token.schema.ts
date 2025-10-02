@@ -25,16 +25,22 @@ export class TokenSchema extends AbstractSchema {
         decimals: number
 
     @Field(() => String, { description: "Contract address of the token on its chain" })
-    @Prop({ type: String, required: true })
+    @Prop({ type: String })
         tokenAddress: string
 
-    @Field(() => String, { description: "CoinMarketCap ID of the token, (eg: 'sui', 'solana', 'bitcoin')" })
-    @Prop({ type: String, required: true })
-        coinMarketCapId: string
+    @Field(() => String, { 
+        description: "CoinMarketCap ID of the token, (eg: 'sui', 'solana', 'bitcoin')",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        coinMarketCapId?: string
 
-    @Field(() => String, { description: "CoinGecko ID of the token (e.g. 'sui', 'solana', 'bitcoin')" })
-    @Prop({ type: String, required: true })
-        coinGeckoId: string
+    @Field(() => String, { 
+        description: "CoinGecko ID of the token (e.g. 'sui', 'solana', 'bitcoin')",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        coinGeckoId?: string
 
     @Field(() => String, { description: "URL of the token icon" })
     @Prop({ type: String, required: true })
@@ -52,29 +58,29 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: String, enum: Network, required: true })
         network: Network
 
-    @Field(() => Boolean, { description: "Whether the token is a native token" })
-    @Prop({ type: Boolean, required: true })
-        isNative: boolean
+    @Field(() => [GraphQLTypeCexId], { description: "List of CEXs where the token is listed", nullable: true })
+    @Prop({ type: [String], enum: CexId, required: false })
+        cexIds?: Array<CexId>
 
-    @Field(() => [GraphQLTypeCexId], { description: "List of CEXs where the token is listed" })
-    @Prop({ type: [String], enum: CexId, required: true, default: [] })
-        cexIds: Array<CexId>
+    @Field(() => GraphQLTypeCexId, { description: "Primary CEX where the token is listed", nullable: true })
+    @Prop({ type: String, enum: CexId, required: false })
+        whichCex?: CexId
 
-    @Field(() => GraphQLTypeCexId, { description: "Primary CEX where the token is listed" })
-    @Prop({ type: String, enum: CexId, required: true })
-        whichCex: CexId
-
-    @Field(() => GraphQLJSON, { description: "CEX trading symbols map (CexId -> symbol)" })
+    @Field(() => GraphQLJSON, { description: "CEX trading symbols map (CexId -> symbol)", nullable: true })
     @Prop({ type: Map, of: String, default: {} })
-        cexSymbols: Record<string, string>
+        cexSymbols?: Record<string, string>
 
     @Field(() => GraphQLTypeTokenType, { description: "Type of the token" })
     @Prop({ type: String, enum: TokenType, required: true })
         type: TokenType
 
-    @Field(() => String, { description: "Pyth feed ID of the token" })
-    @Prop({ type: String, required: true })
-        pythFeedId: string
+    @Field(() => String, { description: "Pyth feed ID of the token", nullable: true })
+    @Prop({ type: String, required: false })
+        pythFeedId?: string
+
+    @Field(() => Boolean, { description: "Whether the token is selectable for liquidity yield farming"})
+    @Prop({ type: Boolean, required: true })
+        selectable: boolean
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)

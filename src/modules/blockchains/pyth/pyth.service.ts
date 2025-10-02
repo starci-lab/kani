@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { TokenId, TokenLike } from "@modules/databases"
+import { TokenId } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { PythSuiService } from "./pyth-sui.service"
-import { PythSolanaService } from "./pyth-solana.service"
 import Decimal from "decimal.js"
-import { AsyncService } from "@modules/mixin/async.service"
+import { AsyncService } from "@modules/mixin"
 
 export interface GetPricesParams {
   tokenIds: Array<TokenId>;
@@ -15,9 +14,8 @@ export interface GetPricesParams {
 @Injectable()
 export class PythService {
     constructor(
-    private readonly suiPythService: PythSuiService,
-    private readonly solanaPythService: PythSolanaService,
-    private readonly asyncService: AsyncService,
+        private readonly suiPythService: PythSuiService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     async getPrices({
@@ -30,10 +28,13 @@ export class PythService {
             return {}
         }
         switch (chainId) {
-        case ChainId.Sui:
+        case ChainId.Sui: {
             return this.suiPythService.getPrices(tokenIds)
-        case ChainId.Solana:
-            return this.solanaPythService.getPrices(tokenIds)
+        }
+        case ChainId.Solana: {
+            // temporarily disabled
+            return {}
+        }
         default:
         // do nothing
             return {}
@@ -59,17 +60,6 @@ export class PythService {
         }
         return tokenAPrice.div(tokenBPrice)
     }
-
-    initialize(tokens: Array<TokenLike>): void {
-        this.suiPythService.initialize(tokens)
-        this.solanaPythService.initialize(tokens)
-    }
-
-    async preloadPrices(): Promise<void> {
-        await this.asyncService.allIgnoreError([
-            (async () => this.suiPythService.preloadPrices())()
-        ])
-    } 
 }
 
 export interface ComputeOraclePriceParams {
