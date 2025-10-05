@@ -56,7 +56,6 @@ export class LiquidityProvisionResolver {
     async initializeLiquidityProvisionBot(
         @Args("request", { description: "The request payload for initializing a liquidity provision bot." })
             request: InitializeLiquidityProvisionBotRequest,
-
         @GraphQLUser() user: UserJwtLike,
     ) {
         return await this.liquidityProvisionService.initializeLiquidityProvisionBot(request, user)

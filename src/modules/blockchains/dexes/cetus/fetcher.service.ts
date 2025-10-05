@@ -8,7 +8,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId } from "@modules/databases"
+import { DexId, DexSchema, MemDbQueryService, MemDbService } from "@modules/databases"
 import { BN } from "bn.js"
 
 @Injectable()
@@ -16,34 +16,39 @@ export class CetusFetcherService implements IFetchService {
     constructor(
         @InjectCetusClmmSdks()
         private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
+        private readonly memDbService: MemDbService,
+        private readonly memDbQueryService: MemDbQueryService,
     ) { }
 
     async fetchPools({
-        liquidityPools,
-        tokens,
         network = Network.Mainnet,
-    }: FetchPoolsParams): Promise<FetchPoolsResponse> {
+    }: FetchPoolsParams,
+    ): Promise<FetchPoolsResponse> {
         // skip testnet
         if (network === Network.Testnet) {
             throw new Error("Testnet is not supported")
         }
         // liquidity in sui network only
-        liquidityPools = liquidityPools.filter(
-            (liquidityPool) => 
-                liquidityPool.dexId === DexId.Cetus
+        const populatedLiquidityPools = 
+        this.memDbQueryService.populateLiquidityPools()
+            // safe filter to avoid undefined dex
+            .filter(liquidityPool => !!liquidityPool.dex)
+            .filter(
+                (liquidityPool) => 
+                    (liquidityPool.dex as DexSchema).displayId === DexId.Cetus
                 && liquidityPool.network === network
                 && liquidityPool.chainId === ChainId.Sui
-        )
+            )
         const cetusClmmSdk = this.cetusClmmSdks[network]
         const pools: Array<FetchedPool> = []
         const fetchedPools = await cetusClmmSdk.Pool.getPools(
-            liquidityPools.map(
+            populatedLiquidityPools.map(
                 (liquidityPool) => 
                     liquidityPool.poolAddress
             )
         )
         const displayId = (poolAddress: string) => {
-            return liquidityPools.find(
+            return populatedLiquidityPools.find(
                 (liquidityPool) => liquidityPool.poolAddress === poolAddress,
             )!.displayId
         }
@@ -55,23 +60,23 @@ export class CetusFetcherService implements IFetchService {
                 currentSqrtPrice: new BN(pool.current_sqrt_price),
                 tickSpacing: Number(pool.tickSpacing),
                 fee: Number(pool.fee_rate),
-                token0: tokens.find(
+                token0: this.memDbService.tokens.find(
                     (token) =>
                         isSameAddress(token.tokenAddress, pool.coinTypeA) && token.network === network && token.chainId === ChainId.Sui,
                 )!,
-                token1: tokens.find(
+                token1: this.memDbService.tokens.find(
                     (token) =>
                         isSameAddress(token.tokenAddress, pool.coinTypeB) && token.network === network && token.chainId === ChainId.Sui,
                 )!,
                 liquidity: new BN(pool.liquidity),
-                liquidityPool: liquidityPools.find(
+                liquidityPool: populatedLiquidityPools.find(
                     (liquidityPool) => liquidityPool.poolAddress === pool.poolAddress,
                 )!,
                 rewardTokens: (pool.rewarder_infos ?? [])
                     .map((rewarderInfo) => rewarderInfo.coinAddress)
                     .map(
                         (rewardTokenAddress) =>
-                            tokens.find(
+                            this.memDbService.tokens.find(
                                 (token) =>
                                     isSameAddress(token.tokenAddress, rewardTokenAddress) &&
                                     token.network === network,

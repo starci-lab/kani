@@ -1,4 +1,3 @@
-import { LiquidityPoolLike, TokenLike } from "@modules/databases"
 import { FetchedPool } from "./types"
 import { Network } from "@modules/common"
 
@@ -11,7 +10,5 @@ export interface IFetchService {
 }
 
 export interface FetchPoolsParams {
-    liquidityPools: Array<LiquidityPoolLike>,
-    tokens: Array<TokenLike>,
     network?: Network
 }

@@ -32,7 +32,6 @@ export class JwtAccessTokenOnlyVerifiedTOTPStrategy extends PassportStrategy(
     constructor() {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-
             ignoreExpiration: false,
             secretOrKey: envConfig().jwt.accessToken.secret,
         })

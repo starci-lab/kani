@@ -1,5 +1,5 @@
 import { Network } from "@modules/common"
-import { TokenId, TokenLike } from "@modules/databases"
+import { TokenId } from "@modules/databases"
 import BN from "bn.js"
 import { ActionResponse } from "../dexes"
 import { SuiClient } from "@mysten/sui/client"
@@ -15,7 +15,6 @@ export interface QuoteParams {
     tokenIn: TokenId,
     tokenOut: TokenId,
     amountIn: BN,
-    tokens: Array<TokenLike>,
     network?: Network
 }
 
@@ -36,7 +35,6 @@ export interface SwapParams {
     // amount in now optional, since sui require coin obj to swap rather then amountIn
     // specify amount in in order to swap by yourself
     amountIn?: BN,
-    tokens: Array<TokenLike>,
     slippage?: number,
     network?: Network
     routerId?: RouterId,
@@ -55,7 +53,6 @@ export interface SwapParams {
 export interface FlexibleInputSwapParams {
     tokenIn: TokenId,
     tokenOut: TokenId,
-    tokens: Array<TokenLike>,
     network?: Network
     inputCoinArgs: Array<TransactionObjectArgument>
     slippage?: number

@@ -8,7 +8,8 @@ import BN from "bn.js"
 import { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { ActionResponse } from "../dexes"
 import { Transaction } from "@mysten/sui/transactions"
-import { AsyncService } from "@modules/mixin/async.service"
+import { AsyncService } from "@modules/mixin"
+import { MemDbService } from "@modules/databases"
 
 @Injectable()
 export class SuiSwapService implements ISwapService {
@@ -18,19 +19,19 @@ export class SuiSwapService implements ISwapService {
         @InjectSevenKAggregatorSdks()
         private readonly sevenKAggregatorSdks: Record<Network, typeof SevenK>,
         private readonly asyncService: AsyncService,
+        private readonly memDbService: MemDbService,
     ) { }
     
     async quote({
         amountIn,
         tokenIn,
         tokenOut,
-        tokens,
         network = Network.Mainnet,
     }: QuoteParams): Promise<QuoteResponse> {
-        const tokenInInstance = tokens.find(
+        const tokenInInstance = this.memDbService.tokens.find(
             token => token.displayId === tokenIn,
         )
-        const tokenOutInstance = tokens.find(
+        const tokenOutInstance = this.memDbService.tokens.find(
             token => token.displayId === tokenOut,
         )
         if (!tokenInInstance || !tokenOutInstance) {
@@ -85,7 +86,6 @@ export class SuiSwapService implements ISwapService {
         network = Network.Mainnet,
         tokenIn,
         tokenOut,
-        tokens,
         inputCoin,
         quoteData,
         fromAddress,
@@ -98,10 +98,10 @@ export class SuiSwapService implements ISwapService {
         if (!inputCoin) {
             throw new Error("Input coin object is required")
         }
-        const tokenInInstance = tokens.find(
+        const tokenInInstance = this.memDbService.tokens.find(
             token => token.displayId === tokenIn,
         )
-        const tokenOutInstance = tokens.find(
+        const tokenOutInstance = this.memDbService.tokens.find(
             token => token.displayId === tokenOut,
         )
         if (!tokenInInstance || !tokenOutInstance) {

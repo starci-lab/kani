@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { 
     DexSchema, 
+    GasConfig, 
     LiquidityPoolSchema, 
     MemDbService, 
     TokenSchema 
@@ -42,5 +43,12 @@ export class StaticService {
      */
     dexes(): Array<DexSchema> {
         return this.memDbService.dexes
+    }
+
+    /**
+     * Return the gas configuration for the platform.
+     */
+    gasConfig(): GasConfig {
+        return this.memDbService.gasConfig!
     }
 }

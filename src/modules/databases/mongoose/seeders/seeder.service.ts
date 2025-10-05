@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
-import { TokenSeeder, LiquidityPoolSeeder, DexSeeder } from "./data"
+import { TokenSeeder, LiquidityPoolSeeder, DexSeeder, ConfigSeeder } from "./data"
 
 @Injectable()
 export class SeedersService implements OnModuleInit {
@@ -8,6 +8,7 @@ export class SeedersService implements OnModuleInit {
         private readonly tokenSeeder: TokenSeeder,
         private readonly dexSeeder: DexSeeder,
         private readonly liquidityPoolSeeder: LiquidityPoolSeeder,
+        private readonly configSeeder: ConfigSeeder,
     ) { }
 
     async onModuleInit() {
@@ -25,6 +26,10 @@ export class SeedersService implements OnModuleInit {
                 await this.liquidityPoolSeeder.drop()
                 await this.liquidityPoolSeeder.seed()
                 this.logger.debug("Seeded lp pools...")
+                // re-seed configs
+                await this.configSeeder.drop()
+                await this.configSeeder.seed()
+                this.logger.debug("Seeded configs...")
             })(),
         ])
     }

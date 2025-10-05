@@ -39,7 +39,7 @@ import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
 import { FeeToService } from "../../swap"
-import { TokenId } from "@modules/databases"
+import { MemDbService, TokenId } from "@modules/databases"
 import { DayjsService } from "@modules/mixin"   
 import { ZapProtectionService } from "../../utils"
 
@@ -59,6 +59,7 @@ export class TurbosActionService implements IActionService {
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
         private readonly zapProtectionService: ZapProtectionService,
         private readonly suiExecutionService: SuiExecutionService,
+        private readonly memDbService: MemDbService,
         private readonly signerService: SignerService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
@@ -71,7 +72,6 @@ export class TurbosActionService implements IActionService {
         network = Network.Mainnet,
         tokenAId,
         tokenBId,
-        tokens,
         priorityAOverB,
         accountAddress,
         amount,
@@ -92,8 +92,8 @@ export class TurbosActionService implements IActionService {
         suiClient = suiClient || this.suiClients[network][clientIndex]
         const turbosSdk = this.turbosClmmSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -110,7 +110,6 @@ export class TurbosActionService implements IActionService {
             accountAddress,
             amountIn: amount,
             tokenInId: tokenIn.displayId,
-            tokens,
             slippage,
             suiClient,
             txb,
@@ -121,7 +120,6 @@ export class TurbosActionService implements IActionService {
         await this.feeToService.attachSuiFee({
             txb,
             tokenId: tokenIn.displayId,
-            tokens,
             network,
             amount: sourceCoin.coinAmount,
             sourceCoin,
@@ -153,7 +151,6 @@ export class TurbosActionService implements IActionService {
                 priorityAOverB,
                 tokenAId,
                 tokenBId,
-                tokens,
                 oraclePrice,
                 network,
                 swapSlippage,
@@ -179,7 +176,6 @@ export class TurbosActionService implements IActionService {
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             amountIn: swapAmount,
-            tokens,
             fromAddress: accountAddress,
             quoteData,
             routerId,
@@ -305,7 +301,6 @@ export class TurbosActionService implements IActionService {
         accountAddress,
         tokenAId,
         tokenBId,
-        tokens,
         slippage,
         user,
         stimulateOnly,
@@ -319,8 +314,8 @@ export class TurbosActionService implements IActionService {
         slippage = slippage || CLOSE_POSITION_SLIPPAGE
         txb = txb || new Transaction()
         const turbosSdk = this.turbosClmmSdks[network]
-        const tokenA = tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -366,7 +361,7 @@ export class TurbosActionService implements IActionService {
                         amount: string;
                         reward_type: { name: string };
                     }
-                    const token = tokens.find((token) =>
+                    const token = this.memDbService.tokens.find((token) =>
                         token.tokenAddress.includes(reward_type.name),
                     )
                     if (token) {

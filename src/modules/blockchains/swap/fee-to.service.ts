@@ -4,7 +4,7 @@ import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 import { CoinArgument } from "../types"
-import { TokenId, TokenLike } from "@modules/databases"
+import { MemDbService, TokenId } from "@modules/databases"
 import Decimal from "decimal.js"
 
 const SUI_ADDRESS = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
@@ -27,7 +27,6 @@ export interface AttachSuiFeeParams {
     txb?: Transaction
     amount: BN
     tokenId: TokenId
-    tokens: Array<TokenLike>
     sourceCoin: CoinArgument
     network: Network
 }
@@ -36,7 +35,6 @@ export interface AttachSuiRoiFeeParams {
     txb?: Transaction
     amount: BN
     tokenId: TokenId
-    tokens: Array<TokenLike>
     sourceCoin: CoinArgument
     network: Network
 }
@@ -44,7 +42,8 @@ export interface AttachSuiRoiFeeParams {
 @Injectable()
 export class FeeToService {
     constructor(
-        private readonly suiCoinManagerService: SuiCoinManagerService
+        private readonly suiCoinManagerService: SuiCoinManagerService,
+        private readonly memDbService: MemDbService,
     ) { }
 
     private splitAmount(
@@ -68,14 +67,13 @@ export class FeeToService {
         {
             txb,
             tokenId,
-            tokens,
             amount,
             sourceCoin,
             network,
         }: AttachSuiFeeParams
     ) {
         txb = txb || new Transaction()
-        const token = tokens.find(token => token.displayId === tokenId)
+        const token = this.memDbService.tokens.find(token => token.displayId === tokenId)
         if (!token) {
             throw new Error("Token not found")
         }
@@ -109,12 +107,11 @@ export class FeeToService {
         txb,
         amount,
         tokenId,
-        tokens,
         network,
         sourceCoin,
     }: AttachSuiRoiFeeParams) {
         txb = txb || new Transaction()
-        const token = tokens.find(token => token.displayId === tokenId)
+        const token = this.memDbService.tokens.find(token => token.displayId === tokenId)
         if (!token) {
             throw new Error("Token not found")
         }

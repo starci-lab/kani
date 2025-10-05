@@ -9,7 +9,7 @@ import {
 } from "@modules/common"
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
-import { TokenId, TokenLike } from "@modules/databases"
+import { MemDbService, TokenId } from "@modules/databases"
 import { GAS_SUI_SWAP_SLIPPAGE } from "./constants"
 import { SuiSwapService } from "./sui-swap.service"
 import { PythService } from "../pyth"
@@ -22,7 +22,6 @@ export interface GasSuiSwapParams {
     network?: Network;
     accountAddress: string;
     tokenInId: TokenId;
-    tokens: Array<TokenLike>;
     slippage?: number;
     // this is a variable that indicate amount in
     // will ignore it if your priority token is not SUI
@@ -48,6 +47,7 @@ export class GasSuiSwapUtilsService {
         private readonly suiCoinManagerService: SuiCoinManagerService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly memDbService: MemDbService,
     ) { }
 
     async gasSuiSwap({
@@ -55,7 +55,6 @@ export class GasSuiSwapUtilsService {
         network = Network.Mainnet,
         accountAddress,
         tokenInId,
-        tokens,
         amountIn,
         slippage,
         suiClient,
@@ -64,8 +63,8 @@ export class GasSuiSwapUtilsService {
         suiClient = suiClient || this.suiClients[network][0]
         txb = txb ?? new Transaction()
         slippage = slippage ?? GAS_SUI_SWAP_SLIPPAGE
-        const tokenNative = tokens.find((token) => token.type === TokenType.Native)
-        const tokenIn = tokens.find((token) => token.displayId === tokenInId)
+        const tokenNative = this.memDbService.tokens.find((token) => token.type === TokenType.Native)
+        const tokenIn = this.memDbService.tokens.find((token) => token.displayId === tokenInId)
         if (!tokenNative || !tokenIn) {
             throw new Error("Token not found")
         }
@@ -129,7 +128,6 @@ export class GasSuiSwapUtilsService {
             tokenIn: tokenIn.displayId,
             tokenOut: tokenNative.displayId,
             amountIn: swapAmount,
-            tokens,
         })
         if (sourceCoin.coinAmount.lt(swapAmount)) {
             throw new Error("Source coin amount is less than swap amount")
@@ -144,7 +142,6 @@ export class GasSuiSwapUtilsService {
             tokenIn: tokenIn.displayId,
             tokenOut: tokenNative.displayId,
             amountIn: swapAmount,
-            tokens,
             fromAddress: accountAddress,
             slippage,
             transferCoinObjs: true,

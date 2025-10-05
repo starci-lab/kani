@@ -6,7 +6,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId } from "@modules/databases"
+import { DexId, DexSchema, MemDbService } from "@modules/databases"
 import { BN } from "bn.js"
 import { InjectFlowXClmmSdks } from "./flowx.decorators"
 import { FlowXClmmSdk } from "./flowx.providers"
@@ -16,11 +16,10 @@ export class FlowXFetcherService implements IFetchService {
     constructor(
         @InjectFlowXClmmSdks()
         private readonly flowxClmmSdks: Record<Network, FlowXClmmSdk>,
+        private readonly memDbService: MemDbService,
     ) { }
 
     async fetchPools({
-        liquidityPools,
-        tokens,
         network = Network.Mainnet,
     }: FetchPoolsParams): Promise<FetchPoolsResponse> {
         // skip testnet
@@ -28,12 +27,15 @@ export class FlowXFetcherService implements IFetchService {
             throw new Error("Testnet is not supported")
         }
         // liquidity in sui network only
-        liquidityPools = liquidityPools.filter(
-            (liquidityPool) => 
-                liquidityPool.dexId === DexId.Cetus
+        const liquidityPools = this.memDbService.liquidityPools
+            // safe filter to avoid undefined dex
+            .filter(liquidityPool => !!liquidityPool.dex)
+            .filter(
+                (liquidityPool) => 
+                    (liquidityPool.dex as DexSchema).displayId === DexId.FlowX
                 && liquidityPool.network === network
                 && liquidityPool.chainId === ChainId.Sui
-        )
+            )
         const flowxClmmSdk = this.flowxClmmSdks[network]
         const pools: Array<FetchedPool> = []
         const fetchedPools = await flowxClmmSdk.poolManager.getPools()
@@ -50,11 +52,11 @@ export class FlowXFetcherService implements IFetchService {
                 currentSqrtPrice: new BN(pool.sqrtPriceX64),
                 tickSpacing: Number(pool.tickSpacing),
                 fee: Number(pool.fee),
-                token0: tokens.find(
+                token0: this.memDbService.tokens.find(
                     (token) =>
                         token.tokenAddress === pool.coinX.coinType && token.network === network && token.chainId === ChainId.Sui,
                 )!,
-                token1: tokens.find(
+                token1: this.memDbService.tokens.find(
                     (token) =>
                         token.tokenAddress === pool.coinY.coinType && token.network === network && token.chainId === ChainId.Sui,
                 )!,
@@ -66,7 +68,7 @@ export class FlowXFetcherService implements IFetchService {
                     .map((rewarderInfo) => rewarderInfo.coin.coinType)
                     .map(
                         (rewardTokenAddress) =>
-                            tokens.find(
+                            this.memDbService.tokens.find(
                                 (token) =>
                                     token.tokenAddress === rewardTokenAddress &&
                                     token.network === network,

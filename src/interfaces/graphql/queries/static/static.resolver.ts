@@ -2,8 +2,8 @@ import { Query, Resolver } from "@nestjs/graphql"
 import { StaticService } from "./static.service"
 import { GraphQLSuccessMessage } from "../../interceptors"
 import { UseThrottler, ThrottlerConfig } from "@modules/throttler"
-import { DexesResponse, LiquidityPoolsResponse, TokensResponse } from "./static.dto"    
-import { DexSchema, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
+import { DexesResponse, GasConfigResponse, LiquidityPoolsResponse, TokensResponse } from "./static.dto"    
+import { DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
 import { GraphQLTransformInterceptor } from "../../interceptors"
 import { UseInterceptors } from "@nestjs/common"
 
@@ -46,4 +46,14 @@ export class StaticResolver {
     dexes(): Array<DexSchema> {
         return this.staticService.dexes()
     }
-}
+
+    @UseThrottler(ThrottlerConfig.Soft)
+    @GraphQLSuccessMessage("Gas config fetched successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @Query(() => GasConfigResponse, {
+        description: "Fetch the gas configuration for the platform.",
+    })
+    gasConfig(): GasConfig {
+        return this.staticService.gasConfig()
+    }
+}   

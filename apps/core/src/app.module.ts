@@ -7,7 +7,7 @@ import { PassportModule } from "@modules/passport"
 import { JwtModule } from "@nestjs/jwt"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
-import { KeypairsModule, UtilsModule } from "@modules/blockchains"
+import { ClientsModule, DexesModule, KeypairsModule, SignersModule, SwapModule, UtilsModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { CodeModule } from "@modules/code"
 import { TotpModule } from "@modules/totp"
@@ -21,6 +21,8 @@ import { PythModule } from "@modules/blockchains"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { EventModule } from "@modules/event"
 import { SocketIoModule } from "@interfaces/socketio"
+import { FetchersModule } from "@modules/blockchains/fetchers"
+import { ScheduleModule } from "@nestjs/schedule"
 
 @Module({
     imports: [
@@ -82,14 +84,32 @@ import { SocketIoModule } from "@interfaces/socketio"
         UtilsModule.register({
             isGlobal: true,
         }),
+        ClientsModule.register({
+            isGlobal: true,
+        }),
+        SwapModule.register({
+            isGlobal: true,
+        }),
+        DexesModule.register({
+            isGlobal: true,
+        }),
+        // Fetchers modules
+        // Use to fetch all blockchains data
+        FetchersModule.register({
+            isGlobal: true,
+        }),
         // GCP modules
         GcpModule.register({
+            isGlobal: true,
+        }),
+        SignersModule.register({
             isGlobal: true,
         }),
         KeypairsModule.register({
             isGlobal: true,
             useGcpKms: true,
         }),
+        ScheduleModule.forRoot(),
         // Event modules
         EventEmitterModule.forRoot(),
         // Event modules

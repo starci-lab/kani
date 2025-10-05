@@ -31,6 +31,7 @@ import { SuiCoinManagerService, SuiExecutionService, TickMathService } from "../
 import { clientIndex } from "./inner-constants"
 import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import Decimal from "decimal.js"
+import { MemDbService } from "@modules/databases"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -50,6 +51,7 @@ export class FlowXActionService implements IActionService {
     private readonly suiCoinManagerService: SuiCoinManagerService,
     private readonly suiSwapService: SuiSwapService, 
     private readonly zapProtectionService: ZapProtectionService,
+    private readonly memDbService: MemDbService,
     ) {}
 
     /**
@@ -64,7 +66,6 @@ export class FlowXActionService implements IActionService {
         tokenAId,
         tokenBId,
         accountAddress,
-        tokens,
         slippage,
         swapSlippage,
         user,
@@ -80,8 +81,8 @@ export class FlowXActionService implements IActionService {
         }
         suiClient = suiClient || this.suiClients[network][clientIndex]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -99,7 +100,6 @@ export class FlowXActionService implements IActionService {
             network,
             accountAddress,
             tokenInId: tokenIn.displayId,
-            tokens,
             amountIn: amount,
             slippage,
             suiClient,
@@ -108,7 +108,6 @@ export class FlowXActionService implements IActionService {
         await this.feeToService.attachSuiFee({
             txb,
             tokenId: tokenIn.displayId,
-            tokens,
             network,
             amount: sourceCoin.coinAmount,
             sourceCoin,
@@ -142,7 +141,6 @@ export class FlowXActionService implements IActionService {
                 priorityAOverB,
                 tokenAId,
                 tokenBId,
-                tokens,
                 oraclePrice,
                 network,
                 swapSlippage,
@@ -168,7 +166,6 @@ export class FlowXActionService implements IActionService {
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             amountIn: swapAmount,
-            tokens,
             fromAddress: accountAddress,
             quoteData,
             routerId,
@@ -273,8 +270,11 @@ export class FlowXActionService implements IActionService {
             slippageTolerance: new Percent(1, 100),
             deadline: Date.now() + 3600 * 1000,
             collectOptions: {
-                expectedCoinOwedX: CoinAmount.fromRawAmount(pool.token0 as any, MaxU64),
-                expectedCoinOwedY: CoinAmount.fromRawAmount(pool.token1 as any, MaxU64),
+                expectedCoinOwedX: CoinAmount.fromRawAmount(
+                    this.memDbService.tokens.find(
+                        (token) => token.displayId === pool.token0.displayId) as any, MaxU64),
+                expectedCoinOwedY: CoinAmount.fromRawAmount(
+                    this.memDbService.tokens.find((token) => token.displayId === pool.token1.displayId) as any, MaxU64),
             },
         }
         positionManager

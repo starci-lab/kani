@@ -5,7 +5,8 @@ import { Connection } from "mongoose"
 import { UserNotFoundException } from "@modules/errors"
 import { 
     ExportedAccountRequest, 
-    ExportedAccountResponseData
+    ExportedAccountResponseData,
+    LiquidityProvisionBotRequest,
 } from "./liquidity-provision-bot.dto"
 import { KeypairsService } from "@modules/blockchains"
 import { LiquidityProvisionBotNotFoundException } from "@modules/errors"
@@ -44,4 +45,20 @@ export class LiquidityProvisionBotService {
             privateKey,
         }
     }   
+
+    async liquidityProvisionBot(
+        { id }: LiquidityProvisionBotRequest,
+        userLike: UserJwtLike,
+    ): Promise<LiquidityProvisionBotSchema> {
+        const liquidityProvisionBot = await this.connection
+            .model<LiquidityProvisionBotSchema>(
+                LiquidityProvisionBotSchema.name).findOne({
+                user: userLike.id,
+                _id: id,
+            })
+        if (!liquidityProvisionBot) {
+            throw new LiquidityProvisionBotNotFoundException()
+        }
+        return liquidityProvisionBot
+    }
 }

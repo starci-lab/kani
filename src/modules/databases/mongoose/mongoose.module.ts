@@ -28,6 +28,8 @@ import {
     SessionSchemaClass,
     LiquidityProvisionBotSchema,
     LiquidityProvisionBotSchemaClass,
+    ConfigSchema,
+    ConfigSchemaClass,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {
@@ -148,6 +150,10 @@ export class MongooseModule extends ConfigurableModuleClass {
                         name: UserCummulativeSchema.name,
                         useFactory: () => UserCummulativeSchemaClass,
                     },  
+                    {
+                        name: ConfigSchema.name,
+                        useFactory: () => ConfigSchemaClass,
+                    },
                 ]),
             ],
         }

@@ -2,9 +2,11 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
 import { Connection } from "mongoose"
 import { RetryService } from "@modules/mixin"
 import { Cron, CronExpression } from "@nestjs/schedule"
-import { LiquidityPoolSchema, TokenSchema } from "../schemas"
+import { ConfigSchema, GasConfig, LiquidityPoolSchema, TokenSchema } from "../schemas"
 import { InjectMongoose } from "../mongoose.decorators"
 import { DexSchema } from "../schemas"
+import { ConfigId } from "../../enums"
+import { KeyValueRecord } from "../types"
 
 @Injectable()
 export class MemDbService implements OnModuleInit {
@@ -12,6 +14,7 @@ export class MemDbService implements OnModuleInit {
     public tokens: Array<TokenSchema> = []
     public liquidityPools: Array<LiquidityPoolSchema> = []
     public dexes: Array<DexSchema> = []
+    public gasConfig?: GasConfig
     constructor(
         private readonly retryService: RetryService,
         @InjectMongoose()
@@ -37,6 +40,14 @@ export class MemDbService implements OnModuleInit {
                     .model<DexSchema>(DexSchema.name)
                     .find()
                 this.dexes = dexes.map((dex) => dex.toJSON())
+            })(),
+            (async () => {
+                const gasConfig = await this.connection
+                    .model<ConfigSchema>(ConfigSchema.name)
+                    .findOne<KeyValueRecord<GasConfig>>({
+                        displayId: ConfigId.Gas,
+                    })
+                this.gasConfig = gasConfig?.value
             })(),
         ])
     }

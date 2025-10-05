@@ -42,28 +42,29 @@ import {
     SuiExecutionService,
     TickManagerService,
 } from "../../utils"
-import { TokenId } from "@modules/databases"
+import { MemDbService, TokenId } from "@modules/databases"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
     private readonly logger = new Logger(MomentumActionService.name)
     constructor(
-    @InjectMomentumClmmSdks()
-    private readonly momentumClmmSdks: Record<Network, MmtSDK>,
-    private readonly tickManagerService: TickManagerService,
-    private readonly feeToService: FeeToService,
-    private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
-    @InjectSuiClients()
-    private readonly suiClients: Record<Network, Array<SuiClient>>,
-    private readonly signerService: SignerService,
-    private readonly suiExecutionService: SuiExecutionService,
-    private readonly pythService: PythService,
-    private readonly tickMathService: TickMathService,
-    private readonly zapService: ZapService,
-    private readonly suiSwapService: SuiSwapService,
-    private readonly suiCoinManagerService: SuiCoinManagerService,
-    private readonly zapProtectionService: ZapProtectionService,
-    ) {}
+        @InjectMomentumClmmSdks()
+        private readonly momentumClmmSdks: Record<Network, MmtSDK>,
+        private readonly tickManagerService: TickManagerService,
+        private readonly feeToService: FeeToService,
+        private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
+        @InjectSuiClients()
+        private readonly suiClients: Record<Network, Array<SuiClient>>,
+        private readonly signerService: SignerService,
+        private readonly suiExecutionService: SuiExecutionService,
+        private readonly pythService: PythService,
+        private readonly tickMathService: TickMathService,
+        private readonly zapService: ZapService,
+        private readonly suiSwapService: SuiSwapService,
+        private readonly suiCoinManagerService: SuiCoinManagerService,
+        private readonly zapProtectionService: ZapProtectionService,
+        private readonly memDbService: MemDbService,
+    ) { }
 
     /**
    * Open LP position on Momentum CLMM
@@ -73,7 +74,6 @@ export class MomentumActionService implements IActionService {
         network = Network.Mainnet,
         tokenAId,
         tokenBId,
-        tokens,
         priorityAOverB,
         accountAddress,
         slippage,
@@ -94,8 +94,8 @@ export class MomentumActionService implements IActionService {
         suiClient = suiClient || this.suiClients[network][clientIndex]
         const mmtSdk = this.momentumClmmSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -112,18 +112,16 @@ export class MomentumActionService implements IActionService {
             amountIn: amount,
             accountAddress,
             tokenInId: tokenIn.displayId,
-            tokens,
             slippage,
             suiClient,
             txb,
         })
         this.logger.debug(`Source coin after gas swap: ${sourceCoin.coinAmount.toString()}`)
         const depositAmount = sourceCoin.coinAmount
-        
+
         await this.feeToService.attachSuiFee({
             txb,
             tokenId: tokenIn.displayId,
-            tokens,
             network,
             amount: sourceCoin.coinAmount,
             sourceCoin,
@@ -140,15 +138,15 @@ export class MomentumActionService implements IActionService {
         )
         const quoteAmountA = computeRaw(1, tokenA.decimals)
         const { coinAmountA, coinAmountB } =
-      estLiquidityAndcoinAmountFromOneAmounts(
-          tickLower,
-          tickUpper,
-          quoteAmountA, // coinAmount must be BN
-          true, // isCoinA
-          true, // roundUp
-          slippage, // example 0.01
-          pool.currentSqrtPrice,
-      )
+            estLiquidityAndcoinAmountFromOneAmounts(
+                tickLower,
+                tickUpper,
+                quoteAmountA, // coinAmount must be BN
+                true, // isCoinA
+                true, // roundUp
+                slippage, // example 0.01
+                pool.currentSqrtPrice,
+            )
         const ratio = computeRatio(
             coinAmountB.mul(toUnit(tokenA.decimals)),
             coinAmountA.mul(toUnit(tokenB.decimals)),
@@ -159,18 +157,17 @@ export class MomentumActionService implements IActionService {
             tokenB.decimals,
         )
         const { swapAmount, routerId, quoteData } =
-      await this.zapService.computeZapAmounts({
-          amountIn: sourceCoin.coinAmount,
-          ratio: new Decimal(ratio),
-          spotPrice,
-          priorityAOverB,
-          tokenAId,
-          tokenBId,
-          tokens,
-          oraclePrice,
-          network,
-          swapSlippage,
-      })
+            await this.zapService.computeZapAmounts({
+                amountIn: sourceCoin.coinAmount,
+                ratio: new Decimal(ratio),
+                spotPrice,
+                priorityAOverB,
+                tokenAId,
+                tokenBId,
+                oraclePrice,
+                network,
+                swapSlippage,
+            })
         // 4. optional ratio check
         if (!user.id) {
             throw new Error("User id is required")
@@ -192,7 +189,6 @@ export class MomentumActionService implements IActionService {
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
             amountIn: swapAmount,
-            tokens,
             fromAddress: accountAddress,
             quoteData,
             routerId,
@@ -252,11 +248,11 @@ export class MomentumActionService implements IActionService {
                 .filter(
                     (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
                         obj.type === "created" &&
-            obj.objectType.endsWith("::position::Position") &&
-            typeof obj.owner === "object" &&
-            "AddressOwner" in obj.owner &&
-            obj.owner.AddressOwner.toLowerCase() ===
-              accountAddress.toLowerCase(),
+                        obj.objectType.endsWith("::position::Position") &&
+                        typeof obj.owner === "object" &&
+                        "AddressOwner" in obj.owner &&
+                        obj.owner.AddressOwner.toLowerCase() ===
+                        accountAddress.toLowerCase(),
                 )
                 .map((obj) => obj.objectId)
             positionId = positionObjId
@@ -295,7 +291,6 @@ export class MomentumActionService implements IActionService {
         tokenAId,
         tokenBId,
         suiClient,
-        tokens,
         stimulateOnly
     }: ClosePositionParams): Promise<ClosePositionResponse> {
         txb = txb || new Transaction()
@@ -352,15 +347,15 @@ export class MomentumActionService implements IActionService {
         const handleEvents = (events: Array<SuiEvent>) => {
             for (const event of events) {
                 if (event.type.includes("::collect::FeeCollectedEvent")) {
-                    const { amount_x, amount_y } = event.parsedJson as 
-                    { amount_x: string, amount_y: string }
+                    const { amount_x, amount_y } = event.parsedJson as
+                        { amount_x: string, amount_y: string }
                     incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_x))
                     incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_y))
                 }
                 if (event.type.includes("::collect::CollectPoolRewardEvent")) {
-                    const { amount, reward_coin_type } = event.parsedJson as 
-                    { amount: string, reward_coin_type: { name: string } }
-                    const token = tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
+                    const { amount, reward_coin_type } = event.parsedJson as
+                        { amount: string, reward_coin_type: { name: string } }
+                    const token = this.memDbService.tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
                     if (!token) {
                         throw new Error("Token not found")
                     }
@@ -368,7 +363,7 @@ export class MomentumActionService implements IActionService {
                 }
                 if (event.type.includes("::liquidity::RemoveLiquidityEvent")) {
                     const { amount_x, amount_y } = event.parsedJson as
-                    { amount_x: string, amount_y: string }
+                        { amount_x: string, amount_y: string }
                     incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_x))
                     incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_y))
                 }

@@ -7,7 +7,7 @@ import {
 import { SuiSwapService } from "./sui-swap.service"
 import { SuiFlexibleSwapParams, SuiFlexibleSwapResponse } from "../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
-import { TokenId } from "@modules/databases"
+import { MemDbQueryService, MemDbService, TokenId } from "@modules/databases"
 import { CoinArgument } from "../types"
 import { FeeToService } from "./fee-to.service"
 import { SignerService } from "../signers"
@@ -24,6 +24,8 @@ export class SuiFlexibleSwapService {
     private readonly suiExecutionService: SuiExecutionService,
     @InjectSuiClients()
     private readonly suiClients: Record<Network, Array<SuiClient>>,
+    private readonly memDbQueryService: MemDbQueryService,
+    private readonly memDbService: MemDbService,
     ) {}
 
     /**
@@ -34,7 +36,6 @@ export class SuiFlexibleSwapService {
         network = Network.Mainnet,
         tokenOut,
         txb,
-        tokens,
         slippage,
         accountAddress,
         suiTokenIns,
@@ -59,7 +60,7 @@ export class SuiFlexibleSwapService {
             if (!amountIn) {
                 throw new Error("Amount in is required")
             }
-            const token = tokens.find(token => token.displayId === _tokenId)
+            const token = this.memDbQueryService.findTokenById(_tokenId)
             if (!token) {
                 throw new Error("Token not found")
             }
@@ -82,14 +83,12 @@ export class SuiFlexibleSwapService {
             const { routerId, quoteData, amountOut } = await this.suiSwapService.quote({
                 tokenIn: _tokenId,
                 tokenOut,
-                tokens,
                 amountIn: sourceCoin.coinAmount,
                 network
             })
             const { coinOut } = await this.suiSwapService.swap({
                 tokenIn: _tokenId,
                 tokenOut,
-                tokens,
                 amountIn: sourceCoin.coinAmount,
                 network,
                 fromAddress: accountAddress,
@@ -115,7 +114,6 @@ export class SuiFlexibleSwapService {
                     txb,
                     amount: estimatedAmountOut.sub(depositAmount),
                     tokenId: tokenOut,
-                    tokens,
                     network,
                     sourceCoin: mergedCoinOut,
                 })

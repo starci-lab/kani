@@ -1,5 +1,5 @@
 import { ObjectType, Field } from "@nestjs/graphql"
-import { DexSchema, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
+import { DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
 import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
 /**
  * GraphQL response type for the tokens query.
@@ -47,4 +47,20 @@ export class DexesResponse
         description: "List of dexes returned by the query.",
     })
         data: Array<DexSchema>
+}
+
+/**
+ * GraphQL response type for the gas config query.
+ */
+@ObjectType({
+    description: "GraphQL response object for fetching the gas config.",
+})
+export class GasConfigResponse
+    extends AbstractGraphQLResponse
+    implements IAbstractGraphQLResponse<GasConfig>
+{
+    @Field(() => GasConfig, {
+        description: "The gas config returned by the query.",
+    })
+        data: GasConfig
 }

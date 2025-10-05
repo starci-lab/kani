@@ -6,7 +6,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId } from "@modules/databases"
+import { DexId, DexSchema, MemDbService, TokenSchema } from "@modules/databases"
 import { BN } from "bn.js"
 import { InjectMomentumClmmSdks } from "./momentum.decorators"
 import { MmtSDK } from "@mmt-finance/clmm-sdk"
@@ -17,11 +17,10 @@ export class MomentumFetcherService implements IFetchService {
     constructor(
         @InjectMomentumClmmSdks()
         private readonly clmmSdks: Record<Network, MmtSDK>,
+        private readonly memDbService: MemDbService,
     ) {}
 
     async fetchPools({
-        liquidityPools,
-        tokens,
         network = Network.Mainnet,
     }: FetchPoolsParams): Promise<FetchPoolsResponse> {
         // Skip testnet (only support mainnet)
@@ -29,12 +28,15 @@ export class MomentumFetcherService implements IFetchService {
             throw new Error("Testnet is not supported")
         }
         // Filter only Momentum pools on Sui mainnet
-        const targetPools = liquidityPools.filter(
-            (pool) =>
-                pool.dexId === DexId.Momentum &&
+        const targetPools = this.memDbService.liquidityPools
+            // safe filter to avoid undefined dex
+            .filter(liquidityPool => !!liquidityPool.dex)
+            .filter(
+                (pool) =>
+                    (pool.dex as DexSchema).displayId === DexId.Momentum &&
                 pool.network === network &&
                 pool.chainId === ChainId.Sui,
-        )
+            )
         if (targetPools.length === 0) {
             return { pools: [] }
         }
@@ -51,31 +53,31 @@ export class MomentumFetcherService implements IFetchService {
                     return targetPools.some(
                         (targetPool) => 
                         {
-                            const tokenA = tokens.find(
+                            const tokenA = this.memDbService.tokens.find(
                                 (token) => token.tokenAddress === pool.tokenX.coinType
                                 && token.network === network
                                 && token.chainId === ChainId.Sui,
                             )
-                            const tokenB = tokens.find(
+                            const tokenB = this.memDbService.tokens.find(
                                 (token) => token.tokenAddress === pool.tokenY.coinType
                                 && token.network === network
                                 && token.chainId === ChainId.Sui,
                             )
                             return targetPool.fee === feeDecimals.toNumber()
-                            && targetPool.tokenAId === tokenA?.displayId
-                            && targetPool.tokenBId === tokenB?.displayId
+                            && (targetPool.tokenA as TokenSchema).displayId === tokenA?.displayId
+                            && (targetPool.tokenB as TokenSchema).displayId === tokenB?.displayId
                         }
                     )
                 }
             )
             .map((pool) => {
-                const token0 = tokens.find(
+                const token0 = this.memDbService.tokens.find(
                     (token) =>
                         token.tokenAddress === pool.tokenX.coinType &&
                     token.network === network &&
                     token.chainId === ChainId.Sui,
                 )
-                const token1 = tokens.find(
+                const token1 = this.memDbService.tokens.find(
                     (token) =>
                         token.tokenAddress === pool.tokenY.coinType &&
                     token.network === network &&
@@ -104,7 +106,7 @@ export class MomentumFetcherService implements IFetchService {
                         .map((rewarder) => rewarder.coin_type)
                         .map(
                             (rewardAddr) =>
-                            tokens.find(
+                            this.memDbService.tokens.find(
                                 (token) =>
                                     token.tokenAddress === rewardAddr &&
                                     token.network === network,

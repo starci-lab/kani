@@ -8,7 +8,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId } from "@modules/databases"
+import { DexId, DexSchema, MemDbService } from "@modules/databases"
 import { BN } from "bn.js"
 
 @Injectable()
@@ -16,11 +16,10 @@ export class TurbosFetcherService implements IFetchService {
     constructor(
         @InjectTurbosClmmSdks()
         private readonly turbosClmmSdks: Record<Network, TurbosSdk>,
+        private readonly memDbService: MemDbService,
     ) { }
 
     async fetchPools({
-        liquidityPools,
-        tokens,
         network = Network.Mainnet,
     }: FetchPoolsParams): Promise<FetchPoolsResponse> {
         // skip testnet
@@ -29,12 +28,15 @@ export class TurbosFetcherService implements IFetchService {
         }
         const turbosSdk = this.turbosClmmSdks[network]  
         // liquidity in sui network only
-        liquidityPools = liquidityPools.filter(
-            (liquidityPool) =>
-                liquidityPool.dexId === DexId.Turbos &&
+        const liquidityPools = this.memDbService.liquidityPools
+            // safe filter to avoid undefined dex
+            .filter(liquidityPool => !!liquidityPool.dex)
+            .filter(
+                (liquidityPool) =>
+                    (liquidityPool.dex as DexSchema).displayId === DexId.Turbos &&
                 liquidityPool.network === network &&
                 liquidityPool.chainId === ChainId.Sui,
-        )
+            )
         const pools: Array<FetchedPool> = []
         for (const liquidityPool of liquidityPools) {
             const fetchedPool = await turbosSdk.pool.getPool(
@@ -51,13 +53,13 @@ export class TurbosFetcherService implements IFetchService {
                 fee: Number(fetchedPool.fee),
                 liquidity: new BN(fetchedPool.liquidity),
                 liquidityPool,
-                token0: tokens.find(
+                token0: this.memDbService.tokens.find(
                     (token) =>
                         token.tokenAddress === fetchedPool.coin_a &&
                         token.network === network &&
                         token.chainId === ChainId.Sui,
                 )!,
-                token1: tokens.find(
+                token1: this.memDbService.tokens.find(
                     (token) =>
                         token.tokenAddress === fetchedPool.coin_b &&
                         token.network === network &&
@@ -68,7 +70,7 @@ export class TurbosFetcherService implements IFetchService {
                     .map((rewarderInfo) => rewarderInfo.fields.vault_coin_type)
                     .map(
                         (rewardTokenAddress) =>
-                            tokens.find(
+                            this.memDbService.tokens.find(
                                 (token) =>
                                     token.tokenAddress === rewardTokenAddress &&
                                     token.network === network,

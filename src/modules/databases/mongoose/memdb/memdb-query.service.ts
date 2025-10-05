@@ -1,23 +1,28 @@
 import { Injectable } from "@nestjs/common"
 import { MemDbService } from "./memdb.service"
-import { DexId, LiquidityPoolId } from "@modules/databases"
+import { DexId, LiquidityPoolId, LiquidityPoolSchema } from "@modules/databases"
 import { Types } from "mongoose"
 
 @Injectable()
 export class MemDbQueryService {
     constructor(private readonly memDbService: MemDbService) {}
 
-    public populateLiquidityPools() {
+    public populateLiquidityPools(): Array<LiquidityPoolSchema> {
         return this.memDbService.liquidityPools.map((liquidityPool) => {
-            return {
-                ...liquidityPool,
-                tokenA: this.memDbService.tokens.find(
-                    (token) => token.id.toString() === liquidityPool.tokenA.toString(),
-                ),
-                tokenB: this.memDbService.tokens.find(
-                    (token) => token.id.toString() === liquidityPool.tokenB.toString(),
-                ),
-            }
+            // set the liquidity pool tokens
+            liquidityPool.tokenA = this.memDbService.tokens.find(
+                (token) => token.id.toString() === liquidityPool.tokenA.toString(),
+            )!
+            liquidityPool.tokenB = this.memDbService.tokens.find(
+                (token) => token.id.toString() === liquidityPool.tokenB.toString(),
+            )!
+            liquidityPool.rewardTokens = liquidityPool.rewardTokens.map((rewardToken) => this.memDbService.tokens.find(
+                (token) => token.id.toString() === rewardToken.toString(),
+            )!)
+            liquidityPool.dex = this.memDbService.dexes.find(
+                (dex) => dex.id.toString() === liquidityPool.dex.toString(),
+            )!
+            return liquidityPool
         })
     }
 

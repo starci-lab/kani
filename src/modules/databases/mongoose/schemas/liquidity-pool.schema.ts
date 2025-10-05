@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, GraphQLTypeTokenType, Network, TokenType } from "@modules/common"
+import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
@@ -61,13 +61,9 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
         chainId: ChainId
 
-    @Field(() => [GraphQLTypeTokenType], { description: "The types of farming pools this token can participate in" })
-    @Prop({ type: [String], enum: TokenType })
-        farmTokenTypes: Array<TokenType>
-
-    @Field(() => Boolean, { description: "Whether the pool is priority A over B", nullable: true })
-    @Prop({ type: Boolean, nullable: true })
-        priorityAOverB?: boolean
+    @Field(() => [ID], { description: "The reward tokens of the pool" })
+    @Prop({ type: [MongooseSchema.Types.ObjectId], ref: TokenSchema.name })
+        rewardTokens: Array<TokenSchema | Types.ObjectId>
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)

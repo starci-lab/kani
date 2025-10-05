@@ -1,5 +1,5 @@
 import { ChainId, Network } from "@modules/common"
-import { TokenId, TokenLike } from "@modules/databases"
+import { TokenId } from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { RouterId } from "../swap/swap.interface"
@@ -31,9 +31,6 @@ export interface ComputeZapAmountsParams {
 
     /** tokenB id */
     tokenBId: TokenId
-
-    /** tokens */
-    tokens: Array<TokenLike>
 
     /** network */
     network?: Network

@@ -5,6 +5,7 @@ import { envConfig } from "@modules/env"
 import { swaggerBuilder } from "@modules/docs"
 import { setupCors } from "@modules/cors"
 import { AuthenticatedRedisIoAdapter } from "@modules/socketio"
+import compression from "compression"
 
 const bootstrap = async () => {
     const app = await NestFactory.create(AppModule)
@@ -30,6 +31,7 @@ for powering Kani's applications and integrations.",
     const redisIoAdapter = new AuthenticatedRedisIoAdapter(app)
     await redisIoAdapter.connectToRedis()
     app.useWebSocketAdapter(redisIoAdapter)
+    app.use(compression())
     // start the app
     await app.listen(envConfig().port.core)
 }
