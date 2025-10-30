@@ -5,6 +5,9 @@ import { DexId } from "@modules/databases"
 import { TurbosModule } from "./turbos"
 import { MomentumModule } from "./momentum"
 import { FlowXModule } from "./flowx"
+import { RaydiumModule } from "./raydium"
+import { OrcaModule } from "./orca"
+import { MeteoraModule } from "./meteora"
 import { LiquidityPoolService } from "./liquidity-pool.service"
 
 @Module({})
@@ -46,6 +49,33 @@ export class DexesModule extends ConfigurableModuleClass {
             || options.dexes.includes(DexId.FlowX)
         ) {
             dexModules.push(FlowXModule.register({
+                isGlobal: options.isGlobal,
+            }))
+        }
+
+        if (
+            !options.dexes
+            || options.dexes.includes(DexId.Raydium)
+        ) {
+            dexModules.push(RaydiumModule.register({
+                isGlobal: options.isGlobal,
+            }))
+        }
+
+        if (
+            !options.dexes
+            || options.dexes.includes(DexId.Orca)
+        ) {
+            dexModules.push(OrcaModule.register({
+                isGlobal: options.isGlobal,
+            }))
+        }
+
+        if (
+            !options.dexes
+            || options.dexes.includes(DexId.Meteora)
+        ) {
+            dexModules.push(MeteoraModule.register({
                 isGlobal: options.isGlobal,
             }))
         }

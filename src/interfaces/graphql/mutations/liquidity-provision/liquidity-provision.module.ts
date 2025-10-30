@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import { LiquidityProvisionService } from "./liquidity-provision.service"
 import { ConfigurableModuleClass } from "./liquidity-provision.module-definition"
-import { LiquidityProvisionResolver } from "./liquidity-provision.resolvers"
+import { LiquidityProvisionResolver } from "./liquidity-provision.resolver"
 
 @Module({
     providers: [LiquidityProvisionService, LiquidityProvisionResolver],

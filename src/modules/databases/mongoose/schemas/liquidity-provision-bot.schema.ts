@@ -6,6 +6,7 @@ import { Schema as MongooseSchema, Types } from "mongoose"
 import { UserSchema } from "./user.schema"
 import { TokenSchema } from "./token.schema"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
+import { ExplorerId, GraphQLTypeExplorerId } from "../../enums"
 /**
  * GraphQL object type representing a liquidity provision bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -80,8 +81,42 @@ export class LiquidityProvisionBotSchema extends AbstractSchema {
     })
     @Prop({ type: Boolean, required: true, default: false })
         initialized: boolean
-}
 
+    @Field(() => [String], {
+        description: "The RPC URLs of the bot",
+        defaultValue: [],
+    })
+    @Prop({ type: [String], default: [] })
+        rpcUrls: Array<string>
+
+    @Field(() => GraphQLTypeExplorerId, {
+        description: "The explorer id of the bot",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false, enum: ExplorerId })
+        explorerId: ExplorerId
+
+    @Field(() => Boolean, {
+        description: "Whether the bot is running",
+        defaultValue: false,
+    })
+    @Prop({ type: Boolean, required: true, default: false })
+        running: boolean
+
+    @Field(() => Date, {
+        description: "The date and time the bot was last run",
+        nullable: true,
+    })
+    @Prop({ type: Date, required: false })
+        lastRunAt: Date
+
+    @Field(() => Date, {
+        description: "The date and time the bot was stopped",
+        nullable: true,
+    })
+    @Prop({ type: Date, required: false })
+        stoppedAt: Date
+}
 /**
  * The actual Mongoose schema generated from the class definition above.
  * This is what gets registered with the NestJS Mongoose module.

@@ -15,6 +15,9 @@ import {
 } from "./momentum"
 import { TurbosActionService, TurbosFetcherService, TurbosMetadataService } from "./turbos"
 import { FlowXActionService, FlowXFetcherService, FlowXMetadataService } from "./flowx"
+import { RaydiumActionService, RaydiumFetcherService, RaydiumMetadataService } from "./raydium"
+import { OrcaActionService, OrcaFetcherService, OrcaMetadataService } from "./orca"
+import { MeteoraActionService, MeteoraFetcherService, MeteoraMetadataService } from "./meteora"
 
 @Injectable()
 export class LiquidityPoolService {
@@ -79,6 +82,51 @@ export class LiquidityPoolService {
                 const fetcher = this.moduleRef.get(FlowXFetcherService, { strict: false })
                 const metadata = this.moduleRef.get(FlowXMetadataService, { strict: false })
                 const action = this.moduleRef.get(FlowXActionService, { strict: false })
+                if (metadata.metadata().chainId !== chainId) {
+                    continue
+                }
+                dexes.push({
+                    dexId,
+                    fetcher,
+                    metadata,
+                    action
+                })
+                break
+            }
+            case DexId.Raydium: {
+                const fetcher = this.moduleRef.get(RaydiumFetcherService, { strict: false })
+                const metadata = this.moduleRef.get(RaydiumMetadataService, { strict: false })
+                const action = this.moduleRef.get(RaydiumActionService, { strict: false })
+                if (metadata.metadata().chainId !== chainId) {
+                    continue
+                }
+                dexes.push({
+                    dexId,
+                    fetcher,
+                    metadata,
+                    action
+                })
+                break
+            }
+            case DexId.Orca: {
+                const fetcher = this.moduleRef.get(OrcaFetcherService, { strict: false })
+                const metadata = this.moduleRef.get(OrcaMetadataService, { strict: false })
+                const action = this.moduleRef.get(OrcaActionService, { strict: false })
+                if (metadata.metadata().chainId !== chainId) {
+                    continue
+                }
+                dexes.push({
+                    dexId,
+                    fetcher,
+                    metadata,
+                    action
+                })
+                break
+            }
+            case DexId.Meteora: {
+                const fetcher = this.moduleRef.get(MeteoraFetcherService, { strict: false })
+                const metadata = this.moduleRef.get(MeteoraMetadataService, { strict: false })
+                const action = this.moduleRef.get(MeteoraActionService, { strict: false })
                 if (metadata.metadata().chainId !== chainId) {
                     continue
                 }

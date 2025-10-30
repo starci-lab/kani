@@ -1,4 +1,105 @@
 <p align="center">
+  <img src="https://r2.starci.net/protocols/solana.png" width="96" alt="Kani" />
+</p>
+
+<h2 align="center">Kani — Automated Liquidity Bot for Ultra‑Thin CLMM Ranges</h2>
+
+<p align="center">
+Amplify capital with ultra‑thin ranges and a smart exit engine powered by CEX + oracle insights. Originally built on Sui, now shifting to Solana for latency and scale.
+</p>
+
+---
+
+### Nội dung
+- Giới thiệu nhanh
+- Kiến trúc & định hướng (Sui → Solana)
+- Cấu trúc mã nguồn (monorepo)
+- Cài đặt & chạy nhanh
+- Cấu hình môi trường
+- Roadmap (Solana)
+- Tài liệu liên quan
+
+### Giới thiệu nhanh
+Kani là một liquidity bot tự động hóa việc mở/duy trì các vị thế CLMM với phạm vi siêu mỏng (ultra‑thin), tối đa hóa APR như một dạng đòn bẩy tự nhiên. Bot sử dụng dữ liệu đa nguồn (CEX, oracle, on‑chain) để phát hiện tín hiệu bất thường và thoát vị thế trước khi giá DEX bị điều chỉnh.
+
+Điểm khác biệt:
+- Ultra‑thin ranges được cập nhật với độ trễ thấp.
+- Pool scoring theo thanh khoản, biến động, độ ổn định yield.
+- Risk module kích hoạt thoát/hedge dựa trên tín hiệu đa nguồn (CEX lead, oracle delta, swap pressure).
+
+### Kiến trúc & định hướng
+- Kani khởi đầu trên Sui (đã có adapters: Cetus, Turbos, Momentum, FlowX).
+- Đang dịch chuyển sang Solana để tận dụng TPS cao, latency thấp và hệ sinh thái CLMM phong phú (Raydium, Orca, Meteora).
+- Mô hình module hóa: mỗi DEX là một adapter riêng (fetch/metadata/action) và được wiring động qua `DexesModule` + `LiquidityPoolService`.
+
+Tham khảo chi tiết tại: `app/ARCHITECTURE.md`.
+
+### Cấu trúc mã nguồn (monorepo)
+Các thư mục đáng chú ý dưới `app/`:
+- `src/modules/blockchains/dexes/`: Adapters cho DEX (Sui và Solana).
+  - Đã có: `cetus/`, `turbos/`, `momentum/`, `flowx/` (Sui)
+  - Mới (Solana, scaffold): `raydium/`, `orca/`, `meteora/`
+- `src/modules/blockchains/dexes/dexes.module.ts`: Đăng ký động các DEX theo `DexId`.
+- `src/modules/blockchains/dexes/liquidity-pool.service.ts`: Trả về danh sách adapter theo `chainId` (Sui/Solana).
+- `src/modules/databases/enums/ids.ts`: Khai báo `DexId`, `ChainId`, và các enum liên quan.
+- `src/modules/env/config.ts`: Cấu hình runtime (DB, RPC, Redis, v.v.).
+
+### Cài đặt & chạy nhanh
+Yêu cầu: Node.js 18+, pnpm/npm, MongoDB/SQLite (tùy cấu hình), Redis (nếu bật queue), RPC endpoints (Sui/Solana).
+
+```bash
+# Cài dependencies (trong thư mục app/)
+npm install
+
+# Development
+npm run start:dev
+
+# Build + Production
+npm run build
+npm run start:prod
+
+# Lint & Test
+npm run lint
+npm run test
+npm run test:e2e
+```
+
+Chạy dịch vụ cụ thể (ví dụ các app con trong `app/apps/*`) có thể cấu hình qua Nest CLI hoặc script riêng nếu cần.
+
+### Cấu hình môi trường
+Xem `app/src/modules/env/config.ts` để biết đầy đủ key. Các trường chính:
+- RPC endpoints: Solana, Sui
+- Databases: MongoDB/SQLite
+- Cache/Queue: Redis
+- API keys: CEX, Oracles (Pyth, v.v.)
+
+Gợi ý biến môi trường (ví dụ):
+```
+SOLANA_RPC_URL=
+SUI_RPC_URL=
+MONGODB_URI=
+REDIS_URL=
+PYTH_ENDPOINT=
+# API keys CEX nếu dùng
+BINANCE_API_KEY=
+BINANCE_API_SECRET=
+```
+
+### Roadmap (Solana)
+- Hoàn thiện adapters: Raydium, Orca, Meteora (fetchers, actions, test cases).
+- Ingestion: realtime index (ticks/swaps/pools) qua RPC + backfill.
+- Scoring + Allocation: tối ưu trọng số theo biến động/phí/độ sâu.
+- Risk engine: thêm tín hiệu (funding, order‑book walls, oracle drift) và chiến lược hedge.
+
+### Tài liệu liên quan
+- Kiến trúc: `app/ARCHITECTURE.md`
+- UI (demo): `app/ui/lp-bot-ui`
+- DEX adapters: `app/src/modules/blockchains/dexes/*`
+
+—
+
+Kani sounds like a dream — but it’s real. Now in private testing, and soon launching publicly.
+<p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 

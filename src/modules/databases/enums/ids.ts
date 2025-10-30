@@ -79,6 +79,9 @@ export enum DexId {
     Turbos = "turbos",
     Momentum = "momentum",
     FlowX = "flowx",
+    Raydium = "raydium",
+    Orca = "orca",
+    Meteora = "meteora",
 }
 
 export const GraphQLTypeDexId = createEnumType(DexId)
@@ -98,6 +101,15 @@ registerEnumType(GraphQLTypeDexId, {
         },
         [DexId.FlowX]: {
             description: "The flowx dex",
+        },
+        [DexId.Raydium]: {
+            description: "The raydium dex",
+        },
+        [DexId.Orca]: {
+            description: "The orca dex",
+        },
+        [DexId.Meteora]: {
+            description: "The meteora dex",
         },
     },
 })
@@ -177,6 +189,40 @@ registerEnumType(GraphQLTypeConfigId, {
     valuesMap: {
         [ConfigId.Gas]: {
             description: "The gas config",
+        },
+    },
+})
+
+export enum ExplorerId {
+    // SUI
+    SuiVision = "suiVision",
+    SuiScan = "suiScan",
+    // SOLANA
+    Solscan = "solscan",
+    SolanaFM = "solanaFm",
+    SolanaExplorer = "solanaExplorer",
+}
+
+export const GraphQLTypeExplorerId = createEnumType(ExplorerId)
+
+registerEnumType(GraphQLTypeExplorerId, {
+    name: "ExplorerId",
+    description: "The name of the explorer",
+    valuesMap: {
+        [ExplorerId.SuiVision]: {
+            description: "The sui vision explorer",
+        },
+        [ExplorerId.SuiScan]: {
+            description: "The sui scan explorer",
+        },
+        [ExplorerId.Solscan]: {
+            description: "The solscan explorer",
+        },
+        [ExplorerId.SolanaFM]: {
+            description: "The solana fm explorer",
+        },
+        [ExplorerId.SolanaExplorer]: {
+            description: "The solana explorer",
         },
     },
 })
