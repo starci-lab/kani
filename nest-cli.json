@@ -19,6 +19,33 @@
         "tsConfigPath": "apps/app/tsconfig.app.json"
       }
     },
+    "bot-executor": {
+      "type": "application",
+      "root": "apps/bot-executor",
+      "entryFile": "main",
+      "sourceRoot": "apps/bot-executor/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/bot-executor/tsconfig.app.json"
+      }
+    },
+    "bot-interface": {
+      "type": "application",
+      "root": "apps/bot-interface",
+      "entryFile": "main",
+      "sourceRoot": "apps/bot-interface/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/bot-interface/tsconfig.app.json"
+      }
+    },
+    "core": {
+      "type": "application",
+      "root": "apps/core",
+      "entryFile": "main",
+      "sourceRoot": "apps/core/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/core/tsconfig.app.json"
+      }
+    },
     "data-fetcher": {
       "type": "application",
       "root": "apps/data-fetcher",
@@ -26,6 +53,15 @@
       "sourceRoot": "apps/data-fetcher/src",
       "compilerOptions": {
         "tsConfigPath": "apps/data-fetcher/tsconfig.app.json"
+      }
+    },
+    "kani-interface": {
+      "type": "application",
+      "root": "apps/kani-interface",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-interface/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-interface/tsconfig.app.json"
       }
     },
     "lp-bot": {
@@ -44,15 +80,6 @@
       "sourceRoot": "apps/test-fn/src",
       "compilerOptions": {
         "tsConfigPath": "apps/test-fn/tsconfig.app.json"
-      }
-    },
-    "core": {
-      "type": "application",
-      "root": "apps/core",
-      "entryFile": "main",
-      "sourceRoot": "apps/core/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/core/tsconfig.app.json"
       }
     }
   }

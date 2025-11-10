@@ -8,6 +8,7 @@ import { InjectMongoose, SessionSchema } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
 import { CacheKey, CacheManagerService, createCacheKey } from "@modules/cache"
 import { MsService } from "@modules/mixin"
+import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 
 export interface GenerateParams {
     id: string
@@ -38,7 +39,7 @@ export class JwtAuthService {
         }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
-            throw new Error("User ID is required to generate access token and refresh token")
+            throw new UserIdRequiredToGenerateAccessTokenException("User ID is required to generate access token and refresh token")
         }
         // generate sessionId
         const sessionId = uuidv4()

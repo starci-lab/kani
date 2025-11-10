@@ -8,7 +8,7 @@ import {
 import { PassportModule as NestPassportModule } from "@nestjs/passport"
 import { ConfigurableModuleClass } from "./passport.module-definition"
 import { JwtModule } from "@nestjs/jwt"
-import { JwtAuthService } from "./jwt/jwt-auth.service"
+import { JwtAuthService } from "./jwt"
 
 @Module({
     imports: [

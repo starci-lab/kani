@@ -22,14 +22,17 @@
       "@apps/*": [
         "./apps/*"
       ],
-      "@features/*": [
-        "./src/features/*"
+      "@exceptions": [
+        "./src/exceptions"
+      ],
+      "@typedefs": [
+        "./src/typedefs"
+      ],
+      "@utils": [
+        "./src/utils"
       ],
       "@modules/*": [
         "./src/modules/*"
-      ],
-      "@interfaces/*": [
-        "./src/interfaces/*"
       ]
     }
   }

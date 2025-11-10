@@ -7,7 +7,6 @@ import { MomentumModule } from "./momentum"
 import { FlowXModule } from "./flowx"
 import { RaydiumModule } from "./raydium"
 import { OrcaModule } from "./orca"
-import { MeteoraModule } from "./meteora"
 import { LiquidityPoolService } from "./liquidity-pool.service"
 
 @Module({})
@@ -71,14 +70,6 @@ export class DexesModule extends ConfigurableModuleClass {
             }))
         }
 
-        if (
-            !options.dexes
-            || options.dexes.includes(DexId.Meteora)
-        ) {
-            dexModules.push(MeteoraModule.register({
-                isGlobal: options.isGlobal,
-            }))
-        }
         
         return {
             ...dynamicModule,

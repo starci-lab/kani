@@ -174,5 +174,13 @@ export const envConfig = () => ({
         solana: {
             endpoint: process.env.SOLANA_PYTH_ENDPOINT || "https://hermes-beta.pyth.network",
         },
-    }
+    },
+    botExecutor: {
+        batchId: process.env.BOX_EXECUTOR_BATCH_ID ? parseInt(process.env.BOX_EXECUTOR_BATCH_ID, 10) : 1,
+    },
+    ports: {
+        kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,
+        botCoordinator: process.env.BOT_COORDINATOR_PORT ? parseInt(process.env.BOT_COORDINATOR_PORT, 10) : 3002,
+        botExecutor: process.env.BOT_EXECUTOR_PORT ? parseInt(process.env.BOT_EXECUTOR_PORT, 10) : 3003,
+    },
 })

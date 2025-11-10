@@ -1,8 +1,9 @@
 import { envConfig } from "@modules/env"
-import { ForbiddenException, Injectable } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { PassportStrategy } from "@nestjs/passport"
 import { ExtractJwt, Strategy } from "passport-jwt"
 import { UserJwtLike } from "../types"
+import { UserHasNotCompletedTOTPVerificationException } from "@exceptions"
 
 export const JWT_ACCESS_TOKEN_STRATEGY = "jwt-access-token"
 @Injectable()
@@ -40,7 +41,7 @@ export class JwtAccessTokenOnlyVerifiedTOTPStrategy extends PassportStrategy(
     validate(payload: UserJwtLike) {
         if (!payload.totpVerified) {
             // You can also throw UnauthorizedException here, but Forbidden is clearer for "logged in but not verified"
-            throw new ForbiddenException("User has not completed TOTP verification")
+            throw new UserHasNotCompletedTOTPVerificationException("User has not completed TOTP verification")
         }
         return payload
     }
