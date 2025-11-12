@@ -202,5 +202,6 @@ export const envConfig = () => ({
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,
         botCoordinator: process.env.BOT_COORDINATOR_PORT ? parseInt(process.env.BOT_COORDINATOR_PORT, 10) : 3002,
         botExecutor: process.env.BOT_EXECUTOR_PORT ? parseInt(process.env.BOT_EXECUTOR_PORT, 10) : 3003,
+        kaniObserver: process.env.KANI_OBSERVER_PORT ? parseInt(process.env.KANI_OBSERVER_PORT, 10) : 3004,
     },
 })

@@ -6,9 +6,11 @@ import { AuthCredentials, JwtRefreshTokenPayload, JwtAccessTokenPayload } from "
 import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectPrimaryMongoose, SessionSchema } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
-import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
-import { MsService } from "@modules/mixin"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { MsService, InjectSuperJson } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
+import { Cache } from "cache-manager"
+import SuperJSON from "superjson"
 
 export interface GenerateParams {
     id: string
@@ -21,8 +23,11 @@ export interface GenerateParams {
 export class JwtAuthService {
     constructor(
         private readonly jwtService: NestJwtService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
-        private readonly cacheService: CacheService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly msService: MsService,
@@ -75,16 +80,16 @@ export class JwtAuthService {
         await this.asyncService.allIgnoreError([
             // Persist sessionId in DB or cache here
             (async () => {
-                await this.cacheService.set({ 
-                    key: createCacheKey(
+                await this.cacheManager.set(
+                    createCacheKey(
                         CacheKey.SessionId,
                         sessionId
-                    ), 
-                    value: sessionId,
-                    ttl: this.msService.fromString(
+                    ),
+                    sessionId,
+                    this.msService.fromString(
                         envConfig().jwt.refreshToken.expiration
-                    ) 
-                })
+                    )
+                )
             })(),
             // Persist refreshToken in DB or cache here
             (async () => {

@@ -1,4 +1,4 @@
-import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { HermesClient, PriceUpdate } from "@pythnetwork/hermes-client"
 import { InjectHermesClient } from "./pyth.decorators"
@@ -8,13 +8,18 @@ import BN from "bn.js"
 import { computeDenomination } from "@modules/common"
 import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
 import { EventEmitterService, EventName } from "@modules/event"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { Cache } from "cache-manager"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class PythService implements OnApplicationBootstrap {
     constructor(
         @InjectHermesClient() private readonly hermesClient: HermesClient,
-        private readonly cacheService: CacheService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly events: EventEmitterService,
         private readonly asyncService: AsyncService,
@@ -50,10 +55,12 @@ export class PythService implements OnApplicationBootstrap {
                 // cache the price and emit the event in parallel
                 await this.asyncService.allIgnoreError([
                     // cache the price
-                    this.cacheService.set({
-                        key: createCacheKey(CacheKey.PythTokenPrice, token.displayId, Network.Mainnet),
-                        value: price.toNumber(),
-                    }),
+                    this.cacheManager.set(
+                        createCacheKey(CacheKey.PythTokenPrice, token.displayId, Network.Mainnet),
+                        this.superjson.stringify({
+                            price: price.toNumber(),
+                        }),
+                    ),
                     // emit the event
                     this.events.emit(
                         EventName.PythSuiPricesUpdated, {

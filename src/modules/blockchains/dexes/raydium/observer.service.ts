@@ -4,8 +4,7 @@ import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
 import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
-import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
-import { DynamicLiquidityPoolInfo } from "../../types"
+import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
 import { 
     DynamicLiquidityPoolInfoSchema, 
@@ -15,19 +14,24 @@ import {
     DexId
 } from "@modules/databases"
 import { Connection as MongooseConnection } from "mongoose"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { createObjectId } from "@modules/common"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { EventEmitterService, EventName } from "@modules/event"
+import { Cache } from "cache-manager"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
-        private readonly cacheService: CacheService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         @InjectSolanaClients()
         private readonly solanaClients: Record<Network, HttpAndWsClients<Connection>>,
         @InjectPrimaryMongoose()
@@ -67,17 +71,17 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 const state = PoolInfoLayout.decode(accountInfo.data)
                 await this.asyncService.allIgnoreError([
                     // cache the pool info
-                    this.cacheService.set<DynamicLiquidityPoolInfo>({
-                        key: createCacheKey(
+                    this.cacheManager.set(
+                        createCacheKey(
                             CacheKey.DynamicLiquidityPoolInfo, 
                             liquidityPool.displayId
                         ),
-                        value: {
+                        this.superjson.stringify({
                             tickCurrent: state.tickCurrent,
                             liquidity: new BN(state.liquidity),
                             sqrtPriceX64: new BN(state.sqrtPriceX64),
-                        },
-                    }),
+                        }),
+                    ),
                     // store the pool info in the database
                     this.connection.model(DynamicLiquidityPoolInfoSchema.name)
                         .create({

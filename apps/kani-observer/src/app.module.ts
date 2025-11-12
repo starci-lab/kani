@@ -5,13 +5,13 @@ import { MixinModule } from "@modules/mixin"
 import { CexesModule, ClientsModule, DexesModule, UtilsModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
-import { PrimaryMongoDbModule } from "@modules/databases"
+import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { SwapModule, PythModule } from "@modules/blockchains"
 import { SignersModule } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
-import { DexId } from "@modules/databases"
+// import { DexId } from "@modules/databases"
 
 @Module({
     imports: [

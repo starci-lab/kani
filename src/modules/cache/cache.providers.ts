@@ -1,6 +1,6 @@
 import { Provider } from "@nestjs/common"
 import { Cache, createCache } from "cache-manager"
-import { MEMORY_CACHE_MANAGER, REDIS_CACHE_MANAGER } from "./cache.constants"
+import { MEMORY_CACHE_MANAGER, REDIS_CACHE_MANAGER } from "./constants"
 import KeyvRedis from "@keyv/redis"
 import { envConfig } from "@modules/env"
 import Keyv from "keyv"

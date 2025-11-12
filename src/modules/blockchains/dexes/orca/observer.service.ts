@@ -1,12 +1,17 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { createObjectId, Network } from "@modules/common"
-import { DexId, DynamicLiquidityPoolInfoSchema, InjectPrimaryMongoose, LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
-import { AsyncService } from "@modules/mixin"
+import { 
+    DexId, 
+    DynamicLiquidityPoolInfoSchema, 
+    InjectPrimaryMongoose, 
+    LiquidityPoolId, 
+    PrimaryMemoryStorageService
+} from "@modules/databases"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { Connection, PublicKey } from "@solana/web3.js"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { ORCA_CLIENT_INDEX } from "./constants"
-import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
-import { DynamicLiquidityPoolInfo } from "../../types"
+import { CacheKey, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
 import { Logger as WinstonLogger } from "winston"
 import { LiquidityPoolNotFoundException } from "@exceptions"
@@ -14,13 +19,19 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Connection as MongooseConnection } from "mongoose"
 import { Whirlpool } from "./beets"
 import { EventEmitterService, EventName } from "@modules/event"
+import { InjectRedisCache } from "@modules/cache"
+import { Cache } from "cache-manager"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
-        private readonly cacheService: CacheService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         @InjectSolanaClients()
         private readonly solanaClients: Record<Network, HttpAndWsClients<Connection>>,
         @InjectPrimaryMongoose()
@@ -58,17 +69,17 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 const state = Whirlpool.struct.read(accountInfo.data, 8)
                 await this.asyncService.allIgnoreError([
                     // cache the pool info
-                    this.cacheService.set<DynamicLiquidityPoolInfo>({
-                        key: createCacheKey(
+                    this.cacheManager.set(
+                        createCacheKey(
                             CacheKey.DynamicLiquidityPoolInfo, 
                             liquidityPool.displayId
                         ),
-                        value: {
+                        this.superjson.stringify({
                             tickCurrent: state.tickCurrentIndex,
                             liquidity: new BN(state.liquidity),
                             sqrtPriceX64: new BN(state.sqrtPrice),
-                        },
-                    }),
+                        }),
+                    ),
                     // store the pool info in the database
                     this.connection.model(DynamicLiquidityPoolInfoSchema.name)
                         .create({
