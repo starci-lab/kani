@@ -72,17 +72,20 @@ export class KeypairsService {
             evmKeypair: {
                 publicKey: evmWallet.address,
                 encryptedPrivateKey: evmEncryptedPrivateKey,
-                platformId: PlatformId.Evm
+                platformId: PlatformId.Evm,
+                chainConfigs: []
             },
             suiKeypair: {
                 publicKey: suiWallet.getPublicKey().toSuiAddress(),
                 encryptedPrivateKey: suiEncryptedPrivateKey,
-                platformId: PlatformId.Sui
+                platformId: PlatformId.Sui,
+                chainConfigs: []
             },
             solanaKeypair: {
                 publicKey: solanaWallet.publicKey.toBase58(),
                 encryptedPrivateKey: solanaEncryptedPrivateKey,
-                platformId: PlatformId.Solana
+                platformId: PlatformId.Solana,
+                chainConfigs: []
             }
         }
     }

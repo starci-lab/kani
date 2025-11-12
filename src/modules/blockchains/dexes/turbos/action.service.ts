@@ -315,11 +315,11 @@ export class TurbosActionService implements IActionService {
             throw new Error("Token not found")
         }
         const positionFields = await turbosSdk.position.getPositionFields(
-            position.positionId,
+            position.id,
         )
         const txbAfterRemoveLiquidity = await turbosSdk.pool.removeLiquidity({
             txb,
-            nft: position.positionId,
+            nft: position.id,
             pool: pool.poolAddress,
             address: accountAddress,
             amountA: positionFields.tokens_owed_a,
