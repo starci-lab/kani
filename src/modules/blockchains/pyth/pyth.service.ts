@@ -1,70 +1,76 @@
-import { Injectable } from "@nestjs/common"
-import { TokenId } from "@modules/databases"
-import { ChainId, Network } from "@modules/common"
-import { PythSuiService } from "./pyth-sui.service"
-import Decimal from "decimal.js"
+import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
+import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
+import { HermesClient, PriceUpdate } from "@pythnetwork/hermes-client"
+import { InjectHermesClient } from "./pyth.decorators"
+import { PrimaryMemoryStorageService } from "@modules/databases"
+import { Network } from "@typedefs"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJson from "superjson"
+import BN from "bn.js"
+import { computeDenomination } from "@modules/common"
+import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
+import { EventEmitterService, EventName } from "@modules/event"
 import { AsyncService } from "@modules/mixin"
 
-export interface GetPricesParams {
-  tokenIds: Array<TokenId>;
-  chainId: ChainId;
-  network?: Network;
-}
-
 @Injectable()
-export class PythService {
+export class PythService implements OnApplicationBootstrap {
     constructor(
-        private readonly suiPythService: PythSuiService,
+        @InjectHermesClient() private readonly hermesClient: HermesClient,
+        private readonly cacheService: CacheService,
+        @InjectWinston() private readonly logger: WinstonLogger,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        @InjectSuperJson() private readonly superJson: SuperJson,
+        private readonly events: EventEmitterService,
         private readonly asyncService: AsyncService,
     ) {}
 
-    async getPrices({
-        tokenIds,
-        chainId,
-        network,
-    }: GetPricesParams): Promise<Partial<Record<TokenId, Decimal>>> {
-        if (network === Network.Testnet) {
-            // do nothing
-            return {}
-        }
-        switch (chainId) {
-        case ChainId.Sui: {
-            return this.suiPythService.getPrices(tokenIds)
-        }
-        case ChainId.Solana: {
-            // temporarily disabled
-            return {}
-        }
-        default:
-        // do nothing
-            return {}
-        }
+    async onApplicationBootstrap() {
+        await this.subscribeToPriceFeeds()
     }
 
-    async computeOraclePrice({
-        tokenAId,
-        tokenBId,
-        chainId,
-        network,
-    }: ComputeOraclePriceParams) {
-        const prices = await this.getPrices({
-            tokenIds: [tokenAId, tokenBId],
-            chainId,
-            network,
+    async subscribeToPriceFeeds() {
+        const tokens = this.primaryMemoryStorageService.tokens
+            .filter(
+                token => 
+                    token.network === Network.Mainnet 
+                && !!token.pythFeedId
+            )
+        if (!tokens.length) {
+            throw new TokenListIsEmptyException("No Pyth tokens found for mainnet")
+        }
+        // we use new set to avoid duplicate feed IDs
+        const feedIds = [...new Set(tokens.map(token => token.pythFeedId!))]
+
+        const stream = await this.hermesClient.getPriceUpdatesStream(
+            feedIds
+        )
+        // handle price updates
+        stream.addEventListener("message", async (data: MessageEvent<string>) => {
+            const update: PriceUpdate = JSON.parse(data.data)
+            for (const data of update.parsed ?? []) {
+                const token = tokens.find(token => token.pythFeedId?.includes(data.id))
+                if (!token) throw new PythTokenNotFoundException(data.id, `Pyth token not found for ${data.id}`)
+                const price = computeDenomination(new BN(data.ema_price.price), -data.ema_price.expo)
+                // cache the price and emit the event in parallel
+                await this.asyncService.allIgnoreError([
+                    // cache the price
+                    this.cacheService.set({
+                        key: createCacheKey(CacheKey.PythTokenPrice, token.displayId, Network.Mainnet),
+                        value: price.toNumber(),
+                    }),
+                    // emit the event
+                    this.events.emit(
+                        EventName.PythSuiPricesUpdated, {
+                            network: Network.Mainnet,
+                            tokenId: token.displayId,
+                            price: price.toNumber(),
+                        }, {
+                            withoutLocal: true,
+                        })
+                ])
+            }
         })
-        const tokenAPrice = prices[tokenAId]
-        const tokenBPrice = prices[tokenBId]
-        if (!tokenAPrice || !tokenBPrice) {
-            // we return undefined if the price is not found
-            return undefined
-        }
-        return tokenAPrice.div(tokenBPrice)
     }
-}
-
-export interface ComputeOraclePriceParams {
-  tokenAId: TokenId;
-  tokenBId: TokenId;
-  chainId: ChainId;
-  network?: Network;
 }

@@ -20,6 +20,7 @@ import { createObjectId } from "@modules/common"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { EventEmitterService, EventName } from "@modules/event"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
@@ -32,7 +33,8 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService
+        private readonly asyncService: AsyncService,
+        private readonly events: EventEmitterService,
     ) { }   
 
     // we try to iterate through all the liquidity pools and observe them
@@ -64,6 +66,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             new PublicKey(liquidityPool.poolAddress), async (accountInfo) => {
                 const state = PoolInfoLayout.decode(accountInfo.data)
                 await this.asyncService.allIgnoreError([
+                    // cache the pool info
                     this.cacheService.set<DynamicLiquidityPoolInfo>({
                         key: createCacheKey(
                             CacheKey.DynamicLiquidityPoolInfo, 
@@ -75,13 +78,23 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                             sqrtPriceX64: new BN(state.sqrtPriceX64),
                         },
                     }),
+                    // store the pool info in the database
                     this.connection.model(DynamicLiquidityPoolInfoSchema.name)
                         .create({
                             liquidityPool: createObjectId(liquidityPoolId),
                             tickCurrent: state.tickCurrent,
                             liquidity: new BN(state.liquidity),
                             sqrtPriceX64: new BN(state.sqrtPriceX64),
-                        })
+                        }),
+                    // emit the event
+                    this.events.emit(EventName.LiquidityPoolsFetched, {
+                        liquidityPoolId,
+                        tickCurrent: state.tickCurrent,
+                        liquidity: new BN(state.liquidity),
+                        sqrtPriceX64: new BN(state.sqrtPriceX64),
+                    }, {
+                        withoutLocal: true,
+                    }),
                 ])
                 this.winstonLogger.debug(
                     WinstonLog.ObserveClmmPool, 

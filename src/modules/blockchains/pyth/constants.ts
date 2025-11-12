@@ -1,0 +1,1 @@
+export const HERMES_CLIENT = "HERMES_CLIENT"

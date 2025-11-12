@@ -1,16 +1,15 @@
 import { Module } from "@nestjs/common"
-import { PythService } from "./pyth.service"
-import { PythSuiService } from "./pyth-sui.service"
 import { ConfigurableModuleClass } from "./pyth.module-definition"
+import { createHermesClientProvider } from "./pyth.providers"
+import { PythService } from "./pyth.service"
 
 @Module({
     providers: [
         PythService,
-        PythSuiService,
+        createHermesClientProvider(),
     ],
     exports: [
         PythService,
-        PythSuiService,
     ],
 })
 export class PythModule extends ConfigurableModuleClass {}

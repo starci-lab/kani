@@ -13,6 +13,7 @@ import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Connection as MongooseConnection } from "mongoose"
 import { Whirlpool } from "./beets"
+import { EventEmitterService, EventName } from "@modules/event"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap {
@@ -25,7 +26,8 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService
+        private readonly asyncService: AsyncService,
+        private readonly events: EventEmitterService,
     ) { }
 
     onApplicationBootstrap() {
@@ -55,6 +57,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 // we remove the first 8 bytes of the account data because they are the account discriminator
                 const state = Whirlpool.struct.read(accountInfo.data, 8)
                 await this.asyncService.allIgnoreError([
+                    // cache the pool info
                     this.cacheService.set<DynamicLiquidityPoolInfo>({
                         key: createCacheKey(
                             CacheKey.DynamicLiquidityPoolInfo, 
@@ -66,13 +69,23 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                             sqrtPriceX64: new BN(state.sqrtPrice),
                         },
                     }),
+                    // store the pool info in the database
                     this.connection.model(DynamicLiquidityPoolInfoSchema.name)
                         .create({
                             liquidityPool: createObjectId(liquidityPoolId),
                             tickCurrent: state.tickCurrentIndex,
                             liquidity: new BN(state.liquidity),
                             sqrtPriceX64: new BN(state.sqrtPrice),
-                        })
+                        }),
+                    // emit the event
+                    this.events.emit(EventName.LiquidityPoolsFetched, {
+                        liquidityPoolId,
+                        tickCurrent: state.tickCurrentIndex,
+                        liquidity: new BN(state.liquidity),
+                        sqrtPriceX64: new BN(state.sqrtPrice),
+                    }, {
+                        withoutLocal: true,
+                    }),
                 ])
                 this.winstonLogger.debug(WinstonLog.ObserveClmmPool, JSON.stringify({
                     liquidityPoolId,
