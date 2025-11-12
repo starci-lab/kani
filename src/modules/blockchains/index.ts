@@ -1,4 +1,4 @@
-export * from "./price"
+export * from "./cexes"
 export * from "./keypairs"
 export * from "./pyth"
 export * from "./clients"

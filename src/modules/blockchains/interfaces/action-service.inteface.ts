@@ -1,14 +1,14 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
 import { ActionResponse } from "../dexes"
-import { PositionLike, TokenId, TokenSchema, UserLike } from "@modules/databases"
+import { PositionSchema, TokenId, TokenSchema, UserSchema } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
 
 export interface ClosePositionParams {
     pool: FetchedPool
-    position: PositionLike
+    position: PositionSchema
     network?: Network
     chainId?: ChainId
     accountAddress: string
@@ -20,7 +20,7 @@ export interface ClosePositionParams {
     // txb (sui only)
     txb?: Transaction
     // user to sign the tx
-    user?: UserLike
+    user?: UserSchema
     suiClient?: SuiClient
     stimulateOnly?: boolean
 }
@@ -42,7 +42,7 @@ export interface OpenPositionParams {
     // txb (sui only)
     txb?: Transaction
     // user to sign the tx
-    user?: UserLike
+    user?: UserSchema
     suiClient?: SuiClient
 }
 
@@ -60,7 +60,7 @@ export interface SwapParams {
     slippage?: number
     priceLimit?: number
     // user to sign the tx
-    user?: UserLike
+    user?: UserSchema
     suiClient?: SuiClient
 }
 
@@ -73,7 +73,7 @@ export interface SuiFlexibleSwapParams {
     tokenOut: TokenId
     slippage?: number
     // user to sign the tx
-    user?: UserLike
+    user?: UserSchema
     suiClient?: SuiClient
     // deposit amount
     depositAmount: BN

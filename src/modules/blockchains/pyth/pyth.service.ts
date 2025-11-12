@@ -1,13 +1,9 @@
 import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
 import { HermesClient, PriceUpdate } from "@pythnetwork/hermes-client"
 import { InjectHermesClient } from "./pyth.decorators"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { Network } from "@typedefs"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJson from "superjson"
 import BN from "bn.js"
 import { computeDenomination } from "@modules/common"
 import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
@@ -19,18 +15,16 @@ export class PythService implements OnApplicationBootstrap {
     constructor(
         @InjectHermesClient() private readonly hermesClient: HermesClient,
         private readonly cacheService: CacheService,
-        @InjectWinston() private readonly logger: WinstonLogger,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        @InjectSuperJson() private readonly superJson: SuperJson,
         private readonly events: EventEmitterService,
         private readonly asyncService: AsyncService,
     ) {}
 
     async onApplicationBootstrap() {
-        await this.subscribeToPriceFeeds()
+        await this.subscribe()
     }
 
-    async subscribeToPriceFeeds() {
+    async subscribe() {
         const tokens = this.primaryMemoryStorageService.tokens
             .filter(
                 token => 

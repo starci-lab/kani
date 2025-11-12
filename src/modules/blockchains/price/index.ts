@@ -1,5 +1,0 @@
-export * from "./price.module"
-export * from "./coin-market-cap.service"
-export * from "./coingekco.service"
-export * from "./binance"
-export * from "./gate"

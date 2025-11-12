@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common"
 import { EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
-import { ClientsModule, DexesModule, UtilsModule } from "@modules/blockchains"
+import { CexesModule, ClientsModule, DexesModule, UtilsModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
 import { PrimaryMongoDbModule } from "@modules/databases"
@@ -44,9 +44,6 @@ import { DexId } from "@modules/databases"
         SwapModule.register({
             isGlobal: true,
         }),
-        PythModule.register({
-            isGlobal: true,
-        }),
         SignersModule.register({
             isGlobal: true,
         }),
@@ -55,6 +52,9 @@ import { DexId } from "@modules/databases"
             isGlobal: true,
         }),
         UtilsModule.register({
+            isGlobal: true,
+        }),
+        PythModule.register({
             isGlobal: true,
         }),
         DexesModule.register({
@@ -75,6 +75,9 @@ import { DexId } from "@modules/databases"
                     },
                 }],
         }),
+        CexesModule.register({
+            isGlobal: true,
+        }), 
     ],
 })
 export class AppModule {}

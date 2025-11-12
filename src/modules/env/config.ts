@@ -1,4 +1,4 @@
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network } from "@typedefs"
 import { v4 } from "uuid"
 import { join } from "path"
 import ms from "ms"

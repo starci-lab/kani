@@ -99,12 +99,7 @@ export class TurbosActionService implements IActionService {
         }
         const tokenIn = priorityAOverB ? tokenA : tokenB
         const tokenOut = priorityAOverB ? tokenB : tokenA
-        const oraclePrice = await this.pythService.computeOraclePrice({
-            tokenAId,
-            tokenBId,
-            chainId: tokenA.chainId,
-            network,
-        })
+        const oraclePrice = new Decimal(1)
         const { sourceCoin } = await this.gasSuiSwapUtilsService.gasSuiSwap({
             network,
             accountAddress,

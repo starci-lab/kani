@@ -1,4 +1,3 @@
-
 import { ConfigurableModuleBuilder } from "@nestjs/common"
 import { WinstonOptions } from "./types"
 

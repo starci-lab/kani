@@ -1,7 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { Transaction } from "@mysten/sui/transactions"
 import {
-    ChainId,
     Network,
     TokenType,
     toScaledBN,
@@ -12,10 +11,10 @@ import BN from "bn.js"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { GAS_SUI_SWAP_SLIPPAGE } from "./constants"
 import { SuiSwapService } from "./sui-swap.service"
-import { PythService } from "../pyth"
 import { InjectSuiClients } from "../clients"
 import { SuiCoinManagerService } from "../utils"
 import { CoinArgument } from "../types"
+import Decimal from "decimal.js"
 
 export interface GasSuiSwapParams {
     txb?: Transaction;
@@ -43,7 +42,6 @@ export class GasSuiSwapUtilsService {
     private readonly logger = new Logger(GasSuiSwapUtilsService.name)
     constructor(
         private readonly suiSwapService: SuiSwapService,
-        private readonly pythService: PythService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
@@ -110,12 +108,7 @@ export class GasSuiSwapUtilsService {
                 sourceCoin,
             }
         }
-        const oraclePrice = await this.pythService.computeOraclePrice({
-            tokenAId: tokenNative.displayId,
-            tokenBId: tokenIn.displayId,
-            chainId: ChainId.Sui,
-            network,
-        })
+        const oraclePrice = new Decimal(1)
         if (!oraclePrice || oraclePrice.lte(0)) {
             throw new Error("Invalid oracle price")
         }

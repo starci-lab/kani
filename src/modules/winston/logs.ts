@@ -3,7 +3,7 @@ export enum WinstonLog {
     BybitWsTicker = "Bybit.WS.Ticker",
     BybitRestSnapshot = "Bybit.REST.Snapshot",
     BybitRestError = "Bybit.REST.Error",
-    BinanceWsTicker = "Binance.WS.Ticker",
+    WsLastPrice = "WS.LastPrice",
     BinanceWsOrderBook = "Binance.WS.OrderBook",
     BinanceRestSnapshot = "Binance.REST.Snapshot",
     BinanceRestError = "Binance.REST.Error",
