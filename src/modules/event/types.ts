@@ -5,10 +5,6 @@ export enum EventType {
     Kafka = "kafka"
 }
 
-export interface EventOptions {
-    types?: Array<EventType>
-}
-
 export type OnEventOptions = OnOptions & {
     prependListener?: boolean;
     suppressErrors?: boolean;

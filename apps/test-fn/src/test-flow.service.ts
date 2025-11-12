@@ -9,7 +9,7 @@ import {
     SuiExecutionService
 } from "@modules/blockchains"
 import { SignerService } from "@modules/blockchains"
-import { UserLoaderService } from "@features/fetchers"
+import { UserLoaderService } from "@modules/blockchains"
 import { SuiClient } from "@mysten/sui/client"
 import { TokenId } from "@modules/databases"
 import BN from "bn.js"
@@ -17,7 +17,7 @@ import BN from "bn.js"
 @Injectable()
 export class TestFlowService implements OnApplicationBootstrap {
     constructor(
-        private readonly dataLikeService: DataLikeService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
         private readonly signerService: SignerService,
         private readonly userLoaderService: UserLoaderService,

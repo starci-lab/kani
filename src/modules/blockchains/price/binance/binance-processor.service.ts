@@ -10,12 +10,12 @@ import { Logger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { CexId, TokenId, TokenLike } from "@modules/databases"
+import { CexId, TokenId, TokenSchema } from "@modules/databases"
 import { EventEmitterService, EventName } from "@modules/event"
 
 @Injectable()
 export class BinanceProcessorService implements OnModuleDestroy {
-    private tokens: Array<TokenLike> = []
+    private tokens: Array<TokenSchema> = []
     private symbols: Array<string> = []
     private readonly cacheManager: Cache
 
@@ -43,7 +43,7 @@ export class BinanceProcessorService implements OnModuleDestroy {
    */
     initialize(
         tokenIds: Array<TokenId>,
-        tokens: Array<TokenLike>
+        tokens: Array<TokenSchema>
     ) {
         this.tokens = tokens.filter((token) => !!token.cexSymbols && !!token.cexSymbols[CexId.Binance])
         this.symbols = this.tokens.map((token) => token.cexSymbols![CexId.Binance]).filter(

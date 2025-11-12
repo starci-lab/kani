@@ -7,7 +7,6 @@ import { MomentumModule } from "./momentum"
 import { FlowXModule } from "./flowx"
 import { RaydiumModule } from "./raydium"
 import { OrcaModule } from "./orca"
-import { LiquidityPoolService } from "./liquidity-pool.service"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -18,7 +17,7 @@ export class DexesModule extends ConfigurableModuleClass {
         const dexModules: Array<DynamicModule> = []
         if (
             !options.dexes 
-            || options.dexes.includes(DexId.Cetus)
+            || options.dexes.find((dex) => dex.dexId === DexId.Cetus)
         ) {
             dexModules.push(CetusModule.register({
                 isGlobal: options.isGlobal,
@@ -27,7 +26,7 @@ export class DexesModule extends ConfigurableModuleClass {
 
         if (
             !options.dexes
-            || options.dexes.includes(DexId.Turbos)
+            || options.dexes.find((dex) => dex.dexId === DexId.Turbos)
         ) {
             dexModules.push(TurbosModule.register({
                 isGlobal: options.isGlobal,
@@ -36,7 +35,7 @@ export class DexesModule extends ConfigurableModuleClass {
 
         if (
             !options.dexes
-            || options.dexes.includes(DexId.Momentum)
+            || options.dexes.find((dex) => dex.dexId === DexId.Momentum)
         ) {
             dexModules.push(MomentumModule.register({
                 isGlobal: options.isGlobal,
@@ -45,7 +44,7 @@ export class DexesModule extends ConfigurableModuleClass {
 
         if (
             !options.dexes
-            || options.dexes.includes(DexId.FlowX)
+            || options.dexes.find((dex) => dex.dexId === DexId.FlowX)
         ) {
             dexModules.push(FlowXModule.register({
                 isGlobal: options.isGlobal,
@@ -54,19 +53,21 @@ export class DexesModule extends ConfigurableModuleClass {
 
         if (
             !options.dexes
-            || options.dexes.includes(DexId.Raydium)
+            || options.dexes.find((dex) => dex.dexId === DexId.Raydium)
         ) {
             dexModules.push(RaydiumModule.register({
                 isGlobal: options.isGlobal,
+                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Raydium)?.enabled,
             }))
         }
 
         if (
             !options.dexes
-            || options.dexes.includes(DexId.Orca)
+            || options.dexes.find((dex) => dex.dexId === DexId.Orca)
         ) {
             dexModules.push(OrcaModule.register({
                 isGlobal: options.isGlobal,
+                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Orca)?.enabled,
             }))
         }
 
@@ -78,11 +79,9 @@ export class DexesModule extends ConfigurableModuleClass {
 
             ],
             providers: [
-                LiquidityPoolService,
             ],
             exports: [
                 ...dexModules,
-                LiquidityPoolService,
             ]
         }
     } 

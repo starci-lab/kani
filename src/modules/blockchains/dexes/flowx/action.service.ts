@@ -31,7 +31,7 @@ import { SuiCoinManagerService, SuiExecutionService, TickMathService } from "../
 import { clientIndex } from "./inner-constants"
 import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import Decimal from "decimal.js"
-import { MemDbService } from "@modules/databases"
+import { PrimaryMemoryStorageService } from "@modules/databases"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -51,7 +51,7 @@ export class FlowXActionService implements IActionService {
     private readonly suiCoinManagerService: SuiCoinManagerService,
     private readonly suiSwapService: SuiSwapService, 
     private readonly zapProtectionService: ZapProtectionService,
-    private readonly memDbService: MemDbService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -81,8 +81,8 @@ export class FlowXActionService implements IActionService {
         }
         suiClient = suiClient || this.suiClients[network][clientIndex]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -271,10 +271,10 @@ export class FlowXActionService implements IActionService {
             deadline: Date.now() + 3600 * 1000,
             collectOptions: {
                 expectedCoinOwedX: CoinAmount.fromRawAmount(
-                    this.memDbService.tokens.find(
+                    this.primaryMemoryStorageService.tokens.find(
                         (token) => token.displayId === pool.token0.displayId) as any, MaxU64),
                 expectedCoinOwedY: CoinAmount.fromRawAmount(
-                    this.memDbService.tokens.find((token) => token.displayId === pool.token1.displayId) as any, MaxU64),
+                    this.primaryMemoryStorageService.tokens.find((token) => token.displayId === pool.token1.displayId) as any, MaxU64),
             },
         }
         positionManager

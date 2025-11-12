@@ -1,4 +1,4 @@
-import { InjectMongoose, OauthProviderName, UserSchema } from "@modules/databases"
+import { InjectPrimaryMongoose, OauthProviderName } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { Connection } from "mongoose"
 import { UserGoogleLike } from "@modules/passport"
@@ -9,11 +9,12 @@ import { CodeGeneratorService } from "@modules/code"
 import { TotpService } from "@modules/totp"
 import { EncryptionService } from "@modules/crypto"
 import { ReferralCodeAlreadyExistsException, CannotCreateUserException } from "@exceptions"
+import { UserSchema } from "@modules/databases"
 
 @Injectable()
 export class AuthV1Service {
     constructor(
-    @InjectMongoose()
+    @InjectPrimaryMongoose()
     private readonly connection: Connection,
     private readonly keypairsService: KeypairsService,
     private readonly jwtAuthService: JwtAuthService,

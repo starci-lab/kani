@@ -5,9 +5,9 @@ import BN from "bn.js"
 import { Logger } from "winston"
 import { IOracleService } from "./i-oracle.interface"
 import { envConfig } from "@modules/env"
-import { MemDbService, TokenId, TokenSchema } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId, TokenSchema } from "@modules/databases"
 import { ChainId, computeDenomination, Network } from "@modules/common"
-import { CacheKey, CacheManagerService, createCacheKey } from "@modules/cache"
+import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
 import { EventEmitterService, EventName, PythSuiPricesUpdatedEvent } from "@modules/event"
 import { AsyncService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -18,9 +18,9 @@ export class PythSuiService implements IOracleService, OnModuleInit {
     private tokens: TokenSchema[] = []
 
     constructor(
-        private readonly cache: CacheManagerService,
+        private readonly cacheService: CacheService,
         @InjectWinston() private readonly logger: Logger,
-        private readonly memDb: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly events: EventEmitterService,
         private readonly asyncService: AsyncService,
     ) {
@@ -38,7 +38,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
      * - Subscribe to live feed updates
      */
     async initialize(): Promise<void> {
-        this.tokens = this.memDb.tokens.filter(
+        this.tokens = this.primaryMemoryStorageService.tokens.filter(
             token => token.chainId === ChainId.Sui
         )
         // Fetch initial prices for all networks in parallel
@@ -93,7 +93,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
         ).toNumber()
 
         // Cache price
-        await this.cache.set({
+        await this.cacheService.set({
             key: createCacheKey(CacheKey.PythTokenPrice, token.displayId, network),
             value: price,
         })
@@ -151,7 +151,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
         }
 
         if (entries.length > 0) {
-            await this.cache.mset({ entries })
+            await this.cacheService.mset({ entries })
             this.logger.debug(WinstonLog.PythSuiPricesUpdated, entries)
         }
 
@@ -168,7 +168,7 @@ export class PythSuiService implements IOracleService, OnModuleInit {
             return createCacheKey(CacheKey.PythTokenPrice, tokenId, token.network)
         })
 
-        const values = await this.cache.mget<number>(keys)
+        const values = await this.cacheService.mget<number>(keys)
         const prices: Partial<Record<TokenId, Decimal>> = {}
 
         tokenIds.forEach((tokenId, i) => {

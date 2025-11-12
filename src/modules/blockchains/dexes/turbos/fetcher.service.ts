@@ -8,7 +8,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId, DexSchema, MemDbService } from "@modules/databases"
+import { DexId, DexSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { BN } from "bn.js"
 
 @Injectable()
@@ -16,7 +16,7 @@ export class TurbosFetcherService implements IFetchService {
     constructor(
         @InjectTurbosClmmSdks()
         private readonly turbosClmmSdks: Record<Network, TurbosSdk>,
-        private readonly memDbService: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     async fetchPools({
@@ -28,7 +28,7 @@ export class TurbosFetcherService implements IFetchService {
         }
         const turbosSdk = this.turbosClmmSdks[network]  
         // liquidity in sui network only
-        const liquidityPools = this.memDbService.liquidityPools
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPools
             // safe filter to avoid undefined dex
             .filter(liquidityPool => !!liquidityPool.dex)
             .filter(
@@ -53,13 +53,13 @@ export class TurbosFetcherService implements IFetchService {
                 fee: Number(fetchedPool.fee),
                 liquidity: new BN(fetchedPool.liquidity),
                 liquidityPool,
-                token0: this.memDbService.tokens.find(
+                token0: this.primaryMemoryStorageService.tokens.find(
                     (token) =>
                         token.tokenAddress === fetchedPool.coin_a &&
                         token.network === network &&
                         token.chainId === ChainId.Sui,
                 )!,
-                token1: this.memDbService.tokens.find(
+                token1: this.primaryMemoryStorageService.tokens.find(
                     (token) =>
                         token.tokenAddress === fetchedPool.coin_b &&
                         token.network === network &&
@@ -70,7 +70,7 @@ export class TurbosFetcherService implements IFetchService {
                     .map((rewarderInfo) => rewarderInfo.fields.vault_coin_type)
                     .map(
                         (rewardTokenAddress) =>
-                            this.memDbService.tokens.find(
+                            this.primaryMemoryStorageService.tokens.find(
                                 (token) =>
                                     token.tokenAddress === rewardTokenAddress &&
                                     token.network === network,

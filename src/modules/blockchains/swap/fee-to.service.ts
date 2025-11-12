@@ -4,7 +4,7 @@ import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 import { CoinArgument } from "../types"
-import { MemDbService, TokenId } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import Decimal from "decimal.js"
 
 const SUI_ADDRESS = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
@@ -43,7 +43,7 @@ export interface AttachSuiRoiFeeParams {
 export class FeeToService {
     constructor(
         private readonly suiCoinManagerService: SuiCoinManagerService,
-        private readonly memDbService: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     private splitAmount(
@@ -73,7 +73,7 @@ export class FeeToService {
         }: AttachSuiFeeParams
     ) {
         txb = txb || new Transaction()
-        const token = this.memDbService.tokens.find(token => token.displayId === tokenId)
+        const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === tokenId)
         if (!token) {
             throw new Error("Token not found")
         }
@@ -111,7 +111,7 @@ export class FeeToService {
         sourceCoin,
     }: AttachSuiRoiFeeParams) {
         txb = txb || new Transaction()
-        const token = this.memDbService.tokens.find(token => token.displayId === tokenId)
+        const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === tokenId)
         if (!token) {
             throw new Error("Token not found")
         }

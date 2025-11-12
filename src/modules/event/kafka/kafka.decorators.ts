@@ -1,6 +1,6 @@
 
 import { Inject } from "@nestjs/common"
-import { KAFKA, KAFKA_PRODUCER, KAFKA_CONSUMER } from "./kafka.constants"
+import { KAFKA, KAFKA_PRODUCER, KAFKA_CONSUMER } from "./constants"
 
 export const InjectKafka = () => Inject(KAFKA)
 export const InjectKafkaProducer = () => Inject(KAFKA_PRODUCER)

@@ -1,6 +1,6 @@
 
 import { Provider } from "@nestjs/common"
-import { KAFKA, KAFKA_CONSUMER, KAFKA_PRODUCER } from "./kafka.constants"
+import { KAFKA, KAFKA_CONSUMER, KAFKA_PRODUCER } from "./constants"
 import { Consumer, Kafka, logLevel, Producer } from "kafkajs"
 import { MODULE_OPTIONS_TOKEN } from "./kafka.module-definition"
 import { KafkaOptions } from "./types"
@@ -28,7 +28,12 @@ export const createKafkaProducerProvider = (): Provider => ({
     provide: KAFKA_PRODUCER,
     inject: [KAFKA],
     useFactory: async (kafka: Kafka): Promise<Producer> => {
-        const producer = kafka.producer()
+        const producer = kafka.producer({ 
+            allowAutoTopicCreation: true,
+            idempotent: true,
+            maxInFlightRequests: 5,
+            retry: { retries: 5 },
+        })
         await producer.connect()
         return producer
     }

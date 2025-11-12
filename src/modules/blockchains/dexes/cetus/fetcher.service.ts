@@ -8,7 +8,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId, DexSchema, MemDbQueryService, MemDbService } from "@modules/databases"
+import { DexId, DexSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { BN } from "bn.js"
 
 @Injectable()
@@ -16,8 +16,7 @@ export class CetusFetcherService implements IFetchService {
     constructor(
         @InjectCetusClmmSdks()
         private readonly cetusClmmSdks: Record<Network, CetusClmmSDK>,
-        private readonly memDbService: MemDbService,
-        private readonly memDbQueryService: MemDbQueryService,
+        private readonly memoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     async fetchPools({
@@ -30,7 +29,7 @@ export class CetusFetcherService implements IFetchService {
         }
         // liquidity in sui network only
         const populatedLiquidityPools = 
-        this.memDbQueryService.populateLiquidityPools()
+        this.memoryStorageService.liquidityPools
             // safe filter to avoid undefined dex
             .filter(liquidityPool => !!liquidityPool.dex)
             .filter(
@@ -60,11 +59,11 @@ export class CetusFetcherService implements IFetchService {
                 currentSqrtPrice: new BN(pool.current_sqrt_price),
                 tickSpacing: Number(pool.tickSpacing),
                 fee: Number(pool.fee_rate),
-                token0: this.memDbService.tokens.find(
+                token0: this.memoryStorageService.tokens.find(
                     (token) =>
                         isSameAddress(token.tokenAddress, pool.coinTypeA) && token.network === network && token.chainId === ChainId.Sui,
                 )!,
-                token1: this.memDbService.tokens.find(
+                token1: this.memoryStorageService.tokens.find(
                     (token) =>
                         isSameAddress(token.tokenAddress, pool.coinTypeB) && token.network === network && token.chainId === ChainId.Sui,
                 )!,
@@ -76,7 +75,7 @@ export class CetusFetcherService implements IFetchService {
                     .map((rewarderInfo) => rewarderInfo.coinAddress)
                     .map(
                         (rewardTokenAddress) =>
-                            this.memDbService.tokens.find(
+                            this.memoryStorageService.tokens.find(
                                 (token) =>
                                     isSameAddress(token.tokenAddress, rewardTokenAddress) &&
                                     token.network === network,

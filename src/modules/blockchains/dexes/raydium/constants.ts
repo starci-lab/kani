@@ -1,0 +1,2 @@
+export const RAYDIUM_CLMM_SDKS = "RAYDIUM_CLMM_SDKS"
+export const RAYDIUM_CLIENTS_INDEX = 0

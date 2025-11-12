@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "strict": false,
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
@@ -25,14 +26,14 @@
       "@exceptions": [
         "./src/exceptions"
       ],
+      "@modules/*": [
+        "./src/modules/*"
+      ],
       "@typedefs": [
         "./src/typedefs"
       ],
       "@utils": [
         "./src/utils"
-      ],
-      "@modules/*": [
-        "./src/modules/*"
       ]
     }
   }

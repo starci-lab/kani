@@ -28,11 +28,9 @@ export class PriceModule extends ConfigurableModuleClass {
             }),
             CacheModule.register({
                 isGlobal: options.isGlobal,
-                types: [CacheType.Memory]
             }),
             EventModule.register({
                 isGlobal: options.isGlobal,
-                types: [EventType.Internal]
             })
         ] : []
         const modules = [

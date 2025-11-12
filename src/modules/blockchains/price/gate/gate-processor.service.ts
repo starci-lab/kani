@@ -8,34 +8,29 @@ import { GateRestService } from "./gate-rest.service"
 import { GateWsService, GateWsTicker } from "./gate-ws.service"
 import { Logger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { CacheHelpersService, CacheKey, createCacheKey } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { CexId, TokenId, TokenLike } from "@modules/databases"
+import { CacheKey, createCacheKey, CacheService } from "@modules/cache"
+import { CexId, TokenId, TokenSchema } from "@modules/databases"
 import { EventEmitterService } from "@modules/event"
 import { EventName } from "@modules/event"
 
 @Injectable()
 export class GateProcessorService implements OnModuleDestroy {
-    private tokens: Array<TokenLike> = []
+    private tokens: Array<TokenSchema> = []
     private symbols: Array<string> = []
-    private readonly cacheManager: Cache
 
     private readonly logger = new NestLogger(GateProcessorService.name)
 
     constructor(
     private readonly rest: GateRestService,
     private readonly ws: GateWsService,
-    private readonly cacheHelpersService: CacheHelpersService,
+    private readonly cacheService: CacheService,
     private readonly eventEmitterService: EventEmitterService,
     @InjectWinston()
     private readonly winston: Logger,
     ) {
-        this.cacheManager = this.cacheHelpersService.getCacheManager({
-            autoSelect: true,
-        })
     }
 
-    initialize(tokenIds: Array<TokenId>, tokens: Array<TokenLike>) {
+    initialize(tokenIds: Array<TokenId>, tokens: Array<TokenSchema>) {
         this.tokens = tokens.filter((token) => !!token.cexSymbols && !!token.cexSymbols[CexId.Gate])
         this.symbols = tokens
             .map((token) => token.cexSymbols![CexId.Gate])
@@ -79,9 +74,11 @@ export class GateProcessorService implements OnModuleDestroy {
                 last: lastPrice,
             })
 
-            await this.cacheManager.set(
-                createCacheKey(CacheKey.TokenPriceData, token.displayId),
-                { price: lastPrice },
+            await this.cacheService.set(
+                {
+                    key: createCacheKey(CacheKey.TokenPriceData, token.displayId),
+                    value: { price: lastPrice },
+                }
             )
             this.eventEmitterService.emit(EventName.PricesUpdated, [
                 {
@@ -106,12 +103,11 @@ export class GateProcessorService implements OnModuleDestroy {
                     }
                 }),
             )
-            await this.cacheHelpersService.mset<{ price: number }>({
+            await this.cacheService.mset({
                 entries: prices.map((price) => ({
                     key: createCacheKey(CacheKey.TokenPriceData, price.symbol),
                     value: { price: price.price },
-                })),
-                autoSelect: true,
+                })),   
             })
             this.winston.debug(WinstonLog.GateRestSnapshot, { prices })
             this.eventEmitterService.emit(

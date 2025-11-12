@@ -17,3 +17,9 @@ export interface CoinArgument {
     coinArg: TransactionObjectArgument
     coinObjectId?: string
 }
+
+export interface DynamicLiquidityPoolInfo {
+    tickCurrent: number
+    liquidity: BN
+    sqrtPriceX64: BN
+}

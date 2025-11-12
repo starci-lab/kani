@@ -102,20 +102,40 @@ export const envConfig = () => ({
     },
     rpcs: {
         [ChainId.Sui]: {
-            [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
-                process.env[`SUI_RPC_URL_${i + 1}`] || ""
-            ).filter((url) => url !== ""),
-            [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
-                process.env[`SUI_RPC_URL_${i + 1}_TESTNET`] || ""
-            ).filter((url) => url !== ""),
+            http: {
+                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SUI_RPC_URL_${i + 1}`] || ""
+                ).filter((url) => url !== ""),
+                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SUI_RPC_URL_${i + 1}_TESTNET`] || ""
+                ).filter((url) => url !== ""),
+            },
+            ws: {
+                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SUI_WS_URL_${i + 1}`] || ""
+                ).filter((url) => url !== ""),
+                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SUI_WS_URL_${i + 1}_TESTNET`] || ""
+                ).filter((url) => url !== ""),
+            },
         },
         [ChainId.Solana]: {
-            [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
-                process.env[`SOLANA_RPC_URL_${i + 1}`] || ""
-            ).filter((url) => url !== ""),
-            [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
-                process.env[`SOLANA_RPC_URL_${i + 1}_TESTNET`] || ""
-            ).filter((url) => url !== ""),
+            http: {
+                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SOLANA_RPC_URL_${i + 1}`] || ""
+                ).filter((url) => url !== ""),
+                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SOLANA_RPC_URL_${i + 1}_TESTNET`] || ""
+                ).filter((url) => url !== ""),
+            },
+            ws: {
+                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SOLANA_WS_URL_${i + 1}`] || ""
+                ).filter((url) => url !== ""),
+                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
+                    process.env[`SOLANA_WS_URL_${i + 1}_TESTNET`] || ""
+                ).filter((url) => url !== ""),
+            },
         },
     },
     bullmq: {

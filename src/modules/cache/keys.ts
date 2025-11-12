@@ -1,4 +1,5 @@
 export enum CacheKey {
+    DynamicLiquidityPoolInfo = "dynamicLiquidityPoolInfo",
     CoinMarketCapPrices = "coinMarketCapPrices",
     CoinGeckoPrices = "coinGeckoPrices",
     LiquidityPools = "liquidityPools",

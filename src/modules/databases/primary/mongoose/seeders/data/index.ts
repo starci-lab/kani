@@ -1,6 +1,0 @@
-export * from "./token.seeder"
-export * from "../seeders.module-definition"
-export * from "./liquidity-pool.seeder"
-export * from "./token.seeder"
-export * from "./dex.seeder"
-export * from "./config.seeder"

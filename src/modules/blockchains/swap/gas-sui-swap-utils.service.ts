@@ -9,7 +9,7 @@ import {
 } from "@modules/common"
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
-import { MemDbService, TokenId } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { GAS_SUI_SWAP_SLIPPAGE } from "./constants"
 import { SuiSwapService } from "./sui-swap.service"
 import { PythService } from "../pyth"
@@ -47,7 +47,7 @@ export class GasSuiSwapUtilsService {
         private readonly suiCoinManagerService: SuiCoinManagerService,
         @InjectSuiClients()
         private readonly suiClients: Record<Network, Array<SuiClient>>,
-        private readonly memDbService: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     async gasSuiSwap({
@@ -63,8 +63,8 @@ export class GasSuiSwapUtilsService {
         suiClient = suiClient || this.suiClients[network][0]
         txb = txb ?? new Transaction()
         slippage = slippage ?? GAS_SUI_SWAP_SLIPPAGE
-        const tokenNative = this.memDbService.tokens.find((token) => token.type === TokenType.Native)
-        const tokenIn = this.memDbService.tokens.find((token) => token.displayId === tokenInId)
+        const tokenNative = this.primaryMemoryStorageService.tokens.find((token) => token.type === TokenType.Native)
+        const tokenIn = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenInId)
         if (!tokenNative || !tokenIn) {
             throw new Error("Token not found")
         }

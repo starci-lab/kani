@@ -42,7 +42,7 @@ import {
     SuiExecutionService,
     TickManagerService,
 } from "../../utils"
-import { MemDbService, TokenId } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -63,7 +63,7 @@ export class MomentumActionService implements IActionService {
         private readonly suiSwapService: SuiSwapService,
         private readonly suiCoinManagerService: SuiCoinManagerService,
         private readonly zapProtectionService: ZapProtectionService,
-        private readonly memDbService: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     /**
@@ -94,8 +94,8 @@ export class MomentumActionService implements IActionService {
         suiClient = suiClient || this.suiClients[network][clientIndex]
         const mmtSdk = this.momentumClmmSdks[network]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -355,7 +355,7 @@ export class MomentumActionService implements IActionService {
                 if (event.type.includes("::collect::CollectPoolRewardEvent")) {
                     const { amount, reward_coin_type } = event.parsedJson as
                         { amount: string, reward_coin_type: { name: string } }
-                    const token = this.memDbService.tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
+                    const token = this.primaryMemoryStorageService.tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
                     if (!token) {
                         throw new Error("Token not found")
                     }

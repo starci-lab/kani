@@ -4,9 +4,9 @@ import { v4 as uuidv4 } from "uuid"
 import { envConfig } from "@modules/env"
 import { AuthCredentials, JwtRefreshTokenPayload, JwtAccessTokenPayload } from "../types"
 import { AsyncService, DayjsService } from "@modules/mixin"
-import { InjectMongoose, SessionSchema } from "@modules/databases"
+import { InjectPrimaryMongoose, SessionSchema } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
-import { CacheKey, CacheManagerService, createCacheKey } from "@modules/cache"
+import { CacheKey, CacheService, createCacheKey } from "@modules/cache"
 import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 
@@ -22,8 +22,8 @@ export class JwtAuthService {
     constructor(
         private readonly jwtService: NestJwtService,
         private readonly dayjsService: DayjsService,
-        private readonly cacheManagerService: CacheManagerService,
-        @InjectMongoose()
+        private readonly cacheService: CacheService,
+        @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly msService: MsService,
         private readonly asyncService: AsyncService
@@ -75,12 +75,12 @@ export class JwtAuthService {
         await this.asyncService.allIgnoreError([
             // Persist sessionId in DB or cache here
             (async () => {
-                await this.cacheManagerService.set({ 
+                await this.cacheService.set({ 
                     key: createCacheKey(
                         CacheKey.SessionId,
                         sessionId
                     ), 
-                    value: true,
+                    value: sessionId,
                     ttl: this.msService.fromString(
                         envConfig().jwt.refreshToken.expiration
                     ) 

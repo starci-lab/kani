@@ -7,7 +7,7 @@ import {
 import { SuiSwapService } from "./sui-swap.service"
 import { SuiFlexibleSwapParams, SuiFlexibleSwapResponse } from "../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
-import { MemDbQueryService, MemDbService, TokenId } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { CoinArgument } from "../types"
 import { FeeToService } from "./fee-to.service"
 import { SignerService } from "../signers"
@@ -24,8 +24,7 @@ export class SuiFlexibleSwapService {
     private readonly suiExecutionService: SuiExecutionService,
     @InjectSuiClients()
     private readonly suiClients: Record<Network, Array<SuiClient>>,
-    private readonly memDbQueryService: MemDbQueryService,
-    private readonly memDbService: MemDbService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -60,7 +59,7 @@ export class SuiFlexibleSwapService {
             if (!amountIn) {
                 throw new Error("Amount in is required")
             }
-            const token = this.memDbQueryService.findTokenById(_tokenId)
+            const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === _tokenId)
             if (!token) {
                 throw new Error("Token not found")
             }

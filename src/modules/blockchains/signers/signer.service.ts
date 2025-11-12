@@ -1,16 +1,14 @@
-import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common"
 import { Network, PlatformId } from "@modules/common"
-import { UserLike } from "@modules/databases"
+import { UserSchema } from "@modules/databases"
 import { Ed25519Keypair as SuiEd25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import { Keypair as SolanaKeypair } from "@solana/web3.js"
 import { ethers } from "ethers"
-import { ModuleRef } from "@nestjs/core"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./signers.module-definition"
 import { GcpKmsService } from "@modules/gcp"
-import { EncryptionService } from "@modules/crypto"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
-  user: UserLike
+  user: UserSchema
   network?: Network
   platformId: PlatformId
   action: (signer: TSigner) => Promise<TResponse>
@@ -18,23 +16,12 @@ export interface WithSignerParams<TSigner, TResponse = void> {
 }
 
 @Injectable()
-export class SignerService implements OnModuleInit {
-    private gcpKmsService: GcpKmsService
-    private encryptionService: EncryptionService
-
+export class SignerService {
     constructor(
-    private readonly moduleRef: ModuleRef,
+    private readonly gcpKmsService: GcpKmsService,
     @Inject(MODULE_OPTIONS_TOKEN)
     private readonly options: typeof OPTIONS_TYPE
     ) {}
-
-    onModuleInit() {
-        if (this.options.useGcpKms) {
-            this.gcpKmsService = this.moduleRef.get(GcpKmsService, { strict: false })
-        } else {
-            this.encryptionService = this.moduleRef.get(EncryptionService, { strict: false })
-        }
-    }
 
     private async withSigner<TSigner, TResponse = void>({
         user,
@@ -49,9 +36,7 @@ export class SignerService implements OnModuleInit {
             if (!wallet) throw new Error(`${PlatformId[platformId]} wallet not found`)
             if (network === Network.Testnet) throw new Error("Testnet not supported")
 
-            privateKey = this.options.useGcpKms
-                ? await this.gcpKmsService.decrypt(wallet.encryptedPrivateKey)
-                : Buffer.from(this.encryptionService.decrypt(wallet.encryptedPrivateKey), "utf8")
+            privateKey = await this.gcpKmsService.decrypt(wallet.encryptedPrivateKey ?? "")
             const signer = factory(privateKey)
             return await action(signer)
         } finally {
@@ -65,7 +50,7 @@ export class SignerService implements OnModuleInit {
     // ------------------------
 
     public withSuiSigner<TResponse = void>(params: {
-    user: UserLike
+    user: UserSchema
     network?: Network
     action: (signer: SuiEd25519Keypair) => Promise<TResponse>
   }) {
@@ -77,7 +62,7 @@ export class SignerService implements OnModuleInit {
     }
 
     public withSolanaSigner<TResponse = void>(params: {
-    user: UserLike
+    user: UserSchema
     network?: Network
     action: (signer: SolanaKeypair) => Promise<TResponse>
   }) {
@@ -89,7 +74,7 @@ export class SignerService implements OnModuleInit {
     }
 
     public withEvmSigner<TResponse = void>(params: {
-    user: UserLike
+    user: UserSchema
     network?: Network
     action: (signer: ethers.Wallet) => Promise<TResponse>
   }) {

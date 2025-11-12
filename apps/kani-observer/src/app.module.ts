@@ -1,0 +1,80 @@
+import { Module } from "@nestjs/common"
+import { EnvModule } from "@modules/env"
+import { WinstonLevel, WinstonModule } from "@modules/winston"
+import { MixinModule } from "@modules/mixin"
+import { ClientsModule, DexesModule, UtilsModule } from "@modules/blockchains"
+import { ScheduleModule } from "@nestjs/schedule"
+import { CryptoModule } from "@modules/crypto"
+import { PrimaryMongoDbModule } from "@modules/databases"
+import { SwapModule, PythModule } from "@modules/blockchains"
+import { SignersModule } from "@modules/blockchains"
+import { CacheModule } from "@modules/cache"
+import { EventModule } from "@modules/event"
+import { GcpModule } from "@modules/gcp"
+import { DexId } from "@modules/databases"
+
+@Module({
+    imports: [
+        EnvModule.forRoot(),
+        WinstonModule.register({
+            isGlobal: true,
+            appName: "kani-observer",
+            level: WinstonLevel.Info,
+        }),
+        MixinModule.register({
+            isGlobal: true,
+        }),
+        GcpModule.register({
+            isGlobal: true,
+        }),
+        PrimaryMongoDbModule.register({
+            isGlobal: true,
+            withSeeders: true,
+            memoryStorage: true,
+        }),
+        CacheModule.register({
+            isGlobal: true,
+        }),
+        EventModule.register({
+            isGlobal: true,
+        }),
+        CryptoModule.register({
+            isGlobal: true,
+        }),
+        SwapModule.register({
+            isGlobal: true,
+        }),
+        PythModule.register({
+            isGlobal: true,
+        }),
+        SignersModule.register({
+            isGlobal: true,
+        }),
+        ScheduleModule.forRoot(),
+        ClientsModule.register({
+            isGlobal: true,
+        }),
+        UtilsModule.register({
+            isGlobal: true,
+        }),
+        DexesModule.register({
+            isGlobal: true,
+            dexes: [
+                {
+                    dexId: DexId.Raydium,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                },
+                {
+                    dexId: DexId.Orca,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                }],
+        }),
+    ],
+})
+export class AppModule {}

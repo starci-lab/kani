@@ -37,4 +37,5 @@ export enum WinstonLog {
     PositionExitEnd = "Position.Exit.End",
     SocketIoClientConnected = "Socket.Io.Client.Connected",
     SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
+    ObserveClmmPool = "Observe.Clmm.Pool",
 }

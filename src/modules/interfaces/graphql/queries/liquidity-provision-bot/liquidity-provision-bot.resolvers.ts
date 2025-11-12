@@ -15,9 +15,9 @@ import {
 } from "./liquidity-provision-bot.dto"
 import { GraphQLTOTPGuard } from "@modules/totp"
 import { UseThrottler, ThrottlerConfig } from "@modules/throttler"
-import { GraphQLSuccessMessage } from "@interfaces/graphql/interceptors"
-import { GraphQLTransformInterceptor } from "@interfaces/graphql/interceptors"
-import { LiquidityProvisionBotSchema } from "@modules/databases"
+import { GraphQLSuccessMessage } from "@modules/interfaces/graphql/interceptors"
+import { GraphQLTransformInterceptor } from "@modules/interfaces/graphql/interceptors"
+import { LiquidityProvisionBotSchema } from "@modules/databases/mongodb/primary/schemas"
 import { GraphQLJwtAccessTokenAuthGuard } from "@modules/passport"
 
 @Resolver()

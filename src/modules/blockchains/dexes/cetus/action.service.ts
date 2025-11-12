@@ -46,7 +46,7 @@ import { InjectCetusClmmSdks } from "./cetus.decorators"
 import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
 import { PythService } from "../../pyth"
-import { MemDbService, TokenId } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -66,7 +66,7 @@ export class CetusActionService implements IActionService {
         private readonly suiCoinManagerService: SuiCoinManagerService,
         private readonly suiSwapService: SuiSwapService,
         private readonly zapProtectionService: ZapProtectionService,
-        private readonly memDbService: MemDbService,
+        private readonly memoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     // ---------- Open Position ----------
@@ -97,8 +97,8 @@ export class CetusActionService implements IActionService {
         }
         suiClient = suiClient || this.suiClients[network][clientIndex]
         const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.memoryStorageService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.memoryStorageService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -290,8 +290,8 @@ export class CetusActionService implements IActionService {
         const cetusClmmSdk = this.cetusClmmSdks[network]
         cetusClmmSdk.senderAddress = accountAddress
 
-        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.memoryStorageService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.memoryStorageService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }
@@ -364,7 +364,7 @@ export class CetusActionService implements IActionService {
                         amount: string;
                         rewarder_type: { name: string };
                     }
-                    const token = this.memDbService.tokens.find((token) =>
+                    const token = this.memoryStorageService.tokens.find((token) =>
                         token.tokenAddress.includes(rewarder_type.name),
                     )
                     if (!token) {

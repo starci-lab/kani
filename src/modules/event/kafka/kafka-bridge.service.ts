@@ -32,13 +32,13 @@ export class KafkaBridgeService implements OnModuleInit, OnApplicationShutdown {
                 const value = message.value?.toString() || "{}"
                 const data = JSON.parse(value) as EventPayloadType<unknown>
                 if (data.instanceId === this.instanceIdService.getId()) {
-                    // this.logger.debug(`Received event ${topic} from this instance`)
+                    this.logger.debug(`Received event ${topic} from this instance`)
                     return
                 }
                 this.eventEmitter.emit(topic, data.data)
             },
         })
-        this.logger.log(`Listening to ${topics.length} topics`)
+        this.logger.debug(`Listening to ${topics.length} topics`)
     }
 
     async onApplicationShutdown(): Promise<void> {

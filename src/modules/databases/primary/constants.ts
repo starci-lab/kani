@@ -1,1 +1,0 @@
-export const PRIMARY_DATABASE_NAME = "primary"

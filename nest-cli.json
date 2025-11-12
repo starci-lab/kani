@@ -19,6 +19,24 @@
         "tsConfigPath": "apps/app/tsconfig.app.json"
       }
     },
+    "blockchain-observer": {
+      "type": "application",
+      "root": "apps/blockchain-observer",
+      "entryFile": "main",
+      "sourceRoot": "apps/blockchain-observer/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/blockchain-observer/tsconfig.app.json"
+      }
+    },
+    "bot-coordinator": {
+      "type": "application",
+      "root": "apps/bot-coordinator",
+      "entryFile": "main",
+      "sourceRoot": "apps/bot-coordinator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/bot-coordinator/tsconfig.app.json"
+      }
+    },
     "bot-executor": {
       "type": "application",
       "root": "apps/bot-executor",
@@ -62,6 +80,15 @@
       "sourceRoot": "apps/kani-interface/src",
       "compilerOptions": {
         "tsConfigPath": "apps/kani-interface/tsconfig.app.json"
+      }
+    },
+    "kani-observer": {
+      "type": "application",
+      "root": "apps/kani-observer",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-observer/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-observer/tsconfig.app.json"
       }
     },
     "lp-bot": {

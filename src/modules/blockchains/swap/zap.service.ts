@@ -8,7 +8,7 @@ import { SuiSwapService } from "./sui-swap.service"
 import { ZapCalculatorService } from "../utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger } from "winston"
-import { MemDbService } from "@modules/databases"
+import { PrimaryMemoryStorageService } from "@modules/databases"
 @Injectable()
 export class ZapService implements IZapService {
     constructor(
@@ -17,7 +17,7 @@ export class ZapService implements IZapService {
         private readonly retryService: RetryService,
         @InjectWinston()
         private readonly logger: Logger,
-        private readonly memDbService: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     async computeZapAmounts(
@@ -32,8 +32,8 @@ export class ZapService implements IZapService {
             swapSlippage = 0.01,
         } = params
 
-        const tokenA = this.memDbService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.memDbService.tokens.find((token) => token.displayId === tokenBId)
+        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenAId)
+        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenBId)
         if (!tokenA || !tokenB) {
             throw new Error("Token not found")
         }

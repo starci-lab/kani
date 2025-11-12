@@ -1,8 +1,7 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orca.module-definition"
-import { OrcaFetcherService } from "./fetcher.service"
+import { OrcaObserverService } from "./observer.service"
 import { OrcaActionService } from "./action.service"
-import { OrcaMetadataService } from "./metadata.service"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -11,10 +10,20 @@ export class OrcaModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            OrcaFetcherService,
-            OrcaActionService,
-            OrcaMetadataService,
         ]
+        if (
+            typeof options.enabled === "boolean" 
+                ? options.enabled
+                : (typeof options.enabled === "undefined" ? true : (options.enabled?.observe ?? true))
+        ) {
+            providers.push(OrcaObserverService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
+        ) {
+            providers.push(OrcaActionService)
+        }
         return {
             ...dynamicModule,
             providers: [

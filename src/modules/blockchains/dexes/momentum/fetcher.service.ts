@@ -6,7 +6,7 @@ import {
     FetchPoolsResponse,
     IFetchService,
 } from "../../interfaces"
-import { DexId, DexSchema, MemDbService, TokenSchema } from "@modules/databases"
+import { DexId, DexSchema, PrimaryMemoryStorageService, TokenSchema } from "@modules/databases"
 import { BN } from "bn.js"
 import { InjectMomentumClmmSdks } from "./momentum.decorators"
 import { MmtSDK } from "@mmt-finance/clmm-sdk"
@@ -17,7 +17,7 @@ export class MomentumFetcherService implements IFetchService {
     constructor(
         @InjectMomentumClmmSdks()
         private readonly clmmSdks: Record<Network, MmtSDK>,
-        private readonly memDbService: MemDbService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async fetchPools({
@@ -28,7 +28,7 @@ export class MomentumFetcherService implements IFetchService {
             throw new Error("Testnet is not supported")
         }
         // Filter only Momentum pools on Sui mainnet
-        const targetPools = this.memDbService.liquidityPools
+        const targetPools = this.primaryMemoryStorageService.liquidityPools
             // safe filter to avoid undefined dex
             .filter(liquidityPool => !!liquidityPool.dex)
             .filter(
@@ -53,12 +53,12 @@ export class MomentumFetcherService implements IFetchService {
                     return targetPools.some(
                         (targetPool) => 
                         {
-                            const tokenA = this.memDbService.tokens.find(
+                            const tokenA = this.primaryMemoryStorageService.tokens.find(
                                 (token) => token.tokenAddress === pool.tokenX.coinType
                                 && token.network === network
                                 && token.chainId === ChainId.Sui,
                             )
-                            const tokenB = this.memDbService.tokens.find(
+                            const tokenB = this.primaryMemoryStorageService.tokens.find(
                                 (token) => token.tokenAddress === pool.tokenY.coinType
                                 && token.network === network
                                 && token.chainId === ChainId.Sui,
@@ -71,13 +71,13 @@ export class MomentumFetcherService implements IFetchService {
                 }
             )
             .map((pool) => {
-                const token0 = this.memDbService.tokens.find(
+                const token0 = this.primaryMemoryStorageService.tokens.find(
                     (token) =>
                         token.tokenAddress === pool.tokenX.coinType &&
                     token.network === network &&
                     token.chainId === ChainId.Sui,
                 )
-                const token1 = this.memDbService.tokens.find(
+                const token1 = this.primaryMemoryStorageService.tokens.find(
                     (token) =>
                         token.tokenAddress === pool.tokenY.coinType &&
                     token.network === network &&
@@ -106,7 +106,7 @@ export class MomentumFetcherService implements IFetchService {
                         .map((rewarder) => rewarder.coin_type)
                         .map(
                             (rewardAddr) =>
-                            this.memDbService.tokens.find(
+                            this.primaryMemoryStorageService.tokens.find(
                                 (token) =>
                                     token.tokenAddress === rewardAddr &&
                                     token.network === network,
