@@ -11,7 +11,7 @@ import { SignersModule } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
-// import { DexId } from "@modules/databases"
+import { WebsocketModule } from "@modules/websocket"
 
 @Module({
     imports: [
@@ -25,6 +25,9 @@ import { GcpModule } from "@modules/gcp"
             isGlobal: true,
         }),
         GcpModule.register({
+            isGlobal: true,
+        }),
+        WebsocketModule.register({
             isGlobal: true,
         }),
         PrimaryMongoDbModule.register({

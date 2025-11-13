@@ -1,74 +1,116 @@
-import { Injectable } from "@nestjs/common"
-import { AxiosService } from "@modules/axios"
-import { Axios } from "axios"
+import {
+    Injectable,
+    OnApplicationBootstrap,
+    OnApplicationShutdown,
+} from "@nestjs/common"
+import { EventEmitterService, EventName } from "@modules/event"
+import { BINANCE_WS_URL } from "./constants"
+import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
+import { Network } from "@modules/common"
+import { TokenListIsEmptyException } from "@exceptions"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { Cache } from "cache-manager"
+import WebSocket from "ws"
+import { WebsocketService } from "@modules/websocket"
+import { AsyncService } from "@modules/mixin"
+import { OrderBook } from "../types"
 
-/**
- * Order book snapshot type: list of [price, quantity]
- */
-export interface OrderBook {
-  bids: Array<[string, string]>
-  asks: Array<[string, string]>
-}
-
-/**
- * Binance price response type
- */
-export interface PriceResponse {
-  symbol: string
-  price: number
-}
-
-/**
- * Binance REST API service
- */
 @Injectable()
-export class BinanceRestService {
-    private readonly restBase = "https://api.binance.com/api/v3"
-    private readonly axios: Axios
+export class BinanceOrderBookService implements OnApplicationShutdown, OnApplicationBootstrap {
+    private ws: WebSocket
 
-    constructor(private readonly axiosService: AxiosService) {
-        this.axios = this.axiosService.create("binance-rest")
-    }
+    constructor(
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
+        private readonly eventEmitterService: EventEmitterService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly websocketService: WebsocketService,
+        private readonly asyncService: AsyncService,
+    ) {}
 
-    /**
-   * Get latest spot prices for multiple symbols
-   * @param symbols Array of trading pair symbols, e.g. ["SUIUSDT", "BTCUSDT"]
-   */
-    async getPrices(symbols: Array<string>): Promise<PriceResponse[]> {
-        const { data } = await this.axios.get(`${this.restBase}/ticker/price`)
+    onApplicationBootstrap() {
+        this.ws = this.websocketService.createWebSocket({
+            streamName: "binance-order-book",
+            url: BINANCE_WS_URL,
+            onMessage: async (data: OrderBookStream | NullOrderBookStream) => {
+                if ("result" in data && data.result === null) return
+                if ("data" in data) {
+                    const token = this.primaryMemoryStorageService.tokens
+                        .find(token => token.cexSymbols?.[CexId.Binance] === data.stream)
+                    if (!token) return
+                    // Only take top-of-book (best bid/ask)
+                    const bestBid = data.data.bids[0]
+                    const bestAsk = data.data.asks[0]
 
-        return (data as Array<{ symbol: string; price: string }>)
-            .filter((item) => symbols.includes(item.symbol))
-            .map((item) => ({
-                symbol: item.symbol,
-                price: parseFloat(item.price),
-            }))
-    }
+                    if (!bestBid || !bestAsk) return
 
-    /**
-   * Get latest spot price for a single symbol
-   * @param symbol Trading pair symbol, e.g. "BTCUSDT"
-   */
-    async getPrice(symbol: string): Promise<PriceResponse> {
-        const { data } = await this.axios.get(`${this.restBase}/ticker/price`, {
-            params: { symbol },
+                    const orderBook: OrderBook = {
+                        bidPrice: parseFloat(bestBid[0]),
+                        bidQty: parseFloat(bestBid[1]),
+                        askPrice: parseFloat(bestAsk[0]),
+                        askQty: parseFloat(bestAsk[1]),
+                    }
+
+                    await this.asyncService.allIgnoreError([
+                    // Cache best bid/ask
+                        this.cacheManager.set(
+                            createCacheKey(CacheKey.WsCexOrderBook, token.displayId),
+                            orderBook
+                        ),
+                        // Emit event
+                        this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
+                            tokenId: token.displayId,
+                            ...orderBook,
+                        })
+                    ])
+                }
+            },
+            onOpen: () => {
+                const tokens = this.primaryMemoryStorageService.tokens
+                    .filter(token =>
+                        token.network === Network.Mainnet &&
+                        !!token.cexIds?.includes(CexId.Binance)
+                    )
+
+                if (!tokens.length) {
+                    throw new TokenListIsEmptyException("No Binance tokens found for mainnet")
+                }
+
+                // Subscribe to top 5 levels of order book
+                const symbols = tokens
+                    .map(token => token.cexSymbols?.[CexId.Binance])
+                    .filter(Boolean)
+                    .map(symbol => `${symbol}@depth5@100ms`)
+
+                this.ws.send(JSON.stringify({
+                    method: "SUBSCRIBE",
+                    params: symbols,
+                    id: 1
+                }))
+            },
         })
-
-        return {
-            symbol: data.symbol,
-            price: parseFloat(data.price),
-        }
     }
 
-    /**
-   * Get order book snapshot
-   * @param symbol Trading pair symbol
-   * @param limit Number of levels (default 20)
-   */
-    async getOrderBook(symbol: string, limit = 20): Promise<OrderBook> {
-        const { data } = await this.axios.get(`${this.restBase}/depth`, {
-            params: { symbol, limit },
-        })
-        return data
+    onApplicationShutdown() {
+        this.ws.close()
     }
+}
+
+/** Interfaces **/
+
+interface OrderBookEvent {
+    symbol: string;             // Symbol e.g., "SUIUSDT"
+    lastUpdateId: number;       // Last update id
+    bids: Array<[string, string]>;   // [[price, quantity]]
+    asks: Array<[string, string]>;   // [[price, quantity]]
+}
+
+interface OrderBookStream {
+    stream: string;             // e.g., "suiusdt@depth5@100ms"
+    data: OrderBookEvent;
+}
+
+interface NullOrderBookStream {
+   result: null
+   id: number
 }

@@ -1,4 +1,5 @@
 export enum WinstonLog {
+    WebsocketConnected = "Websocket.Connected",
     PythSuiPricesUpdated = "Pyth.Sui.Prices.Updated",
     BybitWsTicker = "Bybit.WS.Ticker",
     BybitRestSnapshot = "Bybit.REST.Snapshot",
@@ -38,4 +39,9 @@ export enum WinstonLog {
     SocketIoClientConnected = "Socket.Io.Client.Connected",
     SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
     ObserveClmmPool = "Observe.Clmm.Pool",
+    WebsocketMessageParseError = "Websocket.Message.Parse.Error",
+    WebsocketConnectionError = "Websocket.Connection.Error",
+    WebsocketCloseError = "Websocket.Close.Error",
+    WebsocketReconnect = "Websocket.Reconnect",
+    WebsocketMaxRetriesReached = "Websocket.Max.Retries.Reached",
 }

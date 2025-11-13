@@ -1,5 +1,6 @@
-export enum PriceTrend {
-    Up = "Up",
-    Down = "Down",
-    Sideway = "Sideway"
+export interface OrderBook {
+    bidPrice: number
+    bidQty: number
+    askPrice: number
+    askQty: number
 }

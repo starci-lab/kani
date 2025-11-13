@@ -35,7 +35,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         coinMarketCapId: "usdc",
         coinGeckoId: "usd-coin",
         cexSymbols: {
-            [CexId.Binance]: "USDCUSDT",
+            [CexId.Binance]: "usdcusdt",
             [CexId.Gate]: "USDC_USDT",
         },
         chainId: ChainId.Sui,
@@ -60,7 +60,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         coinMarketCapId: "cetus",
         coinGeckoId: "cetus-protocol",
         cexSymbols: {
-            [CexId.Binance]: "CETUSUSDT",
+            [CexId.Binance]: "cetususdt",
             [CexId.Gate]: "CETUS_USDT",
         },
         chainId: ChainId.Sui,
@@ -85,7 +85,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         coinMarketCapId: "sui",
         coinGeckoId: "sui",
         cexSymbols: {
-            [CexId.Binance]: "SUIUSDT",
+            [CexId.Binance]: "suiusdt",
             [CexId.Gate]: "SUI_USDT",
         },
         iconUrl: "https://r2.starci.net/tokens/sui.png",
@@ -202,7 +202,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         coinMarketCapId: "ethereum",
         coinGeckoId: "ethereum",
         cexSymbols: {
-            [CexId.Binance]: "ETHUSDT",
+            [CexId.Binance]: "ethusdt",
             [CexId.Gate]: "ETH_USDT",
         },
         iconUrl: "https://r2.starci.net/tokens/eth.png",
@@ -238,7 +238,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         coinMarketCapId: "solana",
         coinGeckoId: "solana",
         cexSymbols: {
-            [CexId.Binance]: "SOLUSDT",
+            [CexId.Binance]: "solusdt",
             [CexId.Gate]: "SOL_USDT",
         },
         iconUrl: "https://r2.starci.net/tokens/sol.png",

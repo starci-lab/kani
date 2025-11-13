@@ -1,5 +1,6 @@
 export enum CacheKey {
-    WsLastPrice = "wsLastPrice",
+    WsCexLastPrice = "wsCexLastPrice",
+    WsCexOrderBook = "wsCexOrderBook",
     DynamicLiquidityPoolInfo = "dynamicLiquidityPoolInfo",
     CoinMarketCapPrices = "coinMarketCapPrices",
     CoinGeckoPrices = "coinGeckoPrices",

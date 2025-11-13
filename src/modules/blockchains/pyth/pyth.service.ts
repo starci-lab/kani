@@ -63,7 +63,7 @@ export class PythService implements OnApplicationBootstrap {
                     ),
                     // emit the event
                     this.events.emit(
-                        EventName.PythSuiPricesUpdated, {
+                        EventName.WsPythLastPricesUpdated, {
                             network: Network.Mainnet,
                             tokenId: token.displayId,
                             price: price.toNumber(),

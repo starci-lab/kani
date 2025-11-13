@@ -3,17 +3,15 @@ import {
     OnApplicationBootstrap,
     OnApplicationShutdown,
 } from "@nestjs/common"
-import { Logger } from "winston"
-import { InjectWinston } from "@modules/winston"
-import { EventEmitterService } from "@modules/event"
+import { EventEmitterService, EventName  } from "@modules/event"
 import { BINANCE_WS_URL } from "./constants"
-import { AsyncService } from "@modules/mixin"
 import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
 import { Network } from "@modules/common"
 import { TokenListIsEmptyException } from "@exceptions"
-import { InjectRedisCache } from "@modules/cache"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
+import { WebsocketService } from "@modules/websocket"
 
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationShutdown, OnApplicationBootstrap {
@@ -23,80 +21,92 @@ export class BinanceLastPriceService implements OnApplicationShutdown, OnApplica
         private readonly cacheManager: Cache,
         private readonly eventEmitterService: EventEmitterService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        @InjectWinston()
-        private readonly winston: Logger,
-        private readonly asyncService: AsyncService,
+        private readonly websocketService: WebsocketService,
     ) {
     }
 
     onApplicationBootstrap() {
-        this.ws = new WebSocket(BINANCE_WS_URL)
-        const ws = new WebSocket("wss://stream.binance.com:9443/stream")
-
-        ws.on("open", () => {
-            console.log("✅ Connected")
-            const msg = {
-                method: "SUBSCRIBE",
-                params: ["btcusdt@trade", "ethusdt@trade"],
-                id: 1,
-            }
-            ws.send(JSON.stringify(msg)) // chỉ gửi sau khi "open"
-        })
-
-        ws.on("message", (data) => {
-            const parsed = JSON.parse(data.toString())
-            if (parsed.stream && parsed.data) {
-                console.log(`💎 ${parsed.data.s}: ${parsed.data.p}`)
-            }
-        })
-    }
-
-    subscribe() {
-        this.ws.on("open", () => {
-            console.log("WebSocket connected!")
-            this.ws.send(JSON.stringify({ method: "SUBSCRIBE", params: ["btcusdt@trade"], id: 1 }))
-        })
-        const tokens = this.primaryMemoryStorageService.tokens
-            .filter(
-                token => 
-                    token.network === Network.Mainnet 
+        this.ws = this.websocketService.createWebSocket({
+            streamName: "binance-last-price",
+            url: BINANCE_WS_URL,
+            onMessage: (data: Ticker24hrStream | NullTicker24hrStream) => {
+                if ("result" in data && data.result === null) return
+                if ("data" in data) {
+                    const token = this.primaryMemoryStorageService.tokens
+                        .find   (
+                            token => token.cexSymbols?.[CexId.Binance] === data.stream
+                        )
+                    if (!token) {
+                        return
+                    }
+                    const lastPrice = parseFloat(data.data.c)
+                    this.cacheManager.set(createCacheKey(CacheKey.WsCexLastPrice, token.displayId), lastPrice)
+                    this.eventEmitterService.emit(EventName.WsCexLastPricesUpdated, {
+                        tokenId: token.displayId,
+                        price: lastPrice,
+                    })
+                }
+            },
+            onOpen: () => {
+                const tokens = this.primaryMemoryStorageService.tokens
+                    .filter(
+                        token => 
+                            token.network === Network.Mainnet 
                 && !!token.cexIds?.includes(CexId.Binance)
-            )
-        if (!tokens.length) {
-            throw new TokenListIsEmptyException("No Binance tokens found for mainnet")
-        }
-        const symbols = tokens.map(token => token.cexSymbols?.[CexId.Binance]).filter(Boolean)
-        this.ws.on("message", async (event: WebSocket.MessageEvent) => {
-            const data = JSON.parse(event.toString())
-            console.log("data", data)
-            // const lastPrice = parseFloat(data.c)
-            // await this.asyncService.allIgnoreError([
-            //     this.cacheService.set({
-            //         key: createCacheKey(
-            //             CacheKey.WsLastPrice, 
-            //             CexId.Binance
-            //         ),
-            //         value: lastPrice,
-            //     })
-            // ])
-            // this.winston.debug(
-            //     WinstonLog.WsLastPrice, 
-            //     {
-            //         cexId: CexId.Binance,
-            //         symbol,
-            //         lastPrice,
-            //     }
-            // )
+                    )
+                if (!tokens.length) {
+                    throw new TokenListIsEmptyException("No Binance tokens found for mainnet")
+                }
+                const symbols = tokens
+                    .map(token => token.cexSymbols?.[CexId.Binance])
+                    .filter(Boolean)
+                    .map(symbol => `${symbol}@ticker`)
+                this.ws.send(JSON.stringify({ 
+                    method: "SUBSCRIBE", 
+                    params: symbols, 
+                    id: 1 
+                }))
+            },
         })
-        this.ws.send(
-            JSON.stringify({
-                method: "SUBSCRIBE",
-                params: symbols,
-                id: 1,
-            }))
     }
 
     onApplicationShutdown() {
         this.ws.close()
     }
 }
+
+interface Ticker24hrEvent {
+    e: string;      // Event type, e.g., "24hrTicker"
+    E: number;      // Event time (timestamp)
+    s: string;      // Symbol, e.g., "SUIUSDT"
+    p: string;      // Price change
+    P: string;      // Price change percent
+    w: string;      // Weighted average price
+    x: string;      // Previous day's close price
+    c: string;      // Current close price
+    Q: string;      // Close trade quantity
+    b: string;      // Best bid price
+    B: string;      // Best bid quantity
+    a: string;      // Best ask price
+    A: string;      // Best ask quantity
+    o: string;      // Open price
+    h: string;      // High price
+    l: string;      // Low price
+    v: string;      // Total traded base asset volume
+    q: string;      // Total traded quote asset volume
+    O: number;      // Statistics open time
+    C: number;      // Statistics close time
+    F: number;      // First trade ID
+    L: number;      // Last trade ID
+    n: number;      // Total number of trades
+  }
+  
+  interface Ticker24hrStream {
+    stream: string;           // Stream name, e.g., "suiusdt@ticker"
+    data: Ticker24hrEvent;    // Detailed ticker data
+  }
+
+  interface NullTicker24hrStream {
+    result: null
+    id: number
+  }
