@@ -12,6 +12,7 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
 import { WebsocketService } from "@modules/websocket"
+import { AsyncService } from "@modules/mixin"
 
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationShutdown, OnApplicationBootstrap {
@@ -22,6 +23,7 @@ export class BinanceLastPriceService implements OnApplicationShutdown, OnApplica
         private readonly eventEmitterService: EventEmitterService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly websocketService: WebsocketService,
+        private readonly asyncService: AsyncService,
     ) {
     }
 
@@ -29,7 +31,7 @@ export class BinanceLastPriceService implements OnApplicationShutdown, OnApplica
         this.ws = this.websocketService.createWebSocket({
             streamName: "binance-last-price",
             url: BINANCE_WS_URL,
-            onMessage: (data: Ticker24hrStream | NullTicker24hrStream) => {
+            onMessage: async (data: Ticker24hrStream | NullTicker24hrStream) => {
                 if ("result" in data && data.result === null) return
                 if ("data" in data) {
                     const token = this.primaryMemoryStorageService.tokens
@@ -40,11 +42,22 @@ export class BinanceLastPriceService implements OnApplicationShutdown, OnApplica
                         return
                     }
                     const lastPrice = parseFloat(data.data.c)
-                    this.cacheManager.set(createCacheKey(CacheKey.WsCexLastPrice, token.displayId), lastPrice)
-                    this.eventEmitterService.emit(EventName.WsCexLastPricesUpdated, {
-                        tokenId: token.displayId,
-                        price: lastPrice,
-                    })
+                    await this.asyncService.allIgnoreError([    
+                        this.cacheManager.set(createCacheKey(
+                            CacheKey.WsCexLastPrice,
+                            {
+                                cexId: CexId.Binance,
+                                tokenId: token.displayId,
+                            }
+                        ), 
+                        lastPrice
+                        ),
+                        this.eventEmitterService.emit(EventName.WsCexLastPricesUpdated, {
+                            cexId: CexId.Binance,
+                            tokenId: token.displayId,
+                            lastPrice,
+                        })
+                    ])
                 }
             },
             onOpen: () => {

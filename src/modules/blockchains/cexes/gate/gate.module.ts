@@ -1,8 +1,7 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./gate.module-definition"
-import { GateWsService } from "./gate-ws.service"
-import { GateRestService } from "./gate-rest.service"
-import { GateProcessorService } from "./gate-processor.service"
+import { GateLastPriceService } from "./gate-last-price.service"
+import { GateOrderBookService } from "./gate-order-book"
 
 @Module({})
 export class GateModule extends ConfigurableModuleClass {
@@ -11,9 +10,8 @@ export class GateModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers = [
-            GateWsService,
-            GateRestService,
-            GateProcessorService,
+            GateLastPriceService,
+            GateOrderBookService,
         ]
         return {
             ...dynamicModule,

@@ -1,0 +1,1 @@
+export const GATE_WS_URL = "wss://api.gateio.ws/ws/v4/"

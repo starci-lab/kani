@@ -50,15 +50,18 @@ export class BinanceOrderBookService implements OnApplicationShutdown, OnApplica
                         askPrice: parseFloat(bestAsk[0]),
                         askQty: parseFloat(bestAsk[1]),
                     }
-
                     await this.asyncService.allIgnoreError([
                     // Cache best bid/ask
                         this.cacheManager.set(
-                            createCacheKey(CacheKey.WsCexOrderBook, token.displayId),
+                            createCacheKey(CacheKey.WsCexOrderBook, {
+                                cexId: CexId.Binance,
+                                tokenId: token.displayId,
+                            }),
                             orderBook
                         ),
                         // Emit event
                         this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
+                            cexId: CexId.Binance,
                             tokenId: token.displayId,
                             ...orderBook,
                         })

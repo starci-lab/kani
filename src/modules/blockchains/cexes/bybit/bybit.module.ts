@@ -1,8 +1,7 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bybit.module-definition"   
-import { BybitWsService } from "./bybit-ws.service"
-import { BybitRestService } from "./bybit-rest.service"
-import { BybitProcessorService } from "./bybit-processor.service"
+import { BybitLastPriceService } from "./bybit-last-price.service"
+import { BybitOrderBookService } from "./bybit-order-book.service"
 
 @Module({})
 export class BybitModule extends ConfigurableModuleClass {
@@ -11,9 +10,8 @@ export class BybitModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers = [
-            BybitWsService,
-            BybitRestService,
-            BybitProcessorService,
+            BybitLastPriceService,
+            BybitOrderBookService,
         ]
         return {
             ...dynamicModule,

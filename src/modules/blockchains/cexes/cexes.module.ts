@@ -1,6 +1,8 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cexes.module-definition"   
 import { BinanceModule } from "./binance"
+import { GateModule } from "./gate"
+import { BybitModule } from "./bybit"
 // import { GateModule } from "./gate"
 
 @Module({})
@@ -13,9 +15,12 @@ export class CexesModule extends ConfigurableModuleClass {
             BinanceModule.register({
                 isGlobal: options.isGlobal
             }),
-            // GateModule.register({
-            //     isGlobal: options.isGlobal
-            // }),
+            GateModule.register({
+                isGlobal: options.isGlobal
+            }),
+            BybitModule.register({
+                isGlobal: options.isGlobal
+            }),
         ]
         return {
             ...dynamicModule,
