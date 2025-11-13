@@ -73,6 +73,24 @@
         "tsConfigPath": "apps/data-fetcher/tsconfig.app.json"
       }
     },
+    "kani-coordinator": {
+      "type": "application",
+      "root": "apps/kani-coordinator",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-coordinator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-coordinator/tsconfig.app.json"
+      }
+    },
+    "kani-executor": {
+      "type": "application",
+      "root": "apps/kani-executor",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-executor/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-executor/tsconfig.app.json"
+      }
+    },
     "kani-interface": {
       "type": "application",
       "root": "apps/kani-interface",
