@@ -34,7 +34,7 @@ export class ProcessorFactoryService implements OnApplicationBootstrap {
                     OpenPositionProcessorService, 
                     contextId
                 )
-                openPositionProcessor.initialize()
+                await openPositionProcessor.initialize()
             })(),
             (async () => {
                 const contextId = ContextIdFactory.create()
@@ -46,7 +46,7 @@ export class ProcessorFactoryService implements OnApplicationBootstrap {
                     ClosePositionProcessorService, 
                     contextId
                 )
-                closePositionProcessor.initialize()
+                await closePositionProcessor.initialize()
             })(),
         ])
     }

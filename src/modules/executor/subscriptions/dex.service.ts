@@ -8,7 +8,6 @@ export class DexSubscriptionService {
         private readonly eventEmitter: EventEmitter2,
     ) {}
     
-
     @OnEvent(EventName.LiquidityPoolsFetched)
     async handleLiquidityPoolsFetched(
         event: LiquidityPoolsFetchedEvent
