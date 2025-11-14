@@ -15,6 +15,7 @@ export enum EventName {
     DataSeeded = "dataSeeded",
     InitializerLoaded = "initializerLoaded",
     PythSuiPricesUpdated = "pythSuiPricesUpdated",
+    InternalLiquidityPoolsFetched = "internalLiquidityPoolsFetched",
 }
 
 export interface LiquidityPoolsFetchedEvent {

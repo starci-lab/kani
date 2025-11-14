@@ -2,6 +2,8 @@ import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./executor.module-definition"
 import { LoadersModule } from "./loaders"
 import { SubscriptionsModule } from "./subscriptions"
+import { ProcessorsModule } from "./processors"
+
 @Module({})
 export class ExecutorModule extends ConfigurableModuleClass {
     static register(
@@ -15,6 +17,9 @@ export class ExecutorModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 SubscriptionsModule.register({
+                    isGlobal: true,
+                }), 
+                ProcessorsModule.register({
                     isGlobal: true,
                 }),
             ],
