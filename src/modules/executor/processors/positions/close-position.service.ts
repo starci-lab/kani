@@ -16,12 +16,13 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
     scope: Scope.REQUEST,
     durable: true,
 })
-export class OpenPositionProcessorService {
+export class ClosePositionProcessorService {
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
         @Inject(REQUEST)
-        private readonly request: OpenPositionProcessorRequest,
+        private readonly request: ClosePositionProcessorRequest,
+
         // Used to manually subscribe to events. We bind listeners here instead
         // of using @OnEvent so Nest doesn't override our request context.
         private readonly eventEmitter: EventEmitter2,
@@ -40,6 +41,6 @@ export class OpenPositionProcessorService {
     }
 }
 
-export interface OpenPositionProcessorRequest {
+export interface ClosePositionProcessorRequest {
     bot: BotSchema
 }

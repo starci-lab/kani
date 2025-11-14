@@ -2,7 +2,7 @@ import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
 import { DexSchema, LiquidityPoolSchema, TokenSchema } from "../schemas"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
-import { RetryService } from "@modules/mixin"
+import { AsyncService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
 
 @Injectable()
@@ -16,10 +16,11 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly retryService: RetryService,
+        private readonly asyncService: AsyncService
     ) { }
 
     private async process() {
-        await Promise.all([
+        await this.asyncService.allMustDone([
             (async () => {
                 await this.retryService.retry({
                     action: async () => {

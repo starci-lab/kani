@@ -2,7 +2,7 @@ import { TokensService } from "./tokens.service"
 import { DexesService } from "./dexes.service"
 import { LiquidityPoolsService } from "./liquidity-pools.service"
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
-import { RetryService } from "@modules/mixin"
+import { AsyncService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./seeders.module-definition"
 
 @Injectable()
@@ -14,10 +14,11 @@ export class SeedersService implements OnModuleInit {
         private readonly dexService: DexesService,
         private readonly liquidityPoolService: LiquidityPoolsService,
         private readonly retryService: RetryService,
+        private readonly asyncService: AsyncService
     ) { }
 
     private async process() {
-        await Promise.all([
+        await this.asyncService.allMustDone([
             (async () => {
                 await this.retryService.retry({
                     action: async () => {

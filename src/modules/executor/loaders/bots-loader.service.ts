@@ -24,8 +24,8 @@ export class BotsLoaderService implements OnModuleInit {
 
     // we listen to moongodb changes and reload users
     async onModuleInit() {
-        // wait until users are loaded
-        await this.readinessWatcherFactoryService.waitUntilReady(UsersLoaderService.name)
+        // create a readiness watcher
+        this.readinessWatcherFactoryService.createWatcher(BotsLoaderService.name)
         // load bots on application bootstrap
         await this.load()
         // observe bots
