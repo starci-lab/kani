@@ -35,7 +35,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         rewardTokens: [
             createObjectId(TokenId.SuiIka),
             createObjectId(TokenId.SuiCetus),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusSuiUsdc005),
@@ -50,7 +51,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         rewardTokens: [
             createObjectId(TokenId.SuiCetus),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosIkaUsdc015),
@@ -66,7 +68,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         rewardTokens: [
             createObjectId(TokenId.SuiIka),
             createObjectId(TokenId.SuiUsdc),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosDeepUsdc015),
@@ -82,7 +85,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         rewardTokens: [
             createObjectId(TokenId.SuiDeep),
             createObjectId(TokenId.SuiUsdc),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusUsdcEth025),
@@ -98,7 +102,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         rewardTokens: [
             createObjectId(TokenId.SuiCetus),
             createObjectId(TokenId.SuiNative),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.MomentumWalSui02),
@@ -114,7 +119,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         rewardTokens: [
             createObjectId(TokenId.SuiXStakedSui),
             createObjectId(TokenId.SuiWalrus),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.MomentumSuiUsdc0175),
@@ -129,7 +135,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         rewardTokens: [
             createObjectId(TokenId.SuiXStakedSui),
-        ]
+        ],
+        tickSpacing: 1000,
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdc004),
@@ -142,6 +149,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         network: Network.Mainnet,
         chainId: ChainId.Solana,
         type: LiquidityPoolType.Clmm,
+        tickSpacing: 1,
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdt001),
@@ -156,7 +164,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Solana,
         rewardTokens: [
             createObjectId(TokenId.SolRay),
-        ]
+        ],
+        tickSpacing: 1,
     },
     {
         _id: createObjectId(LiquidityPoolId.OrcaSolUsdc004),
@@ -169,5 +178,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         network: Network.Mainnet,
         chainId: ChainId.Solana,
+        tickSpacing: 4,
     }
 ]

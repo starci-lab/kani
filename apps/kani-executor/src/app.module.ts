@@ -6,10 +6,12 @@ import { PrimaryMongoDbModule } from "@modules/databases"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { EventModule } from "@modules/event"
+import { EventEmitterModule } from "@nestjs/event-emitter"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
+        EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
             appName: `kani-executor-${envConfig().botExecutor.batchId}`,

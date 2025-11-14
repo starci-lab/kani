@@ -51,4 +51,11 @@ export class EventEmitterService {
             })
         }
     }
+
+    on<T>(
+        event: EventName,
+        listener: (payload: T) => void
+    ) {
+        this.eventEmitter.on(event, listener)
+    }
 }

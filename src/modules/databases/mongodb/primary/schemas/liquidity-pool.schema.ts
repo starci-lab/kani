@@ -73,6 +73,10 @@ export class LiquidityPoolSchema extends AbstractSchema {
         default: LiquidityPoolType.Clmm,
     })
         type: LiquidityPoolType
+
+    @Field(() => Number, { description: "The tick spacing of the pool" })
+    @Prop({ type: Number })
+        tickSpacing: number
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)

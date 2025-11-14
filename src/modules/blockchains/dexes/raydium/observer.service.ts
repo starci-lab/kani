@@ -15,13 +15,13 @@ import {
 } from "@modules/databases"
 import { Connection as MongooseConnection } from "mongoose"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { createObjectId } from "@modules/common"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
+import { createObjectId } from "@utils"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
@@ -91,14 +91,15 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                             sqrtPriceX64: new BN(state.sqrtPriceX64),
                         }),
                     // emit the event
-                    this.events.emit(EventName.LiquidityPoolsFetched, {
-                        liquidityPoolId,
-                        tickCurrent: state.tickCurrent,
-                        liquidity: new BN(state.liquidity),
-                        sqrtPriceX64: new BN(state.sqrtPriceX64),
-                    }, {
-                        withoutLocal: true,
-                    }),
+                    this.events.emit(
+                        EventName.LiquidityPoolsFetched, {
+                            liquidityPoolId,
+                            tickCurrent: state.tickCurrent,
+                            liquidity: new BN(state.liquidity),
+                            sqrtPriceX64: new BN(state.sqrtPriceX64),
+                        }, {
+                            withoutLocal: true,
+                        }),
                 ])
                 this.winstonLogger.debug(
                     WinstonLog.ObserveClmmPool, 

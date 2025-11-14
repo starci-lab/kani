@@ -6,6 +6,5 @@ import { EventName, WsPythLastPricesUpdatedEvent } from "@modules/event"
 export class PythSubscriptionService {
     @OnEvent(EventName.WsPythLastPricesUpdated)
     async handlePythLastPricesUpdated(event: WsPythLastPricesUpdatedEvent) {
-        console.log(event)
     }
 }   

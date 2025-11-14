@@ -12,6 +12,7 @@ import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
 import { WebsocketModule } from "@modules/websocket"
+import { EventEmitterModule } from "@nestjs/event-emitter"
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { WebsocketModule } from "@modules/websocket"
             appName: "kani-observer",
             level: WinstonLevel.Info,
         }),
+        EventEmitterModule.forRoot(),
         MixinModule.register({
             isGlobal: true,
         }),

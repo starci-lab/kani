@@ -1,5 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { createObjectId, Network } from "@modules/common"
+import { Network } from "@typedefs"
+import { createObjectId } from "@utils"
 import { 
     DexId, 
     DynamicLiquidityPoolInfoSchema, 
@@ -89,14 +90,15 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                             sqrtPriceX64: new BN(state.sqrtPrice),
                         }),
                     // emit the event
-                    this.events.emit(EventName.LiquidityPoolsFetched, {
-                        liquidityPoolId,
-                        tickCurrent: state.tickCurrentIndex,
-                        liquidity: new BN(state.liquidity),
-                        sqrtPriceX64: new BN(state.sqrtPrice),
-                    }, {
-                        withoutLocal: true,
-                    }),
+                    this.events.emit(
+                        EventName.LiquidityPoolsFetched, {
+                            liquidityPoolId,
+                            tickCurrent: state.tickCurrentIndex,
+                            liquidity: new BN(state.liquidity),
+                            sqrtPriceX64: new BN(state.sqrtPrice),
+                        }, {
+                            withoutLocal: true,
+                        }),
                 ])
                 this.winstonLogger.debug(WinstonLog.ObserveClmmPool, JSON.stringify({
                     liquidityPoolId,

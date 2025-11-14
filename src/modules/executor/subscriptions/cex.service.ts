@@ -6,11 +6,9 @@ import { EventName, WsCexLastPricesUpdatedEvent, WsCexOrderBookUpdatedEvent } fr
 export class CexSubscriptionService {
     @OnEvent(EventName.WsCexLastPricesUpdated)
     async handleCexLastPricesUpdated(payload: WsCexLastPricesUpdatedEvent) {
-        console.log(payload)
     }
 
     @OnEvent(EventName.WsCexOrderBookUpdated)
     async handleCexOrderBookUpdated(event: WsCexOrderBookUpdatedEvent) {
-        console.log(event)
     }
 }

@@ -7,6 +7,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { PrimaryMongooseObserverService } from "@modules/databases"
 import { Cron, CronExpression } from "@nestjs/schedule"
+import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable()
 export class UsersLoaderService implements OnModuleInit {
@@ -17,15 +18,20 @@ export class UsersLoaderService implements OnModuleInit {
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
         private readonly observerService: PrimaryMongooseObserverService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { 
     }
 
     // we listen to moongodb changes and reload users
     async onModuleInit() {
+        // create a readiness watcher
+        this.readinessWatcherFactoryService.createWatcher(UsersLoaderService.name)
         // load users on application bootstrap
         await this.load()
         // observe users
         this.observe()
+        // wait until users are loaded
+        this.readinessWatcherFactoryService.setReady(UsersLoaderService.name)
     }
 
     // observe users changes

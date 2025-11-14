@@ -6,10 +6,11 @@ import { Logger as WinstonLogger } from "winston"
 import { PrimaryMongooseObserverService } from "@modules/databases"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { UsersLoaderService } from "./users-loader.service"
+import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable()
-export class BotLoaderService implements OnModuleInit {
-    private bots: Array<BotSchema> = []
+export class BotsLoaderService implements OnModuleInit {
+    bots: Array<BotSchema> = []
     constructor(
         private readonly usersLoaderService: UsersLoaderService,
         @InjectPrimaryMongoose()
@@ -17,15 +18,18 @@ export class BotLoaderService implements OnModuleInit {
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
         private readonly observerService: PrimaryMongooseObserverService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { 
     }
 
     // we listen to moongodb changes and reload users
     async onModuleInit() {
+        // wait until users are loaded
+        await this.readinessWatcherFactoryService.waitUntilReady(UsersLoaderService.name)
         // load bots on application bootstrap
         await this.load()
         // observe bots
-        this.observe()
+        await this.observe()
     }
 
     // observe bots changes
@@ -61,7 +65,10 @@ export class BotLoaderService implements OnModuleInit {
     async load(): Promise<void> {
         const bots = await this.connection
             .model<BotSchema>(BotSchema.name)
-            .find({ user: { $in: this.usersLoaderService.users.map((user) => new Types.ObjectId(user.id)) } })
+            .find({ 
+                user: { 
+                    $in: this.usersLoaderService.users.map((user) => new Types.ObjectId(user.id)) }
+            })
         this.winstonLogger.debug(
             WinstonLog.BotsLoaded, {
                 bots: bots.length,

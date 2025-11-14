@@ -1,6 +1,8 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./processors.module-definition"
-import { PositionsModule } from "./positions"
+import { ProcessorFactoryService } from "./processor-factory.service"
+import { OpenPositionProcessorService } from "./positions/open-position.service"
+
 @Module({})
 export class ProcessorsModule extends ConfigurableModuleClass {
     static register(
@@ -11,14 +13,15 @@ export class ProcessorsModule extends ConfigurableModuleClass {
             ...dynamicModule,
             imports: [
                 ...dynamicModule.imports || [],
-                PositionsModule.register({
-                    isGlobal: true,
-                }),
             ],
             providers: [
                 ...dynamicModule.providers || [], 
+                ProcessorFactoryService,
+                OpenPositionProcessorService,
             ],
-            exports: [],
+            exports: [
+                ProcessorFactoryService,
+            ],
         }
     }
 }   

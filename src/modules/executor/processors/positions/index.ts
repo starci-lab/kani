@@ -1,1 +1,1 @@
-export * from "./positions.module"
+export * from "./open-position.service"

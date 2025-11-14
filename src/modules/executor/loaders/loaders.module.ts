@@ -1,7 +1,7 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./loaders.module-definition"
 import { UsersLoaderService } from "./users-loader.service"
-import { BotLoaderService } from "./bot-loader.service"
+import { BotsLoaderService } from "./bots-loader.service"
 
 @Module({})
 export class LoadersModule extends ConfigurableModuleClass {
@@ -11,7 +11,7 @@ export class LoadersModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             UsersLoaderService,
-            BotLoaderService,
+            BotsLoaderService,
         ]
         return {
             ...dynamicModule,
