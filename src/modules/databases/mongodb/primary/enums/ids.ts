@@ -132,7 +132,7 @@ export enum LiquidityPoolId {
     MomentumSuiUsdc0175 = "momentumSuiUsdc0175",
     RaydiumSolUsdc004 = "raydiumSolUsdc004",
     RaydiumSolUsdt001 = "raydiumSolUsdt001",
-    OrcaSolUsdc004 = "orcaSolUsdc004",
+    OrcaSolUsdc004 = "orcaSolUsdc004"
 }
 
 export const GraphQLTypeLiquidityPoolId = createEnumType(LiquidityPoolId)

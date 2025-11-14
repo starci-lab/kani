@@ -22,6 +22,7 @@ export class LiquidityPoolsService implements Seeder {
 }
 export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
     {
+        _id: createObjectId(LiquidityPoolId.CetusSuiIka02),
         displayId: LiquidityPoolId.CetusSuiIka02,
         dex: createObjectId(DexId.Cetus),
         poolAddress: "0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789",
@@ -37,6 +38,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.CetusSuiUsdc005),
         displayId: LiquidityPoolId.CetusSuiUsdc005,
         dex: createObjectId(DexId.Cetus),
         poolAddress: "0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab",
@@ -51,6 +53,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.TurbosIkaUsdc015),
         displayId: LiquidityPoolId.TurbosIkaUsdc015,
         dex: createObjectId(DexId.Turbos),
         poolAddress: "0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
@@ -66,6 +69,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.TurbosDeepUsdc015),
         displayId: LiquidityPoolId.TurbosDeepUsdc015,
         dex: createObjectId(DexId.Turbos),
         poolAddress: "0x198af6ff81028c6577e94465d534c4e2cfcbbab06a95724ece7011c55a9d1f5a",
@@ -81,6 +85,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.CetusUsdcEth025),
         displayId: LiquidityPoolId.CetusUsdcEth025,
         dex: createObjectId(DexId.Cetus),
         poolAddress: "0x9e59de50d9e5979fc03ac5bcacdb581c823dbd27d63a036131e17b391f2fac88",
@@ -96,6 +101,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.MomentumWalSui02),
         displayId: LiquidityPoolId.MomentumWalSui02,
         dex: createObjectId(DexId.Momentum),
         poolAddress: "0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
@@ -111,6 +117,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.MomentumSuiUsdc0175),
         displayId: LiquidityPoolId.MomentumSuiUsdc0175,
         dex: createObjectId(DexId.Momentum),
         poolAddress: "0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388",
@@ -125,6 +132,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.RaydiumSolUsdc004),
         displayId: LiquidityPoolId.RaydiumSolUsdc004,
         dex: createObjectId(DexId.Raydium),
         poolAddress: "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv",
@@ -136,6 +144,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
     },
     {
+        _id: createObjectId(LiquidityPoolId.RaydiumSolUsdt001),
         displayId: LiquidityPoolId.RaydiumSolUsdt001,
         dex: createObjectId(DexId.Raydium),
         poolAddress: "3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
@@ -150,6 +159,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         ]
     },
     {
+        _id: createObjectId(LiquidityPoolId.OrcaSolUsdc004),
         displayId: LiquidityPoolId.OrcaSolUsdc004,
         dex: createObjectId(DexId.Orca),
         poolAddress: "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
@@ -159,5 +169,5 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         network: Network.Mainnet,
         chainId: ChainId.Solana,
-    },
+    }
 ]

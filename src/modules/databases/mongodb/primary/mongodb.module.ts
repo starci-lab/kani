@@ -26,8 +26,8 @@ import {
     WalletSchemaClass,
     SessionSchema,
     SessionSchemaClass,
-    LiquidityProvisionBotSchema,
-    LiquidityProvisionBotSchemaClass,
+    BotSchema,
+    BotSchemaClass,
     ConfigSchema,
     ConfigSchemaClass,
     DynamicLiquidityPoolInfoSchema,
@@ -43,6 +43,8 @@ import { Connection } from "mongoose"
 import { SeedersModule } from "./seeders"
 import { MemoryModule } from "./memory"
 import { CONNECTION_NAME } from "./constants"
+import { normalizeMongoose } from "../plugins"
+import { PrimaryMongooseObserverService } from "./observer.service"
 
 @Module({})
 export class PrimaryMongoDbModule extends ConfigurableModuleClass {
@@ -89,13 +91,20 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     dbName,
                     connectionName: CONNECTION_NAME,
                     connectionFactory: async (connection: Connection) => {
+                        connection.plugin(normalizeMongoose)
                         return connection
                     },
                 }),
                 this.forFeature(),
                 ...extraModules,
             ],
-            exports: [...extraModules],
+            providers: [
+                PrimaryMongooseObserverService
+            ],
+            exports: [
+                ...extraModules, 
+                PrimaryMongooseObserverService
+            ],
         }
     }
 
@@ -109,8 +118,8 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         useFactory: () => StorageSchemaClass,
                     },
                     {
-                        name: LiquidityProvisionBotSchema.name,
-                        useFactory: () => LiquidityProvisionBotSchemaClass,
+                        name: BotSchema.name,
+                        useFactory: () => BotSchemaClass,
                     },
                     {
                         name: UserSchema.name,

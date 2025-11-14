@@ -10,3 +10,13 @@ export class LiquidityPoolNotFoundException extends AbstractException {
         )
     }
 }
+
+export class LiquidityPoolsValidationException extends AbstractException {
+    constructor(liquidityPoolIds: Array<LiquidityPoolId>, message?: string) {
+        super(
+            message || `Liquidity pools ${liquidityPoolIds.join(", ")} validation failed`, 
+            "LIQUIDITY_POOLS_VALIDATION_EXCEPTION", 
+            { liquidityPoolIds }
+        )
+    }
+}

@@ -1,12 +1,12 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./mutations.module-definition"
 import { AuthModule } from "./auth"
-import { LiquidityProvisionModule } from "./liquidity-provision"
+import { BotModule } from "./bot"
 
 @Module({
     imports: [
         AuthModule.register({}),
-        LiquidityProvisionModule.register({}),
+        BotModule.register({}),
     ],
 })
 export class MutationsModule extends ConfigurableModuleClass {}

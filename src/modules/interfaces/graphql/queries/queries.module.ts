@@ -1,13 +1,13 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./queries.module-definition"
 import { UsersModule } from "./users"
-import { LiquidityProvisionBotModule } from "./liquidity-provision-bot"
+import { BotModule } from "./bot"
 import { StaticModule } from "./static"
 
 @Module({
     imports: [
         UsersModule.register({}),
-        LiquidityProvisionBotModule.register({}),
+        BotModule.register({}),
         StaticModule.register({}),
     ],
 })

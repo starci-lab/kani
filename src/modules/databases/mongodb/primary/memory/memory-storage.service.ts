@@ -26,7 +26,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         const tokens = await this.connection
                             .model<TokenSchema>(TokenSchema.name)
                             .find()
-                        this.tokens = tokens.map((token) => token.toJSON())
+                        this.tokens = tokens.map(token => token.toJSON())
                     },
                 })
             })(),
@@ -36,7 +36,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         const liquidityPools = await this.connection
                             .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                             .find()
-                        this.liquidityPools = liquidityPools.map((liquidityPool) => liquidityPool.toJSON())
+                        this.liquidityPools = liquidityPools.map(liquidityPool => liquidityPool.toJSON())
                     },
                 })
             })(),
@@ -46,7 +46,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         const dexes = await this.connection
                             .model<DexSchema>(DexSchema.name)
                             .find()
-                        this.dexes = dexes.map((dex) => dex.toJSON())
+                        this.dexes = dexes.map(dex => dex.toJSON())
                     },
                 })
             })(),

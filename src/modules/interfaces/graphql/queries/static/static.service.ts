@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { 
     DexSchema, 
-    GasConfig, 
     LiquidityPoolSchema, 
-    MemDbService, 
-    TokenSchema 
+    TokenSchema,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 
 /**
@@ -15,7 +14,7 @@ import {
 @Injectable()
 export class StaticService {
     constructor(
-        private readonly memDbService: MemDbService,
+        private readonly memoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -24,7 +23,7 @@ export class StaticService {
      * and typically represent static registry data.
      */
     tokens(): Array<TokenSchema> {
-        return this.memDbService.tokens
+        return this.memoryStorageService.tokens
     }
 
     /**
@@ -33,7 +32,7 @@ export class StaticService {
      * fee tiers, tick spacing, and pool identifiers.
      */
     liquidityPools(): Array<LiquidityPoolSchema> {
-        return this.memDbService.liquidityPools
+        return this.memoryStorageService.liquidityPools
     }
 
     /**
@@ -42,13 +41,6 @@ export class StaticService {
      * used for routing and liquidity aggregation.
      */
     dexes(): Array<DexSchema> {
-        return this.memDbService.dexes
-    }
-
-    /**
-     * Return the gas configuration for the platform.
-     */
-    gasConfig(): GasConfig {
-        return this.memDbService.gasConfig!
+        return this.memoryStorageService.dexes
     }
 }

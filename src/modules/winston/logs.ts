@@ -44,4 +44,13 @@ export enum WinstonLog {
     WebsocketCloseError = "Websocket.Close.Error",
     WebsocketReconnect = "Websocket.Reconnect",
     WebsocketMaxRetriesReached = "Websocket.Max.Retries.Reached",
+    UsersLoaded = "Users.Loaded",
+    MongooseChangeStreamClose = "Mongoose.Change.Stream.Close",
+    MongooseChangeStreamStarted = "Mongoose.Change.Stream.Started",
+    MongooseChangeStreamError = "Mongoose.Change.Stream.Error",
+    MongooseChangeStreamRestarting = "Mongoose.Change.Stream.Restarting",
+    BotsLoaded = "Bots.Loaded",
+    MongooseChangeStreamInsert = "Mongoose.Change.Stream.Insert",
+    MongooseChangeStreamUpdate = "Mongoose.Change.Stream.Update",
+    MongooseChangeStreamDelete = "Mongoose.Change.Stream.Delete",
 }

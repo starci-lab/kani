@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common"
 
-import { InjectMongoose, UserSchema } from "@modules/databases"
+import { InjectPrimaryMongoose, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
-import { UserNotFoundException, UserTotpSecretNotFoundException } from "@modules/errors/db/user"
+import { UserNotFoundException, UserTotpSecretNotFoundException } from "@exceptions"
 import { EncryptionService } from "@modules/crypto"
 
 @Injectable()
 export class UsersService {
     constructor(
-        @InjectMongoose()
+        @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly encryptionService: EncryptionService,
     ) {}

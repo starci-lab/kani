@@ -6,20 +6,20 @@ import { Schema as MongooseSchema, Types } from "mongoose"
 import { UserSchema } from "./user.schema"
 import { TokenSchema } from "./token.schema"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
-import { ExplorerId, GraphQLTypeExplorerId } from "../enums"
+import { ExplorerId, GraphQLTypeExplorerId, GraphQLTypeTokenId, TokenId } from "../enums"
 /**
- * GraphQL object type representing a liquidity provision bot.
+ * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
  * on a specific blockchain.
  */
 @ObjectType({
-    description: "Represents a liquidity provision bot",
+    description: "Represents a bot",
 })
 @Schema({
     timestamps: true,
-    collection: "liquidity_provision_bots",
+    collection: "bots",
 })
-export class LiquidityProvisionBotSchema extends AbstractSchema {
+export class BotSchema extends AbstractSchema {
     /**
      * The on-chain account address associated with this bot.
      * This address is used to manage liquidity positions and execute transactions.
@@ -55,9 +55,10 @@ export class LiquidityProvisionBotSchema extends AbstractSchema {
     @Field(() => String, {
         description:
             "Human-readable name of the bot, used for easy identification and management.",
+        nullable: true,
     })
-    @Prop({ type: String, required: true })
-        name: string
+    @Prop({ type: String, required: false })
+        name?: string
 
     @Field(() => ID, {
         description:
@@ -116,11 +117,16 @@ export class LiquidityProvisionBotSchema extends AbstractSchema {
     })
     @Prop({ type: Date, required: false })
         stoppedAt: Date
+
+    @Field(() => GraphQLTypeTokenId, {
+        description: "The token that the bot aims to accumulate as the primary outcome of its liquidity strategy.",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false, enum: TokenId })
+        targetTokenId?: TokenId
 }
 /**
  * The actual Mongoose schema generated from the class definition above.
  * This is what gets registered with the NestJS Mongoose module.
  */
-export const LiquidityProvisionBotSchemaClass = SchemaFactory.createForClass(
-    LiquidityProvisionBotSchema,
-)
+export const BotSchemaClass = SchemaFactory.createForClass(BotSchema)

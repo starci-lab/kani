@@ -196,7 +196,7 @@ export const envConfig = () => ({
         },
     },
     botExecutor: {
-        batchId: process.env.BOX_EXECUTOR_BATCH_ID ? parseInt(process.env.BOX_EXECUTOR_BATCH_ID, 10) : 1,
+        batchId: process.env.BOX_EXECUTOR_BATCH_ID ? parseInt(process.env.BOX_EXECUTOR_BATCH_ID, 10) : 0,
     },
     ports: {
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,

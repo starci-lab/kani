@@ -1,6 +1,6 @@
 import { Field, InputType, ObjectType } from "@nestjs/graphql"
 import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
-import { LiquidityProvisionBotSchema } from "@modules/databases"
+import { BotSchema } from "@modules/databases"
 
 @ObjectType({
     description: "Contains the exported wallet keypair, used for backup or manual storage.",
@@ -36,30 +36,30 @@ export class ExportedAccountResponse
 })
 export class ExportedAccountRequest {
     @Field(() => String, {
-        description: "The unique ID of the liquidity provision bot associated with the account.",
+        description: "The unique ID of the bot associated with the account.",
     })
         id: string
 }
 
 @InputType({
-    description: "Input fields required to fetch a liquidity provision bot.",
+    description: "Input fields required to fetch a bot.",
 })
-export class LiquidityProvisionBotRequest {
+export class BotRequest {
     @Field(() => String, {
-        description: "The unique ID of the liquidity provision bot.",
+        description: "The unique ID of the bot.",
     })
         id: string
 }
 
 @ObjectType({
-    description: "The GraphQL response for fetching details of a liquidity provision bot.",
+    description: "The GraphQL response for fetching details of a bot.",
 })
-export class LiquidityProvisionBotResponse
+export class BotResponse
     extends AbstractGraphQLResponse
-    implements IAbstractGraphQLResponse<LiquidityProvisionBotSchema> {
-    @Field(() => LiquidityProvisionBotSchema, {
+    implements IAbstractGraphQLResponse<BotSchema> {
+    @Field(() => BotSchema, {
         nullable: true,
-        description: "The liquidity provision bot data, if the request is successful.",
+        description: "The bot data, if the request is successful.",
     })
-        data?: LiquidityProvisionBotSchema
+        data?: BotSchema
 }

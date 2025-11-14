@@ -230,6 +230,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         selectable: false,
     },
     {
+        _id: createObjectId(TokenId.SolNative),
         displayId: TokenId.SolNative,
         name: "SOL",
         symbol: "SOL",
@@ -252,6 +253,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         selectable: true,
     },
     {
+        _id: createObjectId(TokenId.SolUsdc),
         displayId: TokenId.SolUsdc,
         name: "USDC",
         symbol: "USDC",
@@ -275,6 +277,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         selectable: false,
     },
     {
+        _id: createObjectId(TokenId.SolUsdt),
         displayId: TokenId.SolUsdt,
         name: "USDT",
         symbol: "USDT",

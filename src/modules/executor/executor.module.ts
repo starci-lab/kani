@@ -1,6 +1,6 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./executor.module-definition"
-import { UserModule } from "./users"
+import { LoadersModule } from "./loaders"
 
 @Module({})
 export class ExecutorModule extends ConfigurableModuleClass {
@@ -11,7 +11,7 @@ export class ExecutorModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = []
         return {
             imports: [
-                UserModule.register({
+                LoadersModule.register({
                     isGlobal: true,
                 }),
             ],

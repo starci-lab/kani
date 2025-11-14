@@ -1,12 +1,10 @@
-import { v4 } from "uuid"
+import { createHash } from "crypto"
 import { Types } from "mongoose"
 
-export const createObjectId = (id: string = v4()): Types.ObjectId => {
-    let hex = Buffer.from(id, "utf-8").toString("hex")
-    if (hex.length < 24) {
-        hex = hex.padStart(24, "0")
-    } else if (hex.length > 24) {
-        hex = hex.slice(0, 24)
-    }
-    return new Types.ObjectId(hex)
+export const createObjectId = (input: string): Types.ObjectId => {
+    const hash = createHash("sha256")
+        .update(input)
+        .digest("hex")
+        .slice(0, 24) // ObjectId = 12 bytes = 24 hex chars
+    return new Types.ObjectId(hash)
 }

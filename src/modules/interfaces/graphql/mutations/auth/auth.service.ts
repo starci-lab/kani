@@ -1,18 +1,18 @@
 import { Injectable } from "@nestjs/common"
-import { InjectMongoose, SessionSchema, UserSchema } from "@modules/databases"
+import { InjectPrimaryMongoose, SessionSchema, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
 import { ConfirmTotpResponseData, RefreshResponseData } from "./auth.dto"
 import { JwtAuthService, UserJwtLike } from "@modules/passport"
 import { 
-    UserNotFoundException,
-    UserTotpSecretNotFoundException,
-    SessionNotFoundException
-} from "@modules/errors"
+    SessionNotFoundException, 
+    UserNotFoundException, 
+    UserTotpSecretNotFoundException
+} from "@exceptions"
 
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectMongoose()
+        @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly jwtAuthService: JwtAuthService,
     ) {}
@@ -27,7 +27,7 @@ export class AuthService {
             throw new UserNotFoundException()
         }
         if (!user.encryptedTotpSecret) {
-            throw new UserTotpSecretNotFoundException()
+            throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
         // if the user not verified, set the totpVerified to true
         if (!user.totpVerified) {
@@ -55,17 +55,17 @@ export class AuthService {
             .model<UserSchema>(UserSchema.name)
             .findById(userLike.id)
         if (!user) {
-            throw new UserNotFoundException()
+            throw new UserNotFoundException("User not found")
         }
         // if not found, try in database
         if (!user.encryptedTotpSecret) {
-            throw new UserTotpSecretNotFoundException()
+            throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
         const sessionExists = await this.connection
             .model<SessionSchema>(SessionSchema.name)
             .exists({ user: userLike.id })
         if (!sessionExists) {
-            throw new SessionNotFoundException()
+            throw new SessionNotFoundException("Session not found")
         }
         return this.jwtAuthService.generate({
             id: user.id,

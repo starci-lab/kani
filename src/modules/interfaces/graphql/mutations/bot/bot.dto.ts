@@ -20,11 +20,11 @@ import {
  */
 @InputType({
     description:
-        "Represents the input payload for creating a new liquidity provision bot",
+        "Represents the input payload for creating a new bot",
 })
-export class AddLiquidityProvisionBotRequest {
+export class AddBotRequest {
     /**
-     * The blockchain network where this liquidity provision bot will operate.
+     * The blockchain network where this bot will operate.
      * Determines which on-chain protocol and RPC endpoint the bot will use.
      */
     @Field(() => GraphQLTypeChainId, {
@@ -37,11 +37,11 @@ export class AddLiquidityProvisionBotRequest {
 
 @ObjectType({
     description:
-        "Represents the response data from the addLiquidityProvisionBot mutation",
+        "Represents the response data from the addBot mutation",
 })
-export class AddLiquidityProvisionBotResponseData {
+export class AddBotResponseData {
     @Field(() => String, {
-        description: "The ID of the liquidity provision bot",
+        description: "The ID of the bot",
     })
         id: string
 
@@ -53,107 +53,107 @@ export class AddLiquidityProvisionBotResponseData {
 
 @ObjectType({
     description:
-        "Represents the response from the addLiquidityProvisionBot mutation",
+        "Represents the response from the addBot mutation",
 })
-export class AddLiquidityProvisionBotResponse
+export class AddBotResponse
     extends AbstractGraphQLResponse
-    implements IAbstractGraphQLResponse<AddLiquidityProvisionBotResponseData> {
-    @Field(() => AddLiquidityProvisionBotResponseData, {
+    implements IAbstractGraphQLResponse<AddBotResponseData> {
+    @Field(() => AddBotResponseData, {
         nullable: true,
-        description: "The response data from the addLiquidityProvisionBot mutation",
+        description: "The response data from the addBot mutation",
     })
-        data?: AddLiquidityProvisionBotResponseData
+        data?: AddBotResponseData
 }
 
 @InputType({
-    description: "Input data required to initialize a liquidity provision bot.",
+    description: "Input data required to initialize a bot.",
 })
-export class InitializeLiquidityProvisionBotRequest {
+export class InitializeBotRequest {
     @Field(() => ID, {
-        description: "The ID of the liquidity provision bot to initialize",
+        description: "The ID of the bot to initialize",
     })
         id: string
 
     @Field(() => String, {
         description:
-            "Human-readable name of the bot, used for identification and management",
+            "Human-readable name of the bot, used for identification and management.",
     })
         name: string
 
     @Field(() => GraphQLTypeTokenId, {
         description:
-            "The token that the bot will prioritize when managing liquidity positions",
+            "The token that the bot aims to accumulate as the primary outcome of its liquidity strategy.",
     })
-        priorityTokenId: TokenId
+        targetTokenId: TokenId
 
     @Field(() => [GraphQLTypeLiquidityPoolId], {
         description:
-            "List of liquidity pools where the bot will actively provide and manage liquidity.",
+            "List of liquidity pools where the bot will actively provide and manage liquidity. Must exist in the database.",
     })
         liquidityPoolIds: Array<LiquidityPoolId>
 }
 
 @ObjectType({
     description:
-        "Defines the payload returned after successfully initializing a new liquidity provision bot.",
+        "Defines the payload returned after successfully initializing a new bot.",
 })
-export class InitializeLiquidityProvisionBotResponse
+export class InitializeBotResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse { }
 
 @InputType({
     description:
-        "Input payload for updating the active liquidity pools managed by a specific liquidity provision bot.",
+        "Input payload for updating the active liquidity pools managed by a specific bot.",
 })
-export class UpdateLiquidityProvisionBotLiquidityPoolsRequest {
+export class UpdateBotLiquidityPoolsRequest {
     @Field(() => ID, {
-        description: "Unique identifier of the liquidity provision bot to update.",
+        description: "Unique identifier of the bot to update.",
     })
         id: string
 
     @Field(() => [GraphQLTypeLiquidityPoolId], {
         description:
-            "Array of liquidity pool IDs that the bot should monitor and provide liquidity for.",
+            "Array of liquidity pool IDs that the bot should monitor and provide liquidity for. Must exist in the database.",
     })
         liquidityPoolIds: Array<LiquidityPoolId>
 }
 
 @ObjectType({
     description:
-        "Response payload returned after successfully updating the bot’s assigned liquidity pools.",
+        "Response payload returned after successfully updating the bot's assigned liquidity pools.",
 })
-export class UpdateLiquidityProvisionBotLiquidityPoolsResponse
+export class UpdateBotLiquidityPoolsResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse { }
 
 @InputType({
     description:
-        "Request payload for starting a liquidity provision bot instance.",
+        "Request payload for starting a bot instance.",
 })
-export class RunLiquidityProvisionBotRequest {
+export class RunBotRequest {
     @Field(() => ID, {
         description:
-            "The unique ID of the liquidity provision bot to start running.",
+            "The unique ID of the bot to start running.",
     })
         id: string
 }
 
 @ObjectType({
     description:
-        "Response payload returned after successfully starting the liquidity provision bot.",
+        "Response payload returned after successfully starting the bot.",
 })
-export class RunLiquidityProvisionBotResponse
+export class RunBotResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse { }
 
 /**
- * Represents the request to stop a liquidity provision bot.
+ * Represents the request to stop a bot.
  */
 @InputType({
     description:
         "Request payload for stopping a running liquidity provision bot instance.",
 })
-export class StopLiquidityProvisionBotRequest {
+export class StopBotRequest {
     @Field(() => ID, {
         description:
             "The unique ID of the liquidity provision bot to stop running.",
@@ -165,18 +165,18 @@ export class StopLiquidityProvisionBotRequest {
     description:
         "Response payload returned after successfully stopping the liquidity provision bot.",
 })
-export class StopLiquidityProvisionBotResponse
+export class StopBotResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse { }
 
 /**
- * Represents the request to set the RPC endpoints for a liquidity provision bot.
+ * Represents the request to set the RPC endpoints for a bot.
  */
 @InputType({
     description:
         "Input payload for updating RPC endpoints used by a liquidity provision bot.",
 })
-export class UpdateLiquidityProvisionBotRpcsRequest {
+export class UpdateBotRpcsRequest {
     @Field(() => ID, {
         description:
             "The unique ID of the liquidity provision bot to update RPC endpoints for.",
@@ -196,7 +196,7 @@ export class UpdateLiquidityProvisionBotRpcsRequest {
     description:
         "Response payload returned after successfully updating the RPC endpoints of a bot.",
 })
-export class UpdateLiquidityProvisionBotRpcsResponse
+export class UpdateBotRpcsResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse { }
 
@@ -207,10 +207,10 @@ export class UpdateLiquidityProvisionBotRpcsResponse
     description:
         "Input payload for configuring the blockchain explorer integration of a bot.",
 })
-export class UpdateLiquidityProvisionBotExplorerIdRequest {
+export class UpdateBotExplorerIdRequest {
     @Field(() => ID, {
         description:
-            "The unique ID of the liquidity provision bot to configure explorer for.",
+            "The unique ID of the bot to configure explorer for.",
     })
         id: string
 
@@ -226,6 +226,6 @@ export class UpdateLiquidityProvisionBotExplorerIdRequest {
     description:
         "Response payload returned after successfully updating the explorer URL of a bot.",
 })
-export class UpdateLiquidityProvisionBotExplorerIdResponse
+export class UpdateBotExplorerIdResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse { }

@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
-import { LiquidityProvisionService } from "./liquidity-provision.service"
+import { BotService } from "./bot.service"
 import { UseGuards, UseInterceptors } from "@nestjs/common"
 import {
     GraphQLUser,
@@ -7,22 +7,22 @@ import {
     GraphQLJwtOnlyVerifiedTOTPAuthGuard,
 } from "@modules/passport"
 import {
-    AddLiquidityProvisionBotRequest,
-    AddLiquidityProvisionBotResponse,
-    AddLiquidityProvisionBotResponseData,
-    InitializeLiquidityProvisionBotRequest,
-    InitializeLiquidityProvisionBotResponse,
-    StopLiquidityProvisionBotResponse,
-    StopLiquidityProvisionBotRequest,
-    UpdateLiquidityProvisionBotLiquidityPoolsRequest,
-    UpdateLiquidityProvisionBotLiquidityPoolsResponse,
-    UpdateLiquidityProvisionBotRpcsResponse,
-    UpdateLiquidityProvisionBotRpcsRequest,
-    UpdateLiquidityProvisionBotExplorerIdRequest,
-    UpdateLiquidityProvisionBotExplorerIdResponse,
-    RunLiquidityProvisionBotResponse,
-    RunLiquidityProvisionBotRequest,
-} from "./liquidity-provision.dto"
+    AddBotResponse,
+    InitializeBotResponse,
+    AddBotRequest,
+    UpdateBotLiquidityPoolsRequest,
+    UpdateBotLiquidityPoolsResponse,
+    InitializeBotRequest,
+    RunBotResponse,
+    RunBotRequest,
+    StopBotResponse,
+    StopBotRequest,
+    UpdateBotRpcsResponse,
+    UpdateBotRpcsRequest,
+    UpdateBotExplorerIdResponse,
+    UpdateBotExplorerIdRequest,
+    AddBotResponseData,
+} from "./bot.dto"
 import { ThrottlerConfig } from "@modules/throttler"
 import { UseThrottler } from "@modules/throttler/throttler.decorators"
 import {
@@ -31,61 +31,61 @@ import {
 } from "../../interceptors"
 
 @Resolver()
-export class LiquidityProvisionResolver {
+export class BotResolver {
     constructor(
-        private readonly liquidityProvisionService: LiquidityProvisionService,
+        private readonly botService: BotService,
     ) { }
 
     /**
-     * Mutation for adding a new liquidity provision bot.
+     * Mutation for adding a new bot.
      * Requires a valid refresh token for authentication.
      */
-    @GraphQLSuccessMessage("Liquidity provision bot added successfully")
+    @GraphQLSuccessMessage("Bot added successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => AddLiquidityProvisionBotResponse, {
-        description: "Creates and registers a new liquidity provision bot for the authenticated user."
+    @Mutation(() => AddBotResponse, {
+        description: "Creates and registers a new bot for the authenticated user."
     })
-    async addLiquidityProvisionBot(
-        @Args("request", { description: "The request payload for creating a new liquidity provision bot." })
-            request: AddLiquidityProvisionBotRequest,
+    async addBot(
+        @Args("request", { description: "The request payload for creating a new bot." })
+            request: AddBotRequest,
 
         @GraphQLUser() user: UserJwtLike,
-    ): Promise<AddLiquidityProvisionBotResponseData> {
-        return await this.liquidityProvisionService.addLiquidityProvisionBot(request, user)
+    ): Promise<AddBotResponseData> {
+        return await this.botService.addBot(request, user)
     }
-
-    @GraphQLSuccessMessage("Liquidity provision bot initialized successfully")
+    
+    @GraphQLSuccessMessage("Bot initialized successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => InitializeLiquidityProvisionBotResponse, {
-        description: "Initializes a liquidity provision bot for the authenticated user."
+    @Mutation(() => InitializeBotResponse, {
+        description: "Initializes a bot for the authenticated user."
     })
-    async initializeLiquidityProvisionBot(
-        @Args("request", { description: "The request payload for initializing a liquidity provision bot." })
-            request: InitializeLiquidityProvisionBotRequest,
+    async initializeBot(
+        @Args("request", { description: "The request payload for initializing a bot." })
+            request: InitializeBotRequest,
         @GraphQLUser() user: UserJwtLike,
     ) {
-        return await this.liquidityProvisionService.initializeLiquidityProvisionBot(request, user)
+        return await this.botService.initializeBot(request, user)
     }
 
-    @GraphQLSuccessMessage("Successfully updated liquidity pools for the liquidity provision bot.")
+    @GraphQLSuccessMessage("Successfully updated liquidity pools for the bot.")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => UpdateLiquidityProvisionBotLiquidityPoolsResponse, {
+    @Mutation(() => UpdateBotLiquidityPoolsResponse, {
         description: "Updates the set of liquidity pools managed by a specific liquidity provision bot belonging to the authenticated user.",
     })
-    async updateLiquidityProvisionBotLiquidityPools(
+    async updateBotLiquidityPools(
         @Args("request", {
             description: "Input payload containing the bot ID and the new list of liquidity pool IDs to manage."
         })
-            request: UpdateLiquidityProvisionBotLiquidityPoolsRequest,
+            request: UpdateBotLiquidityPoolsRequest,
         @GraphQLUser() user: UserJwtLike,
     ) {
-        return await this.liquidityProvisionService.updateLiquidityProvisionBotLiquidityPools(request, user)
+        return await this.botService.updateBotLiquidityPools(request, user)
     }
 
     /**
@@ -95,17 +95,17 @@ export class LiquidityProvisionResolver {
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => RunLiquidityProvisionBotResponse, {
+    @Mutation(() => RunBotResponse, {
         description: "Starts the execution of a liquidity provision bot owned by the authenticated user.",
     })
-    async runLiquidityProvisionBot(
+    async runBot(
         @Args("request", {
             description: "The request payload containing the ID of the bot to start.",
         })
-            request: RunLiquidityProvisionBotRequest,
+            request: RunBotRequest,
         @GraphQLUser() user: UserJwtLike,
     ) {
-        return await this.liquidityProvisionService.runLiquidityProvisionBot(request, user)
+        return await this.botService.runBot(request, user)
     }
 
     /**
@@ -115,17 +115,17 @@ export class LiquidityProvisionResolver {
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => StopLiquidityProvisionBotResponse, {
+    @Mutation(() => StopBotResponse, {
         description: "Stops a currently running liquidity provision bot belonging to the authenticated user.",
     })
-    async stopLiquidityProvisionBot(
+    async stopBot(
         @Args("request", {
             description: "The request payload containing the ID of the bot to stop.",
         })
-            request: StopLiquidityProvisionBotRequest,
+            request: StopBotRequest,
         @GraphQLUser() user: UserJwtLike,
     ) {
-        return await this.liquidityProvisionService.stopLiquidityProvisionBot(request, user)
+        return await this.botService.stopBot(request, user)
     }
 
     /**
@@ -135,17 +135,17 @@ export class LiquidityProvisionResolver {
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => UpdateLiquidityProvisionBotRpcsResponse, {
+    @Mutation(() => UpdateBotRpcsResponse, {
         description: "Updates the RPC endpoints used by a specific liquidity provision bot.",
     })
-    async updateLiquidityProvisionBotRpcs(
+    async updateBotRpcs(
         @Args("request", {
             description: "Input payload containing the bot ID and the new RPC URLs to use.",
         })
-            request: UpdateLiquidityProvisionBotRpcsRequest,
+            request: UpdateBotRpcsRequest,
         @GraphQLUser() user: UserJwtLike,
     ) {
-        return await this.liquidityProvisionService.updateLiquidityProvisionBotRpcs(request, user)
+        return await this.botService.updateBotRpcs(request, user)
     }
 
     /**
@@ -155,16 +155,16 @@ export class LiquidityProvisionResolver {
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @Mutation(() => UpdateLiquidityProvisionBotExplorerIdResponse, {
+    @Mutation(() => UpdateBotExplorerIdResponse, {
         description: "Configures or updates the blockchain explorer integration for a liquidity provision bot.",
     })
-    async updateLiquidityProvisionBotExplorerId(
+    async updateBotExplorerId(
         @Args("request", {
             description: "Input payload containing the bot ID and the new explorer base URL.",
         })
-            request: UpdateLiquidityProvisionBotExplorerIdRequest,
+            request: UpdateBotExplorerIdRequest,
         @GraphQLUser() user: UserJwtLike,
     ) {
-        return await this.liquidityProvisionService.updateLiquidityProvisionBotExplorerId(request, user)
+        return await this.botService.updateBotExplorerId(request, user)
     }
 }

@@ -11,6 +11,10 @@ import { GcpModule } from "@modules/gcp"
 import { CodeModule } from "@modules/code"
 import { TotpModule } from "@modules/totp"
 import { CacheModule } from "@modules/cache"
+import { GraphQLModule } from "@modules/interfaces"
+import { ThrottlerModule } from "@modules/throttler"
+import { CookieModule } from "@modules/cookie"
+import { SentryModule } from "@modules/sentry"
 
 @Module({
     imports: [
@@ -24,6 +28,15 @@ import { CacheModule } from "@modules/cache"
             isGlobal: true,
         }),
         CryptoModule.register({
+            isGlobal: true,
+        }),
+        CookieModule.register({
+            isGlobal: true,
+        }),
+        SentryModule.register({
+            isGlobal: true,
+        }),
+        ThrottlerModule.register({
             isGlobal: true,
         }),
         CodeModule.register({
@@ -52,6 +65,11 @@ import { CacheModule } from "@modules/cache"
         }),
         HttpModule.register({
             isGlobal: true,
+        }),
+        GraphQLModule.register({
+            isGlobal: true,
+            useFederation: false,
+            registerAllResolvers: true,
         }),
     ],
 })
