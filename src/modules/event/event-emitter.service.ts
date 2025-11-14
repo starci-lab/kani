@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { EventName } from "./events"
-import { InstanceIdService } from "@modules/mixin"
+import { InjectSuperJson, InstanceIdService } from "@modules/mixin"
 import { InjectKafkaProducer } from "./kafka/kafka.decorators"
 import { CompressionTypes, Producer } from "kafkajs"
+import SuperJSON from "superjson"
 
 export interface EmitOptions {
     withoutKafka?: boolean
@@ -17,6 +18,8 @@ export class EventEmitterService {
         private readonly kafkaProducer: Producer,
         private readonly eventEmitter: EventEmitter2,
         private readonly instanceIdService: InstanceIdService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
     ) {}
 
     async emit<T>(
@@ -37,10 +40,14 @@ export class EventEmitterService {
                 // ack = 0 means the message is acknowledged when the leader has received the message from the producer
                 // ack = -1 means the message is acknowledged when the leader has written the message to its local log and the message is persisted to the follower
                 acks: -1,
-                messages: [{ value: JSON.stringify({
-                    ...payload,
-                    instanceId: this.instanceIdService.getId()
-                }) }]
+                messages: [
+                    { 
+                        value: this.superjson.stringify({
+                            data: payload,
+                            instanceId: this.instanceIdService.getId()
+                        }) 
+                    },
+                ],
             })
         }
     }

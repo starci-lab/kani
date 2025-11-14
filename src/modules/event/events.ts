@@ -1,6 +1,6 @@
 import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@modules/common"
-import { LiquidityPoolId, TokenId } from "@modules/databases"
+import { CexId, LiquidityPoolId, TokenId } from "@modules/databases"
 import BN from "bn.js"
 
 export enum EventName {
@@ -39,4 +39,28 @@ export interface LiquidityPoolsFetchedEvent {
 
 export interface LiquidityPoolsUpdatedEvent {
     pool: FetchedPool
+}
+
+export interface WsCexLastPricesUpdatedEvent {
+    cexId: CexId
+    tokenId: TokenId
+    lastPrice: number
+}
+
+export interface WsCexOrderBookUpdatedEvent {
+    cexId: CexId
+    tokenId: TokenId
+    orderBook: OrderBook
+}
+
+export interface OrderBook {
+    bidPrice: number
+    bidQty: number
+    askPrice: number
+    askQty: number
+}
+
+export interface WsPythLastPricesUpdatedEvent {
+    tokenId: TokenId
+    price: number
 }

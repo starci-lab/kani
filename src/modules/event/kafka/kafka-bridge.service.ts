@@ -3,8 +3,9 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Consumer, EachMessagePayload } from "kafkajs"
 import { EventName } from "../events"
 import { InjectKafkaConsumer } from "./kafka.decorators"
-import { InstanceIdService } from "@modules/mixin"
+import { InjectSuperJson, InstanceIdService } from "@modules/mixin"
 import { EventPayloadType } from "../types"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class KafkaBridgeService implements OnModuleInit, OnApplicationShutdown {
@@ -13,7 +14,9 @@ export class KafkaBridgeService implements OnModuleInit, OnApplicationShutdown {
         @InjectKafkaConsumer()
         private readonly consumer: Consumer,
         private readonly eventEmitter: EventEmitter2,
-        private readonly instanceIdService: InstanceIdService
+        private readonly instanceIdService: InstanceIdService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
     ) {}
 
     async onModuleInit() {
@@ -30,7 +33,7 @@ export class KafkaBridgeService implements OnModuleInit, OnApplicationShutdown {
             eachMessage: async (payload: EachMessagePayload) => {
                 const { topic, message } = payload
                 const value = message.value?.toString() || "{}"
-                const data = JSON.parse(value) as EventPayloadType<unknown>
+                const data = this.superjson.parse(value) as EventPayloadType<unknown>
                 if (data.instanceId === this.instanceIdService.getId()) {
                     this.logger.debug(`Received event ${topic} from this instance`)
                     return

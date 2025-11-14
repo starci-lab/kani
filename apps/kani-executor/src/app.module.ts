@@ -5,6 +5,7 @@ import { envConfig, EnvModule } from "@modules/env"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
+import { EventModule } from "@modules/event"
 
 @Module({
     imports: [
@@ -24,6 +25,9 @@ import { ScheduleModule } from "@nestjs/schedule"
         }),
         ScheduleModule.forRoot(),
         ExecutorModule.register({
+            isGlobal: true,
+        }),
+        EventModule.register({
             isGlobal: true,
         }),
     ],
