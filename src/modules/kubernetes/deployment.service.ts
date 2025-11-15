@@ -22,7 +22,8 @@ export class KubernetesDeploymentService {
     async createDeployment({ 
         namespace, 
         deployment 
-    }: CreateDeploymentParams): Promise<void> {
+    }: CreateDeploymentParams
+    ): Promise<void> {
         await this.kubernetesApi.createNamespacedDeployment({
             namespace,
             body: deployment,

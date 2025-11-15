@@ -1,9 +1,8 @@
 import { AbstractException } from "@exceptions"
-import { TokenId } from "@modules/databases"
 
 export class TokenNotFoundException extends AbstractException {
-    constructor(tokenId: TokenId, message?: string) {
-        super(message || "Token not found", "TOKEN_NOT_FOUND_EXCEPTION", { tokenId })
+    constructor(message?: string) {
+        super(message || "Token not found", "TOKEN_NOT_FOUND_EXCEPTION")
     }
 }
 

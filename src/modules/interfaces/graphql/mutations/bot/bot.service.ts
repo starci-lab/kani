@@ -91,7 +91,7 @@ export class BotService {
         // we find the priority token and the liquidity pools
         const targetTokenObject = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === targetTokenId)
         if (!targetTokenObject) {
-            throw new TokenNotFoundException(targetTokenId)
+            throw new TokenNotFoundException("Target token not found with display id: " + targetTokenId)
         }
         const liquidityPoolsObjects = 
         this.primaryMemoryStorageService.liquidityPools
