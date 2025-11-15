@@ -2,6 +2,7 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./raydium.module-definition"
 import { RaydiumObserverService } from "./observer.service"
 import { RaydiumActionService } from "./action.service"
+import { createRaydiumClmmSdkProvider } from "./raydium.providers"
 
 @Injectable()
 export class RaydiumModule extends ConfigurableModuleClass {
@@ -10,6 +11,7 @@ export class RaydiumModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
+            createRaydiumClmmSdkProvider(),
         ]
         if (
             typeof options.enabled === "boolean" 
