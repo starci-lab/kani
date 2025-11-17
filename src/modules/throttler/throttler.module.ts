@@ -14,9 +14,9 @@ export class ThrottlerModule extends ConfigurableModuleClass {
             {
                 imports: [
                     IoRedisModule.register({
-                        host: envConfig().redis.host,
-                        port: envConfig().redis.port,
-                        password: envConfig().redis.password,
+                        host: envConfig().redis.throttler.host,
+                        port: envConfig().redis.throttler.port,
+                        password: envConfig().redis.throttler.password,
                     }),
                 ],
                 inject: [createIoRedisKey()],

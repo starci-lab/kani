@@ -7,7 +7,6 @@ import SuperJSON from "superjson"
 import { AsyncService } from "@modules/mixin"
 import Decimal from "decimal.js"
 import { TokenId } from "@modules/databases"
-import { Network } from "@typedefs"
 
 @Injectable()
 export class OraclePriceService {
@@ -20,20 +19,23 @@ export class OraclePriceService {
     ) {}
 
     async getOraclePrice(
-        { tokenA, tokenB, network }
+        { tokenA, tokenB }
         : GetOraclePriceParams
     ) {
-        const keyA = createCacheKey(CacheKey.PythTokenPrice, tokenA, network)
-        const keyB = createCacheKey(CacheKey.PythTokenPrice, tokenB, network)
-        const [priceACacheResult, priceBCacheResult] = await this.asyncService.allMustDone([
+        const keyA = createCacheKey(CacheKey.PythTokenPrice, tokenA)
+        const keyB = createCacheKey(CacheKey.PythTokenPrice, tokenB)
+        const [
+            priceACacheResult, 
+            priceBCacheResult
+        ] = await this.asyncService.allMustDone([
             this.cacheManager.get<string>(keyA),
             this.cacheManager.get<string>(keyB),
         ])
         if (!priceACacheResult) {
-            throw new PythTokenPriceNotFoundException(tokenA, network, "Token A price not found")
+            throw new PythTokenPriceNotFoundException(tokenA, "Token A price not found")
         }
         if (!priceBCacheResult) {
-            throw new PythTokenPriceNotFoundException(tokenB, network, "Token B price not found")
+            throw new PythTokenPriceNotFoundException(tokenB, "Token B price not found")
         }
         const priceA = new Decimal(
             this.superjson.parse<PythTokenPriceCacheResult>(priceACacheResult)?.price ?? 0
@@ -48,5 +50,4 @@ export class OraclePriceService {
 export interface GetOraclePriceParams {
     tokenA: TokenId
     tokenB: TokenId
-    network: Network
 }

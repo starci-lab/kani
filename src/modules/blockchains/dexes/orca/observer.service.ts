@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
@@ -24,7 +24,7 @@ import { createObjectId } from "@utils"
 import { Whirlpool } from "./beets"
 
 @Injectable()
-export class OrcaObserverService implements OnApplicationBootstrap {
+export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
@@ -41,17 +41,18 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         private readonly events: EventEmitterService,
     ) {}
 
+    async onModuleInit() {
+        for (
+            const liquidityPool of this.memoryStorageService.liquidityPools
+        ) {
+            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
+            await this.fetchPoolInfo(liquidityPool.displayId)
+        }
+    }
     // ============================================
     // Main bootstrap
     // ============================================
     async onApplicationBootstrap() {
-        // fetch once
-        await this.asyncService.allIgnoreError(
-            this.memoryStorageService.liquidityPools.map((pool) =>
-                this.fetchPoolInfo(pool.displayId),
-            ),
-        )
-
         // observe
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
@@ -80,7 +81,9 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             ),
 
             // db insert
-            this.connection.model(DynamicLiquidityPoolInfoSchema.name).create({
+            this.connection.model(
+                DynamicLiquidityPoolInfoSchema.name
+            ).create({
                 liquidityPool: createObjectId(liquidityPoolId),
                 ...parsed,
             }),

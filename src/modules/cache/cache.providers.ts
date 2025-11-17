@@ -11,8 +11,8 @@ export const createRedisCacheManagerProvider = (): Provider => ({
     provide: REDIS_CACHE_MANAGER,
     useFactory: async (): Promise<Cache> => {
         const client = createClient({
-            url: `redis://${envConfig().redis.host}:${envConfig().redis.port}`,
-            password: envConfig().redis.password,
+            url: `redis://${envConfig().redis.cache.host}:${envConfig().redis.cache.port}`,
+            password: envConfig().redis.cache.password,
         })
         await client.connect()
         const keyv = new Keyv(new KeyvRedis(client))

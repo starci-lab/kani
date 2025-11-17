@@ -1,6 +1,5 @@
 import { AbstractException } from "@exceptions"
 import { TokenId } from "@modules/databases"
-import { Network } from "@typedefs"
 
 export class TokenNotFoundException extends AbstractException {
     constructor(message?: string) {
@@ -15,8 +14,8 @@ export class PythTokenNotFoundException extends AbstractException {
 }
 
 export class PythTokenPriceNotFoundException extends AbstractException {
-    constructor(tokenId: TokenId, network: Network, message?: string) {
-        super(message || "Pyth token price not found", "PYTH_TOKEN_PRICE_NOT_FOUND_EXCEPTION", { tokenId, network })
+    constructor(tokenId: TokenId, message?: string) {
+        super(message || "Pyth token price not found", "PYTH_TOKEN_PRICE_NOT_FOUND_EXCEPTION", { tokenId })
     }
 }
 

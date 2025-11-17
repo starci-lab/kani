@@ -35,9 +35,9 @@ export class BullModule extends ConfigurableModuleClass {
                 NestBullModule.forRootAsync({
                     imports: [
                         IoRedisModule.register({
-                            host: envConfig().redis.host,
-                            port: envConfig().redis.port,
-                            password: envConfig().redis.password,
+                            host: envConfig().redis.bullmq.host,
+                            port: envConfig().redis.bullmq.port,
+                            password: envConfig().redis.bullmq.password,
                         }),
                     ],
                     inject: [createIoRedisKey()],

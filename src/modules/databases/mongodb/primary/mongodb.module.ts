@@ -52,7 +52,7 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
 
         const { dbName, host, password, port, username } =
-      envConfig().databases.mongoose
+      envConfig().databases.mongoose.primary
         const url = `mongodb://${username}:${password}@${host}:${port}`
 
         const extraModules: Array<DynamicModule> = []

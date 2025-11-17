@@ -41,6 +41,10 @@ export class SolanaTokenManagerService {
                     throw new TokenNotFoundException("Token not found")
                 }
                 if (chainIdToPlatformId(token.chainId) !== PlatformId.Solana) throw new InvalidTokenPlatformException()
+                if (token.type === TokenType.Native) {
+                    const balance = await rpc.getBalance(address(accountAddress)).send()
+                    return new BN(balance.value.toString())
+                }
                 const mintAddress = address(token.tokenAddress)
                 const owner = address(accountAddress)
                 // Derive the user's associated token account (ATA)

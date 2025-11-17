@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
@@ -24,7 +24,7 @@ import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 
 @Injectable()
-export class RaydiumObserverService implements OnApplicationBootstrap {
+export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleInit {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
@@ -41,17 +41,16 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly events: EventEmitterService,
     ) {}
 
+    async onModuleInit() {
+        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+            if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
+            await this.fetchPoolInfo(liquidityPool.displayId)
+        }
+    }
     // ============================================
     // Main bootstrap
     // ============================================
     async onApplicationBootstrap() {
-        await this.asyncService.allIgnoreError(
-            this.memoryStorageService.liquidityPools
-                .map(
-                    liquidityPool => this.fetchPoolInfo(liquidityPool.displayId)
-                ),
-        )
-
         for (const liquidityPool 
             of this.memoryStorageService.liquidityPools) 
         {

@@ -50,11 +50,12 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const oraclePrice = await this.oraclePriceService.getOraclePrice({
-            tokenA: targetIsA ? tokenA.displayId : tokenB.displayId,
-            tokenB: targetIsA ? tokenB.displayId : tokenA.displayId,
-            network,
-        })
+        const oraclePrice = await this
+            .oraclePriceService
+            .getOraclePrice({
+                tokenA: targetIsA ? tokenA.displayId : tokenB.displayId,
+                tokenB: targetIsA ? tokenB.displayId : tokenA.displayId,
+            })
         const { 
             status, 
             remainingTargetTokenBalanceAmount, 
@@ -76,7 +77,6 @@ export class RaydiumActionService implements IActionService {
             gasTokenBalanceAmount, 
             gasTokenSwapAmount
         )
-
         // const aggregator = await this.solanaAggregatorSelectorService.batchQuote({
         //     tokenIn: tokenA.displayId,
         //     tokenOut: tokenB.displayId,

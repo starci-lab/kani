@@ -1,8 +1,8 @@
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { HermesClient, PriceUpdate } from "@pythnetwork/hermes-client"
 import { InjectHermesClient } from "./pyth.decorators"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { Network } from "@typedefs"
 import BN from "bn.js"
 import { computeDenomination } from "@modules/common"
@@ -13,8 +13,13 @@ import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { chunkArray } from "@utils"
 
+interface PythTokenPrice {
+    tokenId: TokenId
+    price: number
+}
+
 @Injectable()
-export class PythService implements OnApplicationBootstrap {
+export class PythService implements OnApplicationBootstrap, OnModuleInit {
     constructor(
         @InjectHermesClient() private readonly hermesClient: HermesClient,
         @InjectRedisCache()
@@ -26,9 +31,12 @@ export class PythService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
     ) {}
 
-    async onApplicationBootstrap() {
+    async onModuleInit() {
         // we fetch the prices first to ensure the prices are cached
         await this.fetchPrices()
+    }
+
+    async onApplicationBootstrap() {
         // then we subscribe to the price updates
         await this.subscribe()
     }
@@ -59,22 +67,37 @@ export class PythService implements OnApplicationBootstrap {
                 data?.ema_price?.expo ?? 8
             )
             return {
-                tokenId: tokens.find(token => token.pythFeedId?.includes(data?.id ?? ""))?.displayId ?? "",
+                feedId: data?.id ?? "",
                 price: price.toNumber(),
             }
         })
+        const tokenList = tokens.map(
+            token => {
+                const price = priceData.find(data => data.feedId.includes(token.pythFeedId!))
+                if (!price) return undefined
+                return {
+                    tokenId: token.displayId,
+                    price: price.price,
+                }
+            }).filter(Boolean) as Array<PythTokenPrice>
         await this.asyncService.allIgnoreError([
             // cache the price
             this.cacheManager.mset(
-                priceData.map(data => ({
-                    key: createCacheKey(CacheKey.PythTokenPrice, data.tokenId, Network.Mainnet),
-                    value: this.superjson.stringify({
-                        price: data.price,
+                tokenList.map(
+                    data => {
+                        return {
+                            key: createCacheKey(
+                                CacheKey.PythTokenPrice, 
+                                data.tokenId
+                            ),
+                            value: this.superjson.stringify({
+                                price: data.price,
+                            }),
+                        }
                     }),
-                })),
             ),
             // emit the event
-            ...priceData.map(data => this.events.emit(
+            ...tokenList.map(data => this.events.emit(
                 EventName.WsPythLastPricesUpdated, {
                     tokenId: data.tokenId,
                     price: data.price,
@@ -112,7 +135,10 @@ export class PythService implements OnApplicationBootstrap {
                 await this.asyncService.allIgnoreError([
                     // cache the price
                     this.cacheManager.set(
-                        createCacheKey(CacheKey.PythTokenPrice, token.displayId, Network.Mainnet),
+                        createCacheKey(
+                            CacheKey.PythTokenPrice, 
+                            token.displayId
+                        ),
                         this.superjson.stringify({
                             price: price.toNumber(),
                         }),

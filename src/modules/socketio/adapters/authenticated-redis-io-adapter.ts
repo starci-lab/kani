@@ -12,8 +12,8 @@ export class AuthenticatedRedisIoAdapter extends IoAdapter {
         // temporarily use the createClient instead of createCluster
         // tech-debt: we need to use the createCluster instead of createClient
         const pubClient = createClient({
-            url: `redis://${envConfig().redis.host}:${envConfig().redis.port}`,
-            password: envConfig().redis.password,
+            url: `redis://${envConfig().redis.adapter.host}:${envConfig().redis.adapter.port}`,
+            password: envConfig().redis.adapter.password,
         })
         // duplicate the client for the subscriber
         const subClient = pubClient.duplicate()

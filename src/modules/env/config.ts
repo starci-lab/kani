@@ -35,6 +35,16 @@ export const envConfig = () => ({
             password: process.env.REDIS_CACHE_PASSWORD || "Cuong123_A",
             ttl: parseInt(process.env.CACHE_CACHE_REDIS_TTL || "3600000", 10), // 3600s
         },
+        adapter: {
+            host: process.env.REDIS_ADAPTER_HOST || "localhost",
+            port: parseInt(process.env.REDIS_ADAPTER_PORT || "6379", 10),
+            password: process.env.REDIS_ADAPTER_PASSWORD || "Cuong123_A",
+        },
+        bullmq: {
+            host: process.env.REDIS_BULLMQ_HOST || "localhost",
+            port: parseInt(process.env.REDIS_BULLMQ_PORT || "6379", 10),
+            password: process.env.REDIS_BULLMQ_PASSWORD || "Cuong123_A",
+        },
         throttler: {
             host: process.env.REDIS_THROTTLER_HOST || "localhost",
             port: parseInt(process.env.REDIS_THROTTLER_PORT || "6379", 10),
