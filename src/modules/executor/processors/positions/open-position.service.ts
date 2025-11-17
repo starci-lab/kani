@@ -48,7 +48,7 @@ export class OpenPositionProcessorService {
         // register event listeners
         this.eventEmitter.on(
             EventName.InternalLiquidityPoolsFetched,
-            (payload: LiquidityPoolsFetchedEvent) => {
+            async (payload: LiquidityPoolsFetchedEvent) => {
                 // find liquidity pools that are eligible to open a position
                 console.log(`The bot ${this.bot.id} is opening position and listen to ${payload}`)
             }

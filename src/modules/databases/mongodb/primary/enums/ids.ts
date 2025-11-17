@@ -199,6 +199,7 @@ registerEnumType(GraphQLTypeCexId, {
 
 export enum ConfigId {
     Gas = "gas",
+    TargetToken = "targetToken",
 }
 
 export const GraphQLTypeConfigId = createEnumType(ConfigId)
@@ -209,6 +210,9 @@ registerEnumType(GraphQLTypeConfigId, {
     valuesMap: {
         [ConfigId.Gas]: {
             description: "The gas config",
+        },
+        [ConfigId.TargetToken]: {
+            description: "The target token config",
         },
     },
 })

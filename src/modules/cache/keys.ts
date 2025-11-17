@@ -13,3 +13,7 @@ export enum CacheKey {
     UserIds = "userIds",
     SessionId = "sessionId",
 }
+
+export interface PythTokenPriceCacheResult {
+    price: number
+}

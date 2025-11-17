@@ -11,6 +11,7 @@ import { EventEmitterService, EventName } from "@modules/event"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
+import { chunkArray } from "@utils"
 
 @Injectable()
 export class PythService implements OnApplicationBootstrap {
@@ -26,7 +27,62 @@ export class PythService implements OnApplicationBootstrap {
     ) {}
 
     async onApplicationBootstrap() {
+        // we fetch the prices first to ensure the prices are cached
+        await this.fetchPrices()
+        // then we subscribe to the price updates
         await this.subscribe()
+    }
+
+    async fetchPrices() {
+        const tokens = this.primaryMemoryStorageService.tokens
+            .filter(
+                token => 
+                    token.network === Network.Mainnet 
+                && !!token.pythFeedId
+            )
+        if (!tokens.length) {
+            throw new TokenListIsEmptyException("No Pyth tokens found for mainnet")
+        }
+        const feedIds = [...new Set(tokens.map(token => token.pythFeedId!))]
+        // we split the feed ids into chunks of 5
+        const chunks = chunkArray(feedIds, 5)
+        const prices = await this.asyncService.allMustDone(
+            chunks.map(async (chunk) => {
+                const prices = await this.hermesClient.getLatestPriceUpdates(
+                    chunk
+                )
+                return prices.parsed
+            }))
+        const priceData = prices.flat().map(data => {
+            const price = computeDenomination(
+                new BN(data?.ema_price?.price ?? 0), 
+                data?.ema_price?.expo ?? 8
+            )
+            return {
+                tokenId: tokens.find(token => token.pythFeedId?.includes(data?.id ?? ""))?.displayId ?? "",
+                price: price.toNumber(),
+            }
+        })
+        await this.asyncService.allIgnoreError([
+            // cache the price
+            this.cacheManager.mset(
+                priceData.map(data => ({
+                    key: createCacheKey(CacheKey.PythTokenPrice, data.tokenId, Network.Mainnet),
+                    value: this.superjson.stringify({
+                        price: data.price,
+                    }),
+                })),
+            ),
+            // emit the event
+            ...priceData.map(data => this.events.emit(
+                EventName.WsPythLastPricesUpdated, {
+                    tokenId: data.tokenId,
+                    price: data.price,
+                }, {
+                    withoutLocal: true,
+                })
+            ),
+        ])
     }
 
     async subscribe() {

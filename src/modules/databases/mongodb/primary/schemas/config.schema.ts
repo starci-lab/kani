@@ -1,7 +1,7 @@
 import { AbstractSchema } from "./abstract"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { ConfigId, GraphQLTypeConfigId } from "../enums"
+import { ConfigId, GraphQLTypeConfigId, TokenId } from "../enums"
 import { GraphQLJSON } from "graphql-type-json"
 import { Schema as MongooseSchema } from "mongoose"
 import { ChainId, Network } from "@modules/common"
@@ -37,4 +37,14 @@ export class GasConfig {
         description: "The minimum gas required to process a transaction.",
     })
         minGasRequired: Partial<Record<ChainId, Partial<Record<Network, number>>>>
+}
+
+@ObjectType({
+    description: "Represents the token configuration for the platform.",
+})
+export class TargetTokenConfig {
+    @Field(() => GraphQLJSON, {
+        description: "The minimum target token required to process a transaction.",
+    })
+        minTargetTokenRequired: Partial<Record<TokenId, Partial<Record<Network, number>>>>
 }

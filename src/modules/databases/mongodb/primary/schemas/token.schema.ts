@@ -81,6 +81,11 @@ export class TokenSchema extends AbstractSchema {
     @Field(() => Boolean, { description: "Whether the token is selectable for liquidity yield farming"})
     @Prop({ type: Boolean, required: true })
         selectable: boolean
+
+    // only valid for solana tokens
+    @Field(() => Boolean, { description: "Whether the token is a 2022 token", nullable: true })
+    @Prop({ type: Boolean, required: false })
+        is2022Token?: boolean
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)
