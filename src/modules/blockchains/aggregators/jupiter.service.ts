@@ -13,6 +13,7 @@ import { Connection, Keypair, PublicKey } from "@solana/web3.js"
 import { Wallet } from "@project-serum/anchor"
 import base58 from "bs58"
 
+const SOLANA_NATIVE_TOKEN_ADDRESS = "So11111111111111111111111111111111111111112"
 @Injectable()
 export class JupiterService implements IAggregatorService {
     constructor(
@@ -55,7 +56,6 @@ export class JupiterService implements IAggregatorService {
         // We wrap the whole quote flow inside the retry service
         return await this.retryService.retry({
             action: async () => {
-
                 // Resolve token metadata from internal storage
                 const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
                     token => token.displayId === tokenIn,
@@ -63,17 +63,15 @@ export class JupiterService implements IAggregatorService {
                 const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
                     token => token.displayId === tokenOut,
                 )
-
                 if (!tokenInInstance || !tokenOutInstance) {
                     throw new TokenNotFoundException(
                         `Token not found with display id: ${tokenIn} or ${tokenOut}`
                     )
                 }
-
                 // Call Jupiter to fetch the best quote route
                 const quote = await this.jupiterAggregatorSdk.quoteGet({
-                    inputMint: tokenInInstance.tokenAddress,
-                    outputMint: tokenOutInstance.tokenAddress,
+                    inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
+                    outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                     amount: amountIn.toNumber(),
                     // we charge 0.02% platform fee as protocol fee
                     platformFeeBps: 2,

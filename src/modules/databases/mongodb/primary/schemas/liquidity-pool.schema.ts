@@ -3,7 +3,7 @@ import { AbstractSchema } from "./abstract"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
-import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
+import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"
 import { GraphQLTypeLiquidityPoolId, GraphQLTypeLiquidityPoolType, LiquidityPoolType } from "../enums"
 import { LiquidityPoolId } from "../enums"
 import { DexSchema } from "./dex.schema"
@@ -77,6 +77,14 @@ export class LiquidityPoolSchema extends AbstractSchema {
     @Field(() => Number, { description: "The tick spacing of the pool" })
     @Prop({ type: Number })
         tickSpacing: number
+
+    @Field(() => Boolean, { description: "Whether the pool is active" })
+    @Prop({ type: Boolean, default: true })
+        isActive: boolean
+
+    @Field(() => Int, { description: "The tick spacing multiplier of the pool" })
+    @Prop({ type: Number, default: 1 })
+        tickMultiplier: number
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)

@@ -76,7 +76,10 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         await this.asyncService.allIgnoreError([
             // cache
             this.cacheManager.set(
-                createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                createCacheKey(
+                    CacheKey.DynamicLiquidityPoolInfo, 
+                    liquidityPoolId
+                ),
                 this.superjson.stringify(parsed),
             ),
 

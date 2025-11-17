@@ -7,6 +7,10 @@ import { Connection } from "mongoose"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { BotNotFoundException } from "@exceptions"
 import { DispatchOpenPositionService } from "@modules/blockchains"
+import { MutexService } from "@modules/lock"
+import { Mutex } from "async-mutex"
+import { getMutexKey, MutexKey } from "@modules/lock"
+import { createObjectId } from "@utils"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -20,8 +24,9 @@ import { DispatchOpenPositionService } from "@modules/blockchains"
     scope: Scope.REQUEST,
     durable: true,
 })
-export class OpenPositionProcessorService {
+export class OpenPositionProcessorService  {
     private bot: BotSchema
+    private mutex: Mutex
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -34,11 +39,18 @@ export class OpenPositionProcessorService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dispatchOpenPositionService: DispatchOpenPositionService,
+        private readonly mutexService: MutexService,
     ) {}
 
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
+        // initialize the mutex
+        this.mutexService.mutex(
+            getMutexKey(
+                MutexKey.OpenPosition, 
+                this.request.bot.id
+            ))
         // re query the bot to ensure data is up to date
         const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
         if (!bot) {
@@ -51,7 +63,17 @@ export class OpenPositionProcessorService {
         this.eventEmitter.on(
             EventName.InternalLiquidityPoolsFetched,
             async (payload: LiquidityPoolsFetchedEvent) => {
-                // find liquidity pools that are eligible to open a position
+                // only run if the liquidity pool is belong to the bot
+                if (
+                    !bot.liquidityPools
+                        .map((liquidityPool) => liquidityPool.toString())
+                        .includes(createObjectId(payload.liquidityPoolId).toString())
+                )
+                {
+                    // skip if the liquidity pool is not belong to the bot
+                    return
+                }
+                // run the open position
                 await this.dispatchOpenPositionService.dispatchOpenPosition({
                     liquidityPoolId: payload.liquidityPoolId,
                     bot: this.bot,

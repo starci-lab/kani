@@ -29,7 +29,7 @@ export class DispatchOpenPositionService {
         if (!tokenA || !tokenB) throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === state.static.dex.toString())
         if (!dex) throw new DexNotFoundException("Dex not found")
-        const targetIsA = bot.targetTokenId === tokenA.id
+        const targetIsA = bot.targetToken.toString() === tokenA.id
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
             throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }

@@ -37,24 +37,19 @@ export class SolanaAggregatorSelectorService {
                 }))()
             )
         }
-
         // Execute + ignore errors
         const results = await this.asyncService.allIgnoreError(promises)
-
         // Remove null or undefined
         const filteredResults = results.filter(
             (r): r is BatchQuoteResponse => r != null
         )
-
         if (filteredResults.length === 0) {
             throw new AggregatorNotFoundException("No aggregator found")
         }
-
         // Pick the best (largest amountOut)
         const best = filteredResults.reduce((a, b) =>
             a.response.amountOut.gt(b.response.amountOut) ? a : b
         )
-
         return best
     }
 

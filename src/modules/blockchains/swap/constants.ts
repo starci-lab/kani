@@ -1,5 +1,6 @@
-const LOW_SLIPPAGE = 0.3 //  30%
-const HIGH_SLIPPAGE = 0.9999 // 99.99%
+import Decimal from "decimal.js"
+const LOW_SLIPPAGE = new Decimal(0.3) //  30%
+const HIGH_SLIPPAGE = new Decimal(0.9999) // 99.99%
 export const OPEN_POSITION_SLIPPAGE = LOW_SLIPPAGE 
 export const CLOSE_POSITION_SLIPPAGE = HIGH_SLIPPAGE 
 export const SWAP_OPEN_POSITION_SLIPPAGE = LOW_SLIPPAGE 

@@ -94,7 +94,7 @@ export class SolanaTokenManagerService {
         }
         const balance = await this.fetchBalanceAmount({ tokenId, accountAddress, network, clientIndex })
         if (token.type === TokenType.Native) {  
-            return BN.max(ZERO_BN, balance.sub(new BN(gasAmount)))
+            return BN.max(ZERO_BN, balance.sub(new BN(computeRaw(gasAmount, token.decimals))))
         }
         return balance
     }
@@ -239,7 +239,7 @@ export interface GetAccountFundingParams {
     clientIndex?: number
     // oracle price of the target token with the gas token
     // swapToGasAmount/x. eg USDC/SUI => 0.5
-    oraclePrice?: number
+    oraclePrice?: Decimal
 }
 
 export enum AccountFundingStatus {

@@ -11,6 +11,7 @@ import { ClientsModule, DexesModule, PythModule, SignersModule, UtilsModule } fr
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
+import { MutexModule } from "@modules/lock"
 
 @Module({
     imports: [
@@ -49,6 +50,9 @@ import { AggregatorsModule } from "@modules/blockchains"
             isGlobal: true,
         }),
         AggregatorsModule.register({
+            isGlobal: true,
+        }),
+        MutexModule.register({
             isGlobal: true,
         }),
         EventModule.register({

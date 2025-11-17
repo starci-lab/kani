@@ -7,6 +7,8 @@ import { TickManagerService } from "./tick-manager.service"
 import { ZapCalculatorService } from "./zap-calculator.service"
 import { TickMathService } from "./tick-math.service"
 import { SolanaTokenManagerService } from "./solana-token-manager.service"
+import { TickService } from "./tick.service"
+import { PoolMathService } from "./pool-math.service"
 
 @Module({
     providers: [
@@ -17,6 +19,8 @@ import { SolanaTokenManagerService } from "./solana-token-manager.service"
         ZapCalculatorService,
         TickMathService,
         SolanaTokenManagerService,
+        TickService,
+        PoolMathService,
     ],
     exports: [
         SuiCoinManagerService,
@@ -26,6 +30,8 @@ import { SolanaTokenManagerService } from "./solana-token-manager.service"
         ZapCalculatorService,
         TickMathService,
         SolanaTokenManagerService,
+        TickService,
+        PoolMathService,
     ],
 })
 export class UtilsModule extends ConfigurableModuleClass {}

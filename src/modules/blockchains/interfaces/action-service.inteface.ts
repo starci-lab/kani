@@ -6,6 +6,7 @@ import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
 import { DynamicLiquidityPoolInfo } from "../types"
+import Decimal from "decimal.js"
 
 export interface LiquidityPoolState {
     static: LiquidityPoolSchema
@@ -42,8 +43,8 @@ export interface OpenPositionParams {
     tokenBId: TokenId
     network?: Network
     chainId?: ChainId
-    slippage?: number
-    swapSlippage?: number
+    slippage?: Decimal
+    swapSlippage?: Decimal
     requireZapEligible?: boolean
     stimulateOnly?: boolean
     // txb (sui only)

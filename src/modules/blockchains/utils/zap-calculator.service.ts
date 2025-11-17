@@ -1,16 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-
-export interface ZapCalculationParams {
-    amountIn: BN             // total input (raw units, BN)
-    ratio: Decimal           // ratio = amountB / amountA (Decimal)
-    spotPrice: Decimal       // spot price (tokenB per tokenA)
-    oraclePrice?: Decimal      // oracle price (tokenB per tokenA)
-    priorityAOverB: boolean  // true: input is tokenA, false: input is tokenB
-    decimalsA: number
-    decimalsB: number
-}
+import { ZapCalculationParams } from "./pool-math.service"
 
 export interface ZapCalculationResult {
     swapAmount: BN
@@ -32,14 +23,14 @@ export class ZapCalculatorService {
         spotPrice,
         oraclePrice,
         ratio,
-        priorityAOverB
+        targetIsA
     }: ZapCalculationParams): ZapCalculationResult { 
         const price = oraclePrice ?? spotPrice
         let swapAmount: BN
         let remainAmount: BN
         let receiveAmount: BN
-        if (priorityAOverB) {
-            // Input hoàn toàn là A
+        if (targetIsA) {
+            // target is A
             // swapA = (ratio * OriginA) / (price + ratio)
             const originA = new Decimal(amountIn.toString()).div(new Decimal(10).pow(decimalsA))
             const swapA = ratio.mul(originA).div(price.add(ratio))
@@ -50,7 +41,7 @@ export class ZapCalculatorService {
             const receiveB = swapA.mul(price)
             receiveAmount = new BN(receiveB.mul(new Decimal(10).pow(decimalsB)).toFixed(0))
         } else {
-            // Input hoàn toàn là B
+            // target is B
             // swapB = (price * OriginB) / (price + ratio)
             const originB = new Decimal(amountIn.toString()).div(new Decimal(10).pow(decimalsB))
             const swapB = price.mul(originB).div(price.add(ratio))

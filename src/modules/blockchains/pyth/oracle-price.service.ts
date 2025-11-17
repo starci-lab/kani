@@ -43,7 +43,7 @@ export class OraclePriceService {
         const priceB = new Decimal(
             this.superjson.parse<PythTokenPriceCacheResult>(priceBCacheResult)?.price ?? 0
         )
-        return priceA.div(priceB).toNumber()
+        return priceA.div(priceB)
     }
 }
 

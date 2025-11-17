@@ -6,7 +6,7 @@ import { Schema as MongooseSchema, Types } from "mongoose"
 import { UserSchema } from "./user.schema"
 import { TokenSchema } from "./token.schema"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
-import { ExplorerId, GraphQLTypeExplorerId, GraphQLTypeTokenId, TokenId } from "../enums"
+import { ExplorerId, GraphQLTypeExplorerId } from "../enums"
 /**
  * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -118,12 +118,12 @@ export class BotSchema extends AbstractSchema {
     @Prop({ type: Date, required: false })
         stoppedAt: Date
 
-    @Field(() => GraphQLTypeTokenId, {
+    @Field(() => ID, {
         description: "The token that the bot aims to accumulate as the primary outcome of its liquidity strategy.",
         nullable: true,
     })
-    @Prop({ type: String, required: false, enum: TokenId })
-        targetTokenId?: TokenId
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
+        targetToken: TokenSchema | Types.ObjectId
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

@@ -48,9 +48,10 @@ export class ClosePositionProcessorService {
         // register event listeners
         this.eventEmitter.on(
             EventName.InternalLiquidityPoolsFetched,
-            (payload: LiquidityPoolsFetchedEvent) => {
+            (
+                payload: LiquidityPoolsFetchedEvent
+            ) => {
                 // find liquidity pools that are eligible to open a position
-                console.log(this.bot.id)
             }
         )
     }
