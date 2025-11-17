@@ -5,7 +5,7 @@ import { CoinArgument } from "../types"
 
 export interface DexesOptions extends BaseModuleOptions {
     dexes?: Array<DexOptions & { dexId: DexId }>
-    useGcpKms?: boolean
+    withUtilities?: boolean
 }
 
 export interface ActionResponse {

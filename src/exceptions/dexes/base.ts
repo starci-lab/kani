@@ -1,8 +1,13 @@
-import { DexId } from "@modules/databases"
 import { AbstractException } from "../abstract"
 
 export class DexNotFoundException extends AbstractException {
-    constructor(dexId: DexId, message?: string) {
-        super(message || "Dex not found", "DEX_NOT_FOUND_EXCEPTION", { dexId })
+    constructor(message?: string) {
+        super(message || "Dex not found", "DEX_NOT_FOUND_EXCEPTION")
+    }
+}
+
+export class DexNotImplementedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Dex not implemented", "DEX_NOT_IMPLEMENTED_EXCEPTION")
     }
 }

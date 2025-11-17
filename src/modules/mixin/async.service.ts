@@ -19,13 +19,16 @@ export class AsyncService {
     async allMustDone<T extends readonly unknown[]>(
         promises: { [K in keyof T]: Promise<T[K]> }
     ): Promise<{ [K in keyof T]: T[K] }> {
-        return await this.retryService.retry({
-            action: async () => {
-                return await Promise.all(promises)
-            },
-            maxRetries: 20,
-            delay: 500,
-        })
+        return await Promise.all(Object.values(promises).map(
+            async (promise) => {
+                return await this.retryService.retry({
+                    action: async () => {
+                        return await promise
+                    },
+                    maxRetries: 20,
+                    delay: 500,
+                })
+            })) as { [K in keyof T]: T[K] }
     }
 
     // go-like async resolve tuple

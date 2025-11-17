@@ -59,6 +59,7 @@ import { AggregatorsModule } from "@modules/blockchains"
         }),
         DexesModule.register({
             isGlobal: true,
+            withUtilities: true,
             dexes: [
                 {
                     dexId: DexId.Raydium,

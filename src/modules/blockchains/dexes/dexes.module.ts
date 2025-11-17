@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from "@nestjs/common"
+import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./dexes.module-definition"
 import { CetusModule } from "./cetus"
 import { DexId } from "@modules/databases"
@@ -8,6 +8,7 @@ import { FlowXModule } from "./flowx"
 import { RaydiumModule } from "./raydium"
 import { OrcaModule } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
+import { DispatchOpenPositionService } from "./dispatch-open-position.service"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -71,20 +72,25 @@ export class DexesModule extends ConfigurableModuleClass {
                 enabled: options.dexes?.find((dex) => dex.dexId === DexId.Orca)?.enabled,
             }))
         }
-
+        
+        const utilities: Array<Provider> = []
+        if (options.withUtilities) {
+            utilities.push(LiquidityPoolStateService)
+            utilities.push(DispatchOpenPositionService)
+        }
         
         return {
             ...dynamicModule,
             imports: [
                 ...dexModules
-
             ],
             providers: [
-                LiquidityPoolStateService,
+                ...dynamicModule.providers || [],
+                ...utilities,
             ],
             exports: [
                 ...dexModules,
-                LiquidityPoolStateService,
+                ...utilities,
             ]
         }
     } 

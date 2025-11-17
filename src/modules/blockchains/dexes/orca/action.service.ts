@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common"
-import { IActionService } from "../../interfaces"
+import { IActionService, OpenPositionParams } from "../../interfaces"
 
 @Injectable()
 export class OrcaActionService implements IActionService {
@@ -15,9 +15,15 @@ export class OrcaActionService implements IActionService {
         throw new Error("Orca closePosition not implemented")
     }
 
-    async openPosition(): Promise<any> {
-        this.logger.warn("Orca openPosition called but not implemented")
-        throw new Error("Orca openPosition not implemented")
+    async openPosition({
+        state,
+        network = Network.Mainnet,
+        bot,
+        targetIsA,
+        tokenAId,
+        tokenBId,
+    }: OpenPositionParams): Promise<any> {
+        
     }
 }
 

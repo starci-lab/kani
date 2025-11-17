@@ -4,10 +4,10 @@ import BN from "bn.js"
 import { InjectSolanaClients } from "../clients"
 import { HttpAndWsClients } from "../clients"
 import { ChainId, Network } from "@modules/common"
-import { Connection } from "mongoose"
+import { Connection } from "@solana/web3.js"
 import { InvalidTokenPlatformException, MinGasRequiredNotFoundException, MinTargetTokenRequiredNotFoundException, TokenNotFoundException } from "@exceptions"
 import { fetchToken as fetchToken2022, TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-import { address } from "@solana/kit"
+import { address, createSolanaRpc } from "@solana/kit"
 import { fetchToken, findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import { RetryService } from "@modules/mixin"
 import { computeRaw, toScaledBN, toUnit, ZERO_BN } from "@utils"
@@ -31,21 +31,18 @@ export class SolanaTokenManagerService {
     }: FetchBalanceAmountParams): Promise<BN> {
         return await this.retryService.retry({
             action: async () => {
-                const client = this.solanaClients[network][clientIndex]
-                const connection = client.http
-    
+                const client = this.solanaClients[network].http[clientIndex]
+                const rpc = createSolanaRpc(client.rpcEndpoint)
                 // Look up token metadata from local storage
                 const token = this.primaryMemoryStorageService.tokens.find(
-                    (token) => token.id === tokenId.toString()
+                    (token) => token.displayId === tokenId.toString()
                 )
                 if (!token) {
                     throw new TokenNotFoundException("Token not found")
                 }
                 if (chainIdToPlatformId(token.chainId) !== PlatformId.Solana) throw new InvalidTokenPlatformException()
-    
                 const mintAddress = address(token.tokenAddress)
                 const owner = address(accountAddress)
-    
                 // Derive the user's associated token account (ATA)
                 // This is required because balances are stored in ATA, not in the owner wallet directly.
                 const [ataAddress] = await findAssociatedTokenPda(
@@ -59,11 +56,11 @@ export class SolanaTokenManagerService {
                 // Token-2022 accounts are handled by the newer token-2022 program.
                 try {
                     if (token.is2022Token) {
-                        const token2022 = await fetchToken2022(connection, ataAddress)
+                        const token2022 = await fetchToken2022(rpc, ataAddress)
                         return new BN(token2022.data.amount.toString())
                     } else {
                         // Standard SPL token account
-                        const tokenAccount = await fetchToken(connection, ataAddress)
+                        const tokenAccount = await fetchToken(rpc, ataAddress)
                         return new BN(tokenAccount.data.amount.toString())
                     }
                 } catch {
@@ -82,7 +79,7 @@ export class SolanaTokenManagerService {
     }: FetchUsableBalanceAmountParams): Promise<BN> {
         const gasConfig = this.primaryMemoryStorageService.gasConfig
         const token = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === tokenId.toString()
+            (token) => token.displayId === tokenId.toString()
         )
         if (!token) {
             throw new TokenNotFoundException("Token not found")
@@ -108,10 +105,10 @@ export class SolanaTokenManagerService {
     }: GetAccountFundingParams): Promise<GetAccountFundingResponse> {
         const { targetTokenConfig, gasConfig, tokens } = this.primaryMemoryStorageService
         // ---- load tokens & configs ----
-        const gasToken = tokens.find(token => token.id === gasTokenId.toString())
+        const gasToken = tokens.find(token => token.displayId === gasTokenId.toString())
         if (!gasToken) throw new TokenNotFoundException("Gas token not found")
         if (chainIdToPlatformId(gasToken.chainId) !== PlatformId.Solana) throw new InvalidTokenPlatformException()
-        const targetToken = tokens.find(token => token.id === targetTokenId.toString())
+        const targetToken = tokens.find(token => token.displayId === targetTokenId.toString())
         if (!targetToken) throw new TokenNotFoundException("Target token not found")
         if (chainIdToPlatformId(targetToken.chainId) !== PlatformId.Solana) throw new InvalidTokenPlatformException()
         const gasAmount = gasConfig.minGasRequired?.[ChainId.Solana]?.[network]

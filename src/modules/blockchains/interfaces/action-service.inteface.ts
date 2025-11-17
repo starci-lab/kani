@@ -35,15 +35,13 @@ export interface ClosePositionParams {
 export interface OpenPositionParams {
     bot: BotSchema
     state: LiquidityPoolState
-    pool: FetchedPool
     // amount to add
     amount?: BN
-    priorityAOverB: boolean
     tokenAId: TokenId
+    targetIsA: boolean
     tokenBId: TokenId
     network?: Network
     chainId?: ChainId
-    accountAddress: string
     slippage?: number
     swapSlippage?: number
     requireZapEligible?: boolean

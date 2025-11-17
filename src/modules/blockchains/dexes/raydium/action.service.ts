@@ -36,6 +36,7 @@ export class RaydiumActionService implements IActionService {
 
     async openPosition(
         {
+            targetIsA,
             state,
             network = Network.Mainnet,
             bot,
@@ -50,8 +51,8 @@ export class RaydiumActionService implements IActionService {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
         const oraclePrice = await this.oraclePriceService.getOraclePrice({
-            tokenA: tokenA.displayId,
-            tokenB: tokenB.displayId,
+            tokenA: targetIsA ? tokenA.displayId : tokenB.displayId,
+            tokenB: targetIsA ? tokenB.displayId : tokenA.displayId,
             network,
         })
         const { 

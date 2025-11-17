@@ -5,6 +5,7 @@ import { Seeder } from "nestjs-seeder"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
+import { createObjectId } from "@utils"
 
 @Injectable()
 export class DexesService implements Seeder {
@@ -25,6 +26,7 @@ export class DexesService implements Seeder {
 export const data: Array<DeepPartial<DexSchema>> 
 = [
     {
+        _id: createObjectId(DexId.Cetus),
         displayId: DexId.Cetus,
         name: "Cetus",
         description: "Cetus is a Move-native concentrated-liquidity DEX built on the Sui blockchain, aiming to provide efficient swaps and liquidity provisioning. It has undergone a major exploit in 2025 and is undergoing recovery efforts.",
@@ -32,6 +34,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.kanibot.xyz/dexes/cetus.png",
     },
     {
+        _id: createObjectId(DexId.Turbos),
         displayId: DexId.Turbos,
         name: "Turbos",
         description: "Turbos Finance is a high-performance non-custodial DEX and liquidity hub on the Sui network, focusing on speed, capital efficiency and user-friendly design. It also supports token launches and concentrated-liquidity pools.",
@@ -39,6 +42,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.starci.net/protocols/turbos.png",
     },
     {
+        _id: createObjectId(DexId.Momentum),
         displayId: DexId.Momentum,
         name: "Momentum",
         description: "Momentum is a next-gen DEX on Sui utilising the ve(3,3) tokenomics model and concentrated‑liquidity engine, positioning itself as a central liquidity infrastructure in the Sui ecosystem.",
@@ -46,6 +50,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.starci.net/protocols/mmt.png",
     },
     {
+        _id: createObjectId(DexId.FlowX),
         displayId: DexId.FlowX,
         name: "FlowX",
         description: "FlowX is a decentralized exchange on Sui designed for low-latency swaps and high throughput, aiming to leverage Sui’s parallel execution capabilities for efficient trading.",
@@ -53,6 +58,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.starci.net/protocols/flowx.png",
     },
     {
+        _id: createObjectId(DexId.Raydium),
         displayId: DexId.Raydium,
         name: "Raydium",
         description: "Raydium is a liquidity-provider and AMM-integrated DEX originally on Solana, and in this context appears on Sui — offering orderbook + AMM hybrid trading and deep liquidity.",
@@ -60,6 +66,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.starci.net/protocols/raydium.png",
     },
     {
+        _id: createObjectId(DexId.Orca),
         displayId: DexId.Orca,
         name: "Orca",
         description: "Orca is a user-friendly AMM DEX known for its simple UI and low fees; here it is listed on Sui ecosystem as a supported exchange with pools for users seeking ease of use.",
@@ -67,6 +74,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.starci.net/protocols/orca.png",
     },
     {
+        _id: createObjectId(DexId.Meteora),
         displayId: DexId.Meteora,
         name: "Meteora",
         description: "Meteora is a decentralized exchange on Sui providing advanced trading features and liquidity pool optimisation for more experienced DeFi users.",
@@ -74,6 +82,7 @@ export const data: Array<DeepPartial<DexSchema>>
         iconUrl: "https://r2.starci.net/protocols/meteora.png",
     },
     {
+        _id: createObjectId(DexId.Saros),
         displayId: DexId.Saros,
         name: "Saros",
         description: "Saros is a DEX on the Sui blockchain focused on optimised liquidity pools, yield farming opportunities and community-driven trading experience.",
