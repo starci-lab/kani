@@ -71,6 +71,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                 price: price.toNumber(),
             }
         })
+        console.log({ priceData })
         const tokenList = tokens.map(
             token => {
                 const price = priceData.find(data => data.feedId.includes(token.pythFeedId!))
@@ -97,13 +98,14 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                     }),
             ),
             // emit the event
-            ...tokenList.map(data => this.events.emit(
-                EventName.WsPythLastPricesUpdated, {
-                    tokenId: data.tokenId,
-                    price: data.price,
-                }, {
-                    withoutLocal: true,
-                })
+            ...tokenList.map(
+                data => this.events.emit(
+                    EventName.WsPythLastPricesUpdated, {
+                        tokenId: data.tokenId,
+                        price: data.price,
+                    }, {
+                        withoutLocal: true,
+                    })
             ),
         ])
     }

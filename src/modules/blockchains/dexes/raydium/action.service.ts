@@ -92,7 +92,7 @@ export class RaydiumActionService implements IActionService {
             state,
             bot
         )
-        const { ratio} = this.poolMathService.getRatioFromAmountA({
+        const { ratio } = this.poolMathService.getRatioFromAmountA({
             slippage,
             sqrtPriceX64: state.dynamic.sqrtPriceX64,
             tickLower,
@@ -124,6 +124,7 @@ export class RaydiumActionService implements IActionService {
             receiveAmountOut: receiveAmountOut.toString(),
             priceLower: this.tickService.tickIndexToPrice(tickLower.toNumber(), tokenA.decimals, tokenB.decimals).toString(),
             priceUpper: this.tickService.tickIndexToPrice(tickUpper.toNumber(), tokenA.decimals, tokenB.decimals).toString(),
+            priceCurrent: this.tickService.sqrtPriceX64ToPrice(state.dynamic.sqrtPriceX64, tokenA.decimals, tokenB.decimals).toString(),
         })
         // const { aggregatorId, response } = await this.solanaAggregatorSelectorService.batchQuote({
         //     tokenIn: tokenIn.displayId,

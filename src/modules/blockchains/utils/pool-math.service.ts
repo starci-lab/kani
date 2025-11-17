@@ -45,7 +45,6 @@ export class PoolMathService {
             new BN(estCoinAmountB).mul(toUnit(tokenA.decimals)),
             new BN(estCoinAmountA).mul(toUnit(tokenB.decimals)),
         )
-        console.log({ ratio })
         return { ratio }
     }
 

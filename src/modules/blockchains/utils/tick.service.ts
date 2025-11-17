@@ -59,6 +59,9 @@ export class TickService {
         }
         // ratio = sqrtPrice / 2^64
         const ratio = sqrtPrice.div(this.Q64)
+        console.log(ratio.pow(2).toString())
+        console.log(decimalsA.toString())
+        console.log(decimalsB.toString())
         // price = ratio^2
         return ratio
             .pow(2)
