@@ -2,11 +2,15 @@ import { Module } from "@nestjs/common"
 import { ExecutorModule } from "@modules/executor"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { envConfig, EnvModule } from "@modules/env"
-import { PrimaryMongoDbModule } from "@modules/databases"
+import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { EventModule } from "@modules/event"
 import { EventEmitterModule } from "@nestjs/event-emitter"
+import { ClientsModule, DexesModule, PythModule, SignersModule, UtilsModule } from "@modules/blockchains"
+import { CacheModule } from "@modules/cache"
+import { CryptoModule } from "@modules/crypto"
+import { AggregatorsModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -25,12 +29,52 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
             withSeeders: true,
             memoryStorage: true,
         }),
+        CacheModule.register({
+            isGlobal: true,
+        }),
+        ClientsModule.register({
+            isGlobal: true,
+        }),
+        SignersModule.register({
+            isGlobal: true,
+        }),
+        CryptoModule.register({
+            isGlobal: true,
+        }),
+        PythModule.register({
+            isGlobal: true,
+        }),
         ScheduleModule.forRoot(),
         ExecutorModule.register({
             isGlobal: true,
         }),
+        AggregatorsModule.register({
+            isGlobal: true,
+        }),
         EventModule.register({
             isGlobal: true,
+        }),
+        UtilsModule.register({
+            isGlobal: true,
+        }),
+        DexesModule.register({
+            isGlobal: true,
+            dexes: [
+                {
+                    dexId: DexId.Raydium,
+                    enabled: {
+                        observe: true,
+                        action: true,
+                    },
+                },
+                {
+                    dexId: DexId.Orca,
+                    enabled: {
+                        observe: true,
+                        action: true,
+                    },
+                },
+            ],
         }),
     ],
 })

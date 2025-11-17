@@ -6,6 +6,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { BotNotFoundException } from "@exceptions"
+import { LiquidityPoolStateService } from "@modules/blockchains"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -32,6 +33,7 @@ export class OpenPositionProcessorService {
         // inject the connection to the database
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -50,7 +52,8 @@ export class OpenPositionProcessorService {
             EventName.InternalLiquidityPoolsFetched,
             async (payload: LiquidityPoolsFetchedEvent) => {
                 // find liquidity pools that are eligible to open a position
-                console.log(`The bot ${this.bot.id} is opening position and listen to ${payload}`)
+                const state = await this.liquidityPoolStateService.getState(payload.liquidityPoolId)
+                console.log(state)
             }
         )
     }

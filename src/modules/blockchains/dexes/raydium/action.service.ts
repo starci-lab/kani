@@ -60,14 +60,15 @@ export class RaydiumActionService implements IActionService {
             gasTokenBalanceAmount, 
             gasTokenSwapAmount
         } 
-        = await this.solanaTokenManagerService.getAccountFunding({
-            targetTokenId: tokenA.displayId,
-            gasTokenId: tokenB.displayId,
-            accountAddress: bot.accountAddress,
-            network,
-            clientIndex: RAYDIUM_CLIENTS_INDEX,
-            oraclePrice,
-        })
+        = await this.solanaTokenManagerService
+            .getAccountFunding({
+                targetTokenId: tokenA.displayId,
+                gasTokenId: tokenB.displayId,
+                accountAddress: bot.accountAddress,
+                network,
+                clientIndex: RAYDIUM_CLIENTS_INDEX,
+                oraclePrice,
+            })
         console.log(
             status, 
             remainingTargetTokenBalanceAmount, 

@@ -20,3 +20,13 @@ export class LiquidityPoolsValidationException extends AbstractException {
         )
     }
 }
+
+export class DynamicLiquidityPoolInfoNotFoundException extends AbstractException {
+    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
+        super(
+            message || `Dynamic liquidity pool info ${liquidityPoolId} not found`, 
+            "DYNAMIC_LIQUIDITY_POOL_INFO_NOT_FOUND_EXCEPTION", 
+            { liquidityPoolId }
+        )
+    }
+}

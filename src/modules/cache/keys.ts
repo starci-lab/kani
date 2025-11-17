@@ -17,3 +17,9 @@ export enum CacheKey {
 export interface PythTokenPriceCacheResult {
     price: number
 }
+
+export interface DynamicLiquidityPoolInfoCacheResult {
+    tickCurrent: number
+    liquidity: number
+    sqrtPriceX64: number
+}

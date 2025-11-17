@@ -1,26 +1,23 @@
-import { Inject, Injectable } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { Network, PlatformId } from "@modules/common"
 import { UserSchema } from "@modules/databases"
 import { Ed25519Keypair as SuiEd25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import { Keypair as SolanaKeypair } from "@solana/web3.js"
 import { ethers } from "ethers"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./signers.module-definition"
-import { GcpKmsService } from "@modules/gcp"
+import { EncryptionService } from "@modules/crypto"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
   user: UserSchema
   network?: Network
   platformId: PlatformId
   action: (signer: TSigner) => Promise<TResponse>
-  factory: (privateKey: Uint8Array) => TSigner
+  factory: (privateKey: string) => TSigner
 }
 
 @Injectable()
 export class SignerService {
     constructor(
-    private readonly gcpKmsService: GcpKmsService,
-    @Inject(MODULE_OPTIONS_TOKEN)
-    private readonly options: typeof OPTIONS_TYPE
+    private readonly encryptionService: EncryptionService
     ) {}
 
     private async withSigner<TSigner, TResponse = void>({
@@ -30,18 +27,17 @@ export class SignerService {
         action,
         factory,
     }: WithSignerParams<TSigner, TResponse>): Promise<TResponse> {
-        let privateKey: Uint8Array | null = null
+        let privateKey: string | null = null
         try {
             const wallet = user.wallets.find((w) => w.platformId === platformId)
             if (!wallet) throw new Error(`${PlatformId[platformId]} wallet not found`)
             if (network === Network.Testnet) throw new Error("Testnet not supported")
 
-            privateKey = await this.gcpKmsService.decrypt(wallet.encryptedPrivateKey ?? "")
+            privateKey = this.encryptionService.decrypt(wallet.encryptedPrivateKey ?? "")
             const signer = factory(privateKey)
             return await action(signer)
         } finally {
-            if (privateKey) privateKey.fill(0)
-            privateKey = null
+            if (privateKey) privateKey = null
         }
     }
 
@@ -57,7 +53,7 @@ export class SignerService {
         return this.withSigner<SuiEd25519Keypair, TResponse>({
             ...params,
             platformId: PlatformId.Sui,
-            factory: (pk) => SuiEd25519Keypair.fromSecretKey(Buffer.from(pk).toString("utf-8")),
+            factory: (privateKey) => SuiEd25519Keypair.fromSecretKey(Buffer.from(privateKey, "utf8")),
         })
     }
 
@@ -69,7 +65,7 @@ export class SignerService {
         return this.withSigner<SolanaKeypair, TResponse>({
             ...params,
             platformId: PlatformId.Solana,
-            factory: (pk) => SolanaKeypair.fromSecretKey(pk),
+            factory: (privateKey) => SolanaKeypair.fromSecretKey(Buffer.from(privateKey, "utf8")),
         })
     }
 

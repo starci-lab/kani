@@ -1,28 +1,27 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { Network } from "@typedefs"
-import { createObjectId } from "@utils"
-import { 
-    DexId, 
-    DynamicLiquidityPoolInfoSchema, 
-    InjectPrimaryMongoose, 
-    LiquidityPoolId, 
-    PrimaryMemoryStorageService
-} from "@modules/databases"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { Connection, PublicKey } from "@solana/web3.js"
+import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
+import { Connection, PublicKey } from "@solana/web3.js"
 import { ORCA_CLIENT_INDEX } from "./constants"
-import { CacheKey, createCacheKey } from "@modules/cache"
+import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
-import { Logger as WinstonLogger } from "winston"
+import {
+    DynamicLiquidityPoolInfoSchema,
+    InjectPrimaryMongoose,
+    LiquidityPoolId,
+    PrimaryMemoryStorageService,
+    DexId,
+} from "@modules/databases"
+import { Connection as MongooseConnection } from "mongoose"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Connection as MongooseConnection } from "mongoose"
-import { Whirlpool } from "./beets"
+import { Logger as WinstonLogger } from "winston"
 import { EventEmitterService, EventName } from "@modules/event"
-import { InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
+import { createObjectId } from "@utils"
+import { Whirlpool } from "./beets"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap {
@@ -40,73 +39,111 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
-    ) { }
+    ) {}
 
-    onApplicationBootstrap() {
+    // ============================================
+    // Main bootstrap
+    // ============================================
+    async onApplicationBootstrap() {
+        // fetch once
+        await this.asyncService.allIgnoreError(
+            this.memoryStorageService.liquidityPools.map((pool) =>
+                this.fetchPoolInfo(pool.displayId),
+            ),
+        )
+
+        // observe
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) {
-                continue
-            }
+            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
             this.observeClmmPool(liquidityPool.displayId)
         }
     }
-    
-    private async observeClmmPool(
+
+    // ============================================
+    // Shared handler
+    // ============================================
+    private async handlePoolStateUpdate(
         liquidityPoolId: LiquidityPoolId,
+        state: ReturnType<typeof Whirlpool.struct["read"]>
     ) {
-        const liquidityPool = this.memoryStorageService
-            .liquidityPools
-            .find((liquidityPool) => liquidityPool.displayId === liquidityPoolId)
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        const parsed = {
+            tickCurrent: state.tickCurrentIndex,
+            liquidity: new BN(state.liquidity),
+            sqrtPriceX64: new BN(state.sqrtPrice),
         }
-        // retrieve the corresponding connection for the network
-        const connection = this.solanaClients[liquidityPool.network]
-            .ws[ORCA_CLIENT_INDEX]
-        // listen to the pool address
+
+        await this.asyncService.allIgnoreError([
+            // cache
+            this.cacheManager.set(
+                createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                this.superjson.stringify(parsed),
+            ),
+
+            // db insert
+            this.connection.model(DynamicLiquidityPoolInfoSchema.name).create({
+                liquidityPool: createObjectId(liquidityPoolId),
+                ...parsed,
+            }),
+
+            // event emit
+            this.events.emit(
+                EventName.LiquidityPoolsFetched,
+                { liquidityPoolId, ...parsed },
+                { withoutLocal: true },
+            ),
+        ])
+
+        // logging
+        this.winstonLogger.debug(WinstonLog.ObserveClmmPool, {
+            liquidityPoolId,
+            tickCurrent: parsed.tickCurrent.toString(),
+            liquidity: parsed.liquidity.toString(),
+            sqrtPriceX64: parsed.sqrtPriceX64.toString(),
+        })
+
+        return parsed
+    }
+
+    // ============================================
+    // Fetch once
+    // ============================================
+    private async fetchPoolInfo(liquidityPoolId: LiquidityPoolId) {
+        const liquidityPool = this.memoryStorageService.liquidityPools.find(
+            (pool) => pool.displayId === liquidityPoolId,
+        )
+        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+
+        const connection =
+            this.solanaClients[liquidityPool.network].ws[ORCA_CLIENT_INDEX]
+        const accountInfo = await connection.getAccountInfo(
+            new PublicKey(liquidityPool.poolAddress),
+        )
+        if (!accountInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+
+        // skip discriminator = 8 bytes
+        const state = Whirlpool.struct.read(accountInfo.data, 8)
+
+        return await this.handlePoolStateUpdate(liquidityPoolId, state)
+    }
+
+    // ============================================
+    // Observe (subscribe)
+    // ============================================
+    private async observeClmmPool(liquidityPoolId: LiquidityPoolId) {
+        const liquidityPool = this.memoryStorageService.liquidityPools.find(
+            (pool) => pool.displayId === liquidityPoolId,
+        )
+        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+
+        const connection =
+            this.solanaClients[liquidityPool.network].ws[ORCA_CLIENT_INDEX]
+
         connection.onAccountChange(
-            new PublicKey(liquidityPool.poolAddress), async (accountInfo) => {
-                // we remove the first 8 bytes of the account data because they are the account discriminator
+            new PublicKey(liquidityPool.poolAddress),
+            async (accountInfo) => {
                 const state = Whirlpool.struct.read(accountInfo.data, 8)
-                await this.asyncService.allIgnoreError([
-                    // cache the pool info
-                    this.cacheManager.set(
-                        createCacheKey(
-                            CacheKey.DynamicLiquidityPoolInfo, 
-                            liquidityPool.displayId
-                        ),
-                        this.superjson.stringify({
-                            tickCurrent: state.tickCurrentIndex,
-                            liquidity: new BN(state.liquidity),
-                            sqrtPriceX64: new BN(state.sqrtPrice),
-                        }),
-                    ),
-                    // store the pool info in the database
-                    this.connection.model(DynamicLiquidityPoolInfoSchema.name)
-                        .create({
-                            liquidityPool: createObjectId(liquidityPoolId),
-                            tickCurrent: state.tickCurrentIndex,
-                            liquidity: new BN(state.liquidity),
-                            sqrtPriceX64: new BN(state.sqrtPrice),
-                        }),
-                    // emit the event
-                    this.events.emit(
-                        EventName.LiquidityPoolsFetched, {
-                            liquidityPoolId,
-                            tickCurrent: state.tickCurrentIndex,
-                            liquidity: new BN(state.liquidity),
-                            sqrtPriceX64: new BN(state.sqrtPrice),
-                        }, {
-                            withoutLocal: true,
-                        }),
-                ])
-                this.winstonLogger.debug(WinstonLog.ObserveClmmPool, JSON.stringify({
-                    liquidityPoolId,
-                    tickCurrent: state.tickCurrentIndex.toString(),
-                    liquidity: new BN(state.liquidity).toString(),
-                    sqrtPriceX64: new BN(state.sqrtPrice).toString(),
-                }))
-            }
+                await this.handlePoolStateUpdate(liquidityPoolId, state)
+            },
         )
     }
 }

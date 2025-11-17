@@ -7,6 +7,7 @@ import { MomentumModule } from "./momentum"
 import { FlowXModule } from "./flowx"
 import { RaydiumModule } from "./raydium"
 import { OrcaModule } from "./orca"
+import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -79,9 +80,11 @@ export class DexesModule extends ConfigurableModuleClass {
 
             ],
             providers: [
+                LiquidityPoolStateService,
             ],
             exports: [
                 ...dexModules,
+                LiquidityPoolStateService,
             ]
         }
     } 
