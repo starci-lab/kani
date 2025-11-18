@@ -71,7 +71,6 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                 price: price.toNumber(),
             }
         })
-        console.log({ priceData })
         const tokenList = tokens.map(
             token => {
                 const price = priceData.find(data => data.feedId.includes(token.pythFeedId!))

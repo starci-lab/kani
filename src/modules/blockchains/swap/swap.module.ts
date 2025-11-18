@@ -6,7 +6,6 @@ import { SwapService } from "./swap.service"
 import { GasSuiSwapUtilsService } from "./gas-sui-swap-utils.service"
 import { FeeToService } from "./fee-to.service"
 import { SuiFlexibleSwapService } from "./sui-flexible-swap.service"
-import { ZapService } from "./zap.service"
 
 @Module({})
 export class SwapModule extends ConfigurableModuleClass {
@@ -23,7 +22,6 @@ export class SwapModule extends ConfigurableModuleClass {
             GasSuiSwapUtilsService,
             SuiFlexibleSwapService,
             SwapService,
-            ZapService
         ]
 
         return {

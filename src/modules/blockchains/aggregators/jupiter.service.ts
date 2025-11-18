@@ -1,6 +1,6 @@
 import { SwapApi, QuoteResponse as JupiterQuoteResponse } from "@jup-ag/api"
 import { InjectJupiterAggregatorSdk } from "./aggregators.decorators"
-import { Injectable } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
@@ -16,14 +16,13 @@ import base58 from "bs58"
 const SOLANA_NATIVE_TOKEN_ADDRESS = "So11111111111111111111111111111111111111112"
 @Injectable()
 export class JupiterService implements IAggregatorService {
+    private readonly logger = new Logger(JupiterService.name)
     constructor(
         @InjectJupiterAggregatorSdk()
         private readonly jupiterAggregatorSdk: SwapApi,
         @InjectSolanaClients()
         private readonly clients: Record<Network, HttpAndWsClients<Connection>>,
-
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-
         // Generic retry helper to re-run any async action with backoff
         private readonly retryService: RetryService,
     ) { }
@@ -52,41 +51,43 @@ export class JupiterService implements IAggregatorService {
         tokenOut,
         amountIn,
     }: QuoteRequest): Promise<QuoteResponse> {
-
         // We wrap the whole quote flow inside the retry service
         return await this.retryService.retry({
             action: async () => {
+                try {
                 // Resolve token metadata from internal storage
-                const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
-                    token => token.displayId === tokenIn,
-                )
-                const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
-                    token => token.displayId === tokenOut,
-                )
-                if (!tokenInInstance || !tokenOutInstance) {
-                    throw new TokenNotFoundException(
-                        `Token not found with display id: ${tokenIn} or ${tokenOut}`
+                    const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
+                        token => token.displayId === tokenIn,
                     )
-                }
-                // Call Jupiter to fetch the best quote route
-                const quote = await this.jupiterAggregatorSdk.quoteGet({
-                    inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
-                    outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
-                    amount: amountIn.toNumber(),
-                    // we charge 0.02% platform fee as protocol fee
-                    platformFeeBps: 2,
-                })
-
-                // Convert output amount to BN and return raw payload
-                return {
-                    amountOut: new BN(quote.outAmount),
-                    payload: quote,
+                    const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
+                        token => token.displayId === tokenOut,
+                    )
+                    if (!tokenInInstance || !tokenOutInstance) {
+                        throw new TokenNotFoundException(
+                            `Token not found with display id: ${tokenIn} or ${tokenOut}`
+                        )
+                    }
+                    // Call Jupiter to fetch the best quote route
+                    const quote = await this.jupiterAggregatorSdk.quoteGet({
+                        inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
+                        outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
+                        amount: amountIn.toNumber(),
+                        // we charge 0.02% platform fee as protocol fee
+                        platformFeeBps: 2,
+                    })
+                    // Convert output amount to BN and return raw payload
+                    return {
+                        amountOut: new BN(quote.outAmount),
+                        payload: quote,
+                    }
+                } catch (error) {
+                    this.logger.debug(error)
+                    throw error
                 }
             },
-
             // Retry config
-            maxRetries: 10, // up to 10 attempts
-            delay: 200,     // 200ms initial delay
+            maxRetries: 3, // up to 3 attempts
+            delay: 500,     // 500ms initial delay
             factor: 2,      // exponential backoff factor
         })
     }

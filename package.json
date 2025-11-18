@@ -74,6 +74,7 @@
     "@solana/kit": "^5.0.0",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "@uniswap/v3-sdk": "^3.26.0",
     "async-mutex": "^0.5.0",
     "axios": "^1.11.0",
     "axios-retry": "^4.5.0",

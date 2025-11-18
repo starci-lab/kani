@@ -7,7 +7,14 @@ import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { EventModule } from "@modules/event"
 import { EventEmitterModule } from "@nestjs/event-emitter"
-import { ClientsModule, DexesModule, PythModule, SignersModule, UtilsModule } from "@modules/blockchains"
+import { 
+    ClientsModule, 
+    DexesModule, 
+    PythModule, 
+    SignersModule, 
+    UtilsModule, 
+    MathModule
+} from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
@@ -59,6 +66,9 @@ import { MutexModule } from "@modules/lock"
             isGlobal: true,
         }),
         UtilsModule.register({
+            isGlobal: true,
+        }),
+        MathModule.register({
             isGlobal: true,
         }),
         DexesModule.register({

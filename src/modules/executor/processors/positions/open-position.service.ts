@@ -46,7 +46,7 @@ export class OpenPositionProcessorService  {
     // This lets every user have their own isolated event handling logic.
     async initialize() {
         // initialize the mutex
-        this.mutexService.mutex(
+        const mutex = await this.mutexService.mutex(
             getMutexKey(
                 MutexKey.OpenPosition, 
                 this.request.bot.id
@@ -74,10 +74,16 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // run the open position
-                await this.dispatchOpenPositionService.dispatchOpenPosition({
-                    liquidityPoolId: payload.liquidityPoolId,
-                    bot: this.bot,
-                })
+                if (mutex.isLocked()) {
+                    return
+                }
+                await mutex.runExclusive(
+                    async () => {
+                        await this.dispatchOpenPositionService.dispatchOpenPosition({
+                            liquidityPoolId: payload.liquidityPoolId,
+                            bot: this.bot,
+                        })
+                    })
             }
         )
     }

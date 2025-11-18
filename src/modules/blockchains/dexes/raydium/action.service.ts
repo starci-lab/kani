@@ -7,12 +7,14 @@ import { InjectPrimaryMongoose } from "@modules/databases"
 import { SignerService } from "../../signers"
 import { SolanaAggregatorSelectorService } from "../../aggregators"
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { InvalidPoolTokensException, TokenNotFoundException } from "@exceptions"
-import { PoolMathService, SolanaTokenManagerService, TickService } from "../../utils"
+import { InvalidPoolTokensException, TokenNotFoundException, ZapAmountNotAcceptableException } from "@exceptions"
+import { SolanaTokenManagerService } from "../../utils"
+import { TickMathService, ZapMathService, PoolMathService } from "../../math"
 import { ChainId, Network, TokenType } from "@typedefs"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
 import { OraclePriceService } from "../../pyth"
 import { OPEN_POSITION_SLIPPAGE } from "@modules/blockchains"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -27,8 +29,9 @@ export class RaydiumActionService implements IActionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly solanaTokenManagerService: SolanaTokenManagerService,
         private readonly oraclePriceService: OraclePriceService,
-        private readonly tickService: TickService,
+        private readonly tickMathService: TickMathService,
         private readonly poolMathService: PoolMathService,
+        private readonly zapMathService: ZapMathService,
     ) { }
 
     async closePosition(): Promise<void> {
@@ -88,11 +91,17 @@ export class RaydiumActionService implements IActionService {
         const { 
             tickLower, 
             tickUpper 
-        } = await this.tickService.getTickBounds(
-            state,
-            bot
+        } = await this.tickMathService.getTickBounds(
+            {
+                tickCurrent: new Decimal(state.dynamic.tickCurrent),
+                tickSpacing: new Decimal(state.static.tickSpacing),
+                targetIsA,
+                tickMultiplier: new Decimal(state.static.tickMultiplier),
+            }
         )
-        const { ratio } = this.poolMathService.getRatioFromAmountA({
+        const { 
+            ratio
+        } = this.poolMathService.getRatioFromAmountA({
             slippage,
             sqrtPriceX64: state.dynamic.sqrtPriceX64,
             tickLower,
@@ -100,16 +109,18 @@ export class RaydiumActionService implements IActionService {
             tokenAId: tokenA.displayId,
             tokenBId: tokenB.displayId,
         })
-        const spotPrice = this.tickService.sqrtPriceX64ToPrice(
-            state.dynamic.sqrtPriceX64,
-            tokenA.decimals,
-            tokenB.decimals,
-        )
+        const { 
+            price: spotPrice
+        } = this.tickMathService.sqrtPriceX64ToPrice({
+            sqrtPriceX64: state.dynamic.sqrtPriceX64,
+            decimalsA: tokenA.decimals,
+            decimalsB: tokenB.decimals,
+        })
         const { 
             swapAmountIn, 
             remainingAmountIn, 
             receiveAmountOut 
-        } = this.poolMathService.calculateZapAmounts({
+        } = this.zapMathService.calculateZapAmounts({
             decimalsA: tokenA.decimals,
             decimalsB: tokenB.decimals,
             amountIn: remainingTargetTokenBalanceAmount,
@@ -118,26 +129,31 @@ export class RaydiumActionService implements IActionService {
             targetIsA,
             oraclePrice,
         })
-        console.log({ 
-            swapAmountIn: swapAmountIn.toString(), 
-            remainingAmountIn: remainingAmountIn.toString(), 
-            receiveAmountOut: receiveAmountOut.toString(),
-            priceLower: this.tickService.tickIndexToPrice(tickLower.toNumber(), tokenA.decimals, tokenB.decimals).toString(),
-            priceUpper: this.tickService.tickIndexToPrice(tickUpper.toNumber(), tokenA.decimals, tokenB.decimals).toString(),
-            priceCurrent: this.tickService.sqrtPriceX64ToPrice(state.dynamic.sqrtPriceX64, tokenA.decimals, tokenB.decimals).toString(),
+        console.log({
+            swapAmountIn,
+            remainingAmountIn,
+            receiveAmountOut,
         })
-        // const { aggregatorId, response } = await this.solanaAggregatorSelectorService.batchQuote({
-        //     tokenIn: tokenIn.displayId,
-        //     tokenOut: tokenOut.displayId,
-        //     amountIn: remainingTargetTokenBalanceAmount,
-        //     senderAddress: bot.accountAddress,
-        // })
-        // console.log({
-        //     aggregatorId,
-        //     response,
-        // })
-
-        
+        const { 
+            aggregatorId, 
+            response 
+        } = await this.solanaAggregatorSelectorService.batchQuote({
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenOut.displayId,
+            amountIn: swapAmountIn,
+            senderAddress: bot.accountAddress,
+        })
+        // we must ensure the diff between computed amount and 
+        const { 
+            deviation, 
+            isAcceptable
+        } = this.zapMathService.ensureZapAmounts({
+            actualAmountOut: receiveAmountOut,
+            expectedAmountOut: response.amountOut,
+        })
+        if (!isAcceptable) {
+            throw new ZapAmountNotAcceptableException(deviation, "Zap amount is not acceptable")
+        }
         // const tickLower = new Decimals(0)
         // const tickUpper = new Decimals(0)
 
