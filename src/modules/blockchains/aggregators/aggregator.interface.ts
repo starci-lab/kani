@@ -37,9 +37,9 @@ export interface QuoteResponse {
 
 export interface SwapRequest {
     payload: unknown
-    privateKey: string
     tokenIn: TokenId
     tokenOut: TokenId
+    accountAddress: string
 }
 
 export interface SwapResponse {

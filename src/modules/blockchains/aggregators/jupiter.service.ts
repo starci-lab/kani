@@ -9,9 +9,7 @@ import { RetryService } from "@modules/mixin"
 import { InjectSolanaClients } from "../clients"
 import { HttpAndWsClients } from "../clients"
 import { ChainId, Network } from "@modules/common"
-import { Connection, Keypair, PublicKey } from "@solana/web3.js"
-import { Wallet } from "@project-serum/anchor"
-import base58 from "bs58"
+import { Connection, PublicKey } from "@solana/web3.js"
 
 const SOLANA_NATIVE_TOKEN_ADDRESS = "So11111111111111111111111111111111111111112"
 @Injectable()
@@ -95,8 +93,8 @@ export class JupiterService implements IAggregatorService {
     async swap(
         {
             payload,
-            privateKey,
             tokenOut,
+            accountAddress,
         }: 
     SwapRequest): 
     Promise<SwapResponse> 
@@ -104,7 +102,7 @@ export class JupiterService implements IAggregatorService {
         return await this.retryService.retry({
             action: async () => {
                 const referralTokenAccount = this.jupiterReferralTokenAccounts()[tokenOut]?.toBase58()
-                const wallet = new Wallet(Keypair.fromSecretKey(base58.decode(privateKey)))
+
                 return await this.retryService.retry({
                     action: async () => {
                         const { 
@@ -112,7 +110,7 @@ export class JupiterService implements IAggregatorService {
                         } = await this.jupiterAggregatorSdk.swapPost({
                             swapRequest: {
                                 quoteResponse: payload as JupiterQuoteResponse,
-                                userPublicKey: wallet.publicKey.toBase58(),
+                                userPublicKey: accountAddress,
                                 dynamicComputeUnitLimit: true,
                                 dynamicSlippage: true,
                                 feeAccount: referralTokenAccount,   

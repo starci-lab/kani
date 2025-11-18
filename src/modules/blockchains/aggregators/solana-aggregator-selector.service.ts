@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { JupiterService } from "./jupiter.service"
-import { QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
+import { QuoteRequest, QuoteResponse, SwapRequest } from "./aggregator.interface"
 import { AsyncService } from "@modules/mixin"
 import { AggregatorNotFoundException } from "@exceptions"
 import { ChainId } from "@modules/common"
@@ -16,6 +16,10 @@ export interface BatchQuoteResponse {
 export interface SelectorSwapParams {
     base: SwapRequest
     aggregatorId: AggregatorId
+}
+
+export interface SelectorSwapResponse {
+    payload: unknown
 }
 
 @Injectable()
@@ -53,10 +57,16 @@ export class SolanaAggregatorSelectorService {
         return best
     }
 
-    async selectorSwap(params: SelectorSwapParams): Promise<SwapResponse> {
+    async selectorSwap(
+        params: SelectorSwapParams
+    ): Promise<SelectorSwapResponse> {
         switch (params.aggregatorId) {
-        case AggregatorId.Jupiter:
-            return this.jupiterService.swap(params.base)
+        case AggregatorId.Jupiter: {
+            const { payload } = await this.jupiterService.swap(params.base)
+            return {
+                payload,
+            }
+        }
         default:
             throw new AggregatorNotFoundException("Aggregator not found")
         }

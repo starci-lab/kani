@@ -93,6 +93,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                             value: this.superjson.stringify({
                                 price: data.price,
                             }),
+                            ttl: 0, // 0 means no expiration
                         }
                     }),
             ),
@@ -143,6 +144,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                         this.superjson.stringify({
                             price: price.toNumber(),
                         }),
+                        0, // 0 means no expiration
                     ),
                     // emit the event
                     this.events.emit(

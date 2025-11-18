@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { Network, PlatformId } from "@modules/common"
-import { UserSchema } from "@modules/databases"
+import { BotSchema } from "@modules/databases"
 import { Ed25519Keypair as SuiEd25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import { Keypair as SolanaKeypair } from "@solana/web3.js"
 import { ethers } from "ethers"
 import { EncryptionService } from "@modules/crypto"
+import bs58 from "bs58"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
-  user: UserSchema
+  bot: BotSchema
   network?: Network
   platformId: PlatformId
   action: (signer: TSigner) => Promise<TResponse>
@@ -21,7 +22,7 @@ export class SignerService {
     ) {}
 
     private async withSigner<TSigner, TResponse = void>({
-        user,
+        bot,
         network = Network.Mainnet,
         platformId,
         action,
@@ -29,11 +30,15 @@ export class SignerService {
     }: WithSignerParams<TSigner, TResponse>): Promise<TResponse> {
         let privateKey: string | null = null
         try {
-            const wallet = user.wallets.find((w) => w.platformId === platformId)
-            if (!wallet) throw new Error(`${PlatformId[platformId]} wallet not found`)
             if (network === Network.Testnet) throw new Error("Testnet not supported")
-
-            privateKey = this.encryptionService.decrypt(wallet.encryptedPrivateKey ?? "")
+            if (platformId === PlatformId.Solana) {
+                privateKey = this.encryptionService.decrypt(bot.encryptedPrivateKey ?? "")
+            } else if (platformId === PlatformId.Sui) {
+                privateKey = this.encryptionService.decrypt(bot.encryptedPrivateKey ?? "")
+            } else if (platformId === PlatformId.Evm) {
+                privateKey = this.encryptionService.decrypt(bot.encryptedPrivateKey ?? "")
+            }
+            if (!privateKey) throw new Error("Private key not found")
             const signer = factory(privateKey)
             return await action(signer)
         } finally {
@@ -46,7 +51,7 @@ export class SignerService {
     // ------------------------
 
     public withSuiSigner<TResponse = void>(params: {
-    user: UserSchema
+    bot: BotSchema
     network?: Network
     action: (signer: SuiEd25519Keypair) => Promise<TResponse>
   }) {
@@ -58,19 +63,20 @@ export class SignerService {
     }
 
     public withSolanaSigner<TResponse = void>(params: {
-    user: UserSchema
+    bot: BotSchema
+    accountAddress: string
     network?: Network
     action: (signer: SolanaKeypair) => Promise<TResponse>
   }) {
         return this.withSigner<SolanaKeypair, TResponse>({
             ...params,
             platformId: PlatformId.Solana,
-            factory: (privateKey) => SolanaKeypair.fromSecretKey(Buffer.from(privateKey, "utf8")),
+            factory: (privateKey) => SolanaKeypair.fromSecretKey(bs58.decode(privateKey)),
         })
     }
 
     public withEvmSigner<TResponse = void>(params: {
-    user: UserSchema
+    bot: BotSchema
     network?: Network
     action: (signer: ethers.Wallet) => Promise<TResponse>
   }) {
