@@ -4,43 +4,109 @@ import { toUnitDecimal } from "@modules/common"
 import BN from "bn.js"
 import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { Q64 } from "./constants"
-
-const MAX_RANGE_FRACTION = new Decimal(1 / 3)
+import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
+import { LiquidityPoolState } from "../interfaces"
+import { computeDenomination } from "@utils"
+import { 
+    SnapshotBalancesNotSetException, 
+    TokenNotFoundException
+} from "@exceptions"
+import { OraclePriceService } from "../pyth"
 
 @Injectable()
 export class TickMathService {
+    constructor(
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly oraclePriceService: OraclePriceService,
+    ) {}
 
     public async getTickBounds(
         {
-            tickCurrent,
-            tickSpacing,
-            targetIsA,
-            tickMultiplier,
+            state,
+            bot,
         }: GetTickBoundsParams
     ): Promise<GetTickBoundsResponse> {
-        const F = new Decimal(MAX_RANGE_FRACTION)
-        // 1. Calculate ideal widths
-        let L: Decimal
-        if (targetIsA) {
-            L = tickMultiplier.mul(F).div(F.add(1))
-        } else {
-            L = tickMultiplier.div(F.add(1))
+        const { 
+            snapshotTargetTokenBalanceAmount, 
+            snapshotQuoteTokenBalanceAmount, 
+            targetToken, quoteToken 
+        } = bot
+        if (!snapshotTargetTokenBalanceAmount || !snapshotQuoteTokenBalanceAmount) {
+            throw new SnapshotBalancesNotSetException(
+                "Snapshot target token balance amount or snapshot quote token balance amount is not set"
+            )
         }
-        // 2. Raw tickLower
-        let tickLower = tickCurrent.sub(L)
-        // 3. Align LOWER bound only
-        tickLower = tickLower.div(tickSpacing).floor().mul(tickSpacing)
-        // 4. Exact tickUpper
-        let tickUpper = tickLower.add(tickMultiplier)
-        // 5. If tickUpper not aligned → shift tickLower so that tickUpper aligns
-        if (!tickUpper.mod(tickSpacing).eq(0)) {
-            // shift in direction THAT KEEPS skew
-            tickLower = tickLower.sub(tickUpper.mod(tickSpacing))
-            tickUpper = tickLower.add(tickMultiplier)
+        const { 
+            dynamic: { 
+                tickCurrent
+            }, 
+            static: { 
+                tickSpacing,
+                tickMultiplier
+            } 
+        } = state
+        const targetTokenEntity = this.primaryMemoryStorageService.tokens
+            .find(token => token.id === targetToken.toString())
+        if (!targetTokenEntity) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteTokenEntity = this.primaryMemoryStorageService.tokens
+            .find(token => token.id === quoteToken.toString())
+        if (!quoteTokenEntity) {
+            throw new TokenNotFoundException("Quote token not found")
+        }
+        const targetIsA = targetToken.id === state.static.tokenA.toString()
+        const oraclePrice = await this.oraclePriceService.getOraclePrice({
+            tokenA: targetTokenEntity.displayId,
+            tokenB: quoteTokenEntity.displayId,
+        })
+        const targetTokenBalanceAmountInQuote = computeDenomination(
+            new BN(snapshotTargetTokenBalanceAmount),
+            targetTokenEntity.decimals
+        ).mul(oraclePrice)
+        const quoteTokenBalanceAmountInQuote = computeDenomination(
+            new BN(snapshotQuoteTokenBalanceAmount),
+            quoteTokenEntity.decimals
+        )   
+        //
+        // 1. Compute R = quote / target
+        //
+        const R = new Decimal(
+            quoteTokenBalanceAmountInQuote
+        ).div(targetTokenBalanceAmountInQuote)
+        //
+        // S = tickMultiplier * tickSpacing define the range of the pool
+        // S = tickUpper - tickLower = (tickUpper - current) + (current - tickLower)
+        //
+        const S = new Decimal(tickMultiplier).mul(tickSpacing)
+        //
+        // 2. Compute L depending on whether target is token A or B.
+        //    L defines: (current - tickLower) / (tickUpper - current) is targetIsA = true 
+        //    L defines: (tickUpper - current) / ((current - tickLower) is targetIsA = false
+        //    L must satisfy L <= R to ensure the token allocation is valid
+        //
+        let tickLower: Decimal
+        let tickUpper: Decimal
+        if (targetIsA) {
+            // L = (S - (current - tickLower))/(current - tickLower) <= R
+            // => S/(current - tickLower) - 1 <= R
+            // => S/(current - tickLower) <= R + 1
+            // => (current - tickLower) >= S/(R + 1)
+            // => tickLower <= current - S/(R + 1)
+            tickLower = Decimal.floor(new Decimal(tickCurrent).sub(S.div(R.add(1))))
+            tickUpper = tickLower.add(S)
+        } else {
+            // L = (S - (tickUpper - current))/(tickUpper - current) <= R
+            // => S/(tickUpper - current) - 1 <= R
+            // => S/(tickUpper - current) <= R + 1
+            // => (tickUpper - current) >= S/(R + 1)
+            // => tickUpper >= current + S/(R + 1)
+            tickUpper = Decimal.ceil(new Decimal(tickCurrent).add(S.div(R.add(1))))
+            tickLower = tickUpper.sub(tickMultiplier)
         }
         return {
-            tickLower: tickLower,
-            tickUpper: tickUpper,
+            tickLower,
+            tickUpper,
         }
     }
 
@@ -97,10 +163,8 @@ export interface SqrtPriceX64ToPriceResponse {
 }
 
 export interface GetTickBoundsParams {
-    tickCurrent: Decimal
-    tickSpacing: Decimal
-    targetIsA: boolean
-    tickMultiplier: Decimal
+    state: LiquidityPoolState
+    bot: BotSchema
 }
 
 export interface GetTickBoundsResponse {

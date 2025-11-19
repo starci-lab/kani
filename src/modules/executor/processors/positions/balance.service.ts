@@ -46,35 +46,27 @@ export class BalanceProcessorService  {
         this.mutex = this.mutexService.mutex(
             getMutexKey(MutexKey.Balance, this.request.bot.id),
         )
-        // Refresh bot data from the database
-        const bot = await this.connection
-            .model<BotSchema>(BotSchema.name)
-            .findById(this.request.bot.id)
-
-        if (!bot) {
-            throw new BotNotFoundException(
-                `Bot not found with id: ${this.request.bot.id}`,
-            )
-        }
-        this.bot = bot.toJSON()
         // Periodic evaluation cycle
-        const runBalanceEvaluation = async () => {
-            const result = await this.balanceService.evaluateBotBalances({
+        const executeBalanceRebalancing = async () => {
+            // Refresh bot data from the database
+            const bot = await this.connection
+                .model<BotSchema>(BotSchema.name)
+                .findById(this.request.bot.id)
+
+            if (!bot) {
+                throw new BotNotFoundException(
+                    `Bot not found with id: ${this.request.bot.id}`,
+                )
+            }
+            this.bot = bot.toJSON()
+            await this.balanceService.executeBalanceRebalancing({
                 bot: this.bot,
-            })
-            console.log({
-                status: result.status,
-                targetBalanceAmount: result.targetBalanceAmount?.toString(),
-                quoteBalanceAmount: result.quoteBalanceAmount?.toString(),
-                gasBalanceAmount: result.gasBalanceAmount?.toString(),
-                targetBalanceAmountSwapToQuote: result.targetBalanceAmountSwapToQuote?.toString(),
-                targetBalanceAmountSwapToGas: result.targetBalanceAmountSwapToGas?.toString(),
             })
         }
         // Run immediately and then at a fixed interval
-        runBalanceEvaluation()
+        executeBalanceRebalancing()
         setInterval(
-            runBalanceEvaluation,
+            executeBalanceRebalancing,
             envConfig().botExecutor.balanceEvaluationInterval,
         )
     }

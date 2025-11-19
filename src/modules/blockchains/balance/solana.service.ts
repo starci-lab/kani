@@ -3,9 +3,9 @@ import { HttpAndWsClients, InjectSolanaClients } from "../clients"
 import { ChainId, computeDenomination, computeRaw, Network, TokenType, toScaledBN, toUnit } from "@modules/common"
 import { Connection } from "@solana/web3.js"
 import { 
-    EvaluateBotBalancesParams, 
-    EvaluateBotBalancesResponse, 
-    EvaluateBotBalancesStatus, 
+    ExecuteBalanceRebalancingParams, 
+    ExecuteBalanceRebalancingResponse, 
+    ExecuteBalanceRebalancingStatus, 
     FetchBalanceParams, 
     FetchBalanceResponse, 
     GasStatus,
@@ -56,6 +56,8 @@ import { SwapExpectedAndQuotedAmountsNotAcceptableException } from "@exceptions"
 import { SignerService } from "../signers"
 import { BotSchema, InjectPrimaryMongoose, TokenSchema } from "@modules/databases"
 import { Connection as MongooseConnection } from "mongoose"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
     constructor(
@@ -71,6 +73,8 @@ export class SolanaBalanceService implements IBalanceService {
     private readonly signerService: SignerService,
     @InjectPrimaryMongoose()
     private readonly connection: MongooseConnection,
+    @InjectWinston()
+    private readonly logger: WinstonLogger
     ) { }
 
     private async fetchBalance(
@@ -135,11 +139,11 @@ export class SolanaBalanceService implements IBalanceService {
         }
     }
 
-    async evaluateBotBalances(
+    async executeBalanceRebalancing(
         {
             bot,
-        }: EvaluateBotBalancesParams
-    ): Promise<EvaluateBotBalancesResponse> {
+        }: ExecuteBalanceRebalancingParams
+    ): Promise<ExecuteBalanceRebalancingResponse> {
         const network = Network.Mainnet
         const client = this.solanaClients[network].http[0]
         const rpc = createSolanaRpc(client.rpcEndpoint)
@@ -199,7 +203,7 @@ export class SolanaBalanceService implements IBalanceService {
                     minRequiredAmountBN.add(gasAmountBN)
                 )) {
                 return {
-                    status: EvaluateBotBalancesStatus.InsufficientTargetBalance,
+                    status: ExecuteBalanceRebalancingStatus.InsufficientTargetBalance,
                     isTerminate: true,
                 }
             }
@@ -227,6 +231,24 @@ export class SolanaBalanceService implements IBalanceService {
             const totalBalanceAmountInQuote = targetBalanceAmountInQuote.add(quoteBalanceAmountInQuote)
             const quoteRatio = quoteBalanceAmountInQuote.div(totalBalanceAmountInQuote)
             // // if the ratio is less than the safe quote ratio min, we return insufficient quote balance
+            if (quoteRatio.lte(SAFE_QUOTE_RATIO_MAX) && quoteRatio.gte(SAFE_QUOTE_RATIO_MIN)) {
+                this.logger.info(WinstonLog.BalanceEvaluateOk, {
+                    quoteRatio: quoteRatio.toString(),
+                    botId: bot.id,
+                })
+                await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                    { _id: bot.id },
+                    { $set: { 
+                        snapshotTargetTokenBalanceAmount: targetBalanceAmount.sub(gasAmountBN).toString(), 
+                        snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
+                        snapshotGasTokenBalanceAmount: gasAmountBN.toString(),
+                    } }
+                )
+                return {
+                    isTerminate: true,
+                    status: ExecuteBalanceRebalancingStatus.OK,
+                }
+            }
             if (quoteRatio.lt(SAFE_QUOTE_RATIO_MIN)) 
             {
                 const idealQuoteBalanceInQuote = totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
@@ -310,7 +332,7 @@ export class SolanaBalanceService implements IBalanceService {
         }
         return {
             isTerminate: true,
-            status: EvaluateBotBalancesStatus.OK,
+            status: ExecuteBalanceRebalancingStatus.OK,
         }
     }
 

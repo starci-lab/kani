@@ -46,23 +46,29 @@ export class OpenPositionProcessorService  {
     // This lets every user have their own isolated event handling logic.
     async initialize() {
         // initialize the mutex
-        const mutex = await this.mutexService.mutex(
+        this.mutex = this.mutexService.mutex(
             getMutexKey(
                 MutexKey.OpenPosition, 
                 this.request.bot.id
             ))
-        // re query the bot to ensure data is up to date
-        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-        if (!bot) {
-            // bot not found, we skip here
-            throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
-        }
-        // assign the bot to the instance
-        this.bot = bot.toJSON()
         // register event listeners
         this.eventEmitter.on(
             EventName.InternalLiquidityPoolsFetched,
             async (payload: LiquidityPoolsFetchedEvent) => {
+                // re query the bot to ensure data is up to date
+                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
+                if (!bot) {
+                    // bot not found, we skip here
+                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
+                }
+                // assign the bot to the instance
+                this.bot = bot.toJSON()
+                if (
+                    !bot.snapshotTargetTokenBalanceAmount 
+                    || !bot.snapshotQuoteTokenBalanceAmount
+                ) {
+                    return
+                }
                 // only run if the liquidity pool is belong to the bot
                 if (
                     !bot.liquidityPools
@@ -74,16 +80,16 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // run the open position
-                // if (mutex.isLocked()) {
-                //     return
-                // }
-                // await mutex.runExclusive(
-                //     async () => {
-                //         await this.dispatchOpenPositionService.dispatchOpenPosition({
-                //             liquidityPoolId: payload.liquidityPoolId,
-                //             bot: this.bot,
-                //         })
-                //     })
+                if (this.mutex.isLocked()) {
+                    return
+                }
+                await this.mutex.runExclusive(
+                    async () => {
+                        await this.dispatchOpenPositionService.dispatchOpenPosition({
+                            liquidityPoolId: payload.liquidityPoolId,
+                            bot: this.bot,
+                        })
+                    })
             }
         )
     }

@@ -53,4 +53,5 @@ export enum WinstonLog {
     MongooseChangeStreamInsert = "Mongoose.Change.Stream.Insert",
     MongooseChangeStreamUpdate = "Mongoose.Change.Stream.Update",
     MongooseChangeStreamDelete = "Mongoose.Change.Stream.Delete",
+    BalanceEvaluateOk = "Balance.Evaluate.Ok",
 }

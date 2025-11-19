@@ -3,7 +3,7 @@
  * It returns a quote + executable swap data.
  */
 export interface IBalanceService {
-    evaluateBotBalances(params: EvaluateBotBalancesParams): Promise<EvaluateBotBalancesResponse>
+    executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<ExecuteBalanceRebalancingResponse>
 }
 
 import { BotSchema, TokenId } from "@modules/databases"
@@ -19,19 +19,19 @@ export interface FetchBalanceResponse {
     balanceAmount: BN
 }
 
-export interface EvaluateBotBalancesParams {
+export interface ExecuteBalanceRebalancingParams {
     bot: BotSchema
 }
 
-export enum EvaluateBotBalancesStatus {
+export enum ExecuteBalanceRebalancingStatus {
     OK = "ok",
     InsufficientTargetBalance = "InsufficientTargetBalance",
     InsufficientGasBalance = "InsufficientGasBalance",
     GasLowButConvertible = "GasLowButConvertible",
 }
 
-export interface EvaluateBotBalancesResponse {
-    status: EvaluateBotBalancesStatus
+export interface ExecuteBalanceRebalancingResponse {
+    status: ExecuteBalanceRebalancingStatus
     targetBalanceAmount?: BN
     quoteBalanceAmount?: BN
     gasBalanceAmount?: BN
