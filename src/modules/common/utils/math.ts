@@ -58,18 +58,21 @@ export const computeDenomination = (
 }
 
 export const computeRaw = (
-    amount: number,
+    amount: Decimal,
     decimals = 8,
     fractionDigits = 5,
 ): BN => {
-    const multiplier = new BN(10).pow(new BN(decimals)) // 10^decimals
-    const decimalMultiplier = new BN(10).pow(new BN(fractionDigits)) // 10^fractionDigits
-
-    // amount * 10^fractionDigits → làm tròn để tránh số thập phân lẻ
-    const scaled = new BN(Math.round(amount * 10 ** fractionDigits))
-
-    const result = scaled.mul(multiplier).div(decimalMultiplier)
-    return result
+    const multiplier = toUnit(decimals) // 10^decimals
+    const decimalMultiplier = toUnit(fractionDigits) // 10^fractionDigits
+    // amount * 10^fractionDigits, round to avoid decimal
+    const scaled = new BN(
+        amount.mul(
+            toUnitDecimal(fractionDigits))
+            .toFixed(0)
+    )
+    return scaled
+        .mul(multiplier)
+        .div(decimalMultiplier)
 }
 
 export const roundNumber = (amount: number, decimals = 5): number => {

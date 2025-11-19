@@ -74,16 +74,16 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // run the open position
-                if (mutex.isLocked()) {
-                    return
-                }
-                await mutex.runExclusive(
-                    async () => {
-                        await this.dispatchOpenPositionService.dispatchOpenPosition({
-                            liquidityPoolId: payload.liquidityPoolId,
-                            bot: this.bot,
-                        })
-                    })
+                // if (mutex.isLocked()) {
+                //     return
+                // }
+                // await mutex.runExclusive(
+                //     async () => {
+                //         await this.dispatchOpenPositionService.dispatchOpenPosition({
+                //             liquidityPoolId: payload.liquidityPoolId,
+                //             bot: this.bot,
+                //         })
+                //     })
             }
         )
     }

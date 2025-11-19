@@ -22,7 +22,7 @@ export class EnsureMathService {
             actual
         }: EnsureCalculationParams
     ): EnsureCalculationResponse {
-        const deviation = new Decimal(actual.toString()).div(new Decimal(expected.toString())).sub(1).abs()
+        const deviation = new Decimal(expected.toString()).div(new Decimal(actual.toString())).sub(1)
         return {
             deviation,
             isAcceptable: deviation.lte(MAX_DEVIATION),

@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./processors.module-defin
 import { ProcessorFactoryService } from "./processor-factory.service"
 import { OpenPositionProcessorService } from "./positions/open-position.service"
 import { ClosePositionProcessorService } from "./positions/close-position.service"
+import { BalanceProcessorService } from "./positions"
 
 @Module({})
 export class ProcessorsModule extends ConfigurableModuleClass {
@@ -18,6 +19,7 @@ export class ProcessorsModule extends ConfigurableModuleClass {
             providers: [
                 ...dynamicModule.providers || [], 
                 ProcessorFactoryService,
+                BalanceProcessorService,
                 OpenPositionProcessorService,
                 ClosePositionProcessorService,
             ],

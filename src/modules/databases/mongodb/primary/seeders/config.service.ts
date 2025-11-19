@@ -36,9 +36,9 @@ export const data: Array<DeepPartial<ConfigSchema>>
                     [Network.Testnet]: 0.3,
                 },
                 [ChainId.Solana]: {
-                    // you must remain at least 0.15 SOL for the gas fee to be able to process a transaction
-                    [Network.Mainnet]: 0.15,
-                    [Network.Testnet]: 0.15,
+                    // you must remain at least 0.1 SOL for the gas fee to be able to process a transaction
+                    [Network.Mainnet]: 0.1,
+                    [Network.Testnet]: 0.1,
                 },
             },
         },

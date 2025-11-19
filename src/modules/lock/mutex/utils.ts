@@ -2,6 +2,7 @@ import { createHash } from "crypto"
 
 export enum MutexKey {
     OpenPosition = "open-position",
+    Balance = "balance",
 }
 export const getMutexKey = (key: MutexKey, ...args: Array<unknown>): string => {
     const hash = createHash("sha256")

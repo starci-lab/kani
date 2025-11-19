@@ -48,3 +48,9 @@ export class InvalidTokenPlatformException extends AbstractException {
         super(message || "Invalid token platform", "INVALID_TOKEN_PLATFORM_EXCEPTION")
     }
 }
+
+export class MinRequiredAmountNotFoundException extends AbstractException {
+    constructor(tokenId: TokenId, message?: string) {
+        super(message || "Min required amount not found", "MIN_REQUIRED_AMOUNT_NOT_FOUND_EXCEPTION", { tokenId })
+    }
+}

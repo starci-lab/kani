@@ -119,11 +119,37 @@ export class BotSchema extends AbstractSchema {
         stoppedAt: Date
 
     @Field(() => ID, {
-        description: "The token that the bot aims to accumulate as the primary outcome of its liquidity strategy.",
-        nullable: true,
+        description: "Primary token the bot aims to accumulate through its liquidity strategy.",
     })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
         targetToken: TokenSchema | Types.ObjectId
+
+    @Field(() => ID, {
+        description: "The secondary token paired with the target token in the liquidity position.",
+    })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
+        quoteToken: TokenSchema | Types.ObjectId
+
+    @Field(() => String, {
+        description: "The snapshot of the target token balance amount",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        snapshotTargetTokenBalanceAmount?: string
+
+    @Field(() => String, {
+        description: "The snapshot of the quote token balance amount",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        snapshotQuoteTokenBalanceAmount?: string
+
+    @Field(() => String, {
+        description: "The snapshot of the gas token balance amount",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        snapshotGasTokenBalanceAmount?: string
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

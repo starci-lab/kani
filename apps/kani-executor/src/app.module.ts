@@ -19,6 +19,7 @@ import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
 import { MutexModule } from "@modules/lock"
+import { BalancesModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -44,6 +45,9 @@ import { MutexModule } from "@modules/lock"
             isGlobal: true,
         }),
         SignersModule.register({
+            isGlobal: true,
+        }),
+        BalancesModule.register({
             isGlobal: true,
         }),
         CryptoModule.register({

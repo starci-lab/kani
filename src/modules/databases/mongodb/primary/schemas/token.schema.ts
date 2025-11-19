@@ -86,6 +86,13 @@ export class TokenSchema extends AbstractSchema {
     @Field(() => Boolean, { description: "Whether the token is a 2022 token", nullable: true })
     @Prop({ type: Boolean, required: false })
         is2022Token?: boolean
+
+    @Field(() => Int, { 
+        description: "The minimum required amount of the token to be eligible for the bot",
+        nullable: true,
+    })
+    @Prop({ type: Number, required: false })
+        minRequiredAmount?: number
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)

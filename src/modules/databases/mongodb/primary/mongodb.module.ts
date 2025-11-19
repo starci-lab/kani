@@ -32,6 +32,8 @@ import {
     ConfigSchemaClass,
     DynamicLiquidityPoolInfoSchema,
     DynamicLiquidityPoolInfoSchemaClass,
+    SwapTransactionSchema,
+    SwapTransactionSchemaClass,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {
@@ -176,6 +178,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: DynamicLiquidityPoolInfoSchema.name,
                         useFactory: () => DynamicLiquidityPoolInfoSchemaClass,
+                    },
+                    {
+                        name: SwapTransactionSchema.name,
+                        useFactory: () => SwapTransactionSchemaClass,
                     },
                 ], CONNECTION_NAME),
             ],

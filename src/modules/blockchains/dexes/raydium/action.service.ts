@@ -9,6 +9,7 @@ import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     TokenNotFoundException, 
+    TransactionMessageTooLargeException, 
     ZapAmountNotAcceptableException
 } from "@exceptions"
 import { AccountFundingStatus, SolanaTokenManagerService } from "../../utils"
@@ -33,11 +34,18 @@ import {
     setTransactionMessageLifetimeUsingBlockhash,
     appendTransactionMessageInstructions,
     createSignerFromKeyPair,
-    signAndSendTransactionMessageWithSigners,
     createKeyPairFromBytes,
-    addSignersToTransactionMessage
+    addSignersToTransactionMessage,
+    isTransactionMessageWithinSizeLimit,
+    compileTransaction,
+    signTransaction,
+    getBase64EncodedWireTransaction,
 } from "@solana/kit"
+import {
+    estimateComputeUnitLimitFactory,
+} from "@solana-program/compute-budget"
 import { InjectRaydiumClmmSdk } from "./raydium.decorators"
+import { BN } from "bn.js"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -75,7 +83,7 @@ export class RaydiumActionService implements IActionService {
     ): Promise<OpenPositionResponse> {
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
         const rpc = createSolanaRpc(client.rpcEndpoint)
-    
+        //const rpcSubscriptions = createSolanaRpcSubscriptions(client.rpcEndpoint)
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
@@ -105,7 +113,7 @@ export class RaydiumActionService implements IActionService {
         }
         const { 
             status, 
-            remainingTargetTokenBalanceAmount, 
+            remainingTargetTokenBalanceAmount: _remainingTargetTokenBalanceAmount, 
         } 
         = await this.solanaTokenManagerService
             .getAccountFunding({
@@ -116,6 +124,7 @@ export class RaydiumActionService implements IActionService {
                 clientIndex: RAYDIUM_CLIENTS_INDEX,
                 oraclePrice,
             })
+        const remainingTargetTokenBalanceAmount = _remainingTargetTokenBalanceAmount.div(new BN(20))
         if (status !== AccountFundingStatus.OK) {
             throw new Error("Insufficient funds")
         }
@@ -258,9 +267,9 @@ export class RaydiumActionService implements IActionService {
             rpc
         )
         const openPositionInstructions = openPositionTransactionMessage.instructions
-
+        const estimateComputeUnitLimit = estimateComputeUnitLimitFactory({ rpc })
         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-        await this.signerService.withSolanaSigner({
+        const txHash = await this.signerService.withSolanaSigner({
             bot,
             accountAddress: bot.accountAddress,
             network,
@@ -273,14 +282,34 @@ export class RaydiumActionService implements IActionService {
                     (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                     (tx) => appendTransactionMessageInstructions(swapInstructions, tx), 
-                    (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx), 
                 )
-                const txHash = await signAndSendTransactionMessageWithSigners(transactionMessage)
-                return {
-                    txHash: txHash.toString(),
+                if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
+                    throw new TransactionMessageTooLargeException("Transaction message is too large")
                 }
+                const transaction = compileTransaction(transactionMessage)
+                // sign the transaction
+                const signedTransaction = await signTransaction(
+                    [keyPair],
+                    transaction,
+                )
+                // send the transaction
+                const txHash = await rpc.sendTransaction(
+                    getBase64EncodedWireTransaction(signedTransaction),
+                    { 
+                        preflightCommitment: "confirmed", 
+                        encoding: "base64"
+                    }).send()
+                return txHash
             },
         })
+        console.log(txHash)
+        
+        // const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
+        // const txHash = await sendAndConfirmTransaction(
+        //     transaction, {
+        //     commitment: "confirmed",
+        // })
+        // console.log(transactionMessage)
     }
 }
 
