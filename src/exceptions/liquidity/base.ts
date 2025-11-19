@@ -9,3 +9,12 @@ export class LiquidityAmountNotAcceptableException extends AbstractException {
             })
     }
 }
+
+export class LiquidityAmountsNotAcceptableException extends AbstractException {
+    constructor(ratio: Decimal, message?: string) {
+        super(
+            message || "Liquidity amounts are not acceptable", 
+            "LIQUIDITY_AMOUNTS_NOT_ACCEPTABLE_EXCEPTION", { ratio: ratio.toString() }
+        )
+    }
+}

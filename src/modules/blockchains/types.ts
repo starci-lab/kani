@@ -3,6 +3,7 @@
 import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
 import BN from "bn.js"
 import { TokenId } from "@modules/databases"
+import { signTransaction } from "@solana/kit"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -23,3 +24,5 @@ export interface DynamicLiquidityPoolInfo {
     liquidity: BN
     sqrtPriceX64: BN
 }
+
+export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]

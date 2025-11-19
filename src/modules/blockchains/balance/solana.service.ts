@@ -15,6 +15,7 @@ import { PrimaryMemoryStorageService, SwapTransactionSchema } from "@modules/dat
 import { 
     MinGasRequiredNotFoundException, 
     MinRequiredAmountNotFoundException, 
+    SnapshotBalancesNotSetException, 
     TokenNotFoundException, 
     TransactionMessageTooLargeException
 } from "@exceptions"
@@ -58,6 +59,8 @@ import { BotSchema, InjectPrimaryMongoose, TokenSchema } from "@modules/database
 import { Connection as MongooseConnection } from "mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { AsyncService } from "@modules/mixin"
+
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
     constructor(
@@ -74,7 +77,8 @@ export class SolanaBalanceService implements IBalanceService {
     @InjectPrimaryMongoose()
     private readonly connection: MongooseConnection,
     @InjectWinston()
-    private readonly logger: WinstonLogger
+    private readonly logger: WinstonLogger,
+    private readonly asyncService: AsyncService,
     ) { }
 
     private async fetchBalance(
@@ -236,14 +240,12 @@ export class SolanaBalanceService implements IBalanceService {
                     quoteRatio: quoteRatio.toString(),
                     botId: bot.id,
                 })
-                await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                    { _id: bot.id },
-                    { $set: { 
-                        snapshotTargetTokenBalanceAmount: targetBalanceAmount.sub(gasAmountBN).toString(), 
-                        snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
-                        snapshotGasTokenBalanceAmount: gasAmountBN.toString(),
-                    } }
-                )
+                await this.updateBotSnapshotBalances({
+                    bot,
+                    targetBalanceAmount: targetBalanceAmount.sub(gasAmountBN),
+                    quoteBalanceAmount: quoteBalanceAmount,
+                    gasAmount: gasAmountBN,
+                })
                 return {
                     isTerminate: true,
                     status: ExecuteBalanceRebalancingStatus.OK,
@@ -273,13 +275,13 @@ export class SolanaBalanceService implements IBalanceService {
                     senderAddress: bot.accountAddress,
                 })
                 // we ensure the swap amount is acceptable
-                const ensureSwapAmountResponse = this.ensureMathService.ensureAmounts({
+                const ensureSwapAmountResponse = this.ensureMathService.ensureActualNotBelowExpected({
                     actual: batchQuoteResponse.response.amountOut,
                     expected: quoteShortfallInQuoteBN,
                 })
                 if (!ensureSwapAmountResponse.isAcceptable) {
                     throw new SwapExpectedAndQuotedAmountsNotAcceptableException(
-                        ensureSwapAmountResponse.deviation, 
+                        ensureSwapAmountResponse.ratio, 
                         "Swap expected and quoted amounts are not acceptable"
                     )
                 }
@@ -307,23 +309,27 @@ export class SolanaBalanceService implements IBalanceService {
                         tokenId: quoteToken.displayId,
                     }
                 )
-                await this.connection.model<SwapTransactionSchema>(SwapTransactionSchema.name).create({
-                    bot: bot.id,
-                    tokenIn: targetToken.id,
-                    tokenOut: quoteToken.id,
-                    amountIn: targetBalanceAmountSwapToQuote,
-                    chainId: ChainId.Solana,
-                    network,
-                    txHash
-                })
-                await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                    { _id: bot.id },
-                    { $set: { 
-                        snapshotTargetTokenBalanceAmount: postTargetBalanceAmount.sub(gasAmountBN).toString(), 
-                        snapshotQuoteTokenBalanceAmount: postSwapQuoteBalanceAmount.toString(),
-                        snapshotGasTokenBalanceAmount: gasAmountBN.toString(),
-                    } }
-                )
+                await this.asyncService.allMustDone([
+                    this.connection.model<SwapTransactionSchema>(
+                        SwapTransactionSchema.name
+                    )
+                        .create({
+                            bot: bot.id,
+                            tokenIn: targetToken.id,
+                            tokenOut: quoteToken.id,
+                            amountIn: targetBalanceAmountSwapToQuote,
+                            chainId: ChainId.Solana,
+                            network,
+                            txHash
+                        }),
+                    this.updateBotSnapshotBalances({
+                        bot,
+                        targetBalanceAmount: postTargetBalanceAmount.sub(gasAmountBN),
+                        quoteBalanceAmount: postSwapQuoteBalanceAmount,
+                        gasAmount: gasAmountBN,
+                    })
+                ])
+                
             } else if (
                 quoteRatio.gt(SAFE_QUOTE_RATIO_MAX))
             {
@@ -404,6 +410,36 @@ export class SolanaBalanceService implements IBalanceService {
         })
         return txHash.toString()
     }
+
+    private async updateBotSnapshotBalances(
+        {
+            bot,
+            targetBalanceAmount,
+            quoteBalanceAmount,
+            gasAmount,
+        }: UpdateBotSnapshotBalancesParams
+    ): Promise<void> {
+        if (!bot.snapshotTargetTokenBalanceAmount 
+            || !bot.snapshotQuoteTokenBalanceAmount 
+            || !bot.snapshotGasTokenBalanceAmount) {
+            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+        }
+        if (
+            targetBalanceAmount.eq(new BN(bot.snapshotTargetTokenBalanceAmount))
+            && quoteBalanceAmount.eq(new BN(bot.snapshotQuoteTokenBalanceAmount))
+            && gasAmount.eq(new BN(bot.snapshotGasTokenBalanceAmount))
+        ) {
+            return
+        }
+        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+            { _id: bot.id },
+            { $set: { 
+                snapshotTargetTokenBalanceAmount: targetBalanceAmount.toString(), 
+                snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
+                snapshotGasTokenBalanceAmount: gasAmount.toString(),
+            } }
+        )
+    }
 }
 
 interface ProcessSwapTransactionParams {
@@ -412,4 +448,11 @@ interface ProcessSwapTransactionParams {
     tokenIn: TokenSchema
     tokenOut: TokenSchema
     batchQuoteResponse: BatchQuoteResponse
+}
+
+interface UpdateBotSnapshotBalancesParams {
+    bot: BotSchema
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
+    gasAmount: BN
 }
