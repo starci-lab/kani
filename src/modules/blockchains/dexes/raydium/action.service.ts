@@ -1,7 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { IActionService, OpenPositionParams, OpenPositionResponse } from "../../interfaces"
-import { InjectRaydiumClmmSdk } from "./raydium.decorators"
-import { Raydium } from "@raydium-io/raydium-sdk-v2"
+import { PoolUtils, Raydium, TxVersion } from "@raydium-io/raydium-sdk-v2"
 import { Connection } from "mongoose"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { SignerService } from "../../signers"
@@ -12,7 +11,7 @@ import {
     TokenNotFoundException, 
     ZapAmountNotAcceptableException
 } from "@exceptions"
-import { SolanaTokenManagerService } from "../../utils"
+import { AccountFundingStatus, SolanaTokenManagerService } from "../../utils"
 import { TickMathService, ZapMathService, PoolMathService, EnsureMathService } from "../../math"
 import { ChainId, Network, TokenType } from "@typedefs"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
@@ -21,14 +20,24 @@ import { InjectSolanaClients, OPEN_POSITION_SLIPPAGE } from "@modules/blockchain
 import Decimal from "decimal.js"
 import { EncryptionService } from "@modules/crypto"
 import { HttpAndWsClients } from "../../clients"
-import { Connection as SolanaConnection } from "@solana/web3.js"
+import { PublicKey, Connection as SolanaConnection } from "@solana/web3.js"
 import { 
     getBase64Encoder, 
     getTransactionDecoder,
     getCompiledTransactionMessageDecoder,
     decompileTransactionMessageFetchingLookupTables,
     createSolanaRpc,
+    pipe,
+    createTransactionMessage,
+    setTransactionMessageFeePayerSigner,
+    setTransactionMessageLifetimeUsingBlockhash,
+    appendTransactionMessageInstructions,
+    createSignerFromKeyPair,
+    signAndSendTransactionMessageWithSigners,
+    createKeyPairFromBytes,
+    addSignersToTransactionMessage
 } from "@solana/kit"
+import { InjectRaydiumClmmSdk } from "./raydium.decorators"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -66,7 +75,7 @@ export class RaydiumActionService implements IActionService {
     ): Promise<OpenPositionResponse> {
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
         const rpc = createSolanaRpc(client.rpcEndpoint)
-        
+    
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
@@ -97,8 +106,6 @@ export class RaydiumActionService implements IActionService {
         const { 
             status, 
             remainingTargetTokenBalanceAmount, 
-            gasTokenBalanceAmount, 
-            gasTokenSwapAmount
         } 
         = await this.solanaTokenManagerService
             .getAccountFunding({
@@ -109,6 +116,9 @@ export class RaydiumActionService implements IActionService {
                 clientIndex: RAYDIUM_CLIENTS_INDEX,
                 oraclePrice,
             })
+        if (status !== AccountFundingStatus.OK) {
+            throw new Error("Insufficient funds")
+        }
         // retrieve the reasonable tick bounds
         const { 
             tickLower, 
@@ -195,62 +205,82 @@ export class RaydiumActionService implements IActionService {
             rpc
         )
         const swapInstructions = swapTransactionMessage.instructions
-        console.log(swapInstructions)
-        // const { 
-        //     poolInfo, 
-        //     poolKeys
-        // } = await this.raydiumClmmSdk.clmm.getPoolInfoFromRpc(state.static.poolAddress)
-        // const epochInfo = await this.raydiumClmmSdk.fetchEpochInfo()
-        // const res = await PoolUtils.getLiquidityAmountOutFromAmountIn({
-        //     poolInfo,
-        //     slippage: slippage.toNumber(),
-        //     inputA: targetIsA,
-        //     tickUpper: tickUpper.toNumber(),
-        //     tickLower: tickLower.toNumber(),
-        //     amount: remainingAmountIn,
-        //     add: true,
-        //     amountHasFee: true,
-        //     epochInfo,
-        // })
-        // // set key pair to the sdk
-        // this.raydiumClmmSdk.setOwner(
-        //     new PublicKey(bot.accountAddress)
-        // )
-        // // open the position
-        // const { 
-        //     transaction: openPositionLegacyTransaction
-        // } = await this.raydiumClmmSdk.clmm.openPositionFromLiquidity(
-        //     {
-        //         poolInfo,
-        //         poolKeys,
-        //         tickUpper: tickLower.toNumber(),
-        //         tickLower: tickUpper.toNumber(),
-        //         amountMaxA: remainingAmountIn,
-        //         amountMaxB: receiveAmountOut,
-        //         liquidity: res.liquidity,
-        //         ownerInfo: {
-        //             useSOLBalance: true,
-        //         },
-        //         txVersion: TxVersion.LEGACY,
-        //         nft2022: true,
-        //         computeBudgetConfig: {
-        //             units: 600000,
-        //             microLamports: 10000,
-        //         },
-        //     }
-        // )
-        // console.log(openPositionLegacyTransaction)
-        // const openPositionTransactionBytes = openPositionLegacyTransaction.serialize()
-        // const openPositionTransaction = getTransactionDecoder().decode(openPositionTransactionBytes)
-        // const compiledOpenPositionTransactionMessage = getCompiledTransactionMessageDecoder().decode(
-        //     openPositionTransaction.messageBytes,
-        // )
-        // const openPositionTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
-        //     compiledOpenPositionTransactionMessage,
-        //     rpc
-        // )
-        // const openPositionInstructions = openPositionTransactionMessage.instructions
-        // console.log(openPositionInstructions)
+
+        this.raydiumClmmSdk.setOwner(new PublicKey(bot.accountAddress))
+        await this.raydiumClmmSdk.account.fetchWalletTokenAccounts()
+        const { 
+            poolInfo, 
+            poolKeys,
+        } = await this.raydiumClmmSdk.clmm.getPoolInfoFromRpc(state.static.poolAddress)
+        const epochInfo = await this.raydiumClmmSdk.fetchEpochInfo()
+        const res = await PoolUtils.getLiquidityAmountOutFromAmountIn({
+            poolInfo,
+            slippage: slippage.toNumber(),
+            inputA: true,
+            tickUpper: tickUpper.toNumber(),
+            tickLower: tickLower.toNumber(),
+            amount: remainingAmountIn,
+            add: true,
+            amountHasFee: true,
+            epochInfo,
+        })
+        // open the position
+        const { 
+            transaction: openPositionLegacyTransaction
+        } = await this.raydiumClmmSdk.clmm.openPositionFromLiquidity(
+            {
+                poolInfo,
+                poolKeys,
+                tickUpper: tickLower.toNumber(),
+                tickLower: tickUpper.toNumber(),
+                amountMaxA: res.amountA.amount,
+                amountMaxB: res.amountB.amount,
+                liquidity: res.liquidity,
+                ownerInfo: {
+                    useSOLBalance: true,
+                },
+                txVersion: TxVersion.V0,
+                nft2022: true,
+                feePayer: new PublicKey(bot.accountAddress),
+                computeBudgetConfig: {
+                    units: 600000,
+                    microLamports: 10000,
+                },
+            }
+        )
+        const openPositionTransactionBytes = openPositionLegacyTransaction.serialize()
+        const openPositionTransaction = getTransactionDecoder().decode(openPositionTransactionBytes)
+        const compiledOpenPositionTransactionMessage = getCompiledTransactionMessageDecoder().decode(
+            openPositionTransaction.messageBytes,
+        )
+        const openPositionTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
+            compiledOpenPositionTransactionMessage,
+            rpc
+        )
+        const openPositionInstructions = openPositionTransactionMessage.instructions
+
+        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+        await this.signerService.withSolanaSigner({
+            bot,
+            accountAddress: bot.accountAddress,
+            network,
+            action: async (signer) => {
+                const keyPair = await createKeyPairFromBytes(signer.secretKey)
+                const kitSigner = await createSignerFromKeyPair(keyPair)
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    (tx) => addSignersToTransactionMessage([kitSigner], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    (tx) => appendTransactionMessageInstructions(swapInstructions, tx), 
+                    (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx), 
+                )
+                const txHash = await signAndSendTransactionMessageWithSigners(transactionMessage)
+                return {
+                    txHash: txHash.toString(),
+                }
+            },
+        })
     }
 }
 
