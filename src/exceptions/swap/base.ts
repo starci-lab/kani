@@ -10,3 +10,16 @@ export class SwapExpectedAndQuotedAmountsNotAcceptableException extends Abstract
         )
     }
 }
+
+
+export class EstimatedSwappedQuoteAmountNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Estimated swapped quote amount not found", "ESTIMATED_SWAPPED_QUOTE_AMOUNT_NOT_FOUND_EXCEPTION")
+    }
+}
+
+export class EstimatedSwappedTargetAmountNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Estimated swapped target amount not found", "ESTIMATED_SWAPPED_TARGET_AMOUNT_NOT_FOUND_EXCEPTION")
+    }
+}

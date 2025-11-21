@@ -44,3 +44,27 @@ registerEnumType(GraphQLTypeLiquidityPoolType, {
         },
     }
 })
+
+export enum QuoteRatioStatus {
+    Good = "good",
+    TargetTooLow = "targetTooLow",
+    TargetTooHigh = "targetTooHigh",
+}
+
+export const GraphQLTypeQuoteRatioStatus = createEnumType(QuoteRatioStatus)
+
+registerEnumType(GraphQLTypeQuoteRatioStatus, {
+    name: "QuoteRatioStatus",
+    description: "The status of the quote ratio",
+    valuesMap: {
+        [QuoteRatioStatus.Good]: {
+            description: "The quote ratio is good"
+        },
+        [QuoteRatioStatus.TargetTooLow]: {
+            description: "The quote ratio is too low"
+        },
+        [QuoteRatioStatus.TargetTooHigh]: {
+            description: "The quote ratio is too high"
+        }
+    }
+})

@@ -1,16 +1,20 @@
+
+import { BotSchema, TokenId } from "@modules/databases"
+import BN from "bn.js"
+import { ComputeQuoteRatioResponse } from "./swap-math.service"
+
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
  * It returns a quote + executable swap data.
  */
 export interface IBalanceService {
-    executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<ExecuteBalanceRebalancingResponse>
+    executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<void>
+    fetchBalances(params: FetchBalancesParams): Promise<FetchBalancesResponse>
+    fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
 }
 
-import { BotSchema, TokenId } from "@modules/databases"
-import BN from "bn.js"
-
 export interface FetchBalanceParams {
-    accountAddress: string
+    bot: BotSchema
     tokenId: TokenId
     clientIndex?: number
 }
@@ -21,6 +25,7 @@ export interface FetchBalanceResponse {
 
 export interface ExecuteBalanceRebalancingParams {
     bot: BotSchema
+    clientIndex?: number
 }
 
 export enum ExecuteBalanceRebalancingStatus {
@@ -30,18 +35,21 @@ export enum ExecuteBalanceRebalancingStatus {
     GasLowButConvertible = "GasLowButConvertible",
 }
 
-export interface ExecuteBalanceRebalancingResponse {
-    status: ExecuteBalanceRebalancingStatus
-    targetBalanceAmount?: BN
-    quoteBalanceAmount?: BN
-    gasBalanceAmount?: BN
-    targetBalanceAmountSwapToQuote?: BN
-    targetBalanceAmountSwapToGas?: BN
-    isTerminate: boolean
-}
-
 export enum GasStatus {
     IsTarget = "isTarget",
     IsQuote = "isQuote",
     IsGas = "isGas",
+}
+
+export interface FetchBalancesParams {
+    bot: BotSchema
+    clientIndex?: number
+}
+
+export interface FetchBalancesResponse {
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
+    gasBalanceAmount?: BN
+    gasStatus: GasStatus
+    quoteRatioResponse: ComputeQuoteRatioResponse
 }

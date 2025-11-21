@@ -1,44 +1,38 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { Field, ObjectType, ID, Float } from "@nestjs/graphql"
+import { Field } from "@nestjs/graphql"
+import { Prop, Schema } from "@nestjs/mongoose"
+import { LiquidityPoolSchema } from "./liquidity-pool.schema"
+import { SchemaFactory } from "@nestjs/mongoose"
+import { Schema as MongooseSchema } from "mongoose"
+import { ObjectType } from "@nestjs/graphql"
+import { AbstractSchema } from "./abstract"
+import { ID } from "@nestjs/graphql"
 
 @Schema({ collection: "positions", timestamps: true })
 @ObjectType()
-export class PositionSchema {
-    @Field(() => ID)
-        _id: string
-
-    @Field(() => String)
-    @Prop({ type: String, required: true })
-        liquidityPoolId: string
-
-    // When opening position
-    @Field(() => Float)
-    @Prop({ type: String, required: true }) // Decimal lưu dạng string
-        amountOpen: string
-
-    @Field(() => Float, { nullable: true })
-    @Prop({ type: String, required: false })
-        amountClose?: string
-
-    @Field(() => String)
-    @Prop({ type: String, required: true })
+export class PositionSchema extends AbstractSchema {
+    @Field(() => String, { description: "Transaction hash of the position opening" })
+    @Prop({
+        unique: true,
+        type: String,
+        required: true,
+    })
         openTxHash: string
 
-    @Field(() => String)
+    @Field(() => ID, { description: "Liquidity pool where this position is opened" })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name })
+        liquidityPool: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
+
+    @Field(() => String, { description: "Amount of target tokens supplied when opening the position" })
     @Prop({ type: String, required: true })
-        openBlockNumber: string
+        targetAmountIn: string
 
-    @Field(() => String, { nullable: true })
-    @Prop({ type: String, required: false })
-        closeTxHash?: string
+    @Field(() => String, { description: "Amount of quote tokens supplied when opening the position" })
+    @Prop({ type: String, required: true })
+        quoteAmountIn: string
 
-    @Field(() => String, { nullable: true })
-    @Prop({ type: String, required: false })
-        closeBlockNumber?: string
-
-    @Field(() => Float, { nullable: true })
-    @Prop({ type: String, required: false })
-        roi?: string
+    @Field(() => String, { description: "Gas tokens spent during the position opening process" })
+    @Prop({ type: String })
+        gasUsed?: string
 }
 
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)

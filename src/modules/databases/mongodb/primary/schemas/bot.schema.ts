@@ -1,12 +1,17 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { Field, ID, ObjectType } from "@nestjs/graphql"
+import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId } from "@modules/common"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { UserSchema } from "./user.schema"
 import { TokenSchema } from "./token.schema"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
-import { ExplorerId, GraphQLTypeExplorerId } from "../enums"
+import { 
+    ExplorerId, 
+    GraphQLTypeExplorerId, 
+    QuoteRatioStatus, 
+    GraphQLTypeQuoteRatioStatus
+} from "../enums"
 /**
  * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -136,7 +141,7 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: String, required: false })
         snapshotTargetTokenBalanceAmount?: string
-
+    
     @Field(() => String, {
         description: "The snapshot of the quote token balance amount",
         nullable: true,
@@ -150,6 +155,27 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: String, required: false })
         snapshotGasTokenBalanceAmount?: string
+
+    @Field(() => Date, {
+        description: "The date and time the last snapshot was taken",
+        nullable: true,
+    })
+    @Prop({ type: Date, required: false })
+        lastBalancesSnapshotAt?: Date
+
+    @Field(() => GraphQLTypeQuoteRatioStatus, {
+        description: "The snapshot of the quote ratio status",
+        nullable: true,
+    })
+    @Prop({ type: String, required: true, default: QuoteRatioStatus.Good, enum: QuoteRatioStatus })
+        snapshotQuoteRatioStatus: QuoteRatioStatus
+
+    @Field(() => Float, {
+        description: "The snapshot of the quote ratio",
+        nullable: true,
+    })
+    @Prop({ type: Number, required: false })
+        snapshotQuoteRatio?: number
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

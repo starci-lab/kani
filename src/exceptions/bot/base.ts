@@ -17,3 +17,15 @@ export class SnapshotTargetTokenBalanceAmountNotSetException extends AbstractExc
         super(message || "Snapshot target token balance amount not set", "SNAPSHOT_TARGET_TOKEN_BALANCE_AMOUNT_NOT_SET_EXCEPTION")
     }
 }
+
+export class InsufficientTargetBalanceAmountException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Insufficient target balance amount", "INSUFFICIENT_TARGET_BALANCE_AMOUNT_EXCEPTION")
+    }
+}
+
+export class InsufficientQuoteBalanceAmountException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Insufficient quote balance amount", "INSUFFICIENT_QUOTE_BALANCE_AMOUNT_EXCEPTION")
+    }
+}

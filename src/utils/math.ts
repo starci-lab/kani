@@ -58,22 +58,16 @@ export const computeDenomination = (
 }
 
 export const computeRaw = (
-    amount: number,
+    amount: Decimal.Value,
     decimals = 8,
     fractionDigits = 5,
 ): BN => {
     const multiplier = new BN(10).pow(new BN(decimals)) // 10^decimals
     const decimalMultiplier = new BN(10).pow(new BN(fractionDigits)) // 10^fractionDigits
-
-    // amount * 10^fractionDigits → làm tròn để tránh số thập phân lẻ
-    const scaled = new BN(Math.round(amount * 10 ** fractionDigits))
-
-    const result = scaled.mul(multiplier).div(decimalMultiplier)
-    return result
-}
-
-export const roundNumber = (amount: number, decimals = 5): number => {
-    return new Decimal(amount).toDecimalPlaces(decimals).toNumber()
+    const scaled = new BN(new Decimal(amount)
+        .mul(new Decimal(10)
+            .pow(new Decimal(fractionDigits))).toFixed(0))
+    return scaled.mul(multiplier).div(decimalMultiplier)
 }
 
 export const computeFeeTierRaw = (feeTier = 0.003): number => {

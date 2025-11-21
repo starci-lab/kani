@@ -85,10 +85,10 @@ export class OpenPositionProcessorService  {
                 }
                 await this.mutex.runExclusive(
                     async () => {
-                        await this.dispatchOpenPositionService.dispatchOpenPosition({
-                            liquidityPoolId: payload.liquidityPoolId,
-                            bot: this.bot,
-                        })
+                        // await this.dispatchOpenPositionService.dispatchOpenPosition({
+                        //     liquidityPoolId: payload.liquidityPoolId,
+                        //     bot: this.bot,
+                        // })
                     })
             }
         )

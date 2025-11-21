@@ -1,11 +1,12 @@
-import { ConfigId, TokenId } from "../enums"
+import { ConfigId } from "../enums"
 import { ChainId, DeepPartial, Network } from "@typedefs"
 import { ConfigSchema } from "../schemas"
 import { Seeder } from "nestjs-seeder"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
-import { createObjectId } from "@utils"
+import { computeRaw, createObjectId } from "@utils"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class ConfigService implements Seeder {
@@ -23,46 +24,31 @@ export class ConfigService implements Seeder {
     }
 }   
 
-export const data: Array<DeepPartial<ConfigSchema>> 
-= [
+export const data: Array<DeepPartial<ConfigSchema>> = [
     {
         _id: createObjectId(ConfigId.Gas),
         displayId: ConfigId.Gas,
         value: {
-            minGasRequired: {
+            gasAmountRequired: {
                 [ChainId.Sui]: {
-                    // you must remain at least 0.3 Sui for the gas fee to be able to process a transaction
-                    [Network.Mainnet]: 0.3,
-                    [Network.Testnet]: 0.3,
+                    [Network.Mainnet]: {
+                        minOperationalAmount: computeRaw(new Decimal(0.25), 9).toString(),
+                        targetOperationalAmount: computeRaw(new Decimal(0.5), 9).toString(),
+                    },
+                    [Network.Testnet]: {
+                        minOperationalAmount: computeRaw(new Decimal(0.25), 9).toString(),
+                        targetOperationalAmount: computeRaw(new Decimal(0.5), 9).toString(),
+                    },
                 },
                 [ChainId.Solana]: {
-                    // you must remain at least 0.1 SOL for the gas fee to be able to process a transaction
-                    [Network.Mainnet]: 0.1,
-                    [Network.Testnet]: 0.1,
-                },
-            },
-        },
-    },
-    {
-        _id: createObjectId(ConfigId.TargetToken),
-        displayId: ConfigId.TargetToken,
-        value: {
-            minTargetTokenRequired: {
-                [TokenId.SuiNative]: {
-                    [Network.Mainnet]: 10, 
-                    [Network.Testnet]: 10,
-                },
-                [TokenId.SolNative]: {
-                    [Network.Mainnet]: 0.2,
-                    [Network.Testnet]: 0.2,
-                },
-                [TokenId.SolUsdc]: {
-                    [Network.Mainnet]: 20,
-                    [Network.Testnet]: 20,
-                },
-                [TokenId.SolUsdt]: {
-                    [Network.Mainnet]: 20,
-                    [Network.Testnet]: 20,
+                    [Network.Mainnet]: {
+                        minOperationalAmount: computeRaw(new Decimal(0.025), 9).toString(),
+                        targetOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                    },
+                    [Network.Testnet]: {
+                        minOperationalAmount: computeRaw(new Decimal(0.025), 9).toString(),
+                        targetOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                    },
                 },
             },
         },

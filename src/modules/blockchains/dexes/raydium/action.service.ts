@@ -1,14 +1,15 @@
-import { Injectable, Logger } from "@nestjs/common"
-import { IActionService, OpenPositionParams, OpenPositionResponse } from "../../interfaces"
+import { Injectable } from "@nestjs/common"
+import { IActionService, OpenPositionParams } from "../../interfaces"
 import { PoolUtils, Raydium, TxVersion } from "@raydium-io/raydium-sdk-v2"
 import { Connection } from "mongoose"
-import { InjectPrimaryMongoose } from "@modules/databases"
+import { InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
 import { SignerService } from "../../signers"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
-    SnapshotBalancesNotSetException,
     LiquidityAmountsNotAcceptableException,
+    SnapshotBalancesNotSetException,
+    TokenNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
@@ -20,6 +21,7 @@ import {
     createSolanaRpc,
     createKeyPairFromBytes,
     signTransaction,
+    getBase64EncodedWireTransaction,
 } from "@solana/kit"
 
 import { InjectRaydiumClmmSdk } from "./raydium.decorators"
@@ -28,9 +30,10 @@ import { fromVersionedTransaction } from "@solana/compat"
 import { Decimal } from "decimal.js"
 import { TransactionWithLifetime } from "../../types"
 import { EnsureMathService } from "../../math"
+import { BalanceService } from "../../balance"
+
 @Injectable()
 export class RaydiumActionService implements IActionService {
-    private readonly logger = new Logger(RaydiumActionService.name)
     constructor(
         @InjectRaydiumClmmSdk()
         private readonly raydiumClmmSdk: Raydium,
@@ -42,6 +45,7 @@ export class RaydiumActionService implements IActionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly tickMathService: TickMathService,
         private readonly ensureMathService: EnsureMathService,
+        private readonly balanceService: BalanceService,
     ) { }
 
     async closePosition(): Promise<void> {
@@ -55,10 +59,13 @@ export class RaydiumActionService implements IActionService {
             bot,
             slippage
         }: OpenPositionParams
-    ): Promise<OpenPositionResponse> {
-        const snapshotQuoteTokenBalanceAmount = bot.snapshotQuoteTokenBalanceAmount
-        const snapshotTargetTokenBalanceAmount = bot.snapshotTargetTokenBalanceAmount
-        if (!snapshotQuoteTokenBalanceAmount || !snapshotTargetTokenBalanceAmount) {
+    ) {
+        const {
+            snapshotTargetTokenBalanceAmount,
+            snapshotQuoteTokenBalanceAmount,
+            snapshotGasTokenBalanceAmount,
+        } = bot
+        if (!snapshotTargetTokenBalanceAmount || !snapshotQuoteTokenBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
@@ -87,6 +94,7 @@ export class RaydiumActionService implements IActionService {
             poolInfo, 
             poolKeys,
         } = await this.raydiumClmmSdk.clmm.getPoolInfoFromRpc(state.static.poolAddress)
+        
         const epochInfo = await this.raydiumClmmSdk.fetchEpochInfo()
         const res = await PoolUtils.getLiquidityAmountOutFromAmountIn({
             poolInfo,
@@ -158,18 +166,19 @@ export class RaydiumActionService implements IActionService {
                     [keyPair],
                     openPositionTransaction,
                 )
-                // const txHash = await rpc.sendTransaction(
-                //     getBase64EncodedWireTransaction(signedTransaction),
-                //     { 
-                //         preflightCommitment: "confirmed", 
-                //         encoding: "base64"
-                //     }).send()
-                // return txHash.toString()
-                return ""
+                const txHash = await rpc.sendTransaction(
+                    getBase64EncodedWireTransaction(
+                        signedTransaction
+                    ),
+                    { 
+                        preflightCommitment: "confirmed", 
+                        encoding: "base64"
+                    }).send()
+                return txHash.toString()
             },
         })
-        console.log(txHash)
     }
+    
 }
 
 

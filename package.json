@@ -132,6 +132,7 @@
     "@nestjs/testing": "^11.0.1",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.7",
+    "@swc/jest": "^0.2.39",
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
@@ -169,10 +170,20 @@
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!p-retry|is-network-error|p-defer|superjson)"
+    ],
+    "moduleNameMapper": {
+      "^@exceptions": "<rootDir>/src/exceptions",
+      "^@modules/(.*)$": "<rootDir>/src/modules/$1",
+      "^@utils": "<rootDir>/src/utils",
+      "^@typedefs": "<rootDir>/src/typedefs"
+    },
     "coverageDirectory": "./coverage",
     "testEnvironment": "node",
     "roots": [
-      "<rootDir>/apps/"
+      "<rootDir>/apps/",
+      "<rootDir>/src/"
     ]
   }
 }

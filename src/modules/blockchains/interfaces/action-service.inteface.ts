@@ -103,7 +103,7 @@ export interface OpenPositionResponse extends ActionResponse {
 
 export interface IActionService {
     // close position
-    closePosition(params: ClosePositionParams): Promise<ClosePositionResponse>
+    closePosition(params: ClosePositionParams): Promise<void>
     // open position
-    openPosition(params: OpenPositionParams): Promise<OpenPositionResponse>
+    openPosition(params: OpenPositionParams): Promise<void>
 }

@@ -1,89 +1,95 @@
 import { Injectable } from "@nestjs/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../clients"
-import { ChainId, computeDenomination, computeRaw, Network, TokenType, toScaledBN, toUnit } from "@modules/common"
+import { ChainId, Network, TokenType } from "@modules/common"
 import { Connection } from "@solana/web3.js"
-import { 
-    ExecuteBalanceRebalancingParams, 
-    ExecuteBalanceRebalancingResponse, 
-    ExecuteBalanceRebalancingStatus, 
-    FetchBalanceParams, 
-    FetchBalanceResponse, 
+import {
+    ExecuteBalanceRebalancingParams,
+    FetchBalanceParams,
+    FetchBalanceResponse,
+    FetchBalancesParams,
+    FetchBalancesResponse,
     GasStatus,
-    IBalanceService
+    IBalanceService,
 } from "./balance.interface"
-import { PrimaryMemoryStorageService, SwapTransactionSchema } from "@modules/databases"
 import { 
-    MinGasRequiredNotFoundException, 
-    MinRequiredAmountNotFoundException, 
-    SnapshotBalancesNotSetException, 
-    TokenNotFoundException, 
+    PrimaryMemoryStorageService, 
+    SwapTransactionSchema, 
+    TokenId
+} from "@modules/databases"
+import {
+    EstimatedSwappedQuoteAmountNotFoundException,
+    TargetOperationalGasAmountNotFoundException,
+    TokenNotFoundException,
     TransactionMessageTooLargeException
 } from "@exceptions"
 import BN from "bn.js"
-import { 
-    address, 
-    createSolanaRpc, 
-    getCompiledTransactionMessageDecoder, 
-    getTransactionDecoder, 
-    getBase64Encoder, 
-    createKeyPairFromBytes, 
-    decompileTransactionMessageFetchingLookupTables, 
-    setTransactionMessageLifetimeUsingBlockhash, 
-    appendTransactionMessageInstructions, 
-    isTransactionMessageWithinSizeLimit, 
+import {
+    address,
+    createSolanaRpc,
+    getCompiledTransactionMessageDecoder,
+    getTransactionDecoder,
+    getBase64Encoder,
+    createKeyPairFromBytes,
+    decompileTransactionMessageFetchingLookupTables,
+    setTransactionMessageLifetimeUsingBlockhash,
+    appendTransactionMessageInstructions,
+    isTransactionMessageWithinSizeLimit,
     compileTransaction,
-    signTransaction, 
-    createSignerFromKeyPair, 
+    signTransaction,
+    createSignerFromKeyPair,
     setTransactionMessageFeePayerSigner,
     pipe,
     createTransactionMessage,
     addSignersToTransactionMessage,
     Rpc,
     SolanaRpcApi,
-    getBase64EncodedWireTransaction
+    getBase64EncodedWireTransaction,
 } from "@solana/kit"
 import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
-import { 
-    fetchToken as fetchToken2022, 
-    TOKEN_2022_PROGRAM_ADDRESS 
+import {
+    fetchToken as fetchToken2022,
+    TOKEN_2022_PROGRAM_ADDRESS
 } from "@solana-program/token-2022"
 import { fetchToken } from "@solana-program/token"
-import { OraclePriceService } from "../pyth"
-import { Decimal } from "decimal.js"
-import { SAFE_QUOTE_RATIO_IDEAL, SAFE_QUOTE_RATIO_MAX, SAFE_QUOTE_RATIO_MIN } from "./constants"
 import { BatchQuoteResponse, SolanaAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
-import { SwapExpectedAndQuotedAmountsNotAcceptableException } from "@exceptions"
 import { SignerService } from "../signers"
 import { BotSchema, InjectPrimaryMongoose, TokenSchema } from "@modules/databases"
 import { Connection as MongooseConnection } from "mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
+import { SwapMathService } from "./swap-math.service"
+import { GasStatusService } from "./gas-status.service"
+import Decimal from "decimal.js"
+import { QuoteRatioService } from "./quote-ratio.service"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
     constructor(
         @InjectSolanaClients()
         private readonly solanaClients: Record<
-        Network, 
-        HttpAndWsClients<Connection>
-    >,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly oraclePriceService: OraclePriceService,
-    private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
-    private readonly ensureMathService: EnsureMathService,
-    private readonly signerService: SignerService,
-    @InjectPrimaryMongoose()
-    private readonly connection: MongooseConnection,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
-    private readonly asyncService: AsyncService,
+            Network,
+            HttpAndWsClients<Connection>
+        >,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly quoteRatioService: QuoteRatioService,
+        private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
+        private readonly ensureMathService: EnsureMathService,
+        private readonly signerService: SignerService,
+        @InjectPrimaryMongoose()
+        private readonly connection: MongooseConnection,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
+        private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
+        private readonly swapMathService: SwapMathService,
+        private readonly gasStatusService: GasStatusService,
     ) { }
 
-    private async fetchBalance(
+    public async fetchBalance(
         {
-            accountAddress,
+            bot,
             tokenId,
             clientIndex = 0,
         }: FetchBalanceParams
@@ -98,14 +104,14 @@ export class SolanaBalanceService implements IBalanceService {
         const rpc = createSolanaRpc(client.rpcEndpoint)
         // return the native token balance
         if (token.type === TokenType.Native) {
-            const balance = await rpc.getBalance(address(accountAddress)).send()
+            const balance = await rpc.getBalance(address(bot.accountAddress)).send()
             return {
                 balanceAmount: new BN(balance.value.toString()),
             }
         }
         // return the token balance
         const mintAddress = address(token.tokenAddress)
-        const ownerAddress = address(accountAddress)
+        const ownerAddress = address(bot.accountAddress)
         // Derive the user's associated token account (ATA)
         // This is required because balances are stored in ATA, not in the owner wallet directly.
         const [
@@ -114,13 +120,13 @@ export class SolanaBalanceService implements IBalanceService {
             {
                 mint: mintAddress,
                 owner: ownerAddress,
-                tokenProgram: 
-                token.is2022Token 
-                    ? TOKEN_2022_PROGRAM_ADDRESS 
-                    : TOKEN_PROGRAM_ADDRESS,
+                tokenProgram:
+                    token.is2022Token
+                        ? TOKEN_2022_PROGRAM_ADDRESS
+                        : TOKEN_PROGRAM_ADDRESS,
             }
         )
-    
+
         // Token-2022 accounts are handled by the newer token-2022 program.
         try {
             if (token.is2022Token) {
@@ -143,22 +149,14 @@ export class SolanaBalanceService implements IBalanceService {
         }
     }
 
-    async executeBalanceRebalancing(
+    public async fetchBalances(
         {
             bot,
-        }: ExecuteBalanceRebalancingParams
-    ): Promise<ExecuteBalanceRebalancingResponse> {
+            clientIndex = 0,
+        }: FetchBalancesParams
+    ): Promise<FetchBalancesResponse> {
         const network = Network.Mainnet
-        const client = this.solanaClients[network].http[0]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const gasAmount = this.primaryMemoryStorageService.gasConfig.minGasRequired?.[ChainId.Solana]?.[network]
-        if (!gasAmount) {
-            throw new MinGasRequiredNotFoundException(
-                ChainId.Solana, 
-                network, 
-                "Min gas required not found"
-            )
-        }
+        const chainId = ChainId.Solana
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === bot.targetToken.toString()
         )
@@ -171,175 +169,263 @@ export class SolanaBalanceService implements IBalanceService {
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
         }
-        let gasStatus: GasStatus = GasStatus.IsGas
-        if (targetToken.type === TokenType.Native) {
-            gasStatus = GasStatus.IsTarget
-        } else if (quoteToken.type === TokenType.Native) {
-            gasStatus = GasStatus.IsQuote
-        }
-        // if the target token is the gas token, we easily check the balance
-        if (gasStatus === GasStatus.IsTarget) {
-            const { balanceAmount: targetBalanceAmount } 
-            = await this.fetchBalance({
-                accountAddress: bot.accountAddress,
-                tokenId: targetToken.displayId,
-            })
-            if (!targetToken.minRequiredAmount) {
-                throw new MinRequiredAmountNotFoundException(
-                    targetToken.displayId, 
-                    "Min required amount not found"
-                )
-            }
-            // we compare the target balance with the min required amount + the gas amount
-            // if less than, we return insufficient target balance
-            // which will terminate the bot
-            const gasAmountBN = new BN(
-                computeRaw(new Decimal(gasAmount), 
-                    targetToken.decimals
-                ))
-            const minRequiredAmountBN = new BN(
-                computeRaw(
-                    new Decimal(targetToken.minRequiredAmount), 
-                    targetToken.decimals
-                ))
-            if (targetBalanceAmount
-                .lt(
-                    minRequiredAmountBN.add(gasAmountBN)
-                )) {
-                return {
-                    status: ExecuteBalanceRebalancingStatus.InsufficientTargetBalance,
-                    isTerminate: true,
-                }
-            }
-            // else, we return ok
-            const availableTargetBalanceAmount = targetBalanceAmount.sub(gasAmountBN)
-            // // we fetch the quote balance, to determine the swap amount if there is too little quote balance or too much
-            const { balanceAmount: quoteBalanceAmount } = await this.fetchBalance({
-                accountAddress: bot.accountAddress,
-                tokenId: quoteToken.displayId,
-            })
-            // we get the oracle price of the target token and the quote token
-            const oraclePrice = await this.oraclePriceService.getOraclePrice({
-                tokenA: targetToken.displayId,
-                tokenB: quoteToken.displayId,
-            })
-            // we compute the target token in quote token
-            const targetBalanceAmountInQuote = computeDenomination(
-                availableTargetBalanceAmount, 
-                targetToken.decimals
-            ).mul(oraclePrice)
-            const quoteBalanceAmountInQuote = computeDenomination(
-                quoteBalanceAmount, 
-                quoteToken.decimals
+        const { balanceAmount: targetBalanceAmount } = await this.fetchBalance({
+            bot,
+            tokenId: targetToken.displayId,
+            clientIndex,
+        })
+        const { balanceAmount: quoteBalanceAmount } = await this.fetchBalance({
+            bot,
+            tokenId: quoteToken.displayId,
+            clientIndex,
+        })
+        const gasStatus = await this.gasStatusService.getGasStatus({
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+        })
+        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+            .gasAmountRequired?.[chainId]?.[network]?.targetOperationalAmount
+        if (!targetOperationalGasAmount) {
+            throw new TargetOperationalGasAmountNotFoundException(
+                chainId,
+                network,
+                "Target operational gas amount not found"
             )
-            const totalBalanceAmountInQuote = targetBalanceAmountInQuote.add(quoteBalanceAmountInQuote)
-            const quoteRatio = quoteBalanceAmountInQuote.div(totalBalanceAmountInQuote)
-            // // if the ratio is less than the safe quote ratio min, we return insufficient quote balance
-            if (quoteRatio.lte(SAFE_QUOTE_RATIO_MAX) && quoteRatio.gte(SAFE_QUOTE_RATIO_MIN)) {
-                this.logger.info(WinstonLog.BalanceEvaluateOk, {
-                    quoteRatio: quoteRatio.toString(),
-                    botId: bot.id,
-                })
-                await this.updateBotSnapshotBalances({
-                    bot,
-                    targetBalanceAmount: targetBalanceAmount.sub(gasAmountBN),
-                    quoteBalanceAmount: quoteBalanceAmount,
-                    gasAmount: gasAmountBN,
-                })
-                return {
-                    isTerminate: true,
-                    status: ExecuteBalanceRebalancingStatus.OK,
-                }
+        }
+        const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
+        switch (gasStatus) {
+        case GasStatus.IsTarget: {
+            const targetBalanceAmountAfterDeductingGas = targetBalanceAmount.sub(targetOperationalGasAmountBN)
+            const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
+                targetTokenId: targetToken.displayId,
+                quoteTokenId: quoteToken.displayId,
+                targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
+                quoteBalanceAmount,
+            })
+            return {
+                targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
+                quoteBalanceAmount,
+                gasStatus,
+                gasBalanceAmount: targetOperationalGasAmountBN,
+                quoteRatioResponse,
             }
-            if (quoteRatio.lt(SAFE_QUOTE_RATIO_MIN)) 
-            {
-                const idealQuoteBalanceInQuote = totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
-                const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteBalanceAmountInQuote)
-                const quoteShortfallInQuoteBN = new BN(
-                    computeRaw(
-                        new Decimal(quoteShortfallInQuote), 
-                        quoteToken.decimals
-                    )
-                )
-                const targetBalanceAmountSwapToQuote = toScaledBN(
-                    toUnit(targetToken.decimals), 
-                    new Decimal(1).div(new Decimal(oraclePrice)
-                    ))
-                    .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
-                // we return ok, but we need to swap a partial of the target balance amount to the quote balance amount
-                // to ensure the quote balance still remain in the safe ratio
-                const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
-                    tokenIn: targetToken.displayId,
-                    tokenOut: quoteToken.displayId,
-                    amountIn: targetBalanceAmountSwapToQuote,
-                    senderAddress: bot.accountAddress,
-                })
-                // we ensure the swap amount is acceptable
-                const ensureSwapAmountResponse = this.ensureMathService.ensureActualNotBelowExpected({
-                    actual: batchQuoteResponse.response.amountOut,
-                    expected: quoteShortfallInQuoteBN,
-                })
-                if (!ensureSwapAmountResponse.isAcceptable) {
-                    throw new SwapExpectedAndQuotedAmountsNotAcceptableException(
-                        ensureSwapAmountResponse.ratio, 
-                        "Swap expected and quoted amounts are not acceptable"
-                    )
+        }
+        case GasStatus.IsQuote: {
+            const quoteBalanceAmountAfterDeductingGas = quoteBalanceAmount.sub(targetOperationalGasAmountBN)
+            const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
+                targetTokenId: targetToken.displayId,
+                quoteTokenId: quoteToken.displayId,
+                targetBalanceAmount,
+                quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
+            })
+            return {
+                targetBalanceAmount,
+                quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
+                gasStatus,
+                gasBalanceAmount: targetOperationalGasAmountBN,
+                quoteRatioResponse,
+            }
+        }
+        default: {
+            const gasToken = this.primaryMemoryStorageService.tokens.find(
+                (token) => 
+                    token.type === TokenType.Native 
+                    && token.network === network 
+                    && token.chainId === chainId
+            )
+            if (!gasToken) {
+                throw new TokenNotFoundException("Gas token not found")
+            }
+            const { balanceAmount: gasBalanceAmount } = await this.fetchBalance({
+                bot,
+                tokenId: gasToken.displayId,
+                clientIndex,
+            })
+            const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
+                targetTokenId: targetToken.displayId,
+                quoteTokenId: quoteToken.displayId,
+                targetBalanceAmount,
+                quoteBalanceAmount,
+            })
+            return {
+                quoteRatioResponse,
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+                gasStatus,
+            }
+        }
+        }
+    }
+
+    async executeBalanceRebalancing(
+        {
+            bot,
+            clientIndex = 0,
+        }: ExecuteBalanceRebalancingParams
+    ): Promise<void> {
+        const client = this.solanaClients[Network.Mainnet].http[clientIndex]
+        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const targetToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.targetToken.toString()
+        )
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.quoteToken.toString()
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
+        }
+        const { 
+            targetBalanceAmount, 
+            quoteBalanceAmount, 
+            gasBalanceAmount, 
+            quoteRatioResponse,
+        } = await this.fetchBalances({
+            bot,
+            clientIndex,
+        })
+        const { 
+            processSwaps,
+            swapTargetToQuoteAmount, 
+            swapQuoteToTargetAmount, 
+            estimatedSwappedTargetAmount,
+            estimatedSwappedQuoteAmount,
+        } = await this.swapMathService.computeSwapAmount({
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+            targetBalanceAmount,
+            quoteBalanceAmount,
+            gasBalanceAmount,
+            quoteRatioResponse,
+        })
+        if (!processSwaps) {
+            // just snapshot the balances and return
+            // ensure the balances are synced
+            await this.updateBotSnapshotBalances({
+                bot,
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasAmount: gasBalanceAmount,
+                quoteRatio: quoteRatioResponse.quoteRatio,
+            })
+            return
+        }
+        await this.asyncService.allMustDone([
+            (
+                async () => {
+                    if (!swapTargetToQuoteAmount) {
+                        return
+                    }
                 }
-                const txHash = await this.processSwapTransaction({
-                    bot,
-                    rpc,
-                    batchQuoteResponse,
-                    tokenIn: targetToken,
-                    tokenOut: quoteToken,
-                })
-                // we refetch the balance 
-                const { 
-                    balanceAmount: postTargetBalanceAmount 
-                } = await this.fetchBalance(
-                    {
-                        accountAddress: bot.accountAddress,
-                        tokenId: targetToken.displayId,
+            )(),
+            (
+                async () => {
+                    if (!swapTargetToQuoteAmount) {
+                        return
                     }
-                )
-                const { 
-                    balanceAmount: postSwapQuoteBalanceAmount
-                } = await this.fetchBalance(
-                    {
-                        accountAddress: bot.accountAddress,
-                        tokenId: quoteToken.displayId,
-                    }
-                )
-                await this.asyncService.allMustDone([
-                    this.connection.model<SwapTransactionSchema>(
-                        SwapTransactionSchema.name
-                    )
-                        .create({
-                            bot: bot.id,
-                            tokenIn: targetToken.id,
-                            tokenOut: quoteToken.id,
-                            amountIn: targetBalanceAmountSwapToQuote,
-                            chainId: ChainId.Solana,
-                            network,
-                            txHash
-                        }),
-                    this.updateBotSnapshotBalances({
-                        bot,
-                        targetBalanceAmount: postTargetBalanceAmount.sub(gasAmountBN),
-                        quoteBalanceAmount: postSwapQuoteBalanceAmount,
-                        gasAmount: gasAmountBN,
+                    const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
+                        tokenIn: targetToken.displayId,
+                        tokenOut: quoteToken.displayId,
+                        amountIn: swapTargetToQuoteAmount,
+                        senderAddress: bot.accountAddress,
                     })
-                ])
-                
-            } else if (
-                quoteRatio.gt(SAFE_QUOTE_RATIO_MAX))
-            {
-                // we return ok, but we need to swap a partial of the quote balance amount to the target balance amount
-            }
-        }
-        return {
-            isTerminate: true,
-            status: ExecuteBalanceRebalancingStatus.OK,
-        }
+                    if (!estimatedSwappedQuoteAmount) {
+                        throw new EstimatedSwappedQuoteAmountNotFoundException(
+                            "Estimated swapped quote amount not found"
+                        )
+                    }
+                    this.ensureMathService.ensureActualNotAboveExpected({
+                        expected: estimatedSwappedQuoteAmount,
+                        actual: batchQuoteResponse.response.amountOut,
+                        lowerBound: new Decimal(0.95),
+                    })
+                    const txHash = await this.processSwapTransaction({
+                        bot,
+                        rpc,
+                        batchQuoteResponse: batchQuoteResponse,
+                        tokenIn: targetToken,
+                        tokenOut: quoteToken,
+                    })
+                    const {
+                        targetBalanceAmount: adjustedTargetBalanceAmount,
+                        quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                        gasBalanceAmount: adjustedGasBalanceAmount,
+                    } = await this.fetchBalances({
+                        bot,
+                        clientIndex,
+                    })
+                    await this.updateBotSnapshotBalances({
+                        bot,
+                        targetBalanceAmount: adjustedTargetBalanceAmount,
+                        quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                        gasAmount: adjustedGasBalanceAmount,
+                        quoteRatio: quoteRatioResponse.quoteRatio,
+                    })
+                    await this.addSwapTransactionRecord({
+                        txHash,
+                        tokenInId: targetToken.displayId,
+                        tokenOutId: quoteToken.displayId,
+                        amountIn: swapTargetToQuoteAmount,
+                        bot,
+                    })
+                }
+            )(),
+            (
+                async () => {
+                    if (!swapQuoteToTargetAmount) {
+                        return
+                    }
+                    const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
+                        tokenIn: quoteToken.displayId,
+                        tokenOut: targetToken.displayId,
+                        amountIn: swapQuoteToTargetAmount,
+                        senderAddress: bot.accountAddress,
+                    })
+                    if (!estimatedSwappedTargetAmount) {
+                        throw new EstimatedSwappedQuoteAmountNotFoundException(
+                            "Estimated swapped target amount not found"
+                        )
+                    }
+                    this.ensureMathService.ensureActualNotAboveExpected({
+                        expected: estimatedSwappedTargetAmount,
+                        actual: batchQuoteResponse.response.amountOut,
+                        lowerBound: new Decimal(0.95),
+                    })
+                    const txHash = await this.processSwapTransaction({
+                        bot,
+                        rpc,
+                        batchQuoteResponse: batchQuoteResponse,
+                        tokenIn: targetToken,
+                        tokenOut: quoteToken,
+                    })
+                    const {
+                        targetBalanceAmount: adjustedTargetBalanceAmount,
+                        quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                        gasBalanceAmount: adjustedGasBalanceAmount,
+                    } = await this.fetchBalances({
+                        bot,
+                        clientIndex,
+                    })
+                    await this.updateBotSnapshotBalances({
+                        bot,
+                        targetBalanceAmount: adjustedTargetBalanceAmount,
+                        quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                        gasAmount: adjustedGasBalanceAmount,
+                        quoteRatio: quoteRatioResponse.quoteRatio,
+                    })
+                    await this.addSwapTransactionRecord({
+                        txHash,
+                        tokenInId: targetToken.displayId,
+                        tokenOutId: quoteToken.displayId,
+                        amountIn: swapQuoteToTargetAmount,
+                        bot,
+                    })
+                })()
+        ]
+        )
     }
 
     private async processSwapTransaction(
@@ -401,14 +487,14 @@ export class SolanaBalanceService implements IBalanceService {
                 )
                 const txHash = await rpc.sendTransaction(
                     getBase64EncodedWireTransaction(signedTransaction),
-                    { 
-                        preflightCommitment: "confirmed", 
+                    {
+                        preflightCommitment: "confirmed",
                         encoding: "base64"
                     }).send()
-                return txHash.toString() 
+                return txHash
             },
         })
-        return txHash.toString()
+        return txHash
     }
 
     private async updateBotSnapshotBalances(
@@ -417,28 +503,60 @@ export class SolanaBalanceService implements IBalanceService {
             targetBalanceAmount,
             quoteBalanceAmount,
             gasAmount,
+            quoteRatio,
         }: UpdateBotSnapshotBalancesParams
     ): Promise<void> {
-        if (!bot.snapshotTargetTokenBalanceAmount 
-            || !bot.snapshotQuoteTokenBalanceAmount 
-            || !bot.snapshotGasTokenBalanceAmount) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
-        }
-        if (
-            targetBalanceAmount.eq(new BN(bot.snapshotTargetTokenBalanceAmount))
-            && quoteBalanceAmount.eq(new BN(bot.snapshotQuoteTokenBalanceAmount))
-            && gasAmount.eq(new BN(bot.snapshotGasTokenBalanceAmount))
-        ) {
-            return
-        }
+        const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
+            quoteRatio,
+        })
         await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             { _id: bot.id },
-            { $set: { 
-                snapshotTargetTokenBalanceAmount: targetBalanceAmount.toString(), 
-                snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
-                snapshotGasTokenBalanceAmount: gasAmount.toString(),
-            } }
+            {
+                $set: {
+                    snapshotTargetTokenBalanceAmount: targetBalanceAmount.toString(),
+                    snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
+                    snapshotGasTokenBalanceAmount: gasAmount ? gasAmount.toString() : undefined,
+                    lastBalancesSnapshotAt: this.dayjsService.now().toDate(),
+                    snapshotQuoteRatio: quoteRatio.toNumber(),
+                    snapshotQuoteRatioStatus: quoteRatioStatus,
+                }
+            }
         )
+        this.logger.info(
+            WinstonLog.BotSnapshotBalancesUpdated, {
+                bot: bot.id,
+                targetBalanceAmount: targetBalanceAmount.toString(),
+                quoteBalanceAmount: quoteBalanceAmount.toString(),
+                gasAmount: gasAmount ? gasAmount.toString() : undefined,
+                quoteRatio: quoteRatio.toNumber(),
+                quoteRatioStatus,
+            })
+    }
+
+    private async addSwapTransactionRecord(
+        {
+            amountIn,
+            tokenInId,
+            tokenOutId,
+            txHash,
+            bot,
+        }: AddSwapTransactionRecordParams
+    ): Promise<void> {
+        await this.connection.model<SwapTransactionSchema>(SwapTransactionSchema.name)
+            .create({
+                tokenInId,
+                tokenOutId,
+                amountIn,
+                chainId: ChainId.Solana,
+                network: Network.Mainnet,
+                txHash,
+                bot: bot.id,
+            })
+        this.logger.info(
+            WinstonLog.SwapTransactionAdded, {
+                txHash,
+                bot: bot.id,
+            })
     }
 }
 
@@ -454,5 +572,27 @@ interface UpdateBotSnapshotBalancesParams {
     bot: BotSchema
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
-    gasAmount: BN
+    gasAmount?: BN
+    quoteRatio: Decimal
+}
+
+export interface ComputeTargetToQuoteSwapParams {
+    targetToken: TokenSchema
+    quoteToken: TokenSchema
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
+}
+
+export interface ComputeTargetToQuoteSwapResponse {
+    inputAmount: BN
+    estimatedOutputAmount: BN
+    requiredSwap: boolean
+}
+
+interface AddSwapTransactionRecordParams {
+    txHash: string
+    tokenInId: TokenId
+    tokenOutId: TokenId
+    amountIn: BN
+    bot: BotSchema
 }

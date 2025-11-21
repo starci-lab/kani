@@ -29,7 +29,7 @@ export class PoolMathService {
         if (!tokenA || !tokenB) {
             throw new TokenNotFoundException("Token not found")
         }
-        const quoteAmountA = computeRaw(1, tokenA.decimals)
+        const quoteAmountA = computeRaw(new Decimal(1), tokenA.decimals)
         // we use sui lib to calculate the amount out efficiently than using the formula
         const { coinAmountA: estCoinAmountA, coinAmountB: estCoinAmountB } =
         ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(

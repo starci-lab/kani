@@ -14,7 +14,9 @@ import { DexSchema } from "./dex.schema"
 })
 @ObjectType({ description: "Represents a liquidity pool between two tokens on a specific DEX" })
 export class LiquidityPoolSchema extends AbstractSchema {
-    @Field(() => GraphQLTypeLiquidityPoolId, { description: "Unique display identifier for the pool" })
+    @Field(() => GraphQLTypeLiquidityPoolId, 
+        { description: "Unique display identifier for the pool" }
+    )
     @Prop({
         unique: true,
         type: String,

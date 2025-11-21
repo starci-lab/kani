@@ -1,7 +1,7 @@
 import { AbstractSchema } from "./abstract"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { ConfigId, GraphQLTypeConfigId, TokenId } from "../enums"
+import { ConfigId, GraphQLTypeConfigId } from "../enums"
 import { GraphQLJSON } from "graphql-type-json"
 import { Schema as MongooseSchema } from "mongoose"
 import { ChainId, Network } from "@modules/common"
@@ -36,15 +36,22 @@ export class GasConfig {
     @Field(() => GraphQLJSON, {
         description: "The minimum gas required to process a transaction.",
     })
-        minGasRequired: Partial<Record<ChainId, Partial<Record<Network, number>>>>
+        gasAmountRequired: Partial<Record<ChainId, Partial<Record<Network, GasAmountRequired>>>>
 }
 
 @ObjectType({
-    description: "Represents the token configuration for the platform.",
+    description: "Represents the gas thresholds required for the bot’s operation.",
 })
-export class TargetTokenConfig {
-    @Field(() => GraphQLJSON, {
-        description: "The minimum target token required to process a transaction.",
+export class GasAmountRequired {
+    @Field(() => String, {
+        description: "The minimum operational gas amount required for the bot to function.",
     })
-        minTargetTokenRequired: Partial<Record<TokenId, Partial<Record<Network, number>>>>
+    @Prop({ type: String, required: true })
+        minOperationalAmount: string
+
+    @Field(() => String, {
+        description: "The target gas amount the bot aims to maintain during normal operation.",
+    })
+    @Prop({ type: String, required: true })
+        targetOperationalAmount: string
 }
