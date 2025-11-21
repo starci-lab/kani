@@ -52,7 +52,6 @@ export class QuoteRatioService {
             targetBalanceAmountInQuote,
             quoteBalanceAmountInQuote,
             oraclePrice,
-            canAddLiquidity: quoteRatio.gte(SAFE_QUOTE_RATIO_MIN) && quoteRatio.lte(SAFE_QUOTE_RATIO_MAX),
         }
     }
 
@@ -65,7 +64,7 @@ export class QuoteRatioService {
             return QuoteRatioStatus.TargetTooLow
         }
         if (quoteRatio.gt(SAFE_QUOTE_RATIO_MAX)) {
-            return QuoteRatioStatus.TargetTooLow
+            return QuoteRatioStatus.TargetTooHigh
         }
         return QuoteRatioStatus.Good
     }

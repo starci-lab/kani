@@ -42,6 +42,10 @@ export class SwapMathService {
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
             quoteRatio: quoteRatioResponse.quoteRatio,
         })
+        console.log({
+            quoteRatioStatus,
+            quoteRatioResponse: quoteRatioResponse.quoteRatio.toString(),
+        })
         // Compute the quote ratio
         switch (quoteRatioStatus)    {
         case QuoteRatioStatus.Good: {
@@ -384,7 +388,6 @@ export interface ComputeQuoteRatioResponse {
     targetBalanceAmountInQuote: Decimal
     quoteBalanceAmountInQuote: Decimal
     oraclePrice: Decimal
-    canAddLiquidity: boolean
 }
 
 export enum GasStatus {

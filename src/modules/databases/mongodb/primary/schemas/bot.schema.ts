@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
+import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId } from "@modules/common"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { UserSchema } from "./user.schema"
@@ -8,9 +8,7 @@ import { TokenSchema } from "./token.schema"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
 import { 
     ExplorerId, 
-    GraphQLTypeExplorerId, 
-    QuoteRatioStatus, 
-    GraphQLTypeQuoteRatioStatus
+    GraphQLTypeExplorerId
 } from "../enums"
 /**
  * GraphQL object type representing a bot.
@@ -162,20 +160,6 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: Date, required: false })
         lastBalancesSnapshotAt?: Date
-
-    @Field(() => GraphQLTypeQuoteRatioStatus, {
-        description: "The snapshot of the quote ratio status",
-        nullable: true,
-    })
-    @Prop({ type: String, required: true, default: QuoteRatioStatus.Good, enum: QuoteRatioStatus })
-        snapshotQuoteRatioStatus: QuoteRatioStatus
-
-    @Field(() => Float, {
-        description: "The snapshot of the quote ratio",
-        nullable: true,
-    })
-    @Prop({ type: Number, required: false })
-        snapshotQuoteRatio?: number
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

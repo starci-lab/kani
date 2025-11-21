@@ -309,7 +309,6 @@ export class SolanaBalanceService implements IBalanceService {
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasAmount: gasBalanceAmount,
-                quoteRatio: quoteRatioResponse.quoteRatio,
             })
             return
         }
@@ -362,7 +361,6 @@ export class SolanaBalanceService implements IBalanceService {
                         targetBalanceAmount: adjustedTargetBalanceAmount,
                         quoteBalanceAmount: adjustedQuoteBalanceAmount,
                         gasAmount: adjustedGasBalanceAmount,
-                        quoteRatio: quoteRatioResponse.quoteRatio,
                     })
                     await this.addSwapTransactionRecord({
                         txHash,
@@ -414,7 +412,6 @@ export class SolanaBalanceService implements IBalanceService {
                         targetBalanceAmount: adjustedTargetBalanceAmount,
                         quoteBalanceAmount: adjustedQuoteBalanceAmount,
                         gasAmount: adjustedGasBalanceAmount,
-                        quoteRatio: quoteRatioResponse.quoteRatio,
                     })
                     await this.addSwapTransactionRecord({
                         txHash,
@@ -497,40 +494,49 @@ export class SolanaBalanceService implements IBalanceService {
         return txHash
     }
 
-    private async updateBotSnapshotBalances(
-        {
-            bot,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasAmount,
-            quoteRatio,
-        }: UpdateBotSnapshotBalancesParams
-    ): Promise<void> {
-        const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
-            quoteRatio,
-        })
-        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+    private async updateBotSnapshotBalances({
+        bot,
+        targetBalanceAmount,
+        quoteBalanceAmount,
+        gasAmount,
+    }: UpdateBotSnapshotBalancesParams): Promise<void> {
+        // snapshot to reduce the onchain reads
+        const sameTarget =
+            bot.snapshotTargetTokenBalanceAmount &&
+            targetBalanceAmount.eq(new BN(bot.snapshotTargetTokenBalanceAmount))
+    
+        const sameQuote =
+            bot.snapshotQuoteTokenBalanceAmount &&
+            quoteBalanceAmount.eq(new BN(bot.snapshotQuoteTokenBalanceAmount))
+    
+        const sameGas =
+            bot.snapshotGasTokenBalanceAmount &&
+            gasAmount &&
+            gasAmount.eq(new BN(bot.snapshotGasTokenBalanceAmount))
+    
+        // If every snapshot is the same → skip update
+        if (sameTarget && sameQuote && sameGas) {
+            return
+        }
+    
+        await this.connection.model(BotSchema.name).updateOne(
             { _id: bot.id },
             {
                 $set: {
                     snapshotTargetTokenBalanceAmount: targetBalanceAmount.toString(),
                     snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
-                    snapshotGasTokenBalanceAmount: gasAmount ? gasAmount.toString() : undefined,
+                    snapshotGasTokenBalanceAmount: gasAmount?.toString(),
                     lastBalancesSnapshotAt: this.dayjsService.now().toDate(),
-                    snapshotQuoteRatio: quoteRatio.toNumber(),
-                    snapshotQuoteRatioStatus: quoteRatioStatus,
-                }
-            }
+                },
+            },
         )
-        this.logger.info(
-            WinstonLog.BotSnapshotBalancesUpdated, {
-                bot: bot.id,
-                targetBalanceAmount: targetBalanceAmount.toString(),
-                quoteBalanceAmount: quoteBalanceAmount.toString(),
-                gasAmount: gasAmount ? gasAmount.toString() : undefined,
-                quoteRatio: quoteRatio.toNumber(),
-                quoteRatioStatus,
-            })
+    
+        this.logger.info(WinstonLog.BotSnapshotBalancesUpdated, {
+            bot: bot.id,
+            targetBalanceAmount: targetBalanceAmount.toString(),
+            quoteBalanceAmount: quoteBalanceAmount.toString(),
+            gasAmount: gasAmount?.toString(),
+        })
     }
 
     private async addSwapTransactionRecord(
@@ -573,7 +579,6 @@ interface UpdateBotSnapshotBalancesParams {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasAmount?: BN
-    quoteRatio: Decimal
 }
 
 export interface ComputeTargetToQuoteSwapParams {
