@@ -531,12 +531,13 @@ export class SolanaBalanceService implements IBalanceService {
             },
         )
     
-        this.logger.info(WinstonLog.BotSnapshotBalancesUpdated, {
-            bot: bot.id,
-            targetBalanceAmount: targetBalanceAmount.toString(),
-            quoteBalanceAmount: quoteBalanceAmount.toString(),
-            gasAmount: gasAmount?.toString(),
-        })
+        this.logger.info(
+            WinstonLog.BotSnapshotBalancesUpdated, {
+                bot: bot.id,
+                targetBalanceAmount: targetBalanceAmount.toString(),
+                quoteBalanceAmount: quoteBalanceAmount.toString(),
+                gasAmount: gasAmount?.toString(),
+            })
     }
 
     private async addSwapTransactionRecord(
