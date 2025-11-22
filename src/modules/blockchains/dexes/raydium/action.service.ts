@@ -2,14 +2,15 @@ import { Injectable } from "@nestjs/common"
 import { IActionService, OpenPositionParams } from "../../interfaces"
 import { PoolUtils, Raydium, TxVersion } from "@raydium-io/raydium-sdk-v2"
 import { Connection } from "mongoose"
-import { InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
+import {
+    InjectPrimaryMongoose,
+} from "@modules/databases"
 import { SignerService } from "../../signers"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     LiquidityAmountsNotAcceptableException,
     SnapshotBalancesNotSetException,
-    TokenNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
@@ -31,6 +32,7 @@ import { Decimal } from "decimal.js"
 import { TransactionWithLifetime } from "../../types"
 import { EnsureMathService } from "../../math"
 import { BalanceService } from "../../balance"
+import { BalanceSnapshotService, OpenPositionService } from "../../snapshots"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -46,6 +48,8 @@ export class RaydiumActionService implements IActionService {
         private readonly tickMathService: TickMathService,
         private readonly ensureMathService: EnsureMathService,
         private readonly balanceService: BalanceService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly openPositionService: OpenPositionService,
     ) { }
 
     async closePosition(): Promise<void> {
@@ -61,16 +65,15 @@ export class RaydiumActionService implements IActionService {
         }: OpenPositionParams
     ) {
         const {
-            snapshotTargetTokenBalanceAmount,
-            snapshotQuoteTokenBalanceAmount,
-            snapshotGasTokenBalanceAmount,
+            snapshotTargetBalanceAmount,
+            snapshotQuoteBalanceAmount,
+            snapshotGasBalanceAmount
         } = bot
-        if (!snapshotTargetTokenBalanceAmount || !snapshotQuoteTokenBalanceAmount) {
+        if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
         const rpc = createSolanaRpc(client.rpcEndpoint)
-        //const rpcSubscriptions = createSolanaRpcSubscriptions(client.rpcEndpoint)
         slippage = slippage || OPEN_POSITION_SLIPPAGE
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
@@ -102,7 +105,7 @@ export class RaydiumActionService implements IActionService {
             inputA: true,
             tickUpper: Decimal.max(tickUpper, tickLower).toNumber(),
             tickLower: Decimal.min(tickUpper, tickLower).toNumber(),
-            amount: new BN(snapshotTargetTokenBalanceAmount),
+            amount: new BN(snapshotTargetBalanceAmount),
             add: true,
             amountHasFee: true,
             epochInfo,
@@ -110,9 +113,9 @@ export class RaydiumActionService implements IActionService {
         const actualQuoteAmount = targetIsA ? res.amountB.amount : res.amountA.amount
         const ensureQuoteTokenResponse = this.ensureMathService.ensureBetween({
             actual: actualQuoteAmount,
-            expected: new BN(snapshotQuoteTokenBalanceAmount),
+            expected: new BN(snapshotQuoteBalanceAmount),
             upperBound: new Decimal(1),
-            lowerBound: new Decimal(0.9),
+            lowerBound: new Decimal(0.95),
         })
         if (!ensureQuoteTokenResponse.isAcceptable) {
             throw new LiquidityAmountsNotAcceptableException(
@@ -122,6 +125,11 @@ export class RaydiumActionService implements IActionService {
         }
         // open the position
         const { 
+            extInfo: {
+                address: {
+                    positionNftAccount
+                }
+            },
             transaction: openPositionLegacyTransaction
         } = await this.raydiumClmmSdk.clmm.openPositionFromLiquidity(
             {
@@ -166,19 +174,70 @@ export class RaydiumActionService implements IActionService {
                     [keyPair],
                     openPositionTransaction,
                 )
-                const txHash = await rpc.sendTransaction(
-                    getBase64EncodedWireTransaction(
-                        signedTransaction
-                    ),
-                    { 
-                        preflightCommitment: "confirmed", 
-                        encoding: "base64"
+                const transactionDigest = await rpc.sendTransaction(
+                    getBase64EncodedWireTransaction(signedTransaction),
+                    {
+                        encoding: "base64",
+                        preflightCommitment: "confirmed",
                     }).send()
-                return txHash.toString()
+                const {
+                    value: {
+                        blockhash,
+                        lastValidBlockHeight,
+                    }
+                } = await rpc.getLatestBlockhash().send()
+                await client.confirmTransaction({
+                    blockhash,
+                    lastValidBlockHeight: Number(lastValidBlockHeight),
+                    signature: transactionDigest.toString(),
+                })
+                return transactionDigest.toString()
             },
         })
+        // we refetch the balances after the position is opened
+        const {
+            quoteBalanceAmount: adjustedQuoteBalanceAmount,
+            targetBalanceAmount: adjustedTargetBalanceAmount,
+            gasBalanceAmount: adjustedGasBalanceAmount,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        const session = await this.connection.startSession()
+        await session.withTransaction(
+            async () => {
+                await this.openPositionService.addOpenPositionTransactionRecord({
+                    targetAmountUsed: 
+            new BN(snapshotTargetBalanceAmount)
+                .sub(new BN(adjustedTargetBalanceAmount)),
+                    quoteAmountUsed: 
+            new BN(snapshotQuoteBalanceAmount)
+                .sub(new BN(adjustedQuoteBalanceAmount)),
+                    liquidity: new BN(res.liquidity),
+                    gasAmountUsed: snapshotGasBalanceAmount ? 
+                        new BN(snapshotGasBalanceAmount)
+                            .sub(adjustedGasBalanceAmount ? 
+                                new BN(adjustedGasBalanceAmount   
+                                ) : new BN(0))
+                        : undefined,
+                    bot,
+                    targetIsA,
+                    tickLower: tickLower.toNumber(),
+                    tickUpper: tickUpper.toNumber(),
+                    network,
+                    chainId: bot.chainId,
+                    liquidityPoolId: state.static.displayId,
+                    positionId: positionNftAccount.toString(),
+                    openTxHash: txHash,
+                    session,
+                })
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount: adjustedTargetBalanceAmount,
+                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                    gasAmount: adjustedGasBalanceAmount,
+                    session,
+                })
+            })
     }
-    
 }
-
 

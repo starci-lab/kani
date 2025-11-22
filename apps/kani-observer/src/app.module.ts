@@ -7,7 +7,7 @@ import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { SwapModule, PythModule } from "@modules/blockchains"
-import { SignersModule } from "@modules/blockchains"
+import { SignersModule, SnapshotsModule } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
@@ -60,6 +60,9 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
             isGlobal: true,
         }),
         PythModule.register({
+            isGlobal: true,
+        }),
+        SnapshotsModule.register({
             isGlobal: true,
         }),
         DexesModule.register({

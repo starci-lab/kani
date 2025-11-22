@@ -12,9 +12,8 @@ import {
     IBalanceService,
 } from "./balance.interface"
 import { 
+    InjectPrimaryMongoose,
     PrimaryMemoryStorageService, 
-    SwapTransactionSchema, 
-    TokenId
 } from "@modules/databases"
 import {
     EstimatedSwappedQuoteAmountNotFoundException,
@@ -43,7 +42,13 @@ import {
     addSignersToTransactionMessage,
     Rpc,
     SolanaRpcApi,
-    getBase64EncodedWireTransaction,
+    assertIsSendableTransaction,
+    assertIsTransactionWithinSizeLimit,
+    sendAndConfirmTransactionFactory,
+    RpcSubscriptions,
+    getSignatureFromTransaction,
+    createSolanaRpcSubscriptions,
+    SolanaRpcSubscriptionsApi,
 } from "@solana/kit"
 import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import {
@@ -54,15 +59,16 @@ import { fetchToken } from "@solana-program/token"
 import { BatchQuoteResponse, SolanaAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
 import { SignerService } from "../signers"
-import { BotSchema, InjectPrimaryMongoose, TokenSchema } from "@modules/databases"
-import { Connection as MongooseConnection } from "mongoose"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { AsyncService, DayjsService } from "@modules/mixin"
+import { BotSchema, TokenSchema } from "@modules/databases"
+import { AsyncService } from "@modules/mixin"
 import { SwapMathService } from "./swap-math.service"
 import { GasStatusService } from "./gas-status.service"
 import Decimal from "decimal.js"
 import { QuoteRatioService } from "./quote-ratio.service"
+import { BalanceSnapshotService } from "../snapshots"
+import { SwapTransactionSnapshotService } from "../snapshots"
+import { Connection as MongooseConnection } from "mongoose"
+import { httpsToWss } from "@utils"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -77,14 +83,13 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
-        @InjectPrimaryMongoose()
-        private readonly connection: MongooseConnection,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
         private readonly asyncService: AsyncService,
-        private readonly dayjsService: DayjsService,
         private readonly swapMathService: SwapMathService,
         private readonly gasStatusService: GasStatusService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        @InjectPrimaryMongoose()
+        private readonly connection: MongooseConnection,
     ) { }
 
     public async fetchBalance(
@@ -266,6 +271,7 @@ export class SolanaBalanceService implements IBalanceService {
     ): Promise<void> {
         const client = this.solanaClients[Network.Mainnet].http[clientIndex]
         const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === bot.targetToken.toString()
         )
@@ -304,7 +310,7 @@ export class SolanaBalanceService implements IBalanceService {
         if (!processSwaps) {
             // just snapshot the balances and return
             // ensure the balances are synced
-            await this.updateBotSnapshotBalances({
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                 bot,
                 targetBalanceAmount,
                 quoteBalanceAmount,
@@ -344,6 +350,7 @@ export class SolanaBalanceService implements IBalanceService {
                     const txHash = await this.processSwapTransaction({
                         bot,
                         rpc,
+                        rpcSubscriptions,
                         batchQuoteResponse: batchQuoteResponse,
                         tokenIn: targetToken,
                         tokenOut: quoteToken,
@@ -356,21 +363,26 @@ export class SolanaBalanceService implements IBalanceService {
                         bot,
                         clientIndex,
                     })
-                    await this.updateBotSnapshotBalances({
-                        bot,
-                        targetBalanceAmount: adjustedTargetBalanceAmount,
-                        quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                        gasAmount: adjustedGasBalanceAmount,
-                    })
-                    await this.addSwapTransactionRecord({
-                        txHash,
-                        tokenInId: targetToken.displayId,
-                        tokenOutId: quoteToken.displayId,
-                        amountIn: swapTargetToQuoteAmount,
-                        bot,
-                    })
-                }
-            )(),
+                    const session = await this.connection.startSession()
+                    await session.withTransaction(
+                        async () => {
+                            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                                bot,
+                                targetBalanceAmount: adjustedTargetBalanceAmount,
+                                quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                                gasAmount: adjustedGasBalanceAmount,
+                                session,
+                            })
+                            await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                                txHash,
+                                tokenInId: targetToken.displayId,
+                                tokenOutId: quoteToken.displayId,
+                                amountIn: swapTargetToQuoteAmount,
+                                bot,
+                                session,
+                            })
+                        })
+                })(),
             (
                 async () => {
                     if (!swapQuoteToTargetAmount) {
@@ -395,6 +407,7 @@ export class SolanaBalanceService implements IBalanceService {
                     const txHash = await this.processSwapTransaction({
                         bot,
                         rpc,
+                        rpcSubscriptions,
                         batchQuoteResponse: batchQuoteResponse,
                         tokenIn: targetToken,
                         tokenOut: quoteToken,
@@ -407,20 +420,25 @@ export class SolanaBalanceService implements IBalanceService {
                         bot,
                         clientIndex,
                     })
-                    await this.updateBotSnapshotBalances({
-                        bot,
-                        targetBalanceAmount: adjustedTargetBalanceAmount,
-                        quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                        gasAmount: adjustedGasBalanceAmount,
-                    })
-                    await this.addSwapTransactionRecord({
-                        txHash,
-                        tokenInId: targetToken.displayId,
-                        tokenOutId: quoteToken.displayId,
-                        amountIn: swapQuoteToTargetAmount,
-                        bot,
-                    })
-                })()
+                    const session = await this.connection.startSession()
+                    await session.withTransaction(
+                        async () => {
+                            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                                bot,
+                                targetBalanceAmount: adjustedTargetBalanceAmount,
+                                quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                                gasAmount: adjustedGasBalanceAmount,
+                                session,
+                            })
+                            await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                                txHash,
+                                tokenInId: targetToken.displayId,
+                                tokenOutId: quoteToken.displayId,
+                                amountIn: swapQuoteToTargetAmount,
+                                bot,
+                                session,
+                            })
+                        })})()
         ]
         )
     }
@@ -429,6 +447,7 @@ export class SolanaBalanceService implements IBalanceService {
         {
             bot,
             rpc,
+            rpcSubscriptions,
             batchQuoteResponse,
             tokenIn,
             tokenOut,
@@ -482,104 +501,31 @@ export class SolanaBalanceService implements IBalanceService {
                     [keyPair],
                     transaction,
                 )
-                const txHash = await rpc.sendTransaction(
-                    getBase64EncodedWireTransaction(signedTransaction),
-                    {
-                        preflightCommitment: "confirmed",
-                        encoding: "base64"
-                    }).send()
-                return txHash
+                assertIsSendableTransaction(signedTransaction)
+                assertIsTransactionWithinSizeLimit(signedTransaction)
+                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                    rpc,
+                    rpcSubscriptions,
+                })
+                const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                await sendAndConfirmTransaction(
+                    signedTransaction, {
+                        commitment: "confirmed",
+                    })
+                return transactionSignature.toString()
             },
         })
         return txHash
-    }
-
-    private async updateBotSnapshotBalances({
-        bot,
-        targetBalanceAmount,
-        quoteBalanceAmount,
-        gasAmount,
-    }: UpdateBotSnapshotBalancesParams): Promise<void> {
-        // snapshot to reduce the onchain reads
-        const sameTarget =
-            bot.snapshotTargetTokenBalanceAmount &&
-            targetBalanceAmount.eq(new BN(bot.snapshotTargetTokenBalanceAmount))
-    
-        const sameQuote =
-            bot.snapshotQuoteTokenBalanceAmount &&
-            quoteBalanceAmount.eq(new BN(bot.snapshotQuoteTokenBalanceAmount))
-    
-        const sameGas =
-            bot.snapshotGasTokenBalanceAmount &&
-            gasAmount &&
-            gasAmount.eq(new BN(bot.snapshotGasTokenBalanceAmount))
-    
-        // If every snapshot is the same → skip update
-        if (sameTarget && sameQuote && sameGas) {
-            return
-        }
-    
-        await this.connection.model(BotSchema.name).updateOne(
-            { _id: bot.id },
-            {
-                $set: {
-                    snapshotTargetTokenBalanceAmount: targetBalanceAmount.toString(),
-                    snapshotQuoteTokenBalanceAmount: quoteBalanceAmount.toString(),
-                    snapshotGasTokenBalanceAmount: gasAmount?.toString(),
-                    lastBalancesSnapshotAt: this.dayjsService.now().toDate(),
-                },
-            },
-        )
-    
-        this.logger.info(
-            WinstonLog.BotSnapshotBalancesUpdated, {
-                bot: bot.id,
-                targetBalanceAmount: targetBalanceAmount.toString(),
-                quoteBalanceAmount: quoteBalanceAmount.toString(),
-                gasAmount: gasAmount?.toString(),
-            })
-    }
-
-    private async addSwapTransactionRecord(
-        {
-            amountIn,
-            tokenInId,
-            tokenOutId,
-            txHash,
-            bot,
-        }: AddSwapTransactionRecordParams
-    ): Promise<void> {
-        await this.connection.model<SwapTransactionSchema>(SwapTransactionSchema.name)
-            .create({
-                tokenInId,
-                tokenOutId,
-                amountIn,
-                chainId: ChainId.Solana,
-                network: Network.Mainnet,
-                txHash,
-                bot: bot.id,
-            })
-        this.logger.info(
-            WinstonLog.SwapTransactionAdded, {
-                txHash,
-                bot: bot.id,
-            })
     }
 }
 
 interface ProcessSwapTransactionParams {
     bot: BotSchema
     rpc: Rpc<SolanaRpcApi>
+    rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
     tokenIn: TokenSchema
     tokenOut: TokenSchema
     batchQuoteResponse: BatchQuoteResponse
-}
-
-interface UpdateBotSnapshotBalancesParams {
-    bot: BotSchema
-    targetBalanceAmount: BN
-    quoteBalanceAmount: BN
-    gasAmount?: BN
 }
 
 export interface ComputeTargetToQuoteSwapParams {
@@ -593,12 +539,4 @@ export interface ComputeTargetToQuoteSwapResponse {
     inputAmount: BN
     estimatedOutputAmount: BN
     requiredSwap: boolean
-}
-
-interface AddSwapTransactionRecordParams {
-    txHash: string
-    tokenInId: TokenId
-    tokenOutId: TokenId
-    amountIn: BN
-    bot: BotSchema
 }

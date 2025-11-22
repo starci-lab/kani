@@ -1,0 +1,1 @@
+export const OPEN_POSITION_SNAPSHOT_INTERVAL = "5 minutes"

@@ -134,25 +134,25 @@ export class BotSchema extends AbstractSchema {
         quoteToken: TokenSchema | Types.ObjectId
 
     @Field(() => String, {
-        description: "The snapshot of the target token balance amount",
+        description: "The snapshot of the target balance amount",
         nullable: true,
     })
     @Prop({ type: String, required: false })
-        snapshotTargetTokenBalanceAmount?: string
+        snapshotTargetBalanceAmount?: string
     
     @Field(() => String, {
-        description: "The snapshot of the quote token balance amount",
+        description: "The snapshot of the quote balance amount",
         nullable: true,
     })
     @Prop({ type: String, required: false })
-        snapshotQuoteTokenBalanceAmount?: string
+        snapshotQuoteBalanceAmount?: string
 
     @Field(() => String, {
-        description: "The snapshot of the gas token balance amount",
+        description: "The snapshot of the gas balance amount",
         nullable: true,
     })
     @Prop({ type: String, required: false })
-        snapshotGasTokenBalanceAmount?: string
+        snapshotGasBalanceAmount?: string
 
     @Field(() => Date, {
         description: "The date and time the last snapshot was taken",

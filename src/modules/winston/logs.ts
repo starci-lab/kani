@@ -54,6 +54,6 @@ export enum WinstonLog {
     MongooseChangeStreamUpdate = "Mongoose.Change.Stream.Update",
     MongooseChangeStreamDelete = "Mongoose.Change.Stream.Delete",
     BalanceEvaluateOk = "Balance.Evaluate.Ok",
-    SwapTransactionAdded = "Swap.Transaction.Added",
+    SwapTransactionSuccess = "Swap.Transactions.Success",
     BotSnapshotBalancesUpdated = "Bot.Snapshot.Balances.Updated",
 }

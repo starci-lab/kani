@@ -4,7 +4,7 @@ import {
     FetchBalanceResponse, 
     FetchBalancesParams, 
     FetchBalancesResponse, 
-    IBalanceService 
+    IBalanceService,
 } from "./balance.interface"
 import { SolanaBalanceService } from "./solana.service"
 import { ExecuteBalanceRebalancingParams } from "./balance.interface"

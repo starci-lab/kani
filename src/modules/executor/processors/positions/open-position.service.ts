@@ -11,6 +11,12 @@ import { MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { getMutexKey, MutexKey } from "@modules/lock"
 import { createObjectId } from "@utils"
+import { DayjsService } from "@modules/mixin"
+import { MsService } from "@modules/mixin"
+import { OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
+import { RetryService } from "@modules/mixin"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -40,6 +46,11 @@ export class OpenPositionProcessorService  {
         private readonly connection: Connection,
         private readonly dispatchOpenPositionService: DispatchOpenPositionService,
         private readonly mutexService: MutexService,
+        private readonly dayjsService: DayjsService,
+        private readonly msService: MsService,
+        private readonly retryService: RetryService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -64,9 +75,13 @@ export class OpenPositionProcessorService  {
                 // assign the bot to the instance
                 this.bot = bot.toJSON()
                 if (
-                    !bot.snapshotTargetTokenBalanceAmount 
-                    || !bot.snapshotQuoteTokenBalanceAmount
+                    !bot.snapshotTargetBalanceAmount 
+                    || !bot.snapshotQuoteBalanceAmount
+                    || this.dayjsService.now().diff(
+                        bot.lastBalancesSnapshotAt, "millisecond") 
+                        > this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
                 ) {
+                    console.log("Skipping open position because the snapshot is not set or the snapshot is too old")
                     return
                 }
                 // only run if the liquidity pool is belong to the bot
@@ -85,10 +100,24 @@ export class OpenPositionProcessorService  {
                 }
                 await this.mutex.runExclusive(
                     async () => {
-                        // await this.dispatchOpenPositionService.dispatchOpenPosition({
-                        //     liquidityPoolId: payload.liquidityPoolId,
-                        //     bot: this.bot,
-                        // })
+                        try {
+                            await this.retryService.retry({
+                                action: async () => {
+                                    return await this.dispatchOpenPositionService.dispatchOpenPosition({
+                                        liquidityPoolId: payload.liquidityPoolId,
+                                        bot: this.bot,
+                                    })
+                                },
+                                maxRetries: 1
+                            })
+                        } catch (error) {
+                            this.logger.error(
+                                WinstonLog.OpenPositionFailed, {
+                                    botId: this.bot.id,
+                                    liquidityPoolId: payload.liquidityPoolId,
+                                    error: error.message,
+                                })
+                        }
                     })
             }
         )

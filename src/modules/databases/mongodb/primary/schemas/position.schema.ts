@@ -1,4 +1,4 @@
-import { Field } from "@nestjs/graphql"
+import { Field, Int } from "@nestjs/graphql"
 import { Prop, Schema } from "@nestjs/mongoose"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
 import { SchemaFactory } from "@nestjs/mongoose"
@@ -6,11 +6,15 @@ import { Schema as MongooseSchema } from "mongoose"
 import { ObjectType } from "@nestjs/graphql"
 import { AbstractSchema } from "./abstract"
 import { ID } from "@nestjs/graphql"
+import BN from "bn.js"
+import { BotSchema } from "./bot.schema"
+import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
 
 @Schema({ collection: "positions", timestamps: true })
 @ObjectType()
 export class PositionSchema extends AbstractSchema {
-    @Field(() => String, { description: "Transaction hash of the position opening" })
+
+    @Field(() => String, { description: "Transaction hash that created this position" })
     @Prop({
         unique: true,
         type: String,
@@ -18,21 +22,61 @@ export class PositionSchema extends AbstractSchema {
     })
         openTxHash: string
 
-    @Field(() => ID, { description: "Liquidity pool where this position is opened" })
+    @Field(() => ID, { description: "Reference to the liquidity pool associated with this position" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name })
         liquidityPool: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 
-    @Field(() => String, { description: "Amount of target tokens supplied when opening the position" })
+    @Field(() => String, { description: "Amount of target tokens spent to open the position" })
     @Prop({ type: String, required: true })
-        targetAmountIn: string
+        targetAmountUsed: string
 
-    @Field(() => String, { description: "Amount of quote tokens supplied when opening the position" })
+    @Field(() => String, { description: "Amount of quote tokens spent to open the position" })
     @Prop({ type: String, required: true })
-        quoteAmountIn: string
+        quoteAmountUsed: string
 
-    @Field(() => String, { description: "Gas tokens spent during the position opening process" })
+    @Field(() => String, { description: "Gas token amount consumed during the position opening transaction" })
     @Prop({ type: String })
-        gasUsed?: string
+        gasAmountUsed?: string
+
+    @Field(() => String, { description: "Liquidity amount minted for this position" })
+    @Prop({ type: String, required: true })
+        liquidity: BN
+
+    @Field(() => Int, { description: "Lower tick boundary of the position's price range" })
+    @Prop({ type: Number })
+        tickLower: number
+
+    @Field(() => Int, { description: "Upper tick boundary of the position's price range" })
+    @Prop({ type: Number })
+        tickUpper: number
+
+    @Field(() => String, { description: "Reference to the bot that created this position" })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: BotSchema.name })
+        bot: BotSchema | MongooseSchema.Types.ObjectId
+
+    @Field(() => GraphQLTypeNetwork, { 
+        description: "The blockchain network where this position is created" 
+    })
+    @Prop({ type: String, enum: Network, required: true })
+        network: Network
+
+    @Field(() => GraphQLTypeChainId, { 
+        description: "The blockchain chain ID where this position is created" 
+    })
+    @Prop({ type: String, enum: ChainId, required: true })
+        chainId: ChainId
+
+    @Field(() => Boolean, { description: "Whether the target token is token A in the liquidity pool" })
+    @Prop({ type: Boolean, default: true })
+        targetIsA: boolean
+
+    @Field(() => Date, { description: "The date and time this position was opened" })
+    @Prop({ type: Date, required: true })
+        positionOpenedAt: Date
+
+    @Field(() => String, { description: "On-chain identifier of this position" })
+    @Prop({ type: String, required: false })
+        positionId: string
 }
 
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
