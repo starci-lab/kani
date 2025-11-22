@@ -29,3 +29,25 @@ export class InsufficientQuoteBalanceAmountException extends AbstractException {
         super(message || "Insufficient quote balance amount", "INSUFFICIENT_QUOTE_BALANCE_AMOUNT_EXCEPTION")
     }
 }
+
+export class ActivePositionNotFoundException extends AbstractException {
+    constructor(botId: string, message?: string) {
+        super(message || "Active position not found", "ACTIVE_POSITION_NOT_FOUND_EXCEPTION", { botId })
+    }
+}
+
+export class OwnerPositionNotFoundException extends AbstractException {
+    constructor(
+        botId: string, 
+        poolAddress: string, 
+        programId: string, 
+        message?: string
+    ) {
+        super(message || "Owner position not found", "OWNER_POSITION_NOT_FOUND_EXCEPTION", 
+            { 
+                botId, 
+                poolAddress, 
+                programId
+            })
+    }
+}

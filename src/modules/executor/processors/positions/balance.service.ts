@@ -1,6 +1,6 @@
 import { BotNotFoundException } from "@exceptions"
 import { DispatchOpenPositionService, BalanceService } from "@modules/blockchains"
-import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
+import { BotSchema, InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
 import { envConfig } from "@modules/env"
 import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
 import { Injectable, Scope, Inject } from "@nestjs/common"
@@ -59,6 +59,12 @@ export class BalanceProcessorService  {
                 )
             }
             this.bot = bot.toJSON()
+            const activePosition = await this.connection
+                .model<PositionSchema>(PositionSchema.name).findOne({
+                    bot: this.request.bot.id,
+                    isActive: true,
+                })
+            this.bot.activePosition = activePosition?.toJSON()
             await this.balanceService.executeBalanceRebalancing({
                 bot: this.bot,
             })

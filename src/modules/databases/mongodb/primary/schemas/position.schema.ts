@@ -1,4 +1,4 @@
-import { Field, Int } from "@nestjs/graphql"
+import { Field, Float, Int } from "@nestjs/graphql"
 import { Prop, Schema } from "@nestjs/mongoose"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
 import { SchemaFactory } from "@nestjs/mongoose"
@@ -77,6 +77,58 @@ export class PositionSchema extends AbstractSchema {
     @Field(() => String, { description: "On-chain identifier of this position" })
     @Prop({ type: String, required: false })
         positionId: string
-}
 
+    @Field(() => Boolean, { description: "Whether the position is active", nullable: true })
+    @Prop({ type: Boolean, default: true })
+        isActive: boolean
+
+    @Field(() => String, { description: "Transaction hash that closed this position", nullable: true })
+    @Prop({ type: String, required: false })
+        closeTxHash?: string
+
+    @Field(() => Date, { description: "The date and time this position was closed", nullable: true })
+    @Prop({ type: Date, required: false })
+        positionClosedAt?: Date
+
+    @Field(() => String, { 
+        description: "The amount of target tokens returned to the account that closed this position", 
+        nullable: true 
+    })
+    @Prop({ type: String, required: false })
+        targetAmountReturned?: string
+
+    @Field(() => String, { 
+        description: "The amount of quote tokens returned to the account that closed this position", 
+        nullable: true 
+    })
+    @Prop({ type: String, required: false })
+        quoteAmountReturned?: string
+    @Field(() => String, { 
+        description: "The amount of gas tokens returned to the account that closed this position", 
+        nullable: true 
+    })
+    @Prop({ type: String, required: false })
+        gasAmountReturned?: string
+
+    @Field(() => Float, { 
+        description: "The return on investment (ROI) percentage of the position", 
+        nullable: true 
+    })
+    @Prop({ type: Number, required: false })
+        roi?: number
+
+    @Field(() => Float, { 
+        description: "The profit or loss in percentage of the position", 
+        nullable: true 
+    })
+    @Prop({ type: Number, required: false })
+        pnl?: number
+    
+    @Field(() => String, { 
+        description: "The amount of fees paid for the position", 
+        nullable: true 
+    })
+    @Prop({ type: String, required: false })
+        feePaidAmount?: string
+}
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)

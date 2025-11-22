@@ -3,6 +3,7 @@ import { BalanceSnapshotService } from "./balance.service"
 import { OpenPositionService } from "./open-position.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./snapshots.module-definition"
 import { SwapTransactionSnapshotService } from "./swap-transaction.service"
+import { ClosePositionService } from "./close-position.service"
 
 @Injectable()
 export class SnapshotsModule extends ConfigurableModuleClass {
@@ -14,6 +15,7 @@ export class SnapshotsModule extends ConfigurableModuleClass {
             BalanceSnapshotService,
             OpenPositionService,
             SwapTransactionSnapshotService,
+            ClosePositionService,
         ]
         return {
             ...dynamicModule,

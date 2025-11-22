@@ -18,6 +18,7 @@ import { QuoteRatioService } from "./quote-ratio.service"
     exports: [
         BalanceService,
         SwapMathService,
+        QuoteRatioService,
     ],
 })
 export class BalancesModule extends ConfigurableModuleClass {}

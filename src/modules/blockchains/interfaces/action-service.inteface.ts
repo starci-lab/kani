@@ -1,7 +1,7 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
 import { ActionResponse } from "../dexes"
-import { BotSchema, LiquidityPoolSchema, PositionSchema, TokenId, TokenSchema, UserSchema } from "@modules/databases"
+import { BotSchema, LiquidityPoolSchema, TokenId, TokenSchema, UserSchema } from "@modules/databases"
 import { ChainId, Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
@@ -14,14 +14,12 @@ export interface LiquidityPoolState {
 }
 
 export interface ClosePositionParams {
+    bot: BotSchema
     state: LiquidityPoolState
-    pool: FetchedPool
-    position: PositionSchema
     network?: Network
     chainId?: ChainId
-    accountAddress: string
-    priorityAOverB: boolean
     tokenAId: TokenId
+    targetIsA: boolean
     tokenBId: TokenId
     slippage?: number
     swapSlippage?: number

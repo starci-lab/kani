@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IActionService, OpenPositionParams } from "../../interfaces"
+import { ClosePositionParams, IActionService, OpenPositionParams } from "../../interfaces"
 import { PoolUtils, Raydium, TxVersion } from "@raydium-io/raydium-sdk-v2"
 import { Connection } from "mongoose"
 import {
@@ -8,9 +8,11 @@ import {
 import { SignerService } from "../../signers"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
+    ActivePositionNotFoundException,
     InvalidPoolTokensException, 
     LiquidityAmountsNotAcceptableException,
     SnapshotBalancesNotSetException,
+    OwnerPositionNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
@@ -32,7 +34,7 @@ import { Decimal } from "decimal.js"
 import { TransactionWithLifetime } from "../../types"
 import { EnsureMathService } from "../../math"
 import { BalanceService } from "../../balance"
-import { BalanceSnapshotService, OpenPositionService } from "../../snapshots"
+import { BalanceSnapshotService, ClosePositionService, OpenPositionService } from "../../snapshots"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -50,9 +52,190 @@ export class RaydiumActionService implements IActionService {
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly openPositionService: OpenPositionService,
+        private readonly closePositionService: ClosePositionService,
     ) { }
 
-    async closePosition(): Promise<void> {
+    async closePosition(
+        params: ClosePositionParams
+    ): Promise<void> {
+        const {
+            bot,
+        } = params
+        if (!bot.activePosition) 
+        {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
+        // we have many close conditions
+        // 1. the position is out-of-range, we close immediately
+        // 2. our detection find a potential dump from CEX
+        // 3. the position is not profitable, we close it  
+        const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange(params)
+        if (!shouldProceedAfterIsPositionOutOfRange) {
+            return
+        }
+    }
+
+    private async assertIsPositionOutOfRange(
+        {
+            bot,
+            state
+        }: ClosePositionParams
+    ): Promise<boolean> {
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
+        if (
+            new Decimal(state.dynamic.tickCurrent).gte(bot.activePosition.tickLower) 
+            && new Decimal(state.dynamic.tickCurrent).lte(bot.activePosition.tickUpper)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
+        const tokenA = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenB.toString())
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        }
+        const targetIsA = bot.targetToken.id === state.static.tokenA.toString()
+        await this.proccessClosePositionTransaction({
+            bot,
+            state,
+            tokenAId: tokenA.displayId,
+            tokenBId: tokenB.displayId,
+            targetIsA,
+        })
+        // return false to terminate the assertion
+        return false
+    }
+
+    private async proccessClosePositionTransaction(
+        {
+            bot,
+            state
+        }: ClosePositionParams
+    ): Promise<void> {
+        const network = Network.Mainnet
+        const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
+        const rpc = createSolanaRpc(client.rpcEndpoint)
+        // check if the tokens are in the pool
+        const tokenA = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenB.toString())
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        }
+        this.raydiumClmmSdk.setOwner(new PublicKey(bot.accountAddress))
+        await this.raydiumClmmSdk.account.fetchWalletTokenAccounts()
+        const { 
+            poolInfo, 
+            poolKeys,
+        } = await this.raydiumClmmSdk.clmm.getPoolInfoFromRpc(state.static.poolAddress)
+        // close the position
+        const ownerPositions = await this.raydiumClmmSdk.clmm.getOwnerPositionInfo(
+            {
+                programId: poolInfo.programId
+            }
+        )
+        const ownerPosition = ownerPositions.find(
+            (position) => position.poolId.toString() === state.static.poolAddress.toString()
+        )
+        if (!ownerPosition) {
+            throw new OwnerPositionNotFoundException(
+                bot.id, 
+                state.static.poolAddress,
+                poolInfo.programId,
+                "Owner position not found"
+            )
+        }
+        const {
+            transaction: closePositionVersionedTransaction
+        } = await this.raydiumClmmSdk.clmm.closePosition(
+            {
+                poolInfo,
+                poolKeys,
+                ownerPosition: ownerPosition,
+                txVersion: TxVersion.V0,
+                computeBudgetConfig: {
+                    units: 600000,
+                    microLamports: 10000,
+                },
+            }
+        )
+        const closePositionTransaction = fromVersionedTransaction(
+            closePositionVersionedTransaction
+        ) as TransactionWithLifetime
+        // sign the transaction
+        const txHash = await this.signerService.withSolanaSigner({
+            bot,
+            accountAddress: bot.accountAddress,
+            network,
+            action: async (signer) => {
+                const keyPair = await createKeyPairFromBytes(signer.secretKey)
+                const signedTransaction = await signTransaction(
+                    [keyPair],
+                    closePositionTransaction,
+                )
+                const transactionDigest = await rpc.sendTransaction(
+                    getBase64EncodedWireTransaction(signedTransaction),
+                    {
+                        encoding: "base64",
+                        preflightCommitment: "confirmed",
+                    }).send()
+                const {
+                    value: {
+                        blockhash,
+                        lastValidBlockHeight,
+                    }
+                } = await rpc.getLatestBlockhash().send()
+                await client.confirmTransaction({
+                    blockhash,
+                    lastValidBlockHeight: Number(lastValidBlockHeight),
+                    signature: transactionDigest.toString(),
+                })
+                return transactionDigest.toString()
+            },
+        })
+
+        const {
+            quoteBalanceAmount: adjustedQuoteBalanceAmount,
+            targetBalanceAmount: adjustedTargetBalanceAmount,
+            gasBalanceAmount: adjustedGasBalanceAmount,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        const session = await this.connection.startSession()
+        await session.withTransaction(
+            async () => {
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount: adjustedTargetBalanceAmount,
+                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
+                    gasAmount: adjustedGasBalanceAmount,
+                    session,
+                })
+                await this.closePositionService.updateClosePositionTransactionRecord({
+                    bot,
+                    pnl: new Decimal(0),
+                    roi: new Decimal(0),
+                    positionId: ownerPosition.poolId.toString(),
+                    closeTxHash: txHash,
+                    targetAmountReturned: new BN(ownerPosition.tokenFeesOwedA),
+                    quoteAmountReturned: new BN(ownerPosition.tokenFeesOwedB),
+                    gasAmountReturned: adjustedGasBalanceAmount,
+                    feePaidAmount: new BN(ownerPosition.tokenFeesOwedA),
+                    session,
+                })
+            })
     }
 
     async openPosition(
@@ -115,7 +298,7 @@ export class RaydiumActionService implements IActionService {
             actual: actualQuoteAmount,
             expected: new BN(snapshotQuoteBalanceAmount),
             upperBound: new Decimal(1),
-            lowerBound: new Decimal(0.95),
+            lowerBound: new Decimal(0.98),
         })
         if (!ensureQuoteTokenResponse.isAcceptable) {
             throw new LiquidityAmountsNotAcceptableException(
@@ -130,7 +313,7 @@ export class RaydiumActionService implements IActionService {
                     positionNftAccount
                 }
             },
-            transaction: openPositionLegacyTransaction
+            transaction: openPositionVersionedTransaction
         } = await this.raydiumClmmSdk.clmm.openPositionFromLiquidity(
             {
                 poolInfo,
@@ -160,7 +343,7 @@ export class RaydiumActionService implements IActionService {
         )
         // convert the transaction to a transaction with lifetime
         const openPositionTransaction = fromVersionedTransaction(
-            openPositionLegacyTransaction
+            openPositionVersionedTransaction
         ) as TransactionWithLifetime
         // sign the transaction
         const txHash = await this.signerService.withSolanaSigner({

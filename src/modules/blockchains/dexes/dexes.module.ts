@@ -9,6 +9,7 @@ import { RaydiumModule } from "./raydium"
 import { OrcaModule } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { DispatchOpenPositionService } from "./dispatch-open-position.service"
+import { DispatchClosePositionService } from "./dispatch-close-position.service"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -77,6 +78,7 @@ export class DexesModule extends ConfigurableModuleClass {
         if (options.withUtilities) {
             utilities.push(LiquidityPoolStateService)
             utilities.push(DispatchOpenPositionService)
+            utilities.push(DispatchClosePositionService)
         }
         
         return {

@@ -10,6 +10,7 @@ import {
     ExplorerId, 
     GraphQLTypeExplorerId
 } from "../enums"
+import { PositionSchema } from "./position.schema"
 /**
  * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -160,6 +161,9 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: Date, required: false })
         lastBalancesSnapshotAt?: Date
+    
+    // active position
+    activePosition?: PositionSchema
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

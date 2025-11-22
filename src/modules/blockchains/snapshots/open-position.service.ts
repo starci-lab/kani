@@ -53,6 +53,7 @@ export class OpenPositionService {
             positionId,
             positionOpenedAt: this.dayjsService.now().toDate(),
             openTxHash,
+            isActive: true,
         }], {
             session,
         })

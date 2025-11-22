@@ -64,10 +64,13 @@ export class BotsLoaderService implements OnModuleInit {
     // load bots from database
     async load(): Promise<void> {
         const bots = await this.connection
-            .model<BotSchema>(BotSchema.name)
-            .find({ 
-                user: { 
-                    $in: this.usersLoaderService.users.map((user) => new Types.ObjectId(user.id)) }
+            .model(BotSchema.name)
+            .find({
+                user: {
+                    $in: this.usersLoaderService.users.map(
+                        (user) => new Types.ObjectId(user.id)
+                    ),
+                },
             })
         this.winstonLogger.debug(
             WinstonLog.BotsLoaded, {

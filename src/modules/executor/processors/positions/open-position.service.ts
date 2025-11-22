@@ -1,12 +1,12 @@
 import { Inject, Injectable, Scope } from "@nestjs/common"
 import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { REQUEST } from "@nestjs/core"
-import { BotSchema } from "@modules/databases"
+import { BotSchema, PrimaryMemoryStorageService, PositionSchema, QuoteRatioStatus } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
 import { InjectPrimaryMongoose } from "@modules/databases"
-import { BotNotFoundException } from "@exceptions"
-import { DispatchOpenPositionService } from "@modules/blockchains"
+import { BotNotFoundException, TokenNotFoundException } from "@exceptions"
+import { DispatchOpenPositionService, QuoteRatioService } from "@modules/blockchains"
 import { MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { getMutexKey, MutexKey } from "@modules/lock"
@@ -14,9 +14,9 @@ import { createObjectId } from "@utils"
 import { DayjsService } from "@modules/mixin"
 import { MsService } from "@modules/mixin"
 import { OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
-import { RetryService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import BN from "bn.js"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -48,7 +48,8 @@ export class OpenPositionProcessorService  {
         private readonly mutexService: MutexService,
         private readonly dayjsService: DayjsService,
         private readonly msService: MsService,
-        private readonly retryService: RetryService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly quoteRatioService: QuoteRatioService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) {}
@@ -74,6 +75,16 @@ export class OpenPositionProcessorService  {
                 }
                 // assign the bot to the instance
                 this.bot = bot.toJSON()
+                const activePosition = await this.connection
+                    .model<PositionSchema>(PositionSchema.name).findOne({
+                        bot: this.request.bot.id,
+                        isActive: true,
+                    })
+                bot.activePosition = activePosition?.toJSON()
+                if (bot.activePosition) {
+                    // we do nothing if the bot is already in a position
+                    return
+                }
                 if (
                     !bot.snapshotTargetBalanceAmount 
                     || !bot.snapshotQuoteBalanceAmount
@@ -81,7 +92,6 @@ export class OpenPositionProcessorService  {
                         bot.lastBalancesSnapshotAt, "millisecond") 
                         > this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
                 ) {
-                    console.log("Skipping open position because the snapshot is not set or the snapshot is too old")
                     return
                 }
                 // only run if the liquidity pool is belong to the bot
@@ -94,6 +104,32 @@ export class OpenPositionProcessorService  {
                     // skip if the liquidity pool is not belong to the bot
                     return
                 }
+                // define the target and quote tokens
+                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
+                if (!targetToken) {
+                    throw new TokenNotFoundException("Target token not found")
+                }
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
+                if (!quoteToken) {
+                    throw new TokenNotFoundException("Quote token not found")
+                }
+                const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
+                const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+                // get the quote ratio, if the quote ratio is not good, we skip the open position
+                const {
+                    quoteRatio
+                } = await this.quoteRatioService.computeQuoteRatio({
+                    targetTokenId: targetToken.displayId,
+                    quoteTokenId: quoteToken.displayId,
+                    targetBalanceAmount: snapshotTargetBalanceAmountBN,
+                    quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
+                })
+                if (this.quoteRatioService.checkQuoteRatioStatus({
+                    quoteRatio
+                }) !== QuoteRatioStatus.Good) {
+                    return
+                }
+
                 // run the open position
                 if (this.mutex.isLocked()) {
                     return
@@ -101,14 +137,9 @@ export class OpenPositionProcessorService  {
                 await this.mutex.runExclusive(
                     async () => {
                         try {
-                            await this.retryService.retry({
-                                action: async () => {
-                                    return await this.dispatchOpenPositionService.dispatchOpenPosition({
-                                        liquidityPoolId: payload.liquidityPoolId,
-                                        bot: this.bot,
-                                    })
-                                },
-                                maxRetries: 1
+                            return await this.dispatchOpenPositionService.dispatchOpenPosition({
+                                liquidityPoolId: payload.liquidityPoolId,
+                                bot: this.bot,
                             })
                         } catch (error) {
                             this.logger.error(
