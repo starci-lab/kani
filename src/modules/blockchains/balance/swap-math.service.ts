@@ -13,6 +13,7 @@ import { ChainId, Network, TokenType } from "@typedefs"
 import BN from "bn.js"
 import { QuoteRatioService } from "./quote-ratio.service"
 import { SAFE_QUOTE_RATIO_IDEAL } from "./constants"
+import { GasStatus } from "./types"
 
 @Injectable()
 export class SwapMathService {
@@ -384,10 +385,4 @@ export interface ComputeQuoteRatioResponse {
     targetBalanceAmountInQuote: Decimal
     quoteBalanceAmountInQuote: Decimal
     oraclePrice: Decimal
-}
-
-export enum GasStatus {
-    IsTarget = "isTarget",
-    IsQuote = "isQuote",
-    IsGas = "isGas",
 }

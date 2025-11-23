@@ -34,26 +34,31 @@ export class AnchorUtilsService {
         return bn.toArrayLike(Buffer, "le", 16)
     }
 
+    i32LE(n: number | BN | string): Uint8Array {
+        const bn = BN.isBN(n) ? n : new BN(n)
+        return bn.toTwos(32).toArrayLike(Buffer, "le", 4)
+    }
+    bool(n: boolean): Uint8Array {
+        return Uint8Array.from([n ? 1 : 0])
+    }
+
     /* ----------------------------------------
    *  ENCODE ANCHOR INSTRUCTION
    * ---------------------------------------- */
     encodeAnchorIx(
         ixName: string, 
-        components: Array<Uint8Array>
+        data?: Uint8Array
     ): Uint8Array {
         const disc = this.anchorDiscriminator(ixName)
-        const totalLength =
-      components.reduce((sum, c) => sum + c.length, disc.length)
+        const totalLength = data ? data.length + disc.length : disc.length
         const out = new Uint8Array(totalLength)
         out.set(disc)
-        let offset = disc.length
-        for (const comp of components) {
-            out.set(comp, offset)
-            offset += comp.length
+        if (data) {
+            out.set(data, disc.length)
         }
         return out
     }
-
+    
     /* ----------------------------------------
    *  APPEND TO TransactionMessage
    * ---------------------------------------- */

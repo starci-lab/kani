@@ -27,11 +27,11 @@ export class TickMathService {
         }: GetTickBoundsParams
     ): Promise<GetTickBoundsResponse> {
         const { 
-            snapshotTargetTokenBalanceAmount, 
-            snapshotQuoteTokenBalanceAmount, 
+            snapshotTargetBalanceAmount, 
+            snapshotQuoteBalanceAmount, 
             targetToken, quoteToken 
         } = bot
-        if (!snapshotTargetTokenBalanceAmount || !snapshotQuoteTokenBalanceAmount) {
+        if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount) {
             throw new SnapshotBalancesNotSetException(
                 "Snapshot target token balance amount or snapshot quote token balance amount is not set"
             )
@@ -61,11 +61,11 @@ export class TickMathService {
             tokenB: quoteTokenEntity.displayId,
         })
         const targetTokenBalanceAmountInQuote = computeDenomination(
-            new BN(snapshotTargetTokenBalanceAmount),
+            new BN(snapshotTargetBalanceAmount),
             targetTokenEntity.decimals
         ).mul(oraclePrice)
         const quoteTokenBalanceAmountInQuote = computeDenomination(
-            new BN(snapshotQuoteTokenBalanceAmount),
+            new BN(snapshotQuoteBalanceAmount),
             quoteTokenEntity.decimals
         )   
         //

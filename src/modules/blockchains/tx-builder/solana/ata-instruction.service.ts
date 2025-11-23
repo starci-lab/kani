@@ -1,12 +1,18 @@
 
 import { Injectable } from "@nestjs/common"
 import { Address, Instruction, fetchEncodedAccount, createSolanaRpc, createNoopSigner, getAddressEncoder, address,  } from "@solana/kit"
-import { TOKEN_2022_PROGRAM_ADDRESS, getTokenSize as getToken2022Size, getInitializeAccountInstruction as getToken2022InitializeAccountInstruction, getCloseAccountInstruction as getToken2022CloseAccountInstruction } from "@solana-program/token-2022"
-import { TOKEN_PROGRAM_ADDRESS, findAssociatedTokenPda, getCreateAssociatedTokenInstruction, getTokenSize, getInitializeAccountInstruction, getCloseAccountInstruction } from "@solana-program/token"
+import { TOKEN_2022_PROGRAM_ADDRESS, getTokenSize as getToken2022Size, getInitializeAccountInstruction as getToken2022InitializeAccountInstruction, 
+    getCloseAccountInstruction as getToken2022CloseAccountInstruction, 
+    getCreateAssociatedTokenInstruction as getToken2022CreateAssociatedTokenInstruction,
+    findAssociatedTokenPda as findToken2022AssociatedTokenPda
+} from "@solana-program/token-2022"
+import { TOKEN_PROGRAM_ADDRESS, findAssociatedTokenPda, 
+    getCreateAssociatedTokenInstruction, 
+    getTokenSize, getInitializeAccountInstruction, getCloseAccountInstruction } from "@solana-program/token"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Network } from "@modules/common"
 import { Keypair, PublicKey, Connection as SolanaConnection } from "@solana/web3.js"
-import { getCreateAccountWithSeedInstruction, SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
+import { getCreateAccountWithSeedInstruction } from "@solana-program/system"
 import BN from "bn.js"
 import { sha256 } from "@noble/hashes/sha2"
 
@@ -19,53 +25,66 @@ export class AtaInstructionService {
         private readonly clients: Record<Network, HttpAndWsClients<SolanaConnection>>,
     ) { }
 
-    async getOrCreateAtaInstruction(
+    async getOrCreateAtaInstructions(
         {
             tokenMint,
             ownerAddress,
             is2022Token = false,
             network = Network.Mainnet,
             clientIndex = 0,
-        }: GetOrCreateAtaInstructionParams
-    ): Promise<GetOrCreateAtaInstructionResponse> {
+            pdaOnly = false,
+            amount = new BN(0),
+        }: GetOrCreateAtaInstructionsParams
+    ): Promise<GetOrCreateAtaInstructionsResponse> {
         const client = this.clients[network].http[clientIndex]
         const rpc = createSolanaRpc(client.rpcEndpoint)
         if (!tokenMint) {
-            return await this.createWSolAccountInstructions({
-                ownerAddress,
-                network,
-                clientIndex,
-                is2022Token,
-                amount: new BN(0),
-            })
+            return await this.createWSolAccountInstructions(
+                {
+                    ownerAddress,
+                    network,
+                    clientIndex,
+                    is2022Token,
+                    amount,
+                    pdaOnly,
+                }
+            )
         }
-        const [ataAddress] = await findAssociatedTokenPda(
+        const tokenProgram = is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS
+        const _findAssociatedTokenPda = is2022Token ? findToken2022AssociatedTokenPda : findAssociatedTokenPda
+        const [ataAddress] = await _findAssociatedTokenPda(
             {
                 mint: tokenMint,
                 owner: ownerAddress,
-                tokenProgram: is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                tokenProgram,
             }
         )
+        if (pdaOnly) {
+            return {
+                ataAddress,
+            }
+        }
         const encodedAccount = await fetchEncodedAccount(rpc, ataAddress)
         if (encodedAccount.exists) {
             return {
                 ataAddress,
-                isExists: true,
             }
         }
-        const createInstruction = getCreateAssociatedTokenInstruction(
+        const _getCreateAssociatedTokenInstruction = 
+        is2022Token 
+            ? getToken2022CreateAssociatedTokenInstruction 
+            : getCreateAssociatedTokenInstruction
+        const createInstruction = _getCreateAssociatedTokenInstruction(
             {
                 ata: ataAddress,
                 payer: createNoopSigner(ownerAddress),
                 owner: ownerAddress,
                 mint: tokenMint,
-                tokenProgram: is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
-                systemProgram: SYSTEM_PROGRAM_ADDRESS,
+                tokenProgram,
             }
         )
         return {
             ataAddress,
-            isExists: false,
             instructions: [createInstruction],
             endInstructions: [],
         }
@@ -107,13 +126,13 @@ export class AtaInstructionService {
                     base: ownerAddress,
                     payer: createNoopSigner(ownerAddress),
                     space,
-                    programAddress: programAddress,
+                    programAddress,
                 }),
                 _getInitializeAccountInstruction({
                     mint: WSOL_MINT_ADDRESS,
                     owner: ownerAddress,
                     account: newAccount,
-                }),
+                }), 
             ],
             endInstructions: [
                 _getCloseAccountInstruction({
@@ -123,7 +142,6 @@ export class AtaInstructionService {
                 }),
             ],
             ataAddress: newAccount,
-            isExists: false,
         }
     }
 
@@ -152,17 +170,18 @@ export class AtaInstructionService {
     }
 }
 
-export interface GetOrCreateAtaInstructionParams {
+export interface GetOrCreateAtaInstructionsParams {
     tokenMint?: Address;
     ownerAddress: Address;
     is2022Token?: boolean;
     network?: Network;
     clientIndex?: number;
+    amount?: BN;
+    pdaOnly?: boolean;
 }
 
-export interface GetOrCreateAtaInstructionResponse {
+export interface GetOrCreateAtaInstructionsResponse {
     ataAddress: Address;
-    isExists: boolean;
     instructions?: Array<Instruction>;
     endInstructions?: Array<Instruction>;
 }
@@ -173,13 +192,13 @@ export interface CreateWSolAccountInstructionsParams {
     clientIndex?: number;
     is2022Token?: boolean;
     amount: BN;
+    pdaOnly?: boolean;
 }
 
 export interface CreateWSolAccountInstructionsResponse {
     instructions: Array<Instruction>;
     endInstructions: Array<Instruction>;
     ataAddress: Address;
-    isExists: boolean;
 }
 
 export interface GeneratePubKeyParams { 

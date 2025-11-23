@@ -39,8 +39,7 @@ export class ClosePositionSnapshotService {
             $set: {
                 closeTxHash,
                 positionClosedAt: this.dayjsService.now().toDate(),
-                //isActive: false,
-                isActive: true,
+                isActive: false,
                 targetAmountReturned: targetAmountReturned.toString(),
                 quoteAmountReturned: quoteAmountReturned.toString(),
                 gasAmountReturned: gasAmountReturned?.toString(),

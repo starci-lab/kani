@@ -6,6 +6,7 @@ import { BalanceService } from "./balance.service"
 import { SwapMathService } from "./swap-math.service"
 import { GasStatusService } from "./gas-status.service"
 import { QuoteRatioService } from "./quote-ratio.service"
+import { ProfitabilityMathService } from "./profitability.service"
 
 @Module({
     providers: [
@@ -14,11 +15,13 @@ import { QuoteRatioService } from "./quote-ratio.service"
         SwapMathService,
         GasStatusService,
         QuoteRatioService,
+        ProfitabilityMathService,
     ],
     exports: [
         BalanceService,
         SwapMathService,
         QuoteRatioService,
+        ProfitabilityMathService,
     ],
 })
 export class BalancesModule extends ConfigurableModuleClass {}

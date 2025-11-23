@@ -6,7 +6,8 @@ import { createRaydiumClmmSdkProvider } from "./raydium.providers"
 import { 
     TickArrayService, 
     PersonalPositionService,
-    ClosePositionInstructionService 
+    ClosePositionInstructionService,
+    OpenPositionInstructionService
 } from "./transactions"
 
 @Injectable()
@@ -20,6 +21,7 @@ export class RaydiumModule extends ConfigurableModuleClass {
             TickArrayService,
             PersonalPositionService,
             ClosePositionInstructionService,
+            OpenPositionInstructionService,
         ]
         if (
             typeof options.enabled === "boolean" 
