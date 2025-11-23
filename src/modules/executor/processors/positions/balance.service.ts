@@ -61,7 +61,7 @@ export class BalanceProcessorService  {
             this.bot = bot.toJSON()
             const activePosition = await this.connection
                 .model<PositionSchema>(PositionSchema.name).findOne({
-                    bot: this.request.bot.id,
+                    bot: this.bot.id,
                     isActive: true,
                 })
             this.bot.activePosition = activePosition?.toJSON()

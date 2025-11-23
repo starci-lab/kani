@@ -297,4 +297,18 @@ const data: Array<DeepPartial<TokenSchema>> = [
         selectable: false,
         minRequiredAmount: 20,
     },
+    {
+        _id: createObjectId(TokenId.SolRay),
+        displayId: TokenId.SolRay,
+        name: "RAY",
+        symbol: "RAY",
+        decimals: 6,
+        chainId: ChainId.Solana,
+        tokenAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+        iconUrl: "https://r2.starci.net/tokens/ray.png",
+        projectUrl: "https://raydium.io/",
+        network: Network.Mainnet,
+        type: TokenType.Native,
+        selectable: false,
+    },
 ]

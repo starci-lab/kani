@@ -154,6 +154,20 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1,
         tickMultiplier: 200,
+        metadata: {
+            programAddress: "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+            tokenVault0: "4ct7br2vTPzfdmY3S5HLtTxcGSBfn6pnw98hsS6v359A",
+            tokenVault1: "5it83u57VRrVgc51oNV19TTmAJuffPx5GtGwQr7gQNUo",
+            rewardVaults: [
+                {
+                    tokenId: TokenId.SolRay,
+                    vaultAddress: "HsBUudV9Y2Z2dJTieWFgK3zhrpX4ELvnfHcAwSBVqDGX",
+                }
+            ]
+        },
+        rewardTokens: [
+            createObjectId(TokenId.SolRay),
+        ],
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdt001),
@@ -185,5 +199,5 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Solana,
         tickSpacing: 4,
         tickMultiplier: 50,
-    }
+    },
 ]

@@ -77,7 +77,7 @@ export class OpenPositionProcessorService  {
                 this.bot = bot.toJSON()
                 const activePosition = await this.connection
                     .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: this.request.bot.id,
+                        bot: this.bot.id,
                         isActive: true,
                     })
                 bot.activePosition = activePosition?.toJSON()
@@ -129,7 +129,6 @@ export class OpenPositionProcessorService  {
                 }) !== QuoteRatioStatus.Good) {
                     return
                 }
-
                 // run the open position
                 if (this.mutex.isLocked()) {
                     return

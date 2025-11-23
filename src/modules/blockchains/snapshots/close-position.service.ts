@@ -8,7 +8,7 @@ import BN from "bn.js"
 import { Decimal } from "decimal.js"
 
 @Injectable()
-export class ClosePositionService {
+export class ClosePositionSnapshotService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -39,7 +39,8 @@ export class ClosePositionService {
             $set: {
                 closeTxHash,
                 positionClosedAt: this.dayjsService.now().toDate(),
-                isActive: false,
+                //isActive: false,
+                isActive: true,
                 targetAmountReturned: targetAmountReturned.toString(),
                 quoteAmountReturned: quoteAmountReturned.toString(),
                 gasAmountReturned: gasAmountReturned?.toString(),

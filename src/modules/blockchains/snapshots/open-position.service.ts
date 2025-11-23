@@ -9,7 +9,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
-export class OpenPositionService {
+export class OpenPositionSnapshotService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,

@@ -1,3 +1,5 @@
+import BN from "bn.js"
+
 export enum CacheKey {
     WsCexLastPrice = "wsCexLastPrice",
     WsCexOrderBook = "wsCexOrderBook",
@@ -20,6 +22,8 @@ export interface PythTokenPriceCacheResult {
 
 export interface DynamicLiquidityPoolInfoCacheResult {
     tickCurrent: number
-    liquidity: number
-    sqrtPriceX64: number
+    liquidity: BN
+    sqrtPriceX64: BN
+    rewards: Array<unknown>
 }
+

@@ -6,7 +6,6 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
 import { BotNotFoundException, TokenNotFoundException } from "@exceptions"
 import { DispatchClosePositionService } from "@modules/blockchains"
-import { DayjsService, MsService } from "@modules/mixin"
 import { createObjectId } from "@utils"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
@@ -41,8 +40,6 @@ export class ClosePositionProcessorService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dispatchClosePositionService: DispatchClosePositionService,
-        private readonly dayjsService: DayjsService,
-        private readonly msService: MsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly mutexService: MutexService,
         @InjectWinston()
@@ -81,17 +78,17 @@ export class ClosePositionProcessorService {
                 this.bot = bot.toJSON()
                 const activePosition = await this.connection
                     .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: this.request.bot.id,
+                        bot: this.bot.id,
                         isActive: true,
                     })
-                bot.activePosition = activePosition?.toJSON()
-                if (!bot.activePosition) {
+                this.bot.activePosition = activePosition?.toJSON()
+                if (!this.bot.activePosition) {
                     // we do nothing if the bot is not in a position
                     return
                 }
                 // only run if the liquidity pool is belong to the bot
                 if (
-                    !bot.liquidityPools
+                    !this.bot.liquidityPools
                         .map((liquidityPool) => liquidityPool.toString())
                         .includes(createObjectId(payload.liquidityPoolId).toString())
                 )
@@ -100,11 +97,11 @@ export class ClosePositionProcessorService {
                     return
                 }
                 // define the target and quote tokens
-                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
+                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException("Target token not found")
                 }
-                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.quoteToken.toString())
                 if (!quoteToken) {
                     throw new TokenNotFoundException("Quote token not found")
                 }
@@ -121,7 +118,7 @@ export class ClosePositionProcessorService {
                             })
                         } catch (error) {
                             this.logger.error(
-                                WinstonLog.OpenPositionFailed, {
+                                WinstonLog.ClosePositionFailed, {
                                     botId: this.bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,

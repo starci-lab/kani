@@ -6,7 +6,6 @@ import { LiquidityPoolState } from "../interfaces"
 import { DynamicLiquidityPoolInfoNotFoundException, LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
-import BN from "bn.js"
 
 @Injectable()
 export class LiquidityPoolStateService {
@@ -37,8 +36,9 @@ export class LiquidityPoolStateService {
             static: staticLiquidityPool,
             dynamic: {
                 tickCurrent: dynamicLiquidityPoolInfo.tickCurrent,
-                liquidity: new BN(dynamicLiquidityPoolInfo.liquidity),
-                sqrtPriceX64: new BN(dynamicLiquidityPoolInfo.sqrtPriceX64),
+                liquidity: dynamicLiquidityPoolInfo.liquidity,
+                sqrtPriceX64: dynamicLiquidityPoolInfo.sqrtPriceX64,
+                rewards: dynamicLiquidityPoolInfo.rewards,
             },
         }
     }

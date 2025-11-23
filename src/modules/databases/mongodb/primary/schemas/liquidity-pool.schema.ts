@@ -4,9 +4,10 @@ import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modul
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"
-import { GraphQLTypeLiquidityPoolId, GraphQLTypeLiquidityPoolType, LiquidityPoolType } from "../enums"
+import { GraphQLTypeLiquidityPoolId, GraphQLTypeLiquidityPoolType, LiquidityPoolType, TokenId } from "../enums"
 import { LiquidityPoolId } from "../enums"
 import { DexSchema } from "./dex.schema"
+import { GraphQLJSON } from "graphql-type-json"
 
 @Schema({
     timestamps: true,
@@ -87,6 +88,26 @@ export class LiquidityPoolSchema extends AbstractSchema {
     @Field(() => Int, { description: "The tick spacing multiplier of the pool" })
     @Prop({ type: Number, default: 1 })
         tickMultiplier: number
+
+    @Field(() => GraphQLJSON, { 
+        description: "Additional pool-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
+        nullable: true 
+    })
+    @Prop({ type: MongooseSchema.Types.Mixed })
+        metadata?: unknown
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)
+
+// extra interfaces for better type safety
+export interface RaydiumLiquidityPoolMetadata {
+    programAddress: string
+    tokenVault0: string
+    tokenVault1: string
+    rewardVaults: Array<RaydiumRewardVault>
+}
+
+export interface RaydiumRewardVault {
+    tokenId: TokenId
+    vaultAddress: string
+}

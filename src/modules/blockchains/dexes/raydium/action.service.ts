@@ -12,7 +12,7 @@ import {
     InvalidPoolTokensException, 
     LiquidityAmountsNotAcceptableException,
     SnapshotBalancesNotSetException,
-    OwnerPositionNotFoundException,
+    TransactionMessageTooLargeException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
@@ -25,6 +25,20 @@ import {
     createKeyPairFromBytes,
     signTransaction,
     getBase64EncodedWireTransaction,
+    pipe,
+    addSignersToTransactionMessage,
+    createSignerFromKeyPair,
+    setTransactionMessageFeePayerSigner,
+    setTransactionMessageLifetimeUsingBlockhash,
+    isTransactionMessageWithinSizeLimit,
+    compileTransaction,
+    assertIsSendableTransaction,
+    assertIsTransactionWithinSizeLimit,
+    sendAndConfirmTransactionFactory,
+    createSolanaRpcSubscriptions,
+    getSignatureFromTransaction,
+    createTransactionMessage,
+    appendTransactionMessageInstructions,
 } from "@solana/kit"
 
 import { InjectRaydiumClmmSdk } from "./raydium.decorators"
@@ -34,7 +48,9 @@ import { Decimal } from "decimal.js"
 import { TransactionWithLifetime } from "../../types"
 import { EnsureMathService } from "../../math"
 import { BalanceService } from "../../balance"
-import { BalanceSnapshotService, ClosePositionService, OpenPositionService } from "../../snapshots"
+import { BalanceSnapshotService, ClosePositionSnapshotService, OpenPositionSnapshotService } from "../../snapshots"
+import { ClosePositionInstructionService } from "./transactions"
+import { httpsToWss } from "@utils"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -51,8 +67,9 @@ export class RaydiumActionService implements IActionService {
         private readonly ensureMathService: EnsureMathService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
-        private readonly openPositionService: OpenPositionService,
-        private readonly closePositionService: ClosePositionService,
+        private readonly openPositionSnapshotService: OpenPositionSnapshotService,
+        private readonly closePositionSnapshotService: ClosePositionSnapshotService,
+        private readonly closePositionInstructionService: ClosePositionInstructionService,
     ) { }
 
     async closePosition(
@@ -123,9 +140,16 @@ export class RaydiumActionService implements IActionService {
             state
         }: ClosePositionParams
     ): Promise<void> {
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
         const network = Network.Mainnet
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
         const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -134,46 +158,11 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        this.raydiumClmmSdk.setOwner(new PublicKey(bot.accountAddress))
-        await this.raydiumClmmSdk.account.fetchWalletTokenAccounts()
-        const { 
-            poolInfo, 
-            poolKeys,
-        } = await this.raydiumClmmSdk.clmm.getPoolInfoFromRpc(state.static.poolAddress)
-        // close the position
-        const ownerPositions = await this.raydiumClmmSdk.clmm.getOwnerPositionInfo(
-            {
-                programId: poolInfo.programId
-            }
-        )
-        const ownerPosition = ownerPositions.find(
-            (position) => position.poolId.toString() === state.static.poolAddress.toString()
-        )
-        if (!ownerPosition) {
-            throw new OwnerPositionNotFoundException(
-                bot.id, 
-                state.static.poolAddress,
-                poolInfo.programId,
-                "Owner position not found"
-            )
-        }
-        const {
-            transaction: closePositionVersionedTransaction
-        } = await this.raydiumClmmSdk.clmm.closePosition(
-            {
-                poolInfo,
-                poolKeys,
-                ownerPosition: ownerPosition,
-                txVersion: TxVersion.V0,
-                computeBudgetConfig: {
-                    units: 600000,
-                    microLamports: 10000,
-                },
-            }
-        )
-        const closePositionTransaction = fromVersionedTransaction(
-            closePositionVersionedTransaction
-        ) as TransactionWithLifetime
+        const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
+            bot,
+            state,
+            clientIndex: RAYDIUM_CLIENTS_INDEX,
+        })
         // sign the transaction
         const txHash = await this.signerService.withSolanaSigner({
             bot,
@@ -181,28 +170,43 @@ export class RaydiumActionService implements IActionService {
             network,
             action: async (signer) => {
                 const keyPair = await createKeyPairFromBytes(signer.secretKey)
+                const kitSigner = await createSignerFromKeyPair(keyPair)
+                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    (tx) => addSignersToTransactionMessage([kitSigner], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => appendTransactionMessageInstructions(closePositionInstructions, tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                )
+                if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
+                    throw new TransactionMessageTooLargeException("Transaction message is too large")
+                }
+                const transaction = compileTransaction(transactionMessage)
+                // sign the transaction
                 const signedTransaction = await signTransaction(
                     [keyPair],
-                    closePositionTransaction,
+                    transaction,
                 )
-                const transactionDigest = await rpc.sendTransaction(
-                    getBase64EncodedWireTransaction(signedTransaction),
-                    {
+                assertIsSendableTransaction(signedTransaction)
+                assertIsTransactionWithinSizeLimit(signedTransaction)
+                // const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                //     rpc,
+                //     rpcSubscriptions,
+                // })
+                //const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                // await sendAndConfirmTransaction(
+                //     signedTransaction, {
+                //         commitment: "confirmed",
+                //     })
+                // return transactionSignature.toString()
+                const simulateTransactionResponse = await rpc.simulateTransaction(
+                    getBase64EncodedWireTransaction(signedTransaction), {
                         encoding: "base64",
-                        preflightCommitment: "confirmed",
-                    }).send()
-                const {
-                    value: {
-                        blockhash,
-                        lastValidBlockHeight,
                     }
-                } = await rpc.getLatestBlockhash().send()
-                await client.confirmTransaction({
-                    blockhash,
-                    lastValidBlockHeight: Number(lastValidBlockHeight),
-                    signature: transactionDigest.toString(),
-                })
-                return transactionDigest.toString()
+                ).send()
+                console.log("simulateTransactionResponse", simulateTransactionResponse.value.logs)
+                return "abc"
             },
         })
 
@@ -216,6 +220,12 @@ export class RaydiumActionService implements IActionService {
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
+                if (!bot.activePosition) {
+                    throw new ActivePositionNotFoundException(
+                        bot.id, 
+                        "Active position not found"
+                    )
+                }
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,
@@ -223,16 +233,16 @@ export class RaydiumActionService implements IActionService {
                     gasAmount: adjustedGasBalanceAmount,
                     session,
                 })
-                await this.closePositionService.updateClosePositionTransactionRecord({
+                await this.closePositionSnapshotService.updateClosePositionTransactionRecord({
                     bot,
                     pnl: new Decimal(0),
                     roi: new Decimal(0),
-                    positionId: ownerPosition.poolId.toString(),
+                    positionId: bot.activePosition.id,
                     closeTxHash: txHash,
-                    targetAmountReturned: new BN(ownerPosition.tokenFeesOwedA),
-                    quoteAmountReturned: new BN(ownerPosition.tokenFeesOwedB),
+                    targetAmountReturned: new BN(adjustedTargetBalanceAmount).sub(new BN(bot.snapshotTargetBalanceAmount || 0)),
+                    quoteAmountReturned: new BN(adjustedQuoteBalanceAmount).sub(new BN(bot.snapshotQuoteBalanceAmount || 0)),
                     gasAmountReturned: adjustedGasBalanceAmount,
-                    feePaidAmount: new BN(ownerPosition.tokenFeesOwedA),
+                    feePaidAmount: bot.activePosition.feePaidAmount ? new BN(bot.activePosition.feePaidAmount) : undefined,
                     session,
                 })
             })
@@ -388,7 +398,7 @@ export class RaydiumActionService implements IActionService {
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
-                await this.openPositionService.addOpenPositionTransactionRecord({
+                await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
                     targetAmountUsed: 
             new BN(snapshotTargetBalanceAmount)
                 .sub(new BN(adjustedTargetBalanceAmount)),

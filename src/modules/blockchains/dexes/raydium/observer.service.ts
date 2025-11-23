@@ -4,11 +4,11 @@ import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
 import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
-import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
+import { CacheKey, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
-import { 
-    DynamicLiquidityPoolInfoSchema, 
-    InjectPrimaryMongoose, 
+import {
+    DynamicLiquidityPoolInfoSchema,
+    InjectPrimaryMongoose,
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId
@@ -39,7 +39,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
-    ) {}
+    ) { }
 
     async onModuleInit() {
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
@@ -51,9 +51,8 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     // Main bootstrap
     // ============================================
     async onApplicationBootstrap() {
-        for (const liquidityPool 
-            of this.memoryStorageService.liquidityPools) 
-        {
+        for (const liquidityPool
+            of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
             this.observeClmmPool(liquidityPool.displayId)
         }
@@ -66,10 +65,11 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         liquidityPoolId: LiquidityPoolId,
         state: ReturnType<typeof PoolInfoLayout["decode"]>
     ) {
-        const parsed = {
+        const parsed: DynamicLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickCurrent,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPriceX64),
+            rewards: state.rewardInfos,
         }
         await this.asyncService.allIgnoreError([
             // cache
@@ -141,4 +141,18 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         })
     }
+}
+
+export interface RaydiumRewardInfo {
+    rewardState: number;
+    rewardClaimed: BN;
+    creator: PublicKey;
+    endTime: BN;
+    openTime: BN;
+    lastUpdateTime: BN;
+    emissionsPerSecondX64: BN;
+    rewardTotalEmissioned: BN;
+    tokenMint: PublicKey;
+    tokenVault: PublicKey;
+    rewardGrowthGlobalX64: BN;
 }

@@ -23,6 +23,7 @@ export interface DynamicLiquidityPoolInfo {
     tickCurrent: number
     liquidity: BN
     sqrtPriceX64: BN
+    rewards: Array<unknown>
 }
 
 export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]

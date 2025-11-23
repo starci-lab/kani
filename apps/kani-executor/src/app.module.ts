@@ -20,6 +20,7 @@ import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
 import { MutexModule } from "@modules/lock"
 import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
+import { TxBuilderModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -64,6 +65,9 @@ import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
             isGlobal: true,
         }),
         MutexModule.register({
+            isGlobal: true,
+        }),
+        TxBuilderModule.register({
             isGlobal: true,
         }),
         EventModule.register({

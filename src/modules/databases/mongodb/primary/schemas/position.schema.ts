@@ -9,6 +9,7 @@ import { ID } from "@nestjs/graphql"
 import BN from "bn.js"
 import { BotSchema } from "./bot.schema"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
+import { GraphQLJSON } from "graphql-type-json"
 
 @Schema({ collection: "positions", timestamps: true })
 @ObjectType()
@@ -130,5 +131,16 @@ export class PositionSchema extends AbstractSchema {
     })
     @Prop({ type: String, required: false })
         feePaidAmount?: string
+
+    @Field(() => GraphQLJSON, { 
+        description: "Additional position-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
+        nullable: true 
+    })
+    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+        metadata?: unknown
 }
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
+
+export interface RaydiumPositionMetadata {
+    nftMintAddress: string
+}

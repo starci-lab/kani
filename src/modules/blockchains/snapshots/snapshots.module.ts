@@ -1,9 +1,9 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { BalanceSnapshotService } from "./balance.service"
-import { OpenPositionService } from "./open-position.service"
+import { OpenPositionSnapshotService } from "./open-position.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./snapshots.module-definition"
 import { SwapTransactionSnapshotService } from "./swap-transaction.service"
-import { ClosePositionService } from "./close-position.service"
+import { ClosePositionSnapshotService } from "./close-position.service"
 
 @Injectable()
 export class SnapshotsModule extends ConfigurableModuleClass {
@@ -13,9 +13,9 @@ export class SnapshotsModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             BalanceSnapshotService,
-            OpenPositionService,
+            OpenPositionSnapshotService,
             SwapTransactionSnapshotService,
-            ClosePositionService,
+            ClosePositionSnapshotService,
         ]
         return {
             ...dynamicModule,
