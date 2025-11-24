@@ -45,7 +45,7 @@ import BN from "bn.js"
 import { BalanceService, CalculateProfitability, ProfitabilityMathService } from "../../balance"
 import { BalanceSnapshotService, ClosePositionSnapshotService, OpenPositionSnapshotService } from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
-import { adjustSlippage, httpsToWss } from "@utils"
+import { adjustSlippage, computeRaw, httpsToWss } from "@utils"
 import { GasStatus, GasStatusService } from "../../balance"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
@@ -221,6 +221,7 @@ export class RaydiumActionService implements IActionService {
                 await sendAndConfirmTransaction(
                     signedTransaction, {
                         commitment: "confirmed",
+                        maxRetries: BigInt(5),
                     })
                 this.logger.info(
                     WinstonLog.ClosePositionSuccess, {
@@ -318,6 +319,10 @@ export class RaydiumActionService implements IActionService {
         if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
+        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
+        const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmount)
+
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
         const rpc = createSolanaRpc(client.rpcEndpoint)
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
@@ -331,6 +336,14 @@ export class RaydiumActionService implements IActionService {
         }
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
+        // safety check, if the target balance amount is too low, we don't open the position
+        // to ensure we do not open the position with too little balance
+        if (
+            snapshotTargetBalanceAmountBN.lt(
+                new BN(computeRaw(targetToken.minRequiredAmount || 0, targetToken.decimals)))
+        ) {
+            return
+        }
         // get the tick bounds
         const { 
             tickLower, 
@@ -413,6 +426,7 @@ export class RaydiumActionService implements IActionService {
                 await sendAndConfirmTransaction(
                     signedTransaction, {
                         commitment: "confirmed",
+                        maxRetries: BigInt(5),
                     })
                 this.logger.info(
                     WinstonLog.OpenPositionSuccess, {
@@ -430,11 +444,11 @@ export class RaydiumActionService implements IActionService {
         } = await this.balanceService.fetchBalances({
             bot,
         })
-        let targetBalanceAmountUsed = new BN(snapshotTargetBalanceAmount)
+        let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
             .sub(new BN(adjustedTargetBalanceAmount))
-        let quoteBalanceAmountUsed = new BN(snapshotQuoteBalanceAmount)
+        let quoteBalanceAmountUsed = snapshotQuoteBalanceAmountBN
             .sub(new BN(adjustedQuoteBalanceAmount))
-        let gasBalanceAmountUsed = new BN(snapshotGasBalanceAmount || 0)
+        let gasBalanceAmountUsed = snapshotGasBalanceAmountBN
             .sub(new BN(adjustedGasBalanceAmount || 0))
         const gasStatus = this.gasStatusService.getGasStatus({
             targetTokenId: targetToken.displayId,

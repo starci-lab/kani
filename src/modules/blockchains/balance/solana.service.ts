@@ -525,6 +525,7 @@ export class SolanaBalanceService implements IBalanceService {
                 await sendAndConfirmTransaction(
                     signedTransaction, {
                         commitment: "confirmed",
+                        maxRetries: BigInt(5),
                     })
                 this.logger.info(
                     WinstonLog.SwapTransactionSuccess, {

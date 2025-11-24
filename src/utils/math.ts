@@ -98,17 +98,6 @@ export const toScaledBN = (
         .div(new BN(decimalMultiplier.toFixed(0)))
 }
 
-export const adjustSlippage = (
-    bn: BN,
-    slippage: Decimal,
-    fractionDigits: number = 10,
-): BN => {
-    return toScaledBN(
-        bn,
-        new Decimal(1).minus(slippage),
-        fractionDigits,
-    )
-}
 
 export const adjustSlippage = (
     bn: BN,
@@ -117,7 +106,7 @@ export const adjustSlippage = (
 ): BN => {
     return toScaledBN(
         bn,
-        new Decimal(1).minus(slippage),
+        new Decimal(1).sub(slippage),
         fractionDigits,
     )
 }
