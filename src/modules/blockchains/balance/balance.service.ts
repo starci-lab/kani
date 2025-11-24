@@ -5,6 +5,8 @@ import {
     FetchBalancesParams, 
     FetchBalancesResponse, 
     IBalanceService,
+    ProcessTransferFeesTransactionParams,
+    ProcessTransferFeesResponse,
 } from "./balance.interface"
 import { SolanaBalanceService } from "./solana.service"
 import { ExecuteBalanceRebalancingParams } from "./balance.interface"
@@ -50,6 +52,17 @@ export class BalanceService implements IBalanceService {
         switch (params.bot.chainId) {
         case ChainId.Solana:
             return this.solanaBalanceService.fetchBalance(params)
+        default:
+            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
+        }
+    }
+
+    public async processTransferFeesTransaction(
+        params: ProcessTransferFeesTransactionParams
+    ): Promise<ProcessTransferFeesResponse> {
+        switch (params.bot.chainId) {
+        case ChainId.Solana:
+            return this.solanaBalanceService.processTransferFeesTransaction(params)
         default:
             throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
         }

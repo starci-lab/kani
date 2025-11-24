@@ -12,11 +12,13 @@ import {
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionMessageTooLargeException,
+    SnapshotBalancesBeforeOpenNotSetException,
+    TokenNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
-import { InjectSolanaClients } from "@modules/blockchains"
+import { InjectSolanaClients, OPEN_POSITION_SLIPPAGE } from "@modules/blockchains"
 import { HttpAndWsClients } from "../../clients"
 import { Connection as SolanaConnection } from "@solana/web3.js"
 import { 
@@ -39,13 +41,12 @@ import {
     appendTransactionMessageInstructions,
 } from "@solana/kit"
 import BN from "bn.js"
-import { Decimal } from "decimal.js"
 import { BalanceService, CalculateProfitability, ProfitabilityMathService } from "../../balance"
 import { BalanceSnapshotService, ClosePositionSnapshotService, OpenPositionSnapshotService } from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
-import { httpsToWss } from "@utils"
+import { httpsToWss, toScaledBN } from "@utils"
 import { GasStatus, GasStatusService } from "../../balance"
-import { SolanaBalanceService } from "@modules/blockchains/balance/solana.service"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -65,7 +66,6 @@ export class RaydiumActionService implements IActionService {
         private readonly profitabilityMathService: ProfitabilityMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly gasStatusService: GasStatusService,
-        private readonly solanaBalanceService: SolanaBalanceService,
     ) { }
 
     async closePosition(
@@ -80,6 +80,18 @@ export class RaydiumActionService implements IActionService {
                 bot.id, 
                 "Active position not found"
             )
+        }
+        const targetToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.targetToken.toString()
+        )
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.quoteToken.toString()
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
         }
         // we have many close conditions
         // 1. the position is out-of-range, we close immediately
@@ -142,6 +154,14 @@ export class RaydiumActionService implements IActionService {
                 "Active position not found"
             )
         }
+        const {
+            snapshotTargetBalanceAmountBeforeOpen,
+            snapshotQuoteBalanceAmountBeforeOpen,
+            snapshotGasBalanceAmountBeforeOpen,
+        } = bot
+        if (!snapshotTargetBalanceAmountBeforeOpen || !snapshotQuoteBalanceAmountBeforeOpen || !snapshotGasBalanceAmountBeforeOpen) {
+            throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
+        }
         const network = Network.Mainnet
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
         const rpc = createSolanaRpc(client.rpcEndpoint)
@@ -154,7 +174,7 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const targetIsA = bot.targetToken.id === state.static.tokenA.toString()
+        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
         const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
@@ -210,9 +230,9 @@ export class RaydiumActionService implements IActionService {
             bot,
         })
         const before: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
-            quoteTokenBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
-            gasBalanceAmount:  new BN(bot.snapshotGasBalanceAmount || 0),
+            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
+            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
+            gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
         }
         const after: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(adjustedTargetBalanceAmount),
@@ -234,7 +254,7 @@ export class RaydiumActionService implements IActionService {
             targetFeeAmount,
             quoteFeeAmount,
             txHash: feesTxHash,
-        } = await this.solanaBalanceService.processTransferFeesTransaction({
+        } = await this.balanceService.processTransferFeesTransaction({
             bot,
             roi,
             targetBalanceAmount: adjustedTargetBalanceAmount,
@@ -256,60 +276,37 @@ export class RaydiumActionService implements IActionService {
                     gasAmount: adjustedGasBalanceAmount,
                     session,
                 })
-                let targetAmountReturned = after.targetTokenBalanceAmount.sub(before.targetTokenBalanceAmount)
-                let quoteAmountReturned = after.quoteTokenBalanceAmount.sub(before.quoteTokenBalanceAmount)
-                let gasAmountReturned = after.gasBalanceAmount.sub(before.gasBalanceAmount)
-                const gasStatus = this.gasStatusService.getGasStatus({
-                    targetTokenId: targetToken.displayId,
-                    quoteTokenId: quoteToken.displayId,
-                })
-                switch (gasStatus) {
-                case GasStatus.IsTarget: {
-                    targetAmountReturned = targetAmountReturned.add(gasAmountReturned)
-                    gasAmountReturned = new BN(0)
-                    break
-                }
-                case GasStatus.IsQuote: {
-                    quoteAmountReturned = quoteAmountReturned.add(gasAmountReturned)
-                    gasAmountReturned = new BN(0)
-                    break
-                }
-                default: {
-                    break
-                }
-                }
-                await this.closePositionSnapshotService.updateClosePositionTransactionRecord({
-                    bot,
-                    pnl,
-                    roi,
-                    positionId: bot.activePosition.id,
-                    closeTxHash: txHash,
-                    targetAmountReturned,
-                    quoteAmountReturned,
-                    gasAmountReturned,
-                    session,
-                    feesTxHash,
-                    targetFeeAmount,
-                    quoteFeeAmount,
-                })
+                await this.closePositionSnapshotService
+                    .updateClosePositionTransactionRecord({
+                        bot,
+                        pnl,
+                        roi,
+                        positionId: bot.activePosition.id,
+                        closeTxHash: txHash,
+                        session,
+                        feesTxHash,
+                        targetFeeAmount,
+                        quoteFeeAmount,
+                    })
             })
     }
 
-
     async openPosition(
         {
-            targetIsA,
             state,
             network = Network.Mainnet,
             bot,
+            slippage
         }: OpenPositionParams
     ) {
+        const targetIsA = bot.targetToken.id === state.static.tokenA.toString()
+        slippage = slippage || OPEN_POSITION_SLIPPAGE
         const {
             snapshotTargetBalanceAmount,
             snapshotQuoteBalanceAmount,
             snapshotGasBalanceAmount,
         } = bot
-        if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount) {
+        if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
         const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
@@ -345,12 +342,15 @@ export class RaydiumActionService implements IActionService {
         )
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
-        const liquidity = LiquidityMath.getLiquidityFromTokenAmounts(
-            sqrtPriceCurrentX64,
-            sqrtPriceLowerX64,
-            sqrtPriceUpperX64,
-            amountA,
-            amountB,
+        const liquidity = toScaledBN(
+            LiquidityMath.getLiquidityFromTokenAmounts(
+                sqrtPriceCurrentX64,
+                sqrtPriceLowerX64,
+                sqrtPriceUpperX64,
+                amountA,
+                amountB,
+            ),
+            new Decimal(1).sub(slippage),
         )
         // open the position
         const {
@@ -470,6 +470,9 @@ export class RaydiumActionService implements IActionService {
                     targetBalanceAmount: adjustedTargetBalanceAmount,
                     quoteBalanceAmount: adjustedQuoteBalanceAmount,
                     gasAmount: adjustedGasBalanceAmount,
+                    targetBalanceAmountBeforeOpen: new BN(snapshotTargetBalanceAmount),
+                    quoteBalanceAmountBeforeOpen: new BN(snapshotQuoteBalanceAmount),
+                    gasAmountBeforeOpen: new BN(snapshotGasBalanceAmount),
                     session,
                 })
             })

@@ -155,6 +155,27 @@ export class BotSchema extends AbstractSchema {
     @Prop({ type: String, required: false })
         snapshotGasBalanceAmount?: string
 
+    @Field(() => String, {
+        description: "Token balance of the target token at the moment before opening the position",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        snapshotTargetBalanceAmountBeforeOpen?: string
+        
+    @Field(() => String, {
+        description: "Token balance of the quote token right before the position was opened",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        snapshotQuoteBalanceAmountBeforeOpen?: string
+        
+    @Field(() => String, {
+        description: "Available gas token balance immediately before opening the position",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        snapshotGasBalanceAmountBeforeOpen?: string
+
     @Field(() => Date, {
         description: "The date and time the last snapshot was taken",
         nullable: true,

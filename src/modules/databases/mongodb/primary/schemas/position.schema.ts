@@ -91,26 +91,6 @@ export class PositionSchema extends AbstractSchema {
     @Prop({ type: Date, required: false })
         positionClosedAt?: Date
 
-    @Field(() => String, { 
-        description: "The amount of target tokens returned to the account that closed this position", 
-        nullable: true 
-    })
-    @Prop({ type: String, required: false })
-        targetAmountReturned?: string
-
-    @Field(() => String, { 
-        description: "The amount of quote tokens returned to the account that closed this position", 
-        nullable: true 
-    })
-    @Prop({ type: String, required: false })
-        quoteAmountReturned?: string
-    @Field(() => String, { 
-        description: "The amount of gas tokens returned to the account that closed this position", 
-        nullable: true 
-    })
-    @Prop({ type: String, required: false })
-        gasAmountReturned?: string
-
     @Field(() => Float, { 
         description: "The return on investment (ROI) percentage of the position", 
         nullable: true 

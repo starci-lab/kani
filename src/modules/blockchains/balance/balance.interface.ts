@@ -1,6 +1,7 @@
 
 import { BotSchema, TokenId } from "@modules/databases"
 import BN from "bn.js"
+import Decimal from "decimal.js"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
@@ -10,6 +11,7 @@ export interface IBalanceService {
     executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<void>
     fetchBalances(params: FetchBalancesParams): Promise<FetchBalancesResponse>
     fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
+    processTransferFeesTransaction(params: ProcessTransferFeesTransactionParams): Promise<ProcessTransferFeesResponse>
 }
 
 export interface FetchBalanceParams {
@@ -49,4 +51,18 @@ export interface FetchBalancesResponse {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount?: BN
+}
+
+export interface ProcessTransferFeesTransactionParams {
+    bot: BotSchema
+    roi: Decimal
+    clientIndex?: number
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
+}
+
+export interface ProcessTransferFeesResponse {
+    txHash: string
+    targetFeeAmount: BN
+    quoteFeeAmount: BN
 }

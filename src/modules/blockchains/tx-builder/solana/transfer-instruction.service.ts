@@ -6,7 +6,8 @@ import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import { getTransferSolInstruction } from "@solana-program/system"
 import { createNoopSigner } from "@solana/signers"
-import { getTransferInstruction, getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
+import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
+import { getTransferInstruction } from "@solana-program/token"
 import { AtaInstructionService } from "./ata-instruction.service"
 
 @Injectable()

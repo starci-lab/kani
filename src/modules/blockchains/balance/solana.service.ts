@@ -10,6 +10,8 @@ import {
     FetchBalancesResponse,
     GasStatus,
     IBalanceService,
+    ProcessTransferFeesTransactionParams,
+    ProcessTransferFeesResponse,
 } from "./balance.interface"
 import { 
     InjectPrimaryMongoose,
@@ -77,6 +79,7 @@ import { SwapTransactionSnapshotService } from "../snapshots"
 import { Connection as MongooseConnection } from "mongoose"
 import { httpsToWss, toScaledBN } from "@utils"
 import { TransferInstructionService } from "../tx-builder"
+import { ROI_FEE_PERCENTAGE } from "./constants"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -534,6 +537,14 @@ export class SolanaBalanceService implements IBalanceService {
             quoteBalanceAmount,
         }: ProcessTransferFeesTransactionParams
     ): Promise<ProcessTransferFeesResponse> {
+        // we skip the transfer fees transaction if the roi is less than 1%
+        if (roi.lt(ROI_FEE_PERCENTAGE)) {
+            return {
+                txHash: "",
+                targetFeeAmount: new BN(0),
+                quoteFeeAmount: new BN(0),
+            }
+        }
         const network = Network.Mainnet
         const client = this.solanaClients[network].http[clientIndex]
         const targetToken = this.primaryMemoryStorageService.tokens.find(
@@ -649,18 +660,4 @@ export interface ComputeTargetToQuoteSwapResponse {
     inputAmount: BN
     estimatedOutputAmount: BN
     requiredSwap: boolean
-}
-
-export interface ProcessTransferFeesTransactionParams {
-    bot: BotSchema
-    roi: Decimal
-    clientIndex?: number
-    targetBalanceAmount: BN
-    quoteBalanceAmount: BN
-}
-
-export interface ProcessTransferFeesResponse {
-    txHash: string
-    targetFeeAmount: BN
-    quoteFeeAmount: BN
 }

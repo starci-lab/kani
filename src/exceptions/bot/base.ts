@@ -51,3 +51,9 @@ export class OwnerPositionNotFoundException extends AbstractException {
             })
     }
 }
+
+export class SnapshotBalancesBeforeOpenNotSetException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Snapshot balances before open not set", "SNAPSHOT_BALANCES_BEFORE_OPEN_NOT_SET_EXCEPTION")
+    }
+}

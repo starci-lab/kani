@@ -69,7 +69,6 @@ export class ProfitabilityMathService {
         const beforeTotalBalanceAmountInTarget = beforeTargetBalanceAmountInTarget.add(
             beforeQuoteBalanceAmountInTarget
         ).add(beforeGasBalanceAmountInTarget)
-            
         const afterTargetBalanceAmountInTarget = computeDenomination(
             after.targetTokenBalanceAmount, 
             targetToken.decimals
@@ -84,10 +83,9 @@ export class ProfitabilityMathService {
         ).mul(gasOraclePrice)
         const afterTotalBalanceAmountInTarget = afterTargetBalanceAmountInTarget.add(
             afterQuoteBalanceAmountInTarget
-        ).add(afterGasBalanceAmountInTarget)
-            
+        ).add(afterGasBalanceAmountInTarget)          
         const pnl = afterTotalBalanceAmountInTarget.sub(beforeTotalBalanceAmountInTarget)
-        const roi = pnl.div(beforeTotalBalanceAmountInTarget).mul(100)
+        const roi = pnl.div(beforeTotalBalanceAmountInTarget)
         return {
             roi,
             pnl,

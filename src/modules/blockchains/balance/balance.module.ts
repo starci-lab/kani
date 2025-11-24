@@ -23,6 +23,7 @@ import { ProfitabilityMathService } from "./profitability.service"
         QuoteRatioService,
         ProfitabilityMathService,
         GasStatusService,
+        SolanaBalanceService,
     ],
 })
 export class BalancesModule extends ConfigurableModuleClass {}

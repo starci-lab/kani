@@ -23,9 +23,6 @@ export class ClosePositionSnapshotService {
             bot,
             positionId,
             session,
-            targetAmountReturned,
-            quoteAmountReturned,
-            gasAmountReturned,
             roi,
             pnl,
             feesTxHash,
@@ -42,9 +39,6 @@ export class ClosePositionSnapshotService {
                 closeTxHash,
                 positionClosedAt: this.dayjsService.now().toDate(),
                 isActive: false,
-                targetAmountReturned: targetAmountReturned.toString(),
-                quoteAmountReturned: quoteAmountReturned.toString(),
-                gasAmountReturned: gasAmountReturned?.toString(),
                 roi: roi.toNumber(),
                 pnl: pnl.toNumber(),    
                 feesTxHash,
@@ -67,9 +61,6 @@ export interface UpdateClosePositionTransactionRecordParams {
     positionId: string
     closeTxHash: string
     bot: BotSchema
-    targetAmountReturned: BN
-    quoteAmountReturned: BN
-    gasAmountReturned?: BN
     session?: ClientSession
     roi: Decimal
     pnl: Decimal
