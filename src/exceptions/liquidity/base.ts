@@ -18,3 +18,9 @@ export class LiquidityAmountsNotAcceptableException extends AbstractException {
         )
     }
 }
+
+export class PnlIsNegativeException extends AbstractException {
+    constructor(pnl: Decimal, message?: string) {
+        super(message || "Pnl is negative", "PNL_IS_NEGATIVE_EXCEPTION", { pnl: pnl.toNumber() })
+    }
+}

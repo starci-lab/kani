@@ -55,3 +55,19 @@ export class GasAmountRequired {
     @Prop({ type: String, required: true })
         targetOperationalAmount: string
 }
+
+@ObjectType({
+    description: "Represents the fee to address for the platform.",
+})
+export class FeeConfig {
+    @Field(() => GraphQLJSON, {
+        description: "The fee rate for the platform.",
+    })
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        feeInfo: Partial<Record<ChainId, Partial<Record<Network, FeeInfo>>>>
+}
+
+export class FeeInfo {
+    feeRate: number
+    feeToAddress: string
+}

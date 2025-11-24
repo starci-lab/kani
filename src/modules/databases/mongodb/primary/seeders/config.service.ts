@@ -53,4 +53,22 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
         },
     },
+    {
+        _id: createObjectId(ConfigId.Fee),
+        displayId: ConfigId.Fee,
+        value: {
+            feeInfo: {
+                [ChainId.Solana]: {
+                    [Network.Mainnet]: {
+                        feeRate: 0.04, // 4%
+                        feeToAddress: "8xqsA3rsyXesnrGTimQM7CamXLoptskrN6L423buggsZ",
+                    },
+                    [Network.Testnet]: {
+                        feeRate: 0.04, // 4%
+                        feeToAddress: "8xqsA3rsyXesnrGTimQM7CamXLoptskrN6L423buggsZ",
+                    },
+                },
+            },
+        },
+    },
 ]

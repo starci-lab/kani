@@ -9,11 +9,13 @@ import {
 import { SolanaBalanceService } from "./solana.service"
 import { ExecuteBalanceRebalancingParams } from "./balance.interface"
 import { ChainId } from "@modules/common"
+import { PrimaryMemoryStorageService } from "@modules/databases"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
     constructor(
         private readonly solanaBalanceService: SolanaBalanceService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async executeBalanceRebalancing(

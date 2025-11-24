@@ -8,6 +8,12 @@ export class GasConfigNotFoundException extends AbstractException {
     }
 }
 
+export class FeeConfigNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Fee config not found", "FEE_CONFIG_NOT_FOUND_EXCEPTION")
+    }
+}
+
 export class MinGasRequiredNotFoundException extends AbstractException {
     constructor(chainId: ChainId, network: Network, message?: string) {
         super(message || `Min gas required not found for chain ${chainId} and network ${network}`, "MIN_GAS_REQUIRED_NOT_FOUND_EXCEPTION_EXCEPTION")
@@ -72,5 +78,17 @@ export class InsufficientMinGasBalanceAmountException extends AbstractException 
             "INSUFFICIENT_MIN_GAS_BALANCE_AMOUNT_EXCEPTION", 
             { chainId, network }
         )
+    }
+}
+
+export class FeeRateNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Fee rate not found", "FEE_RATE_NOT_FOUND_EXCEPTION")
+    }
+}
+
+export class FeeToAddressNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Fee to address not found", "FEE_TO_ADDRESS_NOT_FOUND_EXCEPTION")
     }
 }

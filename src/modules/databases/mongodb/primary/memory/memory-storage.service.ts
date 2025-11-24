@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
-import { DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema } from "../schemas"
+import { DexSchema, FeeConfig, GasConfig, LiquidityPoolSchema, TokenSchema } from "../schemas"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { AsyncService, RetryService } from "@modules/mixin"
@@ -7,15 +7,15 @@ import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
 import { ConfigSchema } from "../schemas"
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
-import { GasConfigNotFoundException } from "@exceptions"
+import { FeeConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
     public tokens: Array<TokenSchema> = []
     public liquidityPools: Array<LiquidityPoolSchema> = []
     public dexes: Array<DexSchema> = []
+    public feeConfig: FeeConfig
     public gasConfig: GasConfig
-
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -67,6 +67,19 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                             throw new GasConfigNotFoundException("Gas config not found")
                         }
                         this.gasConfig = gasConfig.value as unknown as GasConfig
+                    },
+                })
+            })(),
+            (async () => {
+                await this.retryService.retry({
+                    action: async () => {
+                        const feeConfig = await this.connection
+                            .model<ConfigSchema>(ConfigSchema.name)
+                            .findById(createObjectId(ConfigId.Fee))
+                        if (!feeConfig) {
+                            throw new FeeConfigNotFoundException("Fee config not found")
+                        }
+                        this.feeConfig = feeConfig.value as unknown as FeeConfig
                     },
                 })
             })()

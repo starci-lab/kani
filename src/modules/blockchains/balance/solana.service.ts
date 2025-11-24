@@ -17,6 +17,9 @@ import {
 } from "@modules/databases"
 import {
     EstimatedSwappedQuoteAmountNotFoundException,
+    FeeRateNotFoundException,
+    FeeToAddressNotFoundException,
+    PnlIsNegativeException,
     TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
     TransactionMessageTooLargeException
@@ -49,11 +52,18 @@ import {
     getSignatureFromTransaction,
     createSolanaRpcSubscriptions,
     SolanaRpcSubscriptionsApi,
+    Instruction,
+    createNoopSigner,
 } from "@solana/kit"
-import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
+import { 
+    findAssociatedTokenPda, 
+    TOKEN_PROGRAM_ADDRESS, 
+    getTransferInstruction 
+} from "@solana-program/token"
 import {
     fetchToken as fetchToken2022,
-    TOKEN_2022_PROGRAM_ADDRESS
+    TOKEN_2022_PROGRAM_ADDRESS,
+    getTransferCheckedInstruction
 } from "@solana-program/token-2022"
 import { fetchToken } from "@solana-program/token"
 import { BatchQuoteResponse, SolanaAggregatorSelectorService } from "../aggregators"
@@ -68,7 +78,9 @@ import { QuoteRatioService } from "./quote-ratio.service"
 import { BalanceSnapshotService } from "../snapshots"
 import { SwapTransactionSnapshotService } from "../snapshots"
 import { Connection as MongooseConnection } from "mongoose"
-import { httpsToWss } from "@utils"
+import { computeRaw, httpsToWss } from "@utils"
+import { getTransferSolInstruction } from "@solana-program/system"
+import { AtaInstructionService } from "../tx-builder/solana/ata-instruction.service"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -88,6 +100,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly gasStatusService: GasStatusService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        private readonly ataInstructionService: AtaInstructionService,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
     ) { }
@@ -517,6 +530,121 @@ export class SolanaBalanceService implements IBalanceService {
         })
         return txHash
     }
+
+    private async processTransferFeeTransaction(
+        {
+            bot,
+            pnl,
+            clientIndex = 0,
+        }: ProcessTransferFeeTransactionParams
+    ): Promise<void> {
+        if (pnl.lte(0)) {
+            throw new PnlIsNegativeException(pnl, "Pnl is negative")
+        }
+        const network = Network.Mainnet
+        const client = this.solanaClients[Network.Mainnet].http[clientIndex]
+        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const targetToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.displayId === bot.targetToken.toString()
+        )
+        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
+        const feeRate = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeRate
+        if (!feeRate) {
+            throw new FeeRateNotFoundException("Fee rate not found")
+        }
+        if (!feeToAddress) {
+            throw new FeeToAddressNotFoundException("Fee to address not found")
+        }
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const instructions: Array<Instruction> = []
+        if (targetToken.type === TokenType.Native) {
+            instructions.push(getTransferSolInstruction({
+                amount: BigInt(computeRaw(pnl.mul(feeRate), targetToken.decimals).toString()),
+                source: createNoopSigner(address(bot.accountAddress)),
+                destination: address(feeToAddress),
+            }))
+        } else {
+            const { 
+                ataAddress: ataSourceAddress, 
+                instructions: ataSourceInstructions 
+            } = await this.ataInstructionService.getOrCreateAtaInstructions({
+                ownerAddress: address(bot.accountAddress),
+                tokenMint: address(targetToken.tokenAddress),
+                is2022Token: targetToken.is2022Token,
+                clientIndex,
+            })
+            if (ataSourceInstructions?.length) {
+                instructions.push(...ataSourceInstructions)
+            }
+            const { 
+                ataAddress: ataDestinationAddress, 
+                instructions: ataDestinationInstructions
+            } = await this.ataInstructionService.getOrCreateAtaInstructions({
+                ownerAddress: address(feeToAddress),
+                tokenMint: address(targetToken.tokenAddress),
+                is2022Token: targetToken.is2022Token,
+                clientIndex,
+            })
+            if (ataDestinationInstructions?.length) {
+                instructions.push(...ataDestinationInstructions)
+            }
+            instructions.push(
+                targetToken.is2022Token 
+                ? getTransferCheckedInstruction({
+                    amount: BigInt(computeRaw(pnl.mul(feeRate), targetToken.decimals).toString()),
+                    source: ataSourceAddress,
+                    destination: ataDestinationAddress,
+                    authority: createNoopSigner(ataSourceAddress),
+                    mint: address(targetToken.tokenAddress),
+                    decimals: targetToken.decimals,
+                }) 
+                : getTransferInstruction({
+                    amount: BigInt(computeRaw(pnl.mul(feeRate), targetToken.decimals).toString()),
+                    source: ataSourceAddress,
+                    destination: ataDestinationAddress,
+                    authority: createNoopSigner(ataSourceAddress),
+                })
+            )
+        }
+        // sign the transaction
+        const txHash = await this.signerService.withSolanaSigner({
+            bot,
+            accountAddress: bot.accountAddress,
+            action: async (signer) => {
+                const keyPair = await createKeyPairFromBytes(signer.secretKey)
+                const kitSigner = await createSignerFromKeyPair(keyPair)
+                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    (tx) => addSignersToTransactionMessage([kitSigner], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    (tx) => appendTransactionMessageInstructions(instructions, tx)
+                )
+                if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
+                    throw new TransactionMessageTooLargeException("Transaction message is too large")
+                }
+                const transaction = compileTransaction(transactionMessage)
+                const signedTransaction = await signTransaction(
+                    [keyPair],
+                    transaction,
+                )
+                assertIsSendableTransaction(signedTransaction)
+                assertIsTransactionWithinSizeLimit(signedTransaction)
+                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                    rpc,
+                    rpcSubscriptions,
+                })
+                const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                await sendAndConfirmTransaction(signedTransaction, { commitment: "confirmed" })
+                return transactionSignature.toString()
+            },
+        })
+        return txHash
+    }
 }
 
 interface ProcessSwapTransactionParams {
@@ -539,4 +667,10 @@ export interface ComputeTargetToQuoteSwapResponse {
     inputAmount: BN
     estimatedOutputAmount: BN
     requiredSwap: boolean
+}
+
+export interface ProcessTransferFeeTransactionParams {
+    bot: BotSchema
+    pnl: Decimal
+    clientIndex?: number
 }

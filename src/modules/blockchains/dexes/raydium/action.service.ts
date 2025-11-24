@@ -232,20 +232,16 @@ export class RaydiumActionService implements IActionService {
                     chainId: bot.chainId,
                     network,
                 })
-                // console.log({
-                //     before: {
-                //         targetTokenBalanceAmount: before.targetTokenBalanceAmount.toString(),
-                //         quoteTokenBalanceAmount: before.quoteTokenBalanceAmount.toString(),
-                //         gasBalanceAmount: before.gasBalanceAmount?.toString(),  
-                //     },
-                //     after: {
-                //         targetTokenBalanceAmount: after.targetTokenBalanceAmount.toString(),
-                //         quoteTokenBalanceAmount: after.quoteTokenBalanceAmount.toString(),
-                //         gasBalanceAmount: after.gasBalanceAmount?.toString(),
-                //     },
-                //     roi: roi.toNumber(),
-                //     pnl: pnl.toNumber(),
-                // })
+                if (pnl.gt(0)) {
+                    // transfer 4% of the pnl to the bot
+                    const pnlAmount = pnl.mul(0.04)
+                    await this.balanceService.transferBalance({
+                        bot,
+                        targetTokenId: targetToken.displayId,
+                        quoteTokenId: quoteToken.displayId,
+                        amount: pnlAmount,
+                    })
+                }
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,
