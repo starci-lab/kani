@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { BotSchema, PositionSchema, InjectPrimaryMongoose } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
-import { Logger as WinstonLogger } from "winston"
-import { InjectWinston, WinstonLog } from "@modules/winston"
 import { DayjsService } from "@modules/mixin"
 import BN from "bn.js"
 import { Decimal } from "decimal.js"
@@ -12,15 +10,12 @@ export class ClosePositionSnapshotService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
         private readonly dayjsService: DayjsService,
     ) { }
 
     async updateClosePositionTransactionRecord(
         {
             closeTxHash,
-            bot,
             positionId,
             session,
             roi,
@@ -49,11 +44,6 @@ export class ClosePositionSnapshotService {
         {
             session,
         })
-        this.logger.info(
-            WinstonLog.ClosePositionSuccess, {
-                closeTxHash,
-                bot: bot.id,
-            })
     }
 }
 

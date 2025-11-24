@@ -18,7 +18,8 @@ import {
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
-import { InjectSolanaClients, OPEN_POSITION_SLIPPAGE } from "@modules/blockchains"
+import { InjectSolanaClients } from "@modules/blockchains"
+import { OPEN_POSITION_SLIPPAGE } from "../../swap"
 import { HttpAndWsClients } from "../../clients"
 import { Connection as SolanaConnection } from "@solana/web3.js"
 import { 
@@ -44,9 +45,10 @@ import BN from "bn.js"
 import { BalanceService, CalculateProfitability, ProfitabilityMathService } from "../../balance"
 import { BalanceSnapshotService, ClosePositionSnapshotService, OpenPositionSnapshotService } from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
-import { httpsToWss, toScaledBN } from "@utils"
+import { adjustSlippage, httpsToWss } from "@utils"
 import { GasStatus, GasStatusService } from "../../balance"
-import Decimal from "decimal.js"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -66,6 +68,8 @@ export class RaydiumActionService implements IActionService {
         private readonly profitabilityMathService: ProfitabilityMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly gasStatusService: GasStatusService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) { }
 
     async closePosition(
@@ -115,14 +119,14 @@ export class RaydiumActionService implements IActionService {
                 "Active position not found"
             )
         }
-        if (
-            new Decimal(state.dynamic.tickCurrent).gte(bot.activePosition.tickLower) 
-            && new Decimal(state.dynamic.tickCurrent).lte(bot.activePosition.tickUpper)
-        ) {
-            // do nothing, since the position is still in the range
-            // return true to continue the assertion
-            return true
-        }
+        // if (
+        //     new Decimal(state.dynamic.tickCurrent).gte(bot.activePosition.tickLower) 
+        //     && new Decimal(state.dynamic.tickCurrent).lte(bot.activePosition.tickUpper)
+        // ) {
+        //     // do nothing, since the position is still in the range
+        //     // return true to continue the assertion
+        //     return true
+        // }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
@@ -218,6 +222,11 @@ export class RaydiumActionService implements IActionService {
                     signedTransaction, {
                         commitment: "confirmed",
                     })
+                this.logger.info(
+                    WinstonLog.ClosePositionSuccess, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
+                    })
                 return transactionSignature.toString()
             },
         })
@@ -296,11 +305,11 @@ export class RaydiumActionService implements IActionService {
             state,
             network = Network.Mainnet,
             bot,
-            slippage
+            slippage,
         }: OpenPositionParams
     ) {
-        const targetIsA = bot.targetToken.id === state.static.tokenA.toString()
         slippage = slippage || OPEN_POSITION_SLIPPAGE
+        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,
             snapshotQuoteBalanceAmount,
@@ -330,7 +339,6 @@ export class RaydiumActionService implements IActionService {
             state,
             bot,
         })
-    
         const sqrtPriceCurrentX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
             state.dynamic.tickCurrent,
         )
@@ -342,15 +350,17 @@ export class RaydiumActionService implements IActionService {
         )
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
-        const liquidity = toScaledBN(
+        const liquidityRaw = 
             LiquidityMath.getLiquidityFromTokenAmounts(
                 sqrtPriceCurrentX64,
                 sqrtPriceLowerX64,
                 sqrtPriceUpperX64,
                 amountA,
                 amountB,
-            ),
-            new Decimal(1).sub(slippage),
+            )
+        const liquidity = adjustSlippage(
+            liquidityRaw,
+            slippage,
         )
         // open the position
         const {
@@ -403,6 +413,11 @@ export class RaydiumActionService implements IActionService {
                 await sendAndConfirmTransaction(
                     signedTransaction, {
                         commitment: "confirmed",
+                    })
+                this.logger.info(
+                    WinstonLog.OpenPositionSuccess, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
                     })
                 return transactionSignature.toString()
             },

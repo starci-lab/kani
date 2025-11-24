@@ -5,8 +5,6 @@ import BN from "bn.js"
 import { ChainId, createObjectId, Network } from "@modules/common"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -14,8 +12,6 @@ export class OpenPositionSnapshotService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
     ) {}
 
     async addOpenPositionTransactionRecord(
@@ -59,11 +55,6 @@ export class OpenPositionSnapshotService {
         }], {
             session,
         })
-        this.logger.info(
-            WinstonLog.OpenPositionSuccess, {
-                openTxHash,
-                bot: bot.id,
-            })
     }
 }
 

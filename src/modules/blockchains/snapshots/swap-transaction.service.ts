@@ -4,9 +4,6 @@ import { DayjsService } from "@modules/mixin"
 import { Injectable } from "@nestjs/common"
 import { ChainId, Network } from "@modules/common"
 import { BN } from "turbos-clmm-sdk"
-import { WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { InjectWinston } from "@modules/winston"
 
 @Injectable()
 export class SwapTransactionSnapshotService {
@@ -14,8 +11,6 @@ export class SwapTransactionSnapshotService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
     ) {}
 
     public async addSwapTransactionRecord(
@@ -43,11 +38,6 @@ export class SwapTransactionSnapshotService {
                 ], {
                     session,
                 })
-        this.logger.info(
-            WinstonLog.SwapTransactionSuccess, {
-                txHash,
-                bot: bot.id,
-            })
     }
 }   
 

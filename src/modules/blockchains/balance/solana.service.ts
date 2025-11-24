@@ -80,6 +80,8 @@ import { Connection as MongooseConnection } from "mongoose"
 import { httpsToWss, toScaledBN } from "@utils"
 import { TransferInstructionService } from "../tx-builder"
 import { ROI_FEE_PERCENTAGE } from "./constants"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -101,6 +103,8 @@ export class SolanaBalanceService implements IBalanceService {
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
         private readonly transferInstructionsService: TransferInstructionService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) { }
 
     public async fetchBalance(
@@ -522,6 +526,11 @@ export class SolanaBalanceService implements IBalanceService {
                     signedTransaction, {
                         commitment: "confirmed",
                     })
+                this.logger.info(
+                    WinstonLog.SwapTransactionSuccess, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
+                    })
                 return transactionSignature.toString()
             },
         })
@@ -628,6 +637,11 @@ export class SolanaBalanceService implements IBalanceService {
                 await sendAndConfirmTransaction(
                     signedTransaction, {
                         commitment: "confirmed",
+                    })
+                this.logger.info(
+                    WinstonLog.OpenPositionSuccess, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
                     })
                 return transactionSignature.toString()
             },

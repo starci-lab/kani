@@ -109,3 +109,15 @@ export const adjustSlippage = (
         fractionDigits,
     )
 }
+
+export const adjustSlippage = (
+    bn: BN,
+    slippage: Decimal,
+    fractionDigits: number = 12,
+): BN => {
+    return toScaledBN(
+        bn,
+        new Decimal(1).minus(slippage),
+        fractionDigits,
+    )
+}
