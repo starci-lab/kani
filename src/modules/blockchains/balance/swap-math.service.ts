@@ -28,7 +28,7 @@ export class SwapMathService {
             targetTokenId,
             quoteTokenId,
             quoteRatioResponse,
-        }: ComputeSwapAmountsParams
+        }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResponse> {
         const targetToken = this.primaryMemoryStorageService
             .tokens.find(token => token.displayId === targetTokenId)
@@ -102,7 +102,7 @@ export class SwapMathService {
             targetTokenId,
             quoteTokenId,
             quoteRatioResponse,
-        }: ComputeSwapAmountsParams
+        }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResponse> {
         const targetToken = this.primaryMemoryStorageService
             .tokens.find(token => token.displayId === targetTokenId)
@@ -176,7 +176,7 @@ export class SwapMathService {
             quoteTokenId,
             gasBalanceAmount,
             quoteRatioResponse,
-        }: ComputeSwapAmountsParams
+        }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResponse> {
         const network = Network.Mainnet
         const chainId = ChainId.Solana
@@ -284,14 +284,13 @@ export class SwapMathService {
         }
     }
 
-    public async computeSwapAmount(
+    public async computeSwapAmounts(
         {
             targetTokenId,
             quoteTokenId,
             targetBalanceAmount,
             quoteBalanceAmount,
             gasBalanceAmount,
-            quoteRatioResponse,
         }: ComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResponse> {
         const targetToken = this.primaryMemoryStorageService
@@ -310,6 +309,12 @@ export class SwapMathService {
         } else if (quoteToken.type === TokenType.Native) {
             gasStatus = GasStatus.IsQuote
         }
+        const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
+            targetTokenId,
+            quoteTokenId,
+            targetBalanceAmount,
+            quoteBalanceAmount,
+        })
         switch (gasStatus) {
         case GasStatus.IsTarget: {
             return this.computeSwapAmountsWhenTargetIsGas({
@@ -318,6 +323,7 @@ export class SwapMathService {
                 quoteRatioResponse,
                 targetBalanceAmount,
                 quoteBalanceAmount,
+                gasBalanceAmount,
             })
         }
         case GasStatus.IsQuote: {
@@ -327,6 +333,7 @@ export class SwapMathService {
                 quoteRatioResponse,
                 targetBalanceAmount,
                 quoteBalanceAmount,
+                gasBalanceAmount,
             })
         }
         case GasStatus.IsGas: {
@@ -346,7 +353,6 @@ export class SwapMathService {
 export interface ComputeSwapAmountsParams {
     targetTokenId: TokenId
     quoteTokenId: TokenId
-    quoteRatioResponse: ComputeQuoteRatioResponse
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount?: BN
@@ -385,4 +391,8 @@ export interface ComputeQuoteRatioResponse {
     targetBalanceAmountInQuote: Decimal
     quoteBalanceAmountInQuote: Decimal
     oraclePrice: Decimal
+}
+
+export interface ExtendedComputeSwapAmountsParams extends ComputeSwapAmountsParams {
+    quoteRatioResponse: ComputeQuoteRatioResponse
 }

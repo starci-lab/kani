@@ -33,6 +33,7 @@ export class OpenPositionSnapshotService {
             liquidityPoolId,
             positionId,
             openTxHash,
+            metadata,
             session,
         }: AddOpenPositionTransactionRecordParams
     ) {
@@ -54,6 +55,7 @@ export class OpenPositionSnapshotService {
             positionOpenedAt: this.dayjsService.now().toDate(),
             openTxHash,
             isActive: true,
+            metadata
         }], {
             session,
         })
@@ -79,5 +81,6 @@ export interface AddOpenPositionTransactionRecordParams {
     targetIsA: boolean
     positionId: string
     openTxHash: string
+    metadata?: unknown
     session?: ClientSession
 }

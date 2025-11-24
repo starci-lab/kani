@@ -44,6 +44,8 @@ import { BalanceService, CalculateProfitability, ProfitabilityMathService } from
 import { BalanceSnapshotService, ClosePositionSnapshotService, OpenPositionSnapshotService } from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
 import { httpsToWss } from "@utils"
+import { GasStatus, GasStatusService } from "../../balance"
+import { SolanaBalanceService } from "@modules/blockchains/balance/solana.service"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -62,6 +64,8 @@ export class RaydiumActionService implements IActionService {
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly profitabilityMathService: ProfitabilityMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
+        private readonly gasStatusService: GasStatusService,
+        private readonly solanaBalanceService: SolanaBalanceService,
     ) { }
 
     async closePosition(
@@ -205,6 +209,37 @@ export class RaydiumActionService implements IActionService {
         } = await this.balanceService.fetchBalances({
             bot,
         })
+        const before: CalculateProfitability = {
+            targetTokenBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
+            quoteTokenBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
+            gasBalanceAmount:  new BN(bot.snapshotGasBalanceAmount || 0),
+        }
+        const after: CalculateProfitability = {
+            targetTokenBalanceAmount: new BN(adjustedTargetBalanceAmount),
+            quoteTokenBalanceAmount: new BN(adjustedQuoteBalanceAmount),
+            gasBalanceAmount: new BN(adjustedGasBalanceAmount || 0),
+        }
+        const { 
+            roi, 
+            pnl 
+        } = await this.profitabilityMathService.calculateProfitability({
+            before,
+            after,
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+            chainId: bot.chainId,
+            network,
+        })
+        const {
+            targetFeeAmount,
+            quoteFeeAmount,
+            txHash: feesTxHash,
+        } = await this.solanaBalanceService.processTransferFeesTransaction({
+            bot,
+            roi,
+            targetBalanceAmount: adjustedTargetBalanceAmount,
+            quoteBalanceAmount: adjustedQuoteBalanceAmount,
+        })
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
@@ -214,34 +249,6 @@ export class RaydiumActionService implements IActionService {
                         "Active position not found"
                     )
                 }
-                const before: CalculateProfitability = {
-                    targetTokenBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
-                    quoteTokenBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
-                    gasBalanceAmount:  bot.snapshotGasBalanceAmount ? new BN(bot.snapshotGasBalanceAmount) : new BN(0),
-                }
-                const after: CalculateProfitability = {
-                    targetTokenBalanceAmount: new BN(adjustedTargetBalanceAmount),
-                    quoteTokenBalanceAmount: new BN(adjustedQuoteBalanceAmount),
-                    gasBalanceAmount: adjustedGasBalanceAmount ? new BN(adjustedGasBalanceAmount) : new BN(0),
-                }
-                const { roi, pnl } = await this.profitabilityMathService.calculateProfitability({
-                    before,
-                    after,
-                    targetTokenId: targetToken.displayId,
-                    quoteTokenId: quoteToken.displayId,
-                    chainId: bot.chainId,
-                    network,
-                })
-                if (pnl.gt(0)) {
-                    // transfer 4% of the pnl to the bot
-                    const pnlAmount = pnl.mul(0.04)
-                    await this.balanceService.transferBalance({
-                        bot,
-                        targetTokenId: targetToken.displayId,
-                        quoteTokenId: quoteToken.displayId,
-                        amount: pnlAmount,
-                    })
-                }
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,
@@ -249,20 +256,45 @@ export class RaydiumActionService implements IActionService {
                     gasAmount: adjustedGasBalanceAmount,
                     session,
                 })
+                let targetAmountReturned = after.targetTokenBalanceAmount.sub(before.targetTokenBalanceAmount)
+                let quoteAmountReturned = after.quoteTokenBalanceAmount.sub(before.quoteTokenBalanceAmount)
+                let gasAmountReturned = after.gasBalanceAmount.sub(before.gasBalanceAmount)
+                const gasStatus = this.gasStatusService.getGasStatus({
+                    targetTokenId: targetToken.displayId,
+                    quoteTokenId: quoteToken.displayId,
+                })
+                switch (gasStatus) {
+                case GasStatus.IsTarget: {
+                    targetAmountReturned = targetAmountReturned.add(gasAmountReturned)
+                    gasAmountReturned = new BN(0)
+                    break
+                }
+                case GasStatus.IsQuote: {
+                    quoteAmountReturned = quoteAmountReturned.add(gasAmountReturned)
+                    gasAmountReturned = new BN(0)
+                    break
+                }
+                default: {
+                    break
+                }
+                }
                 await this.closePositionSnapshotService.updateClosePositionTransactionRecord({
                     bot,
                     pnl,
                     roi,
                     positionId: bot.activePosition.id,
                     closeTxHash: txHash,
-                    targetAmountReturned: new BN(after.targetTokenBalanceAmount).sub(before.targetTokenBalanceAmount),
-                    quoteAmountReturned: new BN(after.quoteTokenBalanceAmount).sub(before.quoteTokenBalanceAmount),
-                    gasAmountReturned: before.gasBalanceAmount ? new BN(after.gasBalanceAmount).sub(before.gasBalanceAmount) : undefined,
-                    feePaidAmount: bot.activePosition.feePaidAmount ? new BN(bot.activePosition.feePaidAmount) : undefined,
+                    targetAmountReturned,
+                    quoteAmountReturned,
+                    gasAmountReturned,
                     session,
+                    feesTxHash,
+                    targetFeeAmount,
+                    quoteFeeAmount,
                 })
             })
     }
+
 
     async openPosition(
         {
@@ -291,6 +323,8 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
+        const targetToken = targetIsA ? tokenA : tokenB
+        const quoteToken = targetIsA ? tokenB : tokenA
         // get the tick bounds
         const { 
             tickLower, 
@@ -381,23 +415,42 @@ export class RaydiumActionService implements IActionService {
         } = await this.balanceService.fetchBalances({
             bot,
         })
+        let targetBalanceAmountUsed = new BN(snapshotTargetBalanceAmount)
+            .sub(new BN(adjustedTargetBalanceAmount))
+        let quoteBalanceAmountUsed = new BN(snapshotQuoteBalanceAmount)
+            .sub(new BN(adjustedQuoteBalanceAmount))
+        let gasBalanceAmountUsed = new BN(snapshotGasBalanceAmount || 0)
+            .sub(new BN(adjustedGasBalanceAmount || 0))
+        const gasStatus = this.gasStatusService.getGasStatus({
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+        })
+        switch (gasStatus) {
+        case GasStatus.IsTarget: {
+            // gas token is the same as target token.
+            // treat gas balance as part of the target balance used,
+            // then mark gas usage as zero because it's merged.
+            targetBalanceAmountUsed = targetBalanceAmountUsed.add(gasBalanceAmountUsed)
+            gasBalanceAmountUsed = new BN(0)
+            break
+        }
+        case GasStatus.IsQuote: {
+            // gas token is the same as quote token.
+            // treat gas balance as part of the quote balance used,
+            // then clear gas usage since it's fully merged.
+            quoteBalanceAmountUsed = quoteBalanceAmountUsed.add(gasBalanceAmountUsed)
+            gasBalanceAmountUsed = new BN(0)
+            break
+        }
+        }
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
                 await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
-                    targetAmountUsed: 
-            new BN(snapshotTargetBalanceAmount)
-                .sub(new BN(adjustedTargetBalanceAmount)),
-                    quoteAmountUsed: 
-            new BN(snapshotQuoteBalanceAmount)
-                .sub(new BN(adjustedQuoteBalanceAmount)),
+                    targetAmountUsed: targetBalanceAmountUsed,
+                    quoteAmountUsed: quoteBalanceAmountUsed,
                     liquidity: new BN(liquidity),
-                    gasAmountUsed: snapshotGasBalanceAmount ? 
-                        new BN(snapshotGasBalanceAmount)
-                            .sub(adjustedGasBalanceAmount ? 
-                                new BN(adjustedGasBalanceAmount   
-                                ) : new BN(0))
-                        : undefined,
+                    gasAmountUsed: gasBalanceAmountUsed,
                     bot,
                     targetIsA,
                     tickLower: tickLower.toNumber(),
@@ -408,6 +461,9 @@ export class RaydiumActionService implements IActionService {
                     positionId: ataAddress.toString(),
                     openTxHash: txHash,
                     session,
+                    metadata: {
+                        nftMintAddress: mintKeyPair.address.toString(),
+                    }
                 })
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,

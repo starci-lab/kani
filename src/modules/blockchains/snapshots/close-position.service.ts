@@ -26,9 +26,11 @@ export class ClosePositionSnapshotService {
             targetAmountReturned,
             quoteAmountReturned,
             gasAmountReturned,
-            feePaidAmount,
             roi,
             pnl,
+            feesTxHash,
+            targetFeeAmount,
+            quoteFeeAmount,
         }: UpdateClosePositionTransactionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
@@ -43,11 +45,14 @@ export class ClosePositionSnapshotService {
                 targetAmountReturned: targetAmountReturned.toString(),
                 quoteAmountReturned: quoteAmountReturned.toString(),
                 gasAmountReturned: gasAmountReturned?.toString(),
-                feePaidAmount: feePaidAmount?.toString(),
                 roi: roi.toNumber(),
                 pnl: pnl.toNumber(),    
+                feesTxHash,
+                targetFeeAmount: targetFeeAmount.toString(),
+                quoteFeeAmount: quoteFeeAmount.toString(),
             },
-        }, {
+        }, 
+        {
             session,
         })
         this.logger.info(
@@ -65,8 +70,10 @@ export interface UpdateClosePositionTransactionRecordParams {
     targetAmountReturned: BN
     quoteAmountReturned: BN
     gasAmountReturned?: BN
-    feePaidAmount?: BN
     session?: ClientSession
     roi: Decimal
     pnl: Decimal
+    feesTxHash: string
+    targetFeeAmount: BN
+    quoteFeeAmount: BN
 }   

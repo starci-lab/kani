@@ -10,12 +10,12 @@ export class GasStatusService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
-    public async getGasStatus(
+    public getGasStatus(
         {
             targetTokenId,
             quoteTokenId,
         }: GetGasStatusParams
-    ): Promise<GasStatus> {
+    ): GasStatus {
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.displayId === targetTokenId
         )

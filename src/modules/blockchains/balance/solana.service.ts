@@ -19,7 +19,8 @@ import {
     EstimatedSwappedQuoteAmountNotFoundException,
     FeeRateNotFoundException,
     FeeToAddressNotFoundException,
-    PnlIsNegativeException,
+    InsufficientMinGasBalanceAmountException,
+    MinOperationalGasAmountNotFoundException,
     TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
     TransactionMessageTooLargeException
@@ -53,17 +54,14 @@ import {
     createSolanaRpcSubscriptions,
     SolanaRpcSubscriptionsApi,
     Instruction,
-    createNoopSigner,
 } from "@solana/kit"
 import { 
     findAssociatedTokenPda, 
     TOKEN_PROGRAM_ADDRESS, 
-    getTransferInstruction 
 } from "@solana-program/token"
 import {
     fetchToken as fetchToken2022,
     TOKEN_2022_PROGRAM_ADDRESS,
-    getTransferCheckedInstruction
 } from "@solana-program/token-2022"
 import { fetchToken } from "@solana-program/token"
 import { BatchQuoteResponse, SolanaAggregatorSelectorService } from "../aggregators"
@@ -74,13 +72,11 @@ import { AsyncService } from "@modules/mixin"
 import { SwapMathService } from "./swap-math.service"
 import { GasStatusService } from "./gas-status.service"
 import Decimal from "decimal.js"
-import { QuoteRatioService } from "./quote-ratio.service"
 import { BalanceSnapshotService } from "../snapshots"
 import { SwapTransactionSnapshotService } from "../snapshots"
 import { Connection as MongooseConnection } from "mongoose"
-import { computeRaw, httpsToWss } from "@utils"
-import { getTransferSolInstruction } from "@solana-program/system"
-import { AtaInstructionService } from "../tx-builder/solana/ata-instruction.service"
+import { httpsToWss, toScaledBN } from "@utils"
+import { TransferInstructionService } from "../tx-builder"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -91,7 +87,6 @@ export class SolanaBalanceService implements IBalanceService {
             HttpAndWsClients<Connection>
         >,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly quoteRatioService: QuoteRatioService,
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
@@ -100,9 +95,9 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly gasStatusService: GasStatusService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
-        private readonly ataInstructionService: AtaInstructionService,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
+        private readonly transferInstructionsService: TransferInstructionService,
     ) { }
 
     public async fetchBalance(
@@ -197,7 +192,7 @@ export class SolanaBalanceService implements IBalanceService {
             tokenId: quoteToken.displayId,
             clientIndex,
         })
-        const gasStatus = await this.gasStatusService.getGasStatus({
+        const gasStatus = this.gasStatusService.getGasStatus({
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
         })
@@ -210,38 +205,47 @@ export class SolanaBalanceService implements IBalanceService {
                 "Target operational gas amount not found"
             )
         }
+        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+            .gasAmountRequired?.[chainId]?.[network]?.minOperationalAmount
+        if (!minOperationalGasAmount) {
+            throw new MinOperationalGasAmountNotFoundException(
+                chainId,
+                network,
+                "Min operational gas amount not found"
+            )
+        }
         const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
+        const minOperationalGasAmountBN = new BN(minOperationalGasAmount)
         switch (gasStatus) {
         case GasStatus.IsTarget: {
-            const targetBalanceAmountAfterDeductingGas = targetBalanceAmount.sub(targetOperationalGasAmountBN)
-            const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
-                targetTokenId: targetToken.displayId,
-                quoteTokenId: quoteToken.displayId,
-                targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
-                quoteBalanceAmount,
-            })
+            // we use the possible maximum amount of gas that can be used
+            const effectiveGasAmountBN = BN.min(
+                targetOperationalGasAmountBN, 
+                targetBalanceAmount
+            )
+            if (
+                effectiveGasAmountBN
+                    .lt(minOperationalGasAmountBN)
+            ) {
+                throw new InsufficientMinGasBalanceAmountException(
+                    chainId,
+                    network,
+                    "Insufficient min gas balance amount"
+                )
+            }
+            const targetBalanceAmountAfterDeductingGas = targetBalanceAmount.sub(effectiveGasAmountBN)
             return {
                 targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
                 quoteBalanceAmount,
-                gasStatus,
-                gasBalanceAmount: targetOperationalGasAmountBN,
-                quoteRatioResponse,
+                gasBalanceAmount: effectiveGasAmountBN,
             }
         }
         case GasStatus.IsQuote: {
             const quoteBalanceAmountAfterDeductingGas = quoteBalanceAmount.sub(targetOperationalGasAmountBN)
-            const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
-                targetTokenId: targetToken.displayId,
-                quoteTokenId: quoteToken.displayId,
-                targetBalanceAmount,
-                quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
-            })
             return {
                 targetBalanceAmount,
                 quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
-                gasStatus,
                 gasBalanceAmount: targetOperationalGasAmountBN,
-                quoteRatioResponse,
             }
         }
         default: {
@@ -259,18 +263,10 @@ export class SolanaBalanceService implements IBalanceService {
                 tokenId: gasToken.displayId,
                 clientIndex,
             })
-            const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
-                targetTokenId: targetToken.displayId,
-                quoteTokenId: quoteToken.displayId,
-                targetBalanceAmount,
-                quoteBalanceAmount,
-            })
             return {
-                quoteRatioResponse,
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasBalanceAmount,
-                gasStatus,
             }
         }
         }
@@ -301,7 +297,6 @@ export class SolanaBalanceService implements IBalanceService {
             targetBalanceAmount, 
             quoteBalanceAmount, 
             gasBalanceAmount, 
-            quoteRatioResponse,
         } = await this.fetchBalances({
             bot,
             clientIndex,
@@ -312,13 +307,12 @@ export class SolanaBalanceService implements IBalanceService {
             swapQuoteToTargetAmount, 
             estimatedSwappedTargetAmount,
             estimatedSwappedQuoteAmount,
-        } = await this.swapMathService.computeSwapAmount({
+        } = await this.swapMathService.computeSwapAmounts({
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
             targetBalanceAmount,
             quoteBalanceAmount,
             gasBalanceAmount,
-            quoteRatioResponse,
         })
         if (!processSwaps) {
             // just snapshot the balances and return
@@ -531,88 +525,68 @@ export class SolanaBalanceService implements IBalanceService {
         return txHash
     }
 
-    private async processTransferFeeTransaction(
+    public async processTransferFeesTransaction(
         {
             bot,
-            pnl,
+            roi,
             clientIndex = 0,
-        }: ProcessTransferFeeTransactionParams
-    ): Promise<void> {
-        if (pnl.lte(0)) {
-            throw new PnlIsNegativeException(pnl, "Pnl is negative")
-        }
+            targetBalanceAmount,
+            quoteBalanceAmount,
+        }: ProcessTransferFeesTransactionParams
+    ): Promise<ProcessTransferFeesResponse> {
         const network = Network.Mainnet
-        const client = this.solanaClients[Network.Mainnet].http[clientIndex]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const client = this.solanaClients[network].http[clientIndex]
         const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.displayId === bot.targetToken.toString()
+            (token) => token.id === bot.targetToken.toString()
         )
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
-        const feeRate = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeRate
-        if (!feeRate) {
-            throw new FeeRateNotFoundException("Fee rate not found")
-        }
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
-        }
         if (!targetToken) {
             throw new TokenNotFoundException("Target token not found")
         }
-        const instructions: Array<Instruction> = []
-        if (targetToken.type === TokenType.Native) {
-            instructions.push(getTransferSolInstruction({
-                amount: BigInt(computeRaw(pnl.mul(feeRate), targetToken.decimals).toString()),
-                source: createNoopSigner(address(bot.accountAddress)),
-                destination: address(feeToAddress),
-            }))
-        } else {
-            const { 
-                ataAddress: ataSourceAddress, 
-                instructions: ataSourceInstructions 
-            } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
-                tokenMint: address(targetToken.tokenAddress),
-                is2022Token: targetToken.is2022Token,
-                clientIndex,
-            })
-            if (ataSourceInstructions?.length) {
-                instructions.push(...ataSourceInstructions)
-            }
-            const { 
-                ataAddress: ataDestinationAddress, 
-                instructions: ataDestinationInstructions
-            } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(feeToAddress),
-                tokenMint: address(targetToken.tokenAddress),
-                is2022Token: targetToken.is2022Token,
-                clientIndex,
-            })
-            if (ataDestinationInstructions?.length) {
-                instructions.push(...ataDestinationInstructions)
-            }
-            instructions.push(
-                targetToken.is2022Token 
-                ? getTransferCheckedInstruction({
-                    amount: BigInt(computeRaw(pnl.mul(feeRate), targetToken.decimals).toString()),
-                    source: ataSourceAddress,
-                    destination: ataDestinationAddress,
-                    authority: createNoopSigner(ataSourceAddress),
-                    mint: address(targetToken.tokenAddress),
-                    decimals: targetToken.decimals,
-                }) 
-                : getTransferInstruction({
-                    amount: BigInt(computeRaw(pnl.mul(feeRate), targetToken.decimals).toString()),
-                    source: ataSourceAddress,
-                    destination: ataDestinationAddress,
-                    authority: createNoopSigner(ataSourceAddress),
-                })
-            )
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.quoteToken.toString()
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
         }
-        // sign the transaction
+        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const feeToAddress = this.primaryMemoryStorageService
+            .feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
+        if (!feeToAddress) {
+            throw new FeeToAddressNotFoundException("Fee to address not found")
+        }
+        const feeRate = this.primaryMemoryStorageService
+            .feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeRate
+        if (!feeRate) {
+            throw new FeeRateNotFoundException("Fee rate not found")
+        }
+        const feePercentage = new Decimal(feeRate).mul(roi)
+        const targetFeeAmount = toScaledBN(targetBalanceAmount, feePercentage)
+        const quoteFeeAmount = toScaledBN(quoteBalanceAmount, feePercentage)
+        const {
+            instructions: targetToFeeTransferInstructions,
+        } = await this.transferInstructionsService.createTransferInstructions({
+            fromAddress: address(bot.accountAddress),
+            toAddress: address(feeToAddress),
+            amount: targetFeeAmount,
+            tokenId: targetToken.displayId,
+        })
+        const {
+            instructions: quoteToFeeTransferInstructions,
+        } = await this.transferInstructionsService.createTransferInstructions({
+            fromAddress: address(bot.accountAddress),
+            toAddress: address(feeToAddress),
+            amount: quoteFeeAmount,
+            tokenId: quoteToken.displayId,
+        })
+        const instructions: Array<Instruction> = [
+            ...targetToFeeTransferInstructions, 
+            ...quoteToFeeTransferInstructions
+        ]
         const txHash = await this.signerService.withSolanaSigner({
             bot,
             accountAddress: bot.accountAddress,
+            network,
             action: async (signer) => {
                 const keyPair = await createKeyPairFromBytes(signer.secretKey)
                 const kitSigner = await createSignerFromKeyPair(keyPair)
@@ -621,13 +595,14 @@ export class SolanaBalanceService implements IBalanceService {
                     createTransactionMessage({ version: 0 }),
                     (tx) => addSignersToTransactionMessage([kitSigner], tx),
                     (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => appendTransactionMessageInstructions(instructions, tx),
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                    (tx) => appendTransactionMessageInstructions(instructions, tx)
                 )
                 if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
                     throw new TransactionMessageTooLargeException("Transaction message is too large")
                 }
                 const transaction = compileTransaction(transactionMessage)
+                // sign the transaction
                 const signedTransaction = await signTransaction(
                     [keyPair],
                     transaction,
@@ -639,11 +614,18 @@ export class SolanaBalanceService implements IBalanceService {
                     rpcSubscriptions,
                 })
                 const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                await sendAndConfirmTransaction(signedTransaction, { commitment: "confirmed" })
+                await sendAndConfirmTransaction(
+                    signedTransaction, {
+                        commitment: "confirmed",
+                    })
                 return transactionSignature.toString()
             },
         })
-        return txHash
+        return {
+            txHash,
+            targetFeeAmount,
+            quoteFeeAmount,
+        }
     }
 }
 
@@ -669,8 +651,16 @@ export interface ComputeTargetToQuoteSwapResponse {
     requiredSwap: boolean
 }
 
-export interface ProcessTransferFeeTransactionParams {
+export interface ProcessTransferFeesTransactionParams {
     bot: BotSchema
-    pnl: Decimal
+    roi: Decimal
     clientIndex?: number
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
+}
+
+export interface ProcessTransferFeesResponse {
+    txHash: string
+    targetFeeAmount: BN
+    quoteFeeAmount: BN
 }

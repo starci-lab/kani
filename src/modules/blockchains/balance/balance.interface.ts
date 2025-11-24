@@ -1,7 +1,6 @@
 
 import { BotSchema, TokenId } from "@modules/databases"
 import BN from "bn.js"
-import { ComputeQuoteRatioResponse } from "./swap-math.service"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
@@ -50,6 +49,4 @@ export interface FetchBalancesResponse {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount?: BN
-    gasStatus: GasStatus
-    quoteRatioResponse: ComputeQuoteRatioResponse
 }
