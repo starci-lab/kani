@@ -2,7 +2,7 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./meteora.module-definition"
 import { MeteoraObserverService } from "./observer.service"
 import { MeteoraActionService } from "./action.service"
-import { EventAuthorityService, OpenPositionInstructionService } from "./transactions"
+import { EventAuthorityService, OpenPositionInstructionService, MeteoraSdkService } from "./transactions"
 @Injectable()
 export class MeteoraModule extends ConfigurableModuleClass {
     static register(
@@ -12,6 +12,7 @@ export class MeteoraModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             OpenPositionInstructionService,
             EventAuthorityService,
+            MeteoraSdkService,
         ]
         if (
             typeof options.enabled === "boolean" 

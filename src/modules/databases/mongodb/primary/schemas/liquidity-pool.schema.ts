@@ -122,4 +122,6 @@ export interface RaydiumRewardVault {
 
 export interface MeteoraLiquidityPoolMetadata {
     programAddress: string
+    reserveXAddress: string
+    reserveYAddress: string
 }

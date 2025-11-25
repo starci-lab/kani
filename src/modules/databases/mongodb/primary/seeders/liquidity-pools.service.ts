@@ -213,6 +213,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         binOffset: 10,
         metadata: {
             programAddress: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+            reserveXAddress: "EYj9xKw6ZszwpyNibHY7JD5o3QgTVrSdcBp1fMJhrR9o",
+            reserveYAddress: "CoaxzEh8p5YyGLcj36Eo3cUThVJxeKCs7qvLAGDYwBcz",
         },
     },
 ]

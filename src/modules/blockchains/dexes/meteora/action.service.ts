@@ -5,7 +5,25 @@ import BN from "bn.js"
 import { SnapshotBalancesNotSetException, TransactionMessageTooLargeException } from "@exceptions"
 import { Network } from "@typedefs"
 import { SignerService } from "../../signers"
-import { addSignersToTransactionMessage, appendTransactionMessageInstructions, compileTransaction, createKeyPairFromBytes, createSignerFromKeyPair, createSolanaRpc, createSolanaRpcSubscriptions, createisTransactionMessageWithinSizeLimit, TransactionMessage, pipe, setTransactionMessageFeePayerSigner, setTransactionMessageLifetimeUsingBlockhash, signTransaction, createTransactionMessage, isTransactionMessageWithinSizeLimit, sendAndConfirmTransactionFactory, assertIsSendableTransaction, assertIsTransactionWithinSizeLimit, getSignatureFromTransaction, getBase64EncodedWireTransaction } from "@solana/kit"
+import { 
+    addSignersToTransactionMessage, 
+    appendTransactionMessageInstructions, 
+    compileTransaction, 
+    createKeyPairFromBytes, 
+    createSignerFromKeyPair, 
+    createSolanaRpc, 
+    createSolanaRpcSubscriptions,
+    pipe, 
+    setTransactionMessageFeePayerSigner, 
+    setTransactionMessageLifetimeUsingBlockhash, 
+    signTransaction, 
+    createTransactionMessage, 
+    isTransactionMessageWithinSizeLimit, 
+    sendAndConfirmTransactionFactory, 
+    assertIsSendableTransaction, 
+    assertIsTransactionWithinSizeLimit, 
+    getSignatureFromTransaction, 
+} from "@solana/kit"
 import { METEORA_CLIENTS_INDEX } from "./constants"
 import { InjectSolanaClients } from "../../clients"
 import { HttpAndWsClients } from "../../clients"
@@ -92,21 +110,14 @@ export class MeteoraActionService implements IActionService {
                     rpc,
                     rpcSubscriptions,
                 })
-                // const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                // await sendAndConfirmTransaction(signedTransaction, { commitment: "confirmed" })
-                // this.logger.info(WinstonLog.OpenPositionSuccess, {
-                //     txHash: transactionSignature.toString(),
-                //     bot: bot.id,
-                // })
-                // return transactionSignature.toString()
-                const stimulateTransaction = await rpc.simulateTransaction(
-                    getBase64EncodedWireTransaction(signedTransaction),
-                    {
-                        commitment: "confirmed",
-                        encoding: "base64",
-                    },
-                ).send()
-                console.log(stimulateTransaction.value.logs)
+                const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                await sendAndConfirmTransaction(signedTransaction, { commitment: "confirmed" })
+                this.logger.info(
+                    WinstonLog.OpenPositionSuccess, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
+                    })
+                return transactionSignature.toString()
             },
         })
     }

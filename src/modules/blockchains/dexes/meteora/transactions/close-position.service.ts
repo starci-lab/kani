@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import {
+    AccountRole,
     Instruction,
+    address,
 } from "@solana/kit"
 import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
-import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
@@ -30,15 +31,15 @@ export class ClosePositionInstructionService {
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
+        const close2Instruction: Instruction = {
+            programAddress: address(state.static.poolAddress),
+            accounts: [
+                {
+                    address: address(bot.accountAddress),
+                    role: AccountRole.WRITABLE_SIGNER,
+                },
+            ],
+        }
         return []
     }
 }
-
-export const ClosePositionArgs = new BeetArgsStruct(
-    [
-        ["liquidity", u128],
-        ["amount0Max", u64],
-        ["amount1Max", u64],
-    ],
-    "ClosePositionArgs"
-)
