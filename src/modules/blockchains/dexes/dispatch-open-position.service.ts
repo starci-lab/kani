@@ -1,10 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
-import { BotSchema, DexId, LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
-import { DexNotFoundException, DexNotImplementedException, InvalidPoolTokensException } from "@exceptions"
+import { BotSchema, DexId, LiquidityPoolId, LiquidityPoolType, PrimaryMemoryStorageService } from "@modules/databases"
+import { DexNotFoundException, DexNotImplementedException, LiquidityPoolNotFoundException } from "@exceptions"
 import { RaydiumActionService } from "./raydium"
 import { OrcaActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
+import { MeteoraActionService } from "./meteora"
+import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 
 @Injectable()
 export class DispatchOpenPositionService {
@@ -13,6 +15,7 @@ export class DispatchOpenPositionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly raydiumActionService: RaydiumActionService,
         private readonly orcaActionService: OrcaActionService,
+        private readonly meteoraActionService: MeteoraActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) {}
@@ -23,13 +26,20 @@ export class DispatchOpenPositionService {
             bot,
         }: DispatchOpenPositionParams,
     ) {
-        const state = await this.liquidityPoolStateService.getState(liquidityPoolId)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(token => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find(token => token.id === state.static.tokenB.toString())
-        if (!tokenA || !tokenB) throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
+            liquidityPool => liquidityPool.displayId === liquidityPoolId,
+        )
+        if (!liquidityPool) {
+            throw new LiquidityPoolNotFoundException(liquidityPoolId, `Liquidity pool ${liquidityPoolId} not found`)
+        }
+        let state: LiquidityPoolState | DlmmLiquidityPoolState
+        if (liquidityPool.type === LiquidityPoolType.Dlmm) {
+            state = await this.liquidityPoolStateService.getDlmmState(liquidityPoolId)
+        } else {
+            state = await this.liquidityPoolStateService.getState(liquidityPoolId)
+        }
         const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === state.static.dex.toString())
         if (!dex) throw new DexNotFoundException("Dex not found")
-        const targetIsA = bot.targetToken.toString() === tokenA.id
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
             throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }
@@ -37,20 +47,17 @@ export class DispatchOpenPositionService {
         case DexId.Raydium:
             return this.raydiumActionService.openPosition({
                 state,
-                network: state.static.network,
                 bot,
-                targetIsA,
-                tokenAId: tokenA.displayId,
-                tokenBId: tokenB.displayId,
             })
         case DexId.Orca:
             return this.orcaActionService.openPosition({
                 state,
-                network: state.static.network,
                 bot,
-                targetIsA,
-                tokenAId: tokenA.displayId,
-                tokenBId: tokenB.displayId,
+            })
+        case DexId.Meteora:
+            return this.meteoraActionService.openPosition({
+                state,
+                bot,
             })
         default:
             throw new Error(`DEX ${state.static.dex.toString()} not supported`)

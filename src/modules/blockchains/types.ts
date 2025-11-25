@@ -26,5 +26,9 @@ export interface DynamicLiquidityPoolInfo {
     rewards: Array<unknown>
 }
 
+export interface DynamicDlmmLiquidityPoolInfo {
+    activeId: number
+}
+
 export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]
 export type SendAndConfirmTransactionType = Parameters<ReturnType<typeof sendAndConfirmTransactionFactory>>[0]

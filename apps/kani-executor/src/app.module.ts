@@ -100,6 +100,13 @@ import { TxBuilderModule } from "@modules/blockchains"
                         action: true,
                     },
                 },
+                {
+                    dexId: DexId.Meteora,
+                    enabled: {
+                        observe: true,
+                        action: true,
+                    },
+                },
             ],
         }),
     ],

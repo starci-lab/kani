@@ -7,13 +7,10 @@ import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
 import { CacheKey, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
 import {
-    DynamicLiquidityPoolInfoSchema,
-    InjectPrimaryMongoose,
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId
 } from "@modules/databases"
-import { Connection as MongooseConnection } from "mongoose"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -34,8 +31,6 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly superjson: SuperJSON,
         @InjectSolanaClients()
         private readonly solanaClients: Record<Network, HttpAndWsClients<Connection>>,
-        @InjectPrimaryMongoose()
-        private readonly connection: MongooseConnection,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
@@ -77,13 +72,6 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                 createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
                 this.superjson.stringify(parsed),
             ),
-
-            // db insert
-            this.connection.model(DynamicLiquidityPoolInfoSchema.name).create({
-                liquidityPool: createObjectId(liquidityPoolId),
-                ...parsed,
-            }),
-
             // event
             this.events.emit(
                 EventName.LiquidityPoolsFetched,
@@ -133,9 +121,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-
         const connection = this.solanaClients[liquidityPool.network].ws[RAYDIUM_CLIENTS_INDEX]
-
         connection.onAccountChange(new PublicKey(liquidityPool.poolAddress), async (accountInfo) => {
             const state = PoolInfoLayout.decode(accountInfo.data)
             await this.handlePoolStateUpdate(liquidityPoolId, state)

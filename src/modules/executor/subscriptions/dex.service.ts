@@ -1,4 +1,4 @@
-import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { Injectable } from "@nestjs/common"
 import { EventEmitter2, OnEvent } from "@nestjs/event-emitter"
 
@@ -14,5 +14,13 @@ export class DexSubscriptionService {
     ) {
         this.eventEmitter
             .emit(EventName.InternalLiquidityPoolsFetched, event)
+    }
+
+    @OnEvent(EventName.DlmmLiquidityPoolsFetched)
+    async handleDlmmLiquidityPoolsFetched(
+        event: DlmmLiquidityPoolsFetchedEvent
+    ) {
+        this.eventEmitter
+            .emit(EventName.InternalDlmmLiquidityPoolsFetched, event)
     }
 }

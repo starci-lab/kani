@@ -1,9 +1,13 @@
 import { LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
-import { CacheKey, createCacheKey, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
+import { CacheKey, createCacheKey, DynamicDlmmLiquidityPoolInfoCacheResult, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
 import { Injectable } from "@nestjs/common"
 import { Cache } from "cache-manager"
-import { LiquidityPoolState } from "../interfaces"
-import { DynamicLiquidityPoolInfoNotFoundException, LiquidityPoolNotFoundException } from "@exceptions"
+import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
+import { 
+    DynamicDlmmLiquidityPoolInfoNotFoundException, 
+    DynamicLiquidityPoolInfoNotFoundException, 
+    LiquidityPoolNotFoundException 
+} from "@exceptions"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 
@@ -42,4 +46,25 @@ export class LiquidityPoolStateService {
             },
         }
     }
+
+    async getDlmmState(
+        liquidityPoolId: LiquidityPoolId,
+    ): Promise<DlmmLiquidityPoolState> {
+        const staticLiquidityPool = this.memoryStorageService.liquidityPools.find(
+            liquidityPool => liquidityPool.displayId === liquidityPoolId,
+        )
+        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
+            createCacheKey(
+                CacheKey.DynamicDlmmLiquidityPoolInfo,
+                liquidityPoolId
+            ))
+        const dynamicLiquidityPoolInfo = this.superjson
+            .parse<DynamicDlmmLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfoCacheResult as string)
+        if (!dynamicLiquidityPoolInfo) throw new DynamicDlmmLiquidityPoolInfoNotFoundException(liquidityPoolId)
+        return {
+            static: staticLiquidityPool,
+            dynamic: dynamicLiquidityPoolInfo,
+        }
+    }   
 }

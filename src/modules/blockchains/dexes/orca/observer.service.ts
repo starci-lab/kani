@@ -6,7 +6,6 @@ import { ORCA_CLIENT_INDEX } from "./constants"
 import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
 import {
-    DynamicLiquidityPoolInfoSchema,
     InjectPrimaryMongoose,
     LiquidityPoolId,
     PrimaryMemoryStorageService,
@@ -82,15 +81,6 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                 ),
                 this.superjson.stringify(parsed),
             ),
-
-            // db insert
-            this.connection.model(
-                DynamicLiquidityPoolInfoSchema.name
-            ).create({
-                liquidityPool: createObjectId(liquidityPoolId),
-                ...parsed,
-            }),
-
             // event emit
             this.events.emit(
                 EventName.LiquidityPoolsFetched,

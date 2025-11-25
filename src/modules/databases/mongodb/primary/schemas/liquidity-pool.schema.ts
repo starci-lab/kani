@@ -77,9 +77,17 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
         type: LiquidityPoolType
 
-    @Field(() => Number, { description: "The tick spacing of the pool" })
-    @Prop({ type: Number })
+    @Field(() => Number, { description: "The tick spacing of the pool", nullable: true })
+    @Prop({ type: Number, nullable: true })
         tickSpacing: number
+
+    @Field(() => Number, { description: "The bin step of the pool", nullable: true })
+    @Prop({ type: Number, nullable: true })
+        binStep: number
+
+    @Field(() => Number, { description: "The bin offset of the pool", nullable: true })
+    @Prop({ type: Number, nullable: true })
+        binOffset: number
 
     @Field(() => Boolean, { description: "Whether the pool is active" })
     @Prop({ type: Boolean, default: true })
@@ -110,4 +118,8 @@ export interface RaydiumLiquidityPoolMetadata {
 export interface RaydiumRewardVault {
     tokenId: TokenId
     vaultAddress: string
+}
+
+export interface MeteoraLiquidityPoolMetadata {
+    programAddress: string
 }

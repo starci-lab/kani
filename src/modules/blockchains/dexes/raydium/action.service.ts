@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ClosePositionParams, IActionService, OpenPositionParams } from "../../interfaces"
+import { ClosePositionParams, IActionService, LiquidityPoolState, OpenPositionParams } from "../../interfaces"
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import { Connection } from "mongoose"
 import {
@@ -83,7 +83,9 @@ export class RaydiumActionService implements IActionService {
     ): Promise<void> {
         const {
             bot,
+            state,
         } = params
+        const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
             throw new ActivePositionNotFoundException(
@@ -107,18 +109,22 @@ export class RaydiumActionService implements IActionService {
         // 1. the position is out-of-range, we close immediately
         // 2. our detection find a potential dump from CEX
         // 3. the position is not profitable, we close it  
-        const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange(params)
+        const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange({
+            bot,
+            state: _state,
+        })
         if (!shouldProceedAfterIsPositionOutOfRange) {
             return
         }
     }
 
     private async assertIsPositionOutOfRange(
-        {
-            bot,
-            state
-        }: ClosePositionParams
+        params: ClosePositionParams
     ): Promise<boolean> {
+        const {
+            bot,
+            state,
+        } = params
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
@@ -140,10 +146,7 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        await this.proccessClosePositionTransaction({
-            bot,
-            state,
-        })
+        await this.proccessClosePositionTransaction(params)
         // return false to terminate the assertion
         return false
     }
@@ -154,6 +157,7 @@ export class RaydiumActionService implements IActionService {
             state
         }: ClosePositionParams
     ): Promise<void> {
+        const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
@@ -185,7 +189,7 @@ export class RaydiumActionService implements IActionService {
         const quoteToken = targetIsA ? tokenB : tokenA
         const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
-            state,
+            state: _state,
             clientIndex: RAYDIUM_CLIENTS_INDEX,
         })
         // sign the transaction
@@ -313,13 +317,14 @@ export class RaydiumActionService implements IActionService {
     async openPosition(
         {
             state,
-            network = Network.Mainnet,
             bot,
-            slippage,
         }: OpenPositionParams
     ) {
-        slippage = slippage || OPEN_POSITION_SLIPPAGE
-        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
+        // cast the state to LiquidityPoolState
+        const _state = state as LiquidityPoolState
+        const network = Network.Mainnet
+        const slippage = OPEN_POSITION_SLIPPAGE
+        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,
             snapshotQuoteBalanceAmount,
@@ -337,9 +342,9 @@ export class RaydiumActionService implements IActionService {
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === state.static.tokenA.toString())
+            .find((token) => token.id === _state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === state.static.tokenB.toString())
+            .find((token) => token.id === _state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
@@ -358,11 +363,11 @@ export class RaydiumActionService implements IActionService {
             tickLower, 
             tickUpper
         } = await this.tickMathService.getTickBounds({
-            state,
+            state: _state,
             bot,
         })
         const sqrtPriceCurrentX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            state.dynamic.tickCurrent,
+            _state.dynamic.tickCurrent,
         )
         const sqrtPriceLowerX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
             tickLower.toNumber(),
@@ -391,7 +396,7 @@ export class RaydiumActionService implements IActionService {
             ataAddress,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
-            state,
+            state: _state,
             clientIndex: RAYDIUM_CLIENTS_INDEX,
             liquidity,
             amountAMax: amountA,
@@ -498,7 +503,7 @@ export class RaydiumActionService implements IActionService {
                     tickUpper: tickUpper.toNumber(),
                     network,
                     chainId: bot.chainId,
-                    liquidityPoolId: state.static.displayId,
+                    liquidityPoolId: _state.static.displayId,
                     positionId: ataAddress.toString(),
                     openTxHash: txHash,
                     session,

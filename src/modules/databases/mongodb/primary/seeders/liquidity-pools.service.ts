@@ -209,6 +209,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenB: createObjectId(TokenId.SolUsdc),
         fee: 0.0004,
         type: LiquidityPoolType.Dlmm,
+        binStep: 4,
+        binOffset: 10,
         metadata: {
             programAddress: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
         },

@@ -2,51 +2,29 @@ import BN from "bn.js"
 import { FetchedPool } from "./types"
 import { ActionResponse } from "../dexes"
 import { BotSchema, LiquidityPoolSchema, TokenId, TokenSchema, UserSchema } from "@modules/databases"
-import { ChainId, Network } from "@modules/common"
+import { Network } from "@modules/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
-import { DynamicLiquidityPoolInfo } from "../types"
-import Decimal from "decimal.js"
+import { DynamicDlmmLiquidityPoolInfo, DynamicLiquidityPoolInfo } from "../types"
 
 export interface LiquidityPoolState {
     static: LiquidityPoolSchema
     dynamic: DynamicLiquidityPoolInfo
 }
 
+export interface DlmmLiquidityPoolState {
+    static: LiquidityPoolSchema
+    dynamic: DynamicDlmmLiquidityPoolInfo
+}
+
 export interface ClosePositionParams {
     bot: BotSchema
-    state: LiquidityPoolState
-    network?: Network
-    chainId?: ChainId
-    slippage?: number
-    swapSlippage?: number
-    // txb (sui only)
-    txb?: Transaction
-    // user to sign the tx
-    user?: UserSchema
-    suiClient?: SuiClient
-    stimulateOnly?: boolean
+    state: LiquidityPoolState | DlmmLiquidityPoolState
 }
 
 export interface OpenPositionParams {
     bot: BotSchema
-    state: LiquidityPoolState
-    // amount to add
-    amount?: BN
-    tokenAId: TokenId
-    targetIsA: boolean
-    tokenBId: TokenId
-    network?: Network
-    chainId?: ChainId
-    slippage?: Decimal
-    swapSlippage?: Decimal
-    requireZapEligible?: boolean
-    stimulateOnly?: boolean
-    // txb (sui only)
-    txb?: Transaction
-    // user to sign the tx
-    user?: UserSchema
-    suiClient?: SuiClient
+    state: LiquidityPoolState | DlmmLiquidityPoolState
 }
 
 export interface ClosePositionResponse extends ActionResponse {

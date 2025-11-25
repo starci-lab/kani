@@ -4,6 +4,7 @@ export enum CacheKey {
     WsCexLastPrice = "wsCexLastPrice",
     WsCexOrderBook = "wsCexOrderBook",
     DynamicLiquidityPoolInfo = "dynamicLiquidityPoolInfo",
+    DynamicDlmmLiquidityPoolInfo = "dynamicDlmmLiquidityPoolInfo",
     CoinMarketCapPrices = "coinMarketCapPrices",
     CoinGeckoPrices = "coinGeckoPrices",
     LiquidityPools = "liquidityPools",
@@ -27,3 +28,6 @@ export interface DynamicLiquidityPoolInfoCacheResult {
     rewards: Array<unknown>
 }
 
+export interface DynamicDlmmLiquidityPoolInfoCacheResult {
+    activeId: number
+}

@@ -71,20 +71,20 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         DexesModule.register({
             isGlobal: true,
             dexes: [
-                {
-                    dexId: DexId.Raydium,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                    },
-                },
-                {
-                    dexId: DexId.Orca,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                    },
-                },
+                // {
+                //     dexId: DexId.Raydium,
+                //     enabled: {
+                //         observe: true,
+                //         action: false,
+                //     },
+                // },
+                // {
+                //     dexId: DexId.Orca,
+                //     enabled: {
+                //         observe: true,
+                //         action: false,
+                //     },
+                // },
                 {
                     dexId: DexId.Meteora,
                     enabled: {

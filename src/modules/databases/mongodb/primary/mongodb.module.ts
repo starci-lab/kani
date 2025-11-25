@@ -30,8 +30,6 @@ import {
     BotSchemaClass,
     ConfigSchema,
     ConfigSchemaClass,
-    DynamicLiquidityPoolInfoSchema,
-    DynamicLiquidityPoolInfoSchemaClass,
     SwapTransactionSchema,
     SwapTransactionSchemaClass,
     PositionSchema,
@@ -180,10 +178,6 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: ConfigSchema.name,
                         useFactory: () => ConfigSchemaClass,
-                    },
-                    {
-                        name: DynamicLiquidityPoolInfoSchema.name,
-                        useFactory: () => DynamicLiquidityPoolInfoSchemaClass,
                     },
                     {
                         name: SwapTransactionSchema.name,

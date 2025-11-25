@@ -3,24 +3,26 @@ import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
 import {  } from "@meteora-ag/dlmm"
-import { InjectRedisCache } from "@modules/cache"
+import { DynamicDlmmLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
 import {
     InjectPrimaryMongoose,
     LiquidityPoolId,
     PrimaryMemoryStorageService,
-    DexId
+    DexId,
 } from "@modules/databases"
 import { Connection as MongooseConnection } from "mongoose"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { EventEmitterService } from "@modules/event"
+import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 import { LbPair } from "./beets"
 import { METEORA_CLIENTS_INDEX } from "./constants"
+import { createCacheKey } from "@modules/cache"
+import { CacheKey } from "@modules/cache"
 
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
@@ -64,37 +66,32 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         liquidityPoolId: LiquidityPoolId,
         state: ReturnType<typeof LbPair.struct["read"]>
     ) {
-        // await this.asyncService.allIgnoreError([
-        //     // cache
-        //     this.cacheManager.set(
-        //         createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
-        //         this.superjson.stringify(state),
-        //     ),
+        const dynamicDlmmLiquidityPoolInfo: DynamicDlmmLiquidityPoolInfoCacheResult = {
+            activeId: state.active_id,
+        }
+        await this.asyncService.allIgnoreError([
+            // cache
+           
+            this.cacheManager.set(
+                createCacheKey(CacheKey.DynamicDlmmLiquidityPoolInfo, liquidityPoolId),
+                this.superjson.stringify(dynamicDlmmLiquidityPoolInfo),
+            ),
 
-        //     // db insert
-        //     this.connection.model(DynamicLiquidityPoolInfoSchema.name).create({
-        //         liquidityPool: createObjectId(liquidityPoolId),
-        //         ...state,
-        //     }),
+            // event
+            this.events.emit(
+                EventName.DlmmLiquidityPoolsFetched,
+                { liquidityPoolId, ...dynamicDlmmLiquidityPoolInfo },
+                { withoutLocal: true },
+            ),
+        ])
 
-        //     // event
-        //     this.events.emit(
-        //         EventName.LiquidityPoolsFetched,
-        //         { liquidityPoolId, ...state },
-        //         { withoutLocal: true },
-        //     ),
-        // ])
+        // logging
+        this.winstonLogger.debug(
+            WinstonLog.ObserveDlmmPool, {
+                liquidityPoolId,
+            })
 
-        // // logging
-        // this.winstonLogger.debug(
-        //     WinstonLog.ObserveClmmPool, {
-        //         liquidityPoolId,
-        //         tickCurrent: state.tickCurrentIndex.toString(),
-        //         liquidity: state.liquidity.toString(),
-        //         sqrtPriceX64: state.sqrtPrice.toString(),
-        //     })
-
-        // return state
+        return state
     }
 
     // ============================================
@@ -129,7 +126,6 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         const connection = this.solanaClients[liquidityPool.network].ws[METEORA_CLIENTS_INDEX]
         connection.onAccountChange(new PublicKey(liquidityPool.poolAddress), async (accountInfo) => {
             const state = LbPair.struct.read(accountInfo.data, 8)
-            console.log(state)
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         })
     }

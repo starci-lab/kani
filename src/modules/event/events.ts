@@ -8,6 +8,7 @@ export enum EventName {
     CoinGeckoPricesFetched = "coinGeckoPricesFetched",
     PoolsUpdated = "poolsUpdated",
     LiquidityPoolsFetched = "liquidityPoolsFetched",
+    DlmmLiquidityPoolsFetched = "dlmmLiquidityPoolsFetched",
     LiquidityPoolsUpdated = "liquidityPoolsUpdated",
     WsCexLastPricesUpdated = "wsCexLastPricesUpdated",
     WsCexOrderBookUpdated = "wsCexOrderBookUpdated",
@@ -16,12 +17,20 @@ export enum EventName {
     InitializerLoaded = "initializerLoaded",
     PythSuiPricesUpdated = "pythSuiPricesUpdated",
     InternalLiquidityPoolsFetched = "internalLiquidityPoolsFetched",
+    InternalDlmmLiquidityPoolsFetched = "internalDlmmLiquidityPoolsFetched",
 }
 
 export interface LiquidityPoolsFetchedEvent {
     chainId: ChainId
     network: Network
     pools: string // serialized
+}
+
+export interface DlmmLiquidityPoolsFetchedEvent {
+    liquidityPoolId: LiquidityPoolId
+    tickCurrent: number
+    liquidity: BN
+    sqrtPriceX64: BN
 }
 
 export interface PythSuiPricesUpdatedEvent {

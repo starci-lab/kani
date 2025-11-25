@@ -1,5 +1,5 @@
 import { Inject, Injectable, Scope } from "@nestjs/common"
-import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { REQUEST } from "@nestjs/core"
 import { BotSchema, PrimaryMemoryStorageService, PositionSchema, QuoteRatioStatus } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
@@ -133,6 +133,58 @@ export class OpenPositionProcessorService  {
                 if (this.quoteRatioService.checkQuoteRatioStatus({
                     quoteRatio
                 }) !== QuoteRatioStatus.Good) {
+                    return
+                }
+                // run the open position
+                if (this.mutex.isLocked()) {
+                    return
+                }
+                await this.mutex.runExclusive(
+                    async () => {
+                        try {
+                            return await this.dispatchOpenPositionService.dispatchOpenPosition({
+                                liquidityPoolId: payload.liquidityPoolId,
+                                bot: this.bot,
+                            })
+                        } catch (error) {
+                            this.logger.error(
+                                WinstonLog.OpenPositionFailed, {
+                                    botId: this.bot.id,
+                                    liquidityPoolId: payload.liquidityPoolId,
+                                    error: error.message,
+                                })
+                        }
+                    })
+            }
+        )
+        this.eventEmitter.on(
+            EventName.InternalDlmmLiquidityPoolsFetched,
+            async (payload: DlmmLiquidityPoolsFetchedEvent) => {
+                // re query the bot to ensure data is up to date
+                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
+                if (!bot) {
+                    // bot not found, we skip here
+                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
+                }
+                // assign the bot to the instance
+                this.bot = bot.toJSON()
+                const activePosition = await this.connection
+                    .model<PositionSchema>(PositionSchema.name).findOne({
+                        bot: this.bot.id,
+                        isActive: true,
+                    })
+                this.bot.activePosition = activePosition?.toJSON()
+                if (this.bot.activePosition) {
+                    // we do nothing if the bot is already in a position
+                    return
+                }
+                if (
+                    !this.bot.liquidityPools
+                        .map((liquidityPool) => liquidityPool.toString())
+                        .includes(createObjectId(payload.liquidityPoolId).toString())
+                )
+                {
+                    // skip if the liquidity pool is not belong to the bot
                     return
                 }
                 // run the open position

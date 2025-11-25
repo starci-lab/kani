@@ -42,12 +42,12 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 },
                 [ChainId.Solana]: {
                     [Network.Mainnet]: {
-                        minOperationalAmount: computeRaw(new Decimal(0.025), 9).toString(),
-                        targetOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                        minOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                        targetOperationalAmount: computeRaw(new Decimal(0.1), 9).toString(),
                     },
                     [Network.Testnet]: {
-                        minOperationalAmount: computeRaw(new Decimal(0.025), 9).toString(),
-                        targetOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                        minOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                        targetOperationalAmount: computeRaw(new Decimal(0.1), 9).toString(),
                     },
                 },
             },

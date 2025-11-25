@@ -39,6 +39,7 @@ export enum WinstonLog {
     SocketIoClientConnected = "Socket.Io.Client.Connected",
     SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
     ObserveClmmPool = "Observe.Clmm.Pool",
+    ObserveDlmmPool = "Observe.Dlmm.Pool",
     WebsocketMessageParseError = "Websocket.Message.Parse.Error",
     WebsocketConnectionError = "Websocket.Connection.Error",
     WebsocketCloseError = "Websocket.Close.Error",
