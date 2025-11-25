@@ -17,6 +17,7 @@ import { OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import BN from "bn.js"
+import Decimal from "decimal.js"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -60,7 +61,7 @@ export class OpenPositionProcessorService  {
         // initialize the mutex
         this.mutex = this.mutexService.mutex(
             getMutexKey(
-                MutexKey.OpenPosition, 
+                MutexKey.Action, 
                 this.request.bot.id
             ))
         // register event listeners
@@ -88,9 +89,14 @@ export class OpenPositionProcessorService  {
                 if (
                     !bot.snapshotTargetBalanceAmount 
                     || !bot.snapshotQuoteBalanceAmount
-                    || this.dayjsService.now().diff(
-                        bot.lastBalancesSnapshotAt, "millisecond") 
-                        > this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
+                    || !bot.snapshotGasBalanceAmount
+                    || new Decimal(
+                        this.dayjsService.now().diff(
+                            bot.lastBalancesSnapshotAt, "millisecond")).gt(
+                        new Decimal(
+                            this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
+                        )
+                    )
                 ) {
                     return
                 }

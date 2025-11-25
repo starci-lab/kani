@@ -65,7 +65,7 @@ export class ClosePositionProcessorService {
             ) => {
                 this.mutex = this.mutexService.mutex(
                     getMutexKey(
-                        MutexKey.ClosePosition, 
+                        MutexKey.Action, 
                         this.request.bot.id
                     ))
                 // re query the bot to ensure data is up to date

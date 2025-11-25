@@ -71,3 +71,14 @@ export class FeeInfo {
     feeRate: number
     feeToAddress: string
 }
+
+@ObjectType({
+    description: "Represents the fund configuration for the platform.",
+})
+export class FundConfig {
+    @Field(() => GraphQLJSON, {
+        description: "The fund amount for the platform.",
+    })
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        fundInfo: Partial<Record<ChainId, Partial<Record<Network, number>>>>
+}

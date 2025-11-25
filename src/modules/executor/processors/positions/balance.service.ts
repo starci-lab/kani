@@ -44,29 +44,35 @@ export class BalanceProcessorService  {
     async initialize() {
         // Ensure mutex exists for this bot
         this.mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Balance, this.request.bot.id),
+            getMutexKey(MutexKey.Action, this.request.bot.id),
         )
         // Periodic evaluation cycle
         const executeBalanceRebalancing = async () => {
-            // Refresh bot data from the database
-            const bot = await this.connection
-                .model<BotSchema>(BotSchema.name)
-                .findById(this.request.bot.id)
-
-            if (!bot) {
-                throw new BotNotFoundException(
-                    `Bot not found with id: ${this.request.bot.id}`,
-                )
+            if (this.mutex.isLocked()) {
+                return
             }
-            this.bot = bot.toJSON()
-            const activePosition = await this.connection
-                .model<PositionSchema>(PositionSchema.name).findOne({
-                    bot: this.bot.id,
-                    isActive: true,
+            await this.mutex.runExclusive(async () => {
+            // Refresh bot data from the database
+                const bot = await this.connection
+                    .model<BotSchema>(BotSchema.name)
+                    .findById(this.request.bot.id)
+
+                if (!bot) {
+                    throw new BotNotFoundException(
+                        `Bot not found with id: ${this.request.bot.id}`,
+                    )
+                }
+                this.bot = bot.toJSON()
+                const activePosition = await this.connection
+                    .model<PositionSchema>(PositionSchema.name).findOne({
+                        bot: this.bot.id,
+                        isActive: true,
+                    })
+                this.bot.activePosition = activePosition?.toJSON()
+                await this.balanceService.executeBalanceRebalancing({
+                    bot: this.bot,
+                    withoutSnapshot: false,
                 })
-            this.bot.activePosition = activePosition?.toJSON()
-            await this.balanceService.executeBalanceRebalancing({
-                bot: this.bot,
             })
         }
         // Run immediately and then at a fixed interval

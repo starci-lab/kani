@@ -20,7 +20,7 @@ import { Network } from "@typedefs"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
 import { InjectSolanaClients } from "@modules/blockchains"
 import { OPEN_POSITION_SLIPPAGE } from "../../swap"
-import { HttpAndWsClients } from "../../clients"
+import { HttpAndWsClients } from "../../clients" 
 import { Connection as SolanaConnection } from "@solana/web3.js"
 import { 
     createSolanaRpc,
@@ -43,7 +43,12 @@ import {
 } from "@solana/kit"
 import BN from "bn.js"
 import { BalanceService, CalculateProfitability, ProfitabilityMathService } from "../../balance"
-import { BalanceSnapshotService, ClosePositionSnapshotService, OpenPositionSnapshotService } from "../../snapshots"
+import { 
+    BalanceSnapshotService, 
+    ClosePositionSnapshotService, 
+    OpenPositionSnapshotService, 
+    SwapTransactionSnapshotService 
+} from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
 import { adjustSlippage, computeRaw, httpsToWss } from "@utils"
 import { GasStatus, GasStatusService } from "../../balance"
@@ -68,6 +73,7 @@ export class RaydiumActionService implements IActionService {
         private readonly profitabilityMathService: ProfitabilityMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly gasStatusService: GasStatusService,
+        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -134,13 +140,9 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const targetIsA = bot.targetToken.id === state.static.tokenA.toString()
         await this.proccessClosePositionTransaction({
             bot,
             state,
-            tokenAId: tokenA.displayId,
-            tokenBId: tokenB.displayId,
-            targetIsA,
         })
         // return false to terminate the assertion
         return false
@@ -233,10 +235,9 @@ export class RaydiumActionService implements IActionService {
         })
 
         const {
-            quoteBalanceAmount: adjustedQuoteBalanceAmount,
-            targetBalanceAmount: adjustedTargetBalanceAmount,
-            gasBalanceAmount: adjustedGasBalanceAmount,
-        } = await this.balanceService.fetchBalances({
+            balancesSnapshotsParams,
+            swapsSnapshotsParams,
+        } = await this.balanceService.executeBalanceRebalancing({
             bot,
         })
         const before: CalculateProfitability = {
@@ -245,9 +246,9 @@ export class RaydiumActionService implements IActionService {
             gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
         }
         const after: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(adjustedTargetBalanceAmount),
-            quoteTokenBalanceAmount: new BN(adjustedQuoteBalanceAmount),
-            gasBalanceAmount: new BN(adjustedGasBalanceAmount || 0),
+            targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+            quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasAmount || 0),
         }
         const { 
             roi, 
@@ -267,8 +268,8 @@ export class RaydiumActionService implements IActionService {
         } = await this.balanceService.processTransferFeesTransaction({
             bot,
             roi,
-            targetBalanceAmount: adjustedTargetBalanceAmount,
-            quoteBalanceAmount: adjustedQuoteBalanceAmount,
+            targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+            quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
         })
         const session = await this.connection.startSession()
         await session.withTransaction(
@@ -281,9 +282,9 @@ export class RaydiumActionService implements IActionService {
                 }
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
-                    targetBalanceAmount: adjustedTargetBalanceAmount,
-                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasAmount: adjustedGasBalanceAmount,
+                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
                     session,
                 })
                 await this.closePositionSnapshotService
@@ -298,6 +299,12 @@ export class RaydiumActionService implements IActionService {
                         targetFeeAmount,
                         quoteFeeAmount,
                     })
+                if (swapsSnapshotsParams) {
+                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                        ...swapsSnapshotsParams,
+                        session,
+                    })
+                }
             })
     }
 
@@ -438,18 +445,17 @@ export class RaydiumActionService implements IActionService {
         })
         // we refetch the balances after the position is opened
         const {
-            quoteBalanceAmount: adjustedQuoteBalanceAmount,
-            targetBalanceAmount: adjustedTargetBalanceAmount,
-            gasBalanceAmount: adjustedGasBalanceAmount,
-        } = await this.balanceService.fetchBalances({
+            balancesSnapshotsParams,
+            swapsSnapshotsParams,
+        } = await this.balanceService.executeBalanceRebalancing({
             bot,
         })
         let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
-            .sub(new BN(adjustedTargetBalanceAmount))
+            .sub(new BN(balancesSnapshotsParams?.targetBalanceAmount || 0))
         let quoteBalanceAmountUsed = snapshotQuoteBalanceAmountBN
-            .sub(new BN(adjustedQuoteBalanceAmount))
+            .sub(new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0))
         let gasBalanceAmountUsed = snapshotGasBalanceAmountBN
-            .sub(new BN(adjustedGasBalanceAmount || 0))
+            .sub(new BN(balancesSnapshotsParams?.gasAmount || 0))
         const gasStatus = this.gasStatusService.getGasStatus({
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
@@ -472,6 +478,8 @@ export class RaydiumActionService implements IActionService {
             break
         }
         }
+        
+        // update the snapshot balances
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
@@ -496,14 +504,20 @@ export class RaydiumActionService implements IActionService {
                 })
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
-                    targetBalanceAmount: adjustedTargetBalanceAmount,
-                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasAmount: adjustedGasBalanceAmount,
+                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
                     targetBalanceAmountBeforeOpen: new BN(snapshotTargetBalanceAmount),
                     quoteBalanceAmountBeforeOpen: new BN(snapshotQuoteBalanceAmount),
                     gasAmountBeforeOpen: new BN(snapshotGasBalanceAmount),
                     session,
                 })
+                if (swapsSnapshotsParams) {
+                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                        ...swapsSnapshotsParams,
+                        session,
+                    })
+                }
             })
     }
 }

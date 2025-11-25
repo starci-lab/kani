@@ -7,6 +7,7 @@ import {
     IBalanceService,
     ProcessTransferFeesTransactionParams,
     ProcessTransferFeesResponse,
+    ExecuteBalanceRebalancingResponse,
 } from "./balance.interface"
 import { SolanaBalanceService } from "./solana.service"
 import { ExecuteBalanceRebalancingParams } from "./balance.interface"
@@ -22,10 +23,10 @@ export class BalanceService implements IBalanceService {
 
     async executeBalanceRebalancing(
         params: ExecuteBalanceRebalancingParams
-    ): Promise<void> {
+    ): Promise<ExecuteBalanceRebalancingResponse> {
         // currently in a position, we skip the balance rebalancing
         if (params.bot.activePosition) {
-            return
+            return {}
         }
         switch (params.bot.chainId) {
         case ChainId.Solana:

@@ -18,9 +18,6 @@ export interface ClosePositionParams {
     state: LiquidityPoolState
     network?: Network
     chainId?: ChainId
-    tokenAId: TokenId
-    targetIsA: boolean
-    tokenBId: TokenId
     slippage?: number
     swapSlippage?: number
     // txb (sui only)

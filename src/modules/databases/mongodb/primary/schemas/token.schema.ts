@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { Field, Int, ObjectType } from "@nestjs/graphql"
+import { Field, Float, Int, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, GraphQLTypeTokenType, Network, TokenType } from "@modules/common"
 import { AbstractSchema } from "./abstract"
 import { CexId, GraphQLTypeCexId, GraphQLTypeTokenId, TokenId } from "../enums"
@@ -87,12 +87,19 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: Boolean, required: false })
         is2022Token?: boolean
 
-    @Field(() => Int, { 
+    @Field(() => Float, { 
         description: "The minimum required amount of the token to be eligible for the bot",
         nullable: true,
     })
     @Prop({ type: Number, required: false })
         minRequiredAmount?: number
+
+    @Field(() => Float, { 
+        description: "The minimum required amount of the token in total to be eligible for the bot",
+        nullable: true,
+    })
+    @Prop({ type: Number, required: false })
+        minRequiredAmountInTotal?: number
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)

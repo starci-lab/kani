@@ -2,13 +2,14 @@
 import { BotSchema, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
+import { UpdateBotSnapshotBalancesRecordParams, AddSwapTransactionRecordParams } from "../snapshots"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
  * It returns a quote + executable swap data.
  */
 export interface IBalanceService {
-    executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<void>
+    executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<ExecuteBalanceRebalancingResponse>
     fetchBalances(params: FetchBalancesParams): Promise<FetchBalancesResponse>
     fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
     processTransferFeesTransaction(params: ProcessTransferFeesTransactionParams): Promise<ProcessTransferFeesResponse>
@@ -27,6 +28,12 @@ export interface FetchBalanceResponse {
 export interface ExecuteBalanceRebalancingParams {
     bot: BotSchema
     clientIndex?: number
+    withoutSnapshot?: boolean
+}
+
+export interface ExecuteBalanceRebalancingResponse {
+    balancesSnapshotsParams?: UpdateBotSnapshotBalancesRecordParams
+    swapsSnapshotsParams?: AddSwapTransactionRecordParams
 }
 
 export enum ExecuteBalanceRebalancingStatus {
