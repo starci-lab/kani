@@ -239,6 +239,8 @@ export class RaydiumActionService implements IActionService {
             swapsSnapshotsParams,
         } = await this.balanceService.executeBalanceRebalancing({
             bot,
+            clientIndex: RAYDIUM_CLIENTS_INDEX,
+            withoutSnapshot: true,
         })
         const before: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
@@ -449,6 +451,8 @@ export class RaydiumActionService implements IActionService {
             swapsSnapshotsParams,
         } = await this.balanceService.executeBalanceRebalancing({
             bot,
+            clientIndex: RAYDIUM_CLIENTS_INDEX,
+            withoutSnapshot: true,
         })
         let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
             .sub(new BN(balancesSnapshotsParams?.targetBalanceAmount || 0))
