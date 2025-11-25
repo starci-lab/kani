@@ -10,6 +10,7 @@ import { OrcaModule } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { DispatchOpenPositionService } from "./dispatch-open-position.service"
 import { DispatchClosePositionService } from "./dispatch-close-position.service"
+import { MeteoraModule } from "./meteora/meteora.module"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -71,6 +72,16 @@ export class DexesModule extends ConfigurableModuleClass {
             dexModules.push(OrcaModule.register({
                 isGlobal: options.isGlobal,
                 enabled: options.dexes?.find((dex) => dex.dexId === DexId.Orca)?.enabled,
+            }))
+        }
+
+        if (
+            !options.dexes
+            || options.dexes.find((dex) => dex.dexId === DexId.Meteora)
+        ) {
+            dexModules.push(MeteoraModule.register({
+                isGlobal: options.isGlobal,
+                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Meteora)?.enabled,
             }))
         }
         

@@ -132,7 +132,8 @@ export enum LiquidityPoolId {
     MomentumSuiUsdc0175 = "momentumSuiUsdc0175",
     RaydiumSolUsdc004 = "raydiumSolUsdc004",
     RaydiumSolUsdt001 = "raydiumSolUsdt001",
-    OrcaSolUsdc004 = "orcaSolUsdc004"
+    OrcaSolUsdc004 = "orcaSolUsdc004",
+    MeteoraSolUsdcBinStep4 = "meteoraSolUsdcBinStep4"
 }
 
 export const GraphQLTypeLiquidityPoolId = createEnumType(LiquidityPoolId)
@@ -170,6 +171,9 @@ registerEnumType(GraphQLTypeLiquidityPoolId, {
         },
         [LiquidityPoolId.OrcaSolUsdc004]: {
             description: "Orca SOL-USDC LP pool with a 0.04% fee tier.",
+        },
+        [LiquidityPoolId.MeteoraSolUsdcBinStep4]: {
+            description: "Meteora SOL-USDC Bin Step 4 LP pool with a 0.04% fee tier.",
         },
     },
 })

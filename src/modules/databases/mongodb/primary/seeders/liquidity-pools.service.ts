@@ -200,4 +200,17 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tickSpacing: 4,
         tickMultiplier: 50,
     },
+    {
+        _id: createObjectId(LiquidityPoolId.MeteoraSolUsdcBinStep4),
+        displayId: LiquidityPoolId.MeteoraSolUsdcBinStep4,
+        dex: createObjectId(DexId.Meteora),
+        poolAddress: "5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6",
+        tokenA: createObjectId(TokenId.SolNative),
+        tokenB: createObjectId(TokenId.SolUsdc),
+        fee: 0.0004,
+        type: LiquidityPoolType.Dlmm,
+        metadata: {
+            programAddress: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+        },
+    },
 ]
