@@ -5,12 +5,10 @@ import { Connection, PublicKey } from "@solana/web3.js"
 import {  } from "@meteora-ag/dlmm"
 import { DynamicDlmmLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
 import {
-    InjectPrimaryMongoose,
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
 } from "@modules/databases"
-import { Connection as MongooseConnection } from "mongoose"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -23,6 +21,7 @@ import { LbPair } from "./beets"
 import { METEORA_CLIENTS_INDEX } from "./constants"
 import { createCacheKey } from "@modules/cache"
 import { CacheKey } from "@modules/cache"
+import { Cron, CronExpression } from "@nestjs/schedule"
 
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
@@ -35,18 +34,31 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly superjson: SuperJSON,
         @InjectSolanaClients()
         private readonly solanaClients: Record<Network, HttpAndWsClients<Connection>>,
-        @InjectPrimaryMongoose()
-        private readonly connection: MongooseConnection,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
     ) { }
 
     async onModuleInit() {
+        this.handlePoolStateUpdateInterval()
+    }
+
+    // fetch the pool every 10s to ensure if no event from websocket
+    @Cron(CronExpression.EVERY_10_SECONDS)
+    async handlePoolStateUpdateInterval() {
+        const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Meteora).toString()) continue
-            await this.fetchPoolInfo(liquidityPool.displayId)
+            promises.push(
+                (
+                    async () => {
+                        const state = await this.fetchPoolInfo(liquidityPool.displayId)
+                        await this.handlePoolStateUpdate(liquidityPool.displayId, state)
+                    }
+                )()
+            )
         }
+        await this.asyncService.allIgnoreError(promises)
     }
     // ============================================
     // Main bootstrap

@@ -86,7 +86,6 @@ export class MeteoraSdkService {
         const overflowDefaultBinArrayBitmap = binArrayIndexes.some(
             (binArrayIndex) => isOverflowDefaultBinArrayBitmap(binArrayIndex)
         )
-        console.log("overflowDefaultBinArrayBitmap", overflowDefaultBinArrayBitmap)
         // track which PDAs have been initialized
         const initTracking = new Set<Address>()
         // need to init bitmap?
@@ -127,8 +126,6 @@ export class MeteoraSdkService {
         // build add parameters
         const minDeltaId = new BN(positionMinBinId).sub(new BN(state.dynamic.activeId))
         const maxDeltaId = new BN(positionMaxBinId).sub(new BN(state.dynamic.activeId))
-        console.log("minDeltaId", minDeltaId.toNumber())
-        console.log("maxDeltaId", maxDeltaId.toNumber())
         const { deltaX, deltaY, x0, y0 } = resetUninvolvedLiquidityParams(
             minDeltaId,
             maxDeltaId,

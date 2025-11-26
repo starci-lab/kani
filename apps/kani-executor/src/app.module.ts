@@ -89,21 +89,21 @@ import { TxBuilderModule } from "@modules/blockchains"
                 {
                     dexId: DexId.Raydium,
                     enabled: {
-                        observe: true,
+                        observe: false,
                         action: true,
                     },
                 },
                 {
                     dexId: DexId.Orca,
                     enabled: {
-                        observe: true,
+                        observe: false,
                         action: true,
                     },
                 },
                 {
                     dexId: DexId.Meteora,
                     enabled: {
-                        observe: true,
+                        observe: false,
                         action: true,
                     },
                 },

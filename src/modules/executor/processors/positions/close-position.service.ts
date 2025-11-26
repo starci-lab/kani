@@ -1,5 +1,5 @@
 import { Inject, Injectable, Scope } from "@nestjs/common"
-import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { REQUEST } from "@nestjs/core"
 import { BotSchema, InjectPrimaryMongoose, PositionSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
@@ -62,6 +62,75 @@ export class ClosePositionProcessorService {
             EventName.InternalLiquidityPoolsFetched,
             async (
                 payload: LiquidityPoolsFetchedEvent
+            ) => {
+                this.mutex = this.mutexService.mutex(
+                    getMutexKey(
+                        MutexKey.Action, 
+                        this.request.bot.id
+                    ))
+                // re query the bot to ensure data is up to date
+                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
+                if (!bot) {
+                    // bot not found, we skip here
+                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
+                }
+                // assign the bot to the instance
+                this.bot = bot.toJSON()
+                const activePosition = await this.connection
+                    .model<PositionSchema>(PositionSchema.name).findOne({
+                        bot: this.bot.id,
+                        isActive: true,
+                    })
+                this.bot.activePosition = activePosition?.toJSON()
+                if (!this.bot.activePosition) {
+                    // we do nothing if the bot is not in a position
+                    return
+                }
+                // only run if the liquidity pool is belong to the bot
+                if (
+                    !this.bot.liquidityPools
+                        .map((liquidityPool) => liquidityPool.toString())
+                        .includes(createObjectId(payload.liquidityPoolId).toString())
+                )
+                {
+                    // skip if the liquidity pool is not belong to the bot
+                    return
+                }
+                // define the target and quote tokens
+                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.targetToken.toString())
+                if (!targetToken) {
+                    throw new TokenNotFoundException("Target token not found")
+                }
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.quoteToken.toString())
+                if (!quoteToken) {
+                    throw new TokenNotFoundException("Quote token not found")
+                }
+                // run the open position
+                if (this.mutex.isLocked()) {
+                    return
+                }
+                await this.mutex.runExclusive(
+                    async () => {
+                        try {
+                            return await this.dispatchClosePositionService.dispatchClosePosition({
+                                liquidityPoolId: payload.liquidityPoolId,
+                                bot: this.bot,
+                            })
+                        } catch (error) {
+                            this.logger.error(
+                                WinstonLog.ClosePositionFailed, {
+                                    botId: this.bot.id,
+                                    liquidityPoolId: payload.liquidityPoolId,
+                                    error: error.message,
+                                })
+                        }
+                    })
+            }
+        )
+        this.eventEmitter.on(
+            EventName.InternalDlmmLiquidityPoolsFetched,
+            async (
+                payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
                 this.mutex = this.mutexService.mutex(
                     getMutexKey(

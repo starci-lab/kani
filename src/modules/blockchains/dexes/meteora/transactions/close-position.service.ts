@@ -107,7 +107,7 @@ export class ClosePositionInstructionService {
             },
         })
         const removeLiquidityByRange2Instruction: Instruction = {
-            programAddress: address(state.static.poolAddress),
+            programAddress: address(programAddress),
             accounts: [
                 {
                     address: address(bot.activePosition.positionId),
@@ -181,7 +181,7 @@ export class ClosePositionInstructionService {
             },
         })
         const claimFee2Instruction: Instruction = {
-            programAddress: address(state.static.poolAddress),
+            programAddress: address(programAddress),
             accounts: [
                 {
                     address: address(state.static.poolAddress),
@@ -244,7 +244,7 @@ export class ClosePositionInstructionService {
         }
         instructions.push(claimFee2Instruction)
         const closePositionIfEmptyInstruction: Instruction = {
-            programAddress: address(state.static.poolAddress),
+            programAddress: address(programAddress),
             accounts: [
                 {
                     address: address(bot.activePosition.positionId),

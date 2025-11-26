@@ -8,6 +8,7 @@ import {
     MeteoraSdkService, 
     ClosePositionInstructionService 
 } from "./transactions"
+
 @Injectable()
 export class MeteoraModule extends ConfigurableModuleClass {
     static register(
