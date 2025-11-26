@@ -98,7 +98,6 @@ export const toScaledBN = (
         .div(new BN(decimalMultiplier.toFixed(0)))
 }
 
-
 export const adjustSlippage = (
     bn: BN,
     slippage: Decimal,

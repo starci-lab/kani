@@ -2,6 +2,12 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orca.module-definition"
 import { OrcaObserverService } from "./observer.service"
 import { OrcaActionService } from "./action.service"
+import { 
+    TickArrayService, 
+    OpenPositionInstructionService, 
+    ClosePositionInstructionService, 
+    PositionService 
+} from "./transactions"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -10,6 +16,10 @@ export class OrcaModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
+            TickArrayService,
+            PositionService,
+            OpenPositionInstructionService,
+            ClosePositionInstructionService,
         ]
         if (
             typeof options.enabled === "boolean" 

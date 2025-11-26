@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
@@ -24,7 +24,7 @@ import { CacheKey } from "@modules/cache"
 import { Cron, CronExpression } from "@nestjs/schedule"
 
 @Injectable()
-export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
+export class MeteoraObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
@@ -39,10 +39,6 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly events: EventEmitterService,
     ) { }
 
-    async onModuleInit() {
-        this.handlePoolStateUpdateInterval()
-    }
-
     // fetch the pool every 10s to ensure if no event from websocket
     @Cron(CronExpression.EVERY_10_SECONDS)
     async handlePoolStateUpdateInterval() {
@@ -52,10 +48,8 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
             promises.push(
                 (
                     async () => {
-                        const state = await this.fetchPoolInfo(liquidityPool.displayId)
-                        await this.handlePoolStateUpdate(liquidityPool.displayId, state)
-                    }
-                )()
+                        await this.fetchPoolInfo(liquidityPool.displayId)
+                    })()
             )
         }
         await this.asyncService.allIgnoreError(promises)
@@ -64,11 +58,19 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     // Main bootstrap
     // ============================================
     async onApplicationBootstrap() {
+        await this.handlePoolStateUpdateInterval()
+        const promises: Array<Promise<void>> = []
         for (const liquidityPool
             of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Meteora).toString()) continue
-            this.observeDlmmPool(liquidityPool.displayId)
+            promises.push(
+                (
+                    async () => {
+                        await this.observeDlmmPool(liquidityPool.displayId)
+                    })()
+            )
         }
+        await this.asyncService.allIgnoreError(promises)
     }
 
     // ============================================

@@ -70,13 +70,13 @@ export class ClosePositionInstructionService {
         })
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.tickLower,
+            tickIndex: bot.activePosition.tickLower ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.tickUpper,
+            tickIndex: bot.activePosition.tickUpper ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
         })
@@ -148,7 +148,7 @@ export class ClosePositionInstructionService {
             })
         }  
         const [closePositionArgs] = ClosePositionArgs.serialize({
-            liquidity: bot.activePosition.liquidity.toString(),
+            liquidity: bot.activePosition.liquidity?.toString(),
             amount0Max: new BN(0).toString(),
             amount1Max: new BN(0).toString(),
         })

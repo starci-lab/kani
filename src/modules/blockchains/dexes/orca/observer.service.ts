@@ -2,7 +2,7 @@ import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common
 import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
-import { ORCA_CLIENT_INDEX } from "./constants"
+import { ORCA_CLIENTS_INDEX } from "./constants"
 import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
 import {
@@ -21,6 +21,7 @@ import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 import { Whirlpool } from "./beets"
+import { CronExpression, Cron } from "@nestjs/schedule"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit {
@@ -52,13 +53,35 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     // Main bootstrap
     // ============================================
     async onApplicationBootstrap() {
+        await this.handlePoolStateUpdateInterval()
+        const promises: Array<Promise<void>> = []
         // observe
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
-            this.observeClmmPool(liquidityPool.displayId)
+            promises.push(
+                (
+                    async () => {
+                        await this.observeClmmPool(liquidityPool.displayId)
+                    })()
+            )
         }
+        await this.asyncService.allIgnoreError(promises)  
     }
 
+    @Cron(CronExpression.EVERY_10_SECONDS)
+    private async handlePoolStateUpdateInterval() {
+        const promises: Array<Promise<void>> = []
+        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
+            promises.push(
+                (
+                    async () => {
+                        await this.fetchPoolInfo(liquidityPool.displayId)
+                    })()
+            )
+        }
+        await this.asyncService.allIgnoreError(promises)
+    }
     // ============================================
     // Shared handler
     // ============================================
@@ -103,14 +126,16 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     // ============================================
     // Fetch once
     // ============================================
-    private async fetchPoolInfo(liquidityPoolId: LiquidityPoolId) {
+    private async fetchPoolInfo(
+        liquidityPoolId: LiquidityPoolId
+    ) {
         const liquidityPool = this.memoryStorageService.liquidityPools.find(
             (pool) => pool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
         const connection =
-            this.solanaClients[liquidityPool.network].ws[ORCA_CLIENT_INDEX]
+            this.solanaClients[liquidityPool.network].ws[ORCA_CLIENTS_INDEX]
         const accountInfo = await connection.getAccountInfo(
             new PublicKey(liquidityPool.poolAddress),
         )
@@ -125,14 +150,16 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     // ============================================
     // Observe (subscribe)
     // ============================================
-    private async observeClmmPool(liquidityPoolId: LiquidityPoolId) {
+    private async observeClmmPool(
+        liquidityPoolId: LiquidityPoolId
+    ) {
         const liquidityPool = this.memoryStorageService.liquidityPools.find(
             (pool) => pool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
         const connection =
-            this.solanaClients[liquidityPool.network].ws[ORCA_CLIENT_INDEX]
+            this.solanaClients[liquidityPool.network].ws[ORCA_CLIENTS_INDEX]
 
         connection.onAccountChange(
             new PublicKey(liquidityPool.poolAddress),

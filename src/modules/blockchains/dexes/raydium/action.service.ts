@@ -18,7 +18,7 @@ import {
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
-import { InjectSolanaClients } from "@modules/blockchains"
+import { DynamicLiquidityPoolInfo, InjectSolanaClients } from "@modules/blockchains"
 import { OPEN_POSITION_SLIPPAGE } from "../../swap"
 import { HttpAndWsClients } from "../../clients" 
 import { Connection as SolanaConnection } from "@solana/web3.js"
@@ -54,6 +54,7 @@ import { adjustSlippage, computeRaw, httpsToWss } from "@utils"
 import { GasStatus, GasStatusService } from "../../balance"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -131,14 +132,15 @@ export class RaydiumActionService implements IActionService {
                 "Active position not found"
             )
         }
-        // if (
-        //     new Decimal(state.dynamic.tickCurrent).gte(bot.activePosition.tickLower) 
-        //     && new Decimal(state.dynamic.tickCurrent).lte(bot.activePosition.tickUpper)
-        // ) {
-        //     // do nothing, since the position is still in the range
-        //     // return true to continue the assertion
-        //     return true
-        // }
+        const _state = state.dynamic as DynamicLiquidityPoolInfo
+        if (
+            new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
+            && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
@@ -169,7 +171,11 @@ export class RaydiumActionService implements IActionService {
             snapshotQuoteBalanceAmountBeforeOpen,
             snapshotGasBalanceAmountBeforeOpen,
         } = bot
-        if (!snapshotTargetBalanceAmountBeforeOpen || !snapshotQuoteBalanceAmountBeforeOpen || !snapshotGasBalanceAmountBeforeOpen) {
+        if (
+            !snapshotTargetBalanceAmountBeforeOpen || 
+            !snapshotQuoteBalanceAmountBeforeOpen || 
+            !snapshotGasBalanceAmountBeforeOpen
+        ) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
         const network = Network.Mainnet

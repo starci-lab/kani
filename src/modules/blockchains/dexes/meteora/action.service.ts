@@ -52,6 +52,9 @@ import {
     OpenPositionSnapshotService,
     ClosePositionSnapshotService, 
 } from "../../snapshots"
+import Decimal from "decimal.js"
+import { DynamicDlmmLiquidityPoolInfo } from "../../types"
+
 @Injectable()
 export class MeteoraActionService implements IActionService {
     constructor(
@@ -307,15 +310,15 @@ export class MeteoraActionService implements IActionService {
                 "Active position not found"
             )
         }
-        // const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo
-        // if (
-        //     new Decimal(_state.activeId || 0).gte(bot.activePosition.minBinId || 0) 
-        //     && new Decimal(_state.activeId || 0).lte(bot.activePosition.maxBinId || 0)
-        // ) {
-        //     // do nothing, since the position is still in the range
-        //     // return true to continue the assertion
-        //     return true
-        // }
+        const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo
+        if (
+            new Decimal(_state.activeId || 0).gte(bot.activePosition.minBinId || 0) 
+            && new Decimal(_state.activeId || 0).lte(bot.activePosition.maxBinId || 0)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens

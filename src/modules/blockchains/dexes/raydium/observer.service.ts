@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { Network } from "@modules/common"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
@@ -19,9 +19,11 @@ import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
+import { CronExpression } from "@nestjs/schedule"
+import { Cron } from "@nestjs/schedule"
 
 @Injectable()
-export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleInit {
+export class RaydiumObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
@@ -36,21 +38,37 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly events: EventEmitterService,
     ) { }
 
-    async onModuleInit() {
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
-            await this.fetchPoolInfo(liquidityPool.displayId)
-        }
-    }
     // ============================================
     // Main bootstrap
     // ============================================
     async onApplicationBootstrap() {
-        for (const liquidityPool
-            of this.memoryStorageService.liquidityPools) {
+        await this.handlePoolStateUpdateInterval()
+        const promises: Array<Promise<void>> = []
+        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
-            this.observeClmmPool(liquidityPool.displayId)
+            promises.push(
+                (
+                    async () => {
+                        await this.observeClmmPool(liquidityPool.displayId)
+                    })()
+            )
         }
+        await this.asyncService.allIgnoreError(promises)
+    }
+
+    @Cron(CronExpression.EVERY_10_SECONDS)
+    private async handlePoolStateUpdateInterval() {
+        const promises: Array<Promise<void>> = []
+        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+            if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
+            promises.push(
+                (
+                    async () => {
+                        await this.fetchPoolInfo(liquidityPool.displayId)
+                    })()
+            )
+        }
+        await this.asyncService.allIgnoreError(promises)
     }
 
     // ============================================

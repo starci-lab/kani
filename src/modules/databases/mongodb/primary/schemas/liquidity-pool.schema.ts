@@ -112,7 +112,6 @@ export interface RaydiumLiquidityPoolMetadata {
     programAddress: string
     tokenVault0: string
     tokenVault1: string
-    rewardVaults: Array<RaydiumRewardVault>
 }
 
 export interface RaydiumRewardVault {
@@ -124,4 +123,10 @@ export interface MeteoraLiquidityPoolMetadata {
     programAddress: string
     reserveXAddress: string
     reserveYAddress: string
+}
+
+export interface OrcaLiquidityPoolMetadata {
+    programAddress: string
+    tokenVault0: string
+    tokenVault1: string
 }

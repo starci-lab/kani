@@ -199,6 +199,11 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Solana,
         tickSpacing: 4,
         tickMultiplier: 50,
+        metadata: {
+            programAddress: "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+            tokenVault0: "EUuUbDcafPrmVTD5M6qoJAoyyNbihBhugADAxRMn5he9",
+            tokenVault1: "2WLWEuKDgkDUccTpbwYp1GToYktiSB1cXvreHUwiSUVP",
+        },
     },
     {
         _id: createObjectId(LiquidityPoolId.MeteoraSolUsdcBinStep4),
