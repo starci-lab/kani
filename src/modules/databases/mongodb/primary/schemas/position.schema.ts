@@ -39,17 +39,33 @@ export class PositionSchema extends AbstractSchema {
     @Prop({ type: String })
         gasAmountUsed?: string
 
-    @Field(() => String, { description: "Liquidity amount minted for this position" })
-    @Prop({ type: String, required: true })
-        liquidity: BN
+    @Field(() => String, { description: "Liquidity amount minted for this position", nullable: true })
+    @Prop({ type: String, required: false })
+        liquidity?: BN
 
-    @Field(() => Int, { description: "Lower tick boundary of the position's price range" })
-    @Prop({ type: Number })
-        tickLower: number
+    @Field(() => Int, { description: "Lower tick boundary of the position's price range", nullable: true })
+    @Prop({ type: Number, required: false })
+        tickLower?: number
 
-    @Field(() => Int, { description: "Upper tick boundary of the position's price range" })
-    @Prop({ type: Number })
-        tickUpper: number
+    @Field(() => Int, { description: "Upper tick boundary of the position's price range", nullable: true })
+    @Prop({ type: Number, required: false })
+        tickUpper?: number
+
+    @Field(() => String, { description: "Amount of target tokens spent to open the position", nullable: true })
+    @Prop({ type: String, required: false })
+        amountA?: string
+
+    @Field(() => String, { description: "Amount of quote tokens spent to open the position", nullable: true })
+    @Prop({ type: String, required: false })
+        amountB?: string
+        
+    @Field(() => Int, { description: "Lower bin id of the position's price range", nullable: true })
+    @Prop({ type: Number, required: false })
+        minBinId?: number
+
+    @Field(() => Int, { description: "Lower bin id of the position's price range", nullable: true })
+    @Prop({ type: Number, required: false })
+        maxBinId?: number
 
     @Field(() => String, { description: "Reference to the bot that created this position" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: BotSchema.name })

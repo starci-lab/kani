@@ -35,7 +35,9 @@ export interface CreateOpenPositionInstructionsParams {
 
 export interface CreateOpenPositionInstructionsResponse {
     instructions: Array<Instruction>
-    positionKeyPairs: Array<KeyPairSigner>
+    positionKeyPair: KeyPairSigner
+    minBinId: Decimal
+    maxBinId: Decimal
 }
 
 @Injectable()
@@ -202,7 +204,9 @@ export class OpenPositionInstructionService {
         instructions.push(...endInstructions) 
         return {
             instructions,
-            positionKeyPairs,
+            positionKeyPair,
+            minBinId,
+            maxBinId,
         }
     }
 }

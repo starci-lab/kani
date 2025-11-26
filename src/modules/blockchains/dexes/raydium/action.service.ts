@@ -233,6 +233,7 @@ export class RaydiumActionService implements IActionService {
                     WinstonLog.ClosePositionSuccess, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,
+                        liquidityPoolId: _state.static.displayId,
                     })
                 return transactionSignature.toString()
             },
@@ -446,6 +447,7 @@ export class RaydiumActionService implements IActionService {
                     WinstonLog.OpenPositionSuccess, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,
+                        liquidityPoolId: _state.static.displayId,
                     })
                 return transactionSignature.toString()
             },

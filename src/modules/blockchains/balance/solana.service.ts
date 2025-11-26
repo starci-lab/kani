@@ -587,6 +587,8 @@ export class SolanaBalanceService implements IBalanceService {
                     WinstonLog.SwapTransactionSuccess, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,
+                        tokenInId: tokenIn.displayId,
+                        tokenOutId: tokenOut.displayId,
                     })
                 return transactionSignature.toString()
             },

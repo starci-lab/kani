@@ -19,6 +19,10 @@ export class OpenPositionSnapshotService {
             targetAmountUsed,
             quoteAmountUsed,
             liquidity,
+            amountA,
+            amountB,
+            minBinId,
+            maxBinId,
             gasAmountUsed,
             bot,
             targetIsA,
@@ -38,7 +42,11 @@ export class OpenPositionSnapshotService {
         ).create([{
             targetAmountUsed: targetAmountUsed.toString(),
             quoteAmountUsed: quoteAmountUsed.toString(),
-            liquidity: liquidity.toString(),
+            liquidity: liquidity?.toString(),
+            amountA: amountA?.toString(),
+            amountB: amountB?.toString(),
+            minBinId,
+            maxBinId,
             gasAmountUsed: gasAmountUsed?.toString(),
             bot: bot.id,
             network,
@@ -59,11 +67,17 @@ export class OpenPositionSnapshotService {
 }
 
 export interface AddOpenPositionTransactionRecordParams {
-    tickUpper: number
-    tickLower: number
+    // clmm
+    tickUpper?: number
+    tickLower?: number
+    liquidity?: BN
+    // dlmm
+    amountA?: BN
+    amountB?: BN
+    minBinId?: number
+    maxBinId?: number
     targetAmountUsed: BN
     quoteAmountUsed: BN
-    liquidity: BN
     gasAmountUsed?: BN
     bot: BotSchema
     network: Network
