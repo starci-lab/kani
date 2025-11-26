@@ -30,4 +30,5 @@ export interface DynamicLiquidityPoolInfoCacheResult {
 
 export interface DynamicDlmmLiquidityPoolInfoCacheResult {
     activeId: number
+    rewards: Array<unknown>
 }

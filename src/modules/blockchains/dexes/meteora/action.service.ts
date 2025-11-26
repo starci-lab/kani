@@ -30,7 +30,6 @@ import {
     assertIsSendableTransaction, 
     assertIsTransactionWithinSizeLimit, 
     getSignatureFromTransaction,
-    getBase64EncodedWireTransaction,
 } from "@solana/kit"
 import { METEORA_CLIENTS_INDEX } from "./constants"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
@@ -406,24 +405,18 @@ export class MeteoraActionService implements IActionService {
                     rpcSubscriptions,
                 })
                 const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                // await sendAndConfirmTransaction(
-                //     signedTransaction, {
-                //         commitment: "confirmed",
-                //         maxRetries: BigInt(5),
-                //     })
-                // this.logger.info(
-                //     WinstonLog.ClosePositionSuccess, {
-                //         txHash: transactionSignature.toString(),
-                //         bot: bot.id,
-                //         liquidityPoolId: _state.static.displayId,
-                //     })
-                //return transactionSignature.toString()
-                const { value: { logs }} = await rpc.simulateTransaction(
-                    getBase64EncodedWireTransaction(signedTransaction), {
-                        encoding: "base64",
-                    }).send()
-                console.log("logs", logs)
-                throw new Error("test")
+                await sendAndConfirmTransaction(
+                    signedTransaction, {
+                        commitment: "confirmed",
+                        maxRetries: BigInt(5),
+                    })
+                this.logger.info(
+                    WinstonLog.ClosePositionSuccess, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                return transactionSignature.toString()
             },
         })
 
@@ -502,5 +495,4 @@ export class MeteoraActionService implements IActionService {
                 }
             })
     }
-
 }

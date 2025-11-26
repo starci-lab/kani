@@ -6,7 +6,7 @@ import { RaydiumActionService } from "./raydium"
 import { OrcaActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraActionService } from "./meteora"
-import { DlmmLiquidityPoolState, LiquidityPoolState } from ".."
+import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 
 @Injectable()
 export class DispatchClosePositionService {

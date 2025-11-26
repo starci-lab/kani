@@ -11,13 +11,17 @@ import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@ex
 import { EventAuthorityService } from "./event-authority.service"
 import BN from "bn.js"
 import { METEORA_CLIENTS_INDEX } from "../constants"
-import { deriveBinArrayBitmapExtension } from "@meteora-ag/dlmm"
+import { deriveBinArrayBitmapExtension, getBinArrayAccountMetasCoverage } from "@meteora-ag/dlmm"
 import { PublicKey } from "@solana/web3.js"
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
-import { FixableBeetArgsStruct, i32, u16 } from "@metaplex-foundation/beet"
+import { bignum, FixableBeetArgsStruct, i32, u16, u64 } from "@metaplex-foundation/beet"
 import { RemainingAccountsInfoArgs, RemainingAccountsInfoType } from "./sdk.service"
+import { convertWeb3MetaToKitMeta } from "@utils"
+import { RewardInfo } from "../beets"
+import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
+import { ChainId } from "@typedefs"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
@@ -106,6 +110,12 @@ export class ClosePositionInstructionService {
                 slices: [],
             },
         })
+        const binArrayAccountsMeta = getBinArrayAccountMetasCoverage(
+            new BN(bot.activePosition.minBinId || 0),
+            new BN(bot.activePosition.maxBinId || 0),
+            new PublicKey(state.static.poolAddress),
+            new PublicKey(programAddress)
+        )
         const removeLiquidityByRange2Instruction: Instruction = {
             programAddress: address(programAddress),
             accounts: [
@@ -169,6 +179,7 @@ export class ClosePositionInstructionService {
                     address: address(programAddress),
                     role: AccountRole.READONLY,
                 },
+                ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
             ],
             data: this.anchorUtilsService.encodeAnchorIx("remove_liquidity_by_range2", removeLiquidityByRange2Args),
         }
@@ -239,10 +250,92 @@ export class ClosePositionInstructionService {
                     address: address(programAddress),
                     role: AccountRole.READONLY,
                 },
+                ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
             ],
             data: this.anchorUtilsService.encodeAnchorIx("claim_fee2", claimFee2Args),
         }
         instructions.push(claimFee2Instruction)
+        for (let i = 0; i < 2; i++) {
+            const [claimReward2Args] = ClaimReward2Args.serialize({
+                rewardIndex: new BN(i),
+                minBinId: bot.activePosition.minBinId || 0,
+                maxBinId: bot.activePosition.maxBinId || 0,
+                remainingAccountsInfo: {
+                    slices: [],
+                },
+            })  
+            const rewardInfo = state.dynamic.rewards[i] as RewardInfo
+            if (!rewardInfo || address(rewardInfo.mint.toString()) === address(SYSTEM_PROGRAM_ADDRESS))
+                continue
+            const {
+                instructions: createAtaRewardInstructions,
+                endInstructions: closeAtaRewardInstructions,
+                ataAddress: ataRewardAddress,
+            } = await this.ataInstructionService.getOrCreateAtaInstructions({
+                tokenMint: address(rewardInfo.mint.toString()),
+                ownerAddress: address(bot.accountAddress),
+                is2022Token: false,
+                clientIndex: METEORA_CLIENTS_INDEX,
+            })
+            if (createAtaRewardInstructions?.length) {
+                instructions.push(...createAtaRewardInstructions)
+            }
+            if (closeAtaRewardInstructions?.length) {
+                endInstructions.push(...closeAtaRewardInstructions)
+            }
+            const token = this.primaryMemoryStorageService.tokens.find((token) => 
+                token.tokenAddress === rewardInfo.mint.toString()
+                && token.chainId === ChainId.Solana
+            )
+            const claimReward2Instruction: Instruction = {
+                programAddress: address(programAddress),
+                accounts: [
+                    {
+                        address: address(state.static.poolAddress),
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: address(bot.activePosition.positionId),
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: address(bot.accountAddress),
+                        role: AccountRole.WRITABLE_SIGNER,
+                    },
+                    {
+                        address: address(rewardInfo.vault.toString()),
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: token?.tokenAddress ? address(token.tokenAddress) : WSOL_MINT_ADDRESS,
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: address(ataRewardAddress),
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: token?.is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                        role: AccountRole.READONLY,
+                    },
+                    {
+                        address: MEMO_PROGRAM_ADDRESS,
+                        role: AccountRole.READONLY,
+                    },
+                    {
+                        address: address(eventAuthorityPda),
+                        role: AccountRole.READONLY,
+                    },
+                    {
+                        address: address(programAddress),
+                        role: AccountRole.READONLY,
+                    },
+                    ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
+                ],
+                data: this.anchorUtilsService.encodeAnchorIx("claim_reward2", claimReward2Args),
+            }
+            instructions.push(claimReward2Instruction)
+        }
         const closePositionIfEmptyInstruction: Instruction = {
             programAddress: address(programAddress),
             accounts: [
@@ -271,9 +364,7 @@ export class ClosePositionInstructionService {
             ],
             data: this.anchorUtilsService.encodeAnchorIx("close_position_if_empty"),
         }
-        instructions.push(closePositionIfEmptyInstruction)
-
-        instructions.push(...endInstructions)
+        instructions.push(closePositionIfEmptyInstruction, ...endInstructions)
         return instructions
     }
 }
@@ -307,4 +398,20 @@ export const ClaimFee2Args = new FixableBeetArgsStruct<ClaimFee2ArgsType>(
         ["remainingAccountsInfo", RemainingAccountsInfoArgs],
     ],
     "ClaimFee2Args"
+)
+
+export interface ClaimReward2ArgsType {
+    rewardIndex: bignum
+    minBinId: number
+    maxBinId: number
+    remainingAccountsInfo: RemainingAccountsInfoType
+}
+export const ClaimReward2Args = new FixableBeetArgsStruct<ClaimReward2ArgsType>(
+    [
+        ["rewardIndex", u64],
+        ["minBinId", i32],
+        ["maxBinId", i32],
+        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+    ],
+    "ClaimReward2Args"
 )

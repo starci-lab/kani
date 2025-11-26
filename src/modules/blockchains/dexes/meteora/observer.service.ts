@@ -80,15 +80,14 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     ) {
         const dynamicDlmmLiquidityPoolInfo: DynamicDlmmLiquidityPoolInfoCacheResult = {
             activeId: state.active_id,
+            rewards: state.reward_infos,
         }
         await this.asyncService.allIgnoreError([
             // cache
-           
             this.cacheManager.set(
                 createCacheKey(CacheKey.DynamicDlmmLiquidityPoolInfo, liquidityPoolId),
                 this.superjson.stringify(dynamicDlmmLiquidityPoolInfo),
             ),
-
             // event
             this.events.emit(
                 EventName.DlmmLiquidityPoolsFetched,

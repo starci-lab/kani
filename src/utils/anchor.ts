@@ -1,6 +1,7 @@
 // anchor-utils.ts
 import { sha256 } from "@noble/hashes/sha2"
-import { Address } from "@solana/kit"
+import { AccountMeta as SolanaWeb3JsAccountMeta } from "@solana/web3.js"
+import { AccountMeta, AccountRole, Address, address } from "@solana/kit"
 import { TransactionMessage } from "@solana/kit"
 import BN from "bn.js"
 
@@ -58,4 +59,25 @@ export interface AppendTransactionMessageInstructionParams<Accounts, Data> {
     ownerAddress: Address;
     accounts: Accounts;
     data: Data;
+}
+
+export const convertWeb3MetaToKitMeta = (meta: SolanaWeb3JsAccountMeta): AccountMeta => {
+    const pubkey = address(meta.pubkey.toString())
+    let role: AccountRole = AccountRole.READONLY
+    if (meta.isWritable && meta.isSigner) {
+        role = AccountRole.READONLY
+    }
+    if (meta.isSigner && !meta.isWritable) {
+        role = AccountRole.READONLY_SIGNER
+    }
+    if (meta.isWritable && !meta.isSigner) {
+        role = AccountRole.WRITABLE
+    }
+    if (!meta.isWritable && !meta.isSigner) {
+        role = AccountRole.WRITABLE_SIGNER
+    }
+    return {
+        address: pubkey,
+        role,
+    }
 }

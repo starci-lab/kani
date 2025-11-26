@@ -28,6 +28,7 @@ export interface DynamicLiquidityPoolInfo {
 
 export interface DynamicDlmmLiquidityPoolInfo {
     activeId: number
+    rewards: Array<unknown>
 }
 
 export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]
