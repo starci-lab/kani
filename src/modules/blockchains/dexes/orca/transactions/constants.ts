@@ -1,0 +1,1 @@
+export const METADATA_UPDATE_AUTH_ADDRESS = "3axbTs2z5GBy6usVbNVoqEgZMng3vZvMnAoX29BFfwhr"

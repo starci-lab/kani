@@ -36,3 +36,15 @@ export class DLMMOverflowDefaultBinArrayBitmapException extends AbstractExceptio
         super(message || "DLMM overflow default bin array bitmap", "DLMM_OVERFLOW_DEFAULT_BIN_ARRAY_BITMAP_EXCEPTION")
     }
 }
+
+export class BotMissingParametersException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bot missing parameters", "BOT_MISSING_PARAMETERS_EXCEPTION")
+    }
+}
+
+export class RpcMissingParametersException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Rpc missing parameters", "RPC_MISSING_PARAMETERS_EXCEPTION")
+    }
+}

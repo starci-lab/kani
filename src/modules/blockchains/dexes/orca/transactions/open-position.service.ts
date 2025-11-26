@@ -2,20 +2,26 @@ import { Injectable } from "@nestjs/common"
 import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
 import { BotSchema, OrcaLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { AccountRole, Address, address, generateKeyPairSigner, Instruction, KeyPairSigner } from "@solana/kit"
-import { LiquidityPoolState } from "@modules/blockchains"
+import { InjectSolanaClients, LiquidityPoolState } from "@modules/blockchains"
 import { InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
 import { Decimal } from "decimal.js"
 import BN from "bn.js"
 import { PositionService } from "./position.service"
-import { ASSOCIATED_TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
+import { ASSOCIATED_TOKEN_PROGRAM_ADDRESS, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
-import { BeetArgsStruct, bool, i32 } from "@metaplex-foundation/beet"
+import { BeetArgsStruct, bool, i32, u128, u64 } from "@metaplex-foundation/beet"
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-
+import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
+import { Network } from "@modules/common"
+import { HttpAndWsClients } from "../../../clients"
+import { Connection as SolanaConnection } from "@solana/web3.js"
+import { createSolanaRpc } from "@solana/kit"
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(
+        @InjectSolanaClients()
+        private readonly solanaClients: Record<Network, HttpAndWsClients<SolanaConnection>>,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -36,6 +42,9 @@ export class OpenPositionInstructionService {
     )
     : Promise<CreateOpenPositionInstructionsResponse>
     {
+        const network = Network.Mainnet
+        const client = this.solanaClients[network].http[clientIndex]
+        const rpc = createSolanaRpc(client.rpcEndpoint)
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
@@ -56,12 +65,16 @@ export class OpenPositionInstructionService {
             tickIndex: tickLower.toNumber(),
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
+            rpc,
+            bot,
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
             tickIndex: tickUpper.toNumber(),
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
+            rpc,
+            bot,
         })
         const {
             instructions: createAtaAInstructions,
@@ -110,6 +123,7 @@ export class OpenPositionInstructionService {
             nftMintAddress: mintKeyPair.address,
             programAddress: address(programAddress),
         })
+        
         const [
             openPositionArgs
         ] = OpenPositionWithTokenMetadataExtensionArgs.serialize({
@@ -167,7 +181,7 @@ export class OpenPositionInstructionService {
                 },
                 // metadata update auth
                 {
-                    address: address("3axbTs2z5GBy6usVbNVoqEgZMng3vZvMnAoX29BFfwhr"),
+                    address: address(METADATA_UPDATE_AUTH_ADDRESS),
                     role: AccountRole.READONLY,
                 }
             ],
@@ -177,6 +191,71 @@ export class OpenPositionInstructionService {
             ),
         }
         instructions.push(openPositionInstruction)
+        const [
+            increaseLiquidityArgs
+        ] = IncreaseLiquidityArgs.serialize({
+            liquidityAmount: liquidity.toString(),
+            tokenMaxA: amountAMax.toString(),
+            tokenMaxB: amountBMax.toString(),
+        })
+        console.log({
+            tickArrayLowerPda,
+            tickArrayUpperPda,
+        })
+        const increaseLiquidityInstruction: Instruction = {
+            programAddress: address(programAddress),
+            accounts: [
+                {
+                    address: address(state.static.poolAddress),
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: TOKEN_PROGRAM_ADDRESS,
+                    role: AccountRole.READONLY,
+                },
+                {
+                    address: address(bot.accountAddress),
+                    role: AccountRole.WRITABLE_SIGNER,
+                },
+                {
+                    address: positionPda,
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: address(ataAddress),
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: ataAAddress,
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: ataBAddress,
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: address(tokenVault0),
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: address(tokenVault1),
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: tickArrayLowerPda, 
+                    role: AccountRole.WRITABLE,
+                },
+                {
+                    address: tickArrayUpperPda,
+                    role: AccountRole.WRITABLE,
+                }
+            ],
+            data: this.anchorUtilsService.encodeAnchorIx(
+                "increase_liquidity",
+                increaseLiquidityArgs
+            ),
+        }
+        instructions.push(increaseLiquidityInstruction)
         instructions.push(...endInstructions)
         return {
             mintKeyPair,
@@ -210,4 +289,13 @@ export const OpenPositionWithTokenMetadataExtensionArgs = new BeetArgsStruct(
         ["withTokenMetadataExtension", bool]
     ],
     "OpenPositionWithTokenMetadataExtensionArgs"
+)
+
+export const IncreaseLiquidityArgs = new BeetArgsStruct(
+    [
+        ["liquidityAmount", u128],
+        ["tokenMaxA", u64],
+        ["tokenMaxB", u64],
+    ],
+    "IncreaseLiquidityArgs"
 )

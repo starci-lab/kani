@@ -1,12 +1,18 @@
 import { Injectable } from "@nestjs/common"
-import BN from "bn.js"
-import { getProgramDerivedAddress, getAddressEncoder, Address, address } from "@solana/kit"
+import { getProgramDerivedAddress, getAddressEncoder, Address, address, fetchEncodedAccount, Rpc, SolanaRpcApi, Instruction, AccountRole } from "@solana/kit"
 import { Decimal } from "decimal.js"
 import { getTickArrayStartTickIndex } from "@orca-so/whirlpools-core"
+import { BotSchema } from "@modules/databases"
+import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
+import { BeetArgsStruct, i32 } from "@metaplex-foundation/beet"
+import { AnchorUtilsService } from "../../../tx-builder"
+import { BotMissingParametersException, RpcMissingParametersException } from "@exceptions"
 
 @Injectable()
 export class TickArrayService {
-
+    constructor(
+        private readonly anchorUtilsService: AnchorUtilsService,
+    ) { }
     /**
      * Internal helper that derives a TickArray PDA directly from:
      *   ["tick_array", pool_id, start_index_be_bytes]
@@ -19,16 +25,15 @@ export class TickArrayService {
         startIndex,
         programAddress,
     }: GetTickArrayPdaByStartIndexParams): Promise<GetTickArrayPdaResponse> {
-
+        
         const [pda] = await getProgramDerivedAddress({
             programAddress,
             seeds: [
                 Buffer.from("tick_array"),
                 getAddressEncoder().encode(address(poolStateAddress)),
-                new BN(startIndex).toTwos(32).toArrayLike(Buffer, "be", 4),
+                `${startIndex}`,
             ],
         })
-
         return { pda }
     }
 
@@ -80,18 +85,70 @@ export class TickArrayService {
      * This matches the Raydium SDK:
      *   TickUtils.getTickArrayAddressByTick()
      */
-    async getPda({
-        poolStateAddress,
-        tickIndex,
-        tickSpacing,
-        programAddress,
-    }: GetTickArrayPdaParams): Promise<GetTickArrayPdaResponse> {
+    async getPda(
+        { 
+            poolStateAddress, 
+            tickIndex,
+            tickSpacing,
+            programAddress,
+            rpc, 
+            bot,
+            pdaOnly
+        }: GetTickArrayPdaParams
+    ): Promise<GetTickArrayPdaResponse> {
         const startIndex = getTickArrayStartTickIndex(tickIndex, tickSpacing)
-        return this.getTickArrayPda({
+        const { pda } = await this.getTickArrayPda({
             poolStateAddress,
             startIndex,
             programAddress,
         })
+        if (pdaOnly) {
+            return { pda }
+        }
+        const [
+            initializeTickArrayArgs
+        ] = InitializeTickArrayArgs.serialize({
+            startTickIndex: startIndex,
+        })
+
+        if (!rpc) {
+            throw new RpcMissingParametersException("Rpc is required")
+        }
+        if (!bot) {
+            throw new BotMissingParametersException("Bot is required")
+        }
+        const account = await fetchEncodedAccount(rpc, pda)
+        if (account.exists) {
+            const instructions: Array<Instruction> = []
+            const initializeTickArrayInstruction: Instruction = {
+                programAddress: address(programAddress),
+                accounts: [
+                    {
+                        address: address(poolStateAddress),
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: address(bot.accountAddress),
+                        role: AccountRole.WRITABLE_SIGNER,
+                    },
+                    {
+                        address: pda,
+                        role: AccountRole.WRITABLE,
+                    },
+                    {
+                        address: SYSTEM_PROGRAM_ADDRESS,
+                        role: AccountRole.READONLY,
+                    },
+                ],
+                data: this.anchorUtilsService.encodeAnchorIx(
+                    "initialize_tick_array", 
+                    initializeTickArrayArgs
+                ),
+            }
+            instructions.push(initializeTickArrayInstruction)
+            return { pda, instructions }
+        }
+        return { pda }
     }
 }
 
@@ -116,8 +173,19 @@ export interface GetTickArrayPdaParams {
     tickIndex: number
     tickSpacing: number
     programAddress: Address
+    rpc?: Rpc<SolanaRpcApi>
+    bot?: BotSchema
+    pdaOnly?: boolean
 }
 
 export interface GetTickArrayPdaResponse {
     pda: Address
+    instructions?: Array<Instruction>
 }
+
+export const InitializeTickArrayArgs = new BeetArgsStruct(
+    [
+        ["startTickIndex", i32],
+    ],
+    "InitializeTickArrayArgs"
+)

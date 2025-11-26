@@ -161,3 +161,7 @@ export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
 export interface RaydiumPositionMetadata {
     nftMintAddress: string
 }
+
+export interface OrcaPositionMetadata {
+    nftMintAddress: string
+}

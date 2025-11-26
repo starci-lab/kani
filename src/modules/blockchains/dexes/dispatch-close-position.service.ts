@@ -50,7 +50,7 @@ export class DispatchClosePositionService {
                 bot,
             })
         case DexId.Orca:
-            return this.orcaActionService.openPosition({
+            return this.orcaActionService.closePosition({
                 state,
                 bot,
             })
