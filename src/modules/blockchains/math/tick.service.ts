@@ -100,7 +100,7 @@ export class TickMathService {
         // Sastify the following condition:
         // ?: targetIsA ? amountA/amountB ~ R : amountB/amountA ~ R
         // TODO: R = (sqrtPriceCurrent - sqrtPriceLower)/(1/sqrtPriceCurrent - 1/sqrtPriceUpper)
-        // * Solution: Use binary search to find the tickLower and tickUpper
+        // * Solution: Use loop to find the tickLower and tickUpper
         let tickLowerEntry = new Decimal(tickCurrent).sub(S.mul(targetIsA ? R : new Decimal(1).sub(R)))
         tickLowerEntry = tickLowerEntry.divToInt(new Decimal(tickSpacing)).mul(new Decimal(tickSpacing))
         let tickUpperEntry = tickLowerEntry.add(S)

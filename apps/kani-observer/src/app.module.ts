@@ -78,20 +78,20 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
                 //         action: false,
                 //     },
                 // },
-                {
-                    dexId: DexId.Orca,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                    },
-                },
                 // {
-                //     dexId: DexId.Meteora,
+                //     dexId: DexId.Orca,
                 //     enabled: {
                 //         observe: true,
                 //         action: false,
                 //     },
-                // }
+                // },
+                {
+                    dexId: DexId.Meteora,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                }
             ],
         }),
         CexesModule.register({

@@ -18,7 +18,7 @@ import {
 import { TickMathService } from "../../math"
 import { Network } from "@typedefs"
 import { ORCA_CLIENTS_INDEX } from "./constants"
-import { InjectSolanaClients } from "@modules/blockchains"
+import { DynamicLiquidityPoolInfo, InjectSolanaClients } from "@modules/blockchains"
 import { OPEN_POSITION_SLIPPAGE } from "../../swap"
 import { HttpAndWsClients } from "../../clients" 
 import { Connection as SolanaConnection } from "@solana/web3.js"
@@ -61,6 +61,7 @@ import { adjustSlippage, computeRaw, httpsToWss } from "@utils"
 import { GasStatus, GasStatusService } from "../../balance"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class OrcaActionService implements IActionService {
@@ -138,15 +139,15 @@ export class OrcaActionService implements IActionService {
                 "Active position not found"
             )
         }
-        // const _state = state.dynamic as DynamicLiquidityPoolInfo
-        // if (
-        //     new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
-        //     && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
-        // ) {
-        //     // do nothing, since the position is still in the range
-        //     // return true to continue the assertion
-        //     return true
-        // }
+        const _state = state.dynamic as DynamicLiquidityPoolInfo
+        if (
+            new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
+            && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
