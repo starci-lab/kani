@@ -17,13 +17,17 @@ import {
 import { DlmmLiquidityPoolState } from "../../../interfaces"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { InvalidPoolTokensException, MultipleDlmmPositionsNotSupportedException } from "@exceptions"
-import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
+import { FeeToAddressNotFoundException, InvalidPoolTokensException, MultipleDlmmPositionsNotSupportedException } from "@exceptions"
+import { getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
 import { SYSVAR_RENT_ADDRESS } from "@solana/sysvars"
 import { EventAuthorityService } from "./event-authority.service"
-import { KeyPairSigner } from "@solana/signers"
+import { createNoopSigner, KeyPairSigner } from "@solana/signers"
 import { MeteoraSdkService } from "./sdk.service"
 import { OPEN_POSITION_SLIPPAGE } from "../../../swap"
+import { FeeService } from "../../../math"
+import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
+import { getTransferInstruction } from "@solana-program/token"
+import { Network, TokenType } from "@modules/common"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -38,6 +42,8 @@ export interface CreateOpenPositionInstructionsResponse {
     positionKeyPair: KeyPairSigner
     minBinId: Decimal
     maxBinId: Decimal
+    feeAmountA: BN
+    feeAmountB: BN
 }
 
 @Injectable()
@@ -49,6 +55,7 @@ export class OpenPositionInstructionService {
         private readonly keypairGeneratorsService: KeypairGeneratorsService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly meteoraSdkService: MeteoraSdkService,
+        private readonly feeService: FeeService,
     ) { }
     async createOpenPositionInstructions({
         bot,
@@ -59,13 +66,52 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResponse>
     {
+        const network = Network.Mainnet
+        const {
+            feeAmount: feeAmountA,
+            remainingAmount: remainingAmountA,
+        } = this.feeService.splitAmount({
+            amount: amountA,
+            network,
+            chainId: bot.chainId,
+        })
+        const {
+            feeAmount: feeAmountB,
+            remainingAmount: remainingAmountB,
+        } = this.feeService.splitAmount({
+            amount: amountB,
+            network,
+            chainId: bot.chainId,
+        })
         const metadata = state.static.metadata as MeteoraLiquidityPoolMetadata
         const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
+        // transfer the fees to the fee address
+        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
+        if (!feeToAddress) {
+            throw new FeeToAddressNotFoundException("Fee to address not found")
+        }
         const instructions: Array<Instruction> = []
+        // if A or B is sol, we must transfer the fees to the fee address
+        if (tokenA.type === TokenType.Native) {
+            instructions.push(
+                getTransferSolInstruction({
+                    source: createNoopSigner(address(bot.accountAddress)),
+                    destination: address(feeToAddress),
+                    amount: BigInt(feeAmountA.toString()),
+                }))
+        }
+        if (tokenB.type === TokenType.Native) {
+            instructions.push(
+                getTransferSolInstruction({
+                    source: createNoopSigner(address(bot.accountAddress)),
+                    destination: address(feeToAddress),
+                    amount: BigInt(feeAmountB.toString()),
+                }))
+        }
         const endInstructions: Array<Instruction> = []
         const minBinId = new Decimal(state.dynamic.activeId).sub(state.static.binOffset)
         const maxBinId = new Decimal(state.dynamic.activeId).add(state.static.binOffset)
@@ -78,8 +124,8 @@ export class OpenPositionInstructionService {
         // we only support one position at a time
         const positionKeyPair = positionKeyPairs[0]
         const liquidityStrategyParameters = buildLiquidityStrategyParameters(
-            amountA,
-            amountB,
+            remainingAmountA,
+            remainingAmountB,
             new BN(minBinId.sub(new Decimal(state.dynamic.activeId)).toNumber()),
             new BN(maxBinId.sub(new Decimal(state.dynamic.activeId)).toNumber()),
             new BN(state.static.binStep),
@@ -96,7 +142,7 @@ export class OpenPositionInstructionService {
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
             clientIndex,
-            amount: amountA,
+            amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
@@ -113,13 +159,61 @@ export class OpenPositionInstructionService {
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
             clientIndex,
-            amount: amountB,
+            amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)
         }
         if (closeAtaBInstructions?.length) {
             endInstructions.push(...closeAtaBInstructions)
+        }
+        const getTransferAInstruction = tokenA.is2022Token ? getTransferInstruction2022 : getTransferInstruction
+        const getTransferBInstruction = tokenB.is2022Token ? getTransferInstruction2022 : getTransferInstruction
+        // if A and B is not sol, we must transfer the fees to the fee address
+        if (tokenA.type !== TokenType.Native) {
+            const {
+                instructions: createAtaAInstructions,
+                ataAddress: feeToAAtaAddress,
+            } = await this.ataInstructionService.getOrCreateAtaInstructions({
+                ownerAddress: address(bot.accountAddress),
+                tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
+                is2022Token: tokenA.is2022Token,
+                clientIndex,
+                amount: feeAmountA,
+            })
+            if (createAtaAInstructions?.length) {
+                instructions.push(...createAtaAInstructions)
+            }
+            instructions.push(
+                getTransferAInstruction({
+                    source: ataAAddress,
+                    destination: feeToAAtaAddress,
+                    amount: BigInt(feeAmountA.toString()),
+                    authority: address(bot.accountAddress),
+                }))
+        }
+        if (tokenB.type !== TokenType.Native) {
+            const {
+                instructions: createAtaBInstructions,
+                ataAddress: feeToBAtaAddress,
+            } = await this.ataInstructionService.getOrCreateAtaInstructions({
+                ownerAddress: address(bot.accountAddress),
+                tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
+                is2022Token: tokenB.is2022Token,
+                clientIndex,
+                amount: feeAmountB,
+            })
+            if (createAtaBInstructions?.length) {
+                instructions.push(...createAtaBInstructions)
+            }
+            instructions.push(
+                getTransferBInstruction({
+                    source: ataBAddress,
+                    destination: feeToBAtaAddress,
+                    amount: BigInt(feeAmountB.toString()),
+                    authority: address(bot.accountAddress),
+                })
+            )
         }
         const { pda: eventAuthorityPda } = await this.eventAuthorityService.getPda({
             programAddress: address(metadata.programAddress),
@@ -207,6 +301,8 @@ export class OpenPositionInstructionService {
             positionKeyPair,
             minBinId,
             maxBinId,
+            feeAmountA,
+            feeAmountB,
         }
     }
 }

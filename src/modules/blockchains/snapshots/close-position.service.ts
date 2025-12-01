@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import { BotSchema, PositionSchema, InjectPrimaryMongoose } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
 import { DayjsService } from "@modules/mixin"
-import BN from "bn.js"
 import { Decimal } from "decimal.js"
 
 @Injectable()
@@ -20,9 +19,6 @@ export class ClosePositionSnapshotService {
             session,
             roi,
             pnl,
-            feesTxHash,
-            targetFeeAmount,
-            quoteFeeAmount,
         }: UpdateClosePositionTransactionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
@@ -36,9 +32,6 @@ export class ClosePositionSnapshotService {
                 isActive: false,
                 roi: roi.toNumber(),
                 pnl: pnl.toNumber(),    
-                feesTxHash,
-                targetFeeAmount: targetFeeAmount.toString(),
-                quoteFeeAmount: quoteFeeAmount.toString(),
             },
         }, 
         {
@@ -54,7 +47,4 @@ export interface UpdateClosePositionTransactionRecordParams {
     session?: ClientSession
     roi: Decimal
     pnl: Decimal
-    feesTxHash: string
-    targetFeeAmount: BN
-    quoteFeeAmount: BN
 }   

@@ -35,6 +35,8 @@ export class OpenPositionSnapshotService {
             openTxHash,
             metadata,
             session,
+            feeAmountTarget,
+            feeAmountQuote,
         }: AddOpenPositionTransactionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
@@ -59,7 +61,9 @@ export class OpenPositionSnapshotService {
             positionOpenedAt: this.dayjsService.now().toDate(),
             openTxHash,
             isActive: true,
-            metadata
+            metadata,
+            feeAmountTarget: feeAmountTarget.toString(),
+            feeAmountQuote: feeAmountQuote.toString(),
         }], {
             session,
         })
@@ -87,5 +91,7 @@ export interface AddOpenPositionTransactionRecordParams {
     positionId: string
     openTxHash: string
     metadata?: unknown
+    feeAmountTarget: BN
+    feeAmountQuote: BN
     session?: ClientSession
 }

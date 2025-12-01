@@ -274,16 +274,6 @@ export class RaydiumActionService implements IActionService {
             chainId: bot.chainId,
             network,
         })
-        const {
-            targetFeeAmount,
-            quoteFeeAmount,
-            txHash: feesTxHash,
-        } = await this.balanceService.processTransferFeesTransaction({
-            bot,
-            roi,
-            targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-            quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-        })
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
@@ -308,9 +298,6 @@ export class RaydiumActionService implements IActionService {
                         positionId: bot.activePosition.id,
                         closeTxHash: txHash,
                         session,
-                        feesTxHash,
-                        targetFeeAmount,
-                        quoteFeeAmount,
                     })
                 if (swapsSnapshotsParams) {
                     await this.swapTransactionSnapshotService.addSwapTransactionRecord({
@@ -401,6 +388,8 @@ export class RaydiumActionService implements IActionService {
             instructions: openPositionInstructions,
             mintKeyPair,
             ataAddress,
+            feeAmountA,
+            feeAmountB,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
@@ -517,7 +506,9 @@ export class RaydiumActionService implements IActionService {
                     session,
                     metadata: {
                         nftMintAddress: mintKeyPair.address.toString(),
-                    }
+                    },
+                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
                 })
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,

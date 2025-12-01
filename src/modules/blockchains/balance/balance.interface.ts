@@ -12,7 +12,6 @@ export interface IBalanceService {
     executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<ExecuteBalanceRebalancingResponse>
     fetchBalances(params: FetchBalancesParams): Promise<FetchBalancesResponse>
     fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
-    processTransferFeesTransaction(params: ProcessTransferFeesTransactionParams): Promise<ProcessTransferFeesResponse>
 }
 
 export interface FetchBalanceParams {

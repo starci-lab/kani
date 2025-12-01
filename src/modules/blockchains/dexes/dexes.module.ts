@@ -10,7 +10,8 @@ import { OrcaModule } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { DispatchOpenPositionService } from "./dispatch-open-position.service"
 import { DispatchClosePositionService } from "./dispatch-close-position.service"
-import { MeteoraModule } from "./meteora/meteora.module"
+import { MeteoraModule } from "./meteora"
+import { FeeService } from "../math/fee.service"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -99,6 +100,7 @@ export class DexesModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [],
+                FeeService,
                 ...utilities,
             ],
             exports: [

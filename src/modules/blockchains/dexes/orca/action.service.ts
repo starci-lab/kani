@@ -281,16 +281,6 @@ export class OrcaActionService implements IActionService {
             chainId: bot.chainId,
             network,
         })
-        const {
-            targetFeeAmount,
-            quoteFeeAmount,
-            txHash: feesTxHash,
-        } = await this.balanceService.processTransferFeesTransaction({
-            bot,
-            roi,
-            targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-            quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-        })
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
@@ -315,9 +305,6 @@ export class OrcaActionService implements IActionService {
                         positionId: bot.activePosition.id,
                         closeTxHash: txHash,
                         session,
-                        feesTxHash,
-                        targetFeeAmount,
-                        quoteFeeAmount,
                     })
                 if (swapsSnapshotsParams) {
                     await this.swapTransactionSnapshotService.addSwapTransactionRecord({
@@ -408,6 +395,8 @@ export class OrcaActionService implements IActionService {
             mintKeyPair,
             ataAddress,
             instructions: openPositionInstructions,
+            feeAmountA,
+            feeAmountB,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
@@ -521,6 +510,8 @@ export class OrcaActionService implements IActionService {
                     positionId: ataAddress.toString(),
                     openTxHash: txHash,
                     session,
+                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
                     metadata: {
                         nftMintAddress: mintKeyPair.address.toString(),
                     }

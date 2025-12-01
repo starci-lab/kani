@@ -54,6 +54,7 @@ import {
 } from "../../snapshots"
 import Decimal from "decimal.js"
 import { DynamicDlmmLiquidityPoolInfo } from "../../types"
+import { FeeService } from "../../math/fee.service"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
@@ -71,6 +72,7 @@ export class MeteoraActionService implements IActionService {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         private readonly profitabilityMathService: ProfitabilityMathService,
+        private readonly feeService: FeeService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
         @InjectPrimaryMongoose()
@@ -126,13 +128,16 @@ export class MeteoraActionService implements IActionService {
             positionKeyPair,
             minBinId,
             maxBinId,
+            feeAmountA,
+            feeAmountB,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
             clientIndex: METEORA_CLIENTS_INDEX,
-            amountA,
+            amountA,    
             amountB,
         })
+        // append the fee instructions
         // convert the transaction to a transaction with lifetime
         // sign the transaction
         const txHash = await this.signerService.withSolanaSigner({
@@ -237,6 +242,8 @@ export class MeteoraActionService implements IActionService {
                     liquidityPoolId: _state.static.displayId,
                     openTxHash: txHash,
                     session,
+                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
                 })
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
@@ -452,16 +459,6 @@ export class MeteoraActionService implements IActionService {
             chainId: bot.chainId,
             network,
         })
-        const {
-            targetFeeAmount,
-            quoteFeeAmount,
-            txHash: feesTxHash,
-        } = await this.balanceService.processTransferFeesTransaction({
-            bot,
-            roi,
-            targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-            quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-        })
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
@@ -486,9 +483,6 @@ export class MeteoraActionService implements IActionService {
                         positionId: bot.activePosition.id,
                         closeTxHash: txHash,
                         session,
-                        feesTxHash,
-                        targetFeeAmount,
-                        quoteFeeAmount,
                     })
                 if (swapsSnapshotsParams) {
                     await this.swapTransactionSnapshotService.addSwapTransactionRecord({

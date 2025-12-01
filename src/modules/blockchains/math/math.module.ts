@@ -4,6 +4,7 @@ import { TickMathService } from "./tick.service"
 import { ZapMathService } from "./zap.service"
 import { PoolMathService } from "./pool.service"
 import { EnsureMathService } from "./ensure.service"
+import { FeeService } from "./fee.service"
 
 @Module({
     providers: [
@@ -11,12 +12,14 @@ import { EnsureMathService } from "./ensure.service"
         ZapMathService,
         PoolMathService,
         EnsureMathService,
+        FeeService,
     ],
     exports: [
         TickMathService,
         ZapMathService,
         PoolMathService,
         EnsureMathService,
+        FeeService,
     ],
 })
 export class MathModule extends ConfigurableModuleClass {}

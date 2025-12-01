@@ -121,40 +121,24 @@ export class PositionSchema extends AbstractSchema {
     @Prop({ type: Number, required: false })
         pnl?: number
     
-    @Field(() => String, { 
-        description: "The amount of fees paid for the position", 
-        nullable: true 
-    })
-    @Prop({ type: String, required: false })
-        feePaidAmount?: string
-
     @Field(() => GraphQLJSON, { 
         description: "Additional position-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
         nullable: true 
     })
     @Prop({ type: MongooseSchema.Types.Mixed, required: false })
         metadata?: unknown
-
-    @Field(() => String, { 
-        description: "The transaction hash that transferred the fees for the position", 
-        nullable: true 
-    })
-    @Prop({ type: String, required: false })
-        feesTxHash?: string
-
+ 
     @Field(() => String, { 
         description: "The amount of target tokens paid as fees for the position", 
-        nullable: true 
     })
-    @Prop({ type: String, required: false })
-        targetFeeAmount?: string
+    @Prop({ type: String })
+        feeAmountTarget: string
 
     @Field(() => String, { 
         description: "The amount of quote tokens paid as fees for the position", 
-        nullable: true 
     })
-    @Prop({ type: String, required: false })
-        quoteFeeAmount?: string
+    @Prop({ type: String })
+        feeAmountQuote: string
 }
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
 

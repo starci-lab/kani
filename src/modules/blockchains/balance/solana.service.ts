@@ -11,8 +11,6 @@ import {
     FetchBalancesResponse,
     GasStatus,
     IBalanceService,
-    ProcessTransferFeesTransactionParams,
-    ProcessTransferFeesResponse,
 } from "./balance.interface"
 import { 
     InjectPrimaryMongoose,
@@ -20,8 +18,6 @@ import {
 } from "@modules/databases"
 import {
     EstimatedSwappedQuoteAmountNotFoundException,
-    FeeRateNotFoundException,
-    FeeToAddressNotFoundException,
     InsufficientMinGasBalanceAmountException,
     MinOperationalGasAmountNotFoundException,
     TargetOperationalGasAmountNotFoundException,
@@ -56,7 +52,6 @@ import {
     getSignatureFromTransaction,
     createSolanaRpcSubscriptions,
     SolanaRpcSubscriptionsApi,
-    Instruction,
 } from "@solana/kit"
 import { 
     findAssociatedTokenPda, 
@@ -78,11 +73,10 @@ import Decimal from "decimal.js"
 import { AddSwapTransactionRecordParams, BalanceSnapshotService, UpdateBotSnapshotBalancesRecordParams } from "../snapshots"
 import { SwapTransactionSnapshotService } from "../snapshots"
 import { Connection as MongooseConnection } from "mongoose"
-import { computeDenomination, httpsToWss, toScaledBN } from "@utils"
-import { TransferInstructionService } from "../tx-builder"
-import { ROI_FEE_PERCENTAGE } from "./constants"
+import { computeDenomination, httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { FeeService } from "../math/fee.service"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -103,7 +97,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
-        private readonly transferInstructionsService: TransferInstructionService,
+        private readonly feeService: FeeService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -595,123 +589,6 @@ export class SolanaBalanceService implements IBalanceService {
         })
         return txHash
     }
-
-    public async processTransferFeesTransaction(
-        {
-            bot,
-            roi,
-            clientIndex = 0,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-        }: ProcessTransferFeesTransactionParams
-    ): Promise<ProcessTransferFeesResponse> {
-        // we skip the transfer fees transaction if the roi is less than 1%
-        if (roi.lt(ROI_FEE_PERCENTAGE)) {
-            return {
-                txHash: "",
-                targetFeeAmount: new BN(0),
-                quoteFeeAmount: new BN(0),
-            }
-        }
-        const network = Network.Mainnet
-        const client = this.solanaClients[network].http[clientIndex]
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
-        )
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
-        )
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
-        const feeToAddress = this.primaryMemoryStorageService
-            .feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
-        }
-        const feeRate = this.primaryMemoryStorageService
-            .feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeRate
-        if (!feeRate) {
-            throw new FeeRateNotFoundException("Fee rate not found")
-        }
-        const feePercentage = new Decimal(feeRate).mul(roi)
-        const targetFeeAmount = toScaledBN(targetBalanceAmount, feePercentage)
-        const quoteFeeAmount = toScaledBN(quoteBalanceAmount, feePercentage)
-        const {
-            instructions: targetToFeeTransferInstructions,
-        } = await this.transferInstructionsService.createTransferInstructions({
-            fromAddress: address(bot.accountAddress),
-            toAddress: address(feeToAddress),
-            amount: targetFeeAmount,
-            tokenId: targetToken.displayId,
-        })
-        const {
-            instructions: quoteToFeeTransferInstructions,
-        } = await this.transferInstructionsService.createTransferInstructions({
-            fromAddress: address(bot.accountAddress),
-            toAddress: address(feeToAddress),
-            amount: quoteFeeAmount,
-            tokenId: quoteToken.displayId,
-        })
-        const instructions: Array<Instruction> = [
-            ...targetToFeeTransferInstructions, 
-            ...quoteToFeeTransferInstructions
-        ]
-        const txHash = await this.signerService.withSolanaSigner({
-            bot,
-            accountAddress: bot.accountAddress,
-            network,
-            action: async (signer) => {
-                const keyPair = await createKeyPairFromBytes(signer.secretKey)
-                const kitSigner = await createSignerFromKeyPair(keyPair)
-                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([kitSigner], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
-                    (tx) => appendTransactionMessageInstructions(instructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                )
-                if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                    throw new TransactionMessageTooLargeException("Transaction message is too large")
-                }
-                const transaction = compileTransaction(transactionMessage)
-                // sign the transaction
-                const signedTransaction = await signTransaction(
-                    [keyPair],
-                    transaction,
-                )
-                assertIsSendableTransaction(signedTransaction)
-                assertIsTransactionWithinSizeLimit(signedTransaction)
-                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                    rpc,
-                    rpcSubscriptions,
-                })
-                const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                await sendAndConfirmTransaction(
-                    signedTransaction, {
-                        commitment: "confirmed",
-                        maxRetries: BigInt(5),
-                    })
-                this.logger.info(
-                    WinstonLog.OpenPositionSuccess, {
-                        txHash: transactionSignature.toString(),
-                        bot: bot.id,
-                    })
-                return transactionSignature.toString()
-            },
-        })
-        return {
-            txHash,
-            targetFeeAmount,
-            quoteFeeAmount,
-        }
-    }
 }
 
 interface ProcessSwapTransactionParams {
@@ -734,4 +611,11 @@ export interface ComputeTargetToQuoteSwapResponse {
     inputAmount: BN
     estimatedOutputAmount: BN
     requiredSwap: boolean
+}
+
+export interface CreateTransferFeesTransactionParams {
+    bot: BotSchema
+    rpc: Rpc<SolanaRpcApi>
+    rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
+    feeAmount: BN
 }
