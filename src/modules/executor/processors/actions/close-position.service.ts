@@ -86,7 +86,7 @@ export class ClosePositionProcessorService {
             async (
                 payload: LiquidityPoolsFetchedEvent
             ) => {
-                if (!this.bot) {
+                if (!this.bot || !this.bot.activePosition) {
                     return
                 }
                 // if the bot has been closed position recently, we skip the close position
@@ -143,7 +143,7 @@ export class ClosePositionProcessorService {
             async (
                 payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
-                if (!this.bot) {
+                if (!this.bot || !this.bot.activePosition) {
                     return
                 }
                 // if the bot has been closed position recently, we skip the close position

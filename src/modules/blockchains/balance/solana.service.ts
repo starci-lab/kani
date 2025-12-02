@@ -75,6 +75,8 @@ import { Connection as MongooseConnection } from "mongoose"
 import { computeDenomination, httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { createEventName, EventName } from "@modules/event"
+import { EventEmitter2 } from "@nestjs/event-emitter"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -92,6 +94,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly gasStatusService: GasStatusService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        private readonly eventEmitter: EventEmitter2,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
         @InjectWinston()
@@ -326,6 +329,11 @@ export class SolanaBalanceService implements IBalanceService {
                     quoteBalanceAmount,
                     gasAmount: gasBalanceAmount,
                 })
+                this.eventEmitter.emit(
+                    createEventName(
+                        EventName.UpdateActiveBot, {
+                            botId: bot.id,
+                        }))
             }
             balancesSnapshotsParams = {
                 bot,
@@ -348,6 +356,11 @@ export class SolanaBalanceService implements IBalanceService {
                     quoteBalanceAmount,
                     gasAmount: gasBalanceAmount,
                 })
+                this.eventEmitter.emit(
+                    createEventName(
+                        EventName.UpdateActiveBot, {
+                            botId: bot.id,
+                        }))
             }
             return {
                 balancesSnapshotsParams: {
@@ -411,6 +424,11 @@ export class SolanaBalanceService implements IBalanceService {
                             session,
                         })
                     })
+                this.eventEmitter.emit(
+                    createEventName(
+                        EventName.UpdateActiveBot, {
+                            botId: bot.id,
+                        }))
                 balancesSnapshotsParams = {
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,
@@ -481,6 +499,11 @@ export class SolanaBalanceService implements IBalanceService {
                             session,
                         })
                     })
+                this.eventEmitter.emit(
+                    createEventName(
+                        EventName.UpdateActiveBot, {
+                            botId: bot.id,
+                        }))
                 balancesSnapshotsParams = {
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,

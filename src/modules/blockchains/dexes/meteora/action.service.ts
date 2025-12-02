@@ -51,7 +51,6 @@ import {
 } from "../../snapshots"
 import Decimal from "decimal.js"
 import { DynamicDlmmLiquidityPoolInfo } from "../../types"
-import { FeeService } from "../../math/fee.service"
 import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { GasStatus } from "../../types"
 import { EventEmitter2 } from "@nestjs/event-emitter"
@@ -73,7 +72,6 @@ export class MeteoraActionService implements IActionService {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         private readonly profitabilityMathService: ProfitabilityMathService,
-        private readonly feeService: FeeService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
         @InjectPrimaryMongoose()

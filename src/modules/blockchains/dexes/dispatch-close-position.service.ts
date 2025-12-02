@@ -43,6 +43,10 @@ export class DispatchClosePositionService {
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
             throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }
+        // safety check, if the active position is not set, return and remind user to open a position first
+        if (!bot.activePosition) {
+            return
+        }
         switch (dex.displayId) {
         case DexId.Raydium:
             return this.raydiumActionService.closePosition({
