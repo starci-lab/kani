@@ -1,6 +1,5 @@
-import { BotNotFoundException } from "@exceptions"
 import { BalanceService } from "@modules/blockchains"
-import { BotSchema, InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
+import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
 import { envConfig } from "@modules/env"
 import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
 import { Injectable, Scope, Inject } from "@nestjs/common"
@@ -9,6 +8,9 @@ import { Mutex } from "async-mutex"
 import { Connection } from "mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { createEventName, EventName } from "@modules/event"
 
 // BalanceProcessorService
 // This processor is responsible for monitoring a bot's balances and evaluating
@@ -40,14 +42,27 @@ export class BalanceProcessorService  {
         private readonly logger: WinstonLogger,
         private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
+        private readonly eventEmitter: EventEmitter2,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     // Initializes the processor and registers periodic balance evaluation logic.
     // Called when a new request-scoped processor instance is created.
     async initialize() {
+        this.readinessWatcherFactoryService.createWatcher(BalanceProcessorService.name)
         // Ensure mutex exists for this bot
         this.mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, this.request.bot.id),
+            getMutexKey(MutexKey.Action, this.request.botId),
+        )
+        this.eventEmitter.on(
+            createEventName(
+                EventName.ActiveBotUpdated, {
+                    botId: this.request.botId,
+                }
+            ),
+            async (payload: BotSchema) => {
+                this.bot = payload
+            }
         )
         // Periodic evaluation cycle
         const executeBalanceRebalancing = async () => {
@@ -56,23 +71,6 @@ export class BalanceProcessorService  {
                     return
                 }
                 await this.mutex.runExclusive(async () => {
-                    // Refresh bot data from the database
-                    const bot = await this.connection
-                        .model<BotSchema>(BotSchema.name)
-                        .findById(this.request.bot.id)
-
-                    if (!bot) {
-                        throw new BotNotFoundException(
-                            `Bot not found with id: ${this.request.bot.id}`,
-                        )
-                    }
-                    this.bot = bot.toJSON()
-                    const activePosition = await this.connection
-                        .model<PositionSchema>(PositionSchema.name).findOne({
-                            bot: this.bot.id,
-                            isActive: true,
-                        })
-                    this.bot.activePosition = activePosition?.toJSON()
                     await this.balanceService.executeBalanceRebalancing({
                         bot: this.bot,
                         withoutSnapshot: false,
@@ -81,7 +79,7 @@ export class BalanceProcessorService  {
             } catch (error) {
                 this.logger.error(
                     WinstonLog.BalanceRebalancingFailed, {
-                        botId: this.request.bot.id,
+                        botId: this.request.botId,
                         error: error.message,
                     })
             }
@@ -92,9 +90,10 @@ export class BalanceProcessorService  {
             executeBalanceRebalancing,
             envConfig().botExecutor.balanceEvaluationInterval,
         )
+        this.readinessWatcherFactoryService.setReady(BalanceProcessorService.name)
     }
 }
 
 export interface BalanceProcessorRequest {
-    bot: BotSchema
+    botId: string
 }

@@ -3,6 +3,7 @@ import { BotSchema, PositionSchema, InjectPrimaryMongoose } from "@modules/datab
 import { ClientSession, Connection } from "mongoose"
 import { DayjsService } from "@modules/mixin"
 import { Decimal } from "decimal.js"
+import { EventEmitter2 } from "@nestjs/event-emitter"
 
 @Injectable()
 export class ClosePositionSnapshotService {
@@ -10,6 +11,7 @@ export class ClosePositionSnapshotService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     async updateClosePositionTransactionRecord(

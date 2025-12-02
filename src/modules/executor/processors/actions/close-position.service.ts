@@ -1,20 +1,22 @@
 import { Inject, Injectable, Scope } from "@nestjs/common"
-import { createEventName, DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { 
+    createEventName, 
+    DlmmLiquidityPoolsFetchedEvent, 
+    EventName, 
+    LiquidityPoolsFetchedEvent 
+} from "@modules/event"
 import { REQUEST } from "@nestjs/core"
 import { 
     BotSchema, 
-    InjectPrimaryMongoose, 
-    PositionSchema, 
-    PrimaryMemoryStorageService 
 } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { Connection } from "mongoose"
 import { DispatchClosePositionService } from "@modules/blockchains"
 import { createObjectId } from "@utils"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -29,7 +31,7 @@ import { Logger as WinstonLogger } from "winston"
     durable: true,
 })
 export class ClosePositionProcessorService {
-    private activeBot: BotSchema
+    private bot: BotSchema
     private mutex: Mutex
     constructor(
         // The request object injected into this processor. It contains
@@ -40,42 +42,28 @@ export class ClosePositionProcessorService {
         // Used to manually subscribe to events. We bind listeners here instead
         // of using @OnEvent so Nest doesn't override our request context.
         private readonly eventEmitter: EventEmitter2,
-        // inject the connection to the database
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly dispatchClosePositionService: DispatchClosePositionService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly mutexService: MutexService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
-        // first time the instance is initialized, we query the bot to ensure data is up to date
-        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-        if (bot) {
-            this.activeBot = bot.toJSON()
-            const activePosition = await this.connection
-                .model<PositionSchema>(PositionSchema.name).findOne({
-                    bot: bot.id,
-                    isActive: true,
-                })
-            if (activePosition) {
-                this.activeBot.activePosition = activePosition.toJSON()
-            }
-        }
+        this.readinessWatcherFactoryService.createWatcher(ClosePositionProcessorService.name)
         // whenever the active bot is updated, we update the active bot instance
         this.eventEmitter.on(
             createEventName(
-                EventName.UpdateActiveBot, 
+                EventName.ActiveBotUpdated, 
                 {
-                    botId: this.request.bot.id,
+                    botId: this.request.botId,
                 }
             ),
             async (payload: BotSchema) => {
-                this.activeBot = payload
+                console.log("Active bot updated", payload)
+                this.bot = payload
             }
         )
         // register event listeners
@@ -84,12 +72,12 @@ export class ClosePositionProcessorService {
             async (
                 payload: LiquidityPoolsFetchedEvent
             ) => {
-                if (!this.activeBot) {
+                if (!this.bot) {
                     return
                 }
                 // only run if the liquidity pool is belong to the bot
                 if (
-                    this.activeBot.activePosition?.liquidityPool.toString() 
+                    this.bot.activePosition?.liquidityPool.toString() 
                     !== createObjectId(payload.liquidityPoolId).toString()
                 )
                 {
@@ -99,7 +87,7 @@ export class ClosePositionProcessorService {
                 this.mutex = this.mutexService.mutex(
                     getMutexKey(
                         MutexKey.Action, 
-                        this.request.bot.id
+                        this.request.botId
                     )
                 )
                 // run the open position
@@ -111,12 +99,12 @@ export class ClosePositionProcessorService {
                         try {
                             return await this.dispatchClosePositionService.dispatchClosePosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.activeBot,
+                                bot: this.bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.ClosePositionFailed, {
-                                    botId: this.request.bot.id,
+                                    botId: this.request.botId,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -129,13 +117,13 @@ export class ClosePositionProcessorService {
             async (
                 payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
-                if (!this.activeBot) {
+                if (!this.bot) {
                     return
                 }
                 this.mutex = this.mutexService.mutex(
                     getMutexKey(
                         MutexKey.Action, 
-                        this.request.bot.id
+                        this.request.botId
                     ))
                 // define the target and quote tokens
                 if (this.mutex.isLocked()) {
@@ -146,12 +134,12 @@ export class ClosePositionProcessorService {
                         try {
                             return await this.dispatchClosePositionService.dispatchClosePosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.activeBot,
+                                bot: this.bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.ClosePositionFailed, {
-                                    botId: this.activeBot.id,
+                                    botId: this.bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -159,9 +147,10 @@ export class ClosePositionProcessorService {
                     })
             }
         )
+        this.readinessWatcherFactoryService.setReady(ClosePositionProcessorService.name)
     }
 }
 
 export interface ClosePositionProcessorRequest {
-    bot: BotSchema
+    botId: string
 }

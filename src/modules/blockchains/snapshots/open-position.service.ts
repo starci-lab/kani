@@ -6,7 +6,6 @@ import { ChainId, createObjectId, Network } from "@modules/common"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { createEventName, EventName } from "@modules/event"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -42,7 +41,7 @@ export class OpenPositionSnapshotService {
             feeAmountQuote,
         }: AddOpenPositionTransactionRecordParams
     ) {
-        const [activePosition] = await this.connection.model<PositionSchema>(
+        await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).create([{
             targetAmountUsed: targetAmountUsed.toString(),
@@ -70,18 +69,6 @@ export class OpenPositionSnapshotService {
         }], {
             session,
         })
-        const botCloned = bot.toJSON()
-        botCloned.activePosition = activePosition.toJSON()
-        // snapshot the bot
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.UpdateActiveBot, 
-                {
-                    botId: bot.id,
-                }
-            ),
-            botCloned,
-        )
     }
 }
 

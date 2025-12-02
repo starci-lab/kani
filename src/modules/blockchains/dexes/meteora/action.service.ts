@@ -54,6 +54,8 @@ import { DynamicDlmmLiquidityPoolInfo } from "../../types"
 import { FeeService } from "../../math/fee.service"
 import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { GasStatus } from "../../types"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { createEventName, EventName } from "@modules/event"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
@@ -76,6 +78,7 @@ export class MeteoraActionService implements IActionService {
         private readonly logger: WinstonLogger,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
+        private readonly eventEmitter: EventEmitter2,
     ) {}
 
     async openPosition({
@@ -255,6 +258,12 @@ export class MeteoraActionService implements IActionService {
                     })
                 }
             })
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
     }
 
     async closePosition(
@@ -328,6 +337,12 @@ export class MeteoraActionService implements IActionService {
         }
         await this.proccessClosePositionTransaction(params)
         // return false to terminate the assertion
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
         return false
     }
 

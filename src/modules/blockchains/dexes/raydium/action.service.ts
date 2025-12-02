@@ -57,6 +57,8 @@ import { GasStatus } from "../../types"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { createEventName, EventName } from "@modules/event"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -77,6 +79,7 @@ export class RaydiumActionService implements IActionService {
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly gasStatusService: GasStatusService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        private readonly eventEmitter: EventEmitter2,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -152,6 +155,12 @@ export class RaydiumActionService implements IActionService {
         }
         await this.proccessClosePositionTransaction(params)
         // return false to terminate the assertion
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
         return false
     }
 
@@ -521,6 +530,13 @@ export class RaydiumActionService implements IActionService {
                     })
                 }
             })
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, 
+                {
+                    botId: bot.id,
+                })
+        )  
     }
 }
 

@@ -1,4 +1,3 @@
-import { BotSchema } from "@modules/databases"
 import { 
     createEventName, 
     DlmmLiquidityPoolsFetchedEvent, 
@@ -9,6 +8,7 @@ import { Inject, Injectable, Scope } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Mutex } from "async-mutex"
+import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable({
     scope: Scope.REQUEST,
@@ -23,9 +23,11 @@ export class DistributorProcessorService {
         @Inject(REQUEST)
         private readonly request: DistributorProcessorRequest,
         private readonly eventEmitter: EventEmitter2,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}    
 
     async initialize() {
+        this.readinessWatcherFactoryService.createWatcher(DistributorProcessorService.name)
         this.eventEmitter.on(
             EventName.InternalDlmmLiquidityPoolsFetched,
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
@@ -33,7 +35,7 @@ export class DistributorProcessorService {
                     createEventName(
                         EventName.DistributedDlmmLiquidityPoolsFetched, 
                         {
-                            botId: this.request.bot.id,
+                            botId: this.request.botId,
                         }),
                     payload,
                 )
@@ -45,14 +47,15 @@ export class DistributorProcessorService {
                     createEventName(
                         EventName.DistributedLiquidityPoolsFetched, 
                         {
-                            botId: this.request.bot.id,
+                            botId: this.request.botId,
                         }),
                     payload,
                 )
             })
+        this.readinessWatcherFactoryService.setReady(DistributorProcessorService.name)
     }
 }
 
 export interface DistributorProcessorRequest {
-    bot: BotSchema
+    botId: string
 }

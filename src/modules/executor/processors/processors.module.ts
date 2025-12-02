@@ -2,6 +2,7 @@ import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./processors.module-definition"
 import { ProcessorFactoryService } from "./processor-factory.service"
 import { 
+    ActiveBotProcessorService,
     OpenPositionProcessorService, 
     ClosePositionProcessorService, 
     BalanceProcessorService,
@@ -23,6 +24,7 @@ export class ProcessorsModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 DistributorProcessorService,
                 ProcessorFactoryService,
+                ActiveBotProcessorService,
                 BalanceProcessorService,
                 OpenPositionProcessorService,
                 ClosePositionProcessorService,

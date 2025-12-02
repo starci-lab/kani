@@ -6,17 +6,17 @@ import {
     LiquidityPoolsFetchedEvent 
 } from "@modules/event"
 import { REQUEST } from "@nestjs/core"
-import { BotSchema, PrimaryMemoryStorageService, PositionSchema, QuoteRatioStatus } from "@modules/databases"
+import { BotSchema, PrimaryMemoryStorageService, QuoteRatioStatus } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
 import { InjectPrimaryMongoose } from "@modules/databases"
-import { BotNotFoundException, TokenNotFoundException } from "@exceptions"
+import { TokenNotFoundException } from "@exceptions"
 import { DispatchOpenPositionService, QuoteRatioService } from "@modules/blockchains"
 import { MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { getMutexKey, MutexKey } from "@modules/lock"
 import { createObjectId } from "@utils"
-import { DayjsService } from "@modules/mixin"
+import { DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { MsService } from "@modules/mixin"
 import { OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -38,6 +38,7 @@ import Decimal from "decimal.js"
 })
 export class OpenPositionProcessorService  {
     private mutex: Mutex
+    private bot: BotSchema
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -57,46 +58,45 @@ export class OpenPositionProcessorService  {
         private readonly quoteRatioService: QuoteRatioService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
+        this.readinessWatcherFactoryService.createWatcher(OpenPositionProcessorService.name)
         // initialize the mutex
         this.mutex = this.mutexService.mutex(
             getMutexKey(
                 MutexKey.Action, 
-                this.request.bot.id
+                this.request.botId
             ))
+        this.eventEmitter.on(
+            createEventName(
+                EventName.ActiveBotUpdated, {
+                    botId: this.request.botId,
+                }),
+            async (payload: BotSchema) => {
+                this.bot = payload
+            }
+        )   
         // register event listeners
         this.eventEmitter.on(
-            createEventName(EventName.InternalLiquidityPoolsFetched, {
-                botId: this.request.bot.id,
-            }),
+            createEventName(
+                EventName.DistributedLiquidityPoolsFetched, {
+                    botId: this.request.botId,
+                }),
             async (payload: LiquidityPoolsFetchedEvent) => {
-                // re query the bot to ensure data is up to date
-                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-                if (!bot) {
-                    // bot not found, we skip here
-                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
-                }
-                const activePosition = await this.connection
-                    .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: bot.id,
-                        isActive: true,
-                    })
-                bot.activePosition = activePosition?.toJSON()
-                if (bot.activePosition) {
-                    // we do nothing if the bot is already in a position
+                if (!this.bot) {
                     return
                 }
                 if (
-                    !bot.snapshotTargetBalanceAmount 
-                    || !bot.snapshotQuoteBalanceAmount
-                    || !bot.snapshotGasBalanceAmount
+                    !this.bot.snapshotTargetBalanceAmount 
+                    || !this.bot.snapshotQuoteBalanceAmount
+                    || !this.bot.snapshotGasBalanceAmount
                     || new Decimal(
                         this.dayjsService.now().diff(
-                            bot.lastBalancesSnapshotAt, "millisecond")).gt(
+                            this.bot.lastBalancesSnapshotAt, "millisecond")).gt(
                         new Decimal(
                             this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
                         )
@@ -106,7 +106,7 @@ export class OpenPositionProcessorService  {
                 }
                 // only run if the liquidity pool is belong to the bot
                 if (
-                    !bot.liquidityPools
+                    !this.bot.liquidityPools
                         .map((liquidityPool) => liquidityPool.toString())
                         .includes(createObjectId(payload.liquidityPoolId).toString())
                 )
@@ -116,17 +116,17 @@ export class OpenPositionProcessorService  {
                 }
                 // define the target and quote tokens
                 const targetToken = this.primaryMemoryStorageService.tokens.find(
-                    token => token.id === bot.targetToken.toString())
+                    token => token.id === this.bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException("Target token not found")
                 }
                 const quoteToken = this.primaryMemoryStorageService.tokens.find(
-                    token => token.id === bot.quoteToken.toString())
+                    token => token.id === this.bot.quoteToken.toString())
                 if (!quoteToken) {
                     throw new TokenNotFoundException("Quote token not found")
                 }
-                const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
-                const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+                const snapshotTargetBalanceAmountBN = new BN(this.bot.snapshotTargetBalanceAmount)
+                const snapshotQuoteBalanceAmountBN = new BN(this.bot.snapshotQuoteBalanceAmount)
                 // get the quote ratio, if the quote ratio is not good, we skip the open position
                 const {
                     quoteRatio
@@ -150,12 +150,12 @@ export class OpenPositionProcessorService  {
                         try {
                             return await this.dispatchOpenPositionService.dispatchOpenPosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: bot,
+                                bot: this.bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.OpenPositionFailed, {
-                                    botId: bot.id,
+                                    botId: this.bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -167,32 +167,19 @@ export class OpenPositionProcessorService  {
             createEventName(
                 EventName.DistributedDlmmLiquidityPoolsFetched, 
                 {
-                    botId: this.request.bot.id,
+                    botId: this.request.botId,
                 }),
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
-                // re query the bot to ensure data is up to date
-                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-                if (!bot) {
-                    // bot not found, we skip here
-                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
-                }
-                // assign the bot to the instance
-                const activePosition = await this.connection
-                    .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: bot.id,
-                        isActive: true,
-                    })
-                if (activePosition) {
-                    // we do nothing if the bot is already in a position
+                if (!this.bot) {
                     return
                 }
                 if (
-                    !bot.snapshotTargetBalanceAmount 
-                    || !bot.snapshotQuoteBalanceAmount
-                    || !bot.snapshotGasBalanceAmount
+                    !this.bot.snapshotTargetBalanceAmount 
+                    || !this.bot.snapshotQuoteBalanceAmount
+                    || !this.bot.snapshotGasBalanceAmount
                     || new Decimal(
                         this.dayjsService.now().diff(
-                            bot.lastBalancesSnapshotAt, "millisecond")).gt(
+                            this.bot.lastBalancesSnapshotAt, "millisecond")).gt(
                         new Decimal(
                             this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
                         )
@@ -201,7 +188,7 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 if (
-                    !bot.liquidityPools
+                    !this.bot.liquidityPools
                         .map((liquidityPool) => liquidityPool.toString())
                         .includes(createObjectId(payload.liquidityPoolId).toString())
                 )
@@ -211,17 +198,17 @@ export class OpenPositionProcessorService  {
                 }
                 // define the target and quote tokens
                 const targetToken = this.primaryMemoryStorageService.tokens.find(
-                    token => token.id === bot.targetToken.toString())
+                    token => token.id === this.bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException("Target token not found")
                 }
                 const quoteToken = this.primaryMemoryStorageService.tokens.find(
-                    token => token.id === bot.quoteToken.toString())
+                    token => token.id === this.bot.quoteToken.toString())
                 if (!quoteToken) {
                     throw new TokenNotFoundException("Quote token not found")
                 }
-                const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
-                const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+                const snapshotTargetBalanceAmountBN = new BN(this.bot.snapshotTargetBalanceAmount)
+                const snapshotQuoteBalanceAmountBN = new BN(this.bot.snapshotQuoteBalanceAmount)
                 // get the quote ratio, if the quote ratio is not good, we skip the open position
                 const {
                     quoteRatio
@@ -245,12 +232,12 @@ export class OpenPositionProcessorService  {
                         try {
                             return await this.dispatchOpenPositionService.dispatchOpenPosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: bot,
+                                bot: this.bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.OpenPositionFailed, {
-                                    botId: bot.id,
+                                    botId: this.bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -258,9 +245,10 @@ export class OpenPositionProcessorService  {
                     })
             }
         )
+        this.readinessWatcherFactoryService.setReady(OpenPositionProcessorService.name)
     }
 }
 
 export interface OpenPositionProcessorRequest {
-    bot: BotSchema
+    botId: string
 }

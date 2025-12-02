@@ -11,7 +11,7 @@ import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable()
 export class UsersLoaderService implements OnModuleInit {
-    public users: Array<UserSchema> = []
+    public userIds: Array<string> = []
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -28,53 +28,28 @@ export class UsersLoaderService implements OnModuleInit {
         this.readinessWatcherFactoryService.createWatcher(UsersLoaderService.name)
         // load users on application bootstrap
         await this.load()
-        // observe users
-        this.observe()
         // wait until users are loaded
         this.readinessWatcherFactoryService.setReady(UsersLoaderService.name)
-    }
-
-    // observe users changes
-    async observe(): Promise<void> {
-        // observe users
-        this.observerService.observe({
-            filter: [
-                { 
-                    $match: { 
-                        operationType: { $in: ["update", "replace"] } 
-                    } 
-                }
-            ],
-            model: this.connection.model<UserSchema>(UserSchema.name),
-            list: this.users,
-            insertCondition: (data) => {
-                if (this.users.some((user) => user.id === data.id)) return false
-                return true
-            },
-            updateCondition: (data) => {
-                if (this.users.some((user) => user.id === data.id)) return false
-                return true
-            },
-            deleteCondition: (id) => {
-                if (this.users.some((user) => user.id === id)) return false
-                return true
-            },
-        })
     }
 
     // load users from database
     async load(): Promise<void> {
         const batchId = envConfig().botExecutor.batchId
+    
         const users = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .find()
+            .find({}, { _id: 1 })           // only select _id field
             .skip(batchId * USERS_PER_BATCH)
             .limit(USERS_PER_BATCH)
+            .lean()                          // return plain objects, no mongoose wrappers
+            .exec()
+    
         this.winstonLogger.debug(
-            WinstonLog.UsersLoaded, {
-                users: users.length,
-            })
-        this.users = users.map((user) => user.toJSON())
+            WinstonLog.UsersLoaded,
+            { users: users.length },
+        )
+        // store only list of IDs
+        this.userIds = users.map((user) => user._id.toString())
     }
 
     @Cron(CronExpression.EVERY_10_SECONDS)

@@ -62,6 +62,8 @@ import Decimal from "decimal.js"
 import { GasStatusService } from "../../balance"
 import { GasStatus } from "../../types"
 import { CalculateProfitability, ProfitabilityMathService } from "../../math"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { createEventName, EventName } from "@modules/event"
 
 @Injectable()
 export class OrcaActionService implements IActionService {
@@ -82,6 +84,7 @@ export class OrcaActionService implements IActionService {
         private readonly gasStatusService: GasStatusService,
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        private readonly eventEmitter: EventEmitter2,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -157,6 +160,14 @@ export class OrcaActionService implements IActionService {
         }
         await this.proccessClosePositionTransaction(params)
         // return false to terminate the assertion
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, 
+                {
+                    botId: bot.id,
+                }
+            )
+        )
         return false
     }
 
@@ -525,6 +536,12 @@ export class OrcaActionService implements IActionService {
                     })
                 }
             })
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
     }
 }
 
