@@ -58,4 +58,5 @@ export enum WinstonLog {
     SwapTransactionSuccess = "Swap.Transactions.Success",
     BotSnapshotBalancesUpdated = "Bot.Snapshot.Balances.Updated",
     BalanceRebalancingFailed = "Balance.Rebalancing.Failed",
+    ActiveBotProcessorInitialized = "Active.Bot.Processor.Initialized",
 }

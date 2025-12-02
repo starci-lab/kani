@@ -19,6 +19,7 @@ import { Logger as WinstonLogger } from "winston"
 import { DayjsService, MsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { Dayjs } from "dayjs"
 import { CLOSE_POSITION_INTERVAL } from "./constants"
+import { Decimal } from "decimal.js"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -148,10 +149,14 @@ export class ClosePositionProcessorService {
                 // if the bot has been closed position recently, we skip the close position
                 if (
                     this.lastClosedPositionAt &&
-                    this.lastClosedPositionAt.diff(this.dayjsService.now(), "millisecond") < 
-                    this.msService.fromString(CLOSE_POSITION_INTERVAL)
-                )
-                {
+                    new Decimal(
+                        this.lastClosedPositionAt.diff(this.dayjsService.now(), "millisecond"
+                        )).lt(
+                        new Decimal(
+                            this.msService.fromString(CLOSE_POSITION_INTERVAL)
+                        )
+                    )
+                ) {
                     return
                 }
                 this.mutex = this.mutexService.mutex(

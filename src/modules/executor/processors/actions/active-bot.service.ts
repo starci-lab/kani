@@ -13,6 +13,8 @@ import { OpenPositionProcessorService } from "./open-position.service"
 import { ClosePositionProcessorService } from "./close-position.service"
 import { DistributorProcessorService } from "./distributor.service"
 import { sleep } from "@modules/common"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable({
     scope: Scope.REQUEST,
@@ -27,6 +29,8 @@ export class ActiveBotProcessorService {
         private readonly connection: Connection,
         private readonly eventEmitter: EventEmitter2,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     async initialize() {
@@ -36,6 +40,11 @@ export class ActiveBotProcessorService {
         await this.readinessWatcherFactoryService.waitUntilReady(OpenPositionProcessorService.name)
         await this.readinessWatcherFactoryService.waitUntilReady(ClosePositionProcessorService.name)
         await this.readinessWatcherFactoryService.waitUntilReady(DistributorProcessorService.name)
+        this.logger.info(
+            WinstonLog.ActiveBotProcessorInitialized, {
+                botId: this.request.botId,
+            }
+        )
         this.eventEmitter.on(
             createEventName(
                 EventName.UpdateActiveBot, {
@@ -67,7 +76,7 @@ export class ActiveBotProcessorService {
         this.bot = botJson
         this.emit()
     }
-    
+
     emit() {
         this.eventEmitter.emit(
             createEventName(

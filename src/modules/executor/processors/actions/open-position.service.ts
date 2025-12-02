@@ -199,10 +199,15 @@ export class OpenPositionProcessorService  {
                 // if the bot has been open position recently, we skip the open position
                 if (
                     this.lastOpenedPositionAt &&
-                    this.lastOpenedPositionAt.diff(this.dayjsService.now(), "millisecond") < 
-                    this.msService.fromString(OPEN_POSITION_INTERVAL)
-                ) 
-                {
+                    new Decimal(
+                        this.lastOpenedPositionAt.diff(this.dayjsService.now(), 
+                            "millisecond"
+                        )).lt(
+                        new Decimal(
+                            this.msService.fromString(OPEN_POSITION_INTERVAL)
+                        )
+                    )
+                ) {
                     return
                 }
                 if (

@@ -325,7 +325,7 @@ export class MeteoraActionService implements IActionService {
                 "Active position not found"
             )
         }
-        const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo  
+        const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo
         if (
             new Decimal(_state.activeId || 0).gte(bot.activePosition.minBinId || 0) 
             && new Decimal(_state.activeId || 0).lte(bot.activePosition.maxBinId || 0)
