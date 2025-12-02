@@ -1,10 +1,14 @@
 import { Inject, Injectable, Scope } from "@nestjs/common"
-import { DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { createEventName, DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { REQUEST } from "@nestjs/core"
-import { BotSchema, InjectPrimaryMongoose, PositionSchema, PrimaryMemoryStorageService } from "@modules/databases"
+import { 
+    BotSchema, 
+    InjectPrimaryMongoose, 
+    PositionSchema, 
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
-import { BotNotFoundException, TokenNotFoundException } from "@exceptions"
 import { DispatchClosePositionService } from "@modules/blockchains"
 import { createObjectId } from "@utils"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
@@ -25,6 +29,7 @@ import { Logger as WinstonLogger } from "winston"
     durable: true,
 })
 export class ClosePositionProcessorService {
+    private activeBot: BotSchema
     private mutex: Mutex
     constructor(
         // The request object injected into this processor. It contains
@@ -48,51 +53,55 @@ export class ClosePositionProcessorService {
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
+        // first time the instance is initialized, we query the bot to ensure data is up to date
+        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
+        if (bot) {
+            this.activeBot = bot.toJSON()
+            const activePosition = await this.connection
+                .model<PositionSchema>(PositionSchema.name).findOne({
+                    bot: bot.id,
+                    isActive: true,
+                })
+            if (activePosition) {
+                this.activeBot.activePosition = activePosition.toJSON()
+            }
+        }
+        // whenever the active bot is updated, we update the active bot instance
+        this.eventEmitter.on(
+            createEventName(
+                EventName.UpdateActiveBot, 
+                {
+                    botId: this.request.bot.id,
+                }
+            ),
+            async (payload: BotSchema) => {
+                this.activeBot = payload
+            }
+        )
         // register event listeners
         this.eventEmitter.on(
             EventName.InternalLiquidityPoolsFetched,
             async (
                 payload: LiquidityPoolsFetchedEvent
             ) => {
-                this.mutex = this.mutexService.mutex(
-                    getMutexKey(
-                        MutexKey.Action, 
-                        this.request.bot.id
-                    ))
-                // re query the bot to ensure data is up to date
-                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-                if (!bot) {
-                    // bot not found, we skip here
-                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
-                }
-                const activePosition = await this.connection
-                    .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: bot.id,
-                        isActive: true,
-                    })
-                if (!activePosition) {
-                    // we do nothing if the bot is not in a position
+                if (!this.activeBot) {
                     return
                 }
                 // only run if the liquidity pool is belong to the bot
                 if (
-                    !bot.liquidityPools
-                        .map((liquidityPool) => liquidityPool.toString())
-                        .includes(createObjectId(payload.liquidityPoolId).toString())
+                    this.activeBot.activePosition?.liquidityPool.toString() 
+                    !== createObjectId(payload.liquidityPoolId).toString()
                 )
                 {
-                    // skip if the liquidity pool is not belong to the bot
+                    // skip if the liquidity pool is not belong to the active position
                     return
                 }
-                // define the target and quote tokens
-                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
-                if (!targetToken) {
-                    throw new TokenNotFoundException("Target token not found")
-                }
-                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
-                if (!quoteToken) {
-                    throw new TokenNotFoundException("Quote token not found")
-                }
+                this.mutex = this.mutexService.mutex(
+                    getMutexKey(
+                        MutexKey.Action, 
+                        this.request.bot.id
+                    )
+                )
                 // run the open position
                 if (this.mutex.isLocked()) {
                     return
@@ -102,12 +111,12 @@ export class ClosePositionProcessorService {
                         try {
                             return await this.dispatchClosePositionService.dispatchClosePosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: bot,
+                                bot: this.activeBot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.ClosePositionFailed, {
-                                    botId: bot.id,
+                                    botId: this.request.bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -120,43 +129,15 @@ export class ClosePositionProcessorService {
             async (
                 payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
+                if (!this.activeBot) {
+                    return
+                }
                 this.mutex = this.mutexService.mutex(
                     getMutexKey(
                         MutexKey.Action, 
                         this.request.bot.id
                     ))
-                // re query the bot to ensure data is up to date
-                const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-                if (!bot) {
-                    // bot not found, we skip here
-                    throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
-                }
-                const activePosition = await this.connection
-                    .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: bot.id,
-                        isActive: true,
-                    })
-                if (!activePosition) {
-                    // we do nothing if the bot is not in a position
-                    return
-                }
-                // only run if the liquidity pool is similar to the active position
-                if (
-                    activePosition.liquidityPool.toString() !== createObjectId(payload.liquidityPoolId).toString()
-                ) {
-                    // skip if the liquidity pool is not similar to the active position
-                    return
-                }
                 // define the target and quote tokens
-                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
-                if (!targetToken) {
-                    throw new TokenNotFoundException("Target token not found")
-                }
-                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
-                if (!quoteToken) {
-                    throw new TokenNotFoundException("Quote token not found")
-                }
-                // run the open position
                 if (this.mutex.isLocked()) {
                     return
                 }
@@ -165,12 +146,12 @@ export class ClosePositionProcessorService {
                         try {
                             return await this.dispatchClosePositionService.dispatchClosePosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: bot,
+                                bot: this.activeBot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.ClosePositionFailed, {
-                                    botId: bot.id,
+                                    botId: this.activeBot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })

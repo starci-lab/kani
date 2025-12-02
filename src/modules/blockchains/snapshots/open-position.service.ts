@@ -5,6 +5,8 @@ import BN from "bn.js"
 import { ChainId, createObjectId, Network } from "@modules/common"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { createEventName, EventName } from "@modules/event"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -12,6 +14,7 @@ export class OpenPositionSnapshotService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
+        private readonly eventEmitter: EventEmitter2,
     ) {}
 
     async addOpenPositionTransactionRecord(
@@ -39,7 +42,7 @@ export class OpenPositionSnapshotService {
             feeAmountQuote,
         }: AddOpenPositionTransactionRecordParams
     ) {
-        await this.connection.model<PositionSchema>(
+        const [activePosition] = await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).create([{
             targetAmountUsed: targetAmountUsed.toString(),
@@ -67,6 +70,18 @@ export class OpenPositionSnapshotService {
         }], {
             session,
         })
+        const botCloned = bot.toJSON()
+        botCloned.activePosition = activePosition.toJSON()
+        // snapshot the bot
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, 
+                {
+                    botId: bot.id,
+                }
+            ),
+            botCloned,
+        )
     }
 }
 

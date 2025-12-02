@@ -38,6 +38,18 @@ export class ProcessorFactoryService implements OnApplicationBootstrap {
             })(),
             (async () => {
                 const contextId = ContextIdFactory.create()
+                this.moduleRef.registerRequestByContextId<DistributorProcessorRequest>(
+                    { bot }, 
+                    contextId
+                )
+                const distributorProcessor = await this.moduleRef.resolve(
+                    DistributorProcessorService, 
+                    contextId
+                )
+                await distributorProcessor.initialize()
+            })(),
+            (async () => {
+                const contextId = ContextIdFactory.create()
                 this.moduleRef.registerRequestByContextId<ClosePositionProcessorRequest>(
                     { bot }, 
                     contextId
@@ -59,18 +71,6 @@ export class ProcessorFactoryService implements OnApplicationBootstrap {
                     contextId
                 )
                 await balanceProcessor.initialize()
-            })(),
-            (async () => {
-                const contextId = ContextIdFactory.create()
-                this.moduleRef.registerRequestByContextId<DistributorProcessorRequest>(
-                    { bot }, 
-                    contextId
-                )
-                const distributorProcessor = await this.moduleRef.resolve(
-                    DistributorProcessorService, 
-                    contextId
-                )
-                await distributorProcessor.initialize()
             })(),
         ])
     }

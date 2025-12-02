@@ -4,7 +4,8 @@ import { ProcessorFactoryService } from "./processor-factory.service"
 import { 
     OpenPositionProcessorService, 
     ClosePositionProcessorService, 
-    BalanceProcessorService 
+    BalanceProcessorService,
+    DistributorProcessorService
 } from "./actions"
 
 @Module({})
@@ -20,6 +21,7 @@ export class ProcessorsModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [], 
+                DistributorProcessorService,
                 ProcessorFactoryService,
                 BalanceProcessorService,
                 OpenPositionProcessorService,

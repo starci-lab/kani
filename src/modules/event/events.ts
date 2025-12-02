@@ -21,6 +21,7 @@ export enum EventName {
     InternalDlmmLiquidityPoolsFetched = "internalDlmmLiquidityPoolsFetched",
     DistributedDlmmLiquidityPoolsFetched = "distributedDlmmLiquidityPoolsFetched",
     DistributedLiquidityPoolsFetched = "distributedLiquidityPoolsFetched",
+    UpdateActiveBot = "updateActiveBot",
 }
 
 export const createEventName = (

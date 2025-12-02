@@ -70,12 +70,9 @@ export class OpenPositionProcessorService  {
             ))
         // register event listeners
         this.eventEmitter.on(
-            createEventName(
-                EventName.DistributedLiquidityPoolsFetched, 
-                {
-                    botId: this.request.bot.id,
-                }
-            ),
+            createEventName(EventName.InternalLiquidityPoolsFetched, {
+                botId: this.request.bot.id,
+            }),
             async (payload: LiquidityPoolsFetchedEvent) => {
                 // re query the bot to ensure data is up to date
                 const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
@@ -118,11 +115,13 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // define the target and quote tokens
-                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
+                const targetToken = this.primaryMemoryStorageService.tokens.find(
+                    token => token.id === bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException("Target token not found")
                 }
-                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(
+                    token => token.id === bot.quoteToken.toString())
                 if (!quoteToken) {
                     throw new TokenNotFoundException("Quote token not found")
                 }
@@ -169,8 +168,7 @@ export class OpenPositionProcessorService  {
                 EventName.DistributedDlmmLiquidityPoolsFetched, 
                 {
                     botId: this.request.bot.id,
-                }
-            ),
+                }),
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
                 // re query the bot to ensure data is up to date
                 const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
@@ -189,12 +187,53 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 if (
+                    !bot.snapshotTargetBalanceAmount 
+                    || !bot.snapshotQuoteBalanceAmount
+                    || !bot.snapshotGasBalanceAmount
+                    || new Decimal(
+                        this.dayjsService.now().diff(
+                            bot.lastBalancesSnapshotAt, "millisecond")).gt(
+                        new Decimal(
+                            this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
+                        )
+                    )
+                ) {
+                    return
+                }
+                if (
                     !bot.liquidityPools
                         .map((liquidityPool) => liquidityPool.toString())
                         .includes(createObjectId(payload.liquidityPoolId).toString())
                 )
                 {
                     // skip if the liquidity pool is not belong to the bot
+                    return
+                }
+                // define the target and quote tokens
+                const targetToken = this.primaryMemoryStorageService.tokens.find(
+                    token => token.id === bot.targetToken.toString())
+                if (!targetToken) {
+                    throw new TokenNotFoundException("Target token not found")
+                }
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(
+                    token => token.id === bot.quoteToken.toString())
+                if (!quoteToken) {
+                    throw new TokenNotFoundException("Quote token not found")
+                }
+                const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
+                const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+                // get the quote ratio, if the quote ratio is not good, we skip the open position
+                const {
+                    quoteRatio
+                } = await this.quoteRatioService.computeQuoteRatio({
+                    targetTokenId: targetToken.displayId,
+                    quoteTokenId: quoteToken.displayId,
+                    targetBalanceAmount: snapshotTargetBalanceAmountBN,
+                    quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
+                })
+                if (this.quoteRatioService.checkQuoteRatioStatus({
+                    quoteRatio
+                }) !== QuoteRatioStatus.Good) {
                     return
                 }
                 // run the open position

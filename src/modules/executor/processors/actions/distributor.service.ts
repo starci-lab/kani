@@ -16,6 +16,7 @@ import { Mutex } from "async-mutex"
 })
 export class DistributorProcessorService {
     private mutex: Mutex
+
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -30,7 +31,8 @@ export class DistributorProcessorService {
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
                 this.eventEmitter.emit(
                     createEventName(
-                        EventName.DistributedDlmmLiquidityPoolsFetched, {
+                        EventName.DistributedDlmmLiquidityPoolsFetched, 
+                        {
                             botId: this.request.bot.id,
                         }),
                     payload,
@@ -41,7 +43,8 @@ export class DistributorProcessorService {
             async (payload: LiquidityPoolsFetchedEvent) => {
                 this.eventEmitter.emit(
                     createEventName(
-                        EventName.DistributedLiquidityPoolsFetched, {
+                        EventName.DistributedLiquidityPoolsFetched, 
+                        {
                             botId: this.request.bot.id,
                         }),
                     payload,
