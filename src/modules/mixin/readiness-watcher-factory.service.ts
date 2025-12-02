@@ -11,7 +11,7 @@ export interface ReadinessWatcher {
 
 @Injectable()
 export class ReadinessWatcherFactoryService {
-    private readonly watchers: Record<string, ReadinessWatcher> = {}
+    readonly watchers: Record<string, ReadinessWatcher> = {}
 
     createWatcher(name: string): ReadinessWatcher {
         if (this.watchers[name]) {

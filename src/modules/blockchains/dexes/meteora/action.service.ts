@@ -264,6 +264,12 @@ export class MeteoraActionService implements IActionService {
                     botId: bot.id,
                 })
         )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionOpened, {
+                    botId: bot.id,
+                })
+        )
     }
 
     async closePosition(
@@ -340,6 +346,12 @@ export class MeteoraActionService implements IActionService {
         this.eventEmitter.emit(
             createEventName(
                 EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionClosed, {
                     botId: bot.id,
                 })
         )

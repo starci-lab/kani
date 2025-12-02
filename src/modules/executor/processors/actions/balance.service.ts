@@ -70,12 +70,16 @@ export class BalanceProcessorService  {
                 if (this.mutex.isLocked()) {
                     return
                 }
-                await this.mutex.runExclusive(async () => {
-                    await this.balanceService.executeBalanceRebalancing({
-                        bot: this.bot,
-                        withoutSnapshot: false,
+                await this.mutex.runExclusive(
+                    async () => {
+                        if (!this.bot) {
+                            return
+                        }
+                        await this.balanceService.executeBalanceRebalancing({
+                            bot: this.bot,
+                            withoutSnapshot: false,
+                        })
                     })
-                })
             } catch (error) {
                 this.logger.error(
                     WinstonLog.BalanceRebalancingFailed, {
@@ -84,8 +88,6 @@ export class BalanceProcessorService  {
                     })
             }
         }
-        // Run immediately and then at a fixed interval
-        executeBalanceRebalancing()
         setInterval(
             executeBalanceRebalancing,
             envConfig().botExecutor.balanceEvaluationInterval,

@@ -16,7 +16,9 @@ import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import { DayjsService, MsService, ReadinessWatcherFactoryService } from "@modules/mixin"
+import { Dayjs } from "dayjs"
+import { CLOSE_POSITION_INTERVAL } from "./constants"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -33,6 +35,7 @@ import { ReadinessWatcherFactoryService } from "@modules/mixin"
 export class ClosePositionProcessorService {
     private bot: BotSchema
     private mutex: Mutex
+    private lastClosedPositionAt: Dayjs | null = null
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -44,6 +47,8 @@ export class ClosePositionProcessorService {
         private readonly eventEmitter: EventEmitter2,
         private readonly dispatchClosePositionService: DispatchClosePositionService,
         private readonly mutexService: MutexService,
+        private readonly dayjsService: DayjsService,
+        private readonly msService: MsService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -62,8 +67,16 @@ export class ClosePositionProcessorService {
                 }
             ),
             async (payload: BotSchema) => {
-                console.log("Active bot updated", payload)
                 this.bot = payload
+            }
+        )
+        this.eventEmitter.on(
+            createEventName(
+                EventName.PositionClosed, {
+                    botId: this.request.botId,
+                }),
+            async () => {
+                this.lastClosedPositionAt = this.dayjsService.now()
             }
         )
         // register event listeners
@@ -74,6 +87,18 @@ export class ClosePositionProcessorService {
             ) => {
                 if (!this.bot) {
                     return
+                }
+                // if the bot has been closed position recently, we skip the close position
+                if (
+                    this.lastClosedPositionAt 
+                )
+                {
+                    if (
+                        this.lastClosedPositionAt.diff(this.dayjsService.now(), "millisecond") 
+                        < this.msService.fromString(CLOSE_POSITION_INTERVAL)
+                    ) {
+                        return
+                    }
                 }
                 // only run if the liquidity pool is belong to the bot
                 if (
@@ -118,6 +143,15 @@ export class ClosePositionProcessorService {
                 payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
                 if (!this.bot) {
+                    return
+                }
+                // if the bot has been closed position recently, we skip the close position
+                if (
+                    this.lastClosedPositionAt &&
+                    this.lastClosedPositionAt.diff(this.dayjsService.now(), "millisecond") < 
+                    this.msService.fromString(CLOSE_POSITION_INTERVAL)
+                )
+                {
                     return
                 }
                 this.mutex = this.mutexService.mutex(

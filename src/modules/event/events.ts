@@ -23,6 +23,8 @@ export enum EventName {
     DistributedLiquidityPoolsFetched = "distributedLiquidityPoolsFetched",
     ActiveBotUpdated = "activeBotUpdated",
     UpdateActiveBot = "updateActiveBot",
+    PositionClosed = "positionClosed",
+    PositionOpened = "positionOpened",
 }
 
 export const createEventName = (

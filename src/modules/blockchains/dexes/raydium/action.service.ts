@@ -157,7 +157,15 @@ export class RaydiumActionService implements IActionService {
         // return false to terminate the assertion
         this.eventEmitter.emit(
             createEventName(
-                EventName.UpdateActiveBot, {
+                EventName.UpdateActiveBot, 
+                {
+                    botId: bot.id,
+                })
+        )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionClosed, 
+                {
                     botId: bot.id,
                 })
         )
@@ -537,6 +545,12 @@ export class RaydiumActionService implements IActionService {
                     botId: bot.id,
                 })
         )  
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionOpened, {
+                    botId: bot.id,
+                })
+        )
     }
 }
 

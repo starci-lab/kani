@@ -18,11 +18,12 @@ import { getMutexKey, MutexKey } from "@modules/lock"
 import { createObjectId } from "@utils"
 import { DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { MsService } from "@modules/mixin"
-import { OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
+import { OPEN_POSITION_INTERVAL, OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import BN from "bn.js"
 import Decimal from "decimal.js"
+import { Dayjs } from "dayjs"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -39,6 +40,7 @@ import Decimal from "decimal.js"
 export class OpenPositionProcessorService  {
     private mutex: Mutex
     private bot: BotSchema
+    private lastOpenedPositionAt: Dayjs | null = null
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -80,6 +82,15 @@ export class OpenPositionProcessorService  {
                 this.bot = payload
             }
         )   
+        this.eventEmitter.on(
+            createEventName(
+                EventName.PositionOpened, {
+                    botId: this.request.botId,
+                }),
+            async () => {
+                this.lastOpenedPositionAt = this.dayjsService.now()
+            }
+        )
         // register event listeners
         this.eventEmitter.on(
             createEventName(
@@ -89,6 +100,18 @@ export class OpenPositionProcessorService  {
             async (payload: LiquidityPoolsFetchedEvent) => {
                 if (!this.bot) {
                     return
+                }
+                // if the bot has been open position recently, we skip the open position
+                if (
+                    this.lastOpenedPositionAt 
+                )
+                {
+                    if (this.lastOpenedPositionAt
+                        .diff(this.dayjsService.now(), "millisecond") < 
+                    this.msService.fromString(OPEN_POSITION_INTERVAL)) 
+                    {
+                        return
+                    }
                 }
                 if (
                     !this.bot.snapshotTargetBalanceAmount 
@@ -171,6 +194,15 @@ export class OpenPositionProcessorService  {
                 }),
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
                 if (!this.bot) {
+                    return
+                }
+                // if the bot has been open position recently, we skip the open position
+                if (
+                    this.lastOpenedPositionAt &&
+                    this.lastOpenedPositionAt.diff(this.dayjsService.now(), "millisecond") < 
+                    this.msService.fromString(OPEN_POSITION_INTERVAL)
+                ) 
+                {
                     return
                 }
                 if (

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
 import { Scope } from "@nestjs/common"
-import { Cron, CronExpression } from "@nestjs/schedule"
+import { envConfig } from "@modules/env"
 import { BotSchema, InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
 import { Connection } from "mongoose"
 import { BotNotFoundException } from "@exceptions"
@@ -12,7 +12,7 @@ import { BalanceProcessorService } from "./balance.service"
 import { OpenPositionProcessorService } from "./open-position.service"
 import { ClosePositionProcessorService } from "./close-position.service"
 import { DistributorProcessorService } from "./distributor.service"
-import { AsyncService } from "@modules/mixin"
+import { sleep } from "@modules/common"
 
 @Injectable({
     scope: Scope.REQUEST,
@@ -27,32 +27,15 @@ export class ActiveBotProcessorService {
         private readonly connection: Connection,
         private readonly eventEmitter: EventEmitter2,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly asyncService: AsyncService,
     ) {}
 
     async initialize() {
-        await this.asyncService.allMustDone([
-            (
-                async () => {
-                    await this.readinessWatcherFactoryService.waitUntilReady(BalanceProcessorService.name)
-                }
-            )(),
-            (
-                async () => {
-                    await this.readinessWatcherFactoryService.waitUntilReady(OpenPositionProcessorService.name)
-                }
-            )(),
-            (
-                async () => {
-                    await this.readinessWatcherFactoryService.waitUntilReady(ClosePositionProcessorService.name)
-                }
-            )(),
-            (
-                async () => {
-                    await this.readinessWatcherFactoryService.waitUntilReady(DistributorProcessorService.name)
-                }
-            )(),
-        ])
+        // sleep 10ms to ensure other processors are initialized
+        await sleep(10)
+        await this.readinessWatcherFactoryService.waitUntilReady(BalanceProcessorService.name)
+        await this.readinessWatcherFactoryService.waitUntilReady(OpenPositionProcessorService.name)
+        await this.readinessWatcherFactoryService.waitUntilReady(ClosePositionProcessorService.name)
+        await this.readinessWatcherFactoryService.waitUntilReady(DistributorProcessorService.name)
         this.eventEmitter.on(
             createEventName(
                 EventName.UpdateActiveBot, {
@@ -63,11 +46,9 @@ export class ActiveBotProcessorService {
             }
         )
         this.load()
-    }
-
-    @Cron(CronExpression.EVERY_10_SECONDS)
-    async reload() {
-        await this.load()
+        setInterval(() => {
+            this.load()
+        }, envConfig().botExecutor.activeBotInterval)
     }
 
     async load() {
@@ -86,7 +67,7 @@ export class ActiveBotProcessorService {
         this.bot = botJson
         this.emit()
     }
-
+    
     emit() {
         this.eventEmitter.emit(
             createEventName(

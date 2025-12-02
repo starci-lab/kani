@@ -159,7 +159,6 @@ export class OrcaActionService implements IActionService {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
         await this.proccessClosePositionTransaction(params)
-        // return false to terminate the assertion
         this.eventEmitter.emit(
             createEventName(
                 EventName.UpdateActiveBot, 
@@ -168,6 +167,15 @@ export class OrcaActionService implements IActionService {
                 }
             )
         )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionClosed, 
+                {
+                    botId: bot.id,
+                }
+            )
+        )
+        // return false to terminate the assertion
         return false
     }
 
@@ -539,6 +547,12 @@ export class OrcaActionService implements IActionService {
         this.eventEmitter.emit(
             createEventName(
                 EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionOpened, {
                     botId: bot.id,
                 })
         )
