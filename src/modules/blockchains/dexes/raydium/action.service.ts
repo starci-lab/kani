@@ -42,7 +42,7 @@ import {
     appendTransactionMessageInstructions,
 } from "@solana/kit"
 import BN from "bn.js"
-import { BalanceService, CalculateProfitability, ProfitabilityMathService } from "../../balance"
+import { BalanceService } from "../../balance"
 import { 
     BalanceSnapshotService, 
     ClosePositionSnapshotService, 
@@ -50,8 +50,10 @@ import {
     SwapTransactionSnapshotService 
 } from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
-import { adjustSlippage, computeRaw, httpsToWss } from "@utils"
-import { GasStatus, GasStatusService } from "../../balance"
+import { adjustSlippage, httpsToWss } from "@utils"
+import { GasStatusService } from "../../balance"
+import { CalculateProfitability, ProfitabilityMathService } from "../../math"
+import { GasStatus } from "../../types"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
@@ -344,14 +346,6 @@ export class RaydiumActionService implements IActionService {
         }
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
-        // safety check, if the target balance amount is too low, we don't open the position
-        // to ensure we do not open the position with too little balance
-        if (
-            snapshotTargetBalanceAmountBN.lt(
-                new BN(computeRaw(targetToken.minRequiredAmount || 0, targetToken.decimals)))
-        ) {
-            return
-        }
         // get the tick bounds
         const { 
             tickLower, 

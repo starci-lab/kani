@@ -21,7 +21,6 @@ export class PositionService {
                 getAddressEncoder().encode(address(nftMintAddress)),
             ],
         })
-
         return {
             pda,
         }

@@ -33,3 +33,9 @@ export interface DynamicDlmmLiquidityPoolInfo {
 
 export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]
 export type SendAndConfirmTransactionType = Parameters<ReturnType<typeof sendAndConfirmTransactionFactory>>[0]
+
+export enum GasStatus {
+    IsTarget = "isTarget",
+    IsQuote = "isQuote",
+    IsGas = "isGas",
+}

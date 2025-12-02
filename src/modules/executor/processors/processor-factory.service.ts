@@ -1,8 +1,8 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { ContextIdFactory, ModuleRef } from "@nestjs/core"
 import { BotSchema } from "@modules/databases"
-import { BalanceProcessorRequest, BalanceProcessorService, ClosePositionProcessorRequest, ClosePositionProcessorService, OpenPositionProcessorService } from "./positions"
-import { OpenPositionProcessorRequest } from "./positions"
+import { BalanceProcessorRequest, BalanceProcessorService, ClosePositionProcessorRequest, ClosePositionProcessorService, DistributorProcessorRequest, DistributorProcessorService, OpenPositionProcessorService } from "./actions"
+import { OpenPositionProcessorRequest } from "./actions"
 import { BotsLoaderService } from "../loaders"
 import { AsyncService } from "@modules/mixin"
 
@@ -59,6 +59,18 @@ export class ProcessorFactoryService implements OnApplicationBootstrap {
                     contextId
                 )
                 await balanceProcessor.initialize()
+            })(),
+            (async () => {
+                const contextId = ContextIdFactory.create()
+                this.moduleRef.registerRequestByContextId<DistributorProcessorRequest>(
+                    { bot }, 
+                    contextId
+                )
+                const distributorProcessor = await this.moduleRef.resolve(
+                    DistributorProcessorService, 
+                    contextId
+                )
+                await distributorProcessor.initialize()
             })(),
         ])
     }

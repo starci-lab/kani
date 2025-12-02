@@ -88,13 +88,6 @@ export class TokenSchema extends AbstractSchema {
         is2022Token?: boolean
 
     @Field(() => Float, { 
-        description: "The minimum required amount of the token to be eligible for the bot",
-        nullable: true,
-    })
-    @Prop({ type: Number, required: false })
-        minRequiredAmount?: number
-
-    @Field(() => Float, { 
         description: "The minimum required amount of the token in total to be eligible for the bot",
         nullable: true,
     })

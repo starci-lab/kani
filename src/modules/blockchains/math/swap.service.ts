@@ -12,8 +12,8 @@ import { computeRaw, toScaledBN, toUnit } from "@utils"
 import { ChainId, Network, TokenType } from "@typedefs"
 import BN from "bn.js"
 import { QuoteRatioService } from "./quote-ratio.service"
-import { SAFE_QUOTE_RATIO_IDEAL } from "./constants"
-import { GasStatus } from "./types"
+import { GasStatus } from "../types"
+import { SAFE_QUOTE_RATIO_BELOW, SAFE_QUOTE_RATIO_ABOVE, EXPECTED_QUOTE_RATIO_BELOW, EXPECTED_QUOTE_RATIO_ABOVE } from "./constants"
 
 @Injectable()
 export class SwapMathService {
@@ -52,9 +52,9 @@ export class SwapMathService {
                 quoteRatioResponse,
             }
         }
-        case QuoteRatioStatus.TargetTooLow: {
-            // quote is too little, we need to swap from target to quote
-            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
+        case QuoteRatioStatus.TargetTooHigh: {
+            // target is too much, we need to swap from target to quote
+            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(EXPECTED_QUOTE_RATIO_BELOW)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResponse.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
                 computeRaw(
@@ -75,21 +75,23 @@ export class SwapMathService {
                 quoteRatioResponse,
             }
         }
-        case QuoteRatioStatus.TargetTooHigh: {
-            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
+        case QuoteRatioStatus.TargetTooLow: {
+            // target is too little, we need to swap from quote to target
+            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(EXPECTED_QUOTE_RATIO_ABOVE)
             const excessQuoteInQuote = quoteRatioResponse.quoteBalanceAmountInQuote.sub(idealQuoteBalanceInQuote)
             const excessQuoteInQuoteBN = new BN(
                 computeRaw(new Decimal(excessQuoteInQuote), quoteToken.decimals)
             )
-            const quoteToTargetSwapAmount = toScaledBN(
-                toUnit(quoteToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResponse.oraclePrice))
-            )
+            const estimatedSwappedTargetAmount = toScaledBN(
+                toUnit(targetToken.decimals),
+                new Decimal(1).div(new Decimal(quoteRatioResponse.oraclePrice)
+                ))
+                .mul(excessQuoteInQuoteBN).div(toUnit(quoteToken.decimals))
             // quote is too much, we need to swap from quote to target
             return {
                 processSwaps: true,
                 swapQuoteToTargetAmount: excessQuoteInQuoteBN,
-                estimatedSwappedTargetAmount: quoteToTargetSwapAmount,
+                estimatedSwappedTargetAmount,
                 quoteRatioStatus: QuoteRatioStatus.TargetTooHigh,
                 quoteRatioResponse,
             }
@@ -127,7 +129,7 @@ export class SwapMathService {
         }
         case QuoteRatioStatus.TargetTooLow: {
             // quote is too little, we need to swap from target to quote
-            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
+            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResponse.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
                 computeRaw(
@@ -149,7 +151,7 @@ export class SwapMathService {
             }
         }
         case QuoteRatioStatus.TargetTooHigh: {
-            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
+            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_ABOVE)
             const excessQuoteInQuote = quoteRatioResponse.quoteBalanceAmountInQuote.sub(idealQuoteBalanceInQuote)
             const excessQuoteInQuoteBN = new BN(
                 computeRaw(new Decimal(excessQuoteInQuote), quoteToken.decimals)
@@ -253,7 +255,7 @@ export class SwapMathService {
             }
         }
         case QuoteRatioStatus.TargetTooLow: {
-            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_IDEAL)
+            const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResponse.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
                 computeRaw(

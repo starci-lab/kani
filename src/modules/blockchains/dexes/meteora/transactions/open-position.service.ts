@@ -175,7 +175,7 @@ export class OpenPositionInstructionService {
                 instructions: createAtaAInstructions,
                 ataAddress: feeToAAtaAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
+                ownerAddress: address(feeToAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
                 clientIndex,
@@ -197,7 +197,7 @@ export class OpenPositionInstructionService {
                 instructions: createAtaBInstructions,
                 ataAddress: feeToBAtaAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
+                ownerAddress: address(feeToAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
                 clientIndex,

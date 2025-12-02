@@ -2,7 +2,7 @@ import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { TokenType } from "@typedefs"
 import { TokenNotFoundException } from "@exceptions"
-import { GasStatus } from "./types"
+import { GasStatus } from "../types"
 
 @Injectable()
 export class GasStatusService {

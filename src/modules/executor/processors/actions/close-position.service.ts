@@ -26,7 +26,6 @@ import { Logger as WinstonLogger } from "winston"
 })
 export class ClosePositionProcessorService {
     private mutex: Mutex
-    private bot: BotSchema
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -49,14 +48,6 @@ export class ClosePositionProcessorService {
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
-        // re query the bot to ensure data is up to date
-        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
-        if (!bot) {
-            // bot not found, we skip here
-            throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
-        }
-        // assign the bot to the instance
-        this.bot = bot.toJSON()
         // register event listeners
         this.eventEmitter.on(
             EventName.InternalLiquidityPoolsFetched,
@@ -74,21 +65,18 @@ export class ClosePositionProcessorService {
                     // bot not found, we skip here
                     throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
                 }
-                // assign the bot to the instance
-                this.bot = bot.toJSON()
                 const activePosition = await this.connection
                     .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: this.bot.id,
+                        bot: bot.id,
                         isActive: true,
                     })
-                this.bot.activePosition = activePosition?.toJSON()
-                if (!this.bot.activePosition) {
+                if (!activePosition) {
                     // we do nothing if the bot is not in a position
                     return
                 }
                 // only run if the liquidity pool is belong to the bot
                 if (
-                    !this.bot.liquidityPools
+                    !bot.liquidityPools
                         .map((liquidityPool) => liquidityPool.toString())
                         .includes(createObjectId(payload.liquidityPoolId).toString())
                 )
@@ -97,11 +85,11 @@ export class ClosePositionProcessorService {
                     return
                 }
                 // define the target and quote tokens
-                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.targetToken.toString())
+                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException("Target token not found")
                 }
-                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.quoteToken.toString())
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
                 if (!quoteToken) {
                     throw new TokenNotFoundException("Quote token not found")
                 }
@@ -114,12 +102,12 @@ export class ClosePositionProcessorService {
                         try {
                             return await this.dispatchClosePositionService.dispatchClosePosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.bot,
+                                bot: bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.ClosePositionFailed, {
-                                    botId: this.bot.id,
+                                    botId: bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -143,34 +131,28 @@ export class ClosePositionProcessorService {
                     // bot not found, we skip here
                     throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
                 }
-                // assign the bot to the instance
-                this.bot = bot.toJSON()
                 const activePosition = await this.connection
                     .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: this.bot.id,
+                        bot: bot.id,
                         isActive: true,
                     })
-                this.bot.activePosition = activePosition?.toJSON()
-                if (!this.bot.activePosition) {
+                if (!activePosition) {
                     // we do nothing if the bot is not in a position
                     return
                 }
-                // only run if the liquidity pool is belong to the bot
+                // only run if the liquidity pool is similar to the active position
                 if (
-                    !this.bot.liquidityPools
-                        .map((liquidityPool) => liquidityPool.toString())
-                        .includes(createObjectId(payload.liquidityPoolId).toString())
-                )
-                {
-                    // skip if the liquidity pool is not belong to the bot
+                    activePosition.liquidityPool.toString() !== createObjectId(payload.liquidityPoolId).toString()
+                ) {
+                    // skip if the liquidity pool is not similar to the active position
                     return
                 }
                 // define the target and quote tokens
-                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.targetToken.toString())
+                const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
                 if (!targetToken) {
                     throw new TokenNotFoundException("Target token not found")
                 }
-                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === this.bot.quoteToken.toString())
+                const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
                 if (!quoteToken) {
                     throw new TokenNotFoundException("Quote token not found")
                 }
@@ -183,12 +165,12 @@ export class ClosePositionProcessorService {
                         try {
                             return await this.dispatchClosePositionService.dispatchClosePosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.bot,
+                                bot: bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.ClosePositionFailed, {
-                                    botId: this.bot.id,
+                                    botId: bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })

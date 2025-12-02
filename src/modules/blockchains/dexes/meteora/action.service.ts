@@ -34,16 +34,13 @@ import {
 import { METEORA_CLIENTS_INDEX } from "./constants"
 import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection } from "@solana/web3.js"
-import { computeRaw, httpsToWss } from "@utils"
+import { httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { PrimaryMemoryStorageService, InjectPrimaryMongoose } from "@modules/databases"
 import { 
     BalanceService, 
-    CalculateProfitability, 
-    GasStatus, 
     GasStatusService, 
-    ProfitabilityMathService 
 } from "../../balance"
 import { Connection as MongooseConnection } from "mongoose"
 import { 
@@ -55,6 +52,8 @@ import {
 import Decimal from "decimal.js"
 import { DynamicDlmmLiquidityPoolInfo } from "../../types"
 import { FeeService } from "../../math/fee.service"
+import { CalculateProfitability, ProfitabilityMathService } from "../../math"
+import { GasStatus } from "../../types"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
@@ -112,14 +111,7 @@ export class MeteoraActionService implements IActionService {
         }
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
-        // safety check, if the target balance amount is too low, we don't open the position
-        // to ensure we do not open the position with too little balance
-        if (
-            snapshotTargetBalanceAmountBN.lt(
-                new BN(computeRaw(targetToken.minRequiredAmount || 0, targetToken.decimals)))
-        ) {
-            return
-        }
+
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
         // open the position
@@ -137,6 +129,7 @@ export class MeteoraActionService implements IActionService {
             amountA,    
             amountB,
         })
+
         // append the fee instructions
         // convert the transaction to a transaction with lifetime
         // sign the transaction
@@ -317,7 +310,7 @@ export class MeteoraActionService implements IActionService {
                 "Active position not found"
             )
         }
-        const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo
+        const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo    
         if (
             new Decimal(_state.activeId || 0).gte(bot.activePosition.minBinId || 0) 
             && new Decimal(_state.activeId || 0).lte(bot.activePosition.maxBinId || 0)

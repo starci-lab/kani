@@ -1,5 +1,10 @@
 import { Inject, Injectable, Scope } from "@nestjs/common"
-import { DlmmLiquidityPoolsFetchedEvent, EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
+import { 
+    createEventName, 
+    DlmmLiquidityPoolsFetchedEvent, 
+    EventName, 
+    LiquidityPoolsFetchedEvent 
+} from "@modules/event"
 import { REQUEST } from "@nestjs/core"
 import { BotSchema, PrimaryMemoryStorageService, PositionSchema, QuoteRatioStatus } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
@@ -32,7 +37,6 @@ import Decimal from "decimal.js"
     durable: true,
 })
 export class OpenPositionProcessorService  {
-    private bot: BotSchema
     private mutex: Mutex
     constructor(
         // The request object injected into this processor. It contains
@@ -66,7 +70,12 @@ export class OpenPositionProcessorService  {
             ))
         // register event listeners
         this.eventEmitter.on(
-            EventName.InternalLiquidityPoolsFetched,
+            createEventName(
+                EventName.DistributedLiquidityPoolsFetched, 
+                {
+                    botId: this.request.bot.id,
+                }
+            ),
             async (payload: LiquidityPoolsFetchedEvent) => {
                 // re query the bot to ensure data is up to date
                 const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
@@ -74,11 +83,9 @@ export class OpenPositionProcessorService  {
                     // bot not found, we skip here
                     throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
                 }
-                // assign the bot to the instance
-                this.bot = bot.toJSON()
                 const activePosition = await this.connection
                     .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: this.bot.id,
+                        bot: bot.id,
                         isActive: true,
                     })
                 bot.activePosition = activePosition?.toJSON()
@@ -144,12 +151,12 @@ export class OpenPositionProcessorService  {
                         try {
                             return await this.dispatchOpenPositionService.dispatchOpenPosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.bot,
+                                bot: bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.OpenPositionFailed, {
-                                    botId: this.bot.id,
+                                    botId: bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })
@@ -158,7 +165,12 @@ export class OpenPositionProcessorService  {
             }
         )
         this.eventEmitter.on(
-            EventName.InternalDlmmLiquidityPoolsFetched,
+            createEventName(
+                EventName.DistributedDlmmLiquidityPoolsFetched, 
+                {
+                    botId: this.request.bot.id,
+                }
+            ),
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
                 // re query the bot to ensure data is up to date
                 const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(this.request.bot.id)
@@ -167,19 +179,17 @@ export class OpenPositionProcessorService  {
                     throw new BotNotFoundException(`Bot not found with id: ${this.request.bot.id}`)
                 }
                 // assign the bot to the instance
-                this.bot = bot.toJSON()
                 const activePosition = await this.connection
                     .model<PositionSchema>(PositionSchema.name).findOne({
-                        bot: this.bot.id,
+                        bot: bot.id,
                         isActive: true,
                     })
-                this.bot.activePosition = activePosition?.toJSON()
-                if (this.bot.activePosition) {
+                if (activePosition) {
                     // we do nothing if the bot is already in a position
                     return
                 }
                 if (
-                    !this.bot.liquidityPools
+                    !bot.liquidityPools
                         .map((liquidityPool) => liquidityPool.toString())
                         .includes(createObjectId(payload.liquidityPoolId).toString())
                 )
@@ -196,12 +206,12 @@ export class OpenPositionProcessorService  {
                         try {
                             return await this.dispatchOpenPositionService.dispatchOpenPosition({
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.bot,
+                                bot: bot,
                             })
                         } catch (error) {
                             this.logger.error(
                                 WinstonLog.OpenPositionFailed, {
-                                    botId: this.bot.id,
+                                    botId: bot.id,
                                     liquidityPoolId: payload.liquidityPoolId,
                                     error: error.message,
                                 })

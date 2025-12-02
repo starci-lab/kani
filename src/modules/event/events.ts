@@ -2,6 +2,7 @@ import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@modules/common"
 import { CexId, LiquidityPoolId, TokenId } from "@modules/databases"
 import BN from "bn.js"
+import crypto from "crypto"
 
 export enum EventName {
     CoinMarketCapPricesFetched = "coinMarketCapPricesFetched",
@@ -18,6 +19,15 @@ export enum EventName {
     PythSuiPricesUpdated = "pythSuiPricesUpdated",
     InternalLiquidityPoolsFetched = "internalLiquidityPoolsFetched",
     InternalDlmmLiquidityPoolsFetched = "internalDlmmLiquidityPoolsFetched",
+    DistributedDlmmLiquidityPoolsFetched = "distributedDlmmLiquidityPoolsFetched",
+    DistributedLiquidityPoolsFetched = "distributedLiquidityPoolsFetched",
+}
+
+export const createEventName = (
+    event: EventName, 
+    params: Record<string, string>
+) => {
+    return crypto.createHash("sha256").update(JSON.stringify({ event, params })).digest("hex")
 }
 
 export interface LiquidityPoolsFetchedEvent {

@@ -1,10 +1,10 @@
 import { PrimaryMemoryStorageService, QuoteRatioStatus } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { ComputeQuoteRatioParams, ComputeQuoteRatioResponse } from "./swap-math.service"
+import { ComputeQuoteRatioParams, ComputeQuoteRatioResponse } from "./swap.service"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
 import { OraclePriceService } from "../pyth"
-import { SAFE_QUOTE_RATIO_MAX, SAFE_QUOTE_RATIO_MIN } from "../math/constants"
+import { SAFE_QUOTE_RATIO_ABOVE, SAFE_QUOTE_RATIO_BELOW } from "."
 import { Decimal } from "decimal.js"
 
 @Injectable()
@@ -60,10 +60,10 @@ export class QuoteRatioService {
             quoteRatio,
         }: CheckQuoteRatioStatusParams
     ): QuoteRatioStatus {
-        if (quoteRatio.lt(SAFE_QUOTE_RATIO_MIN)) {
+        if (quoteRatio.gt(SAFE_QUOTE_RATIO_ABOVE)) {
             return QuoteRatioStatus.TargetTooLow
         }
-        if (quoteRatio.gt(SAFE_QUOTE_RATIO_MAX)) {
+        if (quoteRatio.lt(SAFE_QUOTE_RATIO_BELOW)) {
             return QuoteRatioStatus.TargetTooHigh
         }
         return QuoteRatioStatus.Good

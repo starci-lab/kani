@@ -66,8 +66,7 @@ import { BatchQuoteResponse, SolanaAggregatorSelectorService } from "../aggregat
 import { EnsureMathService } from "../math"
 import { SignerService } from "../signers"
 import { BotSchema, TokenSchema } from "@modules/databases"
-import { AsyncService } from "@modules/mixin"
-import { SwapMathService } from "./swap-math.service"
+import { SwapMathService } from "../math/swap.service"
 import { GasStatusService } from "./gas-status.service"
 import Decimal from "decimal.js"
 import { AddSwapTransactionRecordParams, BalanceSnapshotService, UpdateBotSnapshotBalancesRecordParams } from "../snapshots"
@@ -76,7 +75,6 @@ import { Connection as MongooseConnection } from "mongoose"
 import { computeDenomination, httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { FeeService } from "../math/fee.service"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -90,14 +88,12 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
-        private readonly asyncService: AsyncService,
         private readonly swapMathService: SwapMathService,
         private readonly gasStatusService: GasStatusService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
-        private readonly feeService: FeeService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }

@@ -44,8 +44,6 @@ import {
 import BN from "bn.js"
 import { 
     BalanceService, 
-    CalculateProfitability, 
-    ProfitabilityMathService 
 } from "../../balance"
 import { 
     BalanceSnapshotService, 
@@ -57,11 +55,13 @@ import {
     ClosePositionInstructionService, 
     OpenPositionInstructionService
 } from "./transactions"
-import { adjustSlippage, computeRaw, httpsToWss } from "@utils"
-import { GasStatus, GasStatusService } from "../../balance"
+import { adjustSlippage, httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
+import { GasStatusService } from "../../balance"
+import { GasStatus } from "../../types"
+import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 
 @Injectable()
 export class OrcaActionService implements IActionService {
@@ -351,14 +351,6 @@ export class OrcaActionService implements IActionService {
         }
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
-        // safety check, if the target balance amount is too low, we don't open the position
-        // to ensure we do not open the position with too little balance
-        if (
-            snapshotTargetBalanceAmountBN.lt(
-                new BN(computeRaw(targetToken.minRequiredAmount || 0, targetToken.decimals)))
-        ) {
-            return
-        }
         // get the tick bounds
         const { 
             tickLower, 
