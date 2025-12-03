@@ -40,3 +40,13 @@ export class DynamicDlmmLiquidityPoolInfoNotFoundException extends AbstractExcep
         )
     }
 }
+
+export class SuiLiquidityPoolInvalidTypeException extends AbstractException {
+    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
+        super(
+            message || `Sui liquidity pool ${liquidityPoolId} is invalid type`, 
+            "SUI_LIQUIDITY_POOL_INVALID_TYPE_EXCEPTION", 
+            { liquidityPoolId }
+        )
+    }
+}

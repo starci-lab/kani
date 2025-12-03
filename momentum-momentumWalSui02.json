@@ -1,0 +1,127 @@
+{
+  "fee_growth_global_x": "1708610011561334902",
+  "fee_growth_global_y": "233799016786039321",
+  "flash_loan_fee_rate": "0",
+  "id": {
+    "id": "0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a"
+  },
+  "liquidity": "28363259067339719",
+  "max_liquidity_per_tick": "15341164371351087122464028106567251",
+  "observation_cardinality": "1",
+  "observation_cardinality_next": "1",
+  "observation_index": "0",
+  "observations": [
+    {
+      "type": "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::oracle::Observation",
+      "fields": {
+        "initialized": true,
+        "seconds_per_liquidity_cumulative": "442026794631374954169517214165354439713653",
+        "tick_cumulative": {
+          "type": "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::i64::I64",
+          "fields": {
+            "bits": "18446743633416541797"
+          }
+        },
+        "timestamp_s": "1764757946"
+      }
+    }
+  ],
+  "protocol_fee_share": "200000",
+  "protocol_fee_x": "30903650146882",
+  "protocol_fee_y": "2759767948171",
+  "protocol_flash_loan_fee_share": "200000",
+  "reserve_x": "2378981424849767",
+  "reserve_y": "79256435603245",
+  "reward_infos": [
+    {
+      "type": "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::pool::PoolRewardInfo",
+      "fields": {
+        "ended_at_seconds": "1750744800",
+        "last_update_time": "1764757946",
+        "reward_coin_type": {
+          "type": "0x1::type_name::TypeName",
+          "fields": {
+            "name": "0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
+          }
+        },
+        "reward_growth_global": "91712033223377427",
+        "reward_per_seconds": "226189436418023847570251612",
+        "total_reward": "12582200000000",
+        "total_reward_allocated": "12582199995034"
+      }
+    },
+    {
+      "type": "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::pool::PoolRewardInfo",
+      "fields": {
+        "ended_at_seconds": "1765173600",
+        "last_update_time": "1764757946",
+        "reward_coin_type": {
+          "type": "0x1::type_name::TypeName",
+          "fields": {
+            "name": "356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL"
+          }
+        },
+        "reward_growth_global": "792625460236179756",
+        "reward_per_seconds": "2604121290089865224032186110",
+        "total_reward": "5335847000000000",
+        "total_reward_allocated": "5277169250343785"
+      }
+    },
+    {
+      "type": "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::pool::PoolRewardInfo",
+      "fields": {
+        "ended_at_seconds": "1765173600",
+        "last_update_time": "1764757946",
+        "reward_coin_type": {
+          "type": "0x1::type_name::TypeName",
+          "fields": {
+            "name": "2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI"
+          }
+        },
+        "reward_growth_global": "20235606992481167",
+        "reward_per_seconds": "73011308622719590460300482",
+        "total_reward": "149129000000000",
+        "total_reward_allocated": "147483861837112"
+      }
+    }
+  ],
+  "sqrt_price": "5679870099128842240",
+  "swap_fee_rate": "2000",
+  "tick_bitmap": {
+    "type": "0x2::table::Table<0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::i32::I32, u256>",
+    "fields": {
+      "id": {
+        "id": "0x9d6fe88a66a2dd5473248c199698d315f0368e03d6d8dadb22052f7790ee993b"
+      },
+      "size": "36"
+    }
+  },
+  "tick_index": {
+    "type": "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::i32::I32",
+    "fields": {
+      "bits": 4294943735
+    }
+  },
+  "tick_spacing": 40,
+  "ticks": {
+    "type": "0x2::table::Table<0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::i32::I32, 0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::tick::TickInfo>",
+    "fields": {
+      "id": {
+        "id": "0x9f32239c50285ce8fbf9b97c52be85088d70fbcb01727c3fc0750185086ffc3c"
+      },
+      "size": "762"
+    }
+  },
+  "type_x": {
+    "type": "0x1::type_name::TypeName",
+    "fields": {
+      "name": "356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL"
+    }
+  },
+  "type_y": {
+    "type": "0x1::type_name::TypeName",
+    "fields": {
+      "name": "0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
+    }
+  }
+}

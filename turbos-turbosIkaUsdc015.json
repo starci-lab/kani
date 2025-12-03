@@ -1,0 +1,63 @@
+{
+  "coin_a": "2802926911459966",
+  "coin_b": "19245318518",
+  "deploy_time_ms": "1756181811713",
+  "fee": 1500,
+  "fee_growth_global_a": "281995006575882191791",
+  "fee_growth_global_b": "12146233336454625",
+  "fee_protocol": 300000,
+  "id": {
+    "id": "0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8"
+  },
+  "liquidity": "76990968212625",
+  "max_liquidity_per_tick": "11505743598341114571880798222544994",
+  "protocol_fees_a": "346374053115",
+  "protocol_fees_b": "1711356",
+  "reward_infos": [
+    {
+      "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::pool::PoolRewardInfo",
+      "fields": {
+        "emissions_per_second": "7618505302442044817408",
+        "growth_global": "1607081113155271",
+        "id": {
+          "id": "0xcdcb25d7a077bb755d8c9dc18ed5a303d68b4c07efb5dcc0a6dba309891943ec"
+        },
+        "manager": "0x0a475e3bd09b7e38ef8e200dcf81b55630f7f8c93f4465005316002184051ea2",
+        "vault": "0xba349e08b61e55fb509d324415ba11f7d52b17d9f0a3028a34bbb0a8cefc41ab",
+        "vault_coin_type": "dba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC"
+      }
+    },
+    {
+      "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::pool::PoolRewardInfo",
+      "fields": {
+        "emissions_per_second": "5718856664699127472173613056",
+        "growth_global": "611665962953455701324",
+        "id": {
+          "id": "0x4cc3ed27c8a2a407088ddc005dea19e6f03cc4efbefb112506c8b362eb11b7f1"
+        },
+        "manager": "0x0a475e3bd09b7e38ef8e200dcf81b55630f7f8c93f4465005316002184051ea2",
+        "vault": "0x8e41249643856837a4e862aea96e079da94d281878c84dd7240914da6d044ad1",
+        "vault_coin_type": "7262fb2f7a3a14c888c438a3cd9b912469a58cf60f367352c46584262e8299aa::ika::IKA"
+      }
+    }
+  ],
+  "reward_last_updated_time_ms": "1764764123839",
+  "sqrt_price": "54440690996081474",
+  "tick_current_index": {
+    "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::i32::I32",
+    "fields": {
+      "bits": 4294850779
+    }
+  },
+  "tick_map": {
+    "type": "0x2::table::Table<0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::i32::I32, u256>",
+    "fields": {
+      "id": {
+        "id": "0x7e24a16ccb04f8c1962c5e201396b0bdf5ca830ea0bab50ddff62dcfebd63ed4"
+      },
+      "size": "11"
+    }
+  },
+  "tick_spacing": 30,
+  "unlocked": true
+}

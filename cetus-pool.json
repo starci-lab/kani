@@ -1,0 +1,209 @@
+{
+  "coin_a": "10508376122078051",
+  "coin_b": "50577946531111",
+  "current_sqrt_price": "1313694238848698957",
+  "current_tick_index": {
+    "type": "0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i32::I32",
+    "fields": {
+      "bits": 4294914452
+    }
+  },
+  "fee_growth_global_a": "21690322372242404188",
+  "fee_growth_global_b": "388463175387926804",
+  "fee_protocol_coin_a": "144087123123",
+  "fee_protocol_coin_b": "1969136128",
+  "fee_rate": "2000",
+  "id": {
+    "id": "0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789"
+  },
+  "index": "34444",
+  "is_pause": false,
+  "liquidity": "183115335288476461",
+  "position_manager": {
+    "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionManager",
+    "fields": {
+      "position_index": "125169",
+      "positions": {
+        "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::linked_table::LinkedTable<0x2::object::ID, 0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionInfo>",
+        "fields": {
+          "head": "0x662a8304063f58db4f6d7cdd1cb11e6d310d11df8abd0d56cc1b9eddcc4768a4",
+          "id": {
+            "id": "0x634ea895082acaee4b9ab495c69846f82b0a0200feb2b5b53fb76204ab44e6ad"
+          },
+          "size": "4099",
+          "tail": "0x67b78a3d53acd1d7b0a5c5701a5fa9120d91f37adb433df2a98913e843505472"
+        }
+      },
+      "tick_spacing": 40
+    }
+  },
+  "rewarder_manager": {
+    "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::rewarder::RewarderManager",
+    "fields": {
+      "last_updated_time": "1764748893",
+      "points_growth_global": "15127060651548893",
+      "points_released": "202280151770247596777406464000000",
+      "rewarders": [
+        {
+          "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::rewarder::Rewarder",
+          "fields": {
+            "emissions_per_second": "7625081225097950537197037038",
+            "growth_global": "8206600884442604137",
+            "reward_coin": {
+              "type": "0x1::type_name::TypeName",
+              "fields": {
+                "name": "7262fb2f7a3a14c888c438a3cd9b912469a58cf60f367352c46584262e8299aa::ika::IKA"
+              }
+            }
+          }
+        },
+        {
+          "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::rewarder::Rewarder",
+          "fields": {
+            "emissions_per_second": "0",
+            "growth_global": "415213396780629192",
+            "reward_coin": {
+              "type": "0x1::type_name::TypeName",
+              "fields": {
+                "name": "06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "tick_manager": {
+    "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::TickManager",
+    "fields": {
+      "tick_spacing": 40,
+      "ticks": {
+        "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::skip_list::SkipList<0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick>",
+        "fields": {
+          "head": [
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "36"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "358556"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "380036"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "385796"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "389996"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "389996"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "389996"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "389996"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": true,
+                "v": "0"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": true,
+                "v": "0"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": true,
+                "v": "0"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": true,
+                "v": "0"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": true,
+                "v": "0"
+              }
+            },
+            {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": true,
+                "v": "0"
+              }
+            }
+          ],
+          "id": {
+            "id": "0x7e1b0f1abc1c45f98cdd5d7c7f45b9441d9004ebd1cee5154c30532f4f61a3ed"
+          },
+          "level": "14",
+          "list_p": "2",
+          "max_level": "16",
+          "random": {
+            "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::random::Random",
+            "fields": {
+              "seed": "3507851186709985110"
+            }
+          },
+          "size": "153",
+          "tail": {
+            "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+            "fields": {
+              "is_none": false,
+              "v": "887236"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tick_spacing": 40,
+  "url": "https://bq7bkvdje7gvgmv66hrxdy7wx5h5ggtrrnmt66rdkkehb64rvz3q.arweave.net/DD4VVGknzVMyvvHjceP2v0_TGnGLWT96I1KIcPuRrnc"
+}

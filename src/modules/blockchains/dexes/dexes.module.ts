@@ -80,12 +80,12 @@ export class DexesModule extends ConfigurableModuleClass {
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Meteora)
         ) {
-            dexModules.push(MeteoraModule.register({
-                isGlobal: options.isGlobal,
-                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Meteora)?.enabled,
-            }))
+            dexModules.push(
+                MeteoraModule.register({
+                    isGlobal: options.isGlobal,
+                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Meteora)?.enabled,
+                }))
         }
-        
         const utilities: Array<Provider> = []
         if (options.withUtilities) {
             utilities.push(LiquidityPoolStateService)

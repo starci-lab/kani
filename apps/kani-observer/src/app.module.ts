@@ -94,7 +94,35 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
                         observe: true,
                         action: false,
                     },
-                }
+                },
+                {
+                    dexId: DexId.Cetus,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                },
+                {
+                    dexId: DexId.FlowX,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                },
+                {
+                    dexId: DexId.Momentum,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                },
+                {
+                    dexId: DexId.Turbos,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                },
             ],
         }),
         CexesModule.register({

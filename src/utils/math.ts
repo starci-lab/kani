@@ -109,3 +109,11 @@ export const adjustSlippage = (
         fractionDigits,
     )
 }
+
+export const parseI32 = (bits: number): number => {
+    const bn = new BN(bits)
+    if (bn.testn(31)) {
+        return bn.sub(new BN(2).pow(new BN(32))).toNumber()
+    }
+    return bn.toNumber()
+}

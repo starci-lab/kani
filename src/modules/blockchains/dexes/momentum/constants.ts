@@ -1,1 +1,1 @@
-export const SUI_CLIENT_INDEX = 3
+export const MOMENTUM_CLIENTS_INDEX = 3

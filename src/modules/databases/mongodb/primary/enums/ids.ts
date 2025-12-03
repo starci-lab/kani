@@ -130,6 +130,7 @@ export enum LiquidityPoolId {
     TurbosDeepUsdc015 = "turbosDeepUsdc015",
     MomentumWalSui02 = "momentumWalSui02",
     MomentumSuiUsdc0175 = "momentumSuiUsdc0175",
+    FlowXSuiUsdc03 = "flowXSuiUsdc03",
     RaydiumSolUsdc004 = "raydiumSolUsdc004",
     RaydiumSolUsdt001 = "raydiumSolUsdt001",
     OrcaSolUsdc004 = "orcaSolUsdc004",
@@ -162,6 +163,9 @@ registerEnumType(GraphQLTypeLiquidityPoolId, {
         },
         [LiquidityPoolId.MomentumSuiUsdc0175]: {
             description: "Momentum SUI-USDC LP pool with a 0.175% fee tier.",
+        },
+        [LiquidityPoolId.FlowXSuiUsdc03]: {
+            description: "FlowX SUI-USDC LP pool with a 0.3% fee tier.",
         },
         [LiquidityPoolId.RaydiumSolUsdc004]: {
             description: "Raydium SOL-USDC LP pool with a 0.04% fee tier.",

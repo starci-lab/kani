@@ -4,7 +4,12 @@ import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
 import { Connection, PublicKey } from "@solana/web3.js"
 import { RAYDIUM_CLIENTS_INDEX } from "./constants"
 import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
-import { CacheKey, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache, createCacheKey } from "@modules/cache"
+import { 
+    CacheKey, 
+    DynamicLiquidityPoolInfoCacheResult, 
+    InjectRedisCache, 
+    createCacheKey 
+} from "@modules/cache"
 import BN from "bn.js"
 import {
     LiquidityPoolId,
@@ -84,19 +89,21 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             sqrtPriceX64: new BN(state.sqrtPriceX64),
             rewards: state.rewardInfos,
         }
-        await this.asyncService.allIgnoreError([
+        await this.asyncService.allIgnoreError(
+            [
             // cache
-            this.cacheManager.set(
-                createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
-                this.superjson.stringify(parsed),
-            ),
-            // event
-            this.events.emit(
-                EventName.LiquidityPoolsFetched,
-                { liquidityPoolId, ...parsed },
-                { withoutLocal: true },
-            ),
-        ])
+                this.cacheManager.set(
+                    createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                    this.superjson.stringify(parsed),
+                ),
+                // event
+                this.events.emit(
+                    EventName.LiquidityPoolsFetched,
+                    { liquidityPoolId, ...parsed },
+                    { withoutLocal: true },
+                ),
+            ]
+        )
 
         // logging
         this.winstonLogger.debug(

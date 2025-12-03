@@ -63,11 +63,6 @@ export class LiquidityPoolSchema extends AbstractSchema {
         default: ChainId.Sui,
     })
         chainId: ChainId
-
-    @Field(() => [ID], { description: "The reward tokens of the pool" })
-    @Prop({ type: [MongooseSchema.Types.ObjectId], ref: TokenSchema.name })
-        rewardTokens: Array<TokenSchema | Types.ObjectId>
-
     @Field(() => GraphQLTypeLiquidityPoolType, { description: "The type of the liquidity pool" })
     @Prop({
         type: String,

@@ -1,9 +1,6 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cetus.module-definition"
-import { createCetusClmmSdkProvider } from "./cetus.providers"
-import { CetusFetcherService } from "./fetcher.service"
-import { CetusActionService } from "./action.service"
-import { CetusMetadataService } from "./metadata.service"
+import { CetusObserverService } from "./observer.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -12,10 +9,7 @@ export class CetusModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            createCetusClmmSdkProvider(),
-            CetusFetcherService,
-            CetusActionService,
-            CetusMetadataService
+            CetusObserverService
         ]
         return {
             ...dynamicModule,

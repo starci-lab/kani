@@ -1,0 +1,109 @@
+{
+  "coin_type_x": {
+    "type": "0x1::type_name::TypeName",
+    "fields": {
+      "name": "0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
+    }
+  },
+  "coin_type_y": {
+    "type": "0x1::type_name::TypeName",
+    "fields": {
+      "name": "dba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC"
+    }
+  },
+  "fee_growth_global_x": "50446253442974929461",
+  "fee_growth_global_y": "159069352823745644",
+  "id": {
+    "id": "0x325239132e2b619147c00052986461cea02815172ea9d000c58e68484f514a90"
+  },
+  "liquidity": "13689786953478",
+  "locked": false,
+  "max_liquidity_per_tick": "23012265295255187899058267899625901",
+  "observation_cardinality": "1",
+  "observation_cardinality_next": "1",
+  "observation_index": "0",
+  "observations": [
+    {
+      "type": "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::oracle::Observation",
+      "fields": {
+        "initialized": true,
+        "seconds_per_liquidity_cumulative": "193232745127866691213323198592340421590906390",
+        "tick_cumulative": {
+          "type": "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::i64::I64",
+          "fields": {
+            "bits": "18446742084361366501"
+          }
+        },
+        "timestamp_s": "1764760589"
+      }
+    }
+  ],
+  "protocol_fee_rate": "85",
+  "protocol_fee_x": "10740405188",
+  "protocol_fee_y": "22407530",
+  "reserve_x": "107034360311465",
+  "reserve_y": "10907309416",
+  "reward_infos": [
+    {
+      "type": "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::PoolRewardInfo",
+      "fields": {
+        "ended_at_seconds": "1765206002",
+        "last_update_time": "1764760589",
+        "reward_coin_type": {
+          "type": "0x1::type_name::TypeName",
+          "fields": {
+            "name": "0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
+          }
+        },
+        "reward_growth_global": "38106250250357749374",
+        "reward_per_seconds": "19898041016355788485264668",
+        "total_reward": "164340000000000",
+        "total_reward_allocated": "163859544138539"
+      }
+    },
+    {
+      "type": "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::PoolRewardInfo",
+      "fields": {
+        "ended_at_seconds": "1747578060",
+        "last_update_time": "1764760589",
+        "reward_coin_type": {
+          "type": "0x1::type_name::TypeName",
+          "fields": {
+            "name": "6dae8ca14311574fdfe555524ea48558e3d1360d1607d1c7f98af867e3b7976c::flx::FLX"
+          }
+        },
+        "reward_growth_global": "1510377016060767315",
+        "reward_per_seconds": "18681974360126293121751667",
+        "total_reward": "7553002733814",
+        "total_reward_allocated": "7553002680319"
+      }
+    }
+  ],
+  "sqrt_price": "760883925437715654",
+  "swap_fee_rate": "3000",
+  "tick_bitmap": {
+    "type": "0x2::table::Table<0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::i32::I32, u256>",
+    "fields": {
+      "id": {
+        "id": "0x6b1c38ffea1edfbe8a44f71b215b80483b6e520c8e589059c9d38f723cb1d901"
+      },
+      "size": "14"
+    }
+  },
+  "tick_index": {
+    "type": "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::i32::I32",
+    "fields": {
+      "bits": 4294903529
+    }
+  },
+  "tick_spacing": 60,
+  "ticks": {
+    "type": "0x2::table::Table<0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::i32::I32, 0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::tick::TickInfo>",
+    "fields": {
+      "id": {
+        "id": "0x79327cb85a89aab545ff507fab821183e67ce286b55b6acd2ff393499c6a01e4"
+      },
+      "size": "175"
+    }
+  }
+}
