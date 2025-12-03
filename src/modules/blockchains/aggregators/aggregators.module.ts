@@ -2,7 +2,8 @@ import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./aggregators.module-definition"   
 import { JupiterService } from "./jupiter.service"
 import { SolanaAggregatorSelectorService } from "./solana-aggregator-selector.service"
-import { createJupiterAggregatorSdkProvider } from "./aggregators.providers"
+import { SevenKAggregatorService } from "./7k.service"
+import { CetusAggregatorService } from "./cetus-aggregator.service"
 
 @Module({})
 export class AggregatorsModule extends ConfigurableModuleClass {
@@ -15,7 +16,8 @@ export class AggregatorsModule extends ConfigurableModuleClass {
             providers: [
                 ...dynamicModule.providers || [],
                 JupiterService,
-                createJupiterAggregatorSdkProvider(),   
+                CetusAggregatorService,
+                SevenKAggregatorService,   
                 SolanaAggregatorSelectorService,
             ],
             exports: [

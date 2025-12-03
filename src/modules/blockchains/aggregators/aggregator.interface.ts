@@ -1,4 +1,5 @@
 import { TokenId } from "@modules/databases"
+import { Transaction, TransactionObjectArgument } from "@mysten/sui/transactions"
 import { ChainId } from "@typedefs"
 import BN from "bn.js"
 
@@ -40,9 +41,13 @@ export interface SwapRequest {
     tokenIn: TokenId
     tokenOut: TokenId
     accountAddress: string
+    inputCoin?: TransactionObjectArgument
+    txb?: Transaction
 }
 
 export interface SwapResponse {
     payload: unknown
+    outputCoin?: TransactionObjectArgument
+    txb?: Transaction
 }
 

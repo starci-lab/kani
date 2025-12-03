@@ -117,3 +117,7 @@ export const parseI32 = (bits: number): number => {
     }
     return bn.toNumber()
 }
+
+export const decimalToBips = (decimal: number): number => {
+    return Math.round(decimal * 10000)
+}

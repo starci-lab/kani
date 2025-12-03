@@ -2,12 +2,12 @@ import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
 import { DexSchema, FeeConfig, GasConfig, LiquidityPoolSchema, TokenSchema } from "../schemas"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
-import { AsyncService, RetryService } from "@modules/mixin"
+import { AsyncService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
-import { ConfigSchema } from "../schemas"
+import { ConfigSchema, ClientConfig } from "../schemas"
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
-import { FeeConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
+import { ClientConfigNotFoundException, FeeConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
@@ -16,13 +16,15 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
     public dexes: Array<DexSchema> = []
     public feeConfig: FeeConfig
     public gasConfig: GasConfig
+    public clientConfig: ClientConfig
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly retryService: RetryService,
-        private readonly asyncService: AsyncService
+        private readonly asyncService: AsyncService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
 
     private async process() {
@@ -82,7 +84,20 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         this.feeConfig = feeConfig.value as unknown as FeeConfig
                     },
                 })
-            })()
+            })(),
+            (async () => {
+                await this.retryService.retry({
+                    action: async () => {
+                        const clientConfig = await this.connection
+                            .model<ConfigSchema>(ConfigSchema.name)
+                            .findById(createObjectId(ConfigId.Client))
+                        if (!clientConfig) {
+                            throw new ClientConfigNotFoundException("Client config not found")
+                        }
+                        this.clientConfig = clientConfig.value as unknown as ClientConfig
+                    },
+                })
+            })(),
         ])
     }
 
@@ -92,7 +107,9 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         if (this.options.manualLoad) {
             return
         }
+        this.readinessWatcherFactoryService.createWatcher(PrimaryMemoryStorageService.name)
         await this.process()
+        this.readinessWatcherFactoryService.setReady(PrimaryMemoryStorageService.name)
     }
 
     // load all data from memory

@@ -92,3 +92,9 @@ export class FeeToAddressNotFoundException extends AbstractException {
         super(message || "Fee to address not found", "FEE_TO_ADDRESS_NOT_FOUND_EXCEPTION")
     }
 }
+
+export class ClientConfigNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Client config not found", "CLIENT_CONFIG_NOT_FOUND_EXCEPTION")
+    }
+}

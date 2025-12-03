@@ -1,4 +1,5 @@
 export * from "./abstract"
+export * from "./sui"
 export * from "./databases"
 export * from "./auth"
 export * from "./dexes"

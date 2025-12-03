@@ -4,7 +4,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { ConfigId, GraphQLTypeConfigId } from "../enums"
 import { GraphQLJSON } from "graphql-type-json"
 import { Schema as MongooseSchema } from "mongoose"
-import { ChainId, Network } from "@modules/common"
+import { ChainId } from "@modules/common"
 
 @ObjectType({
     description: "Represents a configuration for the platform.",
@@ -36,7 +36,7 @@ export class GasConfig {
     @Field(() => GraphQLJSON, {
         description: "The minimum gas required to process a transaction.",
     })
-        gasAmountRequired: Partial<Record<ChainId, Partial<Record<Network, GasAmountRequired>>>>
+        gasAmountRequired: Partial<Record<ChainId, GasAmountRequired>>
 }
 
 @ObjectType({
@@ -64,7 +64,7 @@ export class FeeConfig {
         description: "The fee rate for the platform.",
     })
     @Prop({ type: MongooseSchema.Types.Mixed, required: true })
-        feeInfo: Partial<Record<ChainId, Partial<Record<Network, FeeInfo>>>>
+        feeInfo: Partial<Record<ChainId, FeeInfo>>
 }
 
 export class FeeInfo {
@@ -73,12 +73,66 @@ export class FeeInfo {
 }
 
 @ObjectType({
-    description: "Represents the fund configuration for the platform.",
+    description: "Represents the client configuration for the platform.",
 })
-export class FundConfig {
-    @Field(() => GraphQLJSON, {
-        description: "The fund amount for the platform.",
+export class ClientConfig {
+    @Field(() => [String], {
+        description: "Cetus aggregator client rpcs",
     })
-    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
-        fundInfo: Partial<Record<ChainId, Partial<Record<Network, number>>>>
+    @Prop({ type: [String], required: true })
+        cetusAggregatorClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "SevenK aggregator client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        sevenKAggregatorClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Cetus clmm client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        cetusClmmClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "SevenK clmm client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        turbosClmmClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Momentum clmm client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        momentumClmmClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "FlowX clmm client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        flowXClmmClientRpcs: Array<string>
+        
+    @Field(() => [String], {
+        description: "Cetus aggregator client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        jupiterAggregatorClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Raydium aggregator client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        raydiumClmmClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Orca aggregator client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        orcaAggregatorClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Meteora aggregator client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        meteoraAggregatorClientRpcs: Array<string>
 }

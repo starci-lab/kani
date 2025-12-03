@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
+import { ChainId, GraphQLTypeChainId } from "@modules/common"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"
@@ -45,15 +45,6 @@ export class LiquidityPoolSchema extends AbstractSchema {
     @Field(() => Float, { description: "Pool trading fee percentage" })
     @Prop({ type: Number })
         fee: number
-
-    @Field(() => GraphQLTypeNetwork, { description: "Network where this pool exists" })
-    @Prop({
-        type: String,
-        enum: Network,
-        required: true,
-        default: Network.Mainnet,
-    })
-        network: Network
 
     @Field(() => GraphQLTypeChainId, { description: "Chain ID where this pool exists" })
     @Prop({
@@ -124,4 +115,16 @@ export interface OrcaLiquidityPoolMetadata {
     programAddress: string
     tokenVault0: string
     tokenVault1: string
+}
+
+export interface FlowXLiquidityPoolMetadata {
+    packageId: string
+    poolRegistryObject: string
+    positionRegistryObject: string
+    versionObject: string
+    positionType: string
+    poolType: string
+    i32Type: string
+    poolFeeCollectEventType: string
+    poolRewardCollectEventType: string
 }

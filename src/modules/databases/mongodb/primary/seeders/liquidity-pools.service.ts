@@ -1,7 +1,7 @@
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { DexId, LiquidityPoolId, LiquidityPoolType, TokenId } from "../enums"
 import { LiquidityPoolSchema } from "../schemas"
-import { DeepPartial, ChainId, Network } from "@typedefs"
+import { DeepPartial, ChainId } from "@typedefs"
 import { createObjectId } from "@utils"
 import { Seeder } from "nestjs-seeder"
 import { Connection } from "mongoose"
@@ -29,7 +29,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiIka),
         tokenB: createObjectId(TokenId.SuiNative),
         fee: 0.002,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -43,7 +42,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiUsdc),
         tokenB: createObjectId(TokenId.SuiNative),
         fee: 0.0005,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -56,7 +54,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiIka),
         tokenB: createObjectId(TokenId.SuiUsdc),
         fee: 0.0015,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -70,7 +67,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiDeep),
         tokenB: createObjectId(TokenId.SuiUsdc),
         fee: 0.0015,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -84,11 +80,21 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiNative),
         tokenB: createObjectId(TokenId.SuiUsdc),
         fee: 0.003,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 60,
         tickMultiplier: 5,
+        metadata: {
+            packageId: "0xafd06ed69a706eabb66f2a1f9305afc0a317ae95e5bfe8ae9868b23b17f7887b",
+            poolRegistryObject: "0x27565d24a4cd51127ac90e4074a841bbe356cca7bf5759ddc14a975be1632abc",
+            positionRegistryObject: "0x7dffe3229d675645564273aa68c67406b6a80aa29e245ac78283acd7ed5e4912",
+            versionObject: "0x67624a1533b5aff5d0dfcf5e598684350efd38134d2d245f475524c03a64e656",
+            positionType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::position::Position",
+            poolType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::Pool",
+            i32Type: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::i32::I32",
+            poolFeeCollectEventType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::Collect",
+            poolRewardCollectEventType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::CollectPoolReward",
+        },
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusUsdcEth025),
@@ -98,7 +104,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiUsdc),
         tokenB: createObjectId(TokenId.SuiEth),
         fee: 0.0025,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -111,7 +116,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiWalrus),
         tokenB: createObjectId(TokenId.SuiNative),
         fee: 0.002,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -124,7 +128,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiNative),
         tokenB: createObjectId(TokenId.SuiUsdc),
         fee: 0.00175,
-        network: Network.Mainnet,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -137,7 +140,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SolNative),
         tokenB: createObjectId(TokenId.SolUsdc),
         fee: 0.0004,
-        network: Network.Mainnet,
         chainId: ChainId.Solana,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1,
@@ -163,7 +165,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenB: createObjectId(TokenId.SolUsdt),
         fee: 0.0001,
         type: LiquidityPoolType.Clmm,
-        network: Network.Mainnet,
         chainId: ChainId.Solana,
         tickSpacing: 1,
         tickMultiplier: 200,
@@ -177,7 +178,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenB: createObjectId(TokenId.SolUsdc),
         fee: 0.0004,
         type: LiquidityPoolType.Clmm,
-        network: Network.Mainnet,
         chainId: ChainId.Solana,
         tickSpacing: 4,
         tickMultiplier: 50,
