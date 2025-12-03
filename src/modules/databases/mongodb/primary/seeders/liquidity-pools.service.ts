@@ -36,8 +36,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tickMultiplier: 1,
     },
     {
-        _id: createObjectId(LiquidityPoolId.CetusSuiUsdc005),
-        displayId: LiquidityPoolId.CetusSuiUsdc005,
+        _id: createObjectId(LiquidityPoolId.CetusUsdcSui005),
+        displayId: LiquidityPoolId.CetusUsdcSui005,
         dex: createObjectId(DexId.Cetus),
         poolAddress: "0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab",
         tokenA: createObjectId(TokenId.SuiUsdc),

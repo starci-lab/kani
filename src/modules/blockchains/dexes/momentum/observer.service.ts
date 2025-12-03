@@ -62,20 +62,18 @@ export class MomentumObserverService {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-
         const connection = this.suiClients[liquidityPool.network].http[clientIndex]
-        const accountInfo = await connection.getObject({
+        const objectInfo = await connection.getObject({
             id: liquidityPool.poolAddress,
             options: {
                 showContent: true,
             },
         })
-        if (!accountInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        if (accountInfo.data?.content?.dataType !== "moveObject") throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
-        const fields = accountInfo.data.content.fields as unknown as SuiObjectPool
+        if (!objectInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        if (objectInfo.data?.content?.dataType !== "moveObject") throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
+        const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
         const pool = parseSuiPoolObject(fields)
         await this.handlePoolStateUpdate(liquidityPoolId, pool)
-        console.dir(accountInfo.data.content.fields, { depth: null })
     }
 
     private async handlePoolStateUpdate(
@@ -83,7 +81,7 @@ export class MomentumObserverService {
         state: Pool
     ) {
         const parsed: DynamicLiquidityPoolInfo = {
-            tickCurrent: state.tickIndex.fields.bits,
+            tickCurrent: state.tickIndex,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),
             rewards: state.rewardInfos,

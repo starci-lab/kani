@@ -93,34 +93,21 @@ export interface RewardInfo {
 export interface Pool {
     coinA: string;
     coinB: string;
-
     deployTimeMs: number;
-
     fee: number;
-
     feeGrowthGlobalA: string;
     feeGrowthGlobalB: string;
-
     feeProtocol: number;
-
     id: string;
-
     liquidity: string;
     maxLiquidityPerTick: string;
-
     protocolFeesA: string;
     protocolFeesB: string;
-
     rewardInfos: Array<RewardInfo>;
-
     rewardLastUpdatedTimeMs: number;
-
     sqrtPrice: string;
-
     tickCurrentIndex: number;
-
     tickSpacing: number;
-
     unlocked: boolean;
 }
 
@@ -130,24 +117,16 @@ export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
     return {
         coinA: raw.coin_a,
         coinB: raw.coin_b,
-
         deployTimeMs: Number(raw.deploy_time_ms),
-
         fee: raw.fee,
-
         feeGrowthGlobalA: raw.fee_growth_global_a,
         feeGrowthGlobalB: raw.fee_growth_global_b,
-
         feeProtocol: raw.fee_protocol,
-
         id: raw.id.id,
-
         liquidity: raw.liquidity,
         maxLiquidityPerTick: raw.max_liquidity_per_tick,
-
         protocolFeesA: raw.protocol_fees_a,
         protocolFeesB: raw.protocol_fees_b,
-
         rewardInfos: raw.reward_infos.map((r) => ({
             emissionsPerSecond: r.fields.emissions_per_second,
             growthGlobal: r.fields.growth_global,
@@ -156,15 +135,10 @@ export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
             vault: r.fields.vault,
             vaultCoinType: r.fields.vault_coin_type,
         })),
-
         rewardLastUpdatedTimeMs: Number(raw.reward_last_updated_time_ms),
-
         sqrtPrice: raw.sqrt_price,
-
         tickCurrentIndex: parseI32(raw.tick_current_index.fields.bits),
-
         tickSpacing: raw.tick_spacing,
-
         unlocked: raw.unlocked,
     }
 }

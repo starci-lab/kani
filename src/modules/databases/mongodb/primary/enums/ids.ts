@@ -124,7 +124,7 @@ registerEnumType(GraphQLTypeDexId, {
 
 export enum LiquidityPoolId {
     CetusSuiIka02 = "cetusSuiIka02",
-    CetusSuiUsdc005 = "cetusSuiUsdc005",  
+    CetusUsdcSui005 = "cetusUsdcSui005",  
     CetusUsdcEth025 = "cetusUsdcEth025",
     TurbosIkaUsdc015 = "turbosIkaUsdc015",
     TurbosDeepUsdc015 = "turbosDeepUsdc015",
@@ -146,8 +146,8 @@ registerEnumType(GraphQLTypeLiquidityPoolId, {
         [LiquidityPoolId.CetusSuiIka02]: {
             description: "Cetus SUI-IKA LP pool with a 0.2% fee tier.",
         },
-        [LiquidityPoolId.CetusSuiUsdc005]: {
-            description: "Cetus SUI-USDC LP pool with a 0.05% fee tier.",
+        [LiquidityPoolId.CetusUsdcSui005]: {
+            description: "Cetus USDC-SUI LP pool with a 0.05% fee tier.",
         },
         [LiquidityPoolId.CetusUsdcEth025]: {
             description: "Cetus USDC-ETH LP pool with a 0.25% fee tier.",

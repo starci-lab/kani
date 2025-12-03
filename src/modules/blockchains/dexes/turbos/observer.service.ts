@@ -86,7 +86,7 @@ export class TurbosObserverService {
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),
             rewards: state.rewardInfos,
-        }
+        } 
         await this.asyncService.allIgnoreError(
             [
             // cache

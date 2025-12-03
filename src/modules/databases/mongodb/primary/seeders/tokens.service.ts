@@ -191,6 +191,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         selectable: true,
     },
     {
+        _id: createObjectId(TokenId.SuiEth),
         displayId: TokenId.SuiEth,
         name: "ETH",
         symbol: "ETH",

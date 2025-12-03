@@ -85,7 +85,7 @@ export class FlowXObserverService {
             tickCurrent: state.tickIndex,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),
-            rewards: [],
+            rewards: state.rewardInfos,
         }
         await this.asyncService.allIgnoreError(
             [

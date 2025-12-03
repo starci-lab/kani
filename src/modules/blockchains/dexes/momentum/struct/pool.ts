@@ -1,5 +1,7 @@
 /** ---------- GENERIC STRUCTS ---------- */
 
+import { parseI32 } from "@utils"
+
 export interface SuiObjectID {
     id: string;
 }
@@ -120,7 +122,7 @@ export interface Pool {
     rewardInfos: Array<PoolRewardInfo>;
     sqrtPrice: string;
     swapFeeRate: string;
-    tickIndex: SuiObjectI32;
+    tickIndex: number;
     tickSpacing: number;
     typeX: TypeName;
     typeY: TypeName;
@@ -177,7 +179,7 @@ export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
         })),
         sqrtPrice: raw.sqrt_price,
         swapFeeRate: raw.swap_fee_rate,
-        tickIndex: raw.tick_index,
+        tickIndex: parseI32(raw.tick_index.fields.bits),
         tickSpacing: raw.tick_spacing,
         typeX: raw.type_x,
         typeY: raw.type_y,
