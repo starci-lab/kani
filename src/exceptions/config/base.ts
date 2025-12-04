@@ -27,56 +27,56 @@ export class TargetTokenConfigNotFoundException extends AbstractException {
 }
 
 export class MinTargetTokenRequiredNotFoundException extends AbstractException {
-    constructor(tokenId: TokenId, network: Network, message?: string) {
+    constructor(tokenId: TokenId, message?: string) {
         super(
             message || "Min target token required not found", 
             "MIN_TARGET_TOKEN_REQUIRED_NOT_FOUND_EXCEPTION", 
-            { tokenId, network }
+            { tokenId }
         )
     }
 }
 
 export class TargetOperationalGasAmountNotFoundException extends AbstractException {
-    constructor(chainId: ChainId, network: Network, message?: string) {
+    constructor(chainId: ChainId, message?: string) {
         super(
             message || "Target operational gas amount not found", 
             "TARGET_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
-            { chainId, network }
+            { chainId }
         )
     }
 }
 
 export class MinOperationalGasAmountNotFoundException extends AbstractException {
-    constructor(chainId: ChainId, network: Network, message?: string) {
+    constructor(chainId: ChainId, message?: string) {
         super(message || "Min operational gas amount not found", 
             "MIN_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
-            { chainId, network }
+            { chainId }
         )
     }
 }
 export class QuoteOperationalGasAmountNotFoundException extends AbstractException {
-    constructor(chainId: ChainId, network: Network, message?: string) {
+    constructor(chainId: ChainId, message?: string) {
         super(message || "Quote operational gas amount not found", 
             "QUOTE_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
-            { chainId, network }
+            { chainId }
         )
     }
 }
 
 export class GasBalanceAmountNotFoundException extends AbstractException {
-    constructor(chainId: ChainId, network: Network, message?: string) {
+    constructor(chainId: ChainId, message?: string) {
         super(message || "Gas balance amount not found", 
             "GAS_BALANCE_AMOUNT_NOT_FOUND_EXCEPTION", 
-            { chainId, network }
+            { chainId }
         )
     }
 }
 
 export class InsufficientMinGasBalanceAmountException extends AbstractException {
-    constructor(chainId: ChainId, network: Network, message?: string) {
+    constructor(chainId: ChainId, message?: string) {
         super(message || "Insufficient min gas balance amount", 
             "INSUFFICIENT_MIN_GAS_BALANCE_AMOUNT_EXCEPTION", 
-            { chainId, network }
+            { chainId }
         )
     }
 }

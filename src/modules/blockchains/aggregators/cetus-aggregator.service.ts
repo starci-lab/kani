@@ -10,7 +10,7 @@ import {
     QuoteNotFoundException, 
     TransactionObjectArgumentNotFoundException
 } from "@exceptions"
-import { Transaction } from "@mysten/sui/dist/cjs/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import { ChainId } from "@typedefs"
 
 const balancerName = "cetus-aggregator"

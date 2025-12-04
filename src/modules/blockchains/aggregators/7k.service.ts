@@ -7,7 +7,7 @@ import {
     CoinArgumentNotFoundException, 
     TransactionObjectArgumentNotFoundException
 } from "@exceptions"
-import { Transaction } from "@mysten/sui/dist/cjs/transactions"
+import { Transaction } from "@mysten/sui/transactions"
 import { ChainId } from "@typedefs"
 import SevenK, { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { PrimaryMemoryStorageService } from "@modules/databases"

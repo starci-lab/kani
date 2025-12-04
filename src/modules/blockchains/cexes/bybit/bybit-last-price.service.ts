@@ -5,7 +5,6 @@ import {
 } from "@nestjs/common"
 import { EventEmitterService, EventName } from "@modules/event"
 import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { Network } from "@modules/common"
 import { TokenListIsEmptyException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
@@ -62,7 +61,6 @@ export class BybitLastPriceService implements OnApplicationShutdown, OnApplicati
                 const tokens = this.primaryMemoryStorageService.tokens
                     .filter(
                         token =>
-                            token.network === Network.Mainnet &&
                             !!token.cexIds?.includes(CexId.Bybit)
                     )
             

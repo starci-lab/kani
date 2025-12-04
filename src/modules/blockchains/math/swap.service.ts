@@ -9,7 +9,7 @@ import { PrimaryMemoryStorageService, QuoteRatioStatus, TokenId } from "@modules
 import { Injectable } from "@nestjs/common"
 import { Decimal } from "decimal.js"
 import { computeRaw, toScaledBN, toUnit } from "@utils"
-import { ChainId, Network, TokenType } from "@typedefs"
+import { ChainId, TokenType } from "@typedefs"
 import BN from "bn.js"
 import { QuoteRatioService } from "./quote-ratio.service"
 import { GasStatus } from "../types"
@@ -180,7 +180,6 @@ export class SwapMathService {
             quoteRatioResponse,
         }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResponse> {
-        const network = Network.Mainnet
         const chainId = ChainId.Solana
         const targetToken = this.primaryMemoryStorageService
             .tokens.find(token => token.displayId === targetTokenId)
@@ -194,34 +193,30 @@ export class SwapMathService {
         }
         const gasToken = this.primaryMemoryStorageService
             .tokens.find(token => token.type === TokenType.Native 
-                && token.network === network 
                 && token.chainId === chainId
             )
         if (!gasToken) {
             throw new TokenNotFoundException("Gas token not found")
         }
         const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.[network]?.targetOperationalAmount
+            .gasAmountRequired?.[chainId]?.targetOperationalAmount
         const minOperationalGasAmount = this.primaryMemoryStorageService
-            .gasConfig.gasAmountRequired?.[chainId]?.[network]?.minOperationalAmount
+            .gasConfig.gasAmountRequired?.[chainId]?.minOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 chainId, 
-                network, 
                 "Target operational gas amount not found"
             )
         }
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
                 chainId, 
-                network, 
                 "Quote operational gas amount not found"
             )
         }
         if (!gasBalanceAmount) {
             throw new GasBalanceAmountNotFoundException(
                 chainId, 
-                network, 
                 "Gas balance amount not found"
             )
         }
@@ -244,7 +239,6 @@ export class SwapMathService {
             if (gasBalanceAmount.lt(minOperationalGasAmountBN)) {
                 throw new InsufficientMinGasBalanceAmountException(
                     chainId, 
-                    network, 
                     "Gas balance amount is insufficient"
                 )
             }

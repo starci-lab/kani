@@ -47,18 +47,11 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     // ============================================
     async onApplicationBootstrap() {
         await this.handlePoolStateUpdateInterval()
-        const promises: Array<Promise<void>> = []
         // observe
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
-            promises.push(
-                (
-                    async () => {
-                        await this.observeClmmPool(liquidityPool.displayId)
-                    })()
-            )
+            this.observeClmmPool(liquidityPool.displayId)
         }
-        await this.asyncService.allIgnoreError(promises)  
     }
 
     @Cron(CronExpression.EVERY_10_SECONDS)
@@ -147,14 +140,19 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
         const url = this.loadBalancerService.balanceP2c(LoadBalancerName.OrcaClmm, this.memoryStorageService.clientConfig.orcaClmmClientRpcs)
+        const controller = new AbortController()
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         const accountNotifications = await rpcSubscriptions.accountNotifications(
-            address(liquidityPool.poolAddress)
+            address(liquidityPool.poolAddress),
+            {
+                commitment: "confirmed",
+                encoding: "base64",
+            }
         ).subscribe({
-            abortSignal: new AbortSignal(),
+            abortSignal: controller.signal,
         })
         for await (const accountNotification of accountNotifications) {
-            const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data), 8)
+            const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         }
     }

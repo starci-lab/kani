@@ -67,7 +67,8 @@ export class LoadBalancerService {
         if (!entry) {
             this.initP2cBalancerIfNotExists(name, urls)
         }
-        return entry.urls[entry.instance.pick()]
+        const entryAfter = this.p2cBalancerRegistry[name]
+        return entryAfter.urls[entryAfter.instance.pick()]
     }
 
     /**
@@ -78,7 +79,8 @@ export class LoadBalancerService {
         const entry = this.randomBalancerRegistry[name]
         if (!entry) {
             this.initRandomBalancerIfNotExists(name, urls)
-        }
-        return entry.urls[entry.instance.pick()]
+        }   
+        const entryAfter = this.randomBalancerRegistry[name]
+        return entryAfter.urls[entryAfter.instance.pick()]
     }
 }

@@ -6,7 +6,6 @@ import {
 import { EventEmitterService, EventName } from "@modules/event"
 import { BYBIT_WS_URL } from "./constants"
 import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { Network } from "@modules/common"
 import { TokenListIsEmptyException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
@@ -73,8 +72,7 @@ export class BybitOrderBookService implements OnApplicationShutdown, OnApplicati
             onOpen: () => {
                 const tokens = this.primaryMemoryStorageService.tokens
                     .filter(
-                        t => t.network === Network.Mainnet &&
-                        !!t.cexIds?.includes(CexId.Bybit)
+                        token => !!token.cexIds?.includes(CexId.Bybit)
                     )
                 if (!tokens.length) {
                     throw new TokenListIsEmptyException("No Bybit tokens found for mainnet")

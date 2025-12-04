@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ChainId, Network, TokenType } from "@modules/common"
+import { ChainId, TokenType } from "@modules/common"
 import {
     ExecuteBalanceRebalancingParams,
     ExecuteBalanceRebalancingResponse,
@@ -163,7 +163,6 @@ export class SolanaBalanceService implements IBalanceService {
             bot,
         }: FetchBalancesParams
     ): Promise<FetchBalancesResponse> {
-        const network = Network.Mainnet
         const chainId = ChainId.Solana
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === bot.targetToken.toString()
@@ -190,20 +189,18 @@ export class SolanaBalanceService implements IBalanceService {
             quoteTokenId: quoteToken.displayId,
         })
         const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.[network]?.targetOperationalAmount
+            .gasAmountRequired?.[chainId]?.targetOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 chainId,
-                network,
                 "Target operational gas amount not found"
             )
         }
         const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.[network]?.minOperationalAmount
+            .gasAmountRequired?.[chainId]?.minOperationalAmount
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
                 chainId,
-                network,
                 "Min operational gas amount not found"
             )
         }
@@ -222,7 +219,6 @@ export class SolanaBalanceService implements IBalanceService {
             ) {
                 throw new InsufficientMinGasBalanceAmountException(
                     chainId,
-                    network,
                     "Insufficient min gas balance amount"
                 )
             }
@@ -331,7 +327,10 @@ export class SolanaBalanceService implements IBalanceService {
             }
         }
         const targetBalanceAmountInTarget = computeDenomination(targetBalanceAmount, targetToken.decimals)
-        const quoteBalanceAmountInTarget = computeDenomination(quoteBalanceAmount, quoteToken.decimals).div(quoteRatioResponse.oraclePrice)
+        const quoteBalanceAmountInTarget = computeDenomination(
+            quoteBalanceAmount, 
+            quoteToken.decimals
+        ).div(quoteRatioResponse.oraclePrice)
         const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(quoteBalanceAmountInTarget)
         if (totalBalanceAmountInTarget.lt(new Decimal(targetToken.minRequiredAmountInTotal || 0))) {
             if (!withoutSnapshot) {

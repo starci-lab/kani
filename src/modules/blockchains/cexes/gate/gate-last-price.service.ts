@@ -6,7 +6,6 @@ import {
 import { EventEmitterService, EventName } from "@modules/event"
 import { GATE_WS_URL } from "./constants"
 import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { Network } from "@modules/common"
 import { TokenListIsEmptyException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
@@ -56,9 +55,7 @@ export class GateLastPriceService implements OnApplicationShutdown, OnApplicatio
             onOpen: () => {
                 const tokens = this.primaryMemoryStorageService.tokens
                     .filter(
-                        token =>
-                            token.network === Network.Mainnet &&
-                !!token.cexIds?.includes(CexId.Gate)
+                        token => !!token.cexIds?.includes(CexId.Gate)
                     )
   
                 if (!tokens.length) {

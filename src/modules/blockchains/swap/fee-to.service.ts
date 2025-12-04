@@ -6,6 +6,7 @@ import { SuiCoinManagerService } from "../utils/sui-coin-manager.service"
 import { CoinArgument } from "../types"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import Decimal from "decimal.js"
+import { SplitAmountResponse } from "../math"
 
 const SUI_ADDRESS = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
 const SUI_ADDRESS_TESTNET = "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030"
@@ -16,12 +17,6 @@ const EVM_ADDRESS_TESTNET = "0x9f0204D1163d8C5c057aAb718a04C00E6C5d5790"
 
 const OPEN_POSITION_FEE_PERCENTAGE = 0.0004 // 0.04%
 const ROI_FEE_PERCENTAGE = 0.1 // 10%
-
-export interface SplitAmountResponse {
-    feeAmount: BN
-    remainingAmount: BN
-    feeToAddress: string
-}
 
 export interface AttachSuiFeeParams {
     txb?: Transaction

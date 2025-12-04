@@ -3,7 +3,6 @@ import { Injectable } from "@nestjs/common"
 import { computeDenomination, toUnitDecimal } from "@modules/common"
 import BN from "bn.js"
 import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { Q64 } from "./constants"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { LiquidityPoolState } from "../interfaces"
 import { 
@@ -16,6 +15,8 @@ import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
 export interface TickToSqrtPriceX64Params {
     tickIndex: Decimal
 }
+
+const Q64 = new Decimal(2).pow(64)
 
 @Injectable()
 export class TickMathService {

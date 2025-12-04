@@ -47,17 +47,10 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     // ============================================
     async onApplicationBootstrap() {
         await this.handlePoolStateUpdateInterval()
-        const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
-            promises.push(
-                (
-                    async () => {
-                        await this.observeClmmPool(liquidityPool.displayId)
-                    })()
-            )
+            this.observeClmmPool(liquidityPool.displayId)
         }
-        await this.asyncService.allIgnoreError(promises)
     }
 
     @Cron(CronExpression.EVERY_10_SECONDS)
@@ -152,14 +145,19 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             LoadBalancerName.RaydiumClmm, 
             this.memoryStorageService.clientConfig.raydiumClmmClientRpcs
         )
+        const controller = new AbortController()
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         const accountNotifications = await rpcSubscriptions.accountNotifications(
-            address(liquidityPool.poolAddress)
+            address(liquidityPool.poolAddress),
+            {
+                commitment: "confirmed",
+                encoding: "base64",
+            }
         ).subscribe({
-            abortSignal: new AbortSignal(),
+            abortSignal: controller.signal,
         })
         for await (const accountNotification of accountNotifications) {
-            const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data))
+            const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data.toString(), "base64"))
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         }
     }

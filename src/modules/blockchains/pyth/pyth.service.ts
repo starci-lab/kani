@@ -3,7 +3,6 @@ import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common
 import { HermesClient, PriceUpdate } from "@pythnetwork/hermes-client"
 import { InjectHermesClient } from "./pyth.decorators"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { Network } from "@typedefs"
 import BN from "bn.js"
 import { computeDenomination } from "@modules/common"
 import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
@@ -44,9 +43,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
     async fetchPrices() {
         const tokens = this.primaryMemoryStorageService.tokens
             .filter(
-                token => 
-                    token.network === Network.Mainnet 
-                && !!token.pythFeedId
+                token => !!token.pythFeedId
             )
         if (!tokens.length) {
             throw new TokenListIsEmptyException("No Pyth tokens found for mainnet")
@@ -113,9 +110,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
     async subscribe() {
         const tokens = this.primaryMemoryStorageService.tokens
             .filter(
-                token => 
-                    token.network === Network.Mainnet 
-                && !!token.pythFeedId
+                token => !!token.pythFeedId
             )
         if (!tokens.length) {
             throw new TokenListIsEmptyException("No Pyth tokens found for mainnet")

@@ -56,18 +56,11 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
     // ============================================
     async onApplicationBootstrap() {
         await this.handlePoolStateUpdateInterval()
-        const promises: Array<Promise<void>> = []
         for (const liquidityPool
             of this.memoryStorageService.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Meteora).toString()) continue
-            promises.push(
-                (
-                    async () => {
-                        await this.observeDlmmPool(liquidityPool.displayId)
-                    })()
-            )
+            this.observeDlmmPool(liquidityPool.displayId)
         }
-        await this.asyncService.allIgnoreError(promises)
     }
 
     // ============================================
@@ -135,13 +128,18 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
         const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs)
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
+        const controller = new AbortController()
         const accountNotifications = await rpcSubscriptions.accountNotifications(
-            address(liquidityPool.poolAddress)
+            address(liquidityPool.poolAddress),
+            {
+                commitment: "confirmed",
+                encoding: "base64",
+            }
         ).subscribe({
-            abortSignal: new AbortSignal(),
+            abortSignal: controller.signal,
         })
         for await (const accountNotification of accountNotifications) {
-            const state = LbPair.struct.read(Buffer.from(accountNotification.value?.data), 8)
+            const state = LbPair.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         }
     }

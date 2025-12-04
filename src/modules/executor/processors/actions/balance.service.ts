@@ -1,11 +1,10 @@
 import { BalanceService } from "@modules/blockchains"
-import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
+import { BotSchema } from "@modules/databases"
 import { envConfig } from "@modules/env"
 import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
 import { Injectable, Scope, Inject } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
 import { Mutex } from "async-mutex"
-import { Connection } from "mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { ReadinessWatcherFactoryService } from "@modules/mixin"
@@ -36,8 +35,6 @@ export class BalanceProcessorService  {
     constructor(
         @Inject(REQUEST)
         private readonly request: BalanceProcessorRequest,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly mutexService: MutexService,
