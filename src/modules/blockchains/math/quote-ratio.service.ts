@@ -44,12 +44,8 @@ export class QuoteRatioService {
             quoteBalanceAmount,
             quoteToken.decimals
         )
-        console.log("targetBalanceAmountInQuote", targetBalanceAmountInQuote.toString())
-        console.log("quoteBalanceAmountInQuote", quoteBalanceAmountInQuote.toString())
         const totalBalanceAmountInQuote = targetBalanceAmountInQuote.add(quoteBalanceAmountInQuote)
-        console.log("totalBalanceAmountInQuote", totalBalanceAmountInQuote.toString())
         const quoteRatio = quoteBalanceAmountInQuote.div(totalBalanceAmountInQuote)
-        console.log("quoteRatio", quoteRatio.toString())
         return {
             quoteRatio,
             totalBalanceAmountInQuote,

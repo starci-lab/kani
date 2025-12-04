@@ -28,8 +28,6 @@ import BN from "bn.js"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection as MongooseConnection } from "mongoose"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
 import { SwapMathService } from "../math"
 import { 
     BalanceSnapshotService, 
@@ -54,8 +52,6 @@ export class BalanceService implements IBalanceService {
         private readonly eventEmitter: EventEmitter2,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
     ) {}
 
     async executeBalanceRebalancing(

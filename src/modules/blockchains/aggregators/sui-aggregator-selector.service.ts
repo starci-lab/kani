@@ -66,15 +66,19 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
     ): Promise<SelectorSwapResponse> {
         switch (params.aggregatorId) {
         case AggregatorId.CetusAggregator: {
-            const { payload } = await this.cetusAggregatorService.swap(params.base)
+            const { payload, outputCoin, txb } = await this.cetusAggregatorService.swap(params.base)
             return {
                 payload,
+                outputCoin,
+                txb,
             }
         }
         case AggregatorId.SevenK: {
-            const { payload } = await this.sevenKService.swap(params.base)
+            const { payload, outputCoin, txb } = await this.sevenKService.swap(params.base)
             return {
                 payload,
+                outputCoin,
+                txb,
             }
         }
         default:

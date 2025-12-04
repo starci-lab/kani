@@ -53,6 +53,7 @@ export class DexesModule extends ConfigurableModuleClass {
         ) {
             dexModules.push(FlowXModule.register({
                 isGlobal: options.isGlobal,
+                enabled: options.dexes?.find((dex) => dex.dexId === DexId.FlowX)?.enabled,
             }))
         }
 

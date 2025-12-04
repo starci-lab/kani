@@ -5,7 +5,7 @@ import { SuiClient } from "@mysten/sui/client"
 import { RetryService } from "@modules/mixin"
 import { 
     CoinArgumentNotFoundException, 
-    TransactionObjectArgumentNotFoundException
+    TokenNotFoundException
 } from "@exceptions"
 import { Transaction } from "@mysten/sui/transactions"
 import { ChainId } from "@typedefs"
@@ -45,16 +45,29 @@ export class SevenKAggregatorService implements IAggregatorService {
         }: QuoteRequest
     ): Promise<QuoteResponse> {
         const client = this.createSevenKAggregatorClient()
+        const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
+            token => token.displayId === tokenIn,
+        )
+        if (!tokenInInstance) {
+            throw new TokenNotFoundException(`Token not found with display id: ${tokenIn}`)
+        }
+        const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
+            token => token.displayId === tokenOut,
+        )
+        if (!tokenOutInstance) {
+            throw new TokenNotFoundException(`Token not found with display id: ${tokenOut}`)
+        }
         return await this.retryService.retry({
-            action: async () => {   
+            action: async () => {  
+
                 const quote = await client.getQuote({
                     amountIn: amountIn.toString(),
-                    tokenIn,
-                    tokenOut,    
-                    commissionBps: 2      
+                    tokenIn: tokenInInstance.tokenAddress,
+                    tokenOut: tokenOutInstance.tokenAddress,    
+                    commissionBps: 2,   
                 })
                 return {
-                    amountOut: new BN(quote.returnAmount),
+                    amountOut: new BN(quote.returnAmountWithDecimal),
                     payload: quote,
                 }   
             },
@@ -75,6 +88,7 @@ export class SevenKAggregatorService implements IAggregatorService {
         if (!inputCoin) {
             throw new CoinArgumentNotFoundException("Input coin is required")
         }
+        txb = txb || new Transaction()
         const { coinOut } = await this.retryService.retry({
             action: async () => {
                 return await client.buildTx({
@@ -86,7 +100,7 @@ export class SevenKAggregatorService implements IAggregatorService {
                         commissionBps: 2,
                     },
                     extendTx: {
-                        tx: txb || new Transaction(),
+                        tx: txb,
                         coinIn: inputCoin,
                     },
                 })
@@ -95,9 +109,6 @@ export class SevenKAggregatorService implements IAggregatorService {
             delay: 500,
             factor: 2,
         })
-        if (!coinOut) {
-            throw new TransactionObjectArgumentNotFoundException("Output coin is required")
-        }
         return {
             outputCoin: coinOut,
             payload: null,

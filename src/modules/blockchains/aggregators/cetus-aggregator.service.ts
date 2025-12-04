@@ -7,7 +7,7 @@ import { SuiClient } from "@mysten/sui/client"
 import { RetryService } from "@modules/mixin"
 import { 
     QuoteNotFoundException, 
-    TransactionObjectArgumentNotFoundException
+    TokenNotFoundException, 
 } from "@exceptions"
 import { Transaction } from "@mysten/sui/transactions"
 import { ChainId } from "@typedefs"
@@ -44,12 +44,25 @@ export class CetusAggregatorService implements IAggregatorService {
             tokenOut,
         }: QuoteRequest
     ): Promise<QuoteResponse> {
+        const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
+            token => token.displayId === tokenIn,
+        )
+        if (!tokenInInstance) {
+            throw new TokenNotFoundException(`Token not found with display id: ${tokenIn}`)
+        }
+        const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
+            token => token.displayId === tokenOut,
+        )
+        if (!tokenOutInstance) {
+            throw new TokenNotFoundException(`Token not found with display id: ${tokenOut}`)
+        }
+
         const client = this.createCetusAggregatorClient()
         return await this.retryService.retry({
             action: async () => {   
                 const quote = await client.findRouters({
-                    from: tokenIn,
-                    target: tokenOut,
+                    from: tokenInInstance.tokenAddress,
+                    target: tokenOutInstance.tokenAddress,
                     amount: amountIn,
                     byAmountIn: true,
                 })
@@ -73,6 +86,7 @@ export class CetusAggregatorService implements IAggregatorService {
             inputCoin, 
             txb 
         }: SwapRequest): Promise<SwapResponse> {
+        txb = txb || new Transaction()
         const client = this.createCetusAggregatorClient()
         const router = payload as RouterDataV3 
         // no slippage
@@ -80,26 +94,24 @@ export class CetusAggregatorService implements IAggregatorService {
         const outputCoin = await this.retryService.retry({
             action: async () => {
                 if (!inputCoin) {
-                    return await client.fastRouterSwap({
+                    await client.fastRouterSwap({
                         router,
                         slippage,
-                        txb: txb || new Transaction(),
+                        txb,
                     })
+                    return undefined
                 }
                 return await client.routerSwap({
                     router,
                     slippage,
-                    txb: txb || new Transaction(),
-                    inputCoin: inputCoin,
+                    txb,
+                    inputCoin,
                 })
             },
             maxRetries: 3,
             delay: 500,
             factor: 2,
         })
-        if (!outputCoin) {
-            throw new TransactionObjectArgumentNotFoundException("Output coin is required")
-        }
         return {
             outputCoin,
             payload: null,

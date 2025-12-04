@@ -4,7 +4,7 @@ import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapRespo
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import BN from "bn.js"
-import { LoadBalancerService, RetryService } from "@modules/mixin"
+import { RetryService } from "@modules/mixin"
 import { ChainId } from "@modules/common"
 import { Address, address } from "@solana/kit"
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
@@ -16,7 +16,6 @@ export class JupiterService implements IAggregatorService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         // Generic retry helper to re-run any async action with backoff
         private readonly retryService: RetryService,
-        private readonly loadBalancerService: LoadBalancerService,
     ) { }
 
     private jupiterReferralTokenAccounts(): Partial<Record<TokenId, Address>> {
@@ -57,12 +56,17 @@ export class JupiterService implements IAggregatorService {
                     const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
                         token => token.displayId === tokenIn,
                     )
+                    if (!tokenInInstance) {
+                        throw new TokenNotFoundException(
+                            `Token not found with display id: ${tokenIn}`
+                        )
+                    }
                     const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
                         token => token.displayId === tokenOut,
                     )
-                    if (!tokenInInstance || !tokenOutInstance) {
+                    if (!tokenOutInstance) {
                         throw new TokenNotFoundException(
-                            `Token not found with display id: ${tokenIn} or ${tokenOut}`
+                            `Token not found with display id: ${tokenOut}`
                         )
                     }
                     const client = this.createJupiterClient()

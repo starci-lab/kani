@@ -8,14 +8,15 @@ import {
 } from "./balance.interface"
 import { LoadBalancerService } from "@modules/mixin"
 import { LoadBalancerName, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenNotFoundException } from "@exceptions"
+import { TokenNotFoundException, TransactionNotFoundException } from "@exceptions"
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
 import { SuiAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
 import Decimal from "decimal.js"
-import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../signers"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -25,6 +26,8 @@ export class SuiBalanceService implements IBalanceService {
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     async processSwapTransaction(
@@ -38,7 +41,7 @@ export class SuiBalanceService implements IBalanceService {
     ): Promise<ProcessSwapTransactionResponse> {
         const { 
             aggregatorId, 
-            response 
+            response
         } = await this.suiAggregatorSelectorService.batchQuote({
             tokenIn: tokenIn.displayId,
             tokenOut: tokenOut.displayId,
@@ -50,7 +53,7 @@ export class SuiBalanceService implements IBalanceService {
             actual: response.amountOut,
             lowerBound: new Decimal(0.95),
         })
-        const { payload: serializedTransaction } = await this.suiAggregatorSelectorService.selectorSwap({
+        const { outputCoin, txb } = await this.suiAggregatorSelectorService.selectorSwap({
             base: {
                 payload: response.payload,
                 tokenIn: tokenIn.displayId,
@@ -59,6 +62,13 @@ export class SuiBalanceService implements IBalanceService {
             },
             aggregatorId: aggregatorId,
         })
+        if (!txb) {
+            throw new TransactionNotFoundException("Transaction is required")
+        }
+        // transfer the output coin to the bot's account address
+        if (outputCoin) {
+            txb.transferObjects([outputCoin], bot.accountAddress)
+        }
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.SuiBalance,
             this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs
@@ -67,13 +77,21 @@ export class SuiBalanceService implements IBalanceService {
             url,
             network: "mainnet",
         })
-        const { digest: txHash } = await this.signerService.withSuiSigner({
+        const txHash = await this.signerService.withSuiSigner<string>({
             bot,
             action: async (signer) => {
-                return await client.signAndExecuteTransaction({
-                    transaction: Transaction.from(serializedTransaction as string),
+                const { digest } = await client.signAndExecuteTransaction({
+                    transaction: txb,
                     signer,
                 })
+                this.logger.info(
+                    WinstonLog.SwapTransactionSuccess, {
+                        txHash: digest,
+                        bot: bot.id,
+                        tokenInId: tokenIn.displayId,
+                        tokenOutId: tokenOut.displayId,
+                    })
+                return digest
             },
         })
         return {
@@ -101,20 +119,12 @@ export class SuiBalanceService implements IBalanceService {
             url,
             network: "mainnet",
         })
-        try {
-            const { totalBalance } = await client.getBalance({
-                owner: bot.accountAddress,
-                coinType: token.tokenAddress,
-            })
-            console.log("totalBalance", totalBalance.toString())
-            return {
-                balanceAmount: new BN(totalBalance.toString()),
-            }
-        } catch (error) {
-            console.log("error", error)
-            return {
-                balanceAmount: new BN(0),
-            }
+        const { totalBalance } = await client.getBalance({
+            owner: bot.accountAddress,
+            coinType: token.tokenAddress,
+        })
+        return {
+            balanceAmount: new BN(totalBalance.toString()),
         }
     }   
 }   

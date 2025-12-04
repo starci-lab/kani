@@ -54,7 +54,7 @@ export class SignerService {
         return this.withSigner<SuiEd25519Keypair, TResponse>({
             ...params,
             platformId: PlatformId.Sui,
-            factory: async (privateKey) => SuiEd25519Keypair.fromSecretKey(Buffer.from(privateKey, "utf8")),
+            factory: async (privateKey) => SuiEd25519Keypair.fromSecretKey(privateKey),
         })
     }
 

@@ -75,7 +75,7 @@ export class BalanceProcessorService  {
                         if (!this.bot) {
                             return
                         }
-                        if (!this.bot.activePosition) {
+                        if (this.bot.activePosition) {
                             return
                         }
                         await this.balanceService.executeBalanceRebalancing({
@@ -84,7 +84,6 @@ export class BalanceProcessorService  {
                         })
                     })
             } catch (error) {
-                console.error(error)
                 this.logger.error(
                     WinstonLog.BalanceRebalancingFailed, {
                         botId: this.request.botId,

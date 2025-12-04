@@ -1,5 +1,6 @@
 import { QuoteRequest, QuoteResponse, SwapRequest } from "./aggregator.interface"
 import { AggregatorId } from "./types"
+import { TransactionObjectArgument, Transaction } from "@mysten/sui/transactions"
 
 /**
  * Params for batch quote request.
@@ -31,6 +32,8 @@ export interface SelectorSwapParams {
  */
 export interface SelectorSwapResponse {
     payload: unknown
+    outputCoin?: TransactionObjectArgument
+    txb?: Transaction
 }
 
 export interface IAggregatorSelectorService {

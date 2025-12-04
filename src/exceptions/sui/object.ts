@@ -5,3 +5,4 @@ export class TransactionObjectArgumentNotFoundException extends AbstractExceptio
         super(message || "Transaction object argument not found", "TRANSACTION_OBJECT_ARGUMENT_NOT_FOUND_EXCEPTION")
     }
 }
+
