@@ -67,7 +67,10 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResponse>
     {
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MeteoraDlmm, 
+            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.read
+        )
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,

@@ -74,7 +74,7 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
         case AggregatorId.Jupiter: {
             const url = this.loadBalancerService.balanceP2c(
                 LoadBalancerName.JupiterAggregator,
-                this.primaryMemoryStorageService.clientConfig.jupiterAggregatorClientRpcs
+                this.primaryMemoryStorageService.clientConfig.jupiterAggregatorClientRpcs.write
             )
             return {
                 rpc: createSolanaRpc(url),

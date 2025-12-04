@@ -30,7 +30,7 @@ export class CetusAggregatorService implements IAggregatorService {
             client: new SuiClient({
                 url: this.loadBalancerService.balanceP2c(
                     balancerName, 
-                    this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs
+                    this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs.read
                 ),
                 network: "mainnet",
             }),

@@ -95,7 +95,7 @@ export class FlowXActionService implements IActionService {
         })
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.FlowXClmm, 
-            this.primaryMemoryStorageService.clientConfig.flowXClmmClientRpcs
+            this.primaryMemoryStorageService.clientConfig.flowXClmmClientRpcs.write
         )
         const client = new SuiClient({
             url,

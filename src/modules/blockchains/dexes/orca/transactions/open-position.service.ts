@@ -46,7 +46,7 @@ export class OpenPositionInstructionService {
     {
         const url = this.loadBalancerService.balanceP2c(
             ORCA_BALANCER_NAME, 
-            this.primaryMemoryStorageService.clientConfig.orcaClmmClientRpcs
+            this.primaryMemoryStorageService.clientConfig.orcaClmmClientRpcs.read
         )
         const rpc = createSolanaRpc(url)
         const instructions: Array<Instruction> = []

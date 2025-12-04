@@ -71,7 +71,7 @@ export class SuiBalanceService implements IBalanceService {
         }
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.SuiBalance,
-            this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs
+            this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs.write
         )
         const client = new SuiClient({
             url,
@@ -113,7 +113,7 @@ export class SuiBalanceService implements IBalanceService {
         }
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.SuiBalance,
-            this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs
+            this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs.read
         )
         const client = new SuiClient({
             url,

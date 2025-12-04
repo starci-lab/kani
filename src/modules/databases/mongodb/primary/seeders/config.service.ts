@@ -57,56 +57,118 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
         _id: createObjectId(ConfigId.Client),
         displayId: ConfigId.Client,
         value: {
-            cetusAggregatorClientRpcs: [
-                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
-                "https://fullnode.mainnet.sui.io:443"
-            ],
-            sevenKAggregatorClientRpcs: [
-                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
-                "https://fullnode.mainnet.sui.io:443"
-            ],
-            cetusClmmClientRpcs: [
-                "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
-            ],
-            turbosClmmClientRpcs: [
-                "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
-            ],
-            momentumClmmClientRpcs: [
-                "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
-            ],
-            flowXClmmClientRpcs: [
-                "https://fullnode.mainnet.sui.io:443",
-                "https://api.flowx.finance/v1/rpc",
-            ],
-            jupiterAggregatorClientRpcs: [
-                "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
-                "https://api.mainnet-beta.solana.com",
-            ],
-            raydiumClmmSdks: [
-                "https://api.mainnet-beta.solana.com",
-                "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
-            ],
-            orcaClmmClientRpcs: [
-                "https://api.mainnet-beta.solana.com",
-                "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
-            ],
-            meteoraDlmmClientRpcs: [
-                "https://api.mainnet-beta.solana.com",
-                "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
-            ],
-            solanaBalanceClientRpcs: [
-                "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
-                "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
-                "https://api.mainnet-beta.solana.com",
-            ],
-            suiBalanceClientRpcs: [
-                "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
-            ],
-        }
+            jupiterAggregatorClientRpcs: {
+                read: [
+                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    "https://api.mainnet-beta.solana.com",
+                ],
+                write: [
+                    "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
+                ],
+            },
+            solanaBalanceClientRpcs: {
+                read: [
+                    "https://api.mainnet-beta.solana.com",
+                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                ],
+                write: [
+                    "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
+                ],
+            },
+            meteoraDlmmClientRpcs: {
+                read: [
+                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    "https://api.mainnet-beta.solana.com",
+                ],
+                write: [
+                    "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
+                ],
+            },
+            raydiumClmmClientRpcs: {
+                read: [
+                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    "https://api.mainnet-beta.solana.com",
+                ],
+                write: [
+                    "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
+                ],
+            },
+            orcaClmmClientRpcs: {
+                read: [
+                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    "https://api.mainnet-beta.solana.com",
+                ],
+                write: [
+                    "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
+                ],
+            },
+
+
+
+            suiBalanceClientRpcs: {
+                read: [
+                    "https://fullnode.mainnet.sui.io:443",
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+            cetusAggregatorClientRpcs: {
+                read: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                    "https://fullnode.mainnet.sui.io:443"
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+            sevenKAggregatorClientRpcs: {
+                read: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                    "https://fullnode.mainnet.sui.io:443"
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+            cetusClmmClientRpcs: {
+                read: [
+                    "https://fullnode.mainnet.sui.io:443",
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+            momentumClmmClientRpcs: {
+                read: [
+                    "https://fullnode.mainnet.sui.io:443",
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+            flowXClmmClientRpcs: {
+                read: [
+                    "https://fullnode.mainnet.sui.io:443",
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+            turbosClmmClientRpcs: {
+                read: [
+                    "https://fullnode.mainnet.sui.io:443",
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+                write: [
+                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                ],
+            },
+        },
     },
 ]
 

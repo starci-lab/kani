@@ -46,7 +46,7 @@ export class ClosePositionInstructionService {
     {
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.RaydiumClmm, 
-            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs
+            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs.read
         )
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []

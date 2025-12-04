@@ -93,7 +93,7 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
         case AggregatorId.CetusAggregator: {
             const url = this.loadBalancerService.balanceP2c(
                 LoadBalancerName.CetusAggregator,
-                this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs
+                this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs.write
             )
             return {
                 client: new SuiClient({
@@ -105,7 +105,7 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
         case AggregatorId.SevenK: {
             const url = this.loadBalancerService.balanceP2c(
                 LoadBalancerName.SevenKAggregator,
-                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs
+                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs.write
             )
             return {
                 client: new SuiClient({

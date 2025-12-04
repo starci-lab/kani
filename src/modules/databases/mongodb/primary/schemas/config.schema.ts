@@ -73,78 +73,94 @@ export class FeeInfo {
 }
 
 @ObjectType({
+    description: "Represents the rpcs for the platform.",
+})
+export class Rpcs {
+    @Field(() => [String], {
+        description: "Read rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        read: Array<string>
+
+    @Field(() => [String], {
+        description: "Write rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        write: Array<string>
+}
+@ObjectType({
     description: "Represents the client configuration for the platform.",
 })
 export class ClientConfig {
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Cetus aggregator client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        cetusAggregatorClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        cetusAggregatorClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "SevenK aggregator client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        sevenKAggregatorClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        sevenKAggregatorClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Cetus clmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        cetusClmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        cetusClmmClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "SevenK clmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        turbosClmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        turbosClmmClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Momentum clmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        momentumClmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        momentumClmmClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "FlowX clmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        flowXClmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        flowXClmmClientRpcs: Rpcs
         
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Jupiter aggregator client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        jupiterAggregatorClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        jupiterAggregatorClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Raydium clmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        raydiumClmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        raydiumClmmClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Orca clmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        orcaClmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        orcaClmmClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Meteora dlmm client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        meteoraDlmmClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        meteoraDlmmClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Solana balance client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        solanaBalanceClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        solanaBalanceClientRpcs: Rpcs
 
-    @Field(() => [String], {
+    @Field(() => Rpcs, {
         description: "Sui balance client rpcs",
     })
-    @Prop({ type: [String], required: true })
-        suiBalanceClientRpcs: Array<string>
+    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+        suiBalanceClientRpcs: Rpcs
 }

@@ -47,7 +47,10 @@ export class ClosePositionInstructionService {
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MeteoraDlmm, 
+            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.read
+        )
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }

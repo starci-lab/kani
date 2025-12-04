@@ -92,7 +92,10 @@ export class MeteoraActionService implements IActionService {
         const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
         const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmount)
 
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MeteoraDlmm, 
+            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.write
+        )
         const rpc = createSolanaRpc(url)
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
@@ -369,7 +372,10 @@ export class MeteoraActionService implements IActionService {
           !snapshotGasBalanceAmountBeforeOpen) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MeteoraDlmm, 
+            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.write
+        )
         const rpc = createSolanaRpc(url)
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool

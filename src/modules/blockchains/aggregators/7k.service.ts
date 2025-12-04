@@ -30,7 +30,7 @@ export class SevenKAggregatorService implements IAggregatorService {
         SevenK.Config.setSuiClient(new SuiClient({
             url: this.loadBalancerService.balanceP2c(
                 balancerName, 
-                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs
+                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs.read
             ),
             network: "mainnet",
         }))
