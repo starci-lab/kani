@@ -1,32 +1,23 @@
 import { createJupiterApiClient, QuoteResponse as JupiterQuoteResponse, SwapApi } from "@jup-ag/api"
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
+import { Injectable, Logger } from "@nestjs/common"
 import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import BN from "bn.js"
-import { LoadBalancerService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
+import { LoadBalancerService, RetryService } from "@modules/mixin"
 import { ChainId } from "@modules/common"
 import { Address, address } from "@solana/kit"
-const balancerName = "jupiter"
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
+
 @Injectable()
-export class JupiterService implements IAggregatorService, OnModuleInit {
+export class JupiterService implements IAggregatorService {
     private readonly logger = new Logger(JupiterService.name)
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         // Generic retry helper to re-run any async action with backoff
         private readonly retryService: RetryService,
         private readonly loadBalancerService: LoadBalancerService,
-        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { }
-
-    async onModuleInit(): Promise<void> {
-        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
-        this.loadBalancerService.initP2cBalancerIfNotExists(
-            balancerName, 
-            this.primaryMemoryStorageService.clientConfig.jupiterAggregatorClientRpcs
-        )
-    }
 
     private jupiterReferralTokenAccounts(): Partial<Record<TokenId, Address>> {
         return {

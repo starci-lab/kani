@@ -17,7 +17,6 @@ export interface IBalanceService {
 export interface FetchBalanceParams {
     bot: BotSchema
     tokenId: TokenId
-    clientIndex?: number
 }
 
 export interface FetchBalanceResponse {

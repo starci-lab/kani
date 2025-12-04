@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
 import { AggregatorClient, RouterDataV3 } from "@cetusprotocol/aggregator-sdk"
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { LoadBalancerService, ReadinessWatcherFactoryService } from "@modules/mixin"
+import { LoadBalancerService } from "@modules/mixin"
 import { SuiClient } from "@mysten/sui/client"
 import { RetryService } from "@modules/mixin"
 import { 
@@ -15,11 +15,10 @@ import { ChainId } from "@typedefs"
 
 const balancerName = "cetus-aggregator"
 @Injectable()
-export class CetusAggregatorService implements IAggregatorService, OnModuleInit {
+export class CetusAggregatorService implements IAggregatorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly loadBalancerService: LoadBalancerService,
-        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly retryService: RetryService,
     ) {}
 
@@ -27,18 +26,13 @@ export class CetusAggregatorService implements IAggregatorService, OnModuleInit 
         return [ChainId.Sui]
     }
 
-    async onModuleInit(): Promise<void> {
-        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
-        this.loadBalancerService.initP2cBalancerIfNotExists(
-            balancerName, 
-            this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs
-        )
-    }
-
     private createCetusAggregatorClient(): AggregatorClient {
         return new AggregatorClient({
             client: new SuiClient({
-                url: this.loadBalancerService.balanceP2c(balancerName),
+                url: this.loadBalancerService.balanceP2c(
+                    balancerName, 
+                    this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs
+                ),
                 network: "mainnet",
             }),
         })

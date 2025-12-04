@@ -27,14 +27,15 @@ import { OPEN_POSITION_SLIPPAGE } from "../../../swap"
 import { FeeService } from "../../../math"
 import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
-import { Network, TokenType } from "@modules/common"
+import { TokenType } from "@modules/common"
+import { LoadBalancerService } from "@modules/mixin"
+import { LoadBalancerName } from "@modules/databases"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
     state: DlmmLiquidityPoolState
     amountA: BN
     amountB: BN
-    clientIndex?: number
 }
 
 export interface CreateOpenPositionInstructionsResponse {
@@ -56,23 +57,22 @@ export class OpenPositionInstructionService {
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly meteoraSdkService: MeteoraSdkService,
         private readonly feeService: FeeService,
+        private readonly loadBalancerService: LoadBalancerService,
     ) { }
     async createOpenPositionInstructions({
         bot,
         state,
         amountA,
         amountB,
-        clientIndex = 0,
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResponse>
     {
-        const network = Network.Mainnet
+        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,
         } = this.feeService.splitAmount({
             amount: amountA,
-            network,
             chainId: bot.chainId,
         })
         const {
@@ -80,7 +80,6 @@ export class OpenPositionInstructionService {
             remainingAmount: remainingAmountB,
         } = this.feeService.splitAmount({
             amount: amountB,
-            network,
             chainId: bot.chainId,
         })
         const metadata = state.static.metadata as MeteoraLiquidityPoolMetadata
@@ -90,7 +89,7 @@ export class OpenPositionInstructionService {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
         // transfer the fees to the fee address
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
+        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }
@@ -141,7 +140,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            clientIndex,
+            url,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -158,7 +157,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            clientIndex,
+            url,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -178,7 +177,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(feeToAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                clientIndex,
+                url,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -200,7 +199,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(feeToAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                clientIndex,
+                url,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {

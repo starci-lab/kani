@@ -113,26 +113,32 @@ export class ClientConfig {
         flowXClmmClientRpcs: Array<string>
         
     @Field(() => [String], {
-        description: "Cetus aggregator client rpcs",
+        description: "Jupiter aggregator client rpcs",
     })
     @Prop({ type: [String], required: true })
         jupiterAggregatorClientRpcs: Array<string>
 
     @Field(() => [String], {
-        description: "Raydium aggregator client rpcs",
+        description: "Raydium clmm client rpcs",
     })
     @Prop({ type: [String], required: true })
         raydiumClmmClientRpcs: Array<string>
 
     @Field(() => [String], {
-        description: "Orca aggregator client rpcs",
+        description: "Orca clmm client rpcs",
     })
     @Prop({ type: [String], required: true })
-        orcaAggregatorClientRpcs: Array<string>
+        orcaClmmClientRpcs: Array<string>
 
     @Field(() => [String], {
-        description: "Meteora aggregator client rpcs",
+        description: "Meteora dlmm client rpcs",
     })
     @Prop({ type: [String], required: true })
-        meteoraAggregatorClientRpcs: Array<string>
+        meteoraDlmmClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Solana balance client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        solanaBalanceClientRpcs: Array<string>
 }

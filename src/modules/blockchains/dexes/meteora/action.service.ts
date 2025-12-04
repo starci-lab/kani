@@ -10,14 +10,11 @@ import {
     TokenNotFoundException, 
     TransactionMessageTooLargeException
 } from "@exceptions"
-import { Network } from "@typedefs"
 import { SignerService } from "../../signers"
 import { 
     addSignersToTransactionMessage, 
     appendTransactionMessageInstructions, 
     compileTransaction, 
-    createKeyPairFromBytes, 
-    createSignerFromKeyPair, 
     createSolanaRpc, 
     createSolanaRpcSubscriptions,
     pipe, 
@@ -31,13 +28,10 @@ import {
     assertIsTransactionWithinSizeLimit, 
     getSignatureFromTransaction,
 } from "@solana/kit"
-import { METEORA_CLIENTS_INDEX } from "./constants"
-import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
-import { Connection } from "@solana/web3.js"
 import { httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { PrimaryMemoryStorageService, InjectPrimaryMongoose } from "@modules/databases"
+import { PrimaryMemoryStorageService, InjectPrimaryMongoose, LoadBalancerName } from "@modules/databases"
 import { 
     BalanceService, 
     GasStatusService, 
@@ -55,12 +49,12 @@ import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { GasStatus } from "../../types"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
+import { LoadBalancerService } from "@modules/mixin"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
     constructor(
-        @InjectSolanaClients()
-        private readonly solanaClients: Record<Network, HttpAndWsClients<Connection>>,
+        private readonly loadBalancerService: LoadBalancerService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -85,7 +79,6 @@ export class MeteoraActionService implements IActionService {
     }: OpenPositionParams): Promise<void> {
         // cast the state to LiquidityPoolState
         const _state = state as DlmmLiquidityPoolState
-        const network = Network.Mainnet
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,
@@ -99,9 +92,9 @@ export class MeteoraActionService implements IActionService {
         const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
         const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmount)
 
-        const client = this.solanaClients[network].http[METEORA_CLIENTS_INDEX]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const rpc = createSolanaRpc(url)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === _state.static.tokenA.toString())
@@ -126,7 +119,6 @@ export class MeteoraActionService implements IActionService {
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
-            clientIndex: METEORA_CLIENTS_INDEX,
             amountA,    
             amountB,
         })
@@ -137,15 +129,12 @@ export class MeteoraActionService implements IActionService {
         const txHash = await this.signerService.withSolanaSigner({
             bot,
             accountAddress: bot.accountAddress,
-            network,
             action: async (signer) => {
-                const keyPair = await createKeyPairFromBytes(signer.secretKey)
-                const kitSigner = await createSignerFromKeyPair(keyPair)
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
                     createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([kitSigner, positionKeyPair], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => addSignersToTransactionMessage([signer, positionKeyPair], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
                     (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
@@ -155,7 +144,7 @@ export class MeteoraActionService implements IActionService {
                 const transaction = compileTransaction(transactionMessage)
                 // sign the transaction
                 const signedTransaction = await signTransaction(
-                    [keyPair, positionKeyPair.keyPair],
+                    [signer.keyPair, positionKeyPair.keyPair],
                     transaction,
                 )
                 assertIsSendableTransaction(signedTransaction)
@@ -185,7 +174,6 @@ export class MeteoraActionService implements IActionService {
             swapsSnapshotsParams,
         } = await this.balanceService.executeBalanceRebalancing({
             bot,
-            clientIndex: METEORA_CLIENTS_INDEX,
             withoutSnapshot: true,
         })
         let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
@@ -231,7 +219,6 @@ export class MeteoraActionService implements IActionService {
                     positionId: positionKeyPair.address.toString(),
                     minBinId: minBinId.toNumber(),
                     maxBinId: maxBinId.toNumber(),
-                    network,
                     chainId: bot.chainId,
                     liquidityPoolId: _state.static.displayId,
                     openTxHash: txHash,
@@ -382,10 +369,9 @@ export class MeteoraActionService implements IActionService {
           !snapshotGasBalanceAmountBeforeOpen) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
-        const network = Network.Mainnet
-        const client = this.solanaClients[network].http[METEORA_CLIENTS_INDEX]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const rpc = createSolanaRpc(url)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -405,15 +391,12 @@ export class MeteoraActionService implements IActionService {
         const txHash = await this.signerService.withSolanaSigner({
             bot,
             accountAddress: bot.accountAddress,
-            network,
             action: async (signer) => {
-                const keyPair = await createKeyPairFromBytes(signer.secretKey)
-                const kitSigner = await createSignerFromKeyPair(keyPair)
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
                     createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([kitSigner], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => addSignersToTransactionMessage([signer], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
                     (tx) => appendTransactionMessageInstructions(closePositionInstructions, tx),
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
@@ -423,7 +406,7 @@ export class MeteoraActionService implements IActionService {
                 const transaction = compileTransaction(transactionMessage)
                 // sign the transaction
                 const signedTransaction = await signTransaction(
-                    [keyPair],
+                    [signer.keyPair],
                     transaction,
                 )
                 assertIsSendableTransaction(signedTransaction)
@@ -453,7 +436,6 @@ export class MeteoraActionService implements IActionService {
             swapsSnapshotsParams,
         } = await this.balanceService.executeBalanceRebalancing({
             bot,
-            clientIndex: METEORA_CLIENTS_INDEX,
             withoutSnapshot: true,
         })
         const before: CalculateProfitability = {
@@ -475,7 +457,6 @@ export class MeteoraActionService implements IActionService {
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
             chainId: bot.chainId,
-            network,
         })
         const session = await this.connection.startSession()
         await session.withTransaction(

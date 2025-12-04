@@ -1,5 +1,5 @@
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { ChainId, Network, toScaledBN } from "@modules/common"
+import { ChainId, toScaledBN } from "@modules/common"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { Decimal } from "decimal.js"
@@ -13,11 +13,10 @@ export class FeeService {
     public splitAmount(
         { 
             amount, 
-            network, 
             chainId 
         }: SplitAmountParams
     ): SplitAmountResponse {
-        const feePercentage = this.primaryMemoryStorageService.feeConfig.feeInfo?.[chainId]?.[network]?.feeRate
+        const feePercentage = this.primaryMemoryStorageService.feeConfig.feeInfo?.[chainId]?.feeRate
         if (!feePercentage) {
             throw new Error("Fee percentage not found")
         }
@@ -32,7 +31,6 @@ export class FeeService {
 
 export interface SplitAmountParams {
     amount: BN
-    network: Network
     chainId: ChainId
 }
 

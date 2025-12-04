@@ -12,7 +12,7 @@ import {
     getTransferInstruction as getTransferInstruction2022 
 } from "@solana-program/token-2022" 
 import { AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata } from "@modules/databases"
+import { BotSchema, LoadBalancerName, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata } from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
 import { FeeToAddressNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
@@ -24,12 +24,12 @@ import BN from "bn.js"
 import { Decimal } from "decimal.js"
 import { u128, u64, i32, bool, BeetArgsStruct, u8  } from "@metaplex-foundation/beet"
 import { FeeService } from "../../../math"
-import { Network, TokenType } from "@modules/common"
+import { TokenType } from "@modules/common"
+import { LoadBalancerService } from "@modules/mixin"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
     state: LiquidityPoolState
-    clientIndex?: number
     liquidity: BN
     amountAMax: BN
     amountBMax: BN
@@ -40,6 +40,7 @@ export interface CreateOpenPositionInstructionsParams {
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(
+        private readonly loadBalancerService: LoadBalancerService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -53,7 +54,6 @@ export class OpenPositionInstructionService {
     async createOpenPositionInstructions({
         bot,
         state,
-        clientIndex = 0,
         liquidity,
         amountAMax,
         amountBMax,
@@ -62,7 +62,10 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResponse>
     {
-        const network = Network.Mainnet
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.RaydiumClmm, 
+            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs
+        )
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
@@ -71,7 +74,7 @@ export class OpenPositionInstructionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
+        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }
@@ -80,7 +83,6 @@ export class OpenPositionInstructionService {
             remainingAmount: remainingAmountA,
         } = this.feeService.splitAmount({
             amount: amountAMax,
-            network,
             chainId: bot.chainId,
         })
         const {
@@ -88,7 +90,6 @@ export class OpenPositionInstructionService {
             remainingAmount: remainingAmountB,
         } = this.feeService.splitAmount({
             amount: amountBMax,
-            network,
             chainId: bot.chainId,
         })
         if (tokenA.type === TokenType.Native) {
@@ -132,7 +133,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            clientIndex,
+            url,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -149,7 +150,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            clientIndex,
+            url,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -168,7 +169,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                clientIndex,
+                url,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -190,7 +191,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                clientIndex,
+                url,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {
@@ -210,7 +211,7 @@ export class OpenPositionInstructionService {
             tokenMint: mintKeyPair.address,
             ownerAddress: address(bot.accountAddress),
             is2022Token: true,
-            clientIndex,
+            url,
             pdaOnly: true,
         })
         const tickArrayLowerStartIndex = this.tickArrayService.getArrayStartIndex(

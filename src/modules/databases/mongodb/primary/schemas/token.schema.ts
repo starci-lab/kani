@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, Float, Int, ObjectType } from "@nestjs/graphql"
-import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, GraphQLTypeTokenType, Network, TokenType } from "@modules/common"
+import { ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType } from "@modules/common"
 import { AbstractSchema } from "./abstract"
 import { CexId, GraphQLTypeCexId, GraphQLTypeTokenId, TokenId } from "../enums"
 import GraphQLJSON from "graphql-type-json"
@@ -53,10 +53,6 @@ export class TokenSchema extends AbstractSchema {
     @Field(() => String, { description: "URL of the token project" })
     @Prop({ type: String, required: true })
         projectUrl: string
-
-    @Field(() => GraphQLTypeNetwork, { description: "Network where this token is deployed" })
-    @Prop({ type: String, enum: Network, required: true })
-        network: Network
 
     @Field(() => [GraphQLTypeCexId], { description: "List of CEXs where the token is listed", nullable: true })
     @Prop({ type: [String], enum: CexId, required: false })

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { ClientSession, Connection } from "mongoose"
 import { BotSchema, InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
 import BN from "bn.js"
-import { ChainId, createObjectId, Network } from "@modules/common"
+import { ChainId, createObjectId } from "@modules/common"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
@@ -30,7 +30,6 @@ export class OpenPositionSnapshotService {
             targetIsA,
             tickLower,
             tickUpper,
-            network,
             chainId,
             liquidityPoolId,
             positionId,
@@ -53,7 +52,6 @@ export class OpenPositionSnapshotService {
             maxBinId,
             gasAmountUsed: gasAmountUsed?.toString(),
             bot: bot.id,
-            network,
             chainId,
             targetIsA,
             tickLower,
@@ -86,7 +84,6 @@ export interface AddOpenPositionTransactionRecordParams {
     quoteAmountUsed: BN
     gasAmountUsed?: BN
     bot: BotSchema
-    network: Network
     chainId: ChainId
     liquidityPoolId: LiquidityPoolId
     targetIsA: boolean

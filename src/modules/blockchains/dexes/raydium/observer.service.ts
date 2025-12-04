@@ -1,8 +1,4 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { Network } from "@modules/common"
-import { HttpAndWsClients, InjectSolanaClients } from "../../clients"
-import { Connection, PublicKey } from "@solana/web3.js"
-import { RAYDIUM_CLIENTS_INDEX } from "./constants"
 import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
 import { 
     CacheKey, 
@@ -14,9 +10,10 @@ import BN from "bn.js"
 import {
     LiquidityPoolId,
     PrimaryMemoryStorageService,
-    DexId
+    DexId,
+    LoadBalancerName,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { AsyncService, InjectSuperJson, LoadBalancerService } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
@@ -26,7 +23,10 @@ import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 import { CronExpression } from "@nestjs/schedule"
 import { Cron } from "@nestjs/schedule"
-
+import { address, createSolanaRpcSubscriptions } from "@solana/kit"
+import { createSolanaRpc } from "@solana/kit"
+import { PublicKey } from "@solana/web3.js"
+import { httpsToWss } from "@utils"
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
     constructor(
@@ -36,8 +36,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        @InjectSolanaClients()
-        private readonly solanaClients: Record<Network, HttpAndWsClients<Connection>>,
+        private readonly loadBalancerService: LoadBalancerService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
@@ -128,11 +127,14 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const connection = this.solanaClients[liquidityPool.network].ws[RAYDIUM_CLIENTS_INDEX]
-        const accountInfo = await connection.getAccountInfo(new PublicKey(liquidityPool.poolAddress))
-        if (!accountInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-
-        const state = PoolInfoLayout.decode(accountInfo.data)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.RaydiumClmm, 
+            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs
+        )
+        const connection = createSolanaRpc(url)
+        const accountInfo = await connection.getAccountInfo(address(liquidityPool.poolAddress)).send()
+        if (!accountInfo || !accountInfo.value?.data) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        const state = PoolInfoLayout.decode(Buffer.from(accountInfo.value?.data))
         return await this.handlePoolStateUpdate(liquidityPoolId, state)
     }
 
@@ -146,11 +148,20 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        const connection = this.solanaClients[liquidityPool.network].ws[RAYDIUM_CLIENTS_INDEX]
-        connection.onAccountChange(new PublicKey(liquidityPool.poolAddress), async (accountInfo) => {
-            const state = PoolInfoLayout.decode(accountInfo.data)
-            await this.handlePoolStateUpdate(liquidityPoolId, state)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.RaydiumClmm, 
+            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs
+        )
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
+        const accountNotifications = await rpcSubscriptions.accountNotifications(
+            address(liquidityPool.poolAddress)
+        ).subscribe({
+            abortSignal: new AbortSignal(),
         })
+        for await (const accountNotification of accountNotifications) {
+            const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data))
+            await this.handlePoolStateUpdate(liquidityPoolId, state)
+        }
     }
 }
 

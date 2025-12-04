@@ -23,6 +23,7 @@ export class TransferInstructionService {
             toAddress,
             amount,
             tokenId,
+            url,
         }: CreateTransferInstructionsParams
     ): Promise<CreateTransferInstructionsResponse> {
         const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === tokenId.toString())
@@ -48,6 +49,7 @@ export class TransferInstructionService {
             ownerAddress: fromAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
+            url,
         })
         if (createAtaInstructions?.length) {
             instructions.push(...createAtaInstructions)
@@ -59,6 +61,7 @@ export class TransferInstructionService {
             ownerAddress: toAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
+            url,
         })
         if (transferAtaInstructions?.length) {
             instructions.push(...transferAtaInstructions)
@@ -82,6 +85,7 @@ export interface CreateTransferInstructionsParams {
     toAddress: Address
     amount: BN
     tokenId: TokenId
+    url: string
 }
 
 export interface CreateTransferInstructionsResponse {

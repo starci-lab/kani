@@ -30,20 +30,17 @@ export class AtaInstructionService {
             tokenMint,
             ownerAddress,
             is2022Token = false,
-            network = Network.Mainnet,
-            clientIndex = 0,
+            url,
             pdaOnly = false,
             amount = new BN(0),
         }: GetOrCreateAtaInstructionsParams
     ): Promise<GetOrCreateAtaInstructionsResponse> {
-        const client = this.clients[network].http[clientIndex]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpc = createSolanaRpc(url)
         if (!tokenMint) {
             return await this.createWSolAccountInstructions(
                 {
                     ownerAddress,
-                    network,
-                    clientIndex,
+                    url,
                     is2022Token,
                     amount,
                     pdaOnly,
@@ -93,15 +90,13 @@ export class AtaInstructionService {
     async createWSolAccountInstructions(
         {
             ownerAddress,
-            network = Network.Mainnet,
-            clientIndex = 0,
+            url,
             is2022Token = false,
             amount,
         }: CreateWSolAccountInstructionsParams
     ): Promise<CreateWSolAccountInstructionsResponse> {
         const programAddress = is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS
-        const client = this.clients[network].http[clientIndex]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpc = createSolanaRpc(url)
         const space = is2022Token 
             ? getToken2022Size() 
             : getTokenSize()
@@ -174,8 +169,7 @@ export interface GetOrCreateAtaInstructionsParams {
     tokenMint?: Address;
     ownerAddress: Address;
     is2022Token?: boolean;
-    network?: Network;
-    clientIndex?: number;
+    url: string;
     amount?: BN;
     pdaOnly?: boolean;
 }
@@ -188,8 +182,7 @@ export interface GetOrCreateAtaInstructionsResponse {
 
 export interface CreateWSolAccountInstructionsParams {
     ownerAddress: Address;
-    network?: Network;
-    clientIndex?: number;
+    url: string;
     is2022Token?: boolean;
     amount: BN;
     pdaOnly?: boolean;

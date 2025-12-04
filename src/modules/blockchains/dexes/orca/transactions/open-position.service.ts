@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
 import { BotSchema, OrcaLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { AccountRole, Address, address, createNoopSigner, generateKeyPairSigner, Instruction, KeyPairSigner } from "@solana/kit"
-import { InjectSolanaClients, LiquidityPoolState } from "@modules/blockchains"
+import { LiquidityPoolState } from "@modules/blockchains"
 import { FeeToAddressNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
 import { Decimal } from "decimal.js"
@@ -14,17 +14,16 @@ import { BeetArgsStruct, bool, i32, u128, u64 } from "@metaplex-foundation/beet"
 import { getTransferInstruction as getTransferInstruction2022, TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
 import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
-import { Network, TokenType } from "@modules/common"
-import { HttpAndWsClients } from "../../../clients"
-import { Connection as SolanaConnection } from "@solana/web3.js"
+import { TokenType } from "@modules/common"
 import { createSolanaRpc } from "@solana/kit"
 import { FeeService } from "../../../math"
+import { LoadBalancerService } from "@modules/mixin"
+import { ORCA_BALANCER_NAME } from "../constants"
 
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(
-        @InjectSolanaClients()
-        private readonly solanaClients: Record<Network, HttpAndWsClients<SolanaConnection>>,
+        private readonly loadBalancerService: LoadBalancerService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -36,7 +35,6 @@ export class OpenPositionInstructionService {
     async createOpenPositionInstructions({
         bot,
         state,
-        clientIndex = 0,
         tickLower,
         tickUpper,
         liquidity,
@@ -46,9 +44,11 @@ export class OpenPositionInstructionService {
     )
     : Promise<CreateOpenPositionInstructionsResponse>
     {
-        const network = Network.Mainnet
-        const client = this.solanaClients[network].http[clientIndex]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const url = this.loadBalancerService.balanceP2c(
+            ORCA_BALANCER_NAME, 
+            this.primaryMemoryStorageService.clientConfig.orcaClmmClientRpcs
+        )
+        const rpc = createSolanaRpc(url)
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
@@ -59,7 +59,7 @@ export class OpenPositionInstructionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.[network]?.feeToAddress
+        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }
@@ -68,7 +68,6 @@ export class OpenPositionInstructionService {
             remainingAmount: remainingAmountA,
         } = this.feeService.splitAmount({
             amount: amountAMax,
-            network,
             chainId: bot.chainId,
         })
         const {
@@ -76,7 +75,6 @@ export class OpenPositionInstructionService {
             remainingAmount: remainingAmountB,
         } = this.feeService.splitAmount({
             amount: amountBMax,
-            network,
             chainId: bot.chainId,
         })
         if (tokenA.type === TokenType.Native) {
@@ -124,7 +122,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            clientIndex,
+            url,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -141,7 +139,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            clientIndex,
+            url,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -160,7 +158,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                clientIndex,
+                url,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -182,7 +180,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                clientIndex,
+                url,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {
@@ -202,7 +200,7 @@ export class OpenPositionInstructionService {
             tokenMint: mintKeyPair.address,
             ownerAddress: address(bot.accountAddress),
             is2022Token: true,
-            clientIndex,
+            url,
             pdaOnly: true,
         })
         const { pda: positionPda } = await this.positionService.getPda({
@@ -352,7 +350,6 @@ export class OpenPositionInstructionService {
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
     state: LiquidityPoolState
-    clientIndex?: number
     tickLower: Decimal
     tickUpper: Decimal
     liquidity: BN

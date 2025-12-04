@@ -8,7 +8,7 @@ import { AbstractSchema } from "./abstract"
 import { ID } from "@nestjs/graphql"
 import BN from "bn.js"
 import { BotSchema } from "./bot.schema"
-import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
+import { ChainId, GraphQLTypeChainId } from "@modules/common"
 import { GraphQLJSON } from "graphql-type-json"
 
 @Schema({ collection: "positions", timestamps: true })
@@ -70,12 +70,6 @@ export class PositionSchema extends AbstractSchema {
     @Field(() => String, { description: "Reference to the bot that created this position" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: BotSchema.name })
         bot: BotSchema | MongooseSchema.Types.ObjectId
-
-    @Field(() => GraphQLTypeNetwork, { 
-        description: "The blockchain network where this position is created" 
-    })
-    @Prop({ type: String, enum: Network, required: true })
-        network: Network
 
     @Field(() => GraphQLTypeChainId, { 
         description: "The blockchain chain ID where this position is created" 

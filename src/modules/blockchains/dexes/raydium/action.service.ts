@@ -6,7 +6,7 @@ import {
     InjectPrimaryMongoose,
 } from "@modules/databases"
 import { SignerService } from "../../signers"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import { LoadBalancerName,  PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     ActivePositionNotFoundException,
     InvalidPoolTokensException, 
@@ -16,19 +16,13 @@ import {
     TokenNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
-import { Network } from "@typedefs"
-import { RAYDIUM_CLIENTS_INDEX } from "./constants"
-import { DynamicLiquidityPoolInfo, InjectSolanaClients } from "@modules/blockchains"
+import { DynamicLiquidityPoolInfo } from "../../types"
 import { OPEN_POSITION_SLIPPAGE } from "../../swap"
-import { HttpAndWsClients } from "../../clients" 
-import { Connection as SolanaConnection } from "@solana/web3.js"
 import { 
     createSolanaRpc,
-    createKeyPairFromBytes,
     signTransaction,
     pipe,
     addSignersToTransactionMessage,
-    createSignerFromKeyPair,
     setTransactionMessageFeePayerSigner,
     setTransactionMessageLifetimeUsingBlockhash,
     isTransactionMessageWithinSizeLimit,
@@ -59,14 +53,14 @@ import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
+import { LoadBalancerService } from "@modules/mixin"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectSolanaClients()
-        private readonly solanaClients: Record<Network, HttpAndWsClients<SolanaConnection>>,
+        private readonly loadBalancerService: LoadBalancerService,
         private readonly signerService: SignerService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly tickMathService: TickMathService,
@@ -197,10 +191,12 @@ export class RaydiumActionService implements IActionService {
         ) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
-        const network = Network.Mainnet
-        const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.RaydiumClmm, 
+            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs
+        )
+        const rpc = createSolanaRpc(url)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -215,21 +211,17 @@ export class RaydiumActionService implements IActionService {
         const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
-            clientIndex: RAYDIUM_CLIENTS_INDEX,
         })
         // sign the transaction
         const txHash = await this.signerService.withSolanaSigner({
             bot,
             accountAddress: bot.accountAddress,
-            network,
             action: async (signer) => {
-                const keyPair = await createKeyPairFromBytes(signer.secretKey)
-                const kitSigner = await createSignerFromKeyPair(keyPair)
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
                     createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([kitSigner], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => addSignersToTransactionMessage([signer], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
                     (tx) => appendTransactionMessageInstructions(closePositionInstructions, tx),
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
@@ -239,7 +231,7 @@ export class RaydiumActionService implements IActionService {
                 const transaction = compileTransaction(transactionMessage)
                 // sign the transaction
                 const signedTransaction = await signTransaction(
-                    [keyPair],
+                    [signer.keyPair],
                     transaction,
                 )
                 assertIsSendableTransaction(signedTransaction)
@@ -269,7 +261,6 @@ export class RaydiumActionService implements IActionService {
             swapsSnapshotsParams,
         } = await this.balanceService.executeBalanceRebalancing({
             bot,
-            clientIndex: RAYDIUM_CLIENTS_INDEX,
             withoutSnapshot: true,
         })
         const before: CalculateProfitability = {
@@ -291,7 +282,6 @@ export class RaydiumActionService implements IActionService {
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
             chainId: bot.chainId,
-            network,
         })
         const session = await this.connection.startSession()
         await session.withTransaction(
@@ -335,7 +325,6 @@ export class RaydiumActionService implements IActionService {
     ) {
         // cast the state to LiquidityPoolState
         const _state = state as LiquidityPoolState
-        const network = Network.Mainnet
         const slippage = OPEN_POSITION_SLIPPAGE
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
@@ -350,9 +339,12 @@ export class RaydiumActionService implements IActionService {
         const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
         const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmount)
 
-        const client = this.solanaClients[network].http[RAYDIUM_CLIENTS_INDEX]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(client.rpcEndpoint))
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.RaydiumClmm, 
+            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs
+        )
+        const rpc = createSolanaRpc(url)
+        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === _state.static.tokenA.toString())
@@ -404,7 +396,6 @@ export class RaydiumActionService implements IActionService {
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
-            clientIndex: RAYDIUM_CLIENTS_INDEX,
             liquidity,
             amountAMax: amountA,
             amountBMax: amountB,
@@ -416,15 +407,12 @@ export class RaydiumActionService implements IActionService {
         const txHash = await this.signerService.withSolanaSigner({
             bot,
             accountAddress: bot.accountAddress,
-            network,
             action: async (signer) => {
-                const keyPair = await createKeyPairFromBytes(signer.secretKey)
-                const kitSigner = await createSignerFromKeyPair(keyPair)
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
                     createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([kitSigner, mintKeyPair], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(kitSigner, tx),
+                    (tx) => addSignersToTransactionMessage([signer, mintKeyPair], tx),
+                    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
                     (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
@@ -434,7 +422,7 @@ export class RaydiumActionService implements IActionService {
                 const transaction = compileTransaction(transactionMessage)
                 // sign the transaction
                 const signedTransaction = await signTransaction(
-                    [keyPair, mintKeyPair.keyPair],
+                    [signer.keyPair, mintKeyPair.keyPair],
                     transaction,
                 )
                 assertIsSendableTransaction(signedTransaction)
@@ -464,7 +452,6 @@ export class RaydiumActionService implements IActionService {
             swapsSnapshotsParams,
         } = await this.balanceService.executeBalanceRebalancing({
             bot,
-            clientIndex: RAYDIUM_CLIENTS_INDEX,
             withoutSnapshot: true,
         })
         let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
@@ -509,7 +496,6 @@ export class RaydiumActionService implements IActionService {
                     targetIsA,
                     tickLower: tickLower.toNumber(),
                     tickUpper: tickUpper.toNumber(),
-                    network,
                     chainId: bot.chainId,
                     liquidityPoolId: _state.static.displayId,
                     positionId: ataAddress.toString(),

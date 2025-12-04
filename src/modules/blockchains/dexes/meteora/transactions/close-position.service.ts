@@ -10,7 +10,6 @@ import { DlmmLiquidityPoolState } from "../../../interfaces"
 import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { EventAuthorityService } from "./event-authority.service"
 import BN from "bn.js"
-import { METEORA_CLIENTS_INDEX } from "../constants"
 import { deriveBinArrayBitmapExtension, getBinArrayAccountMetasCoverage } from "@meteora-ag/dlmm"
 import { PublicKey } from "@solana/web3.js"
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
@@ -22,11 +21,12 @@ import { convertWeb3MetaToKitMeta } from "@utils"
 import { RewardInfo } from "../beets"
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
 import { ChainId } from "@typedefs"
+import { LoadBalancerService } from "@modules/mixin"
+import { LoadBalancerName } from "@modules/databases"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
     state: DlmmLiquidityPoolState
-    clientIndex?: number
 }
 
 @Injectable()
@@ -36,6 +36,7 @@ export class ClosePositionInstructionService {
         private readonly eventAuthorityService: EventAuthorityService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly loadBalancerService: LoadBalancerService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -46,6 +47,7 @@ export class ClosePositionInstructionService {
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
+        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
@@ -64,7 +66,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            clientIndex: METEORA_CLIENTS_INDEX,
+            url,
             amount: new BN(0),
         })
         if (createAtaAInstructions?.length) {
@@ -81,7 +83,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            clientIndex: METEORA_CLIENTS_INDEX,
+            url,
             amount: new BN(0),
         })
         if (createAtaBInstructions?.length) {
@@ -275,7 +277,7 @@ export class ClosePositionInstructionService {
                 tokenMint: address(rewardInfo.mint.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
-                clientIndex: METEORA_CLIENTS_INDEX,
+                url,
             })
             if (createAtaRewardInstructions?.length) {
                 instructions.push(...createAtaRewardInstructions)

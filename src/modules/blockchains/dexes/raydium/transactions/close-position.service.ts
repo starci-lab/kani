@@ -10,19 +10,19 @@ import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import BN from "bn.js"
 import { AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata, RaydiumPositionMetadata } from "@modules/databases"
+import { BotSchema, LoadBalancerName, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata, RaydiumPositionMetadata } from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
 import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
 import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
 import { PersonalPositionService } from "./personal-position.service"
-import { RaydiumRewardInfo } from "../observer.service"
 import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
+import { LoadBalancerService } from "@modules/mixin"
+import { RaydiumRewardInfo } from "../observer.service"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
     state: LiquidityPoolState
-    clientIndex?: number
 }
 
 @Injectable()
@@ -33,6 +33,7 @@ export class ClosePositionInstructionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly tickArrayService: TickArrayService,
         private readonly personalPositionService: PersonalPositionService,
+        private readonly loadBalancerService: LoadBalancerService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -40,10 +41,13 @@ export class ClosePositionInstructionService {
     async createCloseInstructions({
         bot,
         state,
-        clientIndex = 0,
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.RaydiumClmm, 
+            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs
+        )
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition) {
@@ -88,7 +92,8 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            clientIndex
+            url,
+            amount: new BN(0),
         })
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
@@ -104,7 +109,8 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            clientIndex
+            url,
+            amount: new BN(0),
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)
@@ -130,7 +136,7 @@ export class ClosePositionInstructionService {
                 tokenMint: address(_reward.tokenMint.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
-                clientIndex
+                url,
             })
             if (createAtaRewardInstructions?.length) {
                 instructions.push(...createAtaRewardInstructions)

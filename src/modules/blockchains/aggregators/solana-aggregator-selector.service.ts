@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { JupiterService } from "./jupiter.service"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, LoadBalancerService } from "@modules/mixin"
+import { LoadBalancerName, PrimaryMemoryStorageService } from "@modules/databases"
 import { AggregatorNotFoundException } from "@exceptions"
 import { ChainId } from "@modules/common"
 import { AggregatorId } from "./types"
@@ -11,10 +12,14 @@ import {
     SelectorSwapParams, 
     SelectorSwapResponse 
 } from "./aggregator-selector.interface"
+import { Rpc, SolanaRpcApi, RpcSubscriptions, createSolanaRpcSubscriptions, createSolanaRpc, SolanaRpcSubscriptionsApi } from "@solana/kit"
+import { httpsToWss } from "@utils"
 
 @Injectable()
 export class SolanaAggregatorSelectorService implements IAggregatorSelectorService {
     constructor(
+        private readonly loadBalancerService: LoadBalancerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly jupiterService: JupiterService,
         private readonly asyncService: AsyncService,
     ) { }
@@ -61,5 +66,32 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
             throw new AggregatorNotFoundException("Aggregator not found")
         }
     }
+
+    async getSolanaRpcs(
+        { aggregatorId }: GetSolanaRpcsParams
+    ): Promise<GetSolanaRpcsResponse> {
+        switch (aggregatorId) {
+        case AggregatorId.Jupiter: {
+            const url = this.loadBalancerService.balanceP2c(
+                LoadBalancerName.JupiterAggregator,
+                this.primaryMemoryStorageService.clientConfig.jupiterAggregatorClientRpcs
+            )
+            return {
+                rpc: createSolanaRpc(url),
+                rpcSubscriptions: createSolanaRpcSubscriptions(httpsToWss(url)),
+            }
+        }
+        default:
+            throw new AggregatorNotFoundException("Aggregator not found")
+        }
+    }
 }   
 
+export interface GetSolanaRpcsParams {
+    aggregatorId: AggregatorId
+}
+
+export interface GetSolanaRpcsResponse {
+    rpc: Rpc<SolanaRpcApi>
+    rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
+}

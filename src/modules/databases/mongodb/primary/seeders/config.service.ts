@@ -85,18 +85,38 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                 "https://api.mainnet-beta.solana.com",
             ],
-            raydiumClmmClientRpcs: [
+            raydiumClmmSdks: [
                 "https://api.mainnet-beta.solana.com",
                 "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
             ],
-            orcaAggregatorClientRpcs: [
+            orcaClmmClientRpcs: [
                 "https://api.mainnet-beta.solana.com",
                 "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
             ],
-            meteoraAggregatorClientRpcs: [
+            meteoraDlmmClientRpcs: [
                 "https://api.mainnet-beta.solana.com",
                 "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+            ],
+            solanaBalanceClientRpcs: [
+                "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
+                "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                "https://api.mainnet-beta.solana.com",
             ],
         }
     },
 ]
+
+
+export enum LoadBalancerName {
+    CetusAggregator = "cetus-aggregator",
+    SevenKAggregator = "7k-aggregator",
+    CetusClmm = "cetus-clmm",
+    TurbosClmm = "turbos-clmm",
+    MomentumClmm = "momentum-clmm",
+    FlowXClmm = "flowx-clmm",
+    JupiterAggregator = "jupiter-aggregator",
+    RaydiumClmm = "raydium-clmm",
+    OrcaClmm = "orca-clmm",
+    MeteoraDlmm = "meteora-dlmm",
+    SolanaBalance = "solana-balance",
+}

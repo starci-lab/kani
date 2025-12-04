@@ -1,30 +1,24 @@
-import { Network } from "@modules/common"
-import { Connection as SolanaConnection } from "@solana/web3.js"
 import { Injectable } from "@nestjs/common"
 import { getInitializeMint2Instruction, getMintSize, TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
 import { Address, createSolanaRpc, Instruction } from "@solana/kit"
 import { createNoopSigner, generateKeyPairSigner, KeyPairSigner } from "@solana/signers"
 import { getCreateAccountInstruction } from "@solana-program/system"
-import { InjectSolanaClients, HttpAndWsClients } from "../../clients"
 import BN from "bn.js"
 
 @Injectable()
 export class MintInstructionService {
     constructor(
-        @InjectSolanaClients()
-        private readonly clients: Record<Network, HttpAndWsClients<SolanaConnection>>,
     ) { }
 
     async createMint2Instruction(
         {
             ownerAddress,
-            network = Network.Mainnet,
-            clientIndex = 0,
+            url,
+
             withInitialize = false,
         }: CreateMint2InstructionParams
     ): Promise<CreateMint2InstructionResponse> {
-        const client = this.clients[network].http[clientIndex]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpc = createSolanaRpc(url)
         const space = getMintSize()
         const balanceNeeded = await rpc.getMinimumBalanceForRentExemption(
             BigInt(
@@ -63,8 +57,7 @@ export class MintInstructionService {
 
 export interface CreateMint2InstructionParams {
     ownerAddress: Address;
-    network?: Network;
-    clientIndex?: number;
+    url: string;
     withInitialize?: boolean;
 }
 

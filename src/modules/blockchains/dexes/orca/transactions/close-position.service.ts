@@ -15,14 +15,11 @@ import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@ex
 import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
 import { PositionService } from "./position.service"
 import { TickArrayService } from "./tick-array.service"
-import { Network } from "@typedefs"
-import { InjectSolanaClients, HttpAndWsClients } from "../../../clients"
-import { Connection as SolanaConnection } from "@solana/web3.js"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
     state: LiquidityPoolState
-    clientIndex?: number
+    url: string
 }
 
 @Injectable()
@@ -33,8 +30,6 @@ export class ClosePositionInstructionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly positionService: PositionService,
         private readonly tickArrayService: TickArrayService,
-        @InjectSolanaClients()
-        private readonly solanaClients: Record<Network, HttpAndWsClients<SolanaConnection>>,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -42,13 +37,11 @@ export class ClosePositionInstructionService {
     async createCloseInstructions({
         bot,
         state,
-        clientIndex = 0,
+        url,
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
-        const network = Network.Mainnet
-        const client = this.solanaClients[network].http[clientIndex]
-        const rpc = createSolanaRpc(client.rpcEndpoint)
+        const rpc = createSolanaRpc(url)
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition) {
@@ -79,7 +72,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            clientIndex
+            url,
         })
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
@@ -95,7 +88,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            clientIndex
+            url,
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)

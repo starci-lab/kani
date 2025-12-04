@@ -37,7 +37,7 @@ export class LoadBalancerService {
      * Register a P2C balancer if it doesn't already exist.
      * Each balancer is identified by a unique name.
      */
-    initP2cBalancerIfNotExists(name: string, urls: Array<string>): void {
+    private initP2cBalancerIfNotExists(name: string, urls: Array<string>): void {
         if (!this.p2cBalancerRegistry[name]) {
             this.p2cBalancerRegistry[name] = {
                 instance: new P2cBalancer(urls.length),
@@ -49,7 +49,7 @@ export class LoadBalancerService {
     /**
      * Register a Random balancer if it doesn't already exist.
      */
-    initRandomBalancerIfNotExists(name: string, urls: Array<string>): void {
+    private initRandomBalancerIfNotExists(name: string, urls: Array<string>): void {
         if (!this.randomBalancerRegistry[name]) {
             this.randomBalancerRegistry[name] = {
                 instance: new RandomBalancer(urls.length),
@@ -62,8 +62,11 @@ export class LoadBalancerService {
      * Pick a backend URL using the P2C algorithm.
      * Returns the URL chosen by the balancer.
      */
-    balanceP2c(name: string): string {
+    balanceP2c(name: string, urls: Array<string>): string {
         const entry = this.p2cBalancerRegistry[name]
+        if (!entry) {
+            this.initP2cBalancerIfNotExists(name, urls)
+        }
         return entry.urls[entry.instance.pick()]
     }
 
@@ -71,8 +74,11 @@ export class LoadBalancerService {
      * Pick a backend URL randomly.
      * Returns the URL chosen by the balancer.
      */
-    balanceRandom(name: string): string {
+    balanceRandom(name: string, urls: Array<string>): string {
         const entry = this.randomBalancerRegistry[name]
+        if (!entry) {
+            this.initRandomBalancerIfNotExists(name, urls)
+        }
         return entry.urls[entry.instance.pick()]
     }
 }
