@@ -22,6 +22,7 @@ import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
 import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
+import { FlowXActionService } from "./flowx"
 
 @Injectable()
 export class DispatchOpenPositionService {
@@ -32,6 +33,7 @@ export class DispatchOpenPositionService {
         private readonly orcaActionService: OrcaActionService,
         private readonly meteoraActionService: MeteoraActionService,
         private readonly quoteRatioService: QuoteRatioService,
+        private readonly flowxActionService: FlowXActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) {}
@@ -97,6 +99,11 @@ export class DispatchOpenPositionService {
             })
         case DexId.Meteora:
             return this.meteoraActionService.openPosition({
+                state,
+                bot,
+            })
+        case DexId.FlowX:
+            return this.flowxActionService.openPosition({
                 state,
                 bot,
             })

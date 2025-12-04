@@ -141,4 +141,10 @@ export class ClientConfig {
     })
     @Prop({ type: [String], required: true })
         solanaBalanceClientRpcs: Array<string>
+
+    @Field(() => [String], {
+        description: "Sui balance client rpcs",
+    })
+    @Prop({ type: [String], required: true })
+        suiBalanceClientRpcs: Array<string>
 }

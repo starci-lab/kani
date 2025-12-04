@@ -8,7 +8,7 @@ import { Inject, Injectable, Scope } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Mutex } from "async-mutex"
-import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable({
     scope: Scope.REQUEST,
@@ -27,7 +27,10 @@ export class DistributorProcessorService {
     ) {}    
 
     async initialize() {
-        this.readinessWatcherFactoryService.createWatcher(DistributorProcessorService.name)
+        this.readinessWatcherFactoryService.createWatcher(
+            createReadinessWatcherName(DistributorProcessorService.name, {
+                botId: this.request.botId,
+            }))
         this.eventEmitter.on(
             EventName.InternalDlmmLiquidityPoolsFetched,
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
@@ -52,7 +55,10 @@ export class DistributorProcessorService {
                     payload,
                 )
             })
-        this.readinessWatcherFactoryService.setReady(DistributorProcessorService.name)
+        this.readinessWatcherFactoryService.setReady(
+            createReadinessWatcherName(DistributorProcessorService.name, {
+                botId: this.request.botId,
+            }))
     }
 }
 

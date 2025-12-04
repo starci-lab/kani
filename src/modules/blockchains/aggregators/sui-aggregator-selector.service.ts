@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, LoadBalancerService } from "@modules/mixin"
 import { AggregatorNotFoundException } from "@exceptions"
 import { ChainId } from "@modules/common"
 import { AggregatorId } from "./types"
@@ -12,13 +12,16 @@ import {
 } from "./aggregator-selector.interface"
 import { SevenKAggregatorService } from "./7k.service"
 import { CetusAggregatorService } from "./cetus-aggregator.service"
-
+import { SuiClient } from "@mysten/sui/client"
+import { PrimaryMemoryStorageService, LoadBalancerName } from "@modules/databases"
 @Injectable()
 export class SuiAggregatorSelectorService implements IAggregatorSelectorService {
     constructor(
         private readonly cetusAggregatorService: CetusAggregatorService,
         private readonly sevenKService: SevenKAggregatorService,
         private readonly asyncService: AsyncService,
+        private readonly loadBalancerService: LoadBalancerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
     async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResponse> {
@@ -78,5 +81,45 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
             throw new AggregatorNotFoundException("Aggregator not found")
         }
     }
+
+    async getSuiRpc(
+        { aggregatorId }: GetSuiRpcParams
+    ): Promise<GetSuiRpcResponse> {
+        switch (aggregatorId) {
+        case AggregatorId.CetusAggregator: {
+            const url = this.loadBalancerService.balanceP2c(
+                LoadBalancerName.CetusAggregator,
+                this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs
+            )
+            return {
+                client: new SuiClient({
+                    url,
+                    network: "mainnet",
+                }),
+            }
+        }
+        case AggregatorId.SevenK: {
+            const url = this.loadBalancerService.balanceP2c(
+                LoadBalancerName.SevenKAggregator,
+                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs
+            )
+            return {
+                client: new SuiClient({
+                    url,
+                    network: "mainnet",
+                }),
+            }
+        }
+        default:
+            throw new AggregatorNotFoundException("Aggregator not found")
+        }
+    }
 }   
 
+export interface GetSuiRpcParams {
+    aggregatorId: AggregatorId
+}
+
+export interface GetSuiRpcResponse {
+    client: SuiClient
+}

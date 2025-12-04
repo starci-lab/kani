@@ -1,11 +1,9 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo, HttpAndWsClients, InjectSuiClients } from "@modules/blockchains"
+import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { Network } from "@typedefs"
 import { SuiClient } from "@mysten/sui/client"
-import { FLOWX_CLIENTS_INDEX } from "./constants"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, LoadBalancerService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import BN from "bn.js"
@@ -18,12 +16,11 @@ import SuperJSON from "superjson"
 import { EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
 import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
+import { LoadBalancerName } from "@modules/databases"
 
 @Injectable()
 export class FlowXObserverService {
     constructor(
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, HttpAndWsClients<SuiClient>>,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         @InjectRedisCache()
@@ -33,6 +30,7 @@ export class FlowXObserverService {
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
         private readonly events: EventEmitterService,
+        private readonly loadBalancerService: LoadBalancerService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -57,14 +55,20 @@ export class FlowXObserverService {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const clientIndex = FLOWX_CLIENTS_INDEX
         const liquidityPool = this.memoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const connection = this.suiClients[liquidityPool.network].http[clientIndex]
-        const accountInfo = await connection.getObject({
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.FlowXClmm, 
+            this.memoryStorageService.clientConfig.flowXClmmClientRpcs
+        )
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        const accountInfo = await client.getObject({
             id: liquidityPool.poolAddress,
             options: {
                 showContent: true,

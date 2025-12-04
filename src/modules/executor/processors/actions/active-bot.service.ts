@@ -7,7 +7,7 @@ import { Connection } from "mongoose"
 import { BotNotFoundException } from "@exceptions"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
-import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { BalanceProcessorService } from "./balance.service"
 import { OpenPositionProcessorService } from "./open-position.service"
 import { ClosePositionProcessorService } from "./close-position.service"
@@ -36,10 +36,26 @@ export class ActiveBotProcessorService {
     async initialize() {
         // sleep 10ms to ensure other processors are initialized
         await sleep(10)
-        await this.readinessWatcherFactoryService.waitUntilReady(BalanceProcessorService.name)
-        await this.readinessWatcherFactoryService.waitUntilReady(OpenPositionProcessorService.name)
-        await this.readinessWatcherFactoryService.waitUntilReady(ClosePositionProcessorService.name)
-        await this.readinessWatcherFactoryService.waitUntilReady(DistributorProcessorService.name)
+        await this.readinessWatcherFactoryService.waitUntilReady(
+            createReadinessWatcherName(
+                BalanceProcessorService.name, {
+                    botId: this.request.botId,
+                }))
+        await this.readinessWatcherFactoryService.waitUntilReady(
+            createReadinessWatcherName(
+                OpenPositionProcessorService.name, {
+                    botId: this.request.botId,
+                }))
+        await this.readinessWatcherFactoryService.waitUntilReady(
+            createReadinessWatcherName(
+                ClosePositionProcessorService.name, {
+                    botId: this.request.botId,
+                }))
+        await this.readinessWatcherFactoryService.waitUntilReady(
+            createReadinessWatcherName(
+                DistributorProcessorService.name, {
+                    botId: this.request.botId,
+                }))
         this.logger.info(
             WinstonLog.ActiveBotProcessorInitialized, {
                 botId: this.request.botId,

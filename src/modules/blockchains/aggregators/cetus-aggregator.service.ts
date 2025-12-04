@@ -6,7 +6,6 @@ import { LoadBalancerService } from "@modules/mixin"
 import { SuiClient } from "@mysten/sui/client"
 import { RetryService } from "@modules/mixin"
 import { 
-    CoinArgumentNotFoundException, 
     QuoteNotFoundException, 
     TransactionObjectArgumentNotFoundException
 } from "@exceptions"
@@ -76,15 +75,20 @@ export class CetusAggregatorService implements IAggregatorService {
         }: SwapRequest): Promise<SwapResponse> {
         const client = this.createCetusAggregatorClient()
         const router = payload as RouterDataV3 
-        if (!inputCoin) {
-            throw new CoinArgumentNotFoundException("Input coin is required")
-        }
+        // no slippage
+        const slippage = 0.999
         const outputCoin = await this.retryService.retry({
             action: async () => {
+                if (!inputCoin) {
+                    return await client.fastRouterSwap({
+                        router,
+                        slippage,
+                        txb: txb || new Transaction(),
+                    })
+                }
                 return await client.routerSwap({
-                    router: router,
-                    // no slippage
-                    slippage: 0.999,
+                    router,
+                    slippage,
                     txb: txb || new Transaction(),
                     inputCoin: inputCoin,
                 })

@@ -7,10 +7,12 @@ import { SwapMathService } from "../math/swap.service"
 import { GasStatusService } from "./gas-status.service"
 import { QuoteRatioService } from "../math/quote-ratio.service"
 import { ProfitabilityMathService } from "../math/profitability.service"
+import { SuiBalanceService } from "./sui.service"
 
 @Module({
     providers: [
         SolanaBalanceService, 
+        SuiBalanceService,
         BalanceService,
         SwapMathService,
         GasStatusService,

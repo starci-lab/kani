@@ -20,7 +20,7 @@ export class OpenPositionTxbService {
             tickLower,
             tickUpper,
         }: CreateOpenPositionTxbParams
-    ) {
+    ): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
         const {
             packageId,
@@ -54,7 +54,7 @@ export class OpenPositionTxbService {
                 arguments: [txb.pure.u32(tickUpper.abs().toNumber())],
             }),
         ]
-        const position = txb.moveCall({
+        txb.moveCall({
             target: `${
                 packageId
             }::position_manager::open_position`,
@@ -71,6 +71,9 @@ export class OpenPositionTxbService {
                 txb.object(versionObject),
             ]
         })
+        return {
+            txb
+        }
     }
 }
 
@@ -78,10 +81,13 @@ export interface CreateOpenPositionTxbParams {
     txb: Transaction 
     bot: BotSchema,
     state: LiquidityPoolState,
-    clientIndex?: number,
     tickLower: Decimal,
     tickUpper: Decimal,
     liquidity: BN,
     amountAMax: BN,
     amountBMax: BN,
+}
+
+export interface CreateOpenPositionTxbResponse {
+    txb: Transaction
 }

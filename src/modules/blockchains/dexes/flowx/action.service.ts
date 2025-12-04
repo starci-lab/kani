@@ -1,314 +1,213 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from "@nestjs/common"
 import {
     ClosePositionParams,
     IActionService,
+    LiquidityPoolState,
     OpenPositionParams,
-    OpenPositionResponse,
 } from "../../interfaces"
-import { InjectFlowXClmmSdks } from "./flowx.decorators"
-import { computeRatio, computeRaw, Network, toUnit } from "../../../common"
-import { Percent, CoinAmount } from "@flowx-finance/sdk"
+import { ClmmLiquidityMath, ClmmTickMath } from "@flowx-finance/sdk"
 import { Transaction } from "@mysten/sui/transactions"
-import { ActionResponse } from "../types"
-import {
-    TickManagerService,
-    FeeToService,
-    GasSuiSwapUtilsService,
-    OPEN_POSITION_SLIPPAGE,
-    SWAP_OPEN_POSITION_SLIPPAGE,
-    PythService,
-    SuiSwapService,
-    ZapService,
-    ZapProtectionService,
-} from "../../../blockchains"
-import { InjectSuiClients } from "../../clients"
 import { SignerService } from "../../signers"
-import { SuiClient, SuiObjectChange } from "@mysten/sui/client"
 import BN from "bn.js"
-import { FlowXClmmSdk } from "./flowx.providers"
-import { SuiCoinManagerService, SuiExecutionService, TickMathService } from "../../utils"
-import { clientIndex } from "./inner-constants"
-import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import Decimal from "decimal.js"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import { InjectPrimaryMongoose, PrimaryMemoryStorageService } from "@modules/databases"
+import { OpenPositionTxbService } from "./transactions"
+import { TickMathService } from "../../math"
+import { LoadBalancerName } from "@modules/databases"
+import { LoadBalancerService } from "@modules/mixin"
+import { SuiClient } from "@mysten/sui/client"
+import { createEventName, EventName } from "@modules/event"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { Connection } from "mongoose"
+import { BalanceService } from "../../balance"
+import { GasStatusService } from "../../balance"
+import { InvalidPoolTokensException } from "@exceptions"
+import { GasStatus } from "../../types"
+import { OpenPositionSnapshotService } from "../../snapshots"
+import { BalanceSnapshotService } from "../../snapshots"
+import { SwapTransactionSnapshotService } from "../../snapshots"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
     constructor(
-    @InjectFlowXClmmSdks()
-    private readonly flowxClmmSdks: Record<Network, FlowXClmmSdk>,
-    private readonly tickManagerService: TickManagerService,
-    private readonly feeToService: FeeToService,
-    private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
-    @InjectSuiClients()
-    private readonly suiClients: Record<Network, Array<SuiClient>>,
     private readonly signerService: SignerService,
-    private readonly suiExecutionService: SuiExecutionService,
-    private readonly pythService: PythService,
-    private readonly tickMathService: TickMathService,
-    private readonly zapService: ZapService,
-    private readonly suiCoinManagerService: SuiCoinManagerService,
-    private readonly suiSwapService: SuiSwapService, 
-    private readonly zapProtectionService: ZapProtectionService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly openPositionTxbService: OpenPositionTxbService,
+    private readonly tickMathService: TickMathService,
+    private readonly loadBalancerService: LoadBalancerService,
+    private readonly eventEmitter: EventEmitter2,
+    @InjectPrimaryMongoose()
+    private readonly connection: Connection,
+    private readonly balanceService: BalanceService,
+    private readonly gasStatusService: GasStatusService,
+    private readonly openPositionSnapshotService: OpenPositionSnapshotService,
+    private readonly balanceSnapshotService: BalanceSnapshotService,
+    private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
     ) {}
 
     /**
    * Open LP position on FlowX CLMM
    */
     async openPosition({
-        pool,
-        txb,
-        network = Network.Mainnet,
-        priorityAOverB = false,
-        amount,
-        tokenAId,
-        tokenBId,
-        accountAddress,
-        slippage,
-        swapSlippage,
-        user,
-        suiClient,
-        requireZapEligible
-    }: OpenPositionParams): Promise<OpenPositionResponse> {
-        // const flowXClmmSdk = this.flowxClmmSdks[network]
-        txb = txb ?? new Transaction()
-        slippage = slippage || OPEN_POSITION_SLIPPAGE
-        swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
-        if (!user) {
-            throw new Error("Sui key pair is required")
+        bot,
+        state,
+    }: OpenPositionParams): Promise<void> {
+        const _state = state as LiquidityPoolState
+        const txb = new Transaction()
+        if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
+            throw new Error("Snapshot balances not set")
         }
-        suiClient = suiClient || this.suiClients[network][clientIndex]
-        const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenBId)
+        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
+        const { 
+            tickLower, 
+            tickUpper
+        } = await this.tickMathService.getTickBounds({
+            state: _state,
+            bot,
+        })
+        const liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
+            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
+            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
+            snapshotTargetBalanceAmountBN,
+            snapshotQuoteBalanceAmountBN,
+            true
+        )
+        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
-            throw new Error("Token not found")
-        }
-        const tokenIn = priorityAOverB ? tokenA : tokenB
-        const tokenOut = priorityAOverB ? tokenB : tokenA
-        const oraclePrice = new Decimal(1)
-        const {
-            sourceCoin,
-        } = await this.gasSuiSwapUtilsService.gasSuiSwap({
-            network,
-            accountAddress,
-            tokenInId: tokenIn.displayId,
-            amountIn: amount,
-            slippage,
-            suiClient,
-            txb
-        })
-        await this.feeToService.attachSuiFee({
+            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        }       
+        const targetIsA = bot.targetToken.toString() === tokenA.id
+        const targetToken = targetIsA ? tokenA : tokenB
+        const quoteToken = targetIsA ? tokenB : tokenA
+
+        const { txb: openPositionTxb } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
-            tokenId: tokenIn.displayId,
-            network,
-            amount: sourceCoin.coinAmount,
-            sourceCoin,
-        })
-        // use this to calculate the ratio
-        const quoteAmountA = computeRaw(1, tokenA.decimals)
-        const { coinAmountA, coinAmountB } =
-            ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
-                tickLower,
-                tickUpper,
-                quoteAmountA,            // coinAmount must be BN
-                true,                             // isCoinA
-                false,                                      // roundUp
-                slippage,                                   // example 0.01
-                pool.currentSqrtPrice,
-            )
-        const ratio = computeRatio(
-            new BN(coinAmountB).mul(toUnit(tokenA.decimals)),
-            new BN(coinAmountA).mul(toUnit(tokenB.decimals))
-        )
-        const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
-            pool.currentSqrtPrice,
-            tokenA.decimals,
-            tokenB.decimals,
-        )
-        const { swapAmount, routerId, quoteData, receiveAmount, remainAmount } =
-            await this.zapService.computeZapAmounts({
-                amountIn: sourceCoin.coinAmount,
-                ratio: new Decimal(ratio),
-                spotPrice,
-                priorityAOverB,
-                tokenAId,
-                tokenBId,
-                oraclePrice,
-                network,
-                swapSlippage,
-            })
-        // 4. optional ratio check
-        if (!user.id) {
-            throw new Error("User id is required")
-        }
-        this.zapProtectionService.ensureZapEligible({
-            amountOriginal: sourceCoin.coinAmount,
-            amountZapped: swapAmount,
-            liquidityPoolId: pool.displayId,
-            userId: user.id,
-            requireZapEligible,
-        })
-        const { spendCoin } = this.suiCoinManagerService.splitCoin({
-            txb,
-            sourceCoin,
-            requiredAmount: swapAmount,
-        })
-        await this.suiSwapService.swap({
-            txb,
-            tokenIn: tokenIn.displayId,
-            tokenOut: tokenOut.displayId,
-            amountIn: swapAmount,
-            fromAddress: accountAddress,
-            quoteData,
-            routerId,
-            network,
-            slippage: swapSlippage,
-            inputCoin: spendCoin,
-            transferCoinObjs: false,
-        })
-        // const coinOut = (extraObj as { coinOut: CoinAsset }).coinOut
-        const providedAmountA = priorityAOverB ? remainAmount : receiveAmount
-        const providedAmountB = priorityAOverB ? receiveAmount : remainAmount
-        const liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
-            pool.currentSqrtPrice,
+            bot,
+            amountAMax: snapshotTargetBalanceAmountBN,
+            amountBMax: snapshotQuoteBalanceAmountBN,
+            liquidity,
             tickLower,
+            state: _state,
             tickUpper,
-            {
-                coinA: providedAmountA,
-                coinB: providedAmountB,
-            }
+        })
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.FlowXClmm, 
+            this.primaryMemoryStorageService.clientConfig.flowXClmmClientRpcs
         )
-        // const inputCoinA = priorityAOverB ? sourceCoin : coinOut
-        // const inputCoinB = priorityAOverB ? coinOut : sourceCoin
-        // if (!pool.flowXClmmPool) {
-        //     throw new Error("FlowX CLMM pool is required")
-        // }
-        // const txbAfterAddLiquidity = flowXClmmSdk.positionManager.openPosition(
-        //     new ClmmPosition({
-        //         owner: accountAddress,
-        //         pool: pool.flowXClmmPool,
-        //         tickLower,
-        //         tickUpper,
-        //         liquidity,
-        //         coinsOwedX: 0,
-        //         coinsOwedY: 0,
-        //         feeGrowthInsideXLast: 0,
-        //         feeGrowthInsideYLast: 0,
-        //         rewardInfos: []
-        //     })
-        // )
-        let positionId = ""
-        const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
-            const [positionObjId] = objectChanges
-                .filter(
-                    (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
-                        obj.type === "created" &&
-                obj.objectType.endsWith("::position::Position") &&
-                typeof obj.owner === "object" &&
-                "AddressOwner" in obj.owner &&
-                obj.owner.AddressOwner.toLowerCase() === accountAddress.toLowerCase()
-                )
-                .map((obj) => obj.objectId)   
-            positionId = positionObjId
-        }
-        const txHash = await this.signerService.withSuiSigner({
-            user,
-            network,
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        const { digest: txHash } = await this.signerService.withSuiSigner({
+            bot,
             action: async (signer) => {
-                return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txb,
-                    suiClient,
+                const stimuateTransaction = await client.devInspectTransactionBlock({
+                    transactionBlock: openPositionTxb,
+                    sender: signer.toSuiAddress(),
+                })
+                console.log(stimuateTransaction)
+                throw new Error("Not implemented")
+                return await client.signAndExecuteTransaction({
+                    transaction: openPositionTxb,
                     signer,
-                    handleObjectChanges
                 })
             },
         })
-        return { 
-            txHash, 
-            tickLower, 
-            tickUpper, 
-            liquidity, 
-            positionId,
-            depositAmount: sourceCoin.coinAmount
+        const {
+            balancesSnapshotsParams,
+            swapsSnapshotsParams,
+        } = await this.balanceService.executeBalanceRebalancing({
+            bot,
+            withoutSnapshot: true,
+        })
+        let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
+            .sub(new BN(balancesSnapshotsParams?.targetBalanceAmount || 0))
+        let quoteBalanceAmountUsed = snapshotQuoteBalanceAmountBN
+            .sub(new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0))
+        let gasBalanceAmountUsed = snapshotGasBalanceAmountBN
+            .sub(new BN(balancesSnapshotsParams?.gasAmount || 0))
+        const gasStatus = this.gasStatusService.getGasStatus({
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+        })
+        switch (gasStatus) {
+        case GasStatus.IsTarget: {
+            // gas token is the same as target token.
+            // treat gas balance as part of the target balance used,
+            // then mark gas usage as zero because it's merged.
+            targetBalanceAmountUsed = targetBalanceAmountUsed.add(gasBalanceAmountUsed)
+            gasBalanceAmountUsed = new BN(0)
+            break
         }
+        case GasStatus.IsQuote: {
+            // gas token is the same as quote token.
+            // treat gas balance as part of the quote balance used,
+            // then clear gas usage since it's fully merged.
+            quoteBalanceAmountUsed = quoteBalanceAmountUsed.add(gasBalanceAmountUsed)
+            gasBalanceAmountUsed = new BN(0)
+            break
+        }
+        }
+        // update the snapshot balances
+        const session = await this.connection.startSession()
+        await session.withTransaction(
+            async () => {
+                await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
+                    targetAmountUsed: targetBalanceAmountUsed,
+                    quoteAmountUsed: quoteBalanceAmountUsed,
+                    liquidity: new BN(liquidity),
+                    gasAmountUsed: gasBalanceAmountUsed,
+                    bot,
+                    targetIsA,
+                    tickLower: tickLower.toNumber(),
+                    tickUpper: tickUpper.toNumber(),
+                    chainId: bot.chainId,
+                    liquidityPoolId: _state.static.displayId,
+                    positionId: "TODO: get position id",
+                    openTxHash: txHash,
+                    session,
+                    feeAmountTarget: targetIsA ? new BN(0) : new BN(0),
+                    feeAmountQuote: targetIsA ? new BN(0) : new BN(0),
+                })
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
+                    targetBalanceAmountBeforeOpen: new BN(snapshotTargetBalanceAmountBN),
+                    quoteBalanceAmountBeforeOpen: new BN(snapshotQuoteBalanceAmountBN),
+                    gasAmountBeforeOpen: new BN(snapshotGasBalanceAmountBN),
+                    session,
+                })
+                if (swapsSnapshotsParams) {
+                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                        ...swapsSnapshotsParams,
+                        session,
+                    })
+                }
+            })
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionOpened, {
+                    botId: bot.id,
+                })
+        )
     }
 
-    /**
-   * Close LP position on FlowX CLMM
-   */
     async closePosition({
-        pool,
-        position,
-        network = Network.Mainnet,
-        txb,
-        accountAddress,
-        user,
-        suiClient
-    }: ClosePositionParams): Promise<ActionResponse> {
-        if (!user) {
-            throw new Error("User is required")
-        }
-        suiClient = suiClient || this.suiClients[network][clientIndex]
-        txb = txb || new Transaction()
-        const flowxSdk = this.flowxClmmSdks[network]
-        const positionManager = flowxSdk.positionManager
-        const MaxU64 = new BN("18446744073709551615")
-
-        // Load on-chain position
-        const positionToClose = await positionManager.getPosition(position.positionId)
-
-        // Remove all liquidity
-        const closeOptions = {
-            slippageTolerance: new Percent(1, 100),
-            deadline: Date.now() + 3600 * 1000,
-            collectOptions: {
-                expectedCoinOwedX: CoinAmount.fromRawAmount(
-                    this.primaryMemoryStorageService.tokens.find(
-                        (token) => token.displayId === pool.token0.displayId) as any, MaxU64),
-                expectedCoinOwedY: CoinAmount.fromRawAmount(
-                    this.primaryMemoryStorageService.tokens.find((token) => token.displayId === pool.token1.displayId) as any, MaxU64),
-            },
-        }
-        positionManager
-            .tx(txb as any)
-            .decreaseLiquidity(positionToClose, closeOptions)
-
-        // Collect all rewards if available
-        const rewards = await positionToClose.getRewards()
-        for (let i = 0; i < rewards.length; i++) {
-            if (rewards[i].gt(new BN(0))) {
-                const collectRewardOptions = {
-                    expectedRewardOwed: CoinAmount.fromRawAmount(
-                        positionToClose.pool.poolRewards[i].coin as any,
-                        MaxU64,
-                    ),
-                    recipient: accountAddress,
-                }
-                console.log(collectRewardOptions)
-                positionManager
-                    .collectPoolReward(positionToClose, i as any)
-            }
-        }
-
-        // Close the NFT position
-        positionManager
-            .tx(txb as any)
-            .closePosition(positionToClose)
-
-        const txHash = await this.signerService.withSuiSigner({
-            user,
-            network,
-            action: async (signer) => {
-                return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txb,
-                    suiClient,
-                    signer,
-                })
-            },
-        })
-        return { txHash }
+        bot,
+        state,
+    }: ClosePositionParams): Promise<void> {
+        console.log("closePosition", bot, state)
+        throw new Error("Not implemented")
     }
 }

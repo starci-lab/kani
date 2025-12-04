@@ -1,5 +1,4 @@
-
-import { BotSchema, TokenId } from "@modules/databases"
+import { BotSchema, TokenId, TokenSchema } from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { UpdateBotSnapshotBalancesRecordParams, AddSwapTransactionRecordParams } from "../snapshots"
@@ -9,9 +8,8 @@ import { UpdateBotSnapshotBalancesRecordParams, AddSwapTransactionRecordParams }
  * It returns a quote + executable swap data.
  */
 export interface IBalanceService {
-    executeBalanceRebalancing(params: ExecuteBalanceRebalancingParams): Promise<ExecuteBalanceRebalancingResponse>
-    fetchBalances(params: FetchBalancesParams): Promise<FetchBalancesResponse>
     fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
+    processSwapTransaction(params: ProcessSwapTransactionParams): Promise<ProcessSwapTransactionResponse>
 }
 
 export interface FetchBalanceParams {
@@ -49,7 +47,6 @@ export enum GasStatus {
 
 export interface FetchBalancesParams {
     bot: BotSchema
-    clientIndex?: number
 }
 
 export interface FetchBalancesResponse {
@@ -70,4 +67,16 @@ export interface ProcessTransferFeesResponse {
     txHash: string
     targetFeeAmount: BN
     quoteFeeAmount: BN
+}
+
+export interface ProcessSwapTransactionParams {
+    bot: BotSchema
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
+    amountIn: BN
+    estimatedSwappedAmount: BN
+}
+
+export interface ProcessSwapTransactionResponse {
+    txHash: string
 }

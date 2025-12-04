@@ -16,7 +16,7 @@ import { MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { getMutexKey, MutexKey } from "@modules/lock"
 import { createObjectId } from "@utils"
-import { DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
+import { createReadinessWatcherName, DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { MsService } from "@modules/mixin"
 import { OPEN_POSITION_INTERVAL, OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -66,7 +66,10 @@ export class OpenPositionProcessorService  {
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
-        this.readinessWatcherFactoryService.createWatcher(OpenPositionProcessorService.name)
+        this.readinessWatcherFactoryService.createWatcher(
+            createReadinessWatcherName(OpenPositionProcessorService.name, {
+                botId: this.request.botId,
+            }))
         // initialize the mutex
         this.mutex = this.mutexService.mutex(
             getMutexKey(
@@ -282,7 +285,10 @@ export class OpenPositionProcessorService  {
                     })
             }
         )
-        this.readinessWatcherFactoryService.setReady(OpenPositionProcessorService.name)
+        this.readinessWatcherFactoryService.setReady(
+            createReadinessWatcherName(OpenPositionProcessorService.name, {
+                botId: this.request.botId,
+            }))
     }
 }
 

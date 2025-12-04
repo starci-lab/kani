@@ -78,7 +78,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         symbol: "SUI",
         chainId: ChainId.Sui,
         tokenAddress:
-          "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+          "0x2::sui::SUI",
         decimals: 9,
         coinMarketCapId: "sui",
         coinGeckoId: "sui",

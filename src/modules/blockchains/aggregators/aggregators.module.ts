@@ -4,6 +4,7 @@ import { JupiterService } from "./jupiter.service"
 import { SolanaAggregatorSelectorService } from "./solana-aggregator-selector.service"
 import { SevenKAggregatorService } from "./7k.service"
 import { CetusAggregatorService } from "./cetus-aggregator.service"
+import { SuiAggregatorSelectorService } from "./sui-aggregator-selector.service"
 
 @Module({})
 export class AggregatorsModule extends ConfigurableModuleClass {
@@ -19,9 +20,11 @@ export class AggregatorsModule extends ConfigurableModuleClass {
                 CetusAggregatorService,
                 SevenKAggregatorService,   
                 SolanaAggregatorSelectorService,
+                SuiAggregatorSelectorService,
             ],
             exports: [
                 SolanaAggregatorSelectorService,
+                SuiAggregatorSelectorService,
                 JupiterService,
             ],
         }

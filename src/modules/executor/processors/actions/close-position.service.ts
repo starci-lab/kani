@@ -16,7 +16,7 @@ import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { DayjsService, MsService, ReadinessWatcherFactoryService } from "@modules/mixin"
+import { createReadinessWatcherName, DayjsService, MsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { Dayjs } from "dayjs"
 import { CLOSE_POSITION_INTERVAL } from "./constants"
 import { Decimal } from "decimal.js"
@@ -58,7 +58,10 @@ export class ClosePositionProcessorService {
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
-        this.readinessWatcherFactoryService.createWatcher(ClosePositionProcessorService.name)
+        this.readinessWatcherFactoryService.createWatcher(
+            createReadinessWatcherName(ClosePositionProcessorService.name, {
+                botId: this.request.botId,
+            }))
         // whenever the active bot is updated, we update the active bot instance
         this.eventEmitter.on(
             createEventName(
@@ -186,7 +189,10 @@ export class ClosePositionProcessorService {
                     })
             }
         )
-        this.readinessWatcherFactoryService.setReady(ClosePositionProcessorService.name)
+        this.readinessWatcherFactoryService.setReady(
+            createReadinessWatcherName(ClosePositionProcessorService.name, {
+                botId: this.request.botId,
+            }))
     }
 }
 

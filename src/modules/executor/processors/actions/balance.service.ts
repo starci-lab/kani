@@ -7,7 +7,7 @@ import { REQUEST } from "@nestjs/core"
 import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
 
@@ -46,7 +46,10 @@ export class BalanceProcessorService  {
     // Initializes the processor and registers periodic balance evaluation logic.
     // Called when a new request-scoped processor instance is created.
     async initialize() {
-        this.readinessWatcherFactoryService.createWatcher(BalanceProcessorService.name)
+        this.readinessWatcherFactoryService.createWatcher(
+            createReadinessWatcherName(BalanceProcessorService.name, {
+                botId: this.request.botId,
+            }))
         // Ensure mutex exists for this bot
         this.mutex = this.mutexService.mutex(
             getMutexKey(MutexKey.Action, this.request.botId),
@@ -72,12 +75,16 @@ export class BalanceProcessorService  {
                         if (!this.bot) {
                             return
                         }
+                        if (!this.bot.activePosition) {
+                            return
+                        }
                         await this.balanceService.executeBalanceRebalancing({
                             bot: this.bot,
                             withoutSnapshot: false,
                         })
                     })
             } catch (error) {
+                console.error(error)
                 this.logger.error(
                     WinstonLog.BalanceRebalancingFailed, {
                         botId: this.request.botId,
@@ -89,7 +96,10 @@ export class BalanceProcessorService  {
             executeBalanceRebalancing,
             envConfig().botExecutor.balanceEvaluationInterval,
         )
-        this.readinessWatcherFactoryService.setReady(BalanceProcessorService.name)
+        this.readinessWatcherFactoryService.setReady(
+            createReadinessWatcherName(BalanceProcessorService.name, {
+                botId: this.request.botId,
+            }))
     }
 }
 

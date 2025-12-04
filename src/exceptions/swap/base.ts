@@ -23,3 +23,9 @@ export class EstimatedSwappedTargetAmountNotFoundException extends AbstractExcep
         super(message || "Estimated swapped target amount not found", "ESTIMATED_SWAPPED_TARGET_AMOUNT_NOT_FOUND_EXCEPTION")
     }
 }
+
+export class EstimatedSwappedAmountNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Estimated swapped amount not found", "ESTIMATED_SWAPPED_AMOUNT_NOT_FOUND_EXCEPTION")
+    }
+}

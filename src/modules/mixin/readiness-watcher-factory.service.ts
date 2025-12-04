@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import pDefer, { DeferredPromise } from "p-defer"
+import crypto from "crypto"
 
 export type WatcherState = "pending" | "ready" | "error"
 
@@ -48,4 +49,8 @@ export class ReadinessWatcherFactoryService {
             Object.entries(this.watchers).map(([name, watcher]) => [name, watcher.state]),
         )
     }
+}
+
+export const createReadinessWatcherName = (name: string, params: Record<string, string>) => {
+    return crypto.createHash("sha256").update(JSON.stringify({ name, params })).digest("hex")
 }

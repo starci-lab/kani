@@ -1,25 +1,17 @@
 import { Injectable } from "@nestjs/common"
-import { ChainId, TokenType } from "@modules/common"
+import { TokenType } from "@modules/common"
 import {
-    ExecuteBalanceRebalancingParams,
-    ExecuteBalanceRebalancingResponse,
     FetchBalanceParams,
     FetchBalanceResponse,
-    FetchBalancesParams,
-    FetchBalancesResponse,
-    GasStatus,
     IBalanceService,
+    ProcessSwapTransactionParams,
+    ProcessSwapTransactionResponse,
 } from "./balance.interface"
 import { 
-    InjectPrimaryMongoose,
     LoadBalancerName,
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
-    EstimatedSwappedQuoteAmountNotFoundException,
-    InsufficientMinGasBalanceAmountException,
-    MinOperationalGasAmountNotFoundException,
-    TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
     TransactionMessageTooLargeException
 } from "@exceptions"
@@ -58,21 +50,13 @@ import {
     TOKEN_2022_PROGRAM_ADDRESS,
 } from "@solana-program/token-2022"
 import { fetchToken } from "@solana-program/token"
-import { BatchQuoteResponse, SolanaAggregatorSelectorService } from "../aggregators"
+import { SolanaAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
 import { SignerService } from "../signers"
 import { BotSchema, TokenSchema } from "@modules/databases"
-import { SwapMathService } from "../math/swap.service"
-import { GasStatusService } from "./gas-status.service"
 import Decimal from "decimal.js"
-import { AddSwapTransactionRecordParams, BalanceSnapshotService, UpdateBotSnapshotBalancesRecordParams } from "../snapshots"
-import { SwapTransactionSnapshotService } from "../snapshots"
-import { Connection as MongooseConnection } from "mongoose"
-import { computeDenomination } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { createEventName, EventName } from "@modules/event"
-import { EventEmitter2 } from "@nestjs/event-emitter"
 import { LoadBalancerService } from "@modules/mixin"
 
 @Injectable()
@@ -83,13 +67,6 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
-        private readonly swapMathService: SwapMathService,
-        private readonly gasStatusService: GasStatusService,
-        private readonly balanceSnapshotService: BalanceSnapshotService,
-        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
-        private readonly eventEmitter: EventEmitter2,
-        @InjectPrimaryMongoose()
-        private readonly connection: MongooseConnection,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -158,360 +135,26 @@ export class SolanaBalanceService implements IBalanceService {
         }
     }
 
-    public async fetchBalances(
+    public async processSwapTransaction(
         {
             bot,
-        }: FetchBalancesParams
-    ): Promise<FetchBalancesResponse> {
-        const chainId = ChainId.Solana
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
-        )
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
-        )
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
-        const { balanceAmount: targetBalanceAmount } = await this.fetchBalance({
-            bot,
-            tokenId: targetToken.displayId,
-        })
-        const { balanceAmount: quoteBalanceAmount } = await this.fetchBalance({
-            bot,
-            tokenId: quoteToken.displayId,
-        })
-        const gasStatus = this.gasStatusService.getGasStatus({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-        })
-        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.targetOperationalAmount
-        if (!targetOperationalGasAmount) {
-            throw new TargetOperationalGasAmountNotFoundException(
-                chainId,
-                "Target operational gas amount not found"
-            )
-        }
-        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.minOperationalAmount
-        if (!minOperationalGasAmount) {
-            throw new MinOperationalGasAmountNotFoundException(
-                chainId,
-                "Min operational gas amount not found"
-            )
-        }
-        const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
-        const minOperationalGasAmountBN = new BN(minOperationalGasAmount)
-        switch (gasStatus) {
-        case GasStatus.IsTarget: {
-            // we use the possible maximum amount of gas that can be used
-            const effectiveGasAmountBN = BN.min(
-                targetOperationalGasAmountBN, 
-                targetBalanceAmount
-            )
-            if (
-                effectiveGasAmountBN
-                    .lt(minOperationalGasAmountBN)
-            ) {
-                throw new InsufficientMinGasBalanceAmountException(
-                    chainId,
-                    "Insufficient min gas balance amount"
-                )
-            }
-            const targetBalanceAmountAfterDeductingGas = targetBalanceAmount.sub(effectiveGasAmountBN)
-            return {
-                targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
-                quoteBalanceAmount,
-                gasBalanceAmount: effectiveGasAmountBN,
-            }
-        }
-        case GasStatus.IsQuote: {
-            const quoteBalanceAmountAfterDeductingGas = quoteBalanceAmount.sub(targetOperationalGasAmountBN)
-            return {
-                targetBalanceAmount,
-                quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
-                gasBalanceAmount: targetOperationalGasAmountBN,
-            }
-        }
-        default: {
-            const gasToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => 
-                    token.type === TokenType.Native 
-                    && token.chainId === chainId
-            )
-            if (!gasToken) {
-                throw new TokenNotFoundException("Gas token not found")
-            }
-            const { balanceAmount: gasBalanceAmount } = await this.fetchBalance({
-                bot,
-                tokenId: gasToken.displayId,
-            })
-            return {
-                targetBalanceAmount,
-                quoteBalanceAmount,
-                gasBalanceAmount,
-            }
-        }
-        }
-    }
-
-    async executeBalanceRebalancing(
-        {
-            bot,
-            withoutSnapshot = false,
-        }: ExecuteBalanceRebalancingParams
-    ): Promise<ExecuteBalanceRebalancingResponse> {
-        let balancesSnapshotsParams: UpdateBotSnapshotBalancesRecordParams | undefined
-        let swapsSnapshotsParams: AddSwapTransactionRecordParams | undefined
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
-        )
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
-        )
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
-        const { 
-            targetBalanceAmount, 
-            quoteBalanceAmount, 
-            gasBalanceAmount, 
-        } = await this.fetchBalances({
-            bot,
-        })
-        const { 
-            processSwaps,
-            swapTargetToQuoteAmount, 
-            swapQuoteToTargetAmount, 
-            estimatedSwappedTargetAmount,
-            estimatedSwappedQuoteAmount,
-            quoteRatioResponse
-        } = await this.swapMathService.computeSwapAmounts({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        })
-        if (!processSwaps) {
-            // just snapshot the balances and return
-            // ensure the balances are synced
-            if (!withoutSnapshot) {
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasAmount: gasBalanceAmount,
-                })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-            }
-            balancesSnapshotsParams = {
-                bot,
-                targetBalanceAmount,
-                quoteBalanceAmount,
-                gasAmount: gasBalanceAmount,
-            }
-            return {
-                balancesSnapshotsParams,
-            }
-        }
-        const targetBalanceAmountInTarget = computeDenomination(targetBalanceAmount, targetToken.decimals)
-        const quoteBalanceAmountInTarget = computeDenomination(
-            quoteBalanceAmount, 
-            quoteToken.decimals
-        ).div(quoteRatioResponse.oraclePrice)
-        const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(quoteBalanceAmountInTarget)
-        if (totalBalanceAmountInTarget.lt(new Decimal(targetToken.minRequiredAmountInTotal || 0))) {
-            if (!withoutSnapshot) {
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasAmount: gasBalanceAmount,
-                })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-            }
-            return {
-                balancesSnapshotsParams: {
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasAmount: gasBalanceAmount,
-                },
-            }
-        }
-        if (swapTargetToQuoteAmount) {
-            const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
-                tokenIn: targetToken.displayId,
-                tokenOut: quoteToken.displayId,
-                amountIn: swapTargetToQuoteAmount,
-                senderAddress: bot.accountAddress,
-            })
-            if (!estimatedSwappedQuoteAmount) {
-                throw new EstimatedSwappedQuoteAmountNotFoundException(
-                    "Estimated swapped quote amount not found"
-                )
-            }
-            this.ensureMathService.ensureActualNotAboveExpected({
-                expected: estimatedSwappedQuoteAmount,
-                actual: batchQuoteResponse.response.amountOut,
-                lowerBound: new Decimal(0.95),
-            })
-            const txHash = await this.processSwapTransaction({
-                bot,
-                batchQuoteResponse: batchQuoteResponse,
-                tokenIn: targetToken,
-                tokenOut: quoteToken,
-            })
-            const {
-                targetBalanceAmount: adjustedTargetBalanceAmount,
-                quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                gasBalanceAmount: adjustedGasBalanceAmount,
-            } = await this.fetchBalances({
-                bot,
-            })
-            if (!withoutSnapshot) {
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                            bot,
-                            targetBalanceAmount: adjustedTargetBalanceAmount,
-                            quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                            gasAmount: adjustedGasBalanceAmount,
-                            session,
-                        })
-                        await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                            txHash,
-                            tokenInId: targetToken.displayId,
-                            tokenOutId: quoteToken.displayId,
-                            amountIn: swapTargetToQuoteAmount,
-                            bot,
-                            session,
-                        })
-                    })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-                balancesSnapshotsParams = {
-                    bot,
-                    targetBalanceAmount: adjustedTargetBalanceAmount,
-                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasAmount: adjustedGasBalanceAmount,
-                }
-                swapsSnapshotsParams = {
-                    txHash,
-                    amountIn: swapTargetToQuoteAmount,
-                    tokenInId: targetToken.displayId,
-                    tokenOutId: quoteToken.displayId,
-                    bot,
-                    session,
-                }
-            }
-        }
-
-        if (swapQuoteToTargetAmount) {
-            const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
-                tokenIn: quoteToken.displayId,
-                tokenOut: targetToken.displayId,
-                amountIn: swapQuoteToTargetAmount,
-                senderAddress: bot.accountAddress,
-            })
-            if (!estimatedSwappedTargetAmount) {
-                throw new EstimatedSwappedQuoteAmountNotFoundException(
-                    "Estimated swapped target amount not found"
-                )
-            }
-            this.ensureMathService.ensureActualNotAboveExpected({
-                expected: estimatedSwappedTargetAmount,
-                actual: batchQuoteResponse.response.amountOut,
-                lowerBound: new Decimal(0.95),
-            })
-            const txHash = await this.processSwapTransaction({
-                bot,
-                batchQuoteResponse: batchQuoteResponse,
-                tokenIn: targetToken,
-                tokenOut: quoteToken,
-            })
-            const {
-                targetBalanceAmount: adjustedTargetBalanceAmount,
-                quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                gasBalanceAmount: adjustedGasBalanceAmount,
-            } = await this.fetchBalances({
-                bot,
-            })
-            if (!withoutSnapshot) {
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                            bot,
-                            targetBalanceAmount: adjustedTargetBalanceAmount,
-                            quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                            gasAmount: adjustedGasBalanceAmount,
-                            session,
-                        })
-                        await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                            txHash,
-                            tokenInId: targetToken.displayId,
-                            tokenOutId: quoteToken.displayId,
-                            amountIn: swapQuoteToTargetAmount,
-                            bot,
-                            session,
-                        })
-                    })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-                balancesSnapshotsParams = {
-                    bot,
-                    targetBalanceAmount: adjustedTargetBalanceAmount,
-                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasAmount: adjustedGasBalanceAmount,
-                }
-                swapsSnapshotsParams = {
-                    txHash,
-                    amountIn: swapQuoteToTargetAmount,
-                    tokenInId: quoteToken.displayId,
-                    tokenOutId: targetToken.displayId,
-                    bot,
-                    session,
-                }
-            }
-        }
-        return {
-            balancesSnapshotsParams: balancesSnapshotsParams,
-            swapsSnapshotsParams: swapsSnapshotsParams,
-        }
-    }
-
-    private async processSwapTransaction(
-        {
-            bot,
-            batchQuoteResponse,
             tokenIn,
             tokenOut,
+            amountIn,
+            estimatedSwappedAmount,
         }: ProcessSwapTransactionParams
-    ): Promise<string> {
+    ): Promise<ProcessSwapTransactionResponse> {
+        const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
+            tokenIn: tokenIn.displayId,
+            tokenOut: tokenOut.displayId,
+            amountIn: amountIn,
+            senderAddress: bot.accountAddress,
+        })
+        this.ensureMathService.ensureActualNotAboveExpected({
+            expected: estimatedSwappedAmount,
+            actual: batchQuoteResponse.response.amountOut,
+            lowerBound: new Decimal(0.95),
+        })
         // we fetch the serialized transaction from the aggregator
         const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
             base: {
@@ -584,16 +227,11 @@ export class SolanaBalanceService implements IBalanceService {
                 return transactionSignature.toString()
             },
         })
-        return txHash
+        return {
+            txHash,
+        }
     }
 }   
-
-interface ProcessSwapTransactionParams {
-    bot: BotSchema
-    tokenIn: TokenSchema
-    tokenOut: TokenSchema
-    batchQuoteResponse: BatchQuoteResponse
-}
 
 export interface ComputeTargetToQuoteSwapParams {
     targetToken: TokenSchema

@@ -107,6 +107,13 @@ import { TxBuilderModule } from "@modules/blockchains"
                         action: true,
                     },
                 },
+                {
+                    dexId: DexId.FlowX,
+                    enabled: {
+                        observe: false,
+                        action: true,
+                    },
+                },
             ],
         }),
     ],

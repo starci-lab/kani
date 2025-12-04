@@ -58,24 +58,24 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
         displayId: ConfigId.Client,
         value: {
             cetusAggregatorClientRpcs: [
-                "https://api.zan.top/node/v1/eth/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 "https://fullnode.mainnet.sui.io:443"
             ],
             sevenKAggregatorClientRpcs: [
-                "https://api.zan.top/node/v1/eth/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 "https://fullnode.mainnet.sui.io:443"
             ],
             cetusClmmClientRpcs: [
                 "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/eth/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
             ],
             turbosClmmClientRpcs: [
                 "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/eth/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
             ],
             momentumClmmClientRpcs: [
                 "https://fullnode.mainnet.sui.io:443",
-                "https://api.zan.top/node/v1/eth/mainnet/22d120019ccb45599c4c09f715e0f42b",
+                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
             ],
             flowXClmmClientRpcs: [
                 "https://fullnode.mainnet.sui.io:443",
@@ -102,6 +102,10 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                 "https://api.mainnet-beta.solana.com",
             ],
+            suiBalanceClientRpcs: [
+                "https://fullnode.mainnet.sui.io:443",
+                "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
+            ],
         }
     },
 ]
@@ -119,4 +123,5 @@ export enum LoadBalancerName {
     OrcaClmm = "orca-clmm",
     MeteoraDlmm = "meteora-dlmm",
     SolanaBalance = "solana-balance",
+    SuiBalance = "sui-balance",
 }
