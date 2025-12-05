@@ -85,7 +85,7 @@ export class SolanaBalanceService implements IBalanceService {
         }
         const balanceUrl = this.loadBalancerService.balanceP2c(
             LoadBalancerName.SolanaBalance,
-            this.primaryMemoryStorageService.clientConfig.solanaBalanceClientRpcs
+            this.primaryMemoryStorageService.clientConfig.solanaBalanceClientRpcs.read
         )
         const balanceRpc = createSolanaRpc(balanceUrl)
         // return the native token balance
@@ -187,7 +187,6 @@ export class SolanaBalanceService implements IBalanceService {
         // we sign the transaction
         const txHash = await this.signerService.withSolanaSigner({
             bot,
-            accountAddress: bot.accountAddress,
             action: async (signer) => {
                 const transactionMessage = pipe(
                     createTransactionMessage({ version: 0 }),

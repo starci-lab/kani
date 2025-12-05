@@ -60,7 +60,6 @@ export class SignerService {
 
     public withSolanaSigner<TResponse = void>(params: {
     bot: BotSchema
-    accountAddress: string
     action: (signer: KeyPairSigner) => Promise<TResponse>
   }) {
         return this.withSigner<KeyPairSigner, TResponse>({

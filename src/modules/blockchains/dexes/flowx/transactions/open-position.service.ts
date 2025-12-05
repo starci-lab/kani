@@ -1,4 +1,8 @@
-import { FeeToAddressNotFoundException, InvalidPoolTokensException, TargetOperationalGasAmountNotFoundException } from "@exceptions"
+import { 
+    FeeToAddressNotFoundException, 
+    InvalidPoolTokensException, 
+    TargetOperationalGasAmountNotFoundException
+} from "@exceptions"
 import { LiquidityPoolState } from "../../../interfaces"
 import { 
     BotSchema, 
@@ -72,7 +76,6 @@ export class OpenPositionTxbService {
                 "Target operational gas amount not found"
             )
         }
-    
         const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")

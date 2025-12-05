@@ -131,7 +131,6 @@ export class MeteoraActionService implements IActionService {
         // sign the transaction
         const txHash = await this.signerService.withSolanaSigner({
             bot,
-            accountAddress: bot.accountAddress,
             action: async (signer) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
@@ -396,7 +395,6 @@ export class MeteoraActionService implements IActionService {
         // sign the transaction
         const txHash = await this.signerService.withSolanaSigner({
             bot,
-            accountAddress: bot.accountAddress,
             action: async (signer) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
