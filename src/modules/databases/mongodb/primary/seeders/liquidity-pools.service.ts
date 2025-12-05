@@ -85,7 +85,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tickSpacing: 60,
         tickMultiplier: 5,
         metadata: {
-            packageId: "0xafd06ed69a706eabb66f2a1f9305afc0a317ae95e5bfe8ae9868b23b17f7887b",
+            packageId: "0xde2c47eb0da8c74e4d0f6a220c41619681221b9c2590518095f0f0c2d3f3c772",
             poolRegistryObject: "0x27565d24a4cd51127ac90e4074a841bbe356cca7bf5759ddc14a975be1632abc",
             positionRegistryObject: "0x7dffe3229d675645564273aa68c67406b6a80aa29e245ac78283acd7ed5e4912",
             versionObject: "0x67624a1533b5aff5d0dfcf5e598684350efd38134d2d245f475524c03a64e656",

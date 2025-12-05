@@ -10,7 +10,6 @@ import { InjectMomentumClmmSdks } from "./momentum.decorators"
 import {
     Network,
     ZERO_BN,
-    adjustSlippage,
     computeRatio,
     computeRaw,
     filterOutBnZero,
@@ -32,7 +31,7 @@ import {
     SuiSwapService,
     OPEN_POSITION_SLIPPAGE,
     SWAP_OPEN_POSITION_SLIPPAGE,
-} from "../../swap"
+} from "../constants"
 import { SignerService } from "../../signers"
 import { PythService } from "../../pyth"
 import { SuiCoinManagerService } from "../../utils"

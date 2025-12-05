@@ -38,7 +38,7 @@ import {
     SuiSwapService,
     SWAP_OPEN_POSITION_SLIPPAGE,
     ZapService,
-} from "../../swap"
+} from "../constants"
 import { SuiClient, SuiEvent, SuiObjectChange } from "@mysten/sui/client"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"

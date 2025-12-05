@@ -20,7 +20,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
 import { BalanceService } from "../../balance"
 import { GasStatusService } from "../../balance"
-import { InvalidPoolTokensException } from "@exceptions"
+import { InvalidPoolTokensException, TransactionEventNotFoundException, TransactionStimulateFailedException } from "@exceptions"
 import { GasStatus } from "../../types"
 import { OpenPositionSnapshotService } from "../../snapshots"
 import { BalanceSnapshotService } from "../../snapshots"
@@ -83,7 +83,11 @@ export class FlowXActionService implements IActionService {
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
 
-        const { txb: openPositionTxb } = await this.openPositionTxbService.createOpenPositionTxb({
+        const { 
+            txb: openPositionTxb,
+            feeAmountA,
+            feeAmountB,
+        } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
             amountAMax: snapshotTargetBalanceAmountBN,
@@ -95,25 +99,43 @@ export class FlowXActionService implements IActionService {
         })
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.FlowXClmm, 
-            this.primaryMemoryStorageService.clientConfig.flowXClmmClientRpcs.write
+            this.primaryMemoryStorageService
+                .clientConfig
+                .flowXClmmClientRpcs.write
         )
         const client = new SuiClient({
             url,
             network: "mainnet",
         })
-        const { digest: txHash } = await this.signerService.withSuiSigner({
+        const { digest: txHash, positionId } = await this.signerService.withSuiSigner({
             bot,
             action: async (signer) => {
-                const stimuateTransaction = await client.devInspectTransactionBlock({
+                const stimulateTransaction = await client.devInspectTransactionBlock({
                     transactionBlock: openPositionTxb,
-                    sender: signer.toSuiAddress(),
+                    sender: bot.accountAddress,
                 })
-                console.log(stimuateTransaction)
-                throw new Error("Not implemented")
-                return await client.signAndExecuteTransaction({
+                if (stimulateTransaction.effects.status.status === "failure") {
+                    throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
+                }
+                const { digest, events } = await client.signAndExecuteTransaction({
                     transaction: openPositionTxb,
                     signer,
+                    options: {
+                        showEvents: true,
+                    }
                 })
+                const increaseLiquidityEvent = events?.find(
+                    event => event.type.includes("::position_manager::IncreaseLiquidity")
+                )
+                if (!increaseLiquidityEvent) {
+                    throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
+                }
+                const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
+                const positionId = increaseLiquidityEventParsed.position_id
+                return {
+                    digest,
+                    positionId,
+                }
             },
         })
         const {
@@ -166,11 +188,11 @@ export class FlowXActionService implements IActionService {
                     tickUpper: tickUpper.toNumber(),
                     chainId: bot.chainId,
                     liquidityPoolId: _state.static.displayId,
-                    positionId: "TODO: get position id",
+                    positionId,
                     openTxHash: txHash,
                     session,
-                    feeAmountTarget: targetIsA ? new BN(0) : new BN(0),
-                    feeAmountQuote: targetIsA ? new BN(0) : new BN(0),
+                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
                 })
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                     bot,
@@ -210,4 +232,13 @@ export class FlowXActionService implements IActionService {
         console.log("closePosition", bot, state)
         throw new Error("Not implemented")
     }
+}
+
+export interface IncreaseLiquidityEvent {
+    amount_x: string;
+    amount_y: string;
+    liquidity: string;
+    pool_id: string;
+    position_id: string;
+    sender: string;
 }

@@ -37,7 +37,10 @@ export class LoadBalancerService {
      * Register a P2C balancer if it doesn't already exist.
      * Each balancer is identified by a unique name.
      */
-    private initP2cBalancerIfNotExists(name: string, urls: Array<string>): void {
+    private initP2cBalancerIfNotExists(
+        name: string, 
+        urls: Array<string>
+    ): void {
         if (!this.p2cBalancerRegistry[name]) {
             this.p2cBalancerRegistry[name] = {
                 instance: new P2cBalancer(urls.length),
@@ -49,7 +52,10 @@ export class LoadBalancerService {
     /**
      * Register a Random balancer if it doesn't already exist.
      */
-    private initRandomBalancerIfNotExists(name: string, urls: Array<string>): void {
+    private initRandomBalancerIfNotExists(
+        name: string, 
+        urls: Array<string>
+    ): void {
         if (!this.randomBalancerRegistry[name]) {
             this.randomBalancerRegistry[name] = {
                 instance: new RandomBalancer(urls.length),

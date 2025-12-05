@@ -62,7 +62,7 @@ export class FlowXObserverService {
 
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.FlowXClmm, 
-            this.memoryStorageService.clientConfig.flowXClmmClientRpcs
+            this.memoryStorageService.clientConfig.flowXClmmClientRpcs.read
         )
         const client = new SuiClient({
             url,
@@ -95,7 +95,10 @@ export class FlowXObserverService {
             [
             // cache
                 this.cacheManager.set(
-                    createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                    createCacheKey(
+                        CacheKey.DynamicLiquidityPoolInfo, 
+                        liquidityPoolId
+                    ),
                     this.superjson.stringify(parsed),
                 ),
                 // event

@@ -30,15 +30,15 @@ import {
     SuiSwapService,
     SWAP_OPEN_POSITION_SLIPPAGE,
     ZapService,
-} from "../../swap"
+} from "../constants"
 import { SuiClient, SuiEvent, SuiObjectChange } from "@mysten/sui/client"
-import { GasSuiSwapUtilsService } from "../../swap"
+import { GasSuiSwapUtilsService } from "../constants"
 import { clientIndex } from "./inner-constants"
 import { SuiExecutionService } from "../../utils"
 import { PythService } from "../../pyth"
 import { SignerService } from "../../signers"
 import { InjectSuiClients } from "../../clients"
-import { FeeToService } from "../../swap"
+import { FeeToService } from "../constants"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { DayjsService } from "@modules/mixin"   
 import { ZapProtectionService } from "../../utils"

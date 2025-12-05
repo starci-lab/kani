@@ -62,7 +62,6 @@ export class TickMathService {
         if (!targetTokenInstance || !quoteTokenInstance) {
             throw new TokenNotFoundException("Target or quote token not found")
         }
-
         const targetTokenEntity = this.primaryMemoryStorageService.tokens.find(token => token.id === targetToken.toString())
         if (!targetTokenEntity) {
             throw new TokenNotFoundException("Target token not found")
@@ -71,24 +70,31 @@ export class TickMathService {
         if (!quoteTokenEntity) {
             throw new TokenNotFoundException("Quote token not found")
         }
+        const tokenAEntity = targetIsA ? targetTokenEntity : quoteTokenEntity
+        const tokenBEntity = targetIsA ? quoteTokenEntity : targetTokenEntity
+        const snapshotTokenAAmount = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        const snapshotTokenBAmount = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         const oraclePrice = await this.oraclePriceService.getOraclePrice({
-            tokenA: targetTokenEntity.displayId,
-            tokenB: quoteTokenEntity.displayId,
+            tokenA: tokenAEntity.displayId,
+            tokenB: tokenBEntity.displayId,
         })
-        const targetTokenBalanceAmountInQuote = computeDenomination(
-            new BN(snapshotTargetBalanceAmount),
-            targetTokenEntity.decimals
+        const tokenAAmountInB = computeDenomination(
+            new BN(snapshotTokenAAmount),
+            tokenAEntity.decimals
         ).mul(oraclePrice)
-        const quoteTokenBalanceAmountInQuote = computeDenomination(
-            new BN(snapshotQuoteBalanceAmount),
+        const tokenBAmountInB = computeDenomination(
+            new BN(snapshotTokenBAmount),
             quoteTokenEntity.decimals
         ) 
         // ?: S = tickSpacing * tickMultiplier = tickUpper - tickLower
         const S = new Decimal(tickSpacing).mul(new Decimal(tickMultiplier))
-        // ?: R = quote / target
+        // ?: R = quote / (target + quote)
         const R = new Decimal(
-            quoteTokenBalanceAmountInQuote
-        ).div(targetTokenBalanceAmountInQuote) // ~ 0.25
+            tokenAAmountInB
+        ).div(
+            tokenAAmountInB
+                .add(tokenBAmountInB)
+        ) // ~ 0.25
         // * Goal: Find tickLower and tickUpper that satisfy the CLMM liquidity formulas
         // Token A amount (when price is inside range)
         // ?: amountA = L * (1/sqrtPriceCurrent - 1/sqrtPriceUpper)
@@ -102,73 +108,55 @@ export class TickMathService {
         // ?: targetIsA ? amountA/amountB ~ R : amountB/amountA ~ R
         // TODO: R = (sqrtPriceCurrent - sqrtPriceLower)/(1/sqrtPriceCurrent - 1/sqrtPriceUpper)
         // * Solution: Use loop to find the tickLower and tickUpper
-        let tickLowerEntry = new Decimal(tickCurrent).sub(S.mul(targetIsA ? R : new Decimal(1).sub(R)))
-        tickLowerEntry = tickLowerEntry.divToInt(new Decimal(tickSpacing)).mul(new Decimal(tickSpacing))
+        let tickLowerEntry = new Decimal(tickCurrent).sub(S).div(tickSpacing).ceil().mul(tickSpacing)
         let tickUpperEntry = tickLowerEntry.add(S)
         // we define a function to compute the R value
-        const tokenAEntity = targetIsA ? targetTokenEntity : quoteTokenEntity
-        const tokenBEntity = targetIsA ? quoteTokenEntity : targetTokenEntity
-        const computeR = () => {
+        const computeR = (tickLower: Decimal, tickUpper: Decimal) => {
             const amountA = new BN(1_000_000_000)
             const liquidity = LiquidityMath.getLiquidityFromTokenAmountA(
-                this.tickToSqrtPriceX64({ tickIndex: new Decimal(tickLowerEntry) }),
-                this.tickToSqrtPriceX64({ tickIndex: new Decimal(tickUpperEntry) }),
+                this.tickToSqrtPriceX64({ tickIndex: tickLower }),
+                this.tickToSqrtPriceX64({ tickIndex: tickUpper }),
                 amountA,
                 false,
             )
             const { amountA: amountAOut, amountB: amountBOut } = LiquidityMath.getAmountsFromLiquidity(
                 this.tickToSqrtPriceX64({ tickIndex: new Decimal(tickCurrent) }),
-                this.tickToSqrtPriceX64({ tickIndex: new Decimal(tickLowerEntry) }),
-                this.tickToSqrtPriceX64({ tickIndex: new Decimal(tickUpperEntry) }),
+                this.tickToSqrtPriceX64({ tickIndex: tickLower }),
+                this.tickToSqrtPriceX64({ tickIndex: tickUpper }),
                 liquidity,
                 false,
             )
-            const ratio = computeDenomination(amountBOut, tokenBEntity.decimals)
-                .div(computeDenomination(amountAOut, tokenAEntity.decimals)).div(
-                    oraclePrice
-                )
-            return targetIsA ? ratio : new Decimal(1).div(ratio)
+            const amountAOutInB = computeDenomination(
+                new BN(amountAOut),
+                tokenAEntity.decimals
+            ).mul(oraclePrice)
+            const amountBOutInB = computeDenomination(
+                new BN(amountBOut),
+                tokenBEntity.decimals
+            )
+            const ratio = amountAOutInB.div(amountAOutInB.add(amountBOutInB))
+            return new Decimal(ratio.toString())
         }
-        let tickLower = new Decimal(0)
-        let tickUpper = new Decimal(0)
-        if (targetIsA) {
-            for (let i = 0; i < S.div(tickSpacing).toNumber(); i++) {
-                const absValue = computeR().sub(R).abs()
-                tickLowerEntry = tickLowerEntry.add(new Decimal(tickSpacing))
-                tickUpperEntry = tickUpperEntry.add(new Decimal(tickSpacing))
-                if (computeR().lt(R)) {
-                    const anotherAbsValue = computeR().sub(R).abs()
-                    if (anotherAbsValue.gt(absValue)) {
-                        tickLower = tickLowerEntry.sub(new Decimal(tickSpacing))
-                        tickUpper = tickUpperEntry.sub(new Decimal(tickSpacing))
-                    } else  {
-                        tickLower = tickLowerEntry
-                        tickUpper = tickUpperEntry
-                    }
-                    break
-                }
+        const tickRecords: Array<TickRecord> = []
+        for (let i = 0; i < tickMultiplier; i++) {
+            const tickRecord: TickRecord = {
+                tickLower: tickLowerEntry,
+                tickUpper: tickUpperEntry,
+                R: computeR(tickLowerEntry, tickUpperEntry),
             }
-        } else {
-            for (let i = 0; i < S.div(tickSpacing).toNumber(); i++) {
-                const absValue = computeR().sub(R).abs()
-                tickLowerEntry = tickLowerEntry.sub(new Decimal(tickSpacing))
-                tickUpperEntry = tickUpperEntry.sub(new Decimal(tickSpacing))
-                if (computeR().gt(R)) {
-                    const anotherAbsValue = computeR().sub(R).abs()
-                    if (anotherAbsValue.gt(absValue)) {
-                        tickLower = tickLowerEntry.add(new Decimal(tickSpacing))
-                        tickUpper = tickUpperEntry.add(new Decimal(tickSpacing))
-                    } else {
-                        tickLower = tickLowerEntry
-                        tickUpper = tickUpperEntry
-                    }
-                    break
-                }
-            }
+            tickRecords.push(tickRecord)
+            tickLowerEntry = tickLowerEntry.add(new Decimal(tickSpacing))
+            tickUpperEntry = tickUpperEntry.add(new Decimal(tickSpacing))
         }
+        // pick the most closest tick record to the R value
+        const closestTickRecord = tickRecords.reduce((prev, curr) => {
+            return prev.R.sub(R).abs().lt(curr.R.sub(R).abs()) ? prev : curr
+        })
+        console.log(closestTickRecord)
+        console.log(tickCurrent)
         return {
-            tickLower,
-            tickUpper,
+            tickLower: closestTickRecord.tickLower,
+            tickUpper: closestTickRecord.tickUpper,
         }
     }
 
@@ -232,4 +220,10 @@ export interface GetTickBoundsParams {
 export interface GetTickBoundsResponse {
     tickLower: Decimal
     tickUpper: Decimal
+}
+
+export interface TickRecord {
+    tickLower: Decimal
+    tickUpper: Decimal
+    R: Decimal
 }

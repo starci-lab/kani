@@ -9,7 +9,7 @@ import {
 import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { GAS_SUI_SWAP_SLIPPAGE } from "./constants"
+import { GAS_SUI_SWAP_SLIPPAGE } from "../dexes/constants"
 import { SuiSwapService } from "./sui-swap.service"
 import { InjectSuiClients } from "../clients"
 import { SuiCoinManagerService } from "../utils"

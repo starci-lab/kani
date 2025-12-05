@@ -18,7 +18,7 @@ import {
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
-import { OPEN_POSITION_SLIPPAGE } from "../../swap"
+import { OPEN_POSITION_SLIPPAGE } from "../constants"
 import { 
     createSolanaRpc,
     signTransaction,
@@ -200,7 +200,10 @@ export class OrcaActionService implements IActionService {
         ) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.OrcaClmm, this.memoryStorageService.clientConfig.orcaClmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.OrcaClmm, 
+            this.memoryStorageService.clientConfig.orcaClmmClientRpcs.write
+        )
         const rpc = createSolanaRpc(url)
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
@@ -331,7 +334,10 @@ export class OrcaActionService implements IActionService {
     ) {
         // cast the state to LiquidityPoolState
         const _state = state as LiquidityPoolState
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.OrcaClmm, this.memoryStorageService.clientConfig.orcaClmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.OrcaClmm, 
+            this.memoryStorageService.clientConfig.orcaClmmClientRpcs.write
+        )
         const slippage = OPEN_POSITION_SLIPPAGE
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {

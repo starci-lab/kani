@@ -50,6 +50,10 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                     feeRate: new Decimal(0.00005).toNumber(), // 0.005%
                     feeToAddress: "8xqsA3rsyXesnrGTimQM7CamXLoptskrN6L423buggsZ",
                 },
+                [ChainId.Sui]: {
+                    feeRate: new Decimal(0.00005).toNumber(), // 0.005%
+                    feeToAddress: "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030",
+                },
             },
         },
     },
@@ -57,9 +61,12 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
         _id: createObjectId(ConfigId.Client),
         displayId: ConfigId.Client,
         value: {
+            // ============================================
+            // Solana
+            // ============================================
             jupiterAggregatorClientRpcs: {
                 read: [
-                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    //"https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                     "https://api.mainnet-beta.solana.com",
                 ],
                 write: [
@@ -69,7 +76,7 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             solanaBalanceClientRpcs: {
                 read: [
                     "https://api.mainnet-beta.solana.com",
-                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    //"https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                 ],
                 write: [
                     "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
@@ -77,7 +84,7 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
             meteoraDlmmClientRpcs: {
                 read: [
-                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
+                    //"https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                     "https://api.mainnet-beta.solana.com",
                 ],
                 write: [
@@ -102,9 +109,9 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                     "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
                 ],
             },
-
-
-
+            // ============================================
+            // Sui
+            // ============================================
             suiBalanceClientRpcs: {
                 read: [
                     "https://fullnode.mainnet.sui.io:443",

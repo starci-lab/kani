@@ -108,7 +108,10 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MeteoraDlmm, 
+            this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs.read
+        )
         const rpc = createSolanaRpc(url)
         const accountInfo = await rpc.getAccountInfo(address(liquidityPool.poolAddress)).send()
         if (!accountInfo || !accountInfo.value?.data) throw new LiquidityPoolNotFoundException(liquidityPoolId)
@@ -126,7 +129,9 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.MeteoraDlmm, this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MeteoraDlmm, 
+            this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs.read)
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         const controller = new AbortController()
         const accountNotifications = await rpcSubscriptions.accountNotifications(

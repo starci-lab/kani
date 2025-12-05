@@ -17,7 +17,7 @@ import {
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { DynamicLiquidityPoolInfo } from "../../types"
-import { OPEN_POSITION_SLIPPAGE } from "../../swap"
+import { OPEN_POSITION_SLIPPAGE } from "../constants"
 import { 
     createSolanaRpc,
     signTransaction,
