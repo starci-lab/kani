@@ -2,7 +2,7 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./flowx.module-definition"
 import { FlowXObserverService } from "./observer.service"
 import { FlowXActionService } from "./action.service"
-import { OpenPositionTxbService } from "./transactions"
+import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 
 @Injectable()
 export class FlowXModule extends ConfigurableModuleClass {
@@ -12,6 +12,7 @@ export class FlowXModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             OpenPositionTxbService,
+            ClosePositionTxbService,
         ]
         if (
             typeof options.enabled === "boolean" 

@@ -128,3 +128,22 @@ export interface FlowXLiquidityPoolMetadata {
     poolFeeCollectEventType: string
     poolRewardCollectEventType: string
 }
+
+export interface CetusLiquidityPoolMetadata {
+    intergratePackageId: string
+    globalConfigObject: string
+    clmmPackageId: string
+    rewarderGlobalVaultObject: string
+}
+
+export interface TurbosLiquidityPoolMetadata {
+    packageId: string
+    feeType: string
+    positionsObject: string
+    versionObject: string
+}
+
+export interface MomentumLiquidityPoolMetadata {
+    packageId: string
+    versionObject: string
+}

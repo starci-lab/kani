@@ -1,2 +1,0 @@
-export const CETUS_CLMM_SDKS = "CETUS_CLMM_SDKS"
-export const CETUS_ZAP_SDKS = "CETUS_ZAP_SDKS"

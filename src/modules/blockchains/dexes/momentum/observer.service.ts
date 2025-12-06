@@ -1,11 +1,9 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo, HttpAndWsClients, InjectSuiClients } from "@modules/blockchains"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
+import { DynamicLiquidityPoolInfo } from "../../types"
+import { PrimaryMemoryStorageService, LiquidityPoolId, DexId, LoadBalancerName } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { Network } from "@typedefs"
 import { SuiClient } from "@mysten/sui/client"
-import { MOMENTUM_CLIENTS_INDEX } from "./constants"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, LoadBalancerService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import BN from "bn.js"
@@ -22,9 +20,9 @@ import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
 @Injectable()
 export class MomentumObserverService {
     constructor(
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, HttpAndWsClients<SuiClient>>,
+        private readonly loadBalancerService: LoadBalancerService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
@@ -57,13 +55,19 @@ export class MomentumObserverService {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const clientIndex = MOMENTUM_CLIENTS_INDEX
         const liquidityPool = this.memoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        const connection = this.suiClients[liquidityPool.network].http[clientIndex]
-        const objectInfo = await connection.getObject({
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MomentumClmm,
+            this.primaryMemoryStorageService.clientConfig.momentumClmmClientRpcs.read
+        )
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        const objectInfo = await client.getObject({
             id: liquidityPool.poolAddress,
             options: {
                 showContent: true,

@@ -1,11 +1,8 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo, HttpAndWsClients, InjectSuiClients } from "@modules/blockchains"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
+import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
+import { PrimaryMemoryStorageService, LiquidityPoolId, DexId, LoadBalancerName } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { Network } from "@typedefs"
-import { SuiClient } from "@mysten/sui/client"
-import { CETUS_CLIENTS_INDEX } from "./constants"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, LoadBalancerService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
@@ -18,12 +15,11 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
+import { SuiClient } from "@mysten/sui/client"
 
 @Injectable()
 export class CetusObserverService {
     constructor(
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, HttpAndWsClients<SuiClient>>,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         @InjectRedisCache()
@@ -33,6 +29,8 @@ export class CetusObserverService {
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
         private readonly events: EventEmitterService,
+        private readonly loadBalancerService: LoadBalancerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -57,14 +55,20 @@ export class CetusObserverService {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const clientIndex = CETUS_CLIENTS_INDEX
         const liquidityPool = this.memoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const connection = this.suiClients[liquidityPool.network].http[clientIndex]
-        const objectInfo = await connection.getObject({
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.CetusClmm,
+            this.primaryMemoryStorageService.clientConfig.cetusClmmClientRpcs.read
+        )
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        const objectInfo = await client.getObject({
             id: liquidityPool.poolAddress,
             options: {
                 showContent: true,

@@ -90,22 +90,24 @@ export class ClosePositionTxbService {
             bot.accountAddress
         )
         const rewardTokens = state.dynamic.rewards as Array<RewardInfo>
-        const rewardTxResult = txb.moveCall({
-            target: `${packageId}::position_manager::collect_pool_reward`,
-            typeArguments: [
-                tokenA.tokenAddress,
-                tokenB.tokenAddress,
-                rewardTokens[0].rewardCoinType
-            ],
-            arguments: [
-                txb.object(poolRegistryObject),
-                txb.object(bot.activePosition.positionId),
-                txb.pure.u64(MaxUint64.toString()),
-                txb.object(versionObject),
-                txb.object(SUI_CLOCK_OBJECT_ID),
-            ],
-        })
-        txb.transferObjects([rewardTxResult[0]], bot.accountAddress)
+        for (const rewardToken of rewardTokens) {
+            const rewardTxResult = txb.moveCall({
+                target: `${packageId}::position_manager::collect_pool_reward`,
+                typeArguments: [
+                    tokenA.tokenAddress,
+                    tokenB.tokenAddress,
+                    rewardToken.rewardCoinType
+                ],
+                arguments: [
+                    txb.object(poolRegistryObject),
+                    txb.object(bot.activePosition.positionId),
+                    txb.pure.u64(MaxUint64.toString()),
+                    txb.object(versionObject),
+                    txb.object(SUI_CLOCK_OBJECT_ID),
+                ],
+            })
+            txb.transferObjects([rewardTxResult[0]], bot.accountAddress)
+        }
         txb.moveCall({
             target: `${packageId}::position_manager::close_position`,
             arguments: [

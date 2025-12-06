@@ -12,7 +12,6 @@ import {
     DexesModule, 
     PythModule, 
     SignersModule, 
-    UtilsModule, 
     MathModule
 } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
@@ -74,9 +73,6 @@ import { TxBuilderModule } from "@modules/blockchains"
             isGlobal: true,
         }),
         SnapshotsModule.register({
-            isGlobal: true,
-        }),
-        UtilsModule.register({
             isGlobal: true,
         }),
         MathModule.register({

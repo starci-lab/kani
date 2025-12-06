@@ -1,8 +1,9 @@
 
 import { ConfigurableModuleBuilder } from "@nestjs/common"
+import { DexOptions } from "../types"
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
-  new ConfigurableModuleBuilder().setExtras(
+  new ConfigurableModuleBuilder<DexOptions>().setExtras(
       {
           isGlobal: false
       },

@@ -88,16 +88,13 @@ export interface PoolObservation {
 /** ---------- REWARD INFO ---------- */
 
 export interface PoolRewardInfo {
-    type: string;
-    fields: {
-        endedAtSeconds: string;
-        lastUpdateTime: string;
-        rewardCoinType: TypeName;
-        rewardGrowthGlobal: string;
-        rewardPerSeconds: string;
-        totalReward: string;
-        totalRewardAllocated: string;
-    };
+    endedAtSeconds: string;
+    lastUpdateTime: string;
+    rewardCoinType: string;
+    rewardGrowthGlobal: string;
+    rewardPerSeconds: string;
+    totalReward: string;
+    totalRewardAllocated: string;
 }
 
 /** ---------- ROOT POOL INTERFACE ---------- */
@@ -124,8 +121,8 @@ export interface Pool {
     swapFeeRate: string;
     tickIndex: number;
     tickSpacing: number;
-    typeX: TypeName;
-    typeY: TypeName;
+    typeX: string;
+    typeY: string;
 }
 
 export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
@@ -161,27 +158,17 @@ export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
         rewardInfos: raw.reward_infos.map((rewardInfo) => ({
             endedAtSeconds: rewardInfo.fields.ended_at_seconds,
             lastUpdateTime: rewardInfo.fields.last_update_time,
-            rewardCoinType: rewardInfo.fields.reward_coin_type,
+            rewardCoinType: rewardInfo.fields.reward_coin_type.fields.name,
             rewardGrowthGlobal: rewardInfo.fields.reward_growth_global,
             rewardPerSeconds: rewardInfo.fields.reward_per_seconds,
             totalReward: rewardInfo.fields.total_reward,
             totalRewardAllocated: rewardInfo.fields.total_reward_allocated,
-            fields: {
-                endedAtSeconds: rewardInfo.fields.ended_at_seconds,
-                lastUpdateTime: rewardInfo.fields.last_update_time,
-                rewardCoinType: rewardInfo.fields.reward_coin_type,
-                rewardGrowthGlobal: rewardInfo.fields.reward_growth_global,
-                rewardPerSeconds: rewardInfo.fields.reward_per_seconds,
-                totalReward: rewardInfo.fields.total_reward,
-                totalRewardAllocated: rewardInfo.fields.total_reward_allocated,
-            },
-            type: rewardInfo.type,
         })),
         sqrtPrice: raw.sqrt_price,
         swapFeeRate: raw.swap_fee_rate,
         tickIndex: parseI32(raw.tick_index.fields.bits),
         tickSpacing: raw.tick_spacing,
-        typeX: raw.type_x,
-        typeY: raw.type_y,
+        typeX: raw.type_x.fields.name,
+        typeY: raw.type_y.fields.name,
     }
 }

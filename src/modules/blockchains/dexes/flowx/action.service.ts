@@ -466,7 +466,7 @@ export class FlowXActionService implements IActionService {
     }
 }
 
-export interface IncreaseLiquidityEvent {
+interface IncreaseLiquidityEvent {
     amount_x: string;
     amount_y: string;
     liquidity: string;

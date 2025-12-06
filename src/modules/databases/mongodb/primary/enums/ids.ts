@@ -128,6 +128,7 @@ export enum LiquidityPoolId {
     CetusUsdcEth025 = "cetusUsdcEth025",
     TurbosIkaUsdc015 = "turbosIkaUsdc015",
     TurbosDeepUsdc015 = "turbosDeepUsdc015",
+    TurbosSuiUsdc005 = "turbosSuiUsdc005",
     MomentumWalSui02 = "momentumWalSui02",
     MomentumSuiUsdc0175 = "momentumSuiUsdc0175",
     FlowXSuiUsdc03 = "flowXSuiUsdc03",
@@ -178,6 +179,9 @@ registerEnumType(GraphQLTypeLiquidityPoolId, {
         },
         [LiquidityPoolId.MeteoraSolUsdcBinStep4]: {
             description: "Meteora SOL-USDC Bin Step 4 LP pool with a 0.04% fee tier.",
+        },
+        [LiquidityPoolId.TurbosSuiUsdc005]: {
+            description: "Turbos SUI-USDC LP pool with a 0.05% fee tier.",
         },
     },
 })

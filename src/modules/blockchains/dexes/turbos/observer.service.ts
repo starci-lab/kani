@@ -1,10 +1,7 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo, HttpAndWsClients, InjectSuiClients } from "@modules/blockchains"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
+import { DynamicLiquidityPoolInfo } from "../../types"
+import { PrimaryMemoryStorageService, LiquidityPoolId, DexId, LoadBalancerName } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { Network } from "@typedefs"
-import { SuiClient } from "@mysten/sui/client"
-import { TURBOS_CLIENTS_INDEX } from "./constanst"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
@@ -13,17 +10,16 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { InjectSuperJson } from "@modules/mixin"
+import { InjectSuperJson, LoadBalancerService } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
 import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
+import { SuiClient } from "@mysten/sui/client"
 
 @Injectable()
 export class TurbosObserverService {
     constructor(
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, HttpAndWsClients<SuiClient>>,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         @InjectRedisCache()
@@ -33,6 +29,8 @@ export class TurbosObserverService {
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
         private readonly events: EventEmitterService,
+        private readonly loadBalancerService: LoadBalancerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -57,14 +55,20 @@ export class TurbosObserverService {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const clientIndex = TURBOS_CLIENTS_INDEX
         const liquidityPool = this.memoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const connection = this.suiClients[liquidityPool.network].http[clientIndex]
-        const accountInfo = await connection.getObject({
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.TurbosClmm,
+            this.primaryMemoryStorageService.clientConfig.turbosClmmClientRpcs.read
+        )
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        const accountInfo = await client.getObject({
             id: liquidityPool.poolAddress,
             options: {
                 showContent: true,

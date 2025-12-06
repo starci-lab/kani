@@ -1,1 +1,0 @@
-export const CETUS_CLIENTS_INDEX = 0

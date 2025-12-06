@@ -1,1 +1,0 @@
-export const MOMENTUM_CLIENTS_INDEX = 3

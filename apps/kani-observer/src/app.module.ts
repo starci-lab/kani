@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common"
 import { EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
-import { CexesModule, ClientsModule, DexesModule, UtilsModule } from "@modules/blockchains"
+import { CexesModule, ClientsModule, DexesModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
@@ -60,9 +60,6 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         }),
         ScheduleModule.forRoot(),
         ClientsModule.register({
-            isGlobal: true,
-        }),
-        UtilsModule.register({
             isGlobal: true,
         }),
         PythModule.register({

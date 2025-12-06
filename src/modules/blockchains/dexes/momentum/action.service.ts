@@ -1,384 +1,476 @@
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import {
     ClosePositionParams,
-    ClosePositionResponse,
     IActionService,
+    LiquidityPoolState,
     OpenPositionParams,
-    OpenPositionResponse,
 } from "../../interfaces"
-import { InjectMomentumClmmSdks } from "./momentum.decorators"
-import {
-    Network,
-    ZERO_BN,
-    computeRatio,
-    computeRaw,
-    filterOutBnZero,
-    incrementBnMap,
-    toUnit,
-} from "@modules/common"
-import { MmtSDK, TickMath } from "@mmt-finance/clmm-sdk"
+import { ClmmLiquidityMath, ClmmTickMath } from "@flowx-finance/sdk"
 import { Transaction } from "@mysten/sui/transactions"
-import { InjectSuiClients } from "../../clients"
-import { SuiClient, SuiEvent, SuiObjectChange } from "@mysten/sui/client"
-import { clientIndex } from "./inner-constants"
-import BN from "bn.js"
-import Decimal from "decimal.js"
-import { estLiquidityAndcoinAmountFromOneAmounts } from "@mmt-finance/clmm-sdk/dist/utils/poolUtils"
-import {
-    FeeToService,
-    GasSuiSwapUtilsService,
-    ZapService,
-    SuiSwapService,
-    OPEN_POSITION_SLIPPAGE,
-    SWAP_OPEN_POSITION_SLIPPAGE,
-} from "../constants"
 import { SignerService } from "../../signers"
-import { PythService } from "../../pyth"
-import { SuiCoinManagerService } from "../../utils"
-import {
-    ZapProtectionService,
-    TickMathService,
-    SuiExecutionService,
-    TickManagerService,
-} from "../../utils"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
+import BN from "bn.js"
+import { 
+    InjectPrimaryMongoose, 
+    PrimaryMemoryStorageService
+} from "@modules/databases"
+import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
+import { CalculateProfitability, ProfitabilityMathService, TickMathService } from "../../math"
+import { LoadBalancerName } from "@modules/databases"
+import { LoadBalancerService } from "@modules/mixin"
+import { SuiClient } from "@mysten/sui/client"
+import { createEventName, EventName } from "@modules/event"
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import { Connection } from "mongoose"
+import { BalanceService, GasStatusService } from "../../balance"
+import { 
+    ActivePositionNotFoundException,
+    InvalidPoolTokensException, 
+    SnapshotBalancesBeforeOpenNotSetException, 
+    TokenNotFoundException, 
+    TransactionEventNotFoundException, 
+    TransactionStimulateFailedException
+} from "@exceptions"
+import { DynamicLiquidityPoolInfo, GasStatus } from "../../types"
+import { 
+    ClosePositionSnapshotService, 
+    SwapTransactionSnapshotService,
+    OpenPositionSnapshotService,
+    BalanceSnapshotService
+} from "../../snapshots"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
-    private readonly logger = new Logger(MomentumActionService.name)
     constructor(
-        @InjectMomentumClmmSdks()
-        private readonly momentumClmmSdks: Record<Network, MmtSDK>,
-        private readonly tickManagerService: TickManagerService,
-        private readonly feeToService: FeeToService,
-        private readonly gasSuiSwapUtilsService: GasSuiSwapUtilsService,
-        @InjectSuiClients()
-        private readonly suiClients: Record<Network, Array<SuiClient>>,
-        private readonly signerService: SignerService,
-        private readonly suiExecutionService: SuiExecutionService,
-        private readonly pythService: PythService,
-        private readonly tickMathService: TickMathService,
-        private readonly zapService: ZapService,
-        private readonly suiSwapService: SuiSwapService,
-        private readonly suiCoinManagerService: SuiCoinManagerService,
-        private readonly zapProtectionService: ZapProtectionService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    ) { }
+    private readonly signerService: SignerService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly openPositionTxbService: OpenPositionTxbService,
+    private readonly tickMathService: TickMathService,
+    private readonly loadBalancerService: LoadBalancerService,
+    private readonly eventEmitter: EventEmitter2,
+    @InjectPrimaryMongoose()
+    private readonly connection: Connection,
+    private readonly balanceService: BalanceService,
+    private readonly gasStatusService: GasStatusService,
+    private readonly openPositionSnapshotService: OpenPositionSnapshotService,
+    private readonly balanceSnapshotService: BalanceSnapshotService,
+    private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+    private readonly closePositionSnapshotService: ClosePositionSnapshotService,
+    private readonly closePositionTxbService: ClosePositionTxbService,
+    private readonly profitabilityMathService: ProfitabilityMathService,
+    ) {}
 
     /**
    * Open LP position on Momentum CLMM
    */
     async openPosition({
-        pool,
-        network = Network.Mainnet,
-        tokenAId,
-        tokenBId,
-        priorityAOverB,
-        accountAddress,
-        slippage,
-        txb,
-        amount, // input capital amount
-        user,
-        suiClient,
-        swapSlippage,
-        requireZapEligible,
-        stimulateOnly = false
-    }: OpenPositionParams): Promise<OpenPositionResponse> {
-        txb = txb ?? new Transaction()
-        slippage = slippage || OPEN_POSITION_SLIPPAGE
-        swapSlippage = swapSlippage || SWAP_OPEN_POSITION_SLIPPAGE
-        if (!user) {
-            throw new Error("Sui user is required")
+        bot,
+        state,
+    }: OpenPositionParams): Promise<void> {
+        const _state = state as LiquidityPoolState
+        const txb = new Transaction()
+        if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
+            throw new Error("Snapshot balances not set")
         }
-        suiClient = suiClient || this.suiClients[network][clientIndex]
-        const mmtSdk = this.momentumClmmSdks[network]
-        const { tickLower, tickUpper } = this.tickManagerService.tickBounds(pool)
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenAId)
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.displayId === tokenBId)
+        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
+        const { 
+            tickLower, 
+            tickUpper
+        } = await this.tickMathService.getTickBounds({
+            state: _state,
+            bot,
+        })
+        const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
+            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
+            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
+            snapshotTargetBalanceAmountBN,
+            snapshotQuoteBalanceAmountBN,
+            true
+        )
+        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
-            throw new Error("Token not found")
-        }
-        const tokenIn = priorityAOverB ? tokenA : tokenB
-        const tokenOut = priorityAOverB ? tokenB : tokenA
-        const oraclePrice = new Decimal(1)
-        const { sourceCoin } = await this.gasSuiSwapUtilsService.gasSuiSwap({
-            network,
-            amountIn: amount,
-            accountAddress,
-            tokenInId: tokenIn.displayId,
-            slippage,
-            suiClient,
-            txb,
-        })
-        this.logger.debug(`Source coin after gas swap: ${sourceCoin.coinAmount.toString()}`)
-        const depositAmount = sourceCoin.coinAmount
+            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        }       
+        const targetIsA = bot.targetToken.toString() === tokenA.id
+        const targetToken = targetIsA ? tokenA : tokenB
+        const quoteToken = targetIsA ? tokenB : tokenA
 
-        await this.feeToService.attachSuiFee({
+        const { 
+            txb: openPositionTxb,
+            feeAmountA,
+            feeAmountB,
+        } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
-            tokenId: tokenIn.displayId,
-            network,
-            amount: sourceCoin.coinAmount,
-            sourceCoin,
-        })
-        this.logger.debug(`Source coin after fee to: ${sourceCoin.coinAmount.toString()}`)
-        // use this to calculate the ratio
-        const lowerSqrtPrice = TickMath.tickIndexToSqrtPriceX64WithTickSpacing(
+            bot,
+            amountAMax: snapshotTargetBalanceAmountBN,
+            amountBMax: snapshotQuoteBalanceAmountBN,
+            liquidity: _liquidity,
             tickLower,
-            pool.tickSpacing,
-        )
-        const upperSqrtPrice = TickMath.tickIndexToSqrtPriceX64WithTickSpacing(
+            state: _state,
             tickUpper,
-            pool.tickSpacing,
-        )
-        const quoteAmountA = computeRaw(1, tokenA.decimals)
-        const { coinAmountA, coinAmountB } =
-            estLiquidityAndcoinAmountFromOneAmounts(
-                tickLower,
-                tickUpper,
-                quoteAmountA, // coinAmount must be BN
-                true, // isCoinA
-                true, // roundUp
-                slippage, // example 0.01
-                pool.currentSqrtPrice,
-            )
-        const ratio = computeRatio(
-            coinAmountB.mul(toUnit(tokenA.decimals)),
-            coinAmountA.mul(toUnit(tokenB.decimals)),
-        )
-        const spotPrice = this.tickMathService.sqrtPriceX64ToPrice(
-            pool.currentSqrtPrice,
-            tokenA.decimals,
-            tokenB.decimals,
-        )
-        const { swapAmount, routerId, quoteData } =
-            await this.zapService.computeZapAmounts({
-                amountIn: sourceCoin.coinAmount,
-                ratio: new Decimal(ratio),
-                spotPrice,
-                priorityAOverB,
-                tokenAId,
-                tokenBId,
-                oraclePrice,
-                network,
-                swapSlippage,
-            })
-        // 4. optional ratio check
-        if (!user.id) {
-            throw new Error("User id is required")
-        }
-        this.zapProtectionService.ensureZapEligible({
-            amountOriginal: sourceCoin.coinAmount,
-            amountZapped: swapAmount,
-            liquidityPoolId: pool.displayId,
-            userId: user.id,
-            requireZapEligible,
         })
-        const { spendCoin } = this.suiCoinManagerService.splitCoin({
-            txb,
-            sourceCoin,
-            requiredAmount: swapAmount,
-        })
-        const { coinOut } = await this.suiSwapService.swap({
-            txb,
-            tokenIn: tokenIn.displayId,
-            tokenOut: tokenOut.displayId,
-            amountIn: swapAmount,
-            fromAddress: accountAddress,
-            quoteData,
-            routerId,
-            network,
-            slippage: swapSlippage,
-            inputCoin: spendCoin,
-            transferCoinObjs: false,
-        })
-        if (!coinOut) {
-            throw new Error("Coin out or change coin is missing")
-        }
-        this.logger.debug(`Coin out after swap: ${coinOut.coinAmount.toString()}`)
-        this.logger.debug(`Swap amount: ${swapAmount.toString()}`)
-        this.logger.debug(`Source coin after swap: ${sourceCoin.coinAmount.toString()}`)
-        const providedCoinA = priorityAOverB ? sourceCoin : coinOut
-        const providedCoinB = priorityAOverB ? coinOut : sourceCoin
-        const position = mmtSdk.Position.openPosition(
-            txb,
-            {
-                objectId: pool.poolAddress,
-                tokenXType: tokenA.tokenAddress,
-                tokenYType: tokenB.tokenAddress,
-                tickSpacing: pool.tickSpacing,
-            },
-            lowerSqrtPrice.toString(),
-            upperSqrtPrice.toString(),
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MomentumClmm, 
+            this.primaryMemoryStorageService
+                .clientConfig
+                .turbosClmmClientRpcs.write
         )
-        mmtSdk.Pool.addLiquidity(
-            txb,
-            {
-                objectId: pool.poolAddress,
-                tokenXType: tokenA.tokenAddress,
-                tokenYType: tokenB.tokenAddress,
-                tickSpacing: pool.tickSpacing,
-            },
-            position, // Position from previous tx
-            providedCoinA.coinArg,
-            providedCoinB.coinArg,
-            BigInt(
-                adjustSlippage(
-                    providedCoinA.coinAmount,
-                    new Decimal(slippage),
-                ).toString(),
-            ), // Min a added
-            BigInt(
-                adjustSlippage(
-                    providedCoinB.coinAmount,
-                    new Decimal(slippage),
-                ).toString(),
-            ), // Min b added
-            accountAddress,
-        )
-        txb.transferObjects([position], accountAddress)
-        let positionId = ""
-        const handleObjectChanges = (objectChanges: Array<SuiObjectChange>) => {
-            const [positionObjId] = objectChanges
-                .filter(
-                    (obj): obj is Extract<SuiObjectChange, { type: "created" }> =>
-                        obj.type === "created" &&
-                        obj.objectType.endsWith("::position::Position") &&
-                        typeof obj.owner === "object" &&
-                        "AddressOwner" in obj.owner &&
-                        obj.owner.AddressOwner.toLowerCase() ===
-                        accountAddress.toLowerCase(),
-                )
-                .map((obj) => obj.objectId)
-            positionId = positionObjId
-        }
-        const txHash = await this.signerService.withSuiSigner({
-            user,
-            network,
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        const { digest: txHash, positionId, liquidity } = await this.signerService.withSuiSigner({
+            bot,
             action: async (signer) => {
-                return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txb,
-                    suiClient,
-                    signer,
-                    stimulateOnly,
-                    handleObjectChanges,
+                const stimulateTransaction = await client.devInspectTransactionBlock({
+                    transactionBlock: openPositionTxb,
+                    sender: bot.accountAddress,
                 })
-            },
-        })
-        const liquidity = await mmtSdk.Position.getLiquidity(positionId)
-        return {
-            txHash,
-            tickLower,
-            tickUpper,
-            positionId,
-            depositAmount,
-            liquidity: new BN(liquidity),
-        }
-    }
-
-    async closePosition({
-        pool,
-        position,
-        network = Network.Mainnet,
-        txb,
-        accountAddress,
-        user,
-        tokenAId,
-        tokenBId,
-        suiClient,
-        stimulateOnly
-    }: ClosePositionParams): Promise<ClosePositionResponse> {
-        txb = txb || new Transaction()
-        if (!user) {
-            throw new Error("Sui user is required")
-        }
-        suiClient = suiClient || this.suiClients[network][clientIndex]
-        const momentumSdk = this.momentumClmmSdks[network]
-        // 1. Remove liquidity
-        momentumSdk.Pool.removeLiquidity(
-            txb,
-            {
-                objectId: pool.poolAddress,
-                tokenXType: pool.token0.tokenAddress,
-                tokenYType: pool.token1.tokenAddress,
-            },
-            position.positionId,
-            BigInt(position.liquidity),
-            BigInt(ZERO_BN.toString()), // minAmountX (slippage protection can be added here)
-            BigInt(ZERO_BN.toString()), // minAmountY
-            accountAddress,
-            true,
-        )
-        if (pool.rewardTokens && pool.rewardTokens.length > 0) {
-            if (!pool.mmtRewarders) {
-                throw new Error("Rewarders are not found")
-            }
-            momentumSdk.Pool.collectAllRewards(
-                txb,
-                {
-                    objectId: pool.poolAddress,
-                    tokenXType: pool.token0.tokenAddress,
-                    tokenYType: pool.token1.tokenAddress,
-                },
-                pool.mmtRewarders,
-                position.positionId,
-                accountAddress,
-            )
-        }
-        // // 3. Collect fees
-        momentumSdk.Pool.collectFee(
-            txb,
-            {
-                objectId: pool.poolAddress,
-                tokenXType: pool.token0.tokenAddress,
-                tokenYType: pool.token1.tokenAddress,
-            },
-            position.positionId,
-            accountAddress
-        )
-        // // 4. Close position NFT
-        momentumSdk.Position.closePosition(txb, position.positionId)
-        const suiTokenOuts: Partial<Record<TokenId, BN>> = {}
-        const handleEvents = (events: Array<SuiEvent>) => {
-            for (const event of events) {
-                if (event.type.includes("::collect::FeeCollectedEvent")) {
-                    const { amount_x, amount_y } = event.parsedJson as
-                        { amount_x: string, amount_y: string }
-                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_x))
-                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_y))
+                if (stimulateTransaction.effects.status.status === "failure") {
+                    throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
                 }
-                if (event.type.includes("::collect::CollectPoolRewardEvent")) {
-                    const { amount, reward_coin_type } = event.parsedJson as
-                        { amount: string, reward_coin_type: { name: string } }
-                    const token = this.primaryMemoryStorageService.tokens.find((token) => token.tokenAddress.includes(reward_coin_type.name))
-                    if (!token) {
-                        throw new Error("Token not found")
+                const { digest, events } = await client.signAndExecuteTransaction({
+                    transaction: openPositionTxb,
+                    signer,
+                    options: {
+                        showEvents: true,
                     }
-                    incrementBnMap(suiTokenOuts, token.displayId, new BN(amount))
-                }
-                if (event.type.includes("::liquidity::RemoveLiquidityEvent")) {
-                    const { amount_x, amount_y } = event.parsedJson as
-                        { amount_x: string, amount_y: string }
-                    incrementBnMap(suiTokenOuts, tokenAId, new BN(amount_x))
-                    incrementBnMap(suiTokenOuts, tokenBId, new BN(amount_y))
-                }
-            }
-        }
-        const txHash = await this.signerService.withSuiSigner({
-            user,
-            network,
-            action: async (signer) => {
-                return await this.suiExecutionService.signAndExecuteTransaction({
-                    transaction: txb,
-                    suiClient,
-                    signer,
-                    stimulateOnly,
-                    handleEvents,
                 })
+                const increaseLiquidityEvent = events?.find(
+                    event => event.type.includes("::position_manager::IncreaseLiquidity")
+                )
+                if (!increaseLiquidityEvent) {
+                    throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
+                }
+                const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
+                const positionId = increaseLiquidityEventParsed.position_id
+                const liquidity = increaseLiquidityEventParsed.liquidity
+                return {
+                    digest,
+                    positionId,
+                    liquidity
+                }
             },
         })
-        return {
-            txHash,
-            suiTokenOuts: filterOutBnZero(suiTokenOuts),
+        const {
+            balancesSnapshotsParams,
+            swapsSnapshotsParams,
+        } = await this.balanceService.executeBalanceRebalancing({
+            bot,
+            withoutSnapshot: true,
+        })
+        let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
+            .sub(new BN(balancesSnapshotsParams?.targetBalanceAmount || 0))
+        let quoteBalanceAmountUsed = snapshotQuoteBalanceAmountBN
+            .sub(new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0))
+        let gasBalanceAmountUsed = snapshotGasBalanceAmountBN
+            .sub(new BN(balancesSnapshotsParams?.gasAmount || 0))
+        const gasStatus = this.gasStatusService.getGasStatus({
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+        })
+        switch (gasStatus) {
+        case GasStatus.IsTarget: {
+            // gas token is the same as target token.
+            // treat gas balance as part of the target balance used,
+            // then mark gas usage as zero because it's merged.
+            targetBalanceAmountUsed = targetBalanceAmountUsed.add(gasBalanceAmountUsed)
+            gasBalanceAmountUsed = new BN(0)
+            break
+        }
+        case GasStatus.IsQuote: {
+            // gas token is the same as quote token.
+            // treat gas balance as part of the quote balance used,
+            // then clear gas usage since it's fully merged.
+            quoteBalanceAmountUsed = quoteBalanceAmountUsed.add(gasBalanceAmountUsed)
+            gasBalanceAmountUsed = new BN(0)
+            break
+        }
+        }
+        // update the snapshot balances
+        const session = await this.connection.startSession()
+        await session.withTransaction(
+            async () => {
+                await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
+                    targetAmountUsed: targetBalanceAmountUsed,
+                    quoteAmountUsed: quoteBalanceAmountUsed,
+                    liquidity: new BN(liquidity || 0),
+                    gasAmountUsed: gasBalanceAmountUsed,
+                    bot,
+                    targetIsA,
+                    tickLower: tickLower.toNumber(),
+                    tickUpper: tickUpper.toNumber(),
+                    chainId: bot.chainId,
+                    liquidityPoolId: _state.static.displayId,
+                    positionId,
+                    openTxHash: txHash,
+                    session,
+                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
+                })
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
+                    targetBalanceAmountBeforeOpen: new BN(snapshotTargetBalanceAmountBN),
+                    quoteBalanceAmountBeforeOpen: new BN(snapshotQuoteBalanceAmountBN),
+                    gasAmountBeforeOpen: new BN(snapshotGasBalanceAmountBN),
+                    session,
+                })
+                if (swapsSnapshotsParams) {
+                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                        ...swapsSnapshotsParams,
+                        session,
+                    })
+                }
+            })
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionOpened, {
+                    botId: bot.id,
+                })
+        )
+    }
+
+    async closePosition(
+        params: ClosePositionParams
+    ): Promise<void> {
+        const {
+            bot,
+            state,
+        } = params
+        const _state = state as LiquidityPoolState
+        if (!bot.activePosition) 
+        {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
+        const targetToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.targetToken.toString()
+        )
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.quoteToken.toString()
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
+        }
+        // we have many close criteria
+        // 1. the position is out-of-range, we close immediately
+        // 2. our detection find a potential dump from CEX
+        // 3. the position is not profitable, we close it  
+        const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange({
+            bot,
+            state: _state,
+        })
+        if (!shouldProceedAfterIsPositionOutOfRange) {
+            return
         }
     }
+
+    private async assertIsPositionOutOfRange(
+        params: ClosePositionParams
+    ): Promise<boolean> {
+        const {
+            bot,
+            state,
+        } = params
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
+        const _state = state.dynamic as DynamicLiquidityPoolInfo
+        if (
+            new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
+            && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
+        const tokenA = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenB.toString())
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        }
+        await this.proccessClosePositionTransaction(params)
+        // return false to terminate the assertion
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                })
+        )
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.PositionClosed, {
+                    botId: bot.id,
+                })
+        )
+        return false
+    }
+
+    private async proccessClosePositionTransaction(
+        {
+            bot,
+            state
+        }: ClosePositionParams
+    ): Promise<void> {
+        const _state = state as LiquidityPoolState
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
+        const {
+            snapshotTargetBalanceAmountBeforeOpen,
+            snapshotQuoteBalanceAmountBeforeOpen,
+            snapshotGasBalanceAmountBeforeOpen,
+        } = bot
+        if (
+            !snapshotTargetBalanceAmountBeforeOpen 
+          || 
+          !snapshotQuoteBalanceAmountBeforeOpen 
+          || 
+          !snapshotGasBalanceAmountBeforeOpen) {
+            throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
+        }
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.MomentumClmm, 
+            this.primaryMemoryStorageService.clientConfig.turbosClmmClientRpcs.write
+        )
+        // check if the tokens are in the pool
+        const tokenA = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokens
+            .find((token) => token.id === state.static.tokenB.toString())
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        }
+        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
+        const targetToken = targetIsA ? tokenA : tokenB
+        const quoteToken = targetIsA ? tokenB : tokenA
+        const txb = new Transaction()
+        const {
+            txb: closePositionTxb,
+        } = await this.closePositionTxbService.createClosePositionTxb({
+            bot,
+            state: _state,
+            txb,
+        })
+        const client = new SuiClient({
+            url,
+            network: "mainnet",
+        })
+        // sign the transaction
+        const txHash = await this.signerService.withSuiSigner({
+            bot,
+            action: async (signer) => {
+                const stimulateTransaction = await client.devInspectTransactionBlock({
+                    transactionBlock: closePositionTxb,
+                    sender: bot.accountAddress,
+                })
+                if (stimulateTransaction.effects.status.status === "failure") {
+                    throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
+                }
+                const { digest } = await client.signAndExecuteTransaction({
+                    transaction: closePositionTxb,
+                    signer,
+                    options: {
+                        showEvents: true,
+                    }
+                })
+                return digest
+            },
+        })
+
+        const {
+            balancesSnapshotsParams,
+            swapsSnapshotsParams,
+        } = await this.balanceService.executeBalanceRebalancing({
+            bot,
+            withoutSnapshot: true,
+        })
+        const before: CalculateProfitability = {
+            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
+            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
+            gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
+        }
+        const after: CalculateProfitability = {
+            targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+            quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasAmount || 0),
+        }
+        const { 
+            roi, 
+            pnl 
+        } = await this.profitabilityMathService.calculateProfitability({
+            before,
+            after,
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+            chainId: bot.chainId,
+        })
+        const session = await this.connection.startSession()
+        await session.withTransaction(
+            async () => {
+                if (!bot.activePosition) {
+                    throw new ActivePositionNotFoundException(
+                        bot.id, 
+                        "Active position not found"
+                    )
+                }
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
+                    session,
+                })
+                await this.closePositionSnapshotService
+                    .updateClosePositionTransactionRecord({
+                        bot,
+                        pnl,
+                        roi,
+                        positionId: bot.activePosition.id,
+                        closeTxHash: txHash,
+                        session,
+                    })
+                if (swapsSnapshotsParams) {
+                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                        ...swapsSnapshotsParams,
+                        session,
+                    })
+                }
+            })
+    }
+}
+
+interface IncreaseLiquidityEvent {
+    amount_x: string;
+    amount_y: string;
+    liquidity: string;
+    pool_id: string;
+    position_id: string;
+    sender: string;
 }
