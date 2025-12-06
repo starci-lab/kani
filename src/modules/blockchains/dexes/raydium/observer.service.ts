@@ -122,10 +122,10 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
 
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.RaydiumClmm, 
-            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs
+            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs.read
         )
-        const connection = createSolanaRpc(url)
-        const accountInfo = await connection.getAccountInfo(address(liquidityPool.poolAddress)).send()
+        const rpc = createSolanaRpc(url)
+        const accountInfo = await rpc.getAccountInfo(address(liquidityPool.poolAddress)).send()
         if (!accountInfo || !accountInfo.value?.data) throw new LiquidityPoolNotFoundException(liquidityPoolId)
         const state = PoolInfoLayout.decode(Buffer.from(accountInfo.value?.data))
         return await this.handlePoolStateUpdate(liquidityPoolId, state)
@@ -143,7 +143,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
         const url = this.loadBalancerService.balanceP2c(
             LoadBalancerName.RaydiumClmm, 
-            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs
+            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs.read
         )
         const controller = new AbortController()
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))

@@ -120,7 +120,10 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.OrcaClmm, this.memoryStorageService.clientConfig.orcaClmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.OrcaClmm, 
+            this.memoryStorageService.clientConfig.orcaClmmClientRpcs.read
+        )
         const rpc = createSolanaRpc(url)
         const accountInfo = await rpc.getAccountInfo(address(liquidityPool.poolAddress)).send()
         if (!accountInfo || !accountInfo.value?.data) throw new LiquidityPoolNotFoundException(liquidityPoolId)
@@ -139,7 +142,10 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const url = this.loadBalancerService.balanceP2c(LoadBalancerName.OrcaClmm, this.memoryStorageService.clientConfig.orcaClmmClientRpcs)
+        const url = this.loadBalancerService.balanceP2c(
+            LoadBalancerName.OrcaClmm, 
+            this.memoryStorageService.clientConfig.orcaClmmClientRpcs.read
+        )
         const controller = new AbortController()
         const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         const accountNotifications = await rpcSubscriptions.accountNotifications(

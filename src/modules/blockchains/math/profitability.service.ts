@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import Decimal from "decimal.js"
 import { OraclePriceService } from "../pyth"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { ChainId, Network, TokenType } from "@modules/common"
+import { ChainId, TokenType } from "@modules/common"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
 import { AsyncService } from "@modules/mixin"
@@ -23,7 +23,6 @@ export class ProfitabilityMathService {
             targetTokenId,
             quoteTokenId,
             chainId,
-            network = Network.Mainnet,
         }: CalculateProfitabilityParams
     ): Promise<CalculateProfitabilityResponse> {
         const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === targetTokenId)
@@ -35,7 +34,7 @@ export class ProfitabilityMathService {
             throw new TokenNotFoundException("Quote token not found")
         }
         const gasToken = this.primaryMemoryStorageService.tokens.find(token => {
-            return token.type === TokenType.Native && token.chainId === chainId && token.network === network
+            return token.type === TokenType.Native && token.chainId === chainId
         })
         if (!gasToken) {
             throw new TokenNotFoundException("Gas token not found")
@@ -99,7 +98,6 @@ export interface CalculateProfitabilityParams {
     targetTokenId: TokenId,
     quoteTokenId: TokenId,
     chainId: ChainId,
-    network?: Network,
 }
 
 export interface CalculateProfitability {
