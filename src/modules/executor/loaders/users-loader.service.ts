@@ -5,7 +5,6 @@ import { Connection } from "mongoose"
 import { USERS_PER_BATCH } from "./constants"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
-import { PrimaryMongooseObserverService } from "@modules/databases"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
@@ -17,7 +16,6 @@ export class UsersLoaderService implements OnModuleInit {
         private readonly connection: Connection,
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
-        private readonly observerService: PrimaryMongooseObserverService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) { 
     }

@@ -38,8 +38,10 @@ export class FetchCoinsService {
                 })))
             cursor = result.nextCursor
         } while (cursor !== undefined)
+        const totalBalance = coinAssets.reduce((acc, coin) => acc.add(coin.coinAmount), new BN(0))
         return {
             coinAssets,
+            totalBalance: new BN(totalBalance),
         }
     }
 
@@ -78,6 +80,7 @@ export interface FetchCoinsParams {
 
 export interface FetchCoinsResponse {
     coinAssets: Array<CoinAsset>
+    totalBalance: BN
     
 }
 

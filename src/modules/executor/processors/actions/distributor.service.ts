@@ -7,7 +7,6 @@ import {
 import { Inject, Injectable, Scope } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { Mutex } from "async-mutex"
 import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable({
@@ -15,8 +14,6 @@ import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@mod
     durable: true,
 })
 export class DistributorProcessorService {
-    private mutex: Mutex
-
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.

@@ -56,7 +56,7 @@ export class ActiveBotProcessorService {
                 DistributorProcessorService.name, {
                     botId: this.request.botId,
                 }))
-        this.logger.debug(
+        this.logger.info(
             WinstonLog.ActiveBotProcessorInitialized, {
                 botId: this.request.botId,
             }

@@ -4,9 +4,10 @@ import { AppModule } from "./app.module"
 Error.stackTraceLimit = 100
 
 const bootstrap = async () => {
-    const app = await NestFactory.createApplicationContext(AppModule, {
-        logger: ["log", "error"],
-    })
+    const app = await NestFactory.createApplicationContext(
+        AppModule, {
+            logger: ["log", "error"],
+        })
     await app.init()
 }
 bootstrap()

@@ -2,6 +2,7 @@ import { Inject, Provider } from "@nestjs/common"
 import SuperJSON from "superjson"
 import BN from "bn.js"
 import { PublicKey } from "@solana/web3.js"
+import Decimal from "decimal.js"
 export const SUPERJSON = "SUPERJSON"
 
 export const InjectSuperJson = () => Inject(SUPERJSON)
@@ -34,6 +35,16 @@ export const createSuperJsonServiceProvider = (): Provider<SuperJSON> => ({
                 deserialize: (v) => new PublicKey(v),
             },
             "solana.web3.js.PublicKey" // identifier
+        )
+        superjson.registerCustom<Decimal, string>(
+            {
+                isApplicable: (v): v is Decimal => {
+                    return Decimal.isDecimal(v)
+                },
+                serialize: (v) => v.toString(),
+                deserialize: (v) => new Decimal(v),
+            },
+            "decimal.js" // identifier
         )
         return superjson
     },

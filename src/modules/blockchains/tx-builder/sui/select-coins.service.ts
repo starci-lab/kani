@@ -3,9 +3,8 @@ import BN from "bn.js"
 import { CoinAsset, CoinArgument } from "../../types"
 import { Transaction } from "@mysten/sui/transactions"
 import { FetchCoinsService } from "./fetch-coins.service"
-import { SuiClient } from "@mysten/sui/client"
 import { isSuiCoin, ZERO_BN } from "@utils"
-import { toCoinArgument } from "../../convert"
+import { toCoinArgument } from "../../utils"
 
 @Injectable()
 export class SelectCoinsService {
@@ -112,7 +111,7 @@ export class SelectCoinsService {
      * and handle SUI specially for gas reservation.
      */
     public async fetchAndMergeCoins({
-        suiClient,
+        url,
         txb,
         owner,
         coinType,
@@ -120,19 +119,22 @@ export class SelectCoinsService {
         requiredAmount,
     }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResponse> {
         txb = txb ?? new Transaction()
-        const fetchedCoins = await suiClient.getCoins({ owner, coinType })
-        if (!fetchedCoins.data.length) throw new Error("No coin found")
+        const fetchedCoins = await this.fetchCoinsService.fetchCoins({
+            owner,
+            coinType,
+            url
+        })
+        if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
 
-        const coins = fetchedCoins.data.map((coin) => ({
-            coinAmount: new BN(coin.balance),
+        const coins = fetchedCoins.coinAssets.map((coin) => ({
+            coinAmount: coin.coinAmount,
             coinRef: {
-                objectId: coin.coinObjectId,
-                version: coin.version,
-                digest: coin.digest,
+                objectId: coin.coinRef.objectId,
+                version: coin.coinRef.version,
+                digest: coin.coinRef.digest,
             },
         }))
-        const { totalBalance } = await suiClient.getBalance({ owner, coinType })
-        const userBalance = new BN(totalBalance)
+        const userBalance = fetchedCoins.totalBalance
         requiredAmount = requiredAmount || userBalance
         // Special handling for SUI gas
         if (isSuiCoin(coinType)) {
@@ -195,7 +197,7 @@ export interface SelectCoinAssetGreaterThanOrEqualResponse {
 }
 
 export interface FetchAndMergeCoinsParams {
-    suiClient: SuiClient
+    url: string
     txb?: Transaction
     owner: string
     coinType: string

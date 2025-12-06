@@ -152,8 +152,6 @@ export class TickMathService {
         const closestTickRecord = tickRecords.reduce((prev, curr) => {
             return prev.R.sub(R).abs().lt(curr.R.sub(R).abs()) ? prev : curr
         })
-        console.log(closestTickRecord)
-        console.log(tickCurrent)
         return {
             tickLower: closestTickRecord.tickLower,
             tickUpper: closestTickRecord.tickUpper,
