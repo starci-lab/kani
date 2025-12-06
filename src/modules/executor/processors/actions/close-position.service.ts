@@ -15,11 +15,9 @@ import { createObjectId } from "@utils"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { createReadinessWatcherName, DayjsService, MsService, ReadinessWatcherFactoryService } from "@modules/mixin"
-import { Dayjs } from "dayjs"
-import { CLOSE_POSITION_INTERVAL } from "./constants"
-import { Decimal } from "decimal.js"
+import { Logger as winstonLogger } from "winston"
+import { createReadinessWatcherName, DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
+import { envConfig } from "@modules/env"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -36,7 +34,6 @@ import { Decimal } from "decimal.js"
 export class ClosePositionProcessorService {
     private bot: BotSchema
     private mutex: Mutex
-    private lastClosedPositionAt: Dayjs | null = null
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -49,9 +46,8 @@ export class ClosePositionProcessorService {
         private readonly dispatchClosePositionService: DispatchClosePositionService,
         private readonly mutexService: MutexService,
         private readonly dayjsService: DayjsService,
-        private readonly msService: MsService,
         @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly logger: winstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
@@ -80,7 +76,7 @@ export class ClosePositionProcessorService {
                     botId: this.request.botId,
                 }),
             async () => {
-                this.lastClosedPositionAt = this.dayjsService.now()
+                // do nothing if the position is not closed
             }
         )
         // register event listeners
@@ -92,18 +88,6 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                // if the bot has been closed position recently, we skip the close position
-                if (
-                    this.lastClosedPositionAt 
-                )
-                {
-                    if (
-                        this.lastClosedPositionAt.diff(this.dayjsService.now(), "millisecond") 
-                        < this.msService.fromString(CLOSE_POSITION_INTERVAL)
-                    ) {
-                        return
-                    }
-                }
                 // only run if the liquidity pool is belong to the bot
                 if (
                     this.bot.activePosition?.liquidityPool.toString() 
@@ -113,32 +97,30 @@ export class ClosePositionProcessorService {
                     // skip if the liquidity pool is not belong to the active position
                     return
                 }
-                this.mutex = this.mutexService.mutex(
-                    getMutexKey(
-                        MutexKey.Action, 
-                        this.request.botId
-                    )
-                )
+                const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
+                this.mutex = this.mutexService.mutex(mutexKey)
                 // run the open position
                 if (this.mutex.isLocked()) {
                     return
                 }
-                await this.mutex.runExclusive(
-                    async () => {
-                        try {
-                            return await this.dispatchClosePositionService.dispatchClosePosition({
+                await this.mutexService.runWithCooldown({
+                    key: mutexKey,
+                    callback: async () => {
+                        return await this.dispatchClosePositionService.dispatchClosePosition({
+                            liquidityPoolId: payload.liquidityPoolId,
+                            bot: this.bot,
+                        })
+                    },
+                    onError: (error) => {
+                        this.logger.error(
+                            WinstonLog.ClosePositionFailed, {
+                                botId: this.request.botId,
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.bot,
+                                error: error.message,
                             })
-                        } catch (error) {
-                            this.logger.error(
-                                WinstonLog.ClosePositionFailed, {
-                                    botId: this.request.botId,
-                                    liquidityPoolId: payload.liquidityPoolId,
-                                    error: error.message,
-                                })
-                        }
-                    })
+                    },
+                    timeout: envConfig().lockCooldown.openPosition,
+                })
             }
         )
         this.eventEmitter.on(
@@ -149,44 +131,30 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                // if the bot has been closed position recently, we skip the close position
-                if (
-                    this.lastClosedPositionAt &&
-                    new Decimal(
-                        this.lastClosedPositionAt.diff(this.dayjsService.now(), "millisecond"
-                        )).lt(
-                        new Decimal(
-                            this.msService.fromString(CLOSE_POSITION_INTERVAL)
-                        )
-                    )
-                ) {
-                    return
-                }
-                this.mutex = this.mutexService.mutex(
-                    getMutexKey(
-                        MutexKey.Action, 
-                        this.request.botId
-                    ))
+                const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
+                this.mutex = this.mutexService.mutex(mutexKey)
                 // define the target and quote tokens
                 if (this.mutex.isLocked()) {
                     return
                 }
-                await this.mutex.runExclusive(
-                    async () => {
-                        try {
-                            return await this.dispatchClosePositionService.dispatchClosePosition({
+                await this.mutexService.runWithCooldown({
+                    key: mutexKey,
+                    callback: async () => {
+                        await this.dispatchClosePositionService.dispatchClosePosition({
+                            liquidityPoolId: payload.liquidityPoolId,
+                            bot: this.bot,
+                        })
+                    },
+                    onError: (error) => {
+                        this.logger.error(
+                            WinstonLog.ClosePositionFailed, {
+                                botId: this.request.botId,
                                 liquidityPoolId: payload.liquidityPoolId,
-                                bot: this.bot,
+                                error: error.message,
                             })
-                        } catch (error) {
-                            this.logger.error(
-                                WinstonLog.ClosePositionFailed, {
-                                    botId: this.bot.id,
-                                    liquidityPoolId: payload.liquidityPoolId,
-                                    error: error.message,
-                                })
-                        }
-                    })
+                    },
+                    timeout: envConfig().lockCooldown.openPosition,
+                })
             }
         )
         this.readinessWatcherFactoryService.setReady(

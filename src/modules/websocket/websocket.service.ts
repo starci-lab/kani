@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import WebSocket from "ws"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 export interface CreateWebSocketParams<
   OnMessageParams,
   OnErrorParams,
@@ -21,7 +21,7 @@ export interface CreateWebSocketParams<
 export class WebsocketService {
     constructor(
         @InjectWinston()
-        private readonly winston: WinstonLogger,
+        private readonly winston: winstonLogger,
     ) {}
     createWebSocket<OnMessageParams, OnErrorParams = void>(
         params: CreateWebSocketParams<

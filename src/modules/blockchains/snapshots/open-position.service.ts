@@ -1,6 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import { ClientSession, Connection } from "mongoose"
-import { BotSchema, InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
+import { 
+    BotSchema, 
+    InjectPrimaryMongoose, 
+    PositionSchema 
+} from "@modules/databases"
 import BN from "bn.js"
 import { ChainId, createObjectId } from "@modules/common"
 import { DayjsService } from "@modules/mixin"
@@ -18,14 +22,14 @@ export class OpenPositionSnapshotService {
 
     async addOpenPositionTransactionRecord(
         {
-            targetAmountUsed,
-            quoteAmountUsed,
+            snapshotTargetBalanceAmountBeforeOpen,
+            snapshotQuoteBalanceAmountBeforeOpen,
+            snapshotGasBalanceAmountBeforeOpen,
             liquidity,
             amountA,
             amountB,
             minBinId,
             maxBinId,
-            gasAmountUsed,
             bot,
             targetIsA,
             tickLower,
@@ -43,14 +47,14 @@ export class OpenPositionSnapshotService {
         await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).create([{
-            targetAmountUsed: targetAmountUsed.toString(),
-            quoteAmountUsed: quoteAmountUsed.toString(),
             liquidity: liquidity?.toString(),
             amountA: amountA?.toString(),
             amountB: amountB?.toString(),
             minBinId,
             maxBinId,
-            gasAmountUsed: gasAmountUsed?.toString(),
+            snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBeforeOpen?.toString(),
+            snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBeforeOpen?.toString(),
+            snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBeforeOpen?.toString(),
             bot: bot.id,
             chainId,
             targetIsA,
@@ -80,9 +84,9 @@ export interface AddOpenPositionTransactionRecordParams {
     amountB?: BN
     minBinId?: number
     maxBinId?: number
-    targetAmountUsed: BN
-    quoteAmountUsed: BN
-    gasAmountUsed?: BN
+    snapshotTargetBalanceAmountBeforeOpen: BN
+    snapshotQuoteBalanceAmountBeforeOpen: BN
+    snapshotGasBalanceAmountBeforeOpen: BN
     bot: BotSchema
     chainId: ChainId
     liquidityPoolId: LiquidityPoolId

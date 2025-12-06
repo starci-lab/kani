@@ -16,7 +16,7 @@ import {
 import { AsyncService, InjectSuperJson, LoadBalancerService } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
@@ -27,11 +27,12 @@ import { address, createSolanaRpcSubscriptions } from "@solana/kit"
 import { createSolanaRpc } from "@solana/kit"
 import { PublicKey } from "@solana/web3.js"
 import { httpsToWss } from "@utils"
+
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonLogger: winstonLogger,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
         @InjectSuperJson()

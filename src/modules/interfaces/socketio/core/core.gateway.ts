@@ -2,7 +2,7 @@ import { OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from "@nestjs
 import { CoreWebSocketGateway, socketIoAuthMiddleware } from "@modules/socketio"
 import { Logger } from "@nestjs/common"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import { TypedSocket } from "@modules/socketio"
 import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { OnEvent } from "@nestjs/event-emitter"
@@ -17,7 +17,7 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private readonly logger = new Logger(CoreGateway.name)
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonLogger: winstonLogger,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
     ) {}
@@ -33,7 +33,7 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     // handle the client connected
     handleConnection(client: TypedSocket) {
         // log the client connected to loki
-        this.winstonLogger.info(
+        this.winstonLogger.debug(
             WinstonLog.SocketIoClientConnected, {
                 clientId: client.id,
                 userId: client.data.userId,
@@ -44,7 +44,7 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     // handle the client disconnected
     handleDisconnect(client: TypedSocket) {
         // log the client disconnected to loki
-        this.winstonLogger.info(
+        this.winstonLogger.debug(
             WinstonLog.SocketIoClientDisconnected, {
                 clientId: client.id,
                 userId: client.data.userId,

@@ -2,8 +2,7 @@ import { Module } from "@nestjs/common"
 import { EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
-import { ClientsModule, DexesModule, UtilsModule } from "@modules/blockchains"
-import { SwapModule } from "@modules/blockchains"
+import { ClientsModule, DexesModule } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 @Module({
@@ -20,16 +19,10 @@ import { EventModule } from "@modules/event"
         EventModule.register({
             isGlobal: true,
         }),
-        SwapModule.register({
-            isGlobal: true,
-        }),
         CacheModule.register({
             isGlobal: true,
         }),
         ClientsModule.register({
-            isGlobal: true,
-        }),
-        UtilsModule.register({
             isGlobal: true,
         }),
         DexesModule.register({

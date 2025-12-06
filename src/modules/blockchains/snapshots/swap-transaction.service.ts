@@ -1,6 +1,10 @@
-import { BotSchema, InjectPrimaryMongoose, SwapTransactionSchema, TokenId } from "@modules/databases"
+import { 
+    BotSchema, 
+    InjectPrimaryMongoose, 
+    SwapTransactionSchema, 
+    TokenId 
+} from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
-import { DayjsService } from "@modules/mixin"
 import { Injectable } from "@nestjs/common"
 import { ChainId, Network } from "@modules/common"
 import { BN } from "turbos-clmm-sdk"
@@ -10,7 +14,6 @@ export class SwapTransactionSnapshotService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly dayjsService: DayjsService,
     ) {}
 
     public async addSwapTransactionRecord(

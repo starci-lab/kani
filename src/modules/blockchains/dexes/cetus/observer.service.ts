@@ -9,7 +9,7 @@ import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
 import BN from "bn.js"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
@@ -27,7 +27,7 @@ export class CetusObserverService {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonLogger: winstonLogger,
         private readonly events: EventEmitterService,
         private readonly loadBalancerService: LoadBalancerService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,

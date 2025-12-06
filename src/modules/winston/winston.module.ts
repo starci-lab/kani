@@ -22,12 +22,13 @@ export class WinstonModule extends ConfigurableModuleClass {
                     format: winston.format.combine(
                         winston.format.timestamp(),
                         winston.format.json(),
-                        utilities.format.nestLike(options.appName, {
-                            colors: true,
-                            prettyPrint: true,
-                            appName: true,
-                            processId: true
-                        }),
+                        utilities.format.nestLike(
+                            options.appName, {
+                                colors: true,
+                                prettyPrint: true,
+                                appName: true,
+                                processId: true
+                            }),
                     ),
                 }),
             )

@@ -20,6 +20,8 @@ import { AggregatorsModule } from "@modules/blockchains"
 import { MutexModule } from "@modules/lock"
 import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
 import { TxBuilderModule } from "@modules/blockchains"
+import { OraModule } from "@modules/ora"
+import { GcpModule } from "@modules/gcp"
 
 @Module({
     imports: [
@@ -28,7 +30,7 @@ import { TxBuilderModule } from "@modules/blockchains"
         WinstonModule.register({
             isGlobal: true,
             appName: `kani-executor-${envConfig().botExecutor.batchId}`,
-            level: WinstonLevel.Info,
+            level: WinstonLevel.Error,
         }),
         MixinModule.register({
             isGlobal: true,
@@ -47,6 +49,9 @@ import { TxBuilderModule } from "@modules/blockchains"
         SignersModule.register({
             isGlobal: true,
         }),
+        GcpModule.register({
+            isGlobal: true,
+        }),
         BalancesModule.register({
             isGlobal: true,
         }),
@@ -54,6 +59,9 @@ import { TxBuilderModule } from "@modules/blockchains"
             isGlobal: true,
         }),
         PythModule.register({
+            isGlobal: true,
+        }),
+        OraModule.register({
             isGlobal: true,
         }),
         ScheduleModule.forRoot(),

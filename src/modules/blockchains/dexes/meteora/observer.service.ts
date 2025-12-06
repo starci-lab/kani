@@ -10,7 +10,7 @@ import {
 import { AsyncService, InjectSuperJson, LoadBalancerService } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
@@ -25,7 +25,7 @@ import { address, createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/
 export class MeteoraObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonLogger: winstonLogger,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
         @InjectSuperJson()

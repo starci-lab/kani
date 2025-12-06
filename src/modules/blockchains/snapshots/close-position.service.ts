@@ -4,6 +4,7 @@ import { ClientSession, Connection } from "mongoose"
 import { DayjsService } from "@modules/mixin"
 import { Decimal } from "decimal.js"
 import { EventEmitter2 } from "@nestjs/event-emitter"
+import BN from "bn.js"
 
 @Injectable()
 export class ClosePositionSnapshotService {
@@ -21,6 +22,9 @@ export class ClosePositionSnapshotService {
             session,
             roi,
             pnl,
+            snapshotTargetBalanceAmountAfterClose,
+            snapshotQuoteBalanceAmountAfterClose,
+            snapshotGasBalanceAmountAfterClose,
         }: UpdateClosePositionTransactionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
@@ -34,6 +38,9 @@ export class ClosePositionSnapshotService {
                 isActive: false,
                 roi: roi.toNumber(),
                 pnl: pnl.toNumber(),    
+                snapshotTargetBalanceAmountAfterClose: snapshotTargetBalanceAmountAfterClose.toString(),
+                snapshotQuoteBalanceAmountAfterClose: snapshotQuoteBalanceAmountAfterClose.toString(),
+                snapshotGasBalanceAmountAfterClose: snapshotGasBalanceAmountAfterClose.toString(),
             },
         }, 
         {
@@ -49,4 +56,7 @@ export interface UpdateClosePositionTransactionRecordParams {
     session?: ClientSession
     roi: Decimal
     pnl: Decimal
+    snapshotTargetBalanceAmountAfterClose: BN
+    snapshotQuoteBalanceAmountAfterClose: BN
+    snapshotGasBalanceAmountAfterClose: BN
 }   

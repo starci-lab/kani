@@ -16,7 +16,7 @@ import { EnsureMathService } from "../math"
 import Decimal from "decimal.js"
 import { SignerService } from "../signers"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -27,7 +27,7 @@ export class SuiBalanceService implements IBalanceService {
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
         @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly logger: winstonLogger,
     ) {}
 
     async processSwapTransaction(
@@ -84,7 +84,7 @@ export class SuiBalanceService implements IBalanceService {
                     transaction: txb,
                     signer,
                 })
-                this.logger.info(
+                this.logger.debug(
                     WinstonLog.SwapTransactionSuccess, {
                         txHash: digest,
                         bot: bot.id,

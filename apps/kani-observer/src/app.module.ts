@@ -52,6 +52,9 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         CryptoModule.register({
             isGlobal: true,
         }),
+        GcpModule.register({
+            isGlobal: true,
+        }),
         SignersModule.register({
             isGlobal: true,
         }),

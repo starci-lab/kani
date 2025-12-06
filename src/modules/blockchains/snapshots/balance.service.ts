@@ -19,9 +19,6 @@ export class BalanceSnapshotService {
             quoteBalanceAmount,
             gasAmount,
             session,
-            targetBalanceAmountBeforeOpen,
-            quoteBalanceAmountBeforeOpen,
-            gasAmountBeforeOpen,
         }: UpdateBotSnapshotBalancesRecordParams
     ) {  
         await this.connection.model(BotSchema.name).updateOne(
@@ -31,19 +28,6 @@ export class BalanceSnapshotService {
                 snapshotQuoteBalanceAmount: quoteBalanceAmount.toString(), 
                 snapshotGasBalanceAmount: gasAmount?.toString(), 
                 lastBalancesSnapshotAt: this.dayjsService.now().toDate(),
-                ...(
-                    targetBalanceAmountBeforeOpen ? {
-                        snapshotTargetBalanceAmountBeforeOpen: targetBalanceAmountBeforeOpen?.toString(),
-                    } : {}),
-                ...(
-                    quoteBalanceAmountBeforeOpen ? {
-                        snapshotQuoteBalanceAmountBeforeOpen: quoteBalanceAmountBeforeOpen?.toString(),
-                    } : {}),
-                ...(
-                    gasAmountBeforeOpen ? {
-                        snapshotGasBalanceAmountBeforeOpen: gasAmountBeforeOpen?.toString(),
-                    } : {}
-                ),
             } 
             },
             {
@@ -59,7 +43,4 @@ export interface UpdateBotSnapshotBalancesRecordParams {
     quoteBalanceAmount: BN
     gasAmount?: BN
     session?: ClientSession
-    targetBalanceAmountBeforeOpen?: BN
-    quoteBalanceAmountBeforeOpen?: BN
-    gasAmountBeforeOpen?: BN
 }

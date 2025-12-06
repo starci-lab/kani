@@ -217,9 +217,6 @@ export class TurbosActionService implements IActionService {
                     targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
                     quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
                     gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
-                    targetBalanceAmountBeforeOpen: new BN(snapshotTargetBalanceAmountBN),
-                    quoteBalanceAmountBeforeOpen: new BN(snapshotQuoteBalanceAmountBN),
-                    gasAmountBeforeOpen: new BN(snapshotGasBalanceAmountBN),
                     session,
                 })
                 if (swapsSnapshotsParams) {
@@ -346,7 +343,7 @@ export class TurbosActionService implements IActionService {
             snapshotTargetBalanceAmountBeforeOpen,
             snapshotQuoteBalanceAmountBeforeOpen,
             snapshotGasBalanceAmountBeforeOpen,
-        } = bot
+        } = bot.activePosition
         if (
             !snapshotTargetBalanceAmountBeforeOpen 
           || 

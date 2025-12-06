@@ -56,7 +56,7 @@ import { SignerService } from "../signers"
 import { BotSchema, TokenSchema } from "@modules/databases"
 import Decimal from "decimal.js"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import { LoadBalancerService } from "@modules/mixin"
 
 @Injectable()
@@ -68,7 +68,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
         @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly logger: winstonLogger,
     ) { }
 
     public async fetchBalance(
@@ -216,7 +216,7 @@ export class SolanaBalanceService implements IBalanceService {
                         commitment: "confirmed",
                         maxRetries: BigInt(5),
                     })
-                this.logger.info(
+                this.logger.debug(
                     WinstonLog.SwapTransactionSuccess, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,

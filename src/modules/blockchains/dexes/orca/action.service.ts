@@ -52,7 +52,7 @@ import {
 } from "./transactions"
 import { adjustSlippage, httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import Decimal from "decimal.js"
 import { GasStatusService } from "../../balance"
 import { GasStatus } from "../../types"
@@ -82,7 +82,7 @@ export class OrcaActionService implements IActionService {
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         private readonly eventEmitter: EventEmitter2,
         @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly logger: winstonLogger,
     ) { }
 
     async closePosition(
@@ -254,7 +254,7 @@ export class OrcaActionService implements IActionService {
                         commitment: "confirmed",
                         maxRetries: BigInt(5),
                     })
-                this.logger.info(
+                this.logger.debug(
                     WinstonLog.ClosePositionSuccess, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,
@@ -444,7 +444,7 @@ export class OrcaActionService implements IActionService {
                         commitment: "confirmed",
                         maxRetries: BigInt(5),
                     })
-                this.logger.info(
+                this.logger.debug(
                     WinstonLog.OpenPositionSuccess, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,

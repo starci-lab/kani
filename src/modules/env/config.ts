@@ -126,6 +126,16 @@ export const envConfig = () => ({
             expiration: (process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d") as ms.StringValue,
         },
     },
+    mountPath: {
+        gcp: {
+            encryptionSa: process.env.GCP_ENCRYPTION_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "encryption-sa.json"),
+        },
+    },
+    lockCooldown: {
+        openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "20000", 10), // 20s
+        closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "20000", 10), // 20s
+        rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
+    },
     rpcs: {
         [ChainId.Sui]: {
             http: {

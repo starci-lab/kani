@@ -52,7 +52,7 @@ export interface FetchBalancesParams {
 export interface FetchBalancesResponse {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
-    gasBalanceAmount?: BN
+    gasBalanceAmount: BN
 }
 
 export interface ProcessTransferFeesTransactionParams {

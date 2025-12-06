@@ -27,17 +27,29 @@ export class PositionSchema extends AbstractSchema {
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name })
         liquidityPool: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 
-    @Field(() => String, { description: "Amount of target tokens spent to open the position" })
+    @Field(() => String, { description: "The snapshot of the target balance amount before opening the position" })
     @Prop({ type: String, required: true })
-        targetAmountUsed: string
+        snapshotTargetBalanceAmountBeforeOpen: string
 
-    @Field(() => String, { description: "Amount of quote tokens spent to open the position" })
+    @Field(() => String, { description: "The snapshot of the quote balance amount before opening the position" })
     @Prop({ type: String, required: true })
-        quoteAmountUsed: string
+        snapshotQuoteBalanceAmountBeforeOpen: string
 
-    @Field(() => String, { description: "Gas token amount consumed during the position opening transaction" })
-    @Prop({ type: String })
-        gasAmountUsed?: string
+    @Field(() => String, { description: "The snapshot of the gas balance amount before opening the position", nullable: true })
+    @Prop({ type: String, required: false })
+        snapshotGasBalanceAmountBeforeOpen?: string
+
+    @Field(() => String, { description: "The snapshot of the target balance amount after closing the position", nullable: true })
+    @Prop({ type: String, required: false })
+        snapshotTargetBalanceAmountAfterClose?: string
+
+    @Field(() => String, { description: "The snapshot of the quote balance amount after closing the position", nullable: true })
+    @Prop({ type: String, required: false })
+        snapshotQuoteBalanceAmountAfterClose?: string
+
+    @Field(() => String, { description: "The snapshot of the gas balance amount after closing the position", nullable: true })
+    @Prop({ type: String, required: false })
+        snapshotGasBalanceAmountAfterClose?: string
 
     @Field(() => String, { description: "Liquidity amount minted for this position", nullable: true })
     @Prop({ type: String, required: false })

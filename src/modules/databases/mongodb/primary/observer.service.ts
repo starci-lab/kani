@@ -1,6 +1,6 @@
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Injectable } from "@nestjs/common"
-import { Logger as WinstonLogger } from "winston"
+import { Logger as winstonLogger } from "winston"
 import { Model } from "mongoose"
 import {
     ChangeStreamInsertDocument,
@@ -31,7 +31,7 @@ export interface ObserveParams<TFilter, TSchema extends AbstractSchema> {
 export class PrimaryMongooseObserverService {
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonLogger: winstonLogger,
     ) {}
 
     async observe
@@ -58,7 +58,7 @@ export class PrimaryMongooseObserverService {
                     resumeAfter: resumeToken ?? undefined,
                 })
             // log started
-            this.winstonLogger.info(
+            this.winstonLogger.debug(
                 WinstonLog.MongooseChangeStreamStarted, 
                 { model: model.modelName, resumeToken }
             )

@@ -2,8 +2,8 @@ import { Provider } from "@nestjs/common"
 import { KeyManagementServiceClient } from "@google-cloud/kms"
 import { GCP_KMS_CLIENT, GCP_SECRET_CLIENT } from "./gcp.constants"
 import { readFileSync } from "fs"
-import { join } from "path"
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager"
+import { envConfig } from "@modules/env"
 
 export const createGcpKmsClientProvider = (): Provider => ({
     provide: GCP_KMS_CLIENT,
@@ -11,7 +11,7 @@ export const createGcpKmsClientProvider = (): Provider => ({
         return new KeyManagementServiceClient({
             credentials: JSON.parse(
                 readFileSync(
-                    join(process.cwd(), ".gcp", "encryption-sa.json"),
+                    envConfig().mountPath.gcp.encryptionSa,
                     "utf8",
                 ),
             ),
@@ -25,7 +25,7 @@ export const createGcpSecretClientProvider = (): Provider => ({
         return new SecretManagerServiceClient({
             credentials: JSON.parse(
                 readFileSync(
-                    join(process.cwd(), ".gcp", "encryption-sa.json"),
+                    envConfig().mountPath.gcp.encryptionSa,
                     "utf8",
                 ),
             ),
