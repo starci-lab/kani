@@ -94,6 +94,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     connectionName: CONNECTION_NAME,
                     connectionFactory: async (connection: Connection) => {
                         connection.plugin(normalizeMongoose)
+                        connection.set("writeConcern", {
+                            w: "majority",
+                            j: true,
+                        })
                         return connection
                     },
                 }),

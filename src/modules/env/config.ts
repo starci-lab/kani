@@ -236,6 +236,7 @@ export const envConfig = () => ({
         balanceEvaluationInterval: process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL, 10) : 10000,
         activeBotInterval: process.env.BOT_EXECUTOR_ACTIVE_BOT_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_ACTIVE_BOT_INTERVAL, 10) : 10000,
         suiPoolFetchInterval: process.env.BOT_EXECUTOR_SUI_POOL_FETCH_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_SUI_POOL_FETCH_INTERVAL, 10) : 1000,
+        transactionCommitInterval: process.env.BOT_EXECUTOR_TRANSACTION_COMMIT_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_TRANSACTION_COMMIT_INTERVAL, 10) : 10000,
     },
     ports: {
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,

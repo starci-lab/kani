@@ -1,5 +1,4 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import {  } from "@meteora-ag/dlmm"
 import { DynamicDlmmLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
 import {
     LiquidityPoolId,
@@ -7,19 +6,20 @@ import {
     DexId,
     LoadBalancerName,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson, LoadBalancerService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
-import { createObjectId, httpsToWss } from "@utils"
+import { createObjectId } from "@utils"
 import { LbPair } from "./beets"
 import { createCacheKey } from "@modules/cache"
 import { CacheKey } from "@modules/cache"
 import { Cron, CronExpression } from "@nestjs/schedule"
-import { address, createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit"
+import { address } from "@solana/kit"
+import { ClientType, RpcPickerService } from "../../clients"
 
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap {
@@ -30,7 +30,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcPickerService: RpcPickerService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
@@ -108,12 +108,13 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MeteoraDlmm, 
-            this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs.read
-        )
-        const rpc = createSolanaRpc(url)
-        const accountInfo = await rpc.getAccountInfo(address(liquidityPool.poolAddress)).send()
+        const accountInfo = await this.rpcPickerService.withSolanaRpc({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.MeteoraDlmm,
+            callback: async ({ rpc }) => {
+                return await rpc.getAccountInfo(address(liquidityPool.poolAddress)).send()
+            },
+        })
         if (!accountInfo || !accountInfo.value?.data) throw new LiquidityPoolNotFoundException(liquidityPoolId)
         const state = LbPair.struct.read(Buffer.from(accountInfo.value.data), 8)
         return await this.handlePoolStateUpdate(liquidityPoolId, state)
@@ -129,23 +130,28 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MeteoraDlmm, 
-            this.memoryStorageService.clientConfig.meteoraDlmmClientRpcs.read)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
-        const controller = new AbortController()
-        const accountNotifications = await rpcSubscriptions.accountNotifications(
-            address(liquidityPool.poolAddress),
-            {
-                commitment: "confirmed",
-                encoding: "base64",
-            }
-        ).subscribe({
-            abortSignal: controller.signal,
+        await this.rpcPickerService.withSolanaRpc({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.MeteoraDlmm,
+            callback: async ({ rpcSubscriptions }) => {
+                const controller = new AbortController()
+                const accountNotifications 
+                = await rpcSubscriptions.accountNotifications(
+                    address(liquidityPool.poolAddress),
+                    {
+                        commitment: "confirmed",
+                        encoding: "base64",
+                    }
+                ).subscribe({
+                    abortSignal: controller.signal,
+                })
+                for await (const accountNotification of accountNotifications) {
+                    const state = LbPair.struct.read(
+                        Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
+                    )
+                    await this.handlePoolStateUpdate(liquidityPoolId, state)
+                }
+            },
         })
-        for await (const accountNotification of accountNotifications) {
-            const state = LbPair.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
-            await this.handlePoolStateUpdate(liquidityPoolId, state)
-        }
     }
 }

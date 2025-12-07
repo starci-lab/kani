@@ -1,4 +1,6 @@
 export enum WinstonLog {
+    OpenPositionTransactionCommitFailed = "Open.Position.Transaction.Commit.Failed",
+    ClosePositionTransactionCommitFailed = "Close.Position.Transaction.Commit.Failed",
     WebsocketConnected = "Websocket.Connected",
     PythSuiPricesUpdated = "Pyth.Sui.Prices.Updated",
     BybitWsTicker = "Bybit.WS.Ticker",

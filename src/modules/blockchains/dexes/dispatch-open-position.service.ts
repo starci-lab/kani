@@ -23,6 +23,8 @@ import { QuoteRatioService } from "../math"
 import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
 import { FlowXActionService } from "./flowx"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { Cache } from "cache-manager"
 
 @Injectable()
 export class DispatchOpenPositionService {
@@ -36,6 +38,8 @@ export class DispatchOpenPositionService {
         private readonly flowxActionService: FlowXActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
     ) {}
 
     async dispatchOpenPosition(
@@ -44,6 +48,14 @@ export class DispatchOpenPositionService {
             bot,
         }: DispatchOpenPositionParams,
     ) {
+        if (await this.cacheManager.get(
+            createCacheKey(
+                CacheKey.OpenPositionTransaction, {
+                    botId: bot.id
+                })
+        )) {
+            return
+        }
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )

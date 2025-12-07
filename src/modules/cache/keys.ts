@@ -1,6 +1,8 @@
 import BN from "bn.js"
 
 export enum CacheKey {
+    OpenPositionTransaction = "openPositionTransaction",
+    ClosePositionTransaction = "closePositionTransaction",
     WsCexLastPrice = "wsCexLastPrice",
     WsCexOrderBook = "wsCexOrderBook",
     DynamicLiquidityPoolInfo = "dynamicLiquidityPoolInfo",

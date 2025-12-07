@@ -18,7 +18,6 @@ import {
 import BN from "bn.js"
 import {
     address,
-    createSolanaRpc,
     getCompiledTransactionMessageDecoder,
     getTransactionDecoder,
     getBase64Encoder,
@@ -57,12 +56,12 @@ import { BotSchema, TokenSchema } from "@modules/databases"
 import Decimal from "decimal.js"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
-import { LoadBalancerService } from "@modules/mixin"
+import { ClientType, RpcPickerService } from "../clients"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
     constructor(
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcPickerService: RpcPickerService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
@@ -83,56 +82,58 @@ export class SolanaBalanceService implements IBalanceService {
         if (!token) {
             throw new TokenNotFoundException("Token not found")
         }
-        const balanceUrl = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.SolanaBalance,
-            this.primaryMemoryStorageService.clientConfig.solanaBalanceClientRpcs.read
-        )
-        const balanceRpc = createSolanaRpc(balanceUrl)
-        // return the native token balance
-        if (token.type === TokenType.Native) {
-            const balance = await balanceRpc.getBalance(address(bot.accountAddress)).send()
-            return {
-                balanceAmount: new BN(balance.value.toString()),
-            }
-        }
-        // return the token balance
-        const mintAddress = address(token.tokenAddress)
-        const ownerAddress = address(bot.accountAddress)
-        // Derive the user's associated token account (ATA)
-        // This is required because balances are stored in ATA, not in the owner wallet directly.
-        const [
-            ataAddress
-        ] = await findAssociatedTokenPda(
-            {
-                mint: mintAddress,
-                owner: ownerAddress,
-                tokenProgram:
+        return await this.rpcPickerService.withSolanaRpc({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.SolanaBalance,
+            callback: async ({ rpc }) => {
+                // return the native token balance
+                if (token.type === TokenType.Native) {
+                    const balance = await rpc.getBalance(address(bot.accountAddress)).send()
+                    return {
+                        balanceAmount: new BN(balance.value.toString()),
+                    }
+                }
+                // return the token balance
+                const mintAddress = address(token.tokenAddress)
+                const ownerAddress = address(bot.accountAddress)
+                // Derive the user's associated token account (ATA)
+                // This is required because balances are stored in ATA, not in the owner wallet directly.
+                const [
+                    ataAddress
+                ] = await findAssociatedTokenPda(
+                    {
+                        mint: mintAddress,
+                        owner: ownerAddress,
+                        tokenProgram:
                     token.is2022Token
                         ? TOKEN_2022_PROGRAM_ADDRESS
                         : TOKEN_PROGRAM_ADDRESS,
-            }
-        )
+                    }
+                )
 
-        // Token-2022 accounts are handled by the newer token-2022 program.
-        try {
-            if (token.is2022Token) {
-                const token2022 = await fetchToken2022(balanceRpc, ataAddress)
-                return {
-                    balanceAmount: new BN(token2022.data.amount.toString()),
+                // Token-2022 accounts are handled by the newer token-2022 program.
+                try {
+                    if (token.is2022Token) {
+                        const token2022 = await fetchToken2022(rpc, ataAddress)
+                        return {
+                            balanceAmount: new BN(token2022.data.amount.toString()),
+                        }
+                    } else {
+                        // Standard SPL token account
+                        const tokenAccount = await fetchToken(rpc, ataAddress)
+                        return {
+                            balanceAmount: new BN(tokenAccount.data.amount.toString()),
+                        }
+                    }
+                } catch {
+                    // we dont find the ata address, so the balance is 0
+                    return {
+                        balanceAmount: new BN(0),
+                    }
                 }
-            } else {
-                // Standard SPL token account
-                const tokenAccount = await fetchToken(balanceRpc, ataAddress)
-                return {
-                    balanceAmount: new BN(tokenAccount.data.amount.toString()),
-                }
-            }
-        } catch {
-            // we dont find the ata address, so the balance is 0
-            return {
-                balanceAmount: new BN(0),
-            }
-        }
+            },
+        })
+        
     }
 
     public async processSwapTransaction(
@@ -165,70 +166,72 @@ export class SolanaBalanceService implements IBalanceService {
             },
             aggregatorId: batchQuoteResponse.aggregatorId,
         })
-        const { rpc: swapRpc, rpcSubscriptions: swapRpcSubscriptions } = 
-        await this.solanaAggregatorSelectorService.getSolanaRpcs({
-            aggregatorId: batchQuoteResponse.aggregatorId,
-        })
         // we decode the serialized transaction
         const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)
         const swapTransaction = getTransactionDecoder().decode(swapTransactionBytes)
         const compiledSwapTransactionMessage = getCompiledTransactionMessageDecoder().decode(
             swapTransaction.messageBytes,
         )
-        // we decompile the transaction message
-        const swapTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
-            compiledSwapTransactionMessage,
-            swapRpc
-        )
-        // we get the swap instructions
-        const swapInstructions = swapTransactionMessage.instructions
-        // we get the latest blockhash
-        const { value: latestBlockhash } = await swapRpc.getLatestBlockhash().send()
-        // we sign the transaction
-        const txHash = await this.signerService.withSolanaSigner({
-            bot,
-            action: async (signer) => {
-                const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([signer], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                    (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
+        const loadBalancerName = this.solanaAggregatorSelectorService.aggregatorIdToLoadBalancerName(batchQuoteResponse.aggregatorId)
+        return await this.rpcPickerService.withSolanaRpc({
+            clientType: ClientType.Write,
+            mainLoadBalancerName: loadBalancerName,
+            callback: async ({ rpc, rpcSubscriptions }) => {
+                const swapTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
+                    compiledSwapTransactionMessage,
+                    rpc
                 )
-                if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                    throw new TransactionMessageTooLargeException("Transaction message is too large")
-                }
-                const transaction = compileTransaction(transactionMessage)
-                // sign the transaction
-                const signedTransaction = await signTransaction(
-                    [signer.keyPair],
-                    transaction,
-                )
-                assertIsSendableTransaction(signedTransaction)
-                assertIsTransactionWithinSizeLimit(signedTransaction)
-                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                    rpc: swapRpc,
-                    rpcSubscriptions: swapRpcSubscriptions,
+                // we get the swap instructions
+                const swapInstructions = swapTransactionMessage.instructions
+                // we get the latest blockhash
+                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                // we sign the transaction
+                const txHash = await this.signerService.withSolanaSigner({
+                    bot,
+                    action: async (signer) => {
+                        const transactionMessage = pipe(
+                            createTransactionMessage({ version: 0 }),
+                            (tx) => addSignersToTransactionMessage([signer], tx),
+                            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+                            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                            (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
+                        )
+                        if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
+                            throw new TransactionMessageTooLargeException("Transaction message is too large")
+                        }
+                        const transaction = compileTransaction(transactionMessage)
+                        // sign the transaction
+                        const signedTransaction = await signTransaction(
+                            [signer.keyPair],
+                            transaction,
+                        )
+                        assertIsSendableTransaction(signedTransaction)
+                        assertIsTransactionWithinSizeLimit(signedTransaction)
+                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                            rpc,
+                            rpcSubscriptions,
+                        })
+                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                        await sendAndConfirmTransaction(
+                            signedTransaction, {
+                                commitment: "confirmed",
+                                maxRetries: BigInt(5),
+                            })
+                        this.logger.debug(
+                            WinstonLog.SwapTransactionSuccess, {
+                                txHash: transactionSignature.toString(),
+                                bot: bot.id,
+                                tokenInId: tokenIn.displayId,
+                                tokenOutId: tokenOut.displayId,
+                            })
+                        return transactionSignature.toString()
+                    },
                 })
-                const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                await sendAndConfirmTransaction(
-                    signedTransaction, {
-                        commitment: "confirmed",
-                        maxRetries: BigInt(5),
-                    })
-                this.logger.debug(
-                    WinstonLog.SwapTransactionSuccess, {
-                        txHash: transactionSignature.toString(),
-                        bot: bot.id,
-                        tokenInId: tokenIn.displayId,
-                        tokenOutId: tokenOut.displayId,
-                    })
-                return transactionSignature.toString()
+                return {
+                    txHash,
+                }
             },
         })
-        return {
-            txHash,
-        }
     }
 }   
 

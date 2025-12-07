@@ -1,2 +1,0 @@
-export const SUI_CLIENTS = "SUI_CLIENTS"
-export const SOLANA_CLIENTS = "SOLANA_CLIENTS"

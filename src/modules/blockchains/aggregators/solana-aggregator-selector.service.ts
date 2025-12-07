@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { JupiterService } from "./jupiter.service"
-import { AsyncService, LoadBalancerService } from "@modules/mixin"
-import { LoadBalancerName, PrimaryMemoryStorageService } from "@modules/databases"
+import { AsyncService } from "@modules/mixin"
+import { LoadBalancerName } from "@modules/databases"
 import { AggregatorNotFoundException } from "@exceptions"
 import { ChainId } from "@modules/common"
 import { AggregatorId } from "./types"
@@ -12,14 +12,11 @@ import {
     SelectorSwapParams, 
     SelectorSwapResponse 
 } from "./aggregator-selector.interface"
-import { Rpc, SolanaRpcApi, RpcSubscriptions, createSolanaRpcSubscriptions, createSolanaRpc, SolanaRpcSubscriptionsApi } from "@solana/kit"
-import { httpsToWss } from "@utils"
+import { Rpc, SolanaRpcApi, RpcSubscriptions, SolanaRpcSubscriptionsApi } from "@solana/kit"
 
 @Injectable()
 export class SolanaAggregatorSelectorService implements IAggregatorSelectorService {
     constructor(
-        private readonly loadBalancerService: LoadBalancerService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly jupiterService: JupiterService,
         private readonly asyncService: AsyncService,
     ) { }
@@ -67,19 +64,12 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
         }
     }
 
-    async getSolanaRpcs(
-        { aggregatorId }: GetSolanaRpcsParams
-    ): Promise<GetSolanaRpcsResponse> {
+    aggregatorIdToLoadBalancerName(
+        aggregatorId: AggregatorId
+    ): LoadBalancerName {
         switch (aggregatorId) {
         case AggregatorId.Jupiter: {
-            const url = this.loadBalancerService.balanceP2c(
-                LoadBalancerName.JupiterAggregator,
-                this.primaryMemoryStorageService.clientConfig.jupiterAggregatorClientRpcs.write
-            )
-            return {
-                rpc: createSolanaRpc(url),
-                rpcSubscriptions: createSolanaRpcSubscriptions(httpsToWss(url)),
-            }
+            return LoadBalancerName.JupiterAggregator
         }
         default:
             throw new AggregatorNotFoundException("Aggregator not found")

@@ -63,14 +63,14 @@ export class OraOpenTransactionService {
         txHash,
     }: OnTxSuccessParams) {
         const previousMessage = this.oraService.getMessage(id)
-        this.oraService.update(id, `${previousMessage} \n 3. Tx ${txHash} successful. Triggering rebalancing...`)
+        this.oraService.update(id, `${previousMessage} \n 3. Tx ${txHash} successful. Triggering balances refetch...`)
     }
 
-    onRebalancingSuccess({
+    onBalancesRefetched({
         id,
-    }: OnRebalancingSuccessParams) {
+    }: OnBalancesRefetchedParams) {
         const previousMessage = this.oraService.getMessage(id)
-        this.oraService.update(id, `${previousMessage} \n 4. Rebalancing successful. Snapshoting to database...`)
+        this.oraService.update(id, `${previousMessage} \n 4. Balances refetched. Snapshoting to database...`)
     }
 
     onProcessFailure({
@@ -111,7 +111,7 @@ interface OnSnapshotSuccessParams {
     id: string
 }
 
-interface OnRebalancingSuccessParams {
+interface OnBalancesRefetchedParams {
     id: string
 }
 

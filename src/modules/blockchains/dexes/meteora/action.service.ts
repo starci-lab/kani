@@ -14,9 +14,7 @@ import { SignerService } from "../../signers"
 import { 
     addSignersToTransactionMessage, 
     appendTransactionMessageInstructions, 
-    compileTransaction, 
-    createSolanaRpc, 
-    createSolanaRpcSubscriptions,
+    compileTransaction,
     pipe, 
     setTransactionMessageFeePayerSigner, 
     setTransactionMessageLifetimeUsingBlockhash, 
@@ -28,7 +26,6 @@ import {
     assertIsTransactionWithinSizeLimit, 
     getSignatureFromTransaction,
 } from "@solana/kit"
-import { httpsToWss } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import { 
@@ -49,13 +46,17 @@ import {
 import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
-import { LoadBalancerService } from "@modules/mixin"
+import { RetryService } from "@modules/mixin"
 import { OraClosePositionService, OraOpenTransactionService } from "@modules/ora"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { Cache } from "cache-manager"
+import { ClientType, RpcPickerService } from "../../clients"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
     constructor(
-        private readonly loadBalancerService: LoadBalancerService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -73,8 +74,9 @@ export class MeteoraActionService implements IActionService {
         private readonly eventEmitter: EventEmitter2,
         private readonly oraOpenTransactionService: OraOpenTransactionService,
         private readonly oraClosePositionService: OraClosePositionService,
+        private readonly retryService: RetryService,
+        private readonly rpcPickerService: RpcPickerService,
     ) {}
-
     async openPosition({
         state,
         bot,
@@ -123,12 +125,6 @@ export class MeteoraActionService implements IActionService {
                 desiredQuoteAmount: snapshotQuoteBalanceAmountBN,
                 desiredGasAmount: snapshotGasBalanceAmountBN,
             })
-            const url = this.loadBalancerService.balanceP2c(
-                LoadBalancerName.MeteoraDlmm, 
-                this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.write
-            )
-            const rpc = createSolanaRpc(url)
-            const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
             // check if the tokens are in the pool
             const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
             const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
@@ -149,112 +145,128 @@ export class MeteoraActionService implements IActionService {
             // append the fee instructions
             // convert the transaction to a transaction with lifetime
             // sign the transaction
-            const txHash = await this.signerService.withSolanaSigner({
-                bot,
-                action: async (signer) => {
-                    const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                    const transactionMessage = pipe(
-                        createTransactionMessage({ version: 0 }),
-                        (tx) => addSignersToTransactionMessage([signer, positionKeyPair], tx),
-                        (tx) => setTransactionMessageFeePayerSigner(signer, tx),
-                        (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
-                        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                    )
-                    if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                        throw new TransactionMessageTooLargeException("Transaction message is too large")
-                    }
-                    const transaction = compileTransaction(transactionMessage)
-                    // sign the transaction
-                    const signedTransaction = await signTransaction(
-                        [signer.keyPair, positionKeyPair.keyPair],
-                        transaction,
-                    )
-                    assertIsSendableTransaction(signedTransaction)
-                    assertIsTransactionWithinSizeLimit(signedTransaction)
-                    const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                        rpc,
-                        rpcSubscriptions,
+            const txHash = await this.rpcPickerService.withSolanaRpc<string>({
+                clientType: ClientType.Write,
+                mainLoadBalancerName: LoadBalancerName.MeteoraDlmm,
+                callback: async ({ rpc, rpcSubscriptions }) => {
+                    return await this.signerService.withSolanaSigner({
+                        bot,
+                        action: async (signer) => {
+                            const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                            const transactionMessage = pipe(
+                                createTransactionMessage({ version: 0 }),
+                                (tx) => addSignersToTransactionMessage([signer, positionKeyPair], tx),
+                                (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+                                (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
+                                (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                            )
+                            if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
+                                throw new TransactionMessageTooLargeException("Transaction message is too large")
+                            }
+                            const transaction = compileTransaction(transactionMessage)
+                            // sign the transaction
+                            const signedTransaction = await signTransaction(
+                                [signer.keyPair, positionKeyPair.keyPair],
+                                transaction,
+                            )
+                            assertIsSendableTransaction(signedTransaction)
+                            assertIsTransactionWithinSizeLimit(signedTransaction)
+                            const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                                rpc,
+                                rpcSubscriptions,
+                            })
+                            const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                            await sendAndConfirmTransaction(
+                                signedTransaction, {
+                                    commitment: "confirmed",
+                                    maxRetries: BigInt(5)
+                                })
+                            this.logger.debug(
+                                WinstonLog.OpenPositionSuccess, {
+                                    txHash: transactionSignature.toString(),
+                                    bot: bot.id,
+                                    liquidityPoolId: _state.static.displayId,
+                                })
+                            return transactionSignature.toString()
+                        },
                     })
-                    const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                    await sendAndConfirmTransaction(
-                        signedTransaction, {
-                            commitment: "confirmed",
-                            maxRetries: BigInt(5)
-                        })
-                    this.logger.debug(
-                        WinstonLog.OpenPositionSuccess, {
-                            txHash: transactionSignature.toString(),
-                            bot: bot.id,
-                            liquidityPoolId: _state.static.displayId,
-                        })
-                    return transactionSignature.toString()
                 },
-            })
+            })           
             this.oraOpenTransactionService.onTxSuccess({
                 id: oraId,
                 txHash,
             })
-            // we refetch the balances after the position is opened
-            const {
-                balancesSnapshotsParams,
-                swapsSnapshotsParams,
-            } = await this.balanceService.executeBalanceRebalancing({
-                bot,
-                withoutSnapshot: true,
-            })
-            this.oraOpenTransactionService.onRebalancingSuccess({
-                id: oraId,
-            })
-            // update the snapshot balances
-            const session = await this.connection.startSession()
-            await session.withTransaction(
-                async () => {
-                    await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
-                        snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
-                        snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
-                        snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
+            // retry until the snapshot balances are updated
+            await this.retryService.retry({
+                action: async () => {
+                    // we refetch the balances after the position is opened
+                    const {
+                        targetBalanceAmount,
+                        quoteBalanceAmount,
+                        gasBalanceAmount,
+                    } = await this.balanceService.fetchBalances({
                         bot,
-                        targetIsA,
-                        amountA,
-                        amountB,
-                        positionId: positionKeyPair.address.toString(),
-                        minBinId: minBinId.toNumber(),
-                        maxBinId: maxBinId.toNumber(),
-                        chainId: bot.chainId,
-                        liquidityPoolId: _state.static.displayId,
-                        openTxHash: txHash,
-                        session,
-                        feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
-                        feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
                     })
-                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                        bot,
-                        targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                        quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                        gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
-                        session,
+                    this.oraOpenTransactionService.onBalancesRefetched({
+                        id: oraId,
                     })
-                    if (swapsSnapshotsParams) {
-                        await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                            ...swapsSnapshotsParams,
-                            session,
+                    const session = await this.connection.startSession()
+                    // we try to cache 
+                    await session.withTransaction(
+                        async () => {
+                            // update the snapshot balances
+                            await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
+                                snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
+                                snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
+                                snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
+                                bot,
+                                targetIsA,
+                                amountA,
+                                amountB,
+                                positionId: positionKeyPair.address.toString(),
+                                minBinId: minBinId.toNumber(),
+                                maxBinId: maxBinId.toNumber(),
+                                chainId: bot.chainId,
+                                liquidityPoolId: _state.static.displayId,
+                                openTxHash: txHash,
+                                feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                                feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
+                                session,
+                            })
+                            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                                bot,
+                                targetBalanceAmount: new BN(targetBalanceAmount),
+                                quoteBalanceAmount: new BN(quoteBalanceAmount),
+                                gasAmount: new BN(gasBalanceAmount),
+                                session,
+                            })
                         })
-                    }
-                })
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.UpdateActiveBot, {
-                        botId: bot.id,
+                    this.eventEmitter.emit(
+                        createEventName(
+                            EventName.UpdateActiveBot, {
+                                botId: bot.id,
+                            })
+                    )
+                    this.eventEmitter.emit(
+                        createEventName(
+                            EventName.PositionOpened, {
+                                botId: bot.id,
+                            })
+                    )
+                    this.oraOpenTransactionService.onSnapshotSuccess({
+                        id: oraId,
                     })
-            )
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.PositionOpened, {
-                        botId: bot.id,
-                    })
-            )
-            this.oraOpenTransactionService.onSnapshotSuccess({
-                id: oraId,
+                    // if success, we clear the cache
+                    await this.cacheManager.del(
+                        createCacheKey(
+                            CacheKey.OpenPositionTransaction, {
+                                botId: bot.id
+                            })
+                    )
+                },
+                maxRetries: 10,
+                delay: 1000,
+                factor: 2,
             })
         } catch (error) {
             this.oraOpenTransactionService.onProcessFailure({
@@ -397,12 +409,6 @@ export class MeteoraActionService implements IActionService {
         ) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MeteoraDlmm, 
-            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.write
-        )
-        const rpc = createSolanaRpc(url)
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -418,124 +424,137 @@ export class MeteoraActionService implements IActionService {
             bot,
             state: _state,
         })
-        // sign the transaction
-        const txHash = await this.signerService.withSolanaSigner({
-            bot,
-            action: async (signer) => {
-                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => addSignersToTransactionMessage([signer], tx),
-                    (tx) => setTransactionMessageFeePayerSigner(signer, tx),
-                    (tx) => appendTransactionMessageInstructions(closePositionInstructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                )
-                if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                    throw new TransactionMessageTooLargeException("Transaction message is too large")
-                }
-                const transaction = compileTransaction(transactionMessage)
+        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
+            clientType: ClientType.Write,
+            mainLoadBalancerName: LoadBalancerName.MeteoraDlmm,
+            callback: async ({ rpc, rpcSubscriptions }) => {
                 // sign the transaction
-                const signedTransaction = await signTransaction(
-                    [signer.keyPair],
-                    transaction,
-                )
-                assertIsSendableTransaction(signedTransaction)
-                assertIsTransactionWithinSizeLimit(signedTransaction)
-                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                    rpc,
-                    rpcSubscriptions,
+                return await this.signerService.withSolanaSigner({
+                    bot,
+                    action: async (signer) => {
+                        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                        const transactionMessage = pipe(
+                            createTransactionMessage({ version: 0 }),
+                            (tx) => addSignersToTransactionMessage([signer], tx),
+                            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+                            (tx) => appendTransactionMessageInstructions(closePositionInstructions, tx),
+                            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                        )
+                        if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
+                            throw new TransactionMessageTooLargeException("Transaction message is too large")
+                        }
+                        const transaction = compileTransaction(transactionMessage)
+                        // sign the transaction
+                        const signedTransaction = await signTransaction(
+                            [signer.keyPair],
+                            transaction,
+                        )
+                        assertIsSendableTransaction(signedTransaction)
+                        assertIsTransactionWithinSizeLimit(signedTransaction)
+                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                            rpc,
+                            rpcSubscriptions,
+                        })
+                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                        await sendAndConfirmTransaction(
+                            signedTransaction, {
+                                commitment: "confirmed",
+                                maxRetries: BigInt(5),
+                            })
+                        this.logger.debug(
+                            WinstonLog.ClosePositionSuccess, {
+                                txHash: transactionSignature.toString(),
+                                bot: bot.id,
+                                liquidityPoolId: _state.static.displayId,
+                            })
+                        return transactionSignature.toString()
+                    },
                 })
-                const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                await sendAndConfirmTransaction(
-                    signedTransaction, {
-                        commitment: "confirmed",
-                        maxRetries: BigInt(5),
-                    })
-                this.logger.debug(
-                    WinstonLog.ClosePositionSuccess, {
-                        txHash: transactionSignature.toString(),
-                        bot: bot.id,
-                        liquidityPoolId: _state.static.displayId,
-                    })
-                return transactionSignature.toString()
             },
-        })
+        }) 
         this.oraClosePositionService.onTxSuccess({
             id: oraId,
             txHash,
         })
-        const {
-            balancesSnapshotsParams,
-            swapsSnapshotsParams,
-        } = await this.balanceService.executeBalanceRebalancing({
-            bot,
-            withoutSnapshot: true,
-        })
-        this.oraClosePositionService.onRebalancingSuccess({
-            id: oraId,
-        })
-        const before: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-            gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
-        }
-        const after: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-            quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasAmount || 0),
-        }
-        const { 
-            roi, 
-            pnl 
-        } = await this.profitabilityMathService.calculateProfitability({
-            before,
-            after,
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            chainId: bot.chainId,
-        })
-        this.oraClosePositionService.onProfitabilityCalculationSuccess({
-            id: oraId,
-            roi,
-            pnl,
-        })
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async () => {
-                if (!bot.activePosition) {
-                    throw new ActivePositionNotFoundException(
-                        bot.id, 
-                        "Active position not found"
-                    )
-                }
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+        await this.retryService.retry({
+            action: async () => {
+                const {
+                    balancesSnapshotsParams,
+                    swapsSnapshotsParams,
+                } = await this.balanceService.executeBalanceRebalancing({
                     bot,
-                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
-                    session,
+                    withoutSnapshot: true,
                 })
-                await this.closePositionSnapshotService
-                    .updateClosePositionTransactionRecord({
-                        bot,
-                        pnl,
-                        roi,
-                        positionId: bot.activePosition.id,
-                        closeTxHash: txHash,
-                        session,
-                        snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-                        snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-                        snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasAmount || 0),
-                    })
-                if (swapsSnapshotsParams) {
-                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                        ...swapsSnapshotsParams,
-                        session,
-                    })
+                this.oraClosePositionService.onRebalancingSuccess({
+                    id: oraId,
+                })
+                const before: CalculateProfitability = {
+                    targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
+                    quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
+                    gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
                 }
-            })
-        this.oraClosePositionService.onSnapshotSuccess({
-            id: oraId,
+                const after: CalculateProfitability = {
+                    targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+                    quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+                    gasBalanceAmount: new BN(balancesSnapshotsParams?.gasAmount || 0),
+                }
+                const { 
+                    roi, 
+                    pnl 
+                } = await this.profitabilityMathService.calculateProfitability({
+                    before,
+                    after,
+                    targetTokenId: targetToken.displayId,
+                    quoteTokenId: quoteToken.displayId,
+                    chainId: bot.chainId,
+                })
+                this.oraClosePositionService.onProfitabilityCalculationSuccess({
+                    id: oraId,
+                    roi,
+                    pnl,
+                })
+                const session = await this.connection.startSession()
+                await session.withTransaction(
+                    async () => {
+                        if (!bot.activePosition) {
+                            throw new ActivePositionNotFoundException(
+                                bot.id, 
+                                "Active position not found"
+                            )
+                        }
+                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                            bot,
+                            targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                            quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                            gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
+                            session,
+                        })
+                        await this.closePositionSnapshotService
+                            .updateClosePositionTransactionRecord({
+                                bot,
+                                pnl,
+                                roi,
+                                positionId: bot.activePosition.id,
+                                closeTxHash: txHash,
+                                session,
+                                snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+                                snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+                                snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasAmount || 0),
+                            })
+                        if (swapsSnapshotsParams) {
+                            await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                                ...swapsSnapshotsParams,
+                                session,
+                            })
+                        }
+                    })
+                this.oraClosePositionService.onSnapshotSuccess({
+                    id: oraId,
+                })
+            },
+            maxRetries: 10,
+            delay: 1000,
+            factor: 2,
         })
     }
 }
