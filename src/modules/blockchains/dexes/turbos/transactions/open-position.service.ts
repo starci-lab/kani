@@ -18,7 +18,6 @@ import {
     TargetOperationalGasAmountNotFoundException 
 } from "@exceptions"
 import { ChainId } from "@typedefs"
-import { SuiClient } from "@mysten/sui/client"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { adjustSlippage } from "@utils"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
@@ -91,7 +90,7 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinA 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                suiClient: new SuiClient({ url }),
+                loadBalancerName: LoadBalancerName.TurbosClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenA.tokenAddress,
@@ -102,7 +101,7 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                suiClient: new SuiClient({ url }),
+                loadBalancerName: LoadBalancerName.TurbosClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenB.tokenAddress,

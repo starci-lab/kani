@@ -18,18 +18,18 @@ import { Injectable } from "@nestjs/common"
 import { adjustSlippage, decimalToBips } from "@utils"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { LoadBalancerService, DayjsService } from "@modules/mixin"
-import { SuiClient } from "@mysten/sui/client"
+import { DayjsService } from "@modules/mixin"
 import { SelectCoinsService } from "../../../tx-builder"
 import { ChainId } from "@typedefs"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { FeeService } from "../../../math"
+import { RpcPickerService } from "@modules/blockchains"
 
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcPickerService: RpcPickerService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly dayjsService: DayjsService,
         private readonly feeService: FeeService,
@@ -62,10 +62,6 @@ export class OpenPositionTxbService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.FlowXClmm,
-            this.primaryMemoryStorageService.clientConfig.flowXClmmClientRpcs.read
-        )
         const targetOperationalAmount = this.primaryMemoryStorageService.
             gasConfig.
             gasAmountRequired[ChainId.Sui]?.
@@ -99,7 +95,7 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinA 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                suiClient: new SuiClient({ url }),
+                loadBalancerName: LoadBalancerName.FlowXClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenA.tokenAddress,
@@ -110,7 +106,7 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                suiClient: new SuiClient({ url }),
+                loadBalancerName: LoadBalancerName.FlowXClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenB.tokenAddress,

@@ -1,15 +1,21 @@
 import { LiquidityPoolState } from "../../../interfaces"
-import { BotSchema, LoadBalancerName, MomentumLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    BotSchema,
+    LoadBalancerName,
+    MomentumLiquidityPoolMetadata,
+    PrimaryMemoryStorageService,
+} from "@modules/databases"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
-import { InvalidPoolTokensException } from "src/exceptions/tokens"
+import { InvalidPoolTokensException } from "@exceptions"
 import Decimal from "decimal.js"
-import { FeeToAddressNotFoundException, TargetOperationalGasAmountNotFoundException } from "@exceptions"
+import {
+    FeeToAddressNotFoundException,
+    TargetOperationalGasAmountNotFoundException,
+} from "@exceptions"
 import { FeeService } from "../../../math"
 import { SelectCoinsService } from "../../../tx-builder"
 import BN from "bn.js"
-import { SuiClient } from "@mysten/sui/client"
-import { LoadBalancerService } from "@modules/mixin"
 import { ChainId } from "@modules/common"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { adjustSlippage } from "@utils"
@@ -18,88 +24,76 @@ import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly feeService: FeeService,
-        private readonly selectCoinsService: SelectCoinsService,
-        private readonly loadBalancerService: LoadBalancerService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly feeService: FeeService,
+    private readonly selectCoinsService: SelectCoinsService,
     ) {}
 
-    async createOpenPositionTxb(
-        {
-            txb,
-            state,
-            tickLower,
-            tickUpper,
-            amountAMax,
-            amountBMax,
-            bot,
-        }: CreateOpenPositionTxbParams
-    ): Promise<CreateOpenPositionTxbResponse> {
+    async createOpenPositionTxb({
+        txb,
+        state,
+        tickLower,
+        tickUpper,
+        amountAMax,
+        amountBMax,
+        bot,
+    }: CreateOpenPositionTxbParams): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
         const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
+            (token) => token.id === state.static.tokenA.toString(),
         )
         const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
+            (token) => token.id === state.static.tokenB.toString(),
         )
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException(
+                "Either token A or token B is not in the pool",
+            )
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
+        const feeToAddress =
+      this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]
+          ?.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }
-        const {
-            feeAmount: feeAmountA,
-            remainingAmount: remainingAmountA,
-        } = this.feeService.splitAmount({
-            amount: amountAMax,
-            chainId: bot.chainId,
-        })
-        const {
-            feeAmount: feeAmountB,
-            remainingAmount: remainingAmountB,
-        } = this.feeService.splitAmount({
-            amount: amountBMax,
-            chainId: bot.chainId,
-        })
+        const { feeAmount: feeAmountA, remainingAmount: remainingAmountA } =
+      this.feeService.splitAmount({
+          amount: amountAMax,
+          chainId: bot.chainId,
+      })
+        const { feeAmount: feeAmountB, remainingAmount: remainingAmountB } =
+      this.feeService.splitAmount({
+          amount: amountBMax,
+          chainId: bot.chainId,
+      })
         // we check balances of tokenA and tokenB
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MomentumClmm,
-            this.primaryMemoryStorageService.clientConfig.momentumClmmClientRpcs.read
-        )
-        const targetOperationalAmount = this.primaryMemoryStorageService.
-            gasConfig.
-            gasAmountRequired[ChainId.Sui]?.
-            targetOperationalAmount
+        const targetOperationalAmount =
+      this.primaryMemoryStorageService.gasConfig.gasAmountRequired[ChainId.Sui]
+          ?.targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 ChainId.Sui,
-                "Target operational gas amount not found"
+                "Target operational gas amount not found",
             )
         }
-        const { 
-            sourceCoin: sourceCoinA 
-        } = await this.selectCoinsService.fetchAndMergeCoins(
-            {
-                suiClient: new SuiClient({ url }),
-                txb,
-                owner: bot.accountAddress,
-                coinType: tokenA.tokenAddress,
-                requiredAmount: amountAMax,
-                suiGasAmount: new BN(targetOperationalAmount),
-            })
-        const { 
-            sourceCoin: sourceCoinB 
-        } = await this.selectCoinsService.fetchAndMergeCoins(
-            {
-                suiClient: new SuiClient({ url }),
-                txb,
-                owner: bot.accountAddress,
-                coinType: tokenB.tokenAddress,
-                requiredAmount: amountBMax,
-                suiGasAmount: new BN(targetOperationalAmount),
-            })
+        const { sourceCoin: sourceCoinA } =
+      await this.selectCoinsService.fetchAndMergeCoins({
+          loadBalancerName: LoadBalancerName.MomentumClmm,
+          txb,
+          owner: bot.accountAddress,
+          coinType: tokenA.tokenAddress,
+          requiredAmount: amountAMax,
+          suiGasAmount: new BN(targetOperationalAmount),
+      })
+        const { sourceCoin: sourceCoinB } =
+      await this.selectCoinsService.fetchAndMergeCoins({
+          loadBalancerName: LoadBalancerName.MomentumClmm,
+          txb,
+          owner: bot.accountAddress,
+          coinType: tokenB.tokenAddress,
+          requiredAmount: amountBMax,
+          suiGasAmount: new BN(targetOperationalAmount),
+      })
         const { spendCoin: feeCoinA } = this.selectCoinsService.splitCoin({
             txb,
             sourceCoin: sourceCoinA,
@@ -110,25 +104,16 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB,
             requiredAmount: feeAmountB,
         })
-        txb.transferObjects([
-            feeCoinA.coinArg, 
-            feeCoinB.coinArg
-        ], feeToAddress)
-        const {
-            packageId,
-            versionObject,
-        } = state.static.metadata as MomentumLiquidityPoolMetadata
+        txb.transferObjects([feeCoinA.coinArg, feeCoinB.coinArg], feeToAddress)
+        const { packageId, versionObject } = state.static
+            .metadata as MomentumLiquidityPoolMetadata
         const [lowerTick1] = txb.moveCall({
             target: `${packageId}::tick_math::get_tick_at_sqrt_price`,
-            arguments: [
-                txb.pure.u128(BigInt(tickLower.toNumber()))
-            ],
+            arguments: [txb.pure.u128(BigInt(tickLower.toNumber()))],
         })
         const [upperTick1] = txb.moveCall({
             target: `${packageId}::tick_math::get_tick_at_sqrt_price`,
-            arguments: [
-                txb.pure.u128(BigInt(tickUpper.toNumber()))
-            ],
+            arguments: [txb.pure.u128(BigInt(tickUpper.toNumber()))],
         })
         const [tick_spacing] = txb.moveCall({
             target: `${packageId}::i32::from_u32`,
@@ -138,7 +123,7 @@ export class OpenPositionTxbService {
             target: `${packageId}::i32::mod`,
             arguments: [lowerTick1, tick_spacing],
         })
-      
+
         const [upperTickmod] = txb.moveCall({
             target: `${packageId}::i32::mod`,
             arguments: [upperTick1, tick_spacing],
@@ -147,16 +132,12 @@ export class OpenPositionTxbService {
             target: `${packageId}::i32::sub`,
             arguments: [upperTick1, upperTickmod],
         })
-      
-        const [
-            lowerTick
-        ] = txb.moveCall({
+
+        const [lowerTick] = txb.moveCall({
             target: `${packageId}::i32::sub`,
             arguments: [lowerTick1, lowerTickmod],
         })
-        const [
-            positionObj
-        ] = txb.moveCall({
+        const [positionObj] = txb.moveCall({
             target: `${packageId}::liquidity::open_position`,
             arguments: [
                 txb.object(state.static.poolAddress),
@@ -164,10 +145,7 @@ export class OpenPositionTxbService {
                 txb.object(upperTick),
                 txb.object(versionObject),
             ],
-            typeArguments: [
-                tokenA.tokenAddress, 
-                tokenB.tokenAddress
-            ],
+            typeArguments: [tokenA.tokenAddress, tokenB.tokenAddress],
         })
         txb.transferObjects([positionObj], txb.pure.address(bot.accountAddress))
         const [coinAOut, coinBOut] = txb.moveCall({
@@ -178,8 +156,12 @@ export class OpenPositionTxbService {
                 txb.object(positionObj),
                 txb.object(sourceCoinA.coinArg),
                 txb.object(sourceCoinB.coinArg),
-                txb.pure.u64(adjustSlippage(remainingAmountA, OPEN_POSITION_SLIPPAGE).toString()),
-                txb.pure.u64(adjustSlippage(remainingAmountB, OPEN_POSITION_SLIPPAGE).toString()),
+                txb.pure.u64(
+                    adjustSlippage(remainingAmountA, OPEN_POSITION_SLIPPAGE).toString(),
+                ),
+                txb.pure.u64(
+                    adjustSlippage(remainingAmountB, OPEN_POSITION_SLIPPAGE).toString(),
+                ),
                 txb.object(SUI_CLOCK_OBJECT_ID),
                 txb.object(versionObject),
             ],
@@ -190,23 +172,23 @@ export class OpenPositionTxbService {
             txb,
             feeAmountA,
             feeAmountB,
-        }  
+        }
     }
 }
 
 export interface CreateOpenPositionTxbParams {
-    txb: Transaction
-    state: LiquidityPoolState
-    tickLower: Decimal
-    tickUpper: Decimal
-    amountAMax: BN
-    amountBMax: BN
-    bot: BotSchema
-    liquidity: BN
+  txb: Transaction;
+  state: LiquidityPoolState;
+  tickLower: Decimal;
+  tickUpper: Decimal;
+  amountAMax: BN;
+  amountBMax: BN;
+  bot: BotSchema;
+  liquidity: BN;
 }
 
 export interface CreateOpenPositionTxbResponse {
-    txb: Transaction
-    feeAmountA: BN
-    feeAmountB: BN
+  txb: Transaction;
+  feeAmountA: BN;
+  feeAmountB: BN;
 }

@@ -1,9 +1,8 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
+import { ClientType, DynamicLiquidityPoolInfo, RpcPickerService } from "@modules/blockchains"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { SuiClient } from "@mysten/sui/client"
-import { AsyncService, LoadBalancerService } from "@modules/mixin"
+import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import BN from "bn.js"
@@ -30,7 +29,7 @@ export class FlowXObserverService {
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
         private readonly events: EventEmitterService,
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcPickerService: RpcPickerService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -60,18 +59,16 @@ export class FlowXObserverService {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.FlowXClmm, 
-            this.memoryStorageService.clientConfig.flowXClmmClientRpcs.read
-        )
-        const client = new SuiClient({
-            url,
-            network: "mainnet",
-        })
-        const accountInfo = await client.getObject({
-            id: liquidityPool.poolAddress,
-            options: {
-                showContent: true,
+        const accountInfo = await this.rpcPickerService.withSuiClient({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.FlowXClmm,
+            callback: async (client) => {
+                return await client.getObject({
+                    id: liquidityPool.poolAddress,
+                    options: {
+                        showContent: true,
+                    },
+                })
             },
         })
         if (!accountInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)

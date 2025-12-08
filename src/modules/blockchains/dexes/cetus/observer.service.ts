@@ -1,8 +1,8 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
+import { DynamicLiquidityPoolInfo, ClientType, RpcPickerService } from "@modules/blockchains"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId, LoadBalancerName } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { AsyncService, LoadBalancerService } from "@modules/mixin"
+import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
@@ -15,7 +15,6 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
-import { SuiClient } from "@mysten/sui/client"
 
 @Injectable()
 export class CetusObserverService {
@@ -29,8 +28,7 @@ export class CetusObserverService {
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
         private readonly events: EventEmitterService,
-        private readonly loadBalancerService: LoadBalancerService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly rpcPickerService: RpcPickerService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -60,18 +58,16 @@ export class CetusObserverService {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.CetusClmm,
-            this.primaryMemoryStorageService.clientConfig.cetusClmmClientRpcs.read
-        )
-        const client = new SuiClient({
-            url,
-            network: "mainnet",
-        })
-        const objectInfo = await client.getObject({
-            id: liquidityPool.poolAddress,
-            options: {
-                showContent: true,
+        const objectInfo = await this.rpcPickerService.withSuiClient({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.CetusClmm,
+            callback: async (client) => {
+                return await client.getObject({
+                    id: liquidityPool.poolAddress,
+                    options: {
+                        showContent: true,
+                    },
+                })
             },
         })
         if (!objectInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)

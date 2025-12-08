@@ -11,26 +11,25 @@ import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
     InjectPrimaryMongoose, 
-    PrimaryMemoryStorageService
+    PrimaryMemoryStorageService,
+    LoadBalancerName
 } from "@modules/databases"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 import { CalculateProfitability, ProfitabilityMathService, TickMathService } from "../../math"
-import { LoadBalancerName } from "@modules/databases"
-import { LoadBalancerService } from "@modules/mixin"
-import { SuiClient } from "@mysten/sui/client"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Connection } from "mongoose"
-import { BalanceService, GasStatusService } from "../../balance"
+import { BalanceService } from "../../balance"
 import { 
     ActivePositionNotFoundException,
     InvalidPoolTokensException, 
-    SnapshotBalancesBeforeOpenNotSetException, 
+    SnapshotBalancesBeforeOpenNotSetException,
+    SnapshotBalancesNotSetException,
     TokenNotFoundException, 
     TransactionEventNotFoundException, 
     TransactionStimulateFailedException
 } from "@exceptions"
-import { DynamicLiquidityPoolInfo, GasStatus } from "../../types"
+import { DynamicLiquidityPoolInfo } from "../../types"
 import { 
     ClosePositionSnapshotService, 
     SwapTransactionSnapshotService,
@@ -38,6 +37,11 @@ import {
     BalanceSnapshotService
 } from "../../snapshots"
 import Decimal from "decimal.js"
+import {
+    OraClosePositionService,
+    OraOpenTransactionService,
+} from "@modules/ora"
+import { ClientType, RpcPickerService } from "../../clients"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -46,201 +50,195 @@ export class MomentumActionService implements IActionService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly openPositionTxbService: OpenPositionTxbService,
     private readonly tickMathService: TickMathService,
-    private readonly loadBalancerService: LoadBalancerService,
     private readonly eventEmitter: EventEmitter2,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     private readonly balanceService: BalanceService,
-    private readonly gasStatusService: GasStatusService,
     private readonly openPositionSnapshotService: OpenPositionSnapshotService,
     private readonly balanceSnapshotService: BalanceSnapshotService,
     private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
     private readonly closePositionSnapshotService: ClosePositionSnapshotService,
     private readonly closePositionTxbService: ClosePositionTxbService,
     private readonly profitabilityMathService: ProfitabilityMathService,
+    private readonly rpcPickerService: RpcPickerService,
+    private readonly oraOpenTransactionService: OraOpenTransactionService,
+    private readonly oraClosePositionService: OraClosePositionService,
     ) {}
 
     /**
-   * Open LP position on Momentum CLMM
-   */
+     * Open LP position on Momentum CLMM
+     */
     async openPosition({
         bot,
         state,
     }: OpenPositionParams): Promise<void> {
         const _state = state as LiquidityPoolState
-        const txb = new Transaction()
-        if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
-            throw new Error("Snapshot balances not set")
-        }
-        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
-        const { 
-            tickLower, 
-            tickUpper
-        } = await this.tickMathService.getTickBounds({
-            state: _state,
+        const oraId = this.oraOpenTransactionService.start({
             bot,
+            liquidityPoolId: _state.static.displayId,
         })
-        const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
-            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
-            snapshotTargetBalanceAmountBN,
-            snapshotQuoteBalanceAmountBN,
-            true
-        )
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
-        if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
-        }       
-        const targetIsA = bot.targetToken.toString() === tokenA.id
-        const targetToken = targetIsA ? tokenA : tokenB
-        const quoteToken = targetIsA ? tokenB : tokenA
+        try {
+            const txb = new Transaction()
+            if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
+                throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+            }
+            const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
+            const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+            const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
+            const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
+            const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
+            if (!tokenA || !tokenB) {
+                throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            }       
+            const targetIsA = bot.targetToken.toString() === tokenA.id
+            const targetToken = targetIsA ? tokenA : tokenB
+            const quoteToken = targetIsA ? tokenB : tokenA
+            // we log the desired amounts to the ora service
+            this.oraOpenTransactionService.onDesiredAmountsCalculated({
+                id: oraId,
+                bot,
+                targetTokenId: targetToken.displayId,
+                quoteTokenId: quoteToken.displayId,
+                desiredTargetAmount: snapshotTargetBalanceAmountBN,
+                desiredQuoteAmount: snapshotQuoteBalanceAmountBN,
+                desiredGasAmount: snapshotGasBalanceAmountBN,
+            })
+            const { 
+                tickLower, 
+                tickUpper
+            } = await this.tickMathService.getTickBounds({
+                state: _state,
+                bot,
+            })
+            const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
+                ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+                ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
+                ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
+                snapshotTargetBalanceAmountBN,
+                snapshotQuoteBalanceAmountBN,
+                true
+            )
 
-        const { 
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-        } = await this.openPositionTxbService.createOpenPositionTxb({
-            txb,
-            bot,
-            amountAMax: snapshotTargetBalanceAmountBN,
-            amountBMax: snapshotQuoteBalanceAmountBN,
-            liquidity: _liquidity,
-            tickLower,
-            state: _state,
-            tickUpper,
-        })
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MomentumClmm, 
-            this.primaryMemoryStorageService
-                .clientConfig
-                .turbosClmmClientRpcs.write
-        )
-        const client = new SuiClient({
-            url,
-            network: "mainnet",
-        })
-        const { digest: txHash, positionId, liquidity } = await this.signerService.withSuiSigner({
-            bot,
-            action: async (signer) => {
-                const stimulateTransaction = await client.devInspectTransactionBlock({
-                    transactionBlock: openPositionTxb,
-                    sender: bot.accountAddress,
-                })
-                if (stimulateTransaction.effects.status.status === "failure") {
-                    throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                }
-                const { digest, events } = await client.signAndExecuteTransaction({
-                    transaction: openPositionTxb,
-                    signer,
-                    options: {
-                        showEvents: true,
-                    }
-                })
-                const increaseLiquidityEvent = events?.find(
-                    event => event.type.includes("::position_manager::IncreaseLiquidity")
-                )
-                if (!increaseLiquidityEvent) {
-                    throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
-                }
-                const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
-                const positionId = increaseLiquidityEventParsed.position_id
-                const liquidity = increaseLiquidityEventParsed.liquidity
-                return {
-                    digest,
-                    positionId,
-                    liquidity
-                }
-            },
-        })
-        const {
-            balancesSnapshotsParams,
-            swapsSnapshotsParams,
-        } = await this.balanceService.executeBalanceRebalancing({
-            bot,
-            withoutSnapshot: true,
-        })
-        let targetBalanceAmountUsed = snapshotTargetBalanceAmountBN
-            .sub(new BN(balancesSnapshotsParams?.targetBalanceAmount || 0))
-        let quoteBalanceAmountUsed = snapshotQuoteBalanceAmountBN
-            .sub(new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0))
-        let gasBalanceAmountUsed = snapshotGasBalanceAmountBN
-            .sub(new BN(balancesSnapshotsParams?.gasAmount || 0))
-        const gasStatus = this.gasStatusService.getGasStatus({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-        })
-        switch (gasStatus) {
-        case GasStatus.IsTarget: {
-            // gas token is the same as target token.
-            // treat gas balance as part of the target balance used,
-            // then mark gas usage as zero because it's merged.
-            targetBalanceAmountUsed = targetBalanceAmountUsed.add(gasBalanceAmountUsed)
-            gasBalanceAmountUsed = new BN(0)
-            break
-        }
-        case GasStatus.IsQuote: {
-            // gas token is the same as quote token.
-            // treat gas balance as part of the quote balance used,
-            // then clear gas usage since it's fully merged.
-            quoteBalanceAmountUsed = quoteBalanceAmountUsed.add(gasBalanceAmountUsed)
-            gasBalanceAmountUsed = new BN(0)
-            break
-        }
-        }
-        // update the snapshot balances
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async () => {
-                await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
-                    targetAmountUsed: targetBalanceAmountUsed,
-                    quoteAmountUsed: quoteBalanceAmountUsed,
-                    liquidity: new BN(liquidity || 0),
-                    gasAmountUsed: gasBalanceAmountUsed,
-                    bot,
-                    targetIsA,
-                    tickLower: tickLower.toNumber(),
-                    tickUpper: tickUpper.toNumber(),
-                    chainId: bot.chainId,
-                    liquidityPoolId: _state.static.displayId,
-                    positionId,
-                    openTxHash: txHash,
-                    session,
-                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
-                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
-                })
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
-                    targetBalanceAmountBeforeOpen: new BN(snapshotTargetBalanceAmountBN),
-                    quoteBalanceAmountBeforeOpen: new BN(snapshotQuoteBalanceAmountBN),
-                    gasAmountBeforeOpen: new BN(snapshotGasBalanceAmountBN),
-                    session,
-                })
-                if (swapsSnapshotsParams) {
-                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                        ...swapsSnapshotsParams,
+            const { 
+                txb: openPositionTxb,
+                feeAmountA,
+                feeAmountB,
+            } = await this.openPositionTxbService.createOpenPositionTxb({
+                txb,
+                bot,
+                amountAMax: snapshotTargetBalanceAmountBN,
+                amountBMax: snapshotQuoteBalanceAmountBN,
+                liquidity: _liquidity,
+                tickLower,
+                state: _state,
+                tickUpper,
+            })
+            const { digest: txHash, positionId, liquidity } = await this.rpcPickerService.withSuiClient<{ digest: string, positionId: string, liquidity: string }>({
+                clientType: ClientType.Write,
+                mainLoadBalancerName: LoadBalancerName.MomentumClmm,
+                callback: async (client) => {
+                    return await this.signerService.withSuiSigner({
+                        bot,
+                        action: async (signer) => {
+                            const stimulateTransaction = await client.devInspectTransactionBlock({
+                                transactionBlock: openPositionTxb,
+                                sender: bot.accountAddress,
+                            })
+                            if (stimulateTransaction.effects.status.status === "failure") {
+                                throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
+                            }
+                            const { digest, events } = await client.signAndExecuteTransaction({
+                                transaction: openPositionTxb,
+                                signer,
+                                options: {
+                                    showEvents: true,
+                                }
+                            })
+                            const increaseLiquidityEvent = events?.find(
+                                event => event.type.includes("::position_manager::IncreaseLiquidity")
+                            )
+                            if (!increaseLiquidityEvent) {
+                                throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
+                            }
+                            const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
+                            const positionId = increaseLiquidityEventParsed.position_id
+                            const liquidity = increaseLiquidityEventParsed.liquidity
+                            return {
+                                digest,
+                                positionId,
+                                liquidity
+                            }
+                        },
+                    })
+                },
+            })
+            this.oraOpenTransactionService.onTxSuccess({
+                id: oraId,
+                txHash,
+            })
+            // we refetch the balances after the position is opened
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+            } = await this.balanceService.fetchBalances({
+                bot,
+            })
+            this.oraOpenTransactionService.onBalancesRefetched({
+                id: oraId,
+            })
+            // update the snapshot balances
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async () => {
+                    await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
+                        snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
+                        snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
+                        snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
+                        liquidity: new BN(liquidity || 0),
+                        bot,
+                        targetIsA,
+                        tickLower: tickLower.toNumber(),
+                        tickUpper: tickUpper.toNumber(),
+                        chainId: bot.chainId,
+                        liquidityPoolId: _state.static.displayId,
+                        positionId,
+                        openTxHash: txHash,
+                        session,
+                        feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                        feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
+                    })
+                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                        bot,
+                        targetBalanceAmount,
+                        quoteBalanceAmount,
+                        gasBalanceAmount,
                         session,
                     })
-                }
+                })
+            this.eventEmitter.emit(
+                createEventName(
+                    EventName.UpdateActiveBot, {
+                        botId: bot.id,
+                    })
+            )
+            this.eventEmitter.emit(
+                createEventName(
+                    EventName.PositionOpened, {
+                        botId: bot.id,
+                    })
+            )
+            this.oraOpenTransactionService.onSnapshotSuccess({
+                id: oraId,
             })
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.UpdateActiveBot, {
-                    botId: bot.id,
-                })
-        )
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.PositionOpened, {
-                    botId: bot.id,
-                })
-        )
+        } catch (error) {
+            this.oraOpenTransactionService.onProcessFailure({
+                id: oraId,
+                bot,
+                liquidityPoolId: _state.static.displayId,
+            })
+            throw error
+        }
     }
 
     async closePosition(
@@ -258,38 +256,51 @@ export class MomentumActionService implements IActionService {
                 "Active position not found"
             )
         }
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
-        )
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
-        )
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
-        // we have many close criteria
-        // 1. the position is out-of-range, we close immediately
-        // 2. our detection find a potential dump from CEX
-        // 3. the position is not profitable, we close it  
-        const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange({
-            bot,
-            state: _state,
-        })
-        if (!shouldProceedAfterIsPositionOutOfRange) {
-            return
+        const oraId = this.oraClosePositionService.start(bot, _state.static.displayId)
+        try {
+            const targetToken = this.primaryMemoryStorageService.tokens.find(
+                (token) => token.id === bot.targetToken.toString()
+            )
+            if (!targetToken) {
+                throw new TokenNotFoundException("Target token not found")
+            }
+            const quoteToken = this.primaryMemoryStorageService.tokens.find(
+                (token) => token.id === bot.quoteToken.toString()
+            )
+            if (!quoteToken) {
+                throw new TokenNotFoundException("Quote token not found")
+            }
+            // we have many close criteria
+            // 1. the position is out-of-range, we close immediately
+            // 2. our detection find a potential dump from CEX
+            // 3. the position is not profitable, we close it  
+            const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange({
+                bot,
+                state: _state,
+                oraId,
+            })
+            if (!shouldProceedAfterIsPositionOutOfRange) {
+                return
+            }
+        } catch (error) {
+            this.oraClosePositionService.onProcessFailure({
+                id: oraId,
+                bot,
+                liquidityPoolId: _state.static.displayId,
+            })
+            throw error
         }
     }
 
     private async assertIsPositionOutOfRange(
-        params: ClosePositionParams
-    ): Promise<boolean> {
-        const {
+        {
             bot,
             state,
-        } = params
+            oraId
+        }: ClosePositionParams & {
+            oraId: string
+        }
+    ): Promise<boolean> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
@@ -312,7 +323,11 @@ export class MomentumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        await this.proccessClosePositionTransaction(params)
+        await this.proccessClosePositionTransaction({
+            bot,
+            state,
+            oraId,
+        })
         // return false to terminate the assertion
         this.eventEmitter.emit(
             createEventName(
@@ -332,8 +347,11 @@ export class MomentumActionService implements IActionService {
     private async proccessClosePositionTransaction(
         {
             bot,
-            state
-        }: ClosePositionParams
+            state,
+            oraId,
+        }: ClosePositionParams & {
+            oraId: string
+        }
     ): Promise<void> {
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
@@ -346,7 +364,7 @@ export class MomentumActionService implements IActionService {
             snapshotTargetBalanceAmountBeforeOpen,
             snapshotQuoteBalanceAmountBeforeOpen,
             snapshotGasBalanceAmountBeforeOpen,
-        } = bot
+        } = bot.activePosition
         if (
             !snapshotTargetBalanceAmountBeforeOpen 
           || 
@@ -355,10 +373,6 @@ export class MomentumActionService implements IActionService {
           !snapshotGasBalanceAmountBeforeOpen) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MomentumClmm, 
-            this.primaryMemoryStorageService.clientConfig.turbosClmmClientRpcs.write
-        )
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -378,30 +392,36 @@ export class MomentumActionService implements IActionService {
             state: _state,
             txb,
         })
-        const client = new SuiClient({
-            url,
-            network: "mainnet",
-        })
-        // sign the transaction
-        const txHash = await this.signerService.withSuiSigner({
-            bot,
-            action: async (signer) => {
-                const stimulateTransaction = await client.devInspectTransactionBlock({
-                    transactionBlock: closePositionTxb,
-                    sender: bot.accountAddress,
+        const txHash = await this.rpcPickerService.withSuiClient<string>({
+            clientType: ClientType.Write,
+            mainLoadBalancerName: LoadBalancerName.MomentumClmm,
+            callback: async (client) => {
+                // sign the transaction
+                return await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        const stimulateTransaction = await client.devInspectTransactionBlock({
+                            transactionBlock: closePositionTxb,
+                            sender: bot.accountAddress,
+                        })
+                        if (stimulateTransaction.effects.status.status === "failure") {
+                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
+                        }
+                        const { digest } = await client.signAndExecuteTransaction({
+                            transaction: closePositionTxb,
+                            signer,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                        return digest
+                    },
                 })
-                if (stimulateTransaction.effects.status.status === "failure") {
-                    throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                }
-                const { digest } = await client.signAndExecuteTransaction({
-                    transaction: closePositionTxb,
-                    signer,
-                    options: {
-                        showEvents: true,
-                    }
-                })
-                return digest
             },
+        })
+        this.oraClosePositionService.onTxSuccess({
+            id: oraId,
+            txHash,
         })
 
         const {
@@ -411,6 +431,9 @@ export class MomentumActionService implements IActionService {
             bot,
             withoutSnapshot: true,
         })
+        this.oraClosePositionService.onRebalancingSuccess({
+            id: oraId,
+        })
         const before: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
             quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
@@ -419,7 +442,7 @@ export class MomentumActionService implements IActionService {
         const after: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
             quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasAmount || 0),
+            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
         }
         const { 
             roi, 
@@ -430,6 +453,11 @@ export class MomentumActionService implements IActionService {
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
             chainId: bot.chainId,
+        })
+        this.oraClosePositionService.onProfitabilityCalculationSuccess({
+            id: oraId,
+            roi,
+            pnl,
         })
         const session = await this.connection.startSession()
         await session.withTransaction(
@@ -444,7 +472,7 @@ export class MomentumActionService implements IActionService {
                     bot,
                     targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
                     quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                    gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
+                    gasBalanceAmount: balancesSnapshotsParams?.gasBalanceAmount || new BN(0),
                     session,
                 })
                 await this.closePositionSnapshotService
@@ -455,6 +483,9 @@ export class MomentumActionService implements IActionService {
                         positionId: bot.activePosition.id,
                         closeTxHash: txHash,
                         session,
+                        snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+                        snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+                        snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
                     })
                 if (swapsSnapshotsParams) {
                     await this.swapTransactionSnapshotService.addSwapTransactionRecord({
@@ -463,6 +494,9 @@ export class MomentumActionService implements IActionService {
                     })
                 }
             })
+        this.oraClosePositionService.onSnapshotSuccess({
+            id: oraId,
+        })
     }
 }
 

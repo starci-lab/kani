@@ -1,10 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
-import { 
-    CacheKey, 
-    DynamicLiquidityPoolInfoCacheResult, 
-    InjectRedisCache, 
-    createCacheKey 
+import {
+    CacheKey,
+    DynamicLiquidityPoolInfoCacheResult,
+    InjectRedisCache,
+    createCacheKey
 } from "@modules/cache"
 import BN from "bn.js"
 import {
@@ -13,7 +13,7 @@ import {
     DexId,
     LoadBalancerName,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson, LoadBalancerService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
@@ -23,10 +23,9 @@ import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 import { CronExpression } from "@nestjs/schedule"
 import { Cron } from "@nestjs/schedule"
-import { address, createSolanaRpcSubscriptions } from "@solana/kit"
-import { createSolanaRpc } from "@solana/kit"
+import { address, fetchEncodedAccount } from "@solana/kit"
 import { PublicKey } from "@solana/web3.js"
-import { httpsToWss } from "@utils"
+import { ClientType, RpcPickerService } from "../../clients"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
@@ -37,7 +36,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcPickerService: RpcPickerService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
@@ -84,7 +83,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         }
         await this.asyncService.allIgnoreError(
             [
-            // cache
+                // cache
                 this.cacheManager.set(
                     createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
                     this.superjson.stringify(parsed),
@@ -120,16 +119,18 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.RaydiumClmm, 
-            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs.read
-        )
-        const rpc = createSolanaRpc(url)
-        const accountInfo = await rpc.getAccountInfo(address(liquidityPool.poolAddress)).send()
-        if (!accountInfo || !accountInfo.value?.data) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        const state = PoolInfoLayout.decode(Buffer.from(accountInfo.value?.data))
-        return await this.handlePoolStateUpdate(liquidityPoolId, state)
+        await this.rpcPickerService.withSolanaRpc({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.RaydiumClmm,
+            callback: async ({ rpc }) => {
+                const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
+                    commitment: "confirmed",
+                })
+                if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+                const state = PoolInfoLayout.decode(Buffer.from(accountInfo.data))
+                return await this.handlePoolStateUpdate(liquidityPoolId, state)
+            },
+        })
     }
 
     // ============================================
@@ -142,25 +143,26 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.RaydiumClmm, 
-            this.memoryStorageService.clientConfig.raydiumClmmClientRpcs.read
-        )
-        const controller = new AbortController()
-        const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(url))
-        const accountNotifications = await rpcSubscriptions.accountNotifications(
-            address(liquidityPool.poolAddress),
-            {
-                commitment: "confirmed",
-                encoding: "base64",
-            }
-        ).subscribe({
-            abortSignal: controller.signal,
+        await this.rpcPickerService.withSolanaRpc({
+            clientType: ClientType.Read,
+            mainLoadBalancerName: LoadBalancerName.RaydiumClmm,
+            callback: async ({ rpcSubscriptions }) => {
+                const controller = new AbortController()
+                const accountNotifications = await rpcSubscriptions.accountNotifications(
+                    address(liquidityPool.poolAddress),
+                    {
+                        commitment: "confirmed",
+                        encoding: "base64",
+                    }
+                ).subscribe({
+                    abortSignal: controller.signal,
+                })
+                for await (const accountNotification of accountNotifications) {
+                    const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data.toString(), "base64"))
+                    await this.handlePoolStateUpdate(liquidityPoolId, state)
+                }
+            },
         })
-        for await (const accountNotification of accountNotifications) {
-            const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data.toString(), "base64"))
-            await this.handlePoolStateUpdate(liquidityPoolId, state)
-        }
     }
 }
 

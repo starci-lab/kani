@@ -5,6 +5,7 @@ import { Transaction } from "@mysten/sui/transactions"
 import { FetchCoinsService } from "./fetch-coins.service"
 import { isSuiCoin, ZERO_BN } from "@utils"
 import { toCoinArgument } from "../../utils"
+import { LoadBalancerName } from "@modules/databases"
 
 @Injectable()
 export class SelectCoinsService {
@@ -111,7 +112,7 @@ export class SelectCoinsService {
      * and handle SUI specially for gas reservation.
      */
     public async fetchAndMergeCoins({
-        url,
+        loadBalancerName,
         txb,
         owner,
         coinType,
@@ -119,11 +120,7 @@ export class SelectCoinsService {
         requiredAmount,
     }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResponse> {
         txb = txb ?? new Transaction()
-        const fetchedCoins = await this.fetchCoinsService.fetchCoins({
-            owner,
-            coinType,
-            url
-        })
+        const fetchedCoins = await this.fetchCoinsService.fetchCoins({ owner, coinType, loadBalancerName })
         if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
 
         const coins = fetchedCoins.coinAssets.map((coin) => ({
@@ -197,7 +194,7 @@ export interface SelectCoinAssetGreaterThanOrEqualResponse {
 }
 
 export interface FetchAndMergeCoinsParams {
-    url: string
+    loadBalancerName: LoadBalancerName
     txb?: Transaction
     owner: string
     coinType: string

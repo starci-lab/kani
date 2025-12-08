@@ -5,7 +5,7 @@ import {
     address,
 } from "@solana/kit"
 import { AtaInstructionService, AnchorUtilsService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import { BotSchema, LoadBalancerName, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { DlmmLiquidityPoolState } from "../../../interfaces"
 import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { EventAuthorityService } from "./event-authority.service"
@@ -21,8 +21,6 @@ import { convertWeb3MetaToKitMeta } from "@utils"
 import { RewardInfo } from "../beets"
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
 import { ChainId } from "@typedefs"
-import { LoadBalancerService } from "@modules/mixin"
-import { LoadBalancerName } from "@modules/databases"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
@@ -36,7 +34,6 @@ export class ClosePositionInstructionService {
         private readonly eventAuthorityService: EventAuthorityService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly loadBalancerService: LoadBalancerService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -47,10 +44,6 @@ export class ClosePositionInstructionService {
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MeteoraDlmm, 
-            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.read
-        )
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
@@ -69,7 +62,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: new BN(0),
         })
         if (createAtaAInstructions?.length) {
@@ -86,7 +79,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: new BN(0),
         })
         if (createAtaBInstructions?.length) {
@@ -280,7 +273,7 @@ export class ClosePositionInstructionService {
                 tokenMint: address(rewardInfo.mint.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
-                url,
+                loadBalancerName: LoadBalancerName.MeteoraDlmm,
             })
             if (createAtaRewardInstructions?.length) {
                 instructions.push(...createAtaRewardInstructions)

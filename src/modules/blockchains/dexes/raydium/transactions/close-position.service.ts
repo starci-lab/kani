@@ -10,14 +10,16 @@ import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import BN from "bn.js"
 import { AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, LoadBalancerName, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata, RaydiumPositionMetadata } from "@modules/databases"
+import {
+    BotSchema,
+    LoadBalancerName, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata, RaydiumPositionMetadata
+} from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
 import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
 import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
 import { PersonalPositionService } from "./personal-position.service"
 import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
-import { LoadBalancerService } from "@modules/mixin"
 import { RaydiumRewardInfo } from "../observer.service"
 
 export interface CreateCloseInstructionsParams {
@@ -33,7 +35,6 @@ export class ClosePositionInstructionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly tickArrayService: TickArrayService,
         private readonly personalPositionService: PersonalPositionService,
-        private readonly loadBalancerService: LoadBalancerService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -42,12 +43,7 @@ export class ClosePositionInstructionService {
         bot,
         state,
     }: CreateCloseInstructionsParams)
-    : Promise<Array<Instruction>>
-    {
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.RaydiumClmm, 
-            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs.read
-        )
+        : Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition) {
@@ -92,7 +88,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: new BN(0),
         })
         if (createAtaAInstructions?.length) {
@@ -109,7 +105,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: new BN(0),
         })
         if (createAtaBInstructions?.length) {
@@ -136,7 +132,7 @@ export class ClosePositionInstructionService {
                 tokenMint: address(_reward.tokenMint.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
-                url,
+                loadBalancerName: LoadBalancerName.RaydiumClmm,
             })
             if (createAtaRewardInstructions?.length) {
                 instructions.push(...createAtaRewardInstructions)
@@ -152,7 +148,7 @@ export class ClosePositionInstructionService {
                 address: address(_reward.tokenMint.toString()),
                 role: AccountRole.READONLY,
             })
-        }  
+        }
         const [closePositionArgs] = ClosePositionArgs.serialize({
             liquidity: bot.activePosition.liquidity?.toString(),
             amount0Max: new BN(0).toString(),
@@ -229,7 +225,7 @@ export class ClosePositionInstructionService {
             ],
             data:
                 this.anchorUtilsService.encodeAnchorIx(
-                    "decrease_liquidity_v2", 
+                    "decrease_liquidity_v2",
                     closePositionArgs
                 ),
         }

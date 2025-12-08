@@ -2,7 +2,6 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./raydium.module-definition"
 import { RaydiumObserverService } from "./observer.service"
 import { RaydiumActionService } from "./action.service"
-import { createRaydiumClmmSdkProvider } from "./raydium.providers"
 import { 
     TickArrayService, 
     PersonalPositionService,
@@ -17,7 +16,6 @@ export class RaydiumModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            createRaydiumClmmSdkProvider(),
             TickArrayService,
             PersonalPositionService,
             ClosePositionInstructionService,

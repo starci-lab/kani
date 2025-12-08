@@ -1,78 +1,77 @@
 import { Injectable } from "@nestjs/common"
-import {
-    AccountRole,
-    address,
-    createSolanaRpc,
-    Instruction,
-} from "@solana/kit"
+import { AccountRole, address, Instruction } from "@solana/kit"
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
 import BN from "bn.js"
 import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
-import { BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata, OrcaPositionMetadata } from "@modules/databases"
+import {
+    BotSchema,
+    PrimaryMemoryStorageService,
+    RaydiumLiquidityPoolMetadata,
+    OrcaPositionMetadata,
+    LoadBalancerName,
+} from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
-import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
+import {
+    ActivePositionNotFoundException,
+    InvalidPoolTokensException,
+} from "@exceptions"
 import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
 import { PositionService } from "./position.service"
 import { TickArrayService } from "./tick-array.service"
 
 export interface CreateCloseInstructionsParams {
-    bot: BotSchema
-    state: LiquidityPoolState
-    url: string
+  bot: BotSchema;
+  state: LiquidityPoolState;
 }
 
 @Injectable()
 export class ClosePositionInstructionService {
     constructor(
-        private readonly anchorUtilsService: AnchorUtilsService,
-        private readonly ataInstructionService: AtaInstructionService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly positionService: PositionService,
-        private readonly tickArrayService: TickArrayService,
-    ) { }
+    private readonly anchorUtilsService: AnchorUtilsService,
+    private readonly ataInstructionService: AtaInstructionService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly positionService: PositionService,
+    private readonly tickArrayService: TickArrayService,
+    ) {}
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
    */
     async createCloseInstructions({
         bot,
         state,
-        url,
-    }: CreateCloseInstructionsParams)
-    : Promise<Array<Instruction>>
-    {
-        const rpc = createSolanaRpc(url)
+    }: CreateCloseInstructionsParams): Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === state.static.tokenA.toString(),
+        )
+        const tokenB = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === state.static.tokenB.toString(),
+        )
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
-        const {
-            programAddress,
-            tokenVault0,
-            tokenVault1,
-        } = state.static.metadata as RaydiumLiquidityPoolMetadata
-        const {
-            nftMintAddress,
-        } = bot.activePosition.metadata as OrcaPositionMetadata
+        const { programAddress, tokenVault0, tokenVault1 } = state.static
+            .metadata as RaydiumLiquidityPoolMetadata
+        const { nftMintAddress } = bot.activePosition
+            .metadata as OrcaPositionMetadata
         const { pda: positionPda } = await this.positionService.getPda({
             nftMintAddress: address(nftMintAddress),
             programAddress: address(programAddress),
         })
-        const { 
+        const {
             instructions: createAtaAInstructions,
             endInstructions: closeAtaAInstructions,
-            ataAddress: ataAAddress
+            ataAddress: ataAAddress,
         } = await this.ataInstructionService.getOrCreateAtaInstructions({
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.OrcaClmm,
         })
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
@@ -88,7 +87,7 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.OrcaClmm,
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)
@@ -101,7 +100,6 @@ export class ClosePositionInstructionService {
             tickIndex: bot.activePosition.tickLower ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
-            rpc,
             bot,
             pdaOnly: true,
         })
@@ -165,10 +163,13 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("decrease_liquidity", decreaseLiquidityArgs),
+            data: this.anchorUtilsService.encodeAnchorIx(
+                "decrease_liquidity",
+                decreaseLiquidityArgs,
+            ),
         }
         instructions.push(decreaseLiquidityInstruction)
-        const collectFeesInstruction: Instruction = { 
+        const collectFeesInstruction: Instruction = {
             programAddress: address(programAddress),
             accounts: [
                 {
@@ -239,9 +240,11 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("close_position_with_token_extensions")
+            data: this.anchorUtilsService.encodeAnchorIx(
+                "close_position_with_token_extensions",
+            ),
         }
-        
+
         instructions.push(closePositionWithTokenExtensionsInstruction)
         instructions.push(...endInstructions)
         return instructions
@@ -254,7 +257,7 @@ export const ClosePositionArgs = new BeetArgsStruct(
         ["amount0Max", u64],
         ["amount1Max", u64],
     ],
-    "ClosePositionArgs"
+    "ClosePositionArgs",
 )
 
 export const DecreaseLiquidityArgs = new BeetArgsStruct(
@@ -263,5 +266,5 @@ export const DecreaseLiquidityArgs = new BeetArgsStruct(
         ["tokenMinA", u64],
         ["tokenMinB", u64],
     ],
-    "DecreaseLiquidityArgs"
+    "DecreaseLiquidityArgs",
 )

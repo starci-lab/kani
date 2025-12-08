@@ -2,61 +2,58 @@ import { Injectable } from "@nestjs/common"
 import { ClosePositionParams, DlmmLiquidityPoolState, IActionService, OpenPositionParams } from "../../interfaces"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
 import BN from "bn.js"
-import { 
-    ActivePositionNotFoundException, 
-    InvalidPoolTokensException, 
-    SnapshotBalancesBeforeOpenNotSetException, 
-    SnapshotBalancesNotSetException, 
-    TokenNotFoundException, 
+import {
+    ActivePositionNotFoundException,
+    InvalidPoolTokensException,
+    SnapshotBalancesBeforeOpenNotSetException,
+    SnapshotBalancesNotSetException,
+    TokenNotFoundException,
     TransactionMessageTooLargeException
 } from "@exceptions"
 import { SignerService } from "../../signers"
-import { 
-    addSignersToTransactionMessage, 
-    appendTransactionMessageInstructions, 
+import {
+    addSignersToTransactionMessage,
+    appendTransactionMessageInstructions,
     compileTransaction,
-    pipe, 
-    setTransactionMessageFeePayerSigner, 
-    setTransactionMessageLifetimeUsingBlockhash, 
-    signTransaction, 
-    createTransactionMessage, 
-    isTransactionMessageWithinSizeLimit, 
-    sendAndConfirmTransactionFactory, 
-    assertIsSendableTransaction, 
-    assertIsTransactionWithinSizeLimit, 
+    pipe,
+    setTransactionMessageFeePayerSigner,
+    setTransactionMessageLifetimeUsingBlockhash,
+    signTransaction,
+    createTransactionMessage,
+    isTransactionMessageWithinSizeLimit,
+    sendAndConfirmTransactionFactory,
+    assertIsSendableTransaction,
+    assertIsTransactionWithinSizeLimit,
     getSignatureFromTransaction,
 } from "@solana/kit"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { 
-    PrimaryMemoryStorageService, 
-    InjectPrimaryMongoose, 
-    LoadBalancerName 
+import { Logger as WinstonLogger } from "winston"
+import {
+    PrimaryMemoryStorageService,
+    InjectPrimaryMongoose,
+    LoadBalancerName
 } from "@modules/databases"
-import { 
-    BalanceService, 
+import {
+    BalanceService,
 } from "../../balance"
 import { Connection as MongooseConnection } from "mongoose"
-import { 
-    BalanceSnapshotService, 
-    SwapTransactionSnapshotService, 
+import {
+    BalanceSnapshotService,
+    SwapTransactionSnapshotService,
     OpenPositionSnapshotService,
-    ClosePositionSnapshotService, 
+    ClosePositionSnapshotService,
 } from "../../snapshots"
 import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
-import { RetryService } from "@modules/mixin"
 import { OraClosePositionService, OraOpenTransactionService } from "@modules/ora"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
 import { ClientType, RpcPickerService } from "../../clients"
+import Decimal from "decimal.js"
+import { DynamicDlmmLiquidityPoolInfo } from "../../types"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
     constructor(
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -68,15 +65,14 @@ export class MeteoraActionService implements IActionService {
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
         private readonly profitabilityMathService: ProfitabilityMathService,
         @InjectWinston()
-        private readonly logger: winstonLogger,
+        private readonly logger: WinstonLogger,
         @InjectPrimaryMongoose()
         private readonly connection: MongooseConnection,
         private readonly eventEmitter: EventEmitter2,
         private readonly oraOpenTransactionService: OraOpenTransactionService,
         private readonly oraClosePositionService: OraClosePositionService,
-        private readonly retryService: RetryService,
         private readonly rpcPickerService: RpcPickerService,
-    ) {}
+    ) { }
     async openPosition({
         state,
         bot,
@@ -84,10 +80,10 @@ export class MeteoraActionService implements IActionService {
         const _state = state as DlmmLiquidityPoolState
         const oraId = this.oraOpenTransactionService.start({
             bot,
-            liquidityPoolId: _state.static.displayId, 
+            liquidityPoolId: _state.static.displayId,
         })
         try {
-        // cast the state to LiquidityPoolState
+            // cast the state to LiquidityPoolState
             const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
             const {
                 snapshotTargetBalanceAmount,
@@ -95,8 +91,8 @@ export class MeteoraActionService implements IActionService {
                 snapshotGasBalanceAmount,
             } = bot
             if (
-                !snapshotTargetBalanceAmount || 
-                !snapshotQuoteBalanceAmount || 
+                !snapshotTargetBalanceAmount ||
+                !snapshotQuoteBalanceAmount ||
                 !snapshotGasBalanceAmount
             ) {
                 throw new SnapshotBalancesNotSetException("Snapshot balances not set")
@@ -139,7 +135,7 @@ export class MeteoraActionService implements IActionService {
             } = await this.openPositionInstructionService.createOpenPositionInstructions({
                 bot,
                 state: _state,
-                amountA,    
+                amountA,
                 amountB,
             })
             // append the fee instructions
@@ -191,82 +187,67 @@ export class MeteoraActionService implements IActionService {
                         },
                     })
                 },
-            })           
+            })
             this.oraOpenTransactionService.onTxSuccess({
                 id: oraId,
                 txHash,
             })
-            // retry until the snapshot balances are updated
-            await this.retryService.retry({
-                action: async () => {
-                    // we refetch the balances after the position is opened
-                    const {
-                        targetBalanceAmount,
-                        quoteBalanceAmount,
-                        gasBalanceAmount,
-                    } = await this.balanceService.fetchBalances({
+            // we refetch the balances after the position is opened
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+            } = await this.balanceService.fetchBalances({
+                bot,
+            })
+            this.oraOpenTransactionService.onBalancesRefetched({
+                id: oraId,
+            })
+            const session = await this.connection.startSession()
+            // we try to cache 
+            await session.withTransaction(
+                async () => {
+                    // update the snapshot balances
+                    await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
+                        snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
+                        snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
+                        snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
                         bot,
+                        targetIsA,
+                        amountA,
+                        amountB,
+                        positionId: positionKeyPair.address.toString(),
+                        minBinId: minBinId.toNumber(),
+                        maxBinId: maxBinId.toNumber(),
+                        chainId: bot.chainId,
+                        liquidityPoolId: _state.static.displayId,
+                        openTxHash: txHash,
+                        feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
+                        feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
+                        session,
                     })
-                    this.oraOpenTransactionService.onBalancesRefetched({
-                        id: oraId,
+                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                        bot,
+                        targetBalanceAmount: new BN(targetBalanceAmount),
+                        quoteBalanceAmount: new BN(quoteBalanceAmount),
+                        gasBalanceAmount: new BN(gasBalanceAmount),
+                        session,
                     })
-                    const session = await this.connection.startSession()
-                    // we try to cache 
-                    await session.withTransaction(
-                        async () => {
-                            // update the snapshot balances
-                            await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
-                                snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
-                                snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
-                                snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
-                                bot,
-                                targetIsA,
-                                amountA,
-                                amountB,
-                                positionId: positionKeyPair.address.toString(),
-                                minBinId: minBinId.toNumber(),
-                                maxBinId: maxBinId.toNumber(),
-                                chainId: bot.chainId,
-                                liquidityPoolId: _state.static.displayId,
-                                openTxHash: txHash,
-                                feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
-                                feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
-                                session,
-                            })
-                            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                                bot,
-                                targetBalanceAmount: new BN(targetBalanceAmount),
-                                quoteBalanceAmount: new BN(quoteBalanceAmount),
-                                gasAmount: new BN(gasBalanceAmount),
-                                session,
-                            })
-                        })
-                    this.eventEmitter.emit(
-                        createEventName(
-                            EventName.UpdateActiveBot, {
-                                botId: bot.id,
-                            })
-                    )
-                    this.eventEmitter.emit(
-                        createEventName(
-                            EventName.PositionOpened, {
-                                botId: bot.id,
-                            })
-                    )
-                    this.oraOpenTransactionService.onSnapshotSuccess({
-                        id: oraId,
+                })
+            this.eventEmitter.emit(
+                createEventName(
+                    EventName.UpdateActiveBot, {
+                        botId: bot.id,
                     })
-                    // if success, we clear the cache
-                    await this.cacheManager.del(
-                        createCacheKey(
-                            CacheKey.OpenPositionTransaction, {
-                                botId: bot.id
-                            })
-                    )
-                },
-                maxRetries: 10,
-                delay: 1000,
-                factor: 2,
+            )
+            this.eventEmitter.emit(
+                createEventName(
+                    EventName.PositionOpened, {
+                        botId: bot.id,
+                    })
+            )
+            this.oraOpenTransactionService.onSnapshotSuccess({
+                id: oraId,
             })
         } catch (error) {
             this.oraOpenTransactionService.onProcessFailure({
@@ -286,10 +267,9 @@ export class MeteoraActionService implements IActionService {
             state,
         } = params
         const _state = state as DlmmLiquidityPoolState
-        if (!bot.activePosition) 
-        {
+        if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id, 
+                bot.id,
                 "Active position not found"
             )
         }
@@ -340,19 +320,19 @@ export class MeteoraActionService implements IActionService {
     ): Promise<boolean> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id, 
+                bot.id,
                 "Active position not found"
             )
         }
-        // const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo
-        // if (
-        //     new Decimal(_state.activeId || 0).gte(bot.activePosition.minBinId || 0) 
-        //     && new Decimal(_state.activeId || 0).lte(bot.activePosition.maxBinId || 0)
-        // ) {
-        //     // do nothing, since the position is still in the range
-        //     // return true to continue the assertion
-        //     return true
-        // }
+        const _state = state.dynamic as DynamicDlmmLiquidityPoolInfo
+        if (
+            new Decimal(_state.activeId || 0).gte(bot.activePosition.minBinId || 0) 
+            && new Decimal(_state.activeId || 0).lte(bot.activePosition.maxBinId || 0)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
@@ -393,7 +373,7 @@ export class MeteoraActionService implements IActionService {
         const _state = state as DlmmLiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id, 
+                bot.id,
                 "Active position not found"
             )
         }
@@ -403,9 +383,9 @@ export class MeteoraActionService implements IActionService {
             snapshotGasBalanceAmountBeforeOpen,
         } = bot.activePosition
         if (
-            !snapshotTargetBalanceAmountBeforeOpen || 
-          !snapshotQuoteBalanceAmountBeforeOpen || 
-          !snapshotGasBalanceAmountBeforeOpen
+            !snapshotTargetBalanceAmountBeforeOpen ||
+            !snapshotQuoteBalanceAmountBeforeOpen ||
+            !snapshotGasBalanceAmountBeforeOpen
         ) {
             throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
         }
@@ -471,90 +451,85 @@ export class MeteoraActionService implements IActionService {
                     },
                 })
             },
-        }) 
+        })
         this.oraClosePositionService.onTxSuccess({
             id: oraId,
             txHash,
         })
-        await this.retryService.retry({
-            action: async () => {
-                const {
-                    balancesSnapshotsParams,
-                    swapsSnapshotsParams,
-                } = await this.balanceService.executeBalanceRebalancing({
-                    bot,
-                    withoutSnapshot: true,
-                })
-                this.oraClosePositionService.onRebalancingSuccess({
-                    id: oraId,
-                })
-                const before: CalculateProfitability = {
-                    targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-                    quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-                    gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
-                }
-                const after: CalculateProfitability = {
-                    targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-                    quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-                    gasBalanceAmount: new BN(balancesSnapshotsParams?.gasAmount || 0),
-                }
-                const { 
-                    roi, 
-                    pnl 
-                } = await this.profitabilityMathService.calculateProfitability({
-                    before,
-                    after,
-                    targetTokenId: targetToken.displayId,
-                    quoteTokenId: quoteToken.displayId,
-                    chainId: bot.chainId,
-                })
-                this.oraClosePositionService.onProfitabilityCalculationSuccess({
-                    id: oraId,
-                    roi,
-                    pnl,
-                })
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        if (!bot.activePosition) {
-                            throw new ActivePositionNotFoundException(
-                                bot.id, 
-                                "Active position not found"
-                            )
-                        }
-                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                            bot,
-                            targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                            quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                            gasAmount: balancesSnapshotsParams?.gasAmount || new BN(0),
-                            session,
-                        })
-                        await this.closePositionSnapshotService
-                            .updateClosePositionTransactionRecord({
-                                bot,
-                                pnl,
-                                roi,
-                                positionId: bot.activePosition.id,
-                                closeTxHash: txHash,
-                                session,
-                                snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-                                snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-                                snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasAmount || 0),
-                            })
-                        if (swapsSnapshotsParams) {
-                            await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                                ...swapsSnapshotsParams,
-                                session,
-                            })
-                        }
-                    })
-                this.oraClosePositionService.onSnapshotSuccess({
-                    id: oraId,
-                })
-            },
-            maxRetries: 10,
-            delay: 1000,
-            factor: 2,
+
+        const {
+            balancesSnapshotsParams,
+            swapsSnapshotsParams,
+        } = await this.balanceService.executeBalanceRebalancing({
+            bot,
+            withoutSnapshot: true,
         })
+        this.oraClosePositionService.onRebalancingSuccess({
+            id: oraId,
+        })
+        const before: CalculateProfitability = {
+            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
+            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
+            gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
+        }
+        const after: CalculateProfitability = {
+            targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+            quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
+        }
+        const {
+            roi,
+            pnl
+        } = await this.profitabilityMathService.calculateProfitability({
+            before,
+            after,
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+            chainId: bot.chainId,
+        })
+        this.oraClosePositionService.onProfitabilityCalculationSuccess({
+            id: oraId,
+            roi,
+            pnl,
+        })
+        const session = await this.connection.startSession()
+        await session.withTransaction(
+            async () => {
+                if (!bot.activePosition) {
+                    throw new ActivePositionNotFoundException(
+                        bot.id,
+                        "Active position not found"
+                    )
+                }
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
+                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
+                    gasBalanceAmount: balancesSnapshotsParams?.gasBalanceAmount || new BN(0),
+                    session,
+                })
+                await this.closePositionSnapshotService
+                    .updateClosePositionTransactionRecord({
+                        bot,
+                        pnl,
+                        roi,
+                        positionId: bot.activePosition.id,
+                        closeTxHash: txHash,
+                        session,
+                        snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
+                        snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
+                        snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
+                    })
+                if (swapsSnapshotsParams) {
+                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+                        ...swapsSnapshotsParams,
+                        session,
+                    })
+                }
+            })
+        this.oraClosePositionService.onSnapshotSuccess({
+            id: oraId,
+        })
+
     }
 }

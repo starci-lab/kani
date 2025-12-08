@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { TokenType } from "@typedefs"
 import { address, Address, Instruction } from "@solana/kit"
 import { BN } from "turbos-clmm-sdk"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
+import { LoadBalancerName, PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import { getTransferSolInstruction } from "@solana-program/system"
 import { createNoopSigner } from "@solana/signers"
@@ -23,7 +23,7 @@ export class TransferInstructionService {
             toAddress,
             amount,
             tokenId,
-            url,
+            loadBalancerName,
         }: CreateTransferInstructionsParams
     ): Promise<CreateTransferInstructionsResponse> {
         const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === tokenId.toString())
@@ -49,7 +49,7 @@ export class TransferInstructionService {
             ownerAddress: fromAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
-            url,
+            loadBalancerName,
         })
         if (createAtaInstructions?.length) {
             instructions.push(...createAtaInstructions)
@@ -61,7 +61,7 @@ export class TransferInstructionService {
             ownerAddress: toAddress,
             tokenMint: address(token.tokenAddress),
             is2022Token: token.is2022Token,
-            url,
+            loadBalancerName,
         })
         if (transferAtaInstructions?.length) {
             instructions.push(...transferAtaInstructions)
@@ -85,7 +85,7 @@ export interface CreateTransferInstructionsParams {
     toAddress: Address
     amount: BN
     tokenId: TokenId
-    url: string
+    loadBalancerName: LoadBalancerName
 }
 
 export interface CreateTransferInstructionsResponse {

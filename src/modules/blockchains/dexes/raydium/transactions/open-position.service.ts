@@ -25,7 +25,6 @@ import { Decimal } from "decimal.js"
 import { u128, u64, i32, bool, BeetArgsStruct, u8  } from "@metaplex-foundation/beet"
 import { FeeService } from "../../../math"
 import { TokenType } from "@modules/common"
-import { LoadBalancerService } from "@modules/mixin"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -40,7 +39,6 @@ export interface CreateOpenPositionInstructionsParams {
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(
-        private readonly loadBalancerService: LoadBalancerService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -62,10 +60,6 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResponse>
     {
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.RaydiumClmm, 
-            this.primaryMemoryStorageService.clientConfig.raydiumClmmClientRpcs.read
-        )
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
@@ -133,7 +127,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -150,7 +144,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -169,7 +163,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                url,
+                loadBalancerName: LoadBalancerName.RaydiumClmm,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -191,7 +185,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                url,
+                loadBalancerName: LoadBalancerName.RaydiumClmm,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {
@@ -211,7 +205,7 @@ export class OpenPositionInstructionService {
             tokenMint: mintKeyPair.address,
             ownerAddress: address(bot.accountAddress),
             is2022Token: true,
-            url,
+            loadBalancerName: LoadBalancerName.RaydiumClmm,
             pdaOnly: true,
         })
         const tickArrayLowerStartIndex = this.tickArrayService.getArrayStartIndex(

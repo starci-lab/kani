@@ -5,7 +5,7 @@ import {
     Instruction,
 } from "@solana/kit"
 import { AtaInstructionService, AnchorUtilsService, KeypairGeneratorsService } from "../../../tx-builder"
-import { BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import { BotSchema, LoadBalancerName, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { i32, BeetArgsStruct } from "@metaplex-foundation/beet"
 import { 
     buildLiquidityStrategyParameters, 
@@ -28,8 +28,6 @@ import { FeeService } from "../../../math"
 import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
 import { TokenType } from "@modules/common"
-import { LoadBalancerService } from "@modules/mixin"
-import { LoadBalancerName } from "@modules/databases"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -56,8 +54,7 @@ export class OpenPositionInstructionService {
         private readonly keypairGeneratorsService: KeypairGeneratorsService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly meteoraSdkService: MeteoraSdkService,
-        private readonly feeService: FeeService,
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly feeService: FeeService
     ) { }
     async createOpenPositionInstructions({
         bot,
@@ -67,10 +64,6 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResponse>
     {
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.MeteoraDlmm, 
-            this.primaryMemoryStorageService.clientConfig.meteoraDlmmClientRpcs.read
-        )
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,
@@ -143,7 +136,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -160,7 +153,7 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            url,
+            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -180,7 +173,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(feeToAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                url,
+                loadBalancerName: LoadBalancerName.MeteoraDlmm,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -202,7 +195,7 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(feeToAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                url,
+                loadBalancerName: LoadBalancerName.MeteoraDlmm,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {

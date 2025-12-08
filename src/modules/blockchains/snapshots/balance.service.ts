@@ -17,7 +17,7 @@ export class BalanceSnapshotService {
             bot,
             targetBalanceAmount,
             quoteBalanceAmount,
-            gasAmount,
+            gasBalanceAmount,
             session,
         }: UpdateBotSnapshotBalancesRecordParams
     ) {  
@@ -26,7 +26,7 @@ export class BalanceSnapshotService {
             { $set: { 
                 snapshotTargetBalanceAmount: targetBalanceAmount.toString(), 
                 snapshotQuoteBalanceAmount: quoteBalanceAmount.toString(), 
-                snapshotGasBalanceAmount: gasAmount?.toString(), 
+                snapshotGasBalanceAmount: gasBalanceAmount.toString(), 
                 lastBalancesSnapshotAt: this.dayjsService.now().toDate(),
             } 
             },
@@ -41,6 +41,6 @@ export interface UpdateBotSnapshotBalancesRecordParams {
     bot: BotSchema
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
-    gasAmount?: BN
+    gasBalanceAmount: BN
     session?: ClientSession
 }

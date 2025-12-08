@@ -9,8 +9,6 @@ import { FeeToAddressNotFoundException, TargetOperationalGasAmountNotFoundExcept
 import { FeeService } from "../../../math"
 import { SelectCoinsService } from "../../../tx-builder"
 import BN from "bn.js"
-import { SuiClient } from "@mysten/sui/client"
-import { LoadBalancerService } from "@modules/mixin"
 import { ChainId } from "@modules/common"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 
@@ -20,7 +18,6 @@ export class OpenPositionTxbService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
-        private readonly loadBalancerService: LoadBalancerService,
     ) {}
 
     async createOpenPositionTxb(
@@ -63,10 +60,6 @@ export class OpenPositionTxbService {
             chainId: bot.chainId,
         })
         // we check balances of tokenA and tokenB
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.CetusClmm,
-            this.primaryMemoryStorageService.clientConfig.cetusClmmClientRpcs.read
-        )
         const targetOperationalAmount = this.primaryMemoryStorageService.
             gasConfig.
             gasAmountRequired[ChainId.Sui]?.
@@ -82,7 +75,7 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinA 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                suiClient: new SuiClient({ url }),
+                loadBalancerName: LoadBalancerName.CetusClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenA.tokenAddress,
@@ -93,7 +86,7 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                suiClient: new SuiClient({ url }),
+                loadBalancerName: LoadBalancerName.CetusClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenB.tokenAddress,

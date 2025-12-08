@@ -1,2 +1,0 @@
-export const METEORA_CLMM_SDK = "METEORA_CLMM_SDK"
-export const METEORA_CLIENTS_INDEX = 0

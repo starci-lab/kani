@@ -103,7 +103,7 @@ export class BalanceService implements IBalanceService {
                     bot,
                     targetBalanceAmount,
                     quoteBalanceAmount,
-                    gasAmount: gasBalanceAmount,
+                    gasBalanceAmount,
                 })
                 this.eventEmitter.emit(
                     createEventName(
@@ -115,7 +115,7 @@ export class BalanceService implements IBalanceService {
                 bot,
                 targetBalanceAmount,
                 quoteBalanceAmount,
-                gasAmount: gasBalanceAmount,
+                gasBalanceAmount,
             }
             return {
                 balancesSnapshotsParams,
@@ -133,7 +133,7 @@ export class BalanceService implements IBalanceService {
                     bot,
                     targetBalanceAmount,
                     quoteBalanceAmount,
-                    gasAmount: gasBalanceAmount,
+                    gasBalanceAmount,
                 })
                 this.eventEmitter.emit(
                     createEventName(
@@ -146,7 +146,7 @@ export class BalanceService implements IBalanceService {
                     bot,
                     targetBalanceAmount,
                     quoteBalanceAmount,
-                    gasAmount: gasBalanceAmount,
+                    gasBalanceAmount,
                 },
             }
         }
@@ -178,7 +178,7 @@ export class BalanceService implements IBalanceService {
                             bot,
                             targetBalanceAmount: adjustedTargetBalanceAmount,
                             quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                            gasAmount: adjustedGasBalanceAmount,
+                            gasBalanceAmount: adjustedGasBalanceAmount,
                             session,
                         })
                         await this.swapTransactionSnapshotService.addSwapTransactionRecord({
@@ -199,7 +199,7 @@ export class BalanceService implements IBalanceService {
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,
                     quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasAmount: adjustedGasBalanceAmount,
+                    gasBalanceAmount: adjustedGasBalanceAmount,
                 }
                 swapsSnapshotsParams = {
                     txHash,
@@ -240,7 +240,7 @@ export class BalanceService implements IBalanceService {
                             bot,
                             targetBalanceAmount: adjustedTargetBalanceAmount,
                             quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                            gasAmount: adjustedGasBalanceAmount,
+                            gasBalanceAmount: adjustedGasBalanceAmount,
                             session,
                         })
                         await this.swapTransactionSnapshotService.addSwapTransactionRecord({
@@ -261,7 +261,7 @@ export class BalanceService implements IBalanceService {
                     bot,
                     targetBalanceAmount: adjustedTargetBalanceAmount,
                     quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasAmount: adjustedGasBalanceAmount,
+                    gasBalanceAmount: adjustedGasBalanceAmount,
                 }
                 swapsSnapshotsParams = {
                     txHash,

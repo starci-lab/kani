@@ -1,2 +1,0 @@
-export const RAYDIUM_CLMM_SDK = "RAYDIUM_CLMM_SDK"
-export const RAYDIUM_CLIENTS_INDEX = 0
