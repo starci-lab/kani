@@ -20,11 +20,13 @@ import { MeteoraActionService } from "./meteora"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
-import { computeDenomination } from "@utils"
+import { computeDenomination, sleep } from "@utils"
 import Decimal from "decimal.js"
 import { FlowXActionService } from "./flowx"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
+import { RedlockKey, RedlockService } from "@modules/lock"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class DispatchOpenPositionService {
@@ -40,6 +42,7 @@ export class DispatchOpenPositionService {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
+        private readonly redlockService: RedlockService,
     ) {}
 
     async dispatchOpenPosition(
@@ -97,30 +100,40 @@ export class DispatchOpenPositionService {
         if (totalBalanceAmountInTarget.lt(new Decimal(targetToken.minRequiredAmountInTotal || 0))) {
             // your balance is not enough to open a position, return and remind user to deposit more tokens
             return
-        }   
-        switch (dex.displayId) {
-        case DexId.Raydium:
-            return this.raydiumActionService.openPosition({
-                state,
-                bot,
-            })
-        case DexId.Orca:
-            return this.orcaActionService.openPosition({
-                state,
-                bot,
-            })
-        case DexId.Meteora:
-            return this.meteoraActionService.openPosition({
-                state,
-                bot,
-            })
-        case DexId.FlowX:
-            return this.flowxActionService.openPosition({
-                state,
-                bot,
-            })
-        default:
-            throw new Error(`DEX ${state.static.dex.toString()} not supported`)
+        }  
+        const lock = await this.redlockService.acquire({
+            botId: bot.id,
+            redlockKey: RedlockKey.Action,
+        })
+        try {
+            switch (dex.displayId) {
+            case DexId.Raydium:
+                return this.raydiumActionService.openPosition({
+                    state,
+                    bot,
+                })
+            case DexId.Orca:
+                return this.orcaActionService.openPosition({
+                    state,
+                    bot,
+                })
+            case DexId.Meteora:
+                return this.meteoraActionService.openPosition({
+                    state,
+                    bot,
+                })
+            case DexId.FlowX:
+                return this.flowxActionService.openPosition({
+                    state,
+                    bot,
+                })
+            default:
+                throw new Error(`DEX ${state.static.dex.toString()} not supported`)
+            }
+        } catch (error) {
+            await sleep(envConfig().lockCooldown.openPosition)
+            await lock.release()
+            throw error
         }
     }
 }

@@ -12,12 +12,12 @@ import {
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { DispatchClosePositionService } from "@modules/blockchains"
 import { createObjectId } from "@utils"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
-import { Mutex } from "async-mutex"
+import { 
+    createReadinessWatcherName, 
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import { Logger as WinstonLogger } from "winston"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -33,7 +33,6 @@ import { envConfig } from "@modules/env"
 })
 export class ClosePositionProcessorService {
     private bot: BotSchema
-    private mutex: Mutex
     constructor(
         // The request object injected into this processor. It contains
         // the `user` instance for whom the processor is running.
@@ -44,10 +43,9 @@ export class ClosePositionProcessorService {
         // of using @OnEvent so Nest doesn't override our request context.
         private readonly eventEmitter: EventEmitter2,
         private readonly dispatchClosePositionService: DispatchClosePositionService,
-        private readonly mutexService: MutexService,
-        @InjectWinston()
-        private readonly logger: winstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -96,30 +94,18 @@ export class ClosePositionProcessorService {
                     // skip if the liquidity pool is not belong to the active position
                     return
                 }
-                const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
-                this.mutex = this.mutexService.mutex(mutexKey)
-                // run the open position
-                if (this.mutex.isLocked()) {
-                    return
+                try {
+                    await this.dispatchClosePositionService.dispatchClosePosition({
+                        liquidityPoolId: payload.liquidityPoolId,
+                        bot: this.bot,
+                    })
+                } catch (error) {
+                    this.logger.error(WinstonLog.ClosePositionFailed, {
+                        botId: this.bot.id,
+                        error: error.message,
+                        stack: error.stack,
+                    })
                 }
-                await this.mutexService.runWithCooldown({
-                    key: mutexKey,
-                    callback: async () => {
-                        return await this.dispatchClosePositionService.dispatchClosePosition({
-                            liquidityPoolId: payload.liquidityPoolId,
-                            bot: this.bot,
-                        })
-                    },
-                    onError: (error) => {
-                        this.logger.error(
-                            WinstonLog.ClosePositionFailed, {
-                                botId: this.request.botId,
-                                liquidityPoolId: payload.liquidityPoolId,
-                                error: error.message,
-                            })
-                    },
-                    timeout: envConfig().lockCooldown.openPosition,
-                })
             }
         )
         this.eventEmitter.on(
@@ -130,31 +116,18 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
-                this.mutex = this.mutexService.mutex(mutexKey)
-                // define the target and quote tokens
-                if (this.mutex.isLocked()) {
-                    return
+                try {
+                    await this.dispatchClosePositionService.dispatchClosePosition({
+                        liquidityPoolId: payload.liquidityPoolId,
+                        bot: this.bot,
+                    })
+                } catch (error) {
+                    this.logger.error(WinstonLog.ClosePositionFailed, {
+                        botId: this.bot.id,
+                        error: error.message,
+                        stack: error.stack,
+                    })
                 }
-                await this.mutexService.runWithCooldown({
-                    key: mutexKey,
-                    callback: async () => {
-                        await this.dispatchClosePositionService.dispatchClosePosition({
-                            liquidityPoolId: payload.liquidityPoolId,
-                            bot: this.bot,
-                        })
-                    },
-                    onError: (error) => {
-                        this.logger.error(
-                            WinstonLog.ClosePositionFailed, {
-                                botId: this.request.botId,
-                                liquidityPoolId: payload.liquidityPoolId,
-                                error: error.message,
-                                stack: error.stack,
-                            })
-                    },
-                    timeout: envConfig().lockCooldown.openPosition,
-                })
             }
         )
         this.readinessWatcherFactoryService.setReady(

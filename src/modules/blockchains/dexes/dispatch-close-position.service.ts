@@ -7,6 +7,9 @@ import { OrcaActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraActionService } from "./meteora"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
+import { RedlockKey, RedlockService } from "@modules/lock"
+import { sleep } from "@utils"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class DispatchClosePositionService {
@@ -18,6 +21,7 @@ export class DispatchClosePositionService {
         private readonly meteoraActionService: MeteoraActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
+        private readonly redlockService: RedlockService,
     ) {}
 
     async dispatchClosePosition(
@@ -47,24 +51,34 @@ export class DispatchClosePositionService {
         if (!bot.activePosition) {
             return
         }
-        switch (dex.displayId) {
-        case DexId.Raydium:
-            return this.raydiumActionService.closePosition({
-                state,
-                bot,
-            })
-        case DexId.Orca:
-            return this.orcaActionService.closePosition({
-                state,
-                bot,
-            })
-        case DexId.Meteora:
-            return this.meteoraActionService.closePosition({
-                state,
-                bot,
-            })
-        default:
-            throw new Error(`DEX ${state.static.dex.toString()} not supported`)
+        const lock = await this.redlockService.acquire({
+            botId: bot.id,
+            redlockKey: RedlockKey.Action,
+        })
+        try {
+            switch (dex.displayId) {
+            case DexId.Raydium:
+                return this.raydiumActionService.closePosition({
+                    state,
+                    bot,
+                })
+            case DexId.Orca:
+                return this.orcaActionService.closePosition({
+                    state,
+                    bot,
+                })
+            case DexId.Meteora:
+                return this.meteoraActionService.closePosition({
+                    state,
+                    bot,
+                })
+            default:
+                throw new Error(`DEX ${state.static.dex.toString()} not supported`)
+            }
+        } catch (error) {
+            await sleep(envConfig().lockCooldown.closePosition)
+            await lock.release()
+            throw error
         }
     }
 }

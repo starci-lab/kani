@@ -44,6 +44,7 @@ export const envConfig = () => ({
             host: process.env.REDIS_BULLMQ_HOST || "localhost",
             port: parseInt(process.env.REDIS_BULLMQ_PORT || "6379", 10),
             password: process.env.REDIS_BULLMQ_PASSWORD || "Cuong123_A",
+            useCluster: Boolean(process.env.REDIS_BULLMQ_USE_CLUSTER) || false,
         },
         throttler: {
             host: process.env.REDIS_THROTTLER_HOST || "localhost",
@@ -133,8 +134,8 @@ export const envConfig = () => ({
         },
     },
     lockCooldown: {
-        openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "20000", 10), // 20s
-        closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "20000", 10), // 20s
+        openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "10000", 10), // 10s
+        closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s
         rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
     },
     rpcs: {

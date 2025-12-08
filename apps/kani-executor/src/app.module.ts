@@ -3,7 +3,6 @@ import { ExecutorModule } from "@modules/executor"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { envConfig, EnvModule } from "@modules/env"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
-import { MixinModule } from "@modules/mixin"
 import { ScheduleModule } from "@nestjs/schedule"
 import { EventModule } from "@modules/event"
 import { EventEmitterModule } from "@nestjs/event-emitter"
@@ -17,12 +16,14 @@ import {
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
-import { MutexModule } from "@modules/lock"
+import { MutexModule, RedlockModule } from "@modules/lock"
 import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
 import { TxBuilderModule } from "@modules/blockchains"
 import { OraModule } from "@modules/ora"
 import { GcpModule } from "@modules/gcp"
 import { SpinnerModule } from "@modules/topcli"
+import { BullModule } from "@modules/bullmq"
+import { MixinModule } from "@modules/mixin"
 
 @Module({
     imports: [
@@ -33,21 +34,27 @@ import { SpinnerModule } from "@modules/topcli"
             appName: `kani-executor-${envConfig().botExecutor.batchId}`,
             level: WinstonLevel.Error,
         }),
-        MixinModule.register({
-            isGlobal: true,
-        }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
             withSeeders: true,
             memoryStorage: true,
         }),
+        RedlockModule.register({
+            isGlobal: true,
+        }),
         CacheModule.register({
+            isGlobal: true,
+        }),
+        MixinModule.register({
             isGlobal: true,
         }),
         ClientsModule.register({
             isGlobal: true,
         }),
         SignersModule.register({
+            isGlobal: true,
+        }),
+        BullModule.forRoot({
             isGlobal: true,
         }),
         GcpModule.register({

@@ -8,6 +8,7 @@ export enum BullQueueName {
     OpenPositionConfirmation = "openPositionConfirmation",
     ClosePositionConfirmation = "closePositionConfirmation",
     SwapConfirmation = "swapConfirmation",
+    BalanceSnapshotConfirmation = "balanceSnapshotConfirmation",
 }
 
 /**

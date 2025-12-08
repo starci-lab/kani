@@ -1,4 +1,4 @@
-import { OnQueueEvent, QueueEventsHost, Processor as Worker } from "@nestjs/bullmq"
+import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
 import { RedlockKey, RedlockService } from "@modules/lock"
 import { Job } from "bullmq"
@@ -25,7 +25,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
  * allowing better fault tolerance, retry mechanisms, and system scalability.
  */
 @Worker(bullData[BullQueueName.OpenPositionConfirmation].name)
-export class OpenPositionConfirmationWorker extends QueueEventsHost {
+export class OpenPositionConfirmationWorker extends WorkerHost {
     constructor(
         private readonly redlockService: RedlockService,
         private readonly balanceService: BalanceService,
@@ -45,8 +45,9 @@ export class OpenPositionConfirmationWorker extends QueueEventsHost {
      * Handles updating snapshot balances, recording open position transactions,
      * emitting events, and releasing distributed locks.
      */
-    @OnQueueEvent("active")
-    async onActive(job: Job<OpenPositionConfirmationPayload>) {
+    async process(
+        job: Job<OpenPositionConfirmationPayload>
+    ) {
         const {
             bot,
             txHash,
@@ -66,17 +67,6 @@ export class OpenPositionConfirmationWorker extends QueueEventsHost {
             amountB,
         } = job.data
 
-        // Convert snapshot balances to BN instances for precision
-        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmountBeforeOpen)
-        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmountBeforeOpen)
-        const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmountBeforeOpen)
-
-        // Refetch current balances after the position is opened
-        const { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } =
-            await this.balanceService.fetchBalances({ bot })
-
-        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
-
         // find if the tx is already in the database
         const exists = await this.connection.model<PositionSchema>(
             PositionSchema.name
@@ -91,6 +81,17 @@ export class OpenPositionConfirmationWorker extends QueueEventsHost {
             })
             return
         }
+
+        // Convert snapshot balances to BN instances for precision
+        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmountBeforeOpen)
+        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmountBeforeOpen)
+        const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmountBeforeOpen)
+
+        // Refetch current balances after the position is opened
+        const { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } =
+            await this.balanceService.fetchBalances({ bot })
+
+        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
@@ -125,17 +126,14 @@ export class OpenPositionConfirmationWorker extends QueueEventsHost {
                 gasBalanceAmount,
                 session,
             })
-
             // Emit events for other parts of the system to react to
             this.eventEmitter.emit(createEventName(EventName.UpdateActiveBot, { botId: bot.id }))
             this.eventEmitter.emit(createEventName(EventName.PositionOpened, { botId: bot.id }))
-
             // Release the distributed lock after processing the position
             await this.redlockService.releaseIfAcquired({
                 botId: bot.id,
                 redlockKey: RedlockKey.Action,
             })
-
             // Log successful processing
             this.logger.verbose(WinstonLog.OpenPositionConfirmationSuccess, {
                 botId: bot.id,
@@ -148,11 +146,16 @@ export class OpenPositionConfirmationWorker extends QueueEventsHost {
      * Event handler triggered when a job fails.
      * Logs the error details for debugging and monitoring purposes.
      */
-    @OnQueueEvent("failed")
+    @OnWorkerEvent("failed")
     async onFailed(job: Job<OpenPositionConfirmationPayload>, error: Error) {
-        this.logger.error(WinstonLog.OpenPositionConfirmationFailed, {
-            botId: job.data.bot.id,
-            error,
-        })
+        const { bot, txHash } = job.data
+        this.logger.error(
+            WinstonLog.OpenPositionConfirmationFailed, 
+            {
+                botId: bot.id,
+                error: error.message,
+                stack: error.stack,
+                txHash,
+            })
     }
 }

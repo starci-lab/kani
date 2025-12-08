@@ -59,4 +59,17 @@ export const bullData: Record<BullQueueName, BullQueueData> = {
             },
         },
     },
+    [BullQueueName.BalanceSnapshotConfirmation]: {
+        prefix: formatWithBraces("balance_snapshot_confirmation"),
+        name: "balance_snapshot_confirmation",
+        batchSize: 1000,
+        opts: {
+            removeOnComplete: true,
+            removeOnFail: false,
+            backoff: {
+                type: "exponential",
+                delay: 1000,
+            },
+        },
+    }
 }

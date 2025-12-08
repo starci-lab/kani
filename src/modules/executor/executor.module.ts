@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./executor.module-definit
 import { LoadersModule } from "./loaders"
 import { SubscriptionsModule } from "./subscriptions"
 import { ProcessorsModule } from "./processors"
+import { WorkersModule } from "./workers"
 
 @Module({})
 export class ExecutorModule extends ConfigurableModuleClass {
@@ -20,6 +21,9 @@ export class ExecutorModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }), 
                 ProcessorsModule.register({
+                    isGlobal: true,
+                }),
+                WorkersModule.register({
                     isGlobal: true,
                 }),
             ],

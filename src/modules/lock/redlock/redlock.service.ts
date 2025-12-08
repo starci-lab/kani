@@ -27,10 +27,17 @@ export class RedlockService {
                     botId
                 )
             ], 
-            -1 // NOTE: TTL set to -1 means "infinite" (not recommended)
+            Number.MAX_SAFE_INTEGER
         )
         this.locks.set(getRedlockKey(redlockKey, botId), lock)
         return lock
+    }
+
+    async isAcquired(
+        { botId, redlockKey }: AcquiredLockParams
+    ) {
+        const lock = this.locks.get(getRedlockKey(redlockKey, botId))
+        return lock ? true : false
     }
 
     /**

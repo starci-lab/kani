@@ -8,11 +8,13 @@ import { envConfig } from "@modules/env/config"
 import { createIoRedisKey, IoRedisModule } from "@modules/native"
 import Redis from "ioredis"
 
+export const BULLMQ_KEY = "BullMQ"
+
 @Module({})
 export class BullModule extends ConfigurableModuleClass {
     // register the queue
     public static registerQueue(options: RegisterQueueOptions = {}): DynamicModule {
-        const queueName = options.queueName || BullQueueName.LiquidityPools
+        const queueName = options.queueName || BullQueueName.OpenPositionConfirmation
         // register the queue
         const registerQueueDynamicModule = NestBullModule.registerQueue({
             name: `${bullData[queueName].name}`,
@@ -38,14 +40,25 @@ export class BullModule extends ConfigurableModuleClass {
                             host: envConfig().redis.bullmq.host,
                             port: envConfig().redis.bullmq.port,
                             password: envConfig().redis.bullmq.password,
+                            additionalInstanceKeys: [BULLMQ_KEY],
+                            useCluster: envConfig().redis.bullmq.useCluster,
+                            additionalOptions: {
+                                maxRetriesPerRequest: null,
+                            },
                         }),
                     ],
-                    inject: [createIoRedisKey()],
+                    inject: [createIoRedisKey(BULLMQ_KEY)],
                     useFactory: async (redis: Redis) => ({
                         // connection to redis
                         connection: redis,
                     })
-                })
+                }),
+                // register the queues
+                ...Object.values(BullQueueName)
+                    .map(queueName => BullModule.registerQueue({
+                        isGlobal: true,
+                        queueName,
+                    })),
             ]
         }
     }

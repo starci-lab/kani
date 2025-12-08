@@ -10,18 +10,14 @@ import { BotSchema, PrimaryMemoryStorageService, QuoteRatioStatus } from "@modul
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { TokenNotFoundException } from "@exceptions"
 import { DispatchOpenPositionService, QuoteRatioService } from "@modules/blockchains"
-import { MutexService } from "@modules/lock"
-import { Mutex } from "async-mutex"
-import { getMutexKey, MutexKey } from "@modules/lock"
 import { createObjectId } from "@utils"
 import { createReadinessWatcherName, DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { MsService } from "@modules/mixin"
 import { OPEN_POSITION_SNAPSHOT_INTERVAL } from "./constants"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { envConfig } from "@modules/env"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -36,7 +32,6 @@ import { envConfig } from "@modules/env"
     durable: true,
 })
 export class OpenPositionProcessorService  {
-    private mutex: Mutex
     private bot: BotSchema
     constructor(
         // The request object injected into this processor. It contains
@@ -48,14 +43,13 @@ export class OpenPositionProcessorService  {
         private readonly eventEmitter: EventEmitter2,
         // inject the connection to the database
         private readonly dispatchOpenPositionService: DispatchOpenPositionService,
-        private readonly mutexService: MutexService,
         private readonly dayjsService: DayjsService,
         private readonly msService: MsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly quoteRatioService: QuoteRatioService,
-        @InjectWinston()
-        private readonly logger: winstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -65,12 +59,6 @@ export class OpenPositionProcessorService  {
             createReadinessWatcherName(OpenPositionProcessorService.name, {
                 botId: this.request.botId,
             }))
-        // initialize the mutex
-        this.mutex = this.mutexService.mutex(
-            getMutexKey(
-                MutexKey.Action, 
-                this.request.botId
-            ))
         this.eventEmitter.on(
             createEventName(
                 EventName.ActiveBotUpdated, {
@@ -99,8 +87,6 @@ export class OpenPositionProcessorService  {
                 if (!this.bot) {
                     return
                 }
-                const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
-                this.mutex = this.mutexService.mutex(mutexKey)
                 if (
                     !this.bot.snapshotTargetBalanceAmount 
                     || !this.bot.snapshotQuoteBalanceAmount
@@ -152,29 +138,20 @@ export class OpenPositionProcessorService  {
                 }) !== QuoteRatioStatus.Good) {
                     return
                 }
+                try {
                 // run the open position
-                if (this.mutex.isLocked()) {
-                    return
-                }
-                await this.mutexService.runWithCooldown({
-                    key: mutexKey,
-                    callback: async () => {
-                        return await this.dispatchOpenPositionService.dispatchOpenPosition({
-                            liquidityPoolId: payload.liquidityPoolId,
-                            bot: this.bot,
+                    await this.dispatchOpenPositionService.dispatchOpenPosition({
+                        liquidityPoolId: payload.liquidityPoolId,
+                        bot: this.bot,
+                    })
+                } catch (error) {
+                    this.logger.error(
+                        WinstonLog.OpenPositionFailed, {
+                            botId: this.bot.id,
+                            error: error.message,
+                            stack: error.stack,
                         })
-                    },
-                    onError: (error) => {
-                        this.logger.error(
-                            WinstonLog.OpenPositionFailed, {
-                                botId: this.request.botId,
-                                liquidityPoolId: payload.liquidityPoolId,
-                                error: error.message,
-                                stack: error.stack,
-                            })
-                    },
-                    timeout: envConfig().lockCooldown.openPosition,
-                })
+                }
             }
         )
         this.eventEmitter.on(
@@ -187,8 +164,6 @@ export class OpenPositionProcessorService  {
                 if (!this.bot) {
                     return
                 }
-                const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
-                this.mutex = this.mutexService.mutex(mutexKey)
                 if (
                     !this.bot.snapshotTargetBalanceAmount 
                     || !this.bot.snapshotQuoteBalanceAmount
@@ -240,28 +215,19 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // run the open position
-                if (this.mutex.isLocked()) {
-                    return
-                }
-                await this.mutexService.runWithCooldown({
-                    key: mutexKey,
-                    callback: async () => {
-                        return await this.dispatchOpenPositionService.dispatchOpenPosition({
-                            liquidityPoolId: payload.liquidityPoolId,
-                            bot: this.bot,
+                try {
+                    await this.dispatchOpenPositionService.dispatchOpenPosition({
+                        liquidityPoolId: payload.liquidityPoolId,
+                        bot: this.bot,
+                    })
+                } catch (error) {
+                    this.logger.error(
+                        WinstonLog.OpenPositionFailed, {
+                            botId: this.bot.id,
+                            error: error.message,
+                            stack: error.stack,
                         })
-                    },
-                    onError: (error) => {
-                        this.logger.error(
-                            WinstonLog.OpenPositionFailed, {
-                                botId: this.request.botId,
-                                liquidityPoolId: payload.liquidityPoolId,
-                                error: error.message,
-                                stack: error.stack,
-                            })
-                    },
-                    timeout: envConfig().lockCooldown.openPosition,
-                })
+                }   
             }
         )
         this.readinessWatcherFactoryService.setReady(

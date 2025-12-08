@@ -2,7 +2,7 @@
 
 import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
 import BN from "bn.js"
-import { BotSchema, LiquidityPoolId, TokenId } from "@modules/databases"
+import { BotSchema, TokenId } from "@modules/databases"
 import { sendAndConfirmTransactionFactory, signTransaction } from "@solana/kit"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "./interfaces"
 
@@ -74,4 +74,49 @@ export interface OpenPositionConfirmationPayload {
     amountA?: string
     // amount b
     amountB?: string
+}
+
+export interface ClosePositionConfirmationPayload {
+    // The bot ID used to identify the bot that created the position
+    bot: BotSchema
+    // The transaction hash of the close position transaction
+    txHash: string
+    // The liquidity pool ID to identify the liquidity pool where the position was closed
+    state: LiquidityPoolState | DlmmLiquidityPoolState
+    // The position ID to identify the closed position
+    // If you do not want to query on-chain, you can pass the balance amounts here
+    targetBalanceAmount?: string
+    quoteBalanceAmount?: string
+    gasBalanceAmount?: string
+    // swap confirmation
+    prevChain?: SwapConfirmationPayload
+}
+
+export interface BalanceSnapshotConfirmationPayload {
+    bot: BotSchema
+    // The transaction hash of the balance snapshot transaction
+    txHash?: string
+    // The target balance amount after the balance snapshot
+    targetBalanceAmount: string
+    // The quote balance amount after the balance snapshot
+    quoteBalanceAmount: string
+    // The gas balance amount after the balance snapshot
+    gasBalanceAmount: string
+}
+
+export interface SwapConfirmationPayload {
+    bot: BotSchema
+    // The transaction hash of the balance snapshot transaction
+    txHash: string
+    // after close
+    afterClose: false | {
+        closeTxHash: string
+        state: LiquidityPoolState | DlmmLiquidityPoolState
+    }
+    // The amount in
+    amountIn: string
+    // The token in ID
+    tokenInId: TokenId
+    // The token out ID
+    tokenOutId: TokenId
 }

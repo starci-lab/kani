@@ -1,16 +1,12 @@
 import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./processors.module-definition"
-import { ProcessorFactoryService } from "./processor-factory.service"
-import { 
-    ActiveBotProcessorService,
-    OpenPositionProcessorService, 
-    ClosePositionProcessorService, 
-    BalanceProcessorService,
-    DistributorProcessorService
-} from "./actions"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workers.module-definition"
+import { ClosePositionConfirmationWorker } from "./close-position-confirmation.worker"
+import { OpenPositionConfirmationWorker } from "./open-position-confirmation.worker"
+import { SwapConfirmationWorker } from "./swap-confirmation.worker"
+import { BalanceSnapshotConfirmationWorker } from "./snapshot-balance-confirmation.worker"
 
 @Module({})
-export class ProcessorsModule extends ConfigurableModuleClass {
+export class WorkersModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
@@ -22,15 +18,10 @@ export class ProcessorsModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [], 
-                DistributorProcessorService,
-                ProcessorFactoryService,
-                ActiveBotProcessorService,
-                BalanceProcessorService,
-                OpenPositionProcessorService,
-                ClosePositionProcessorService,
-            ],
-            exports: [
-                ProcessorFactoryService,
+                BalanceSnapshotConfirmationWorker,
+                ClosePositionConfirmationWorker,
+                OpenPositionConfirmationWorker,
+                SwapConfirmationWorker,
             ],
         }
     }

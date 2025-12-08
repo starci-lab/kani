@@ -1,12 +1,10 @@
 import { BalanceService } from "@modules/blockchains"
 import { BotSchema } from "@modules/databases"
-import { envConfig } from "@modules/env"
-import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
+import { envConfig } from "@modules/env"    
 import { Injectable, Scope, Inject } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
-import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
@@ -30,14 +28,12 @@ import { createEventName, EventName } from "@modules/event"
 })
 export class BalanceProcessorService  {
     private bot: BotSchema
-    private mutex: Mutex
 
     constructor(
         @Inject(REQUEST)
         private readonly request: BalanceProcessorRequest,
         @InjectWinston()
-        private readonly logger: winstonLogger,
-        private readonly mutexService: MutexService,
+        private readonly logger: WinstonLogger,
         private readonly balanceService: BalanceService,
         private readonly eventEmitter: EventEmitter2,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -51,8 +47,6 @@ export class BalanceProcessorService  {
                 botId: this.request.botId,
             }))
         // Ensure mutex exists for this bot
-        const mutexKey = getMutexKey(MutexKey.Action, this.request.botId)
-        this.mutex = this.mutexService.mutex(mutexKey)
         this.eventEmitter.on(
             createEventName(
                 EventName.ActiveBotUpdated, {
@@ -71,29 +65,20 @@ export class BalanceProcessorService  {
             if (this.bot.activePosition) {
                 return
             }
-            if (this.mutex.isLocked()) {
-                return
+            try {   
+                await this.balanceService.executeBalanceRebalancing({
+                    bot: this.bot,
+                })
+            } catch (error) {
+                this.logger.error(
+                    WinstonLog.BalanceRebalancingFailed, {
+                        botId: this.bot.id,
+                        error: error.message,
+                        stack: error.stack,
+                    })
             }
-            await this.mutexService.runWithCooldown(
-                {
-                    key: mutexKey,
-                    callback: async () => {
-                        await this.balanceService.executeBalanceRebalancing({
-                            bot: this.bot,
-                            withoutSnapshot: false,
-                        })
-                    },
-                    onError: (error) => {
-                        this.logger.error(
-                            WinstonLog.BalanceRebalancingFailed, {
-                                botId: this.request.botId,
-                                error: error.message,
-                            })
-                    },
-                    timeout: envConfig().lockCooldown.openPosition,
-                }
-            )
         }
+
         setInterval(
             executeBalanceRebalancing,
             envConfig().botExecutor.balanceEvaluationInterval,

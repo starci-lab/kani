@@ -1,4 +1,4 @@
-export * from "./ioredis.constants"
+export * from "./constants"
 export * from "./ioredis.decorators"
 export * from "./ioredis.module"
 export * from "./ioredis.module-definition"

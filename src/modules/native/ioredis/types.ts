@@ -1,4 +1,4 @@
-import { Cluster, Redis } from "ioredis"
+import { Cluster, Redis, RedisOptions } from "ioredis"
 
 export interface IoRedisOptions {
     // Whether to use a Redis cluster
@@ -11,6 +11,8 @@ export interface IoRedisOptions {
     password: string
     // Additional instance keys
     additionalInstanceKeys?: Array<string>
+    // Additional options
+    additionalOptions?: RedisOptions
 }
 
 export type RedisOrCluster = Redis | Cluster

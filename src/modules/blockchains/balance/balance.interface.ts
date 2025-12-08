@@ -23,8 +23,12 @@ export interface FetchBalanceResponse {
 
 export interface ExecuteBalanceRebalancingParams {
     bot: BotSchema
-    clientIndex?: number
-    withoutSnapshot?: boolean
+    afterClose?: boolean
+}
+
+export interface ExecuteBalanceRebalancingInternalParams {
+    bot: BotSchema
+    afterClose?: boolean
 }
 
 export interface ExecuteBalanceRebalancingResponse {

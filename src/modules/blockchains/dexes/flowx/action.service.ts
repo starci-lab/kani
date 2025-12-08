@@ -10,7 +10,6 @@ import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import {
-    InjectPrimaryMongoose,
     PrimaryMemoryStorageService,
     LoadBalancerName,
 } from "@modules/databases"
@@ -19,14 +18,10 @@ import {
     OpenPositionTxbService,
 } from "./transactions"
 import {
-    CalculateProfitability,
-    ProfitabilityMathService,
     TickMathService,
 } from "../../math"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { Connection } from "mongoose"
-import { BalanceService } from "../../balance"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
@@ -36,18 +31,20 @@ import {
     TransactionEventNotFoundException,
     TransactionStimulateFailedException,
 } from "@exceptions"
-import { DynamicLiquidityPoolInfo } from "../../types"
-import {
-    ClosePositionSnapshotService,
-    SwapTransactionSnapshotService,
-    OpenPositionSnapshotService,
-    BalanceSnapshotService,
-} from "../../snapshots"
+import { 
+    ClosePositionConfirmationPayload, 
+    DynamicLiquidityPoolInfo, 
+    OpenPositionConfirmationPayload 
+} from "../../types"
 import Decimal from "decimal.js"
 import { ClientType, RpcPickerService } from "../../clients"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { InjectQueue } from "@nestjs/bullmq"
+import { bullData, BullQueueName } from "@modules/bullmq"
+import { Queue } from "bullmq"
+import { v4 } from "uuid"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -57,15 +54,11 @@ export class FlowXActionService implements IActionService {
     private readonly openPositionTxbService: OpenPositionTxbService,
     private readonly tickMathService: TickMathService,
     private readonly eventEmitter: EventEmitter2,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    private readonly balanceService: BalanceService,
-    private readonly openPositionSnapshotService: OpenPositionSnapshotService,
-    private readonly balanceSnapshotService: BalanceSnapshotService,
-    private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
-    private readonly closePositionSnapshotService: ClosePositionSnapshotService,
+    @InjectQueue(bullData[BullQueueName.OpenPositionConfirmation].name) 
+    private openPositionConfirmationQueue: Queue<OpenPositionConfirmationPayload>,
+    @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
+    private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     private readonly closePositionTxbService: ClosePositionTxbService,
-    private readonly profitabilityMathService: ProfitabilityMathService,
     private readonly rpcPickerService: RpcPickerService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
@@ -93,7 +86,6 @@ export class FlowXActionService implements IActionService {
             bot.snapshotTargetBalanceAmount,
         )
         const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === _state.static.tokenA.toString(),
         )
@@ -105,7 +97,6 @@ export class FlowXActionService implements IActionService {
                 "Either token A or token B is not in the pool",
             )
         }
-        const targetIsA = bot.targetToken.toString() === tokenA.id
         // we log the desired amounts to the ora service
         const { tickLower, tickUpper } = await this.tickMathService.getTickBounds({
             state: _state,
@@ -192,6 +183,26 @@ export class FlowXActionService implements IActionService {
                 })
             },
         })
+        // Enqueue the job to be processed by the worker.
+        // Logic is no longer executed immediately here.
+        // Using the worker ensures reliable and asynchronous processing.
+        await this.openPositionConfirmationQueue.add(
+            v4(), 
+            {
+                bot,
+                txHash,
+                state: _state,
+                positionId,
+                liquidity: liquidity.toString(),
+                feeAmountTarget: feeAmountA.toString(),
+                feeAmountQuote: feeAmountB.toString(),
+                snapshotTargetBalanceAmountBeforeOpen: bot.snapshotTargetBalanceAmount,
+                snapshotQuoteBalanceAmountBeforeOpen: bot.snapshotQuoteBalanceAmount,
+                snapshotGasBalanceAmountBeforeOpen: bot.snapshotGasBalanceAmount,
+                tickLower: tickLower.toNumber(),
+                tickUpper: tickUpper.toNumber(),
+            }
+        )
     }
 
     async closePosition(
@@ -318,10 +329,6 @@ export class FlowXActionService implements IActionService {
                 "Either token A or token B is not in the pool",
             )
         }
-        const targetIsA =
-      bot.targetToken.toString() === state.static.tokenA.toString()
-        const targetToken = targetIsA ? tokenA : tokenB
-        const quoteToken = targetIsA ? tokenB : tokenA
         const txb = new Transaction()
         const { txb: closePositionTxb } =
       await this.closePositionTxbService.createClosePositionTxb({
@@ -367,78 +374,14 @@ export class FlowXActionService implements IActionService {
                 })
             },
         })
-
-        const { balancesSnapshotsParams, swapsSnapshotsParams } =
-      await this.balanceService.executeBalanceRebalancing({
-          bot,
-          withoutSnapshot: true,
-      })
-        const before: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-            gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
-        }
-        const after: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(
-                balancesSnapshotsParams?.targetBalanceAmount || 0,
-            ),
-            quoteTokenBalanceAmount: new BN(
-                balancesSnapshotsParams?.quoteBalanceAmount || 0,
-            ),
-            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
-        }
-        const { roi, pnl } =
-      await this.profitabilityMathService.calculateProfitability({
-          before,
-          after,
-          targetTokenId: targetToken.displayId,
-          quoteTokenId: quoteToken.displayId,
-          chainId: bot.chainId,
-      })
-        const session = await this.connection.startSession()
-        await session.withTransaction(async () => {
-            if (!bot.activePosition) {
-                throw new ActivePositionNotFoundException(
-                    bot.id,
-                    "Active position not found",
-                )
-            }
-            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+        await this.closePositionConfirmationQueue.add(
+            v4(), 
+            {
                 bot,
-                targetBalanceAmount:
-          balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                quoteBalanceAmount:
-          balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                gasBalanceAmount:
-          balancesSnapshotsParams?.gasBalanceAmount || new BN(0),
-                session,
-            })
-            await this.closePositionSnapshotService.updateClosePositionTransactionRecord(
-                {
-                    bot,
-                    pnl,
-                    roi,
-                    positionId: bot.activePosition.id,
-                    closeTxHash: txHash,
-                    session,
-                    snapshotTargetBalanceAmountAfterClose: new BN(
-                        balancesSnapshotsParams?.targetBalanceAmount || 0,
-                    ),
-                    snapshotQuoteBalanceAmountAfterClose: new BN(
-                        balancesSnapshotsParams?.quoteBalanceAmount || 0,
-                    ),
-                    snapshotGasBalanceAmountAfterClose: new BN(
-                        balancesSnapshotsParams?.gasBalanceAmount || 0,
-                    ),
-                },
-            )
-            if (swapsSnapshotsParams) {
-                await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                    ...swapsSnapshotsParams,
-                    session,
-                })
+                txHash,
+                state: _state,
             }
-        })
+        )
     }
 }
 

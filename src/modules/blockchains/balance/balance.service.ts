@@ -5,7 +5,6 @@ import {
     FetchBalancesParams, 
     FetchBalancesResponse, 
     IBalanceService,
-    ExecuteBalanceRebalancingResponse,
     ProcessSwapTransactionResponse,
     ProcessSwapTransactionParams,
 } from "./balance.interface"
@@ -23,21 +22,16 @@ import {
     EstimatedSwappedQuoteAmountNotFoundException
 } from "@exceptions"
 import { GasStatusService } from "./gas-status.service"
-import { GasStatus } from "../types"
-import BN from "bn.js"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { InjectPrimaryMongoose } from "@modules/databases"
-import { Connection as MongooseConnection } from "mongoose"
-import { SwapMathService } from "../math"
 import { 
-    BalanceSnapshotService, 
-    UpdateBotSnapshotBalancesRecordParams, 
-    AddSwapTransactionRecordParams, 
-    SwapTransactionSnapshotService
-} from "../snapshots"
+    BalanceSnapshotConfirmationPayload, GasStatus, SwapConfirmationPayload } from "../types"
+import BN from "bn.js"
+import { SwapMathService } from "../math"
 import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
-import { createEventName, EventName } from "@modules/event"
+import { RedlockKey, RedlockService } from "@modules/lock"
+import { Queue } from "bullmq"
+import { InjectQueue } from "@nestjs/bullmq"
+import { bullData, BullQueueName } from "@modules/bullmq"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -47,235 +41,152 @@ export class BalanceService implements IBalanceService {
         private readonly suiBalanceService: SuiBalanceService,
         private readonly gasStatusService: GasStatusService,
         private readonly swapMathService: SwapMathService,
-        private readonly balanceSnapshotService: BalanceSnapshotService,
-        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
-        private readonly eventEmitter: EventEmitter2,
-        @InjectPrimaryMongoose()
-        private readonly connection: MongooseConnection,
+        private readonly redlockService: RedlockService,
+        @InjectQueue(bullData[BullQueueName.BalanceSnapshotConfirmation].name)
+        private readonly balanceSnapshotConfirmationQueue: Queue<BalanceSnapshotConfirmationPayload>,
+        @InjectQueue(bullData[BullQueueName.SwapConfirmation].name)
+        private readonly swapConfirmationQueue: Queue<SwapConfirmationPayload>,
     ) {}
 
     async executeBalanceRebalancing(
         {
             bot,
-            withoutSnapshot = false,
+            afterClose = false,
         }: ExecuteBalanceRebalancingParams
-    ): Promise<ExecuteBalanceRebalancingResponse> {
-        let balancesSnapshotsParams: UpdateBotSnapshotBalancesRecordParams | undefined
-        let swapsSnapshotsParams: AddSwapTransactionRecordParams | undefined
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
-        )
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
-        )
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
-        const { 
-            targetBalanceAmount, 
-            quoteBalanceAmount, 
-            gasBalanceAmount, 
-        } = await this.fetchBalances({
-            bot,
+    ) {
+        // we only acquire the lock if we are not taking snapshots
+        // mean that this fn is called outside
+        const lock = afterClose ? undefined : await this.redlockService.acquire({
+            botId: bot.id,
+            redlockKey: RedlockKey.Action,
         })
-        const { 
-            processSwaps,
-            swapTargetToQuoteAmount, 
-            swapQuoteToTargetAmount, 
-            estimatedSwappedTargetAmount,
-            estimatedSwappedQuoteAmount,
-            quoteRatioResponse
-        } = await this.swapMathService.computeSwapAmounts({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        })
-        if (!processSwaps) {
-            // just snapshot the balances and return
-            // ensure the balances are synced
-            if (!withoutSnapshot) {
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasBalanceAmount,
-                })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
+        try {
+            const targetToken = this.primaryMemoryStorageService.tokens.find(
+                (token) => token.id === bot.targetToken.toString()
+            )
+            if (!targetToken) {
+                throw new TokenNotFoundException("Target token not found")
             }
-            balancesSnapshotsParams = {
+            const quoteToken = this.primaryMemoryStorageService.tokens.find(
+                (token) => token.id === bot.quoteToken.toString()
+            )
+            if (!quoteToken) {
+                throw new TokenNotFoundException("Quote token not found")
+            }
+            const { 
+                targetBalanceAmount, 
+                quoteBalanceAmount, 
+                gasBalanceAmount, 
+            } = await this.fetchBalances({
                 bot,
+            })
+            const { 
+                processSwaps,
+                swapTargetToQuoteAmount, 
+                swapQuoteToTargetAmount, 
+                estimatedSwappedTargetAmount,
+                estimatedSwappedQuoteAmount,
+                quoteRatioResponse
+            } = await this.swapMathService.computeSwapAmounts({
+                targetTokenId: targetToken.displayId,
+                quoteTokenId: quoteToken.displayId,
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasBalanceAmount,
-            }
-            return {
-                balancesSnapshotsParams,
-            }
-        }
-        const targetBalanceAmountInTarget = computeDenomination(targetBalanceAmount, targetToken.decimals)
-        const quoteBalanceAmountInTarget = computeDenomination(
-            quoteBalanceAmount, 
-            quoteToken.decimals
-        ).div(quoteRatioResponse.oraclePrice)
-        const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(quoteBalanceAmountInTarget)
-        if (totalBalanceAmountInTarget.lt(new Decimal(targetToken.minRequiredAmountInTotal || 0))) {
-            if (!withoutSnapshot) {
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasBalanceAmount,
-                })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-            }
-            return {
-                balancesSnapshotsParams: {
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasBalanceAmount,
-                },
-            }
-        }
-        if (swapTargetToQuoteAmount) {
-            if (!estimatedSwappedQuoteAmount) {
-                throw new EstimatedSwappedQuoteAmountNotFoundException(
-                    "Estimated swapped quote amount not found"
+            })
+            if (!processSwaps) {
+            // just snapshot the balances and return
+            // ensure the balances are synced
+                await this.balanceSnapshotConfirmationQueue.add(
+                    bullData[BullQueueName.BalanceSnapshotConfirmation].name,
+                    {
+                        bot,
+                        targetBalanceAmount: targetBalanceAmount.toString(),
+                        quoteBalanceAmount: quoteBalanceAmount.toString(),
+                        gasBalanceAmount: gasBalanceAmount.toString(),
+                    }
                 )
+                return
             }
-            const { txHash } = await this.processSwapTransaction({
-                bot,
-                tokenIn: targetToken,
-                tokenOut: quoteToken,
-                amountIn: swapTargetToQuoteAmount,
-                estimatedSwappedAmount: estimatedSwappedQuoteAmount,
-            })
-            const {
-                targetBalanceAmount: adjustedTargetBalanceAmount,
-                quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                gasBalanceAmount: adjustedGasBalanceAmount,
-            } = await this.fetchBalances({
-                bot,
-            })
-            if (!withoutSnapshot) {
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                            bot,
-                            targetBalanceAmount: adjustedTargetBalanceAmount,
-                            quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                            gasBalanceAmount: adjustedGasBalanceAmount,
-                            session,
-                        })
-                        await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                            txHash,
-                            tokenInId: targetToken.displayId,
-                            tokenOutId: quoteToken.displayId,
-                            amountIn: swapTargetToQuoteAmount,
-                            bot,
-                            session,
-                        })
-                    })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-                balancesSnapshotsParams = {
-                    bot,
-                    targetBalanceAmount: adjustedTargetBalanceAmount,
-                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasBalanceAmount: adjustedGasBalanceAmount,
+            const targetBalanceAmountInTarget = computeDenomination(
+                targetBalanceAmount, 
+                targetToken.decimals
+            )
+            const quoteBalanceAmountInTarget = computeDenomination(
+                quoteBalanceAmount, 
+                quoteToken.decimals
+            ).div(quoteRatioResponse.oraclePrice)
+            const totalBalanceAmountInTarget = targetBalanceAmountInTarget
+                .add(quoteBalanceAmountInTarget)
+            if (totalBalanceAmountInTarget.lt(new Decimal(targetToken.minRequiredAmountInTotal || 0))) {
+                // snapshot the balances and return, since the balance is not enough to swap
+                await this.balanceSnapshotConfirmationQueue.add(
+                    bullData[BullQueueName.BalanceSnapshotConfirmation].name,
+                    {
+                        bot,
+                        targetBalanceAmount: targetBalanceAmount.toString(),
+                        quoteBalanceAmount: quoteBalanceAmount.toString(),
+                        gasBalanceAmount: gasBalanceAmount.toString(),
+                    }
+                )
+                return
+            }
+            if (swapTargetToQuoteAmount) {
+                if (!estimatedSwappedQuoteAmount) {
+                    throw new EstimatedSwappedQuoteAmountNotFoundException(
+                        "Estimated swapped quote amount not found"
+                    )
                 }
-                swapsSnapshotsParams = {
-                    txHash,
+                const { txHash } = await this.processSwapTransaction({
+                    bot,
+                    tokenIn: targetToken,
+                    tokenOut: quoteToken,
                     amountIn: swapTargetToQuoteAmount,
-                    tokenInId: targetToken.displayId,
-                    tokenOutId: quoteToken.displayId,
-                    bot,
-                    session,
-                }
-            }
-        }
-
-        if (swapQuoteToTargetAmount) {
-            if (!estimatedSwappedTargetAmount) {
-                throw new EstimatedSwappedTargetAmountNotFoundException(
-                    "Estimated swapped target amount not found"
+                    estimatedSwappedAmount: estimatedSwappedQuoteAmount,
+                })
+                await this.swapConfirmationQueue.add(
+                    bullData[BullQueueName.SwapConfirmation].name,
+                    {
+                        bot,
+                        txHash,
+                        afterClose,
+                        amountIn: swapTargetToQuoteAmount.toString(),
+                        tokenInId: targetToken.displayId,
+                        tokenOutId: quoteToken.displayId,
+                    }
                 )
+                return
             }
-            const { txHash } = await this.processSwapTransaction({
-                bot,
-                tokenIn: quoteToken,
-                tokenOut: targetToken,
-                amountIn: swapQuoteToTargetAmount,
-                estimatedSwappedAmount: estimatedSwappedTargetAmount,
-            })
-            const {
-                targetBalanceAmount: adjustedTargetBalanceAmount,
-                quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                gasBalanceAmount: adjustedGasBalanceAmount,
-            } = await this.fetchBalances({
-                bot,
-            })
-            if (!withoutSnapshot) {
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                            bot,
-                            targetBalanceAmount: adjustedTargetBalanceAmount,
-                            quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                            gasBalanceAmount: adjustedGasBalanceAmount,
-                            session,
-                        })
-                        await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                            txHash,
-                            tokenInId: targetToken.displayId,
-                            tokenOutId: quoteToken.displayId,
-                            amountIn: swapQuoteToTargetAmount,
-                            bot,
-                            session,
-                        })
-                    })
-                this.eventEmitter.emit(
-                    createEventName(
-                        EventName.UpdateActiveBot, {
-                            botId: bot.id,
-                        }))
-                balancesSnapshotsParams = {
-                    bot,
-                    targetBalanceAmount: adjustedTargetBalanceAmount,
-                    quoteBalanceAmount: adjustedQuoteBalanceAmount,
-                    gasBalanceAmount: adjustedGasBalanceAmount,
+
+            if (swapQuoteToTargetAmount) {
+                if (!estimatedSwappedTargetAmount) {
+                    throw new EstimatedSwappedTargetAmountNotFoundException(
+                        "Estimated swapped target amount not found"
+                    )
                 }
-                swapsSnapshotsParams = {
-                    txHash,
+                const { txHash } = await this.processSwapTransaction({
+                    bot,
+                    tokenIn: quoteToken,
+                    tokenOut: targetToken,
                     amountIn: swapQuoteToTargetAmount,
-                    tokenInId: quoteToken.displayId,
-                    tokenOutId: targetToken.displayId,
-                    bot,
-                    session,
-                }
+                    estimatedSwappedAmount: estimatedSwappedTargetAmount,
+                })
+                await this.swapConfirmationQueue.add(
+                    bullData[BullQueueName.SwapConfirmation].name,
+                    {
+                        bot,
+                        txHash,
+                        afterClose,
+                        amountIn: swapQuoteToTargetAmount.toString(),
+                        tokenInId: quoteToken.displayId,
+                        tokenOutId: targetToken.displayId,
+                    }
+                )
+                return
             }
-        }
-        return {
-            balancesSnapshotsParams: balancesSnapshotsParams,
-            swapsSnapshotsParams: swapsSnapshotsParams,
+        } catch (error) {
+            await lock?.release()
+            throw error
         }
     }
 
