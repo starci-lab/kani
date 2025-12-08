@@ -1,5 +1,5 @@
 import { AbstractException } from "../abstract"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network } from "@typedefs"
 import { TokenId } from "@modules/databases"
 
 export class GasConfigNotFoundException extends AbstractException {

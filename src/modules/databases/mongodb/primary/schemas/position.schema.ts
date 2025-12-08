@@ -8,7 +8,7 @@ import { AbstractSchema } from "./abstract"
 import { ID } from "@nestjs/graphql"
 import BN from "bn.js"
 import { BotSchema } from "./bot.schema"
-import { ChainId, GraphQLTypeChainId } from "@modules/common"
+import { ChainId, GraphQLTypeChainId } from "@typedefs"
 import { GraphQLJSON } from "graphql-type-json"
 
 @Schema({ collection: "positions", timestamps: true })

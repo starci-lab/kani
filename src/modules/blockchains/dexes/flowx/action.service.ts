@@ -44,11 +44,10 @@ import {
     BalanceSnapshotService,
 } from "../../snapshots"
 import Decimal from "decimal.js"
-import {
-    OraClosePositionService,
-    OraOpenTransactionService,
-} from "@modules/ora"
 import { ClientType, RpcPickerService } from "../../clients"
+import { WinstonLog } from "@modules/winston"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -68,210 +67,136 @@ export class FlowXActionService implements IActionService {
     private readonly closePositionTxbService: ClosePositionTxbService,
     private readonly profitabilityMathService: ProfitabilityMathService,
     private readonly rpcPickerService: RpcPickerService,
-    private readonly oraOpenTransactionService: OraOpenTransactionService,
-    private readonly oraClosePositionService: OraClosePositionService,
+    @InjectWinston()
+    private readonly logger: WinstonLogger,
     ) {}
 
     /**
    * Open LP position on FlowX CLMM
    */
-    async openPosition({ bot, state }: OpenPositionParams): Promise<void> {
+    async openPosition(
+        { 
+            bot, 
+            state 
+        }: OpenPositionParams): Promise<void> {
         const _state = state as LiquidityPoolState
-        const oraId = this.oraOpenTransactionService.start({
-            bot,
-            liquidityPoolId: _state.static.displayId,
-        })
-        try {
-            const txb = new Transaction()
-            if (
-                !bot.snapshotTargetBalanceAmount ||
-        !bot.snapshotQuoteBalanceAmount ||
-        !bot.snapshotGasBalanceAmount
-            ) {
-                throw new SnapshotBalancesNotSetException("Snapshot balances not set")
-            }
-            const snapshotTargetBalanceAmountBN = new BN(
-                bot.snapshotTargetBalanceAmount,
-            )
-            const snapshotQuoteBalanceAmountBN = new BN(
-                bot.snapshotQuoteBalanceAmount,
-            )
-            const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
-            const tokenA = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === _state.static.tokenA.toString(),
-            )
-            const tokenB = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === _state.static.tokenB.toString(),
-            )
-            if (!tokenA || !tokenB) {
-                throw new InvalidPoolTokensException(
-                    "Either token A or token B is not in the pool",
-                )
-            }
-            const targetIsA = bot.targetToken.toString() === tokenA.id
-            const targetToken = targetIsA ? tokenA : tokenB
-            const quoteToken = targetIsA ? tokenB : tokenA
-            // we log the desired amounts to the ora service
-            this.oraOpenTransactionService.onDesiredAmountsCalculated({
-                id: oraId,
-                bot,
-                targetTokenId: targetToken.displayId,
-                quoteTokenId: quoteToken.displayId,
-                desiredTargetAmount: snapshotTargetBalanceAmountBN,
-                desiredQuoteAmount: snapshotQuoteBalanceAmountBN,
-                desiredGasAmount: snapshotGasBalanceAmountBN,
-            })
-            const { tickLower, tickUpper } = await this.tickMathService.getTickBounds(
-                {
-                    state: _state,
-                    bot,
-                },
-            )
-            const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
-                ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
-                ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
-                ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
-                snapshotTargetBalanceAmountBN,
-                snapshotQuoteBalanceAmountBN,
-                true,
-            )
 
-            const {
-                txb: openPositionTxb,
-                feeAmountA,
-                feeAmountB,
-            } = await this.openPositionTxbService.createOpenPositionTxb({
-                txb,
-                bot,
-                amountAMax: snapshotTargetBalanceAmountBN,
-                amountBMax: snapshotQuoteBalanceAmountBN,
-                liquidity: _liquidity,
-                tickLower,
-                state: _state,
-                tickUpper,
-            })
-            const {
-                digest: txHash,
-                positionId,
-                liquidity,
-            } = await this.rpcPickerService.withSuiClient<{
-        digest: string;
-        positionId: string;
-        liquidity: string;
-      }>({
-          clientType: ClientType.Write,
-          mainLoadBalancerName: LoadBalancerName.FlowXClmm,
-          callback: async (client) => {
-              return await this.signerService.withSuiSigner({
-                  bot,
-                  action: async (signer) => {
-                      const stimulateTransaction =
-                await client.devInspectTransactionBlock({
-                    transactionBlock: openPositionTxb,
-                    sender: bot.accountAddress,
-                })
-                      if (stimulateTransaction.effects.status.status === "failure") {
-                          throw new TransactionStimulateFailedException(
-                              stimulateTransaction.effects.status.error,
-                          )
-                      }
-                      const { digest, events } = await client.signAndExecuteTransaction(
-                          {
-                              transaction: openPositionTxb,
-                              signer,
-                              options: {
-                                  showEvents: true,
-                              },
-                          },
-                      )
-                      const increaseLiquidityEvent = events?.find((event) =>
-                          event.type.includes("::position_manager::IncreaseLiquidity"),
-                      )
-                      if (!increaseLiquidityEvent) {
-                          throw new TransactionEventNotFoundException(
-                              "IncreaseLiquidity event not found",
-                          )
-                      }
-                      const increaseLiquidityEventParsed =
-                increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
-                      const positionId = increaseLiquidityEventParsed.position_id
-                      const liquidity = increaseLiquidityEventParsed.liquidity
-                      return {
-                          digest,
-                          positionId,
-                          liquidity,
-                      }
-                  },
-              })
-          },
-      })
-            this.oraOpenTransactionService.onTxSuccess({
-                id: oraId,
-                txHash,
-            })
-            // we refetch the balances after the position is opened
-            const { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } =
-        await this.balanceService.fetchBalances({
+        const txb = new Transaction()
+        if (
+            !bot.snapshotTargetBalanceAmount ||
+      !bot.snapshotQuoteBalanceAmount ||
+      !bot.snapshotGasBalanceAmount
+        ) {
+            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+        }
+        const snapshotTargetBalanceAmountBN = new BN(
+            bot.snapshotTargetBalanceAmount,
+        )
+        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotGasBalanceAmountBN = new BN(bot.snapshotGasBalanceAmount)
+        const tokenA = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === _state.static.tokenA.toString(),
+        )
+        const tokenB = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === _state.static.tokenB.toString(),
+        )
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException(
+                "Either token A or token B is not in the pool",
+            )
+        }
+        const targetIsA = bot.targetToken.toString() === tokenA.id
+        // we log the desired amounts to the ora service
+        const { tickLower, tickUpper } = await this.tickMathService.getTickBounds({
+            state: _state,
             bot,
         })
-            this.oraOpenTransactionService.onBalancesRefetched({
-                id: oraId,
-            })
-            // update the snapshot balances
-            const session = await this.connection.startSession()
-            await session.withTransaction(async () => {
-                await this.openPositionSnapshotService.addOpenPositionTransactionRecord(
-                    {
-                        snapshotTargetBalanceAmountBeforeOpen:
-              snapshotTargetBalanceAmountBN,
-                        snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
-                        snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
-                        liquidity: new BN(liquidity || 0),
-                        bot,
-                        targetIsA,
-                        tickLower: tickLower.toNumber(),
-                        tickUpper: tickUpper.toNumber(),
-                        chainId: bot.chainId,
-                        liquidityPoolId: _state.static.displayId,
-                        positionId,
-                        openTxHash: txHash,
-                        session,
-                        feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
-                        feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
-                    },
-                )
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+        const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
+            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
+            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
+            snapshotTargetBalanceAmountBN,
+            snapshotQuoteBalanceAmountBN,
+            true,
+        )
+        const {
+            txb: openPositionTxb,
+            feeAmountA,
+            feeAmountB,
+        } = await this.openPositionTxbService.createOpenPositionTxb({
+            txb,
+            bot,
+            amountAMax: snapshotTargetBalanceAmountBN,
+            amountBMax: snapshotQuoteBalanceAmountBN,
+            liquidity: _liquidity,
+            tickLower,
+            state: _state,
+            tickUpper,
+        })
+        const {
+            digest: txHash,
+            positionId,
+            liquidity,
+        } = await this.rpcPickerService.withSuiClient({
+            clientType: ClientType.Write,
+            mainLoadBalancerName: LoadBalancerName.FlowXClmm,
+            // we do not proccess retries here, since we dont want to wait for the retries to complete
+            withoutRetry: true,
+            callback: async (client) => {
+                return await this.signerService.withSuiSigner({
                     bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasBalanceAmount,
-                    session,
+                    action: async (signer) => {
+                        const stimulateTransaction =
+              await client.devInspectTransactionBlock({
+                  transactionBlock: openPositionTxb,
+                  sender: bot.accountAddress,
+              })
+                        if (stimulateTransaction.effects.status.status === "failure") {
+                            throw new TransactionStimulateFailedException(
+                                stimulateTransaction.effects.status.error,
+                            )
+                        }
+                        const { digest, events } = await client.signAndExecuteTransaction({
+                            transaction: openPositionTxb,
+                            signer,
+                            options: {
+                                showEvents: true,
+                            },
+                        })
+                        const increaseLiquidityEvent = events?.find((event) =>
+                            event.type.includes("::position_manager::IncreaseLiquidity"),
+                        )
+                        if (!increaseLiquidityEvent) {
+                            throw new TransactionEventNotFoundException(
+                                "IncreaseLiquidity event not found",
+                            )
+                        }
+                        const increaseLiquidityEventParsed =
+              increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
+                        const positionId = increaseLiquidityEventParsed.position_id
+                        const liquidity = increaseLiquidityEventParsed.liquidity
+                        // log the open position success
+                        this.logger.verbose(
+                            WinstonLog.OpenPositionSuccess, {
+                                botId: bot.id,
+                                txHash,
+                                liquidityPoolId: _state.static.displayId,
+                            })
+                        // return the transaction hash, position id and liquidity
+                        return {
+                            digest,
+                            positionId,
+                            liquidity,
+                        }
+                    },
                 })
-            })
-            this.eventEmitter.emit(
-                createEventName(EventName.UpdateActiveBot, {
-                    botId: bot.id,
-                }),
-            )
-            this.eventEmitter.emit(
-                createEventName(EventName.PositionOpened, {
-                    botId: bot.id,
-                }),
-            )
-            this.oraOpenTransactionService.onSnapshotSuccess({
-                id: oraId,
-            })
-        } catch (error) {
-            this.oraOpenTransactionService.onProcessFailure({
-                id: oraId,
-                bot,
-                liquidityPoolId: _state.static.displayId,
-            })
-            throw error
-        }
+            },
+        })
     }
 
-    async closePosition(params: ClosePositionParams): Promise<void> {
+    async closePosition(
+        params: ClosePositionParams
+    ): Promise<void> {
         const { bot, state } = params
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
@@ -280,53 +205,36 @@ export class FlowXActionService implements IActionService {
                 "Active position not found",
             )
         }
-        const oraId = this.oraClosePositionService.start(
-            bot,
-            _state.static.displayId,
+        const targetToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.targetToken.toString(),
         )
-        try {
-            const targetToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === bot.targetToken.toString(),
-            )
-            if (!targetToken) {
-                throw new TokenNotFoundException("Target token not found")
-            }
-            const quoteToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === bot.quoteToken.toString(),
-            )
-            if (!quoteToken) {
-                throw new TokenNotFoundException("Quote token not found")
-            }
-            // we have many close criteria
-            // 1. the position is out-of-range, we close immediately
-            // 2. our detection find a potential dump from CEX
-            // 3. the position is not profitable, we close it
-            const shouldProceedAfterIsPositionOutOfRange =
-        await this.assertIsPositionOutOfRange({
-            bot,
-            state: _state,
-            oraId,
-        })
-            if (!shouldProceedAfterIsPositionOutOfRange) {
-                return
-            }
-        } catch (error) {
-            this.oraClosePositionService.onProcessFailure({
-                id: oraId,
-                bot,
-                liquidityPoolId: _state.static.displayId,
-            })
-            throw error
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.quoteToken.toString(),
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
+        }
+        // we have many close criteria
+        // 1. the position is out-of-range, we close immediately
+        // 2. our detection find a potential dump from CEX
+        // 3. the position is not profitable, we close it
+        const shouldProceedAfterIsPositionOutOfRange =
+      await this.assertIsPositionOutOfRange({
+          bot,
+          state: _state,
+      })
+        if (!shouldProceedAfterIsPositionOutOfRange) {
+            return
         }
     }
 
     private async assertIsPositionOutOfRange({
         bot,
         state,
-        oraId,
-    }: ClosePositionParams & {
-    oraId: string;
-  }): Promise<boolean> {
+    }: ClosePositionParams): Promise<boolean> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id,
@@ -353,10 +261,10 @@ export class FlowXActionService implements IActionService {
                 "Either token A or token B is not in the pool",
             )
         }
+        // proccess the close position transaction
         await this.proccessClosePositionTransaction({
             bot,
             state,
-            oraId,
         })
         // return false to terminate the assertion
         this.eventEmitter.emit(
@@ -369,16 +277,14 @@ export class FlowXActionService implements IActionService {
                 botId: bot.id,
             }),
         )
+
         return false
     }
 
     private async proccessClosePositionTransaction({
         bot,
         state,
-        oraId,
-    }: ClosePositionParams & {
-    oraId: string;
-  }): Promise<void> {
+    }: ClosePositionParams): Promise<void> {
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -448,14 +354,18 @@ export class FlowXActionService implements IActionService {
                                 showEvents: true,
                             },
                         })
+                        // log the close position success
+                        this.logger.verbose(
+                            WinstonLog.ClosePositionSuccess, {
+                                botId: bot.id,
+                                txHash: digest,
+                                liquidityPoolId: _state.static.displayId,
+                            })
+                        // return the transaction hash
                         return digest
                     },
                 })
             },
-        })
-        this.oraClosePositionService.onTxSuccess({
-            id: oraId,
-            txHash,
         })
 
         const { balancesSnapshotsParams, swapsSnapshotsParams } =
@@ -463,9 +373,6 @@ export class FlowXActionService implements IActionService {
           bot,
           withoutSnapshot: true,
       })
-        this.oraClosePositionService.onRebalancingSuccess({
-            id: oraId,
-        })
         const before: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
             quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
@@ -488,11 +395,6 @@ export class FlowXActionService implements IActionService {
           quoteTokenId: quoteToken.displayId,
           chainId: bot.chainId,
       })
-        this.oraClosePositionService.onProfitabilityCalculationSuccess({
-            id: oraId,
-            roi,
-            pnl,
-        })
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
             if (!bot.activePosition) {
@@ -536,9 +438,6 @@ export class FlowXActionService implements IActionService {
                     session,
                 })
             }
-        })
-        this.oraClosePositionService.onSnapshotSuccess({
-            id: oraId,
         })
     }
 }

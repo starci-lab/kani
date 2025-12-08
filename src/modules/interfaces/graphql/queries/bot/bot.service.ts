@@ -10,7 +10,7 @@ import {
 } from "./bot.dto"
 import { KeypairsService } from "@modules/blockchains"
 import { BotNotFoundException } from "@exceptions"
-import { chainIdToPlatformId } from "@modules/common"
+import { chainIdToPlatformId } from "@typedefs"
 import { UserJwtLike } from "@modules/passport"
 
 @Injectable()

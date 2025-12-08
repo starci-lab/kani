@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common"
-import { sleep } from "@modules/common"
+import { sleep } from "@utils"
 import { AsyncService } from "./async.service"
 
 @Injectable()

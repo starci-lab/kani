@@ -6,10 +6,10 @@ import {
     PositionSchema 
 } from "@modules/databases"
 import BN from "bn.js"
-import { ChainId, createObjectId } from "@modules/common"
+import { createObjectId } from "@utils"
+import { ChainId } from "@typedefs"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
-import { EventEmitter2 } from "@nestjs/event-emitter"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -17,7 +17,6 @@ export class OpenPositionSnapshotService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
-        private readonly eventEmitter: EventEmitter2,
     ) {}
 
     async addOpenPositionTransactionRecord(

@@ -1,6 +1,6 @@
 import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
 import { IsArray, IsEnum, IsUrl } from "class-validator"
-import { ChainId, GraphQLTypeChainId } from "@modules/common"
+import { ChainId, GraphQLTypeChainId } from "@typedefs"
 import {
     AbstractGraphQLResponse,
     IAbstractGraphQLResponse,

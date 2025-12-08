@@ -234,6 +234,7 @@ export class OrcaActionService implements IActionService {
         const txHash = await this.rpcPickerService.withSolanaRpc<string>({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.OrcaClmm,
+            withoutRetry: true,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 const instructions = await this.closePositionInstructionService.createCloseInstructions({
                     bot,
@@ -460,6 +461,7 @@ export class OrcaActionService implements IActionService {
             const txHash = await this.rpcPickerService.withSolanaRpc<string>({
                 clientType: ClientType.Write,
                 mainLoadBalancerName: LoadBalancerName.OrcaClmm,
+                withoutRetry: true,
                 callback: async ({ rpc, rpcSubscriptions }) => {
                     return await this.signerService.withSolanaSigner({
                         bot,
@@ -493,7 +495,7 @@ export class OrcaActionService implements IActionService {
                                     commitment: "confirmed",
                                     maxRetries: BigInt(5),
                                 })
-                            this.logger.debug(
+                            this.logger.verbose(
                                 WinstonLog.OpenPositionSuccess, {
                                     txHash: transactionSignature.toString(),
                                     bot: bot.id,

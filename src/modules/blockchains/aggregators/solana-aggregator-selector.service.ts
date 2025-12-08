@@ -3,7 +3,7 @@ import { JupiterService } from "./jupiter.service"
 import { AsyncService } from "@modules/mixin"
 import { LoadBalancerName } from "@modules/databases"
 import { AggregatorNotFoundException } from "@exceptions"
-import { ChainId } from "@modules/common"
+import { ChainId } from "@typedefs"
 import { AggregatorId } from "./types"
 import { 
     BatchQuoteParams, 

@@ -1,4 +1,4 @@
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network } from "@typedefs"
 import { TokenId } from "@modules/databases"
 
 export enum SocketIoEvent {

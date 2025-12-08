@@ -122,7 +122,6 @@ export class SelectCoinsService {
         txb = txb ?? new Transaction()
         const fetchedCoins = await this.fetchCoinsService.fetchCoins({ owner, coinType, loadBalancerName })
         if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
-
         const coins = fetchedCoins.coinAssets.map((coin) => ({
             coinAmount: coin.coinAmount,
             coinRef: {

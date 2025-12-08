@@ -27,7 +27,7 @@ import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { FeeService } from "../../../math"
 import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
-import { TokenType } from "@modules/common"
+import { TokenType } from "@typedefs"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema

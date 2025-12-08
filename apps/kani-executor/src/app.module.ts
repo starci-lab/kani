@@ -22,6 +22,7 @@ import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
 import { TxBuilderModule } from "@modules/blockchains"
 import { OraModule } from "@modules/ora"
 import { GcpModule } from "@modules/gcp"
+import { SpinnerModule } from "@modules/topcli"
 
 @Module({
     imports: [
@@ -69,6 +70,9 @@ import { GcpModule } from "@modules/gcp"
             isGlobal: true,
         }),
         AggregatorsModule.register({
+            isGlobal: true,
+        }),
+        SpinnerModule.register({
             isGlobal: true,
         }),
         MutexModule.register({

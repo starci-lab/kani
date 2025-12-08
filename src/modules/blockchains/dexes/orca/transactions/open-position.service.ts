@@ -45,7 +45,7 @@ import {
 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
 import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
-import { TokenType } from "@modules/common"
+import { TokenType } from "@typedefs"
 import { FeeService } from "../../../math"
 
 @Injectable()

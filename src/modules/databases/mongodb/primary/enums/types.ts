@@ -1,5 +1,5 @@
 import { registerEnumType } from "@nestjs/graphql"
-import { createEnumType } from "@modules/common"
+import { createEnumType } from "@utils"
 
 export enum OauthProviderName {
     Google = "google",

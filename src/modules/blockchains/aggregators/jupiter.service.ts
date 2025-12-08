@@ -5,7 +5,7 @@ import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import BN from "bn.js"
 import { RetryService } from "@modules/mixin"
-import { ChainId } from "@modules/common"
+import { ChainId } from "@typedefs"
 import { Address, address } from "@solana/kit"
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 

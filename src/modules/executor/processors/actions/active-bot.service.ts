@@ -12,7 +12,7 @@ import { BalanceProcessorService } from "./balance.service"
 import { OpenPositionProcessorService } from "./open-position.service"
 import { ClosePositionProcessorService } from "./close-position.service"
 import { DistributorProcessorService } from "./distributor.service"
-import { sleep } from "@modules/common"
+import { sleep } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 

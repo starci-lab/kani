@@ -6,7 +6,7 @@ import {
 } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network } from "@typedefs"
 import { BN } from "turbos-clmm-sdk"
 
 @Injectable()

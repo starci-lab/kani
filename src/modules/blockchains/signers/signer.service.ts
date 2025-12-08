@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { PlatformId } from "@modules/common"
+import { PlatformId } from "@typedefs"
 import { BotSchema } from "@modules/databases"
 import { Ed25519Keypair as SuiEd25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import { createKeyPairFromBytes, createSignerFromKeyPair, KeyPairSigner } from "@solana/kit"

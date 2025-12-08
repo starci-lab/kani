@@ -1,9 +1,8 @@
 
-import { BaseModuleOptions } from "@modules/common"
 import { DexId } from "@modules/databases"
 import { CoinArgument } from "../types"
 
-export interface DexesOptions extends BaseModuleOptions {
+export interface DexesOptions {
     dexes?: Array<DexOptions & { dexId: DexId }>
     withUtilities?: boolean
 }

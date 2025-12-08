@@ -23,13 +23,11 @@ import { SelectCoinsService } from "../../../tx-builder"
 import { ChainId } from "@typedefs"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { FeeService } from "../../../math"
-import { RpcPickerService } from "@modules/blockchains"
 
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly rpcPickerService: RpcPickerService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly dayjsService: DayjsService,
         private readonly feeService: FeeService,

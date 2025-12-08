@@ -55,6 +55,7 @@ export const envConfig = () => ({
             host: process.env.REDIS_LOCK_HOST || "localhost",
             port: parseInt(process.env.REDIS_LOCK_PORT || "6379", 10),
             password: process.env.REDIS_LOCK_PASSWORD || "Cuong123_A",
+            useCluster: Boolean(process.env.REDIS_LOCK_USE_CLUSTER) || false,
             ttl: parseInt(process.env.LOCK_REDIS_TTL || "3600000", 10), // 3600s
         },
     },

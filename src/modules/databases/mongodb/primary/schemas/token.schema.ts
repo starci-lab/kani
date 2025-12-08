@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, Float, Int, ObjectType } from "@nestjs/graphql"
-import { ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType } from "@modules/common"
+import { ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType } from "@typedefs"
 import { AbstractSchema } from "./abstract"
 import { CexId, GraphQLTypeCexId, GraphQLTypeTokenId, TokenId } from "../enums"
 import GraphQLJSON from "graphql-type-json"

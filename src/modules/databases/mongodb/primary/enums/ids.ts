@@ -1,4 +1,4 @@
-import { createEnumType } from "@modules/common"
+import { createEnumType } from "@utils"
 import { registerEnumType } from "@nestjs/graphql"
 
 export enum TokenId {

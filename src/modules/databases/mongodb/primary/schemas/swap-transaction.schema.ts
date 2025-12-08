@@ -4,7 +4,7 @@ import { Field, ID } from "@nestjs/graphql"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { BotSchema } from "./bot.schema"
 import { TokenSchema } from "./token.schema"
-import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@modules/common"
+import { ChainId, GraphQLTypeChainId, GraphQLTypeNetwork, Network } from "@typedefs"
 
 @Schema({
     timestamps: true,

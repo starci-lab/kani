@@ -24,7 +24,7 @@ import BN from "bn.js"
 import { Decimal } from "decimal.js"
 import { u128, u64, i32, bool, BeetArgsStruct, u8  } from "@metaplex-foundation/beet"
 import { FeeService } from "../../../math"
-import { TokenType } from "@modules/common"
+import { TokenType } from "@typedefs"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema

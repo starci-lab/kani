@@ -9,7 +9,7 @@ import { FeeToAddressNotFoundException, TargetOperationalGasAmountNotFoundExcept
 import { FeeService } from "../../../math"
 import { SelectCoinsService } from "../../../tx-builder"
 import BN from "bn.js"
-import { ChainId } from "@modules/common"
+import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 
 @Injectable()

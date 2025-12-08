@@ -4,7 +4,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { ConfigId, GraphQLTypeConfigId } from "../enums"
 import { GraphQLJSON } from "graphql-type-json"
 import { Schema as MongooseSchema } from "mongoose"
-import { ChainId } from "@modules/common"
+import { ChainId } from "@typedefs"
 
 @ObjectType({
     description: "Represents a configuration for the platform.",

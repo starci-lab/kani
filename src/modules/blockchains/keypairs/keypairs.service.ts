@@ -5,7 +5,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import base58 from "bs58"
 import { WalletSchema } from "@modules/databases"
 import { GeneratedKeypair } from "./types"
-import { PlatformId } from "@modules/common"
+import { PlatformId } from "@typedefs"
 import { EncryptionService } from "@modules/crypto"
 
 export interface Keypairs {

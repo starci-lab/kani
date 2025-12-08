@@ -16,7 +16,7 @@ import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Mutex } from "async-mutex"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
-import { createReadinessWatcherName, DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
+import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 
 // open position processor service is to process the open position of the liquidity pools
@@ -45,7 +45,6 @@ export class ClosePositionProcessorService {
         private readonly eventEmitter: EventEmitter2,
         private readonly dispatchClosePositionService: DispatchClosePositionService,
         private readonly mutexService: MutexService,
-        private readonly dayjsService: DayjsService,
         @InjectWinston()
         private readonly logger: winstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -151,6 +150,7 @@ export class ClosePositionProcessorService {
                                 botId: this.request.botId,
                                 liquidityPoolId: payload.liquidityPoolId,
                                 error: error.message,
+                                stack: error.stack,
                             })
                     },
                     timeout: envConfig().lockCooldown.openPosition,

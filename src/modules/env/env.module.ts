@@ -3,7 +3,6 @@ import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
 import { envConfig } from "./config"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./env.module-definition"
-import { join } from "path"
 
 @Module({})
 export class EnvModule extends ConfigurableModuleClass {

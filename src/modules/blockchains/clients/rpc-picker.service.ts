@@ -66,6 +66,7 @@ export class RpcPickerService {
         mainLoadBalancerName,
         callback,
         clientType,
+        withoutRetry = false,
     }: WithSolanaRpcParams<TResponse>): Promise<TResponse> {  
         const urls = await this.getUrls({ loadBalancerName: mainLoadBalancerName, clientType })
         // pick the first endpoint
@@ -82,6 +83,9 @@ export class RpcPickerService {
         try {
             const rpc = createSolanaRpc(primaryUrl)
             const rpcSubscriptions = createSolanaRpcSubscriptions(httpsToWss(primaryUrl))
+            if (withoutRetry) {
+                return await callback({ rpc, rpcSubscriptions })
+            }
             return await this.retryService.retry({
                 action: () => callback({ rpc, rpcSubscriptions }),
                 maxRetries: 2,
@@ -114,28 +118,30 @@ export class RpcPickerService {
         mainLoadBalancerName,
         callback,
         clientType,
+        withoutRetry = false,
     }: WithSuiClientParams<TResponse>): Promise<TResponse> {
-    
         const urls = await this.getUrls({ loadBalancerName: mainLoadBalancerName, clientType })
-    
         // pick the best endpoint via P2C
         const primaryUrl = this.loadBalancerService.balanceP2c(
             mainLoadBalancerName,
             urls,
         )
-    
+        if (withoutRetry) {
+            return callback(
+                new SuiClient({
+                    url: primaryUrl,
+                    network: "mainnet",
+                }))
+        }
         // fallback endpoints
         const restUrls = urls.filter(u => u !== primaryUrl)
-    
         let lastError: unknown = null
-    
         // try primary RPC first
         try {
             const client = new SuiClient({
                 url: primaryUrl,
                 network: "mainnet",
             })
-    
             return await this.retryService.retry({
                 action: () => callback(client),
                 maxRetries: 2,
@@ -174,6 +180,7 @@ export interface WithSolanaRpcParams<TResponse = void> {
     mainLoadBalancerName: LoadBalancerName
     callback: (params: WithSolanaRpcCallbackParams) => Promise<TResponse>
     clientType: ClientType
+    withoutRetry?: boolean
 }
 
 export interface WithSolanaRpcCallbackParams {
@@ -190,6 +197,7 @@ export interface WithSuiClientParams<TResponse = void> {
     mainLoadBalancerName: LoadBalancerName
     callback: (client: SuiClient) => Promise<TResponse>
     clientType: ClientType
+    withoutRetry?: boolean
 }   
 
 export enum ClientType {

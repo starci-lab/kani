@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { ChainId, GraphQLTypeChainId } from "@modules/common"
+import { ChainId, GraphQLTypeChainId } from "@typedefs"
 import { TokenSchema } from "./token.schema"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"

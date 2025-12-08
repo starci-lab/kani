@@ -170,6 +170,7 @@ export class OpenPositionProcessorService  {
                                 botId: this.request.botId,
                                 liquidityPoolId: payload.liquidityPoolId,
                                 error: error.message,
+                                stack: error.stack,
                             })
                     },
                     timeout: envConfig().lockCooldown.openPosition,
@@ -256,6 +257,7 @@ export class OpenPositionProcessorService  {
                                 botId: this.request.botId,
                                 liquidityPoolId: payload.liquidityPoolId,
                                 error: error.message,
+                                stack: error.stack,
                             })
                     },
                     timeout: envConfig().lockCooldown.openPosition,

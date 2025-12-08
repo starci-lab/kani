@@ -1,1 +1,0 @@
-export type Atomic = string | number | object | bigint | boolean | null | undefined

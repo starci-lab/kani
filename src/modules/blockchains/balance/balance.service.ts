@@ -11,7 +11,7 @@ import {
 } from "./balance.interface"
 import { SolanaBalanceService } from "./solana.service"
 import { ExecuteBalanceRebalancingParams } from "./balance.interface"
-import { ChainId, TokenType } from "@modules/common"
+import { TokenType, ChainId } from "@typedefs"
 import { SuiBalanceService } from "./sui.service"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 

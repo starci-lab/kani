@@ -66,7 +66,9 @@ export class TransferInstructionService {
         if (transferAtaInstructions?.length) {
             instructions.push(...transferAtaInstructions)
         }
-        const _getTransferInstruction = token.is2022Token ? getTransferInstruction2022 : getTransferInstruction
+        const _getTransferInstruction = token.is2022Token 
+            ? getTransferInstruction2022 
+            : getTransferInstruction
         instructions.push(
             _getTransferInstruction({
                 source: sourceAtaAddress,

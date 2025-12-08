@@ -1,5 +1,5 @@
 import { FetchedPool } from "@modules/blockchains"
-import { ChainId, Network } from "@modules/common"
+import { ChainId, Network } from "@typedefs"
 import { CexId, LiquidityPoolId, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import crypto from "crypto"

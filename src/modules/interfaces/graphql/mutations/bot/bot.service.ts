@@ -23,7 +23,7 @@ import {
     LiquidityPoolsValidationException,
 } from "@exceptions"
 import { KeypairsService } from "@modules/blockchains"
-import { chainIdToPlatformId } from "@modules/common"
+import { chainIdToPlatformId } from "@typedefs"
 import { 
     LiquidityPoolNotFoundException,
     TokenNotFoundException

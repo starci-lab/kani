@@ -72,10 +72,6 @@ export class OpenPositionTxbService {
             chainId: bot.chainId,
         })
         // we check balances of tokenA and tokenB
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.TurbosClmm,
-            this.primaryMemoryStorageService.clientConfig.turbosClmmClientRpcs.read
-        )
         const targetOperationalAmount = this.primaryMemoryStorageService.
             gasConfig.
             gasAmountRequired[ChainId.Sui]?.

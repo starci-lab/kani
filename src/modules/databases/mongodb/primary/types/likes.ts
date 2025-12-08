@@ -1,4 +1,4 @@
-import { ChainId, Network, PlatformId, TokenType } from "@modules/common"
+import { ChainId, Network, PlatformId, TokenType } from "@typedefs"
 import { CexId, DexId, LiquidityPoolId, TokenId } from "../primary/enums"
 
 export interface BaseLike {

@@ -47,9 +47,10 @@ export class BotsLoaderService implements OnModuleInit {
             .lean()                          // return plain objects, no mongoose wrappers
             .exec()
         this.botIds = bots.map((bot) => bot._id.toString())
-        this.winstonLogger.debug(WinstonLog.BotsLoaded, {
-            bots: this.botIds.length,
-        })
+        this.winstonLogger.info(
+            WinstonLog.BotsLoaded, {
+                bots: this.botIds.length,
+            })
     }
 
     @Cron(CronExpression.EVERY_10_SECONDS)

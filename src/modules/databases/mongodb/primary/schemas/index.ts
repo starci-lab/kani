@@ -1,5 +1,4 @@
 export * from "./abstract"
-export * from "./storage.schema"
 export * from "./user.schema"
 export * from "./wallet.schema"
 export * from "./token.schema"

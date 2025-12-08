@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TokenType } from "@modules/common"
+import { TokenType } from "@typedefs"
 import {
     FetchBalanceParams,
     FetchBalanceResponse,

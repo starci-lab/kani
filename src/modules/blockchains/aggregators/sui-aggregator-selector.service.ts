@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { AsyncService, LoadBalancerService } from "@modules/mixin"
 import { AggregatorNotFoundException } from "@exceptions"
-import { ChainId } from "@modules/common"
+import { ChainId } from "@typedefs"
 import { AggregatorId } from "./types"
 import { 
     BatchQuoteParams, 

@@ -1,5 +1,5 @@
 import { TokenNotFoundException } from "@exceptions"
-import { computeRatio, computeRaw, toUnit } from "@modules/common"
+import { computeRatio, computeRaw, toUnit } from "@utils"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"

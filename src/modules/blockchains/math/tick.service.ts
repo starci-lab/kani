@@ -1,6 +1,6 @@
 import Decimal from "decimal.js"
 import { Injectable } from "@nestjs/common"
-import { computeDenomination, toUnitDecimal } from "@modules/common"
+import { computeDenomination, toUnitDecimal } from "@utils"
 import BN from "bn.js"
 import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"

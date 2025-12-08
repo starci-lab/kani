@@ -6,8 +6,6 @@ import {
     InstanceSchemaClass,
     LiquidityPoolSchema,
     LiquidityPoolSchemaClass,
-    StorageSchema,
-    StorageSchemaClass,
     TokenSchema,
     TokenSchemaClass,
     UserAllocationSchema,
@@ -119,10 +117,6 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
             module: PrimaryMongoDbModule,
             imports: [
                 NestMongooseModule.forFeatureAsync([
-                    {
-                        name: StorageSchema.name,
-                        useFactory: () => StorageSchemaClass,
-                    },
                     {
                         name: BotSchema.name,
                         useFactory: () => BotSchemaClass,

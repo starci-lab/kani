@@ -34,4 +34,8 @@ export class OraService {
         this.oras[id]?.clear()
         delete this.oras[id]
     }
+
+    ora(id: string) {
+        return this.oras[id]
+    }
 }

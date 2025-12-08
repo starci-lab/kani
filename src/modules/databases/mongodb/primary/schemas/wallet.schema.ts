@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, ObjectType } from "@nestjs/graphql" 
 import { ChainConfigSchema, ChainConfigSchemaClass } from "./chain-config.schema"
-import { GraphQLTypePlatformId, PlatformId } from "@modules/common"
+import { GraphQLTypePlatformId, PlatformId } from "@typedefs"
 
 @Schema({ autoCreate: false })
 @ObjectType()

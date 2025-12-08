@@ -1,5 +1,6 @@
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { ChainId, toScaledBN } from "@modules/common"
+import { ChainId } from "@typedefs"
+import { toScaledBN } from "@utils"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { Decimal } from "decimal.js"

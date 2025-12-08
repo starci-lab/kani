@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { Field, ObjectType } from "@nestjs/graphql"
-import { ChainId, GraphQLTypeChainId } from "@modules/common"
+import { ChainId, GraphQLTypeChainId } from "@typedefs"
 
 @Schema({ autoCreate: false })
 @ObjectType()
