@@ -85,13 +85,13 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
                 //         action: false,
                 //     },
                 // },
-                {
-                    dexId: DexId.Meteora,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                    },
-                },
+                // {
+                //     dexId: DexId.Meteora,
+                //     enabled: {
+                //         observe: true,
+                //         action: false,
+                //     },
+                // },
                 {
                     dexId: DexId.FlowX,
                     enabled: {

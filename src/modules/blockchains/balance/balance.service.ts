@@ -64,12 +64,13 @@ export class BalanceService implements IBalanceService {
                 bot.id
             )
         )
+        // if withoutAcquireLock is true, we will not acquire the lock and continue the execution
+        // otherwise, we will acquire the lock and continue the execution
         if (!withoutAcquireLock) {
-            await mutex.acquire()
-        } else {
             if (mutex.isLocked()) {
                 return
             }
+            await mutex.acquire()
         }
         try {
             const targetToken = this.primaryMemoryStorageService.tokens.find(

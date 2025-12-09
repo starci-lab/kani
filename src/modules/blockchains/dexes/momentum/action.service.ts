@@ -133,7 +133,7 @@ export class MomentumActionService implements IActionService {
                 state: _state,
                 tickUpper,
             })
-            const { digest: txHash, positionId, liquidity } = await this.rpcPickerService.withSuiClient<{ digest: string, positionId: string, liquidity: string }>({
+            const { txHash, positionId, liquidity } = await this.rpcPickerService.withSuiClient<{ txHash: string, positionId: string, liquidity: string }>({
                 clientType: ClientType.Write,
                 mainLoadBalancerName: LoadBalancerName.MomentumClmm,
                 callback: async (client) => {
@@ -147,7 +147,7 @@ export class MomentumActionService implements IActionService {
                             if (stimulateTransaction.effects.status.status === "failure") {
                                 throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
                             }
-                            const { digest, events } = await client.signAndExecuteTransaction({
+                            const { digest: txHash, events } = await client.signAndExecuteTransaction({
                                 transaction: openPositionTxb,
                                 signer,
                                 options: {
@@ -164,7 +164,7 @@ export class MomentumActionService implements IActionService {
                             const positionId = increaseLiquidityEventParsed.position_id
                             const liquidity = increaseLiquidityEventParsed.liquidity
                             return {
-                                digest,
+                                txHash,
                                 positionId,
                                 liquidity
                             }

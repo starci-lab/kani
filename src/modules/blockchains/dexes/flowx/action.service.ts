@@ -72,7 +72,6 @@ export class FlowXActionService implements IActionService {
             bot, 
             state 
         }: OpenPositionParams): Promise<void> {
-        console.log("openPosition", bot.id, state)
         const _state = state as LiquidityPoolState
         const txb = new Transaction()
         if (
@@ -125,7 +124,7 @@ export class FlowXActionService implements IActionService {
             tickUpper,
         })
         const {
-            digest: txHash,
+            txHash,
             positionId,
             liquidity,
         } = await this.rpcPickerService.withSuiClient({
@@ -166,6 +165,7 @@ export class FlowXActionService implements IActionService {
               increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
                         const positionId = increaseLiquidityEventParsed.position_id
                         const liquidity = increaseLiquidityEventParsed.liquidity
+                        const txHash = digest
                         // log the open position success
                         this.logger.verbose(
                             WinstonLog.OpenPositionSuccess, {
@@ -175,7 +175,7 @@ export class FlowXActionService implements IActionService {
                             })
                         // return the transaction hash, position id and liquidity
                         return {
-                            digest,
+                            txHash,
                             positionId,
                             liquidity,
                         }

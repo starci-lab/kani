@@ -122,7 +122,7 @@ export class SelectCoinsService {
         txb = txb ?? new Transaction()
         const fetchedCoins = await this.fetchCoinsService.fetchCoins({ owner, coinType, loadBalancerName })
         if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
-        const coins = fetchedCoins.coinAssets.map((coin) => ({
+        const coinAssets = fetchedCoins.coinAssets.map((coin) => ({
             coinAmount: coin.coinAmount,
             coinRef: {
                 objectId: coin.coinRef.objectId,
@@ -139,7 +139,7 @@ export class SelectCoinsService {
                 userBalance.sub(suiGasAmount),
                 requiredAmount || userBalance
             )
-            txb.setGasPayment(coins.map((coin) => coin.coinRef))
+            txb.setGasPayment(coinAssets.map((coin) => coin.coinRef))
             const [sourceCoin] = txb.splitCoins(txb.gas, [
                 txb.pure.u64(coinAmount.toString()),
             ])
@@ -155,8 +155,8 @@ export class SelectCoinsService {
         // Select coins to cover the required amount
         const coinAmount = requiredAmount ? BN.min(userBalance, requiredAmount) : userBalance
 
-        if (coins.length === 1) {
-            const [ coin ] = coins
+        if (coinAssets.length === 1) {
+            const [ coin ] = coinAssets
             const spendCoin = txb.splitCoins(txb.object(coin.coinRef.objectId), [
                 txb.pure.u64(coinAmount.toString()),
             ])
@@ -169,7 +169,7 @@ export class SelectCoinsService {
             }
         }
         // Merge into a single coin
-        const mergedCoin = this.mergeCoins(txb, coins.map((coin) => toCoinArgument(coin, txb)))
+        const mergedCoin = this.mergeCoins(txb, coinAssets.map((coin) => toCoinArgument(coin, txb)))
         // Split out exactly the required amount
         const { spendCoin } = this.splitCoin({
             sourceCoin: mergedCoin,

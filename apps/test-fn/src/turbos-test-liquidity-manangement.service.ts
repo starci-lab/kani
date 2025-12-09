@@ -96,6 +96,5 @@ export class TurbosTestLiquidityManangementService implements OnApplicationBoots
             },
             maxRetries: 10,
         })
-        console.log(txHash, liquidity.toString(), positionId, depositAmount.toString())
     }
 }
