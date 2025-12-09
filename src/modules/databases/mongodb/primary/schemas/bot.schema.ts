@@ -7,7 +7,9 @@ import { UserSchema } from "./user.schema"
 import { TokenSchema } from "./token.schema"
 import { LiquidityPoolSchema } from "./liquidity-pool.schema"
 import { 
+    BotType,
     ExplorerId, 
+    GraphQLTypeBotType, 
     GraphQLTypeExplorerId
 } from "../enums"
 import { PositionSchema } from "./position.schema"
@@ -30,16 +32,19 @@ export class BotSchema extends AbstractSchema {
      */
     @Field(() => String, {
         description: "The account address of the wallet",
+        nullable: true,
     })
     @Prop({ type: String, required: false })
         accountAddress: string
-
+ 
+    /** @deprecated Use privyWalletId instead */
     /**
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
     @Field(() => String, {
         description: "The encrypted private key of the wallet",
+        nullable: true,
     })
     @Prop({ type: String, required: false })
         encryptedPrivateKey: string
@@ -162,6 +167,27 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: Date, required: false })
         lastBalancesSnapshotAt?: Date
+
+    @Field(() => String, {
+        description: "The privy user id of the bot",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        privyUserId?: string
+
+    @Field(() => String, {
+        description: "The privy wallet id of the bot",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        privyWalletId?: string
+    
+    @Field(() => GraphQLTypeBotType, {
+        description: "The privy wallet address of the bot",
+        nullable: true,
+    })
+    @Prop({ type: String, enum: BotType, required: true, default: BotType.Standard })
+        botType: BotType
     
     // active position
     activePosition?: PositionSchema

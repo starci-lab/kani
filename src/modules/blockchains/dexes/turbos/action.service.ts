@@ -301,19 +301,15 @@ export class TurbosActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const stimulateTransaction = await client.devInspectTransactionBlock({
-                            transactionBlock: closePositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                        }
                         const { digest } = await client.signAndExecuteTransaction({
                             transaction: closePositionTxb,
                             signer,
                             options: {
                                 showEvents: true,
                             }
+                        })
+                        await client.waitForTransaction({
+                            digest,
                         })
                         // log the close position success
                         this.logger.verbose(

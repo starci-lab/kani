@@ -4,7 +4,8 @@ import {
     BotSchema,
     LiquidityPoolSchema, 
     UserSchema, 
-    PrimaryMemoryStorageService} from "@modules/databases"
+    PrimaryMemoryStorageService,
+    BotType} from "@modules/databases"
 import { Connection } from "mongoose"
 import { 
     AddBotRequest,
@@ -29,12 +30,14 @@ import {
     TokenNotFoundException
 } from "@exceptions"
 import { DayjsService } from "@modules/mixin"
+import { PrivyService } from "@modules/privy"
 
 @Injectable()
 export class BotService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly privyService: PrivyService,
         private readonly keypairsService: KeypairsService,
         private readonly dayjsService: DayjsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -64,6 +67,40 @@ export class BotService {
             accountAddress: wallet.accountAddress,
         }
     }
+
+    // v2 bot using privy-solutions
+    async addBotV2(
+        request: AddBotRequest,
+        userLike: UserJwtLike,
+    ): Promise<AddBotResponseData> {
+        // we try to find the user in the database
+        const exists = await this.connection.model<UserSchema>(UserSchema.name)
+            .exists({ _id: userLike.id })
+        if (!exists) {
+            throw new UserNotFoundException()
+        }
+        const bot = await this.connection.model<BotSchema>(BotSchema.name).insertOne({
+            user: userLike.id,
+            chainId: request.chainId,
+            botType: BotType.Privy,
+        })
+        const privyUser = await this.privyService.getOrCreateUser(bot)
+        const wallet = await this.privyService.createWallet(bot)
+        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+            { _id: bot.id },
+            { $set: { 
+                privyUserId: privyUser.id, 
+                accountAddress: wallet.address,
+                privyWalletId: wallet.id,
+            } 
+            }
+        )
+        return {
+            id: bot.id,
+            accountAddress: wallet.address,
+        }
+    }
+
 
     async initializeBot(
         {

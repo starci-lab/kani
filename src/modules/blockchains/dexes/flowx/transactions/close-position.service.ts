@@ -46,7 +46,8 @@ export class ClosePositionTxbService {
         const {
             packageId,
             poolRegistryObject,
-            versionObject
+            versionObject,
+            positionRegistryObject
         } = state.static.metadata as FlowXLiquidityPoolMetadata
         const deadline = this.dayjsService.now().add(5, "minute").utc().valueOf().toString()
         txb.moveCall({
@@ -75,9 +76,8 @@ export class ClosePositionTxbService {
             arguments: [
                 txb.object(poolRegistryObject),
                 txb.object(bot.activePosition.positionId),
-                txb.pure.u64(0),
-                txb.pure.u64(0),
-                txb.pure.u64(deadline),
+                txb.pure.u64(MaxUint64.toString()),
+                txb.pure.u64(MaxUint64.toString()),
                 txb.object(versionObject),
                 txb.object(SUI_CLOCK_OBJECT_ID),
             ],
@@ -111,7 +111,7 @@ export class ClosePositionTxbService {
         txb.moveCall({
             target: `${packageId}::position_manager::close_position`,
             arguments: [
-                txb.object(poolRegistryObject),
+                txb.object(positionRegistryObject),
                 txb.object(bot.activePosition.positionId),
                 txb.object(versionObject),
             ],

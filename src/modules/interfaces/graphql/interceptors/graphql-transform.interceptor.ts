@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor, SetMetadata } from "@nestjs/common"
+import { 
+    CallHandler, 
+    ExecutionContext, 
+    Injectable, 
+    NestInterceptor, 
+    SetMetadata 
+} from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 import { Observable } from "rxjs"
 import { map, catchError } from "rxjs/operators"
@@ -33,19 +39,17 @@ implements NestInterceptor<T, GraphQLResponse<T>>
                     success: true,
                 }
             }),
-            catchError((err) => {
-                return new Observable<GraphQLResponse<T>>((observer) => {
-                    console.log("err", err)
-                    console.log("err.message", err.message)
-                    console.log("err.name", err.name)
-                    observer.next({
-                        success: false,
-                        message: err.message,
-                        error: err.name,
+            catchError(
+                (err) => {
+                    return new Observable<GraphQLResponse<T>>((observer) => {
+                        observer.next({
+                            success: false,
+                            message: err.message,
+                            error: err.name,
+                        })
+                        observer.complete()
                     })
-                    observer.complete()
-                })
-            }),
+                }),
         )
     }
 }

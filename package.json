@@ -61,6 +61,8 @@
     "@nestjs/websockets": "^11.1.8",
     "@orca-so/sdk": "^1.2.26",
     "@orca-so/whirlpools-core": "^3.0.0",
+    "@privy-io/node": "^0.6.2",
+    "@privy-io/server-auth": "^1.32.5",
     "@project-serum/anchor": "^0.26.0",
     "@pythnetwork/client": "^2.22.1",
     "@pythnetwork/hermes-client": "^2.1.0",

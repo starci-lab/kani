@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { 
-    FetchBalanceParams, 
-    FetchBalanceResponse, 
-    FetchBalancesParams, 
-    FetchBalancesResponse, 
+import { EventEmitter2 } from "@nestjs/event-emitter"
+import {
+    FetchBalanceParams,
+    FetchBalanceResponse,
+    FetchBalancesParams,
+    FetchBalancesResponse,
     IBalanceService,
     ProcessSwapTransactionResponse,
     ProcessSwapTransactionParams,
@@ -12,18 +13,17 @@ import { SolanaBalanceService } from "./solana.service"
 import { ExecuteBalanceRebalancingParams } from "./balance.interface"
 import { TokenType, ChainId } from "@typedefs"
 import { SuiBalanceService } from "./sui.service"
-import { PrimaryMemoryStorageService } from "@modules/databases"
-import { 
-    InsufficientMinGasBalanceAmountException, 
-    TargetOperationalGasAmountNotFoundException, 
+import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    InsufficientMinGasBalanceAmountException,
+    TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
     MinOperationalGasAmountNotFoundException,
     EstimatedSwappedTargetAmountNotFoundException,
-    EstimatedSwappedQuoteAmountNotFoundException
+    EstimatedSwappedQuoteAmountNotFoundException,
 } from "@exceptions"
 import { GasStatusService } from "./gas-status.service"
-import { 
-    BalanceSnapshotConfirmationPayload, GasStatus, SwapConfirmationPayload } from "../types"
+import { GasStatus, SwapConfirmationPayload } from "../types"
 import BN from "bn.js"
 import { SwapMathService } from "../math"
 import { computeDenomination } from "@utils"
@@ -33,54 +33,55 @@ import { Queue } from "bullmq"
 import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { MutexService } from "@modules/lock"
+import { Connection } from "mongoose"
+import { InjectPrimaryMongoose } from "@modules/databases"
+import { BalanceSnapshotService } from "../snapshots"
+import { createEventName, EventName } from "@modules/event"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
     constructor(
-        private readonly solanaBalanceService: SolanaBalanceService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly suiBalanceService: SuiBalanceService,
-        private readonly gasStatusService: GasStatusService,
-        private readonly swapMathService: SwapMathService,
-        private readonly mutexService: MutexService,
-        @InjectQueue(bullData[BullQueueName.BalanceSnapshotConfirmation].name)
-        private readonly balanceSnapshotConfirmationQueue: Queue<BalanceSnapshotConfirmationPayload>,
-        @InjectQueue(bullData[BullQueueName.SwapConfirmation].name)
-        private readonly swapConfirmationQueue: Queue<SwapConfirmationPayload>,
+    private readonly solanaBalanceService: SolanaBalanceService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly suiBalanceService: SuiBalanceService,
+    private readonly gasStatusService: GasStatusService,
+    private readonly swapMathService: SwapMathService,
+    private readonly mutexService: MutexService,
+    @InjectQueue(bullData[BullQueueName.SwapConfirmation].name)
+    private readonly swapConfirmationQueue: Queue<SwapConfirmationPayload>,
+    @InjectPrimaryMongoose()
+    private readonly connection: Connection,
+    private readonly balanceSnapshotService: BalanceSnapshotService,
+    private readonly eventEmitter: EventEmitter2,
     ) {}
 
-    async executeBalanceRebalancing(
-        {
-            bot,
-            withoutAcquireLock = false,
-            snapshotTargetBalanceAmount,
-            snapshotQuoteBalanceAmount,
-            snapshotGasBalanceAmount,
-        }: ExecuteBalanceRebalancingParams
-    ) {
-        const mutex = this.mutexService.mutex(
-            getMutexKey(
-                MutexKey.Action, 
-                bot.id
-            )
-        )
+    async executeBalanceRebalancing({
+        bot,
+        withoutAcquireLock = false,
+        snapshotTargetBalanceAmount,
+        snapshotQuoteBalanceAmount,
+        snapshotGasBalanceAmount,
+    }: ExecuteBalanceRebalancingParams) {
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         // if withoutAcquireLock is true, we will not acquire the lock and continue the execution
         // otherwise, we will acquire the lock and continue the execution
         if (!withoutAcquireLock) {
+            // if the mutex is locked, skip the execution
             if (mutex.isLocked()) {
                 return
             }
+            // acquire the mutex lock
             await mutex.acquire()
         }
         try {
             const targetToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === bot.targetToken.toString()
+                (token) => token.id === bot.targetToken.toString(),
             )
             if (!targetToken) {
                 throw new TokenNotFoundException("Target token not found")
             }
             const quoteToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === bot.quoteToken.toString()
+                (token) => token.id === bot.quoteToken.toString(),
             )
             if (!quoteToken) {
                 throw new TokenNotFoundException("Quote token not found")
@@ -90,18 +91,18 @@ export class BalanceService implements IBalanceService {
             let quoteBalanceAmount: BN
             let gasBalanceAmount: BN
             if (
-                snapshotTargetBalanceAmount 
-                && snapshotQuoteBalanceAmount 
-                && snapshotGasBalanceAmount
+                snapshotTargetBalanceAmount &&
+        snapshotQuoteBalanceAmount &&
+        snapshotGasBalanceAmount
             ) {
                 targetBalanceAmount = snapshotTargetBalanceAmount
                 quoteBalanceAmount = snapshotQuoteBalanceAmount
                 gasBalanceAmount = snapshotGasBalanceAmount
             } else {
-                const { 
-                    targetBalanceAmount: fetchedTargetBalanceAmount, 
-                    quoteBalanceAmount: fetchedQuoteBalanceAmount, 
-                    gasBalanceAmount: fetchedGasBalanceAmount, 
+                const {
+                    targetBalanceAmount: fetchedTargetBalanceAmount,
+                    quoteBalanceAmount: fetchedQuoteBalanceAmount,
+                    gasBalanceAmount: fetchedGasBalanceAmount,
                 } = await this.fetchBalances({
                     bot,
                 })
@@ -109,13 +110,13 @@ export class BalanceService implements IBalanceService {
                 quoteBalanceAmount = fetchedQuoteBalanceAmount
                 gasBalanceAmount = fetchedGasBalanceAmount
             }
-            const { 
+            const {
                 processSwaps,
-                swapTargetToQuoteAmount, 
-                swapQuoteToTargetAmount, 
+                swapTargetToQuoteAmount,
+                swapQuoteToTargetAmount,
                 estimatedSwappedTargetAmount,
                 estimatedSwappedQuoteAmount,
-                quoteRatioResponse
+                quoteRatioResponse,
             } = await this.swapMathService.computeSwapAmounts({
                 targetTokenId: targetToken.displayId,
                 quoteTokenId: quoteToken.displayId,
@@ -124,46 +125,35 @@ export class BalanceService implements IBalanceService {
                 gasBalanceAmount,
             })
             if (!processSwaps) {
-            // just snapshot the balances and return
-            // ensure the balances are synced
-                await this.balanceSnapshotConfirmationQueue.add(
-                    bullData[BullQueueName.BalanceSnapshotConfirmation].name,
-                    {
-                        bot,
-                        targetBalanceAmount: targetBalanceAmount.toString(),
-                        quoteBalanceAmount: quoteBalanceAmount.toString(),
-                        gasBalanceAmount: gasBalanceAmount.toString(),
-                    }
-                )
+                // just snapshot the balances and return
+                // ensure the balances are synced
+                await this.fetchBalancesAndSnapshot({ bot })
                 return
             }
             const targetBalanceAmountInTarget = computeDenomination(
-                targetBalanceAmount, 
-                targetToken.decimals
+                targetBalanceAmount,
+                targetToken.decimals,
             )
             const quoteBalanceAmountInTarget = computeDenomination(
-                quoteBalanceAmount, 
-                quoteToken.decimals
+                quoteBalanceAmount,
+                quoteToken.decimals,
             ).div(quoteRatioResponse.oraclePrice)
-            const totalBalanceAmountInTarget = targetBalanceAmountInTarget
-                .add(quoteBalanceAmountInTarget)
-            if (totalBalanceAmountInTarget.lt(new Decimal(targetToken.minRequiredAmountInTotal || 0))) {
-                // snapshot the balances and return, since the balance is not enough to swap
-                await this.balanceSnapshotConfirmationQueue.add(
-                    bullData[BullQueueName.BalanceSnapshotConfirmation].name,
-                    {
-                        bot,
-                        targetBalanceAmount: targetBalanceAmount.toString(),
-                        quoteBalanceAmount: quoteBalanceAmount.toString(),
-                        gasBalanceAmount: gasBalanceAmount.toString(),
-                    }
+            const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(
+                quoteBalanceAmountInTarget,
+            )
+            if (
+                totalBalanceAmountInTarget.lt(
+                    new Decimal(targetToken.minRequiredAmountInTotal || 0),
                 )
+            ) {
+                // snapshot the balances and return, since the balance is not enough to swap
+                await this.fetchBalancesAndSnapshot({ bot })
                 return
             }
             if (swapTargetToQuoteAmount) {
                 if (!estimatedSwappedQuoteAmount) {
                     throw new EstimatedSwappedQuoteAmountNotFoundException(
-                        "Estimated swapped quote amount not found"
+                        "Estimated swapped quote amount not found",
                     )
                 }
                 const { txHash } = await this.processSwapTransaction({
@@ -181,14 +171,14 @@ export class BalanceService implements IBalanceService {
                         amountIn: swapTargetToQuoteAmount.toString(),
                         tokenInId: targetToken.displayId,
                         tokenOutId: quoteToken.displayId,
-                    }
+                    },
                 )
                 return
             }
             if (swapQuoteToTargetAmount) {
                 if (!estimatedSwappedTargetAmount) {
                     throw new EstimatedSwappedTargetAmountNotFoundException(
-                        "Estimated swapped target amount not found"
+                        "Estimated swapped target amount not found",
                     )
                 }
                 const { txHash } = await this.processSwapTransaction({
@@ -206,9 +196,8 @@ export class BalanceService implements IBalanceService {
                         amountIn: swapQuoteToTargetAmount.toString(),
                         tokenInId: quoteToken.displayId,
                         tokenOutId: targetToken.displayId,
-                    }
+                    },
                 )
-                return
             }
         } catch (error) {
             mutex.release()
@@ -216,20 +205,18 @@ export class BalanceService implements IBalanceService {
         }
     }
 
-    public async fetchBalances(
-        {
-            bot,
-        }: FetchBalancesParams
-    ): Promise<FetchBalancesResponse> {
+    public async fetchBalances({
+        bot,
+    }: FetchBalancesParams): Promise<FetchBalancesResponse> {
         const chainId = ChainId.Solana
         const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
+            (token) => token.id === bot.targetToken.toString(),
         )
         if (!targetToken) {
             throw new TokenNotFoundException("Target token not found")
         }
         const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
+            (token) => token.id === bot.quoteToken.toString(),
         )
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
@@ -246,41 +233,41 @@ export class BalanceService implements IBalanceService {
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
         })
-        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.targetOperationalAmount
+        const targetOperationalGasAmount =
+      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId]
+          ?.targetOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 chainId,
-                "Target operational gas amount not found"
+                "Target operational gas amount not found",
             )
         }
-        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.minOperationalAmount
+        const minOperationalGasAmount =
+      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId]
+          ?.minOperationalAmount
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
                 chainId,
-                "Min operational gas amount not found"
+                "Min operational gas amount not found",
             )
         }
         const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
         const minOperationalGasAmountBN = new BN(minOperationalGasAmount)
         switch (gasStatus) {
         case GasStatus.IsTarget: {
-            // we use the possible maximum amount of gas that can be used
+        // we use the possible maximum amount of gas that can be used
             const effectiveGasAmountBN = BN.min(
-                targetOperationalGasAmountBN, 
-                targetBalanceAmount
+                targetOperationalGasAmountBN,
+                targetBalanceAmount,
             )
-            if (
-                effectiveGasAmountBN
-                    .lt(minOperationalGasAmountBN)
-            ) {
+            if (effectiveGasAmountBN.lt(minOperationalGasAmountBN)) {
                 throw new InsufficientMinGasBalanceAmountException(
                     chainId,
-                    "Insufficient min gas balance amount"
+                    "Insufficient min gas balance amount",
                 )
             }
-            const targetBalanceAmountAfterDeductingGas = targetBalanceAmount.sub(effectiveGasAmountBN)
+            const targetBalanceAmountAfterDeductingGas =
+          targetBalanceAmount.sub(effectiveGasAmountBN)
             return {
                 targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
                 quoteBalanceAmount,
@@ -288,7 +275,9 @@ export class BalanceService implements IBalanceService {
             }
         }
         case GasStatus.IsQuote: {
-            const quoteBalanceAmountAfterDeductingGas = quoteBalanceAmount.sub(targetOperationalGasAmountBN)
+            const quoteBalanceAmountAfterDeductingGas = quoteBalanceAmount.sub(
+                targetOperationalGasAmountBN,
+            )
             return {
                 targetBalanceAmount,
                 quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
@@ -297,9 +286,8 @@ export class BalanceService implements IBalanceService {
         }
         default: {
             const gasToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => 
-                    token.type === TokenType.Native 
-                    && token.chainId === chainId
+                (token) =>
+                    token.type === TokenType.Native && token.chainId === chainId,
             )
             if (!gasToken) {
                 throw new TokenNotFoundException("Gas token not found")
@@ -318,7 +306,7 @@ export class BalanceService implements IBalanceService {
     }
 
     public async fetchBalance(
-        params: FetchBalanceParams
+        params: FetchBalanceParams,
     ): Promise<FetchBalanceResponse> {
         switch (params.bot.chainId) {
         case ChainId.Solana:
@@ -331,7 +319,7 @@ export class BalanceService implements IBalanceService {
     }
 
     public async processSwapTransaction(
-        params: ProcessSwapTransactionParams
+        params: ProcessSwapTransactionParams,
     ): Promise<ProcessSwapTransactionResponse> {
         switch (params.bot.chainId) {
         case ChainId.Solana:
@@ -342,4 +330,32 @@ export class BalanceService implements IBalanceService {
             throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
         }
     }
+
+    private async fetchBalancesAndSnapshot({
+        bot,
+    }: FetchBalancesAndSnapshotParams) {
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } =
+      await this.fetchBalances({ bot })
+        const session = await this.connection.startSession()
+        await session.withTransaction(async () => {
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                bot,
+                targetBalanceAmount: new BN(targetBalanceAmount),
+                quoteBalanceAmount: new BN(quoteBalanceAmount),
+                gasBalanceAmount: new BN(gasBalanceAmount),
+                session,
+            })
+        })
+        // Emit event to update the active bot
+        this.eventEmitter.emit(
+            createEventName(EventName.UpdateActiveBot, { botId: bot.id }),
+        )
+        // Release the mutex after fetching the balances and snapshotting
+        mutex.release()
+    }
+}
+
+export interface FetchBalancesAndSnapshotParams {
+  bot: BotSchema;
 }

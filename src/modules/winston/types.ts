@@ -3,6 +3,8 @@ export enum WinstonLevel {
     Info = "info",
     Warn = "warn",
     Error = "error",
+    Fatal = "fatal",
+    Verbose = "verbose",
 }
 
 export enum WinstonLogType {

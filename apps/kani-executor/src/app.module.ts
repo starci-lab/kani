@@ -32,7 +32,7 @@ import { MixinModule } from "@modules/mixin"
         WinstonModule.register({
             isGlobal: true,
             appName: `kani-executor-${envConfig().botExecutor.batchId}`,
-            level: WinstonLevel.Error,
+            level: WinstonLevel.Verbose,
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
@@ -73,9 +73,6 @@ import { MixinModule } from "@modules/mixin"
             isGlobal: true,
         }),
         ScheduleModule.forRoot(),
-        ExecutorModule.register({
-            isGlobal: true,
-        }),
         AggregatorsModule.register({
             isGlobal: true,
         }),
@@ -151,6 +148,9 @@ import { MixinModule } from "@modules/mixin"
                     },
                 },
             ],
+        }),
+        ExecutorModule.register({
+            isGlobal: true,
         }),
     ],
 })

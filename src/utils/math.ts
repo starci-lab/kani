@@ -110,6 +110,18 @@ export const adjustSlippage = (
     )
 }
 
+export const adjustSlippageUp = (
+    bn: BN,
+    slippage: Decimal,
+    fractionDigits: number = 12,
+): BN => {
+    return toScaledBN(
+        bn,
+        new Decimal(1).div((new Decimal(1).sub(slippage))),
+        fractionDigits,
+    )
+}
+
 export const parseI32 = (bits: number): number => {
     const bn = new BN(bits)
     if (bn.testn(31)) {

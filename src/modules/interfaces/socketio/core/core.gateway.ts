@@ -55,7 +55,6 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     // handle the liquidity pools updated
     @OnEvent(EventName.LiquidityPoolsFetched)
     handleLiquidityPoolsUpdated(payload: LiquidityPoolsFetchedEvent) {
-        console.log("handleLiquidityPoolsUpdated", payload)
         // emit the event to the client
         this.server.emit(
             SocketIoEvent.LiquidityPoolsFetched, 

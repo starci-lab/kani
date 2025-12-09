@@ -41,7 +41,6 @@ export class ClosePositionTxbService {
         }
         const {
             intergratePackageId,
-            clmmPackageId,
             globalConfigObject,
             rewarderGlobalVaultObject
         } = state.static.metadata as CetusLiquidityPoolMetadata
@@ -53,7 +52,7 @@ export class ClosePositionTxbService {
                     rewarder.rewardCoinName
                 ],
             })
-            const rewardTxResult = txb.moveCall({
+            txb.moveCall({
                 target: `${intergratePackageId}::pool_script_v2::collect_reward`,
                 typeArguments: [
                     tokenA.tokenAddress,
@@ -69,10 +68,9 @@ export class ClosePositionTxbService {
                     txb.object(SUI_CLOCK_OBJECT_ID),
                 ],
             })
-            txb.transferObjects([rewardTxResult[0]], bot.accountAddress)
         }
         txb.moveCall({
-            target: `${clmmPackageId}::pool_script::close_position`,
+            target: `${intergratePackageId}::pool_script::close_position`,
             typeArguments: [
                 tokenA.tokenAddress,
                 tokenB.tokenAddress
@@ -81,7 +79,6 @@ export class ClosePositionTxbService {
                 txb.object(globalConfigObject),
                 txb.object(state.static.poolAddress),
                 txb.object(bot.activePosition.positionId),
-                txb.object(globalConfigObject),
                 txb.pure.u64(0),
                 txb.pure.u64(0),
                 txb.object(SUI_CLOCK_OBJECT_ID),

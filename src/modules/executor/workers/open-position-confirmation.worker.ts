@@ -117,17 +117,18 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
                 gasBalanceAmount,
                 session,
             })
-            // Emit events for other parts of the system to react to
-            this.eventEmitter.emit(createEventName(EventName.UpdateActiveBot, { botId: bot.id }))
-            this.eventEmitter.emit(createEventName(EventName.PositionOpened, { botId: bot.id }))
-            // Log successful processing
-            this.logger.verbose(WinstonLog.OpenPositionConfirmationSuccess, {
+        })
+        // Emit events for other parts of the system to react to
+        this.eventEmitter.emit(createEventName(EventName.UpdateActiveBot, { botId: bot.id }))
+        this.eventEmitter.emit(createEventName(EventName.PositionOpened, { botId: bot.id }))
+        // Log successful processing
+        this.logger.verbose(
+            WinstonLog.OpenPositionConfirmationSuccess, {
                 botId: bot.id,
                 positionId,
             })
-            // Release the mutex after processing the position
-            mutex.release()
-        })
+        // Release the mutex after processing the position
+        mutex.release()
     }
 
     /**

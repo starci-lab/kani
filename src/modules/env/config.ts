@@ -138,6 +138,10 @@ export const envConfig = () => ({
         closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s
         rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
     },
+    privy: {
+        appId: process.env.PRIVY_APP_ID || "",
+        appSecret: process.env.PRIVY_APP_SECRET || "",
+    },
     rpcs: {
         [ChainId.Sui]: {
             http: {

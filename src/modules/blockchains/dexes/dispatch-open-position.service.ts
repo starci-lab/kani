@@ -5,7 +5,8 @@ import {
     DexId, 
     LiquidityPoolId, 
     LiquidityPoolType, 
-    PrimaryMemoryStorageService
+    PrimaryMemoryStorageService,
+    QuoteRatioStatus
 } from "@modules/databases"
 import { 
     DexNotFoundException, 
@@ -20,7 +21,7 @@ import { MeteoraActionService } from "./meteora"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
-import { computeDenomination } from "@utils"
+import { computeDenomination, createObjectId } from "@utils"
 import Decimal from "decimal.js"
 import { FlowXActionService } from "./flowx"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
@@ -29,6 +30,11 @@ import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { CetusActionService } from "./cetus"
 import { TurbosActionService } from "./turbos"
 import { MomentumActionService } from "./momentum"
+import { DayjsService, MsService } from "@modules/mixin"
+import { WinstonLog } from "@modules/winston"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
+const OPEN_POSITION_SNAPSHOT_INTERVAL = "30 seconds"
 
 @Injectable()
 export class DispatchOpenPositionService {
@@ -43,6 +49,10 @@ export class DispatchOpenPositionService {
         private readonly cetusActionService: CetusActionService,
         private readonly turbosActionService: TurbosActionService,
         private readonly momentumActionService: MomentumActionService,
+        private readonly dayjsService: DayjsService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
+        private readonly msService: MsService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectRedisCache()
@@ -56,6 +66,53 @@ export class DispatchOpenPositionService {
             bot,
         }: DispatchOpenPositionParams,
     ) {
+        if (
+            !bot.snapshotTargetBalanceAmount 
+            || !bot.snapshotQuoteBalanceAmount
+            || !bot.snapshotGasBalanceAmount
+            || new Decimal(
+                this.dayjsService.now().diff(
+                    bot.lastBalancesSnapshotAt, "millisecond")).gt(
+                new Decimal(
+                    this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)
+                )
+            )
+        ) {
+            return
+        }
+        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
+        }
+        if (
+            !bot.liquidityPools
+                .map((liquidityPool) => liquidityPool.toString())
+                .includes(createObjectId(liquidityPoolId).toString())
+        )
+        {
+            // skip if the liquidity pool is not belong to the bot
+            return
+        }
+        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        // get the quote ratio, if the quote ratio is not good, we skip the open position
+        const {
+            quoteRatio
+        } = await this.quoteRatioService.computeQuoteRatio({
+            targetTokenId: targetToken.displayId,
+            quoteTokenId: quoteToken.displayId,
+            targetBalanceAmount: snapshotTargetBalanceAmountBN,
+            quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
+        })
+        if (this.quoteRatioService.checkQuoteRatioStatus({
+            quoteRatio
+        }) !== QuoteRatioStatus.Good) {
+            return
+        }
         if (await this.cacheManager.get(
             createCacheKey(
                 CacheKey.OpenPositionTransaction, {
@@ -81,14 +138,6 @@ export class DispatchOpenPositionService {
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
             throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }
-        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
         const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
@@ -108,60 +157,71 @@ export class DispatchOpenPositionService {
         }  
         // Retrieve the mutex for the bot
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        // if the mutex is locked, skip the execution
         if (mutex.isLocked()) {
+            console.log("mutex is locked, skipping open position")
             return
         }
+        // acquire the mutex lock
+        await mutex.acquire()
         // run the open position action under mutex lock
-        mutex.runExclusive(
-            async () => {
-                switch (dex.displayId) {
-                case DexId.Raydium: {
-                    return this.raydiumActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Orca: {
-                    return this.orcaActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Meteora: {
-                    return this.meteoraActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.FlowX: {
-                    return this.flowxActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Cetus: {
-                    return this.cetusActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Turbos: {
-                    return this.turbosActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Momentum: {
-                    return this.momentumActionService.openPosition({
-                        state,
-                        bot,
-                    })
-                }
-                default: {
-                    throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported`)
-                }
-                }
-            })
+        try {
+            switch (dex.displayId) {
+            case DexId.Raydium: {
+                return await this.raydiumActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Orca: {
+                return await this.orcaActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Meteora: {
+                return await this.meteoraActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.FlowX: {
+                return await this.flowxActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Cetus: {
+                return await this.cetusActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Turbos: {
+                return await this.turbosActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Momentum: {
+                return await this.momentumActionService.openPosition({
+                    state,
+                    bot,
+                })
+            }
+            default: {
+                throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported`)
+            }
+            }
+        } catch (error) {
+            mutex.release() 
+            this.logger.error(
+                WinstonLog.OpenPositionFailed, {
+                    botId: bot.id,
+                    error: error.message,
+                    stack: error.stack,
+                })
+        }
     }
 }
 

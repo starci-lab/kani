@@ -7,7 +7,7 @@ import BN from "bn.js"
 import { computeDenomination } from "@utils"
 import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
 import { EventEmitterService, EventName } from "@modules/event"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { AsyncService, InjectSuperJson, RetryService } from "@modules/mixin"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { chunkArray } from "@utils"
@@ -28,6 +28,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly events: EventEmitterService,
         private readonly asyncService: AsyncService,
+        private readonly retryService: RetryService,
     ) {}
 
     async onModuleInit() {
@@ -53,9 +54,12 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
         const chunks = chunkArray(feedIds, 5)
         const prices = await this.asyncService.allMustDone(
             chunks.map(async (chunk) => {
-                const prices = await this.hermesClient.getLatestPriceUpdates(
-                    chunk
-                )
+                const prices = await this.retryService.retry({
+                    action: () => this.hermesClient.getLatestPriceUpdates(chunk),
+                    maxRetries: 3,
+                    delay: 1000,
+                    factor: 2,
+                })
                 return prices.parsed
             }))
         const priceData = prices.flat().map(data => {

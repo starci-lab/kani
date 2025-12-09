@@ -61,22 +61,22 @@ export class SwapConfirmationWorker extends WorkerHost {
                 tokenInId,
                 tokenOutId,
             })
-            // Emit event to update the active bot
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.UpdateActiveBot, {
-                        botId: bot.id,
-                    }))
-            // Log successful processing
-            this.logger.verbose(
-                WinstonLog.SwapConfirmationSuccess, 
-                {
-                    botId: bot.id,
-                    txHash,
-                })
-            // Release the mutex after processing the swap
-            mutex.release()
         })
+        // Emit event to update the active bot
+        this.eventEmitter.emit(
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                }))
+        // Log successful processing
+        this.logger.verbose(
+            WinstonLog.SwapConfirmationSuccess, 
+            {
+                botId: bot.id,
+                txHash,
+            })
+        // Release the mutex after processing the swap
+        mutex.release()
     }
 
     @OnWorkerEvent("failed")

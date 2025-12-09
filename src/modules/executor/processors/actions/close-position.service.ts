@@ -11,13 +11,10 @@ import {
 } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { DispatchClosePositionService } from "@modules/blockchains"
-import { createObjectId } from "@utils"
 import { 
     createReadinessWatcherName, 
     ReadinessWatcherFactoryService 
 } from "@modules/mixin"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
 
 // open position processor service is to process the open position of the liquidity pools
 // to determine if a liquidity pool is eligible to open a position
@@ -44,8 +41,6 @@ export class ClosePositionProcessorService {
         private readonly eventEmitter: EventEmitter2,
         private readonly dispatchClosePositionService: DispatchClosePositionService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -85,27 +80,10 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                // only run if the liquidity pool is belong to the bot
-                if (
-                    this.bot.activePosition?.liquidityPool.toString() 
-                    !== createObjectId(payload.liquidityPoolId).toString()
-                )
-                {
-                    // skip if the liquidity pool is not belong to the active position
-                    return
-                }
-                try {
-                    await this.dispatchClosePositionService.dispatchClosePosition({
-                        liquidityPoolId: payload.liquidityPoolId,
-                        bot: this.bot,
-                    })
-                } catch (error) {
-                    this.logger.error(WinstonLog.ClosePositionFailed, {
-                        botId: this.bot.id,
-                        error: error.message,
-                        stack: error.stack,
-                    })
-                }
+                await this.dispatchClosePositionService.dispatchClosePosition({
+                    liquidityPoolId: payload.liquidityPoolId,
+                    bot: this.bot,
+                })
             }
         )
         this.eventEmitter.on(
@@ -116,18 +94,10 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                try {
-                    await this.dispatchClosePositionService.dispatchClosePosition({
-                        liquidityPoolId: payload.liquidityPoolId,
-                        bot: this.bot,
-                    })
-                } catch (error) {
-                    this.logger.error(WinstonLog.ClosePositionFailed, {
-                        botId: this.bot.id,
-                        error: error.message,
-                        stack: error.stack,
-                    })
-                }
+                await this.dispatchClosePositionService.dispatchClosePosition({
+                    liquidityPoolId: payload.liquidityPoolId,
+                    bot: this.bot,
+                })
             }
         )
         this.readinessWatcherFactoryService.setReady(

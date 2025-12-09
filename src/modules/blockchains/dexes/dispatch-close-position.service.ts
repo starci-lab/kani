@@ -12,6 +12,10 @@ import { FlowXActionService } from "./flowx"
 import { CetusActionService } from "./cetus"
 import { TurbosActionService } from "./turbos"
 import { MomentumActionService } from "./momentum"
+import { WinstonLog } from "@modules/winston"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
+import { createObjectId } from "@utils"
 
 @Injectable()
 export class DispatchClosePositionService {
@@ -21,13 +25,15 @@ export class DispatchClosePositionService {
         private readonly raydiumActionService: RaydiumActionService,
         private readonly orcaActionService: OrcaActionService,
         private readonly meteoraActionService: MeteoraActionService,
-        private readonly flowxActionService: FlowXActionService,
+        private readonly flowXActionService: FlowXActionService,
         private readonly cetusActionService: CetusActionService,
         private readonly turbosActionService: TurbosActionService,
         private readonly momentumActionService: MomentumActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         private readonly mutexService: MutexService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     async dispatchClosePosition(
@@ -58,62 +64,78 @@ export class DispatchClosePositionService {
         if (!bot.activePosition) {
             return
         }
-        // Retrieve the mutex for the bot
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
-        if (mutex.isLocked()) {
+        // check if current liquidity pool is belong to the active position
+        if (bot.activePosition.liquidityPool.toString() !== createObjectId(liquidityPoolId).toString()) {
             return
         }
-        // run the close position action under mutex lock
-        mutex.runExclusive(
-            async () => {
-                switch (dex.displayId) {
-                case DexId.Raydium: {
-                    return this.raydiumActionService.closePosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Orca: {
-                    return this.orcaActionService.closePosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Meteora: {
-                    return this.meteoraActionService.closePosition({
-                        state,
-                        bot,
-                    })  
-                }
-                case DexId.FlowX: {
-                    return this.flowxActionService.closePosition({
-                        state,
-                        bot,
-                    })  
-                }
-                case DexId.Cetus: {
-                    return this.cetusActionService.closePosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Turbos: {
-                    return this.turbosActionService.closePosition({
-                        state,
-                        bot,
-                    })
-                }
-                case DexId.Momentum: {
-                    return this.momentumActionService.closePosition({
-                        state,
-                        bot,
-                    })
-                }
-                default: {
-                    throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported`)
-                }
-                }
-            })
+        // Retrieve the mutex for the bot
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        // if the mutex is locked, skip the execution
+        if (mutex.isLocked()) {
+            console.log("mutex is locked, skipping close position")
+            return
+        }
+        // acquire the mutex lock
+        await mutex.acquire()
+        try {
+            console.log("dispatching close position for bot", bot.id, "liquidity pool", liquidityPoolId)
+            // run the close position action under mutex lock
+            switch (dex.displayId) {
+            case DexId.Raydium: {
+                return await this.raydiumActionService.closePosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Orca: {
+                return await this.orcaActionService.closePosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Meteora: {
+                return await this.meteoraActionService.closePosition({
+                    state,
+                    bot,
+                })  
+            }
+            case DexId.FlowX: {
+                return await this.flowXActionService.closePosition({
+                    state,
+                    bot,
+                })  
+            }
+            case DexId.Cetus: {
+                return await this.cetusActionService.closePosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Turbos: {
+                return await this.turbosActionService.closePosition({
+                    state,
+                    bot,
+                })
+            }
+            case DexId.Momentum: {
+                return await this.momentumActionService.closePosition({
+                    state,
+                    bot,
+                })
+            }
+            default: {
+                throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported`)
+            }
+            }
+        } catch (error) {
+            mutex.release()
+            this.logger.error(
+                WinstonLog.ClosePositionFailed, {
+                    botId: bot.id,
+                    error: error.message,
+                    stack: error.stack,
+                })
+        }
     }
 }
 

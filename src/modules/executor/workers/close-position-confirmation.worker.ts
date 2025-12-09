@@ -1,6 +1,5 @@
 import { OnWorkerEvent, WorkerHost, Processor as Worker } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
-import { MutexService } from "@modules/lock"
 import { Job } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
@@ -33,7 +32,6 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
     private readonly closePositionSnapshotService: ClosePositionSnapshotService,
     private readonly profitabilityMathService: ProfitabilityMathService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly mutexService: MutexService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectWinston()
@@ -44,6 +42,7 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
     }
 
     async process(job: Job<ClosePositionConfirmationPayload>) {
+        console.log("ClosePositionConfirmationWorker process started")
         const { bot, txHash, state } = job.data
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -141,27 +140,27 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
                     snapshotGasBalanceAmountAfterClose: new BN(gasBalanceAmountBN || 0),
                 },
             )
-            // Emit events for other parts of the system to react to
-            this.eventEmitter.emit(
-                createEventName(EventName.UpdateActiveBot, { botId: bot.id }),
-            )
-            this.eventEmitter.emit(
-                createEventName(EventName.PositionClosed, { botId: bot.id }),
-            )
-            // Log successful processing
-            this.logger.verbose(
-                WinstonLog.ClosePositionConfirmationSuccess, {
-                    botId: bot.id,
-                    positionId: bot.activePosition.id,
-                })
-            // Execute rebalance job
-            await this.balanceService.executeBalanceRebalancing({
-                bot,
-                snapshotTargetBalanceAmount: targetBalanceAmountBN,
-                snapshotQuoteBalanceAmount: quoteBalanceAmountBN,
-                snapshotGasBalanceAmount: gasBalanceAmountBN,
-                withoutAcquireLock: true,
+        })
+        // Emit events for other parts of the system to react to
+        this.eventEmitter.emit(
+            createEventName(EventName.UpdateActiveBot, { botId: bot.id }),
+        )
+        this.eventEmitter.emit(
+            createEventName(EventName.PositionClosed, { botId: bot.id }),
+        )
+        // Log successful processing
+        this.logger.verbose(
+            WinstonLog.ClosePositionConfirmationSuccess, {
+                botId: bot.id,
+                positionId: bot.activePosition.id,
             })
+        // Execute rebalance
+        this.balanceService.executeBalanceRebalancing({
+            bot,
+            snapshotTargetBalanceAmount: targetBalanceAmountBN,
+            snapshotQuoteBalanceAmount: quoteBalanceAmountBN,
+            snapshotGasBalanceAmount: gasBalanceAmountBN,
+            withoutAcquireLock: true,
         })
     }
 
@@ -178,12 +177,13 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
                 "Active position not found",
             )
         }
-        this.logger.error(WinstonLog.ClosePositionConfirmationFailed, {
-            botId: bot.id,
-            positionId: bot.activePosition?.id,
-            txHash,
-            error: error.message,
-            stack: error.stack,
-        })
+        this.logger.error(
+            WinstonLog.ClosePositionConfirmationFailed, {
+                botId: bot.id,
+                positionId: bot.activePosition?.id,
+                txHash,
+                error: error.message,
+                stack: error.stack,
+            })
     }
 }

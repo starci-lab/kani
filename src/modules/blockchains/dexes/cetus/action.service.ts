@@ -6,7 +6,7 @@ import {
     OpenPositionParams,
 } from "../../interfaces"
 import { 
-    estimateLiquidityForCoinA,
+    ClmmPoolUtil,
     TickMath,
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { Transaction } from "@mysten/sui/transactions"
@@ -46,6 +46,7 @@ import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -61,6 +62,7 @@ export class CetusActionService implements IActionService {
     private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     private readonly closePositionTxbService: ClosePositionTxbService,
     private readonly rpcPickerService: RpcPickerService,
+    private readonly mutexService: MutexService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -92,12 +94,17 @@ export class CetusActionService implements IActionService {
             state: _state,
             bot,
         })
-        const _liquidity = estimateLiquidityForCoinA(
-            TickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
-            TickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
-            snapshotTargetBalanceAmountBN,
+        const snapshotCoinA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const snapshotCoinB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        const _liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
+            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            tickLower.toNumber(),
+            tickUpper.toNumber(),
+            {
+                coinA: snapshotCoinA,
+                coinB: snapshotCoinB,
+            }
         )
-
         const { 
             txb: openPositionTxb,
             feeAmountA,
@@ -105,27 +112,25 @@ export class CetusActionService implements IActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax: snapshotTargetBalanceAmountBN,
-            amountBMax: snapshotQuoteBalanceAmountBN,
+            amountAMax: snapshotCoinA,
+            amountBMax: snapshotCoinB,
             liquidity: _liquidity,
             tickLower,
             state: _state,
             tickUpper,
         })
-        const { digest: txHash, positionId, liquidity } = await this.rpcPickerService.withSuiClient<{ digest: string, positionId: string, liquidity: string }>({
+        const { 
+            digest: txHash, 
+            positionId, 
+            liquidity 
+        } = await this.rpcPickerService.withSuiClient({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.CetusClmm,
+            withoutRetry: true,
             callback: async (client) => {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const stimulateTransaction = await client.devInspectTransactionBlock({
-                            transactionBlock: openPositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                        }
                         const { digest, events } = await client.signAndExecuteTransaction({
                             transaction: openPositionTxb,
                             signer,
@@ -133,15 +138,18 @@ export class CetusActionService implements IActionService {
                                 showEvents: true,
                             }
                         })
-                        const increaseLiquidityEvent = events?.find(
-                            event => event.type.includes("::position_manager::IncreaseLiquidity")
+                        await client.waitForTransaction({
+                            digest,
+                        })
+                        const addLiquidityV2Event = events?.find(
+                            event => event.type.includes("::pool::AddLiquidityV2Event")
                         )
-                        if (!increaseLiquidityEvent) {
-                            throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
+                        if (!addLiquidityV2Event) {
+                            throw new TransactionEventNotFoundException("AddLiquidityV2Event event not found")
                         }
-                        const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
-                        const positionId = increaseLiquidityEventParsed.position_id
-                        const liquidity = increaseLiquidityEventParsed.liquidity
+                        const addLiquidityV2EventParsed = addLiquidityV2Event.parsedJson as AddLiquidityV2Event
+                        const positionId = addLiquidityV2EventParsed.position
+                        const liquidity = addLiquidityV2EventParsed.liquidity
                         // log the open position success
                         this.logger.verbose(
                             WinstonLog.OpenPositionSuccess, {
@@ -187,6 +195,7 @@ export class CetusActionService implements IActionService {
             bot,
             state,
         } = params
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
@@ -216,6 +225,9 @@ export class CetusActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            // release the mutex
+            mutex.release()
+            // return false to terminate the assertion
             return
         }
     }
@@ -226,21 +238,22 @@ export class CetusActionService implements IActionService {
             state,
         }: ClosePositionParams
     ): Promise<boolean> {
+        console.log("assertIsPositionOutOfRange", bot.id)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
                 "Active position not found"
             )
         }
-        const _state = state.dynamic as DynamicLiquidityPoolInfo
-        if (
-            new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
-            && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
-        ) {
-            // do nothing, since the position is still in the range
-            // return true to continue the assertion
-            return true
-        }
+        // const _state = state.dynamic as DynamicLiquidityPoolInfo
+        // if (
+        //     new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
+        //     && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+        // ) {
+        //     // do nothing, since the position is still in the range
+        //     // return true to continue the assertion
+        //     return true
+        // }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
@@ -300,6 +313,7 @@ export class CetusActionService implements IActionService {
         const txHash = await this.rpcPickerService.withSuiClient<string>({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.CetusClmm,
+            withoutRetry: true,
             callback: async (client) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({
@@ -343,11 +357,12 @@ export class CetusActionService implements IActionService {
     }
 }
 
-export interface IncreaseLiquidityEvent {
-    amount_x: string;
-    amount_y: string;
-    liquidity: string;
-    pool_id: string;
-    position_id: string;
-    sender: string;
+export interface AddLiquidityV2Event {
+    after_liquidity: string,
+    amount_a: string,
+    amount_b: string,
+    current_sqrt_price: string,
+    liquidity: string,
+    pool: string,
+    position: string,
 }

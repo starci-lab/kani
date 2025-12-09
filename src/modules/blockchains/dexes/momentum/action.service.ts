@@ -115,19 +115,15 @@ export class MomentumActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const stimulateTransaction = await client.devInspectTransactionBlock({
-                            transactionBlock: openPositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                        }
                         const { digest: txHash, events } = await client.signAndExecuteTransaction({
                             transaction: openPositionTxb,
                             signer,
                             options: {
                                 showEvents: true,
                             }
+                        })
+                        await client.waitForTransaction({
+                            digest: txHash,
                         })
                         const increaseLiquidityEvent = events?.find(
                             event => event.type.includes("::position_manager::IncreaseLiquidity")

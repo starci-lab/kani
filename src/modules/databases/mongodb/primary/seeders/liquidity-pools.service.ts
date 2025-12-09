@@ -44,7 +44,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         fee: 0.0005,
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
-        tickSpacing: 1000,
+        tickSpacing: 10,
+        tickMultiplier: 100,
         metadata: {
             intergratePackageId: "0xfbb32ac0fa89a3cb0c56c745b688c6d2a53ac8e43447119ad822763997ffb9c3",
             globalConfigObject: "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f",

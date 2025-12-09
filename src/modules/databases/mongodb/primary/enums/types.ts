@@ -68,3 +68,27 @@ registerEnumType(GraphQLTypeQuoteRatioStatus, {
         }
     }
 })
+
+export enum BotType {
+    Standard = "standard",   
+    Privy = "privy",
+}
+
+export const GraphQLTypeBotType = createEnumType(BotType)
+
+registerEnumType(GraphQLTypeBotType, {
+    name: "BotType",
+    description: `
+      Defines where a bot’s private keys are stored, determining its security and access model.
+      
+      Use this enum when specifying how the bot should handle private-key storage.
+    `.trim(),
+    valuesMap: {
+        [BotType.Standard]: {
+            description: "Private keys are stored in the application database — suitable for most default bots.",
+        },
+        [BotType.Privy]: {
+            description: "Private keys are stored in Privy — used for bots requiring enhanced security or restricted access.",
+        }
+    }
+})

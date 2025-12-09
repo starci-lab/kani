@@ -26,27 +26,29 @@ export class DexesModule extends ConfigurableModuleClass {
         ) {
             dexModules.push(CetusModule.register({
                 isGlobal: options.isGlobal,
+                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Cetus)?.enabled,
             }))
         }
-
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Turbos)
         ) {
-            dexModules.push(TurbosModule.register({
-                isGlobal: options.isGlobal,
-            }))
+            dexModules.push(
+                TurbosModule.register({
+                    isGlobal: options.isGlobal,
+                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Turbos)?.enabled,
+                }))
         }
-
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Momentum)
         ) {
-            dexModules.push(MomentumModule.register({
-                isGlobal: options.isGlobal,
-            }))
+            dexModules.push(
+                MomentumModule.register({
+                    isGlobal: options.isGlobal,
+                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Momentum)?.enabled,
+                }))
         }
-
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.FlowX)
@@ -57,7 +59,6 @@ export class DexesModule extends ConfigurableModuleClass {
                     enabled: options.dexes?.find((dex) => dex.dexId === DexId.FlowX)?.enabled,
                 }))
         }
-
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Raydium)
@@ -68,7 +69,6 @@ export class DexesModule extends ConfigurableModuleClass {
                     enabled: options.dexes?.find((dex) => dex.dexId === DexId.Raydium)?.enabled,
                 }))
         }
-
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Orca)
@@ -78,7 +78,6 @@ export class DexesModule extends ConfigurableModuleClass {
                 enabled: options.dexes?.find((dex) => dex.dexId === DexId.Orca)?.enabled,
             }))
         }
-
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Meteora)

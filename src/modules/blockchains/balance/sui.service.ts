@@ -84,6 +84,9 @@ export class SuiBalanceService implements IBalanceService {
                     transaction: txb,
                     signer,
                 })
+                await client.waitForTransaction({   
+                    digest,
+                })
                 this.logger.debug(
                     WinstonLog.SwapTransactionSuccess, {
                         txHash: digest,

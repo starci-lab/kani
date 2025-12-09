@@ -2,7 +2,7 @@ import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import { Connection, Types } from "mongoose"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { UsersLoaderService } from "./users-loader.service"
 import { ReadinessWatcherFactoryService } from "@modules/mixin"
@@ -16,7 +16,7 @@ export class BotsLoaderService implements OnModuleInit {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonLogger: WinstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
@@ -44,10 +44,10 @@ export class BotsLoaderService implements OnModuleInit {
                 },
                 { _id: 1 },              // only select ID
             )
-            .lean()                          // return plain objects, no mongoose wrappers
+            .lean()                      // return plain objects, no mongoose wrappers
             .exec()
         this.botIds = bots.map((bot) => bot._id.toString())
-        this.winstonLogger.info(
+        this.winstonLogger.debug(
             WinstonLog.BotsLoaded, {
                 bots: this.botIds.length,
             })

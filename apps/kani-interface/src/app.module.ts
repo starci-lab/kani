@@ -15,6 +15,7 @@ import { GraphQLModule } from "@modules/interfaces"
 import { ThrottlerModule } from "@modules/throttler"
 import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
+import { PrivyModule } from "@modules/privy"
 
 @Module({
     imports: [
@@ -23,6 +24,9 @@ import { SentryModule } from "@modules/sentry"
             isGlobal: true,
             appName: "kani-interface",
             level: WinstonLevel.Info,
+        }),
+        PrivyModule.register({
+            isGlobal: true,
         }),
         PassportModule.register({
             isGlobal: true,

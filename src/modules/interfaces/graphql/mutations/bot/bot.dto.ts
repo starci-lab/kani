@@ -35,6 +35,17 @@ export class AddBotRequest {
         chainId: ChainId
 }
 
+@InputType({
+    description:
+        "Represents the input payload for creating a new bot",
+})
+export class AddBotV2Request {
+    @Field(() => GraphQLTypeChainId, {
+        description: "The blockchain network where the bot will operate",
+    })
+        chainId: ChainId
+}
+
 @ObjectType({
     description:
         "Represents the response data from the addBot mutation",
@@ -63,6 +74,36 @@ export class AddBotResponse
         description: "The response data from the addBot mutation",
     })
         data?: AddBotResponseData
+}
+
+@ObjectType({
+    description:
+        "Represents the response data from the addBotV2 mutation",
+})
+export class AddBotV2ResponseData {
+    @Field(() => String, {
+        description: "The ID of the bot",
+    })
+        id: string
+
+    @Field(() => String, {
+        description: "The account address of the wallet",
+    })
+        accountAddress: string
+}
+
+@ObjectType({
+    description:
+        "Represents the response from the addBotV2 mutation",
+})
+export class AddBotV2Response
+    extends AbstractGraphQLResponse
+    implements IAbstractGraphQLResponse<AddBotV2ResponseData> {
+    @Field(() => AddBotV2ResponseData, {
+        nullable: true,
+        description: "The response data from the addBotV2 mutation",
+    })
+        data?: AddBotV2ResponseData
 }
 
 @InputType({

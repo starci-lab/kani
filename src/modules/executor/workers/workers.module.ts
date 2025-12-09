@@ -3,7 +3,6 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workers.module-definiti
 import { ClosePositionConfirmationWorker } from "./close-position-confirmation.worker"
 import { OpenPositionConfirmationWorker } from "./open-position-confirmation.worker"
 import { SwapConfirmationWorker } from "./swap-confirmation.worker"
-import { BalanceSnapshotConfirmationWorker } from "./snapshot-balance-confirmation.worker"
 
 @Module({})
 export class WorkersModule extends ConfigurableModuleClass {
@@ -18,7 +17,6 @@ export class WorkersModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [], 
-                BalanceSnapshotConfirmationWorker,
                 ClosePositionConfirmationWorker,
                 OpenPositionConfirmationWorker,
                 SwapConfirmationWorker,

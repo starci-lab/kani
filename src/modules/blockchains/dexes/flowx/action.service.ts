@@ -45,6 +45,8 @@ import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import {  } from "@modules/lock"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -53,13 +55,13 @@ export class FlowXActionService implements IActionService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly openPositionTxbService: OpenPositionTxbService,
     private readonly tickMathService: TickMathService,
-    private readonly eventEmitter: EventEmitter2,
     @InjectQueue(bullData[BullQueueName.OpenPositionConfirmation].name) 
     private openPositionConfirmationQueue: Queue<OpenPositionConfirmationPayload>,
     @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
     private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     private readonly closePositionTxbService: ClosePositionTxbService,
     private readonly rpcPickerService: RpcPickerService,
+    private readonly mutexService: MutexService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -72,7 +74,6 @@ export class FlowXActionService implements IActionService {
             bot, 
             state 
         }: OpenPositionParams): Promise<void> {
-        console.log("openPosition", bot.id, state)
         const _state = state as LiquidityPoolState
         const txb = new Transaction()
         if (
@@ -137,22 +138,15 @@ export class FlowXActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const stimulateTransaction =
-              await client.devInspectTransactionBlock({
-                  transactionBlock: openPositionTxb,
-                  sender: bot.accountAddress,
-              })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(
-                                stimulateTransaction.effects.status.error,
-                            )
-                        }
                         const { digest, events } = await client.signAndExecuteTransaction({
                             transaction: openPositionTxb,
                             signer,
                             options: {
                                 showEvents: true,
                             },
+                        })
+                        await client.waitForTransaction({
+                            digest,  
                         })
                         const increaseLiquidityEvent = events?.find((event) =>
                             event.type.includes("::position_manager::IncreaseLiquidity"),
@@ -207,9 +201,9 @@ export class FlowXActionService implements IActionService {
     }
 
     async closePosition(
-        params: ClosePositionParams
+        { bot, state }: ClosePositionParams
     ): Promise<void> {
-        const { bot, state } = params
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -239,6 +233,9 @@ export class FlowXActionService implements IActionService {
           state: _state,
       })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            // release the mutex
+            mutex.release()
+            // return false to terminate the assertion
             return
         }
     }
@@ -256,7 +253,7 @@ export class FlowXActionService implements IActionService {
         const _state = state.dynamic as DynamicLiquidityPoolInfo
         if (
             new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) &&
-      new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+          new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
         ) {
             // do nothing, since the position is still in the range
             // return true to continue the assertion
@@ -278,18 +275,6 @@ export class FlowXActionService implements IActionService {
             bot,
             state,
         })
-        // return false to terminate the assertion
-        this.eventEmitter.emit(
-            createEventName(EventName.UpdateActiveBot, {
-                botId: bot.id,
-            }),
-        )
-        this.eventEmitter.emit(
-            createEventName(EventName.PositionClosed, {
-                botId: bot.id,
-            }),
-        )
-
         return false
     }
 
@@ -361,6 +346,9 @@ export class FlowXActionService implements IActionService {
                             options: {
                                 showEvents: true,
                             },
+                        })
+                        await client.waitForTransaction({
+                            digest,
                         })
                         // log the close position success
                         this.logger.verbose(

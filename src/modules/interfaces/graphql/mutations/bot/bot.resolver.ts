@@ -22,9 +22,12 @@ import {
     UpdateBotExplorerIdResponse,
     UpdateBotExplorerIdRequest,
     AddBotResponseData,
+    AddBotV2Request,
+    AddBotV2ResponseData,
+    AddBotV2Response,
 } from "./bot.dto"
 import { ThrottlerConfig } from "@modules/throttler"
-import { UseThrottler } from "@modules/throttler/throttler.decorators"
+import { UseThrottler } from "@modules/throttler"
 import {
     GraphQLSuccessMessage,
     GraphQLTransformInterceptor
@@ -166,5 +169,23 @@ export class BotResolver {
         @GraphQLUser() user: UserJwtLike,
     ) {
         return await this.botService.updateBotExplorerId(request, user)
+    }
+
+    @GraphQLSuccessMessage("Bot V2 added successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @UseThrottler(ThrottlerConfig.Strict)
+    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @Mutation(() => AddBotV2Response, {
+        description: "Creates and registers a new bot V2 for the authenticated user."
+    })
+    async addBotV2(
+        @Args(
+            "request", 
+            { description: "The request payload for creating a new bot." }
+        )
+            request: AddBotV2Request,
+        @GraphQLUser() user: UserJwtLike,
+    ): Promise<AddBotV2ResponseData> {
+        return await this.botService.addBotV2(request, user)
     }
 }
