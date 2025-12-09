@@ -48,6 +48,7 @@ import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -63,17 +64,15 @@ export class RaydiumActionService implements IActionService {
         private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
         private readonly eventEmitter: EventEmitter2,
         private readonly rpcPickerService: RpcPickerService,
+        private readonly mutexService: MutexService,
         @InjectWinston()
         private readonly logger: winstonLogger,
     ) { }
 
     async closePosition(
-        params: ClosePositionParams
+        { bot, state }: ClosePositionParams
     ): Promise<void> {
-        const {
-            bot,
-            state,
-        } = params
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
@@ -103,6 +102,7 @@ export class RaydiumActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            mutex.release()
             return
         }
     }
@@ -219,17 +219,17 @@ export class RaydiumActionService implements IActionService {
                                 commitment: "confirmed",
                                 maxRetries: BigInt(5),
                             })
-                        this.logger.verbose(
-                            WinstonLog.ClosePositionSuccess, {
-                                txHash: transactionSignature.toString(),
-                                botId: bot.id,
-                                liquidityPoolId: _state.static.displayId,
-                            })
                         return transactionSignature.toString()
                     },
                 })
             },
         })
+        this.logger.verbose(
+            WinstonLog.ClosePositionSuccess, {
+                txHash,
+                botId: bot.id,
+                liquidityPoolId: _state.static.displayId,
+            })
         await this.closePositionConfirmationQueue.add(
             v4(), 
             {

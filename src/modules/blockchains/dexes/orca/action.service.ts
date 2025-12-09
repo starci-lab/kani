@@ -54,6 +54,7 @@ import {
     ClosePositionInstructionService, 
     OpenPositionInstructionService
 } from "./transactions"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class OrcaActionService implements IActionService {
@@ -69,17 +70,15 @@ export class OrcaActionService implements IActionService {
         private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
         private readonly eventEmitter: EventEmitter2,
         private readonly rpcPickerService: RpcPickerService,
+        private readonly mutexService: MutexService,
         @InjectWinston()
         private readonly logger: winstonLogger,
     ) { }
 
     async closePosition(
-        params: ClosePositionParams
+        { bot, state }: ClosePositionParams
     ): Promise<void> {
-        const {
-            bot,
-            state,
-        } = params
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
@@ -109,6 +108,7 @@ export class OrcaActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            mutex.release()
             return
         }
     }

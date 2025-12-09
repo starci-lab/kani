@@ -45,6 +45,7 @@ import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
@@ -61,6 +62,7 @@ export class MeteoraActionService implements IActionService {
         private readonly logger: WinstonLogger,
         private readonly eventEmitter: EventEmitter2,
         private readonly rpcPickerService: RpcPickerService,
+        private readonly mutexService: MutexService,
     ) { }
     async openPosition({
         state,
@@ -181,12 +183,9 @@ export class MeteoraActionService implements IActionService {
     }
 
     async closePosition(
-        params: ClosePositionParams
+        { bot, state }: ClosePositionParams
     ): Promise<void> {
-        const {
-            bot,
-            state,
-        } = params
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const _state = state as DlmmLiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -215,6 +214,7 @@ export class MeteoraActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            mutex.release()
             return
         }
     }
