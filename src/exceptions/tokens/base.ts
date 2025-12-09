@@ -1,5 +1,7 @@
 import { AbstractException } from "@exceptions"
 import { TokenId } from "@modules/databases"
+import BN from "bn.js"
+import Decimal from "decimal.js"
 
 export class TokenNotFoundException extends AbstractException {
     constructor(message?: string) {
@@ -52,5 +54,23 @@ export class InvalidTokenPlatformException extends AbstractException {
 export class MinRequiredAmountNotFoundException extends AbstractException {
     constructor(tokenId: TokenId, message?: string) {
         super(message || "Min required amount not found", "MIN_REQUIRED_AMOUNT_NOT_FOUND_EXCEPTION", { tokenId })
+    }
+}
+
+export class AmountBNotBelowExpectedException extends AbstractException {
+    constructor(expected: BN, actual: BN, message?: string) {
+        super(message || "Amount B is not below expected", "AMOUNT_B_NOT_BELOW_EXPECTED_EXCEPTION", { expected: expected.toString(), actual: actual.toString() })
+    }
+}
+
+export class AmountBNotAboveExpectedException extends AbstractException {
+    constructor(ratio: Decimal, message?: string) {
+        super(message || "Amount B is not above expected", "AMOUNT_B_NOT_ABOVE_EXPECTED_EXCEPTION", { ratio: ratio.toString() })
+    }
+}
+
+export class AmountBInBetweenExpectedException extends AbstractException {
+    constructor(ratio: Decimal, message?: string) {
+        super(message || "Amount B is in between expected", "AMOUNT_B_IN_BETWEEN_EXPECTED_EXCEPTION", { ratio: ratio.toString() })
     }
 }

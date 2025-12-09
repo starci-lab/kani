@@ -55,19 +55,19 @@ export class ClosePositionTxbService {
                 "Target operational gas amount not found"
             )
         }
+        const deadline = this.dayjsService.now().add(5, "minute").utc().valueOf().toString()
         const {
             packageId,
             feeType,
             positionsObject,
             versionObject 
         } = state.static.metadata as TurbosLiquidityPoolMetadata
-        const deadline = this.dayjsService.now().add(5, "minute").utc().valueOf().toString()
         const [coinA, coinB] = txb.moveCall({
-            target: `${packageId}::position_manager::mint`,
+            target: `${packageId}::position_manager::decrease_liquidity_with_return_`,
             typeArguments: [
                 tokenA.tokenAddress,
                 tokenB.tokenAddress,
-                feeType
+                feeType,
             ],
             arguments: [
                 // pool address
@@ -90,13 +90,12 @@ export class ClosePositionTxbService {
                 txb.object(versionObject),
             ],
         })
-        txb.transferObjects([coinA, coinB], bot.accountAddress)
         txb.moveCall({
             target: `${packageId}::position_manager::collect`,
             typeArguments: [
                 tokenA.tokenAddress,
                 tokenB.tokenAddress,
-                feeType
+                feeType,
             ],
             arguments: [
                 // pool address
@@ -105,46 +104,78 @@ export class ClosePositionTxbService {
                 txb.object(positionsObject),
                 // position id
                 txb.object(bot.activePosition.positionId),
-                // max amount A
+                // amount A max
                 txb.pure.u64(MAX_UINT_64.toString()),
-                // max amount B
+                // amount B max
                 txb.pure.u64(MAX_UINT_64.toString()),
-                // bot account address
+                // recipient
                 txb.pure.address(bot.accountAddress),
                 // deadline
                 txb.pure.u64(deadline),
                 // SUI clock object ID
                 txb.object(SUI_CLOCK_OBJECT_ID),
                 // version object
+                txb.object(versionObject),
             ],
         })
-        const rewardInfos = state.dynamic.rewards as Array<RewardInfo>
-        for (const [index, rewardInfo] of rewardInfos.entries()) {
-            if (deprecatedPoolRewards(state.static.poolAddress, index)) {
-                continue
+        const rewards = state.dynamic.rewards as Array<RewardInfo>
+        for (const [index, reward] of rewards.entries()) {
+            if (
+                !deprecatedPoolRewards(state.static.poolAddress, index)
+            ) {
+                txb.moveCall({
+                    target: `${packageId}::position_manager::collect_reward`,
+                    typeArguments: [
+                        tokenA.tokenAddress, 
+                        tokenB.tokenAddress, 
+                        feeType,
+                        reward.vaultCoinType
+                    ],
+                    arguments: [
+                        // pool address
+                        txb.object(state.static.poolAddress),
+                        // positions object
+                        txb.object(positionsObject),
+                        // position id
+                        txb.object(bot.activePosition.positionId),
+                        // vault
+                        txb.object(reward.vault),
+                        // index
+                        txb.pure.u64(index),
+                        // amount max
+                        txb.pure.u64(MAX_UINT_64.toString()),
+                        // recipient
+                        txb.pure.address(bot.accountAddress),
+                        // deadline
+                        txb.pure.u64(deadline),
+                        // SUI clock object ID
+                        txb.object(SUI_CLOCK_OBJECT_ID),
+                        // version object
+                        txb.object(versionObject),
+                    ],
+                })
             }
-            txb.moveCall({
-                target: `${packageId}::position_manager::collect_reward`,
-                typeArguments: [
-                    tokenA.tokenAddress,
-                    tokenB.tokenAddress,
-                    feeType,
-                    rewardInfo.vaultCoinType,
-                ],
-                arguments: [
-                    txb.object(state.static.poolAddress),
-                    txb.object(positionsObject),
-                    txb.object(bot.activePosition.positionId),
-                    txb.pure.address(rewardInfo.vault),
-                    txb.pure.u64(index),
-                    txb.pure.u64(MAX_UINT_64.toString()),
-                    txb.pure.u64(bot.accountAddress),
-                    txb.pure.u64(deadline),
-                    txb.object(SUI_CLOCK_OBJECT_ID),
-                    txb.object(versionObject),
-                ]
-            })
         }
+        txb.moveCall({
+            target: `${packageId}::position_manager::burn`,
+            typeArguments: [
+                tokenA.tokenAddress,
+                tokenB.tokenAddress,
+                feeType,
+            ],
+            arguments: [
+                txb.object(positionsObject),
+                txb.object(bot.activePosition.positionId),
+                txb.object(versionObject),
+            ],
+        })
+        txb.transferObjects(
+            [
+                coinA, 
+                coinB
+            ], 
+            txb.pure.address(bot.accountAddress)
+        )
         return {
             txb,
         }

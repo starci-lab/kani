@@ -5,8 +5,6 @@ import {
     LiquidityPoolState,
     OpenPositionParams,
 } from "../../interfaces"
-import { TickMath } from "@mmt-finance/clmm-sdk"
-import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
@@ -87,21 +85,8 @@ export class MomentumActionService implements IActionService {
             state: _state,
             bot,
         })
-        const maxAmountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        const maxAmountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
-        const _liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
-            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
-            tickLower.toNumber(),
-            tickUpper.toNumber(),
-            {
-                coinA: maxAmountA,
-                coinB: maxAmountB,
-            }
-        )
-        // get the amount of tokenA and tokenB
-        const amountAMax = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        const amountBMax = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
-
+        const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
         const { 
             txb: openPositionTxb,
             feeAmountA,
@@ -109,9 +94,9 @@ export class MomentumActionService implements IActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax,
-            amountBMax,
-            liquidity: _liquidity,
+            amountAMax: amountA,
+            amountBMax: amountB,
+            liquidity: new BN(0),
             tickLower,
             state: _state,
             tickUpper,

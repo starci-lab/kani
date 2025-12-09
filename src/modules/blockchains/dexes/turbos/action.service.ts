@@ -5,7 +5,6 @@ import {
     LiquidityPoolState,
     OpenPositionParams,
 } from "../../interfaces"
-import { ClmmLiquidityMath, ClmmTickMath } from "@flowx-finance/sdk"
 import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
@@ -19,11 +18,11 @@ import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { 
     ActivePositionNotFoundException,
+    AmountBInBetweenExpectedException,
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TokenNotFoundException, 
     TransactionEventNotFoundException, 
-    TransactionStimulateFailedException
 } from "@exceptions"
 import { 
     ClosePositionConfirmationPayload, 
@@ -39,6 +38,10 @@ import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
+import { Network, TurbosSdk } from "turbos-clmm-sdk"
+import { EnsureMathService } from "../../math"
+import { toScaledBN } from "@utils"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -54,6 +57,8 @@ export class TurbosActionService implements IActionService {
     private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     private readonly closePositionTxbService: ClosePositionTxbService,
     private readonly rpcPickerService: RpcPickerService,
+    private readonly ensureMathService: EnsureMathService,
+    private readonly mutexService: MutexService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -85,15 +90,30 @@ export class TurbosActionService implements IActionService {
             state: _state,
             bot,
         })
-        const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
-            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
-            snapshotTargetBalanceAmountBN,
-            snapshotQuoteBalanceAmountBN,
-            true
-        )
-
+        let amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        let amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        const sdk = new TurbosSdk(Network.mainnet)
+        const [, actualAmountB] = sdk.pool.estimateAmountsFromOneAmount({
+            isAmountA: true,
+            amount: amountA.toString(),
+            sqrtPrice: sdk.math.tickIndexToSqrtPriceX64(new BN(_state.dynamic.tickCurrent).toNumber()).toString(),
+            tickLower: tickLower.toNumber(),
+            tickUpper: tickUpper.toNumber(),
+        })
+        const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
+            expected: amountB,
+            actual: new BN(actualAmountB),
+        })
+        if (!isAcceptable) {
+            throw new AmountBInBetweenExpectedException(
+                ratio, 
+                "Amount B is not in between expected"
+            )
+        }
+        if (ratio.gt(new Decimal(1))) {
+            amountB = new BN(actualAmountB)
+            amountA = toScaledBN(amountA, new Decimal(1).div(ratio))
+        }
         const { 
             txb: openPositionTxb,
             feeAmountA,
@@ -101,27 +121,26 @@ export class TurbosActionService implements IActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax: snapshotTargetBalanceAmountBN,
-            amountBMax: snapshotQuoteBalanceAmountBN,
-            liquidity: _liquidity,
+            // we don't need to calculate liquidity for Turbos CLMM
+            liquidity: new BN(0),
+            amountAMax: amountA,
+            amountBMax: amountB,
             tickLower,
             state: _state,
             tickUpper,
         })
-        const { digest: txHash, positionId, liquidity } = await this.rpcPickerService.withSuiClient<{ digest: string, positionId: string, liquidity: string }>({
+        const { 
+            digest: txHash, 
+            positionId, 
+            liquidity 
+        } = await this.rpcPickerService.withSuiClient({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.TurbosClmm,
+            withoutRetry: true,
             callback: async (client) => {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const stimulateTransaction = await client.devInspectTransactionBlock({
-                            transactionBlock: openPositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                        }
                         const { digest, events } = await client.signAndExecuteTransaction({
                             transaction: openPositionTxb,
                             signer,
@@ -129,15 +148,25 @@ export class TurbosActionService implements IActionService {
                                 showEvents: true,
                             }
                         })
-                        const increaseLiquidityEvent = events?.find(
-                            event => event.type.includes("::position_manager::IncreaseLiquidity")
+                        await client.waitForTransaction({
+                            digest,
+                        })
+                        const mintNftEvent = events?.find(
+                            event => event.type.includes("position_manager::MintNftEvent")
                         )
-                        if (!increaseLiquidityEvent) {
-                            throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
+                        if (!mintNftEvent) {
+                            throw new TransactionEventNotFoundException("MintNft event not found")
                         }
-                        const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
-                        const positionId = increaseLiquidityEventParsed.position_id
-                        const liquidity = increaseLiquidityEventParsed.liquidity
+                        const mintNftEventParsed = mintNftEvent.parsedJson as MintNftEvent
+                        const positionId = mintNftEventParsed.nft_address
+                        const mintEvent = events?.find(
+                            event => event.type.includes("pool::MintEvent")
+                        )
+                        if (!mintEvent) {
+                            throw new TransactionEventNotFoundException("Mint event not found")
+                        }
+                        const mintEventParsed = mintEvent.parsedJson as MintEvent
+                        const liquidity = new BN(mintEventParsed.liquidity_delta)
                         // log the open position success
                         this.logger.verbose(
                             WinstonLog.OpenPositionSuccess, {
@@ -177,12 +206,9 @@ export class TurbosActionService implements IActionService {
     }
 
     async closePosition(
-        params: ClosePositionParams
+        { bot, state }: ClosePositionParams
     ): Promise<void> {
-        const {
-            bot,
-            state,
-        } = params
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
@@ -212,6 +238,7 @@ export class TurbosActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            mutex.release()
             return
         }
     }
@@ -293,9 +320,10 @@ export class TurbosActionService implements IActionService {
             state: _state,
             txb,
         })
-        const txHash = await this.rpcPickerService.withSuiClient<string>({
+        const { txHash } = await this.rpcPickerService.withSuiClient({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.TurbosClmm,
+            withoutRetry: true,
             callback: async (client) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({
@@ -309,7 +337,7 @@ export class TurbosActionService implements IActionService {
                             }
                         })
                         await client.waitForTransaction({
-                            digest,
+                            digest
                         })
                         // log the close position success
                         this.logger.verbose(
@@ -319,7 +347,9 @@ export class TurbosActionService implements IActionService {
                                 liquidityPoolId: _state.static.displayId,
                             })
                         // return the transaction hash
-                        return digest
+                        return {
+                            txHash: digest,
+                        }
                     },
                 })
             },
@@ -335,11 +365,16 @@ export class TurbosActionService implements IActionService {
     }
 }
 
-interface IncreaseLiquidityEvent {
-    amount_x: string;
-    amount_y: string;
-    liquidity: string;
+interface MintNftEvent {
+    nft_address: string;
     pool_id: string;
     position_id: string;
-    sender: string;
+}
+
+interface MintEvent {
+    amount_a: string;
+    amount_b: string;
+    liquidity_delta: string;
+    owner: string;
+    pool: string;
 }

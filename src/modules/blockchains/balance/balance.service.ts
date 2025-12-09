@@ -208,7 +208,6 @@ export class BalanceService implements IBalanceService {
     public async fetchBalances({
         bot,
     }: FetchBalancesParams): Promise<FetchBalancesResponse> {
-        const chainId = ChainId.Solana
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === bot.targetToken.toString(),
         )
@@ -234,20 +233,20 @@ export class BalanceService implements IBalanceService {
             quoteTokenId: quoteToken.displayId,
         })
         const targetOperationalGasAmount =
-      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId]
+      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[bot.chainId]
           ?.targetOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                chainId,
+                bot.chainId,
                 "Target operational gas amount not found",
             )
         }
         const minOperationalGasAmount =
-      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId]
+      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[bot.chainId]
           ?.minOperationalAmount
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
-                chainId,
+                bot.chainId,
                 "Min operational gas amount not found",
             )
         }
@@ -262,7 +261,7 @@ export class BalanceService implements IBalanceService {
             )
             if (effectiveGasAmountBN.lt(minOperationalGasAmountBN)) {
                 throw new InsufficientMinGasBalanceAmountException(
-                    chainId,
+                    bot.chainId,
                     "Insufficient min gas balance amount",
                 )
             }
@@ -287,7 +286,7 @@ export class BalanceService implements IBalanceService {
         default: {
             const gasToken = this.primaryMemoryStorageService.tokens.find(
                 (token) =>
-                    token.type === TokenType.Native && token.chainId === chainId,
+                    token.type === TokenType.Native && token.chainId === bot.chainId,
             )
             if (!gasToken) {
                 throw new TokenNotFoundException("Gas token not found")

@@ -84,7 +84,7 @@ export class TickMathService {
         ).mul(oraclePrice)
         const tokenBAmountInB = computeDenomination(
             new BN(snapshotTokenBAmount),
-            quoteTokenEntity.decimals
+            tokenBEntity.decimals
         ) 
         // ?: S = tickSpacing * tickMultiplier = tickUpper - tickLower
         const S = new Decimal(tickSpacing).mul(new Decimal(tickMultiplier))

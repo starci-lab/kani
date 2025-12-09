@@ -21,12 +21,13 @@ import {
     OpenPositionTxbService 
 } from "./transactions"
 import { 
-    TickMathService 
+    EnsureMathService, TickMathService 
 } from "../../math"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { 
     ActivePositionNotFoundException,
+    AmountBInBetweenExpectedException,
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TokenNotFoundException, 
@@ -47,6 +48,8 @@ import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import { OPEN_POSITION_SLIPPAGE } from "../constants"
+import { toScaledBN } from "@utils"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -63,6 +66,7 @@ export class CetusActionService implements IActionService {
     private readonly closePositionTxbService: ClosePositionTxbService,
     private readonly rpcPickerService: RpcPickerService,
     private readonly mutexService: MutexService,
+    private readonly ensureMathService: EnsureMathService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -86,7 +90,7 @@ export class CetusActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }       
-        const targetIsA = bot.targetToken.toString() === tokenA.id
+        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const { 
             tickLower, 
             tickUpper
@@ -94,18 +98,31 @@ export class CetusActionService implements IActionService {
             state: _state,
             bot,
         })
-        const amountAMax = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        const amountBMax = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
-        const snapshotCoinB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
-        const _liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
-            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+        let amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        let amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        const { coinAmountB: expectedAmountB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
             tickLower.toNumber(),
             tickUpper.toNumber(),
-            {
-                coinA: amountAMax,
-                coinB: amountBMax,
-            }
+            amountA,
+            true,
+            false,
+            OPEN_POSITION_SLIPPAGE.toNumber(),
+            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
         )
+        const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
+            expected: amountB,
+            actual: expectedAmountB,
+        })
+        if (!isAcceptable) {
+            throw new AmountBInBetweenExpectedException(
+                ratio, 
+                "Amount B is not in between expected"
+            )
+        }
+        if (ratio.gt(new Decimal(1))) {
+            amountB = new BN(expectedAmountB)
+            amountA = toScaledBN(amountA, new Decimal(1).div(ratio))
+        }
         const { 
             txb: openPositionTxb,
             feeAmountA,
@@ -113,9 +130,9 @@ export class CetusActionService implements IActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax,
-            amountBMax,
-            liquidity: _liquidity,
+            amountAMax: amountA,
+            amountBMax: amountB,
+            liquidity: new BN(0),
             tickLower,
             state: _state,
             tickUpper,

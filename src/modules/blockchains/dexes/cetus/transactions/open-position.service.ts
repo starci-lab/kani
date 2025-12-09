@@ -11,8 +11,6 @@ import { SelectCoinsService } from "../../../tx-builder"
 import BN from "bn.js"
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { adjustSlippage } from "@utils"
-import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -31,7 +29,6 @@ export class OpenPositionTxbService {
             amountAMax,
             amountBMax,
             bot,
-            liquidity,
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
@@ -114,7 +111,7 @@ export class OpenPositionTxbService {
             globalConfigObject,
         } = state.static.metadata as CetusLiquidityPoolMetadata
         txb.moveCall({
-            target: `${intergratePackageId}::pool_script_v2::open_position_with_liquidity`,
+            target: `${intergratePackageId}::pool_script_v2::open_position_with_liquidity_by_fix_coin`,
             typeArguments: [
                 tokenA.tokenAddress,
                 tokenB.tokenAddress,
@@ -128,7 +125,7 @@ export class OpenPositionTxbService {
                 txb.object(sourceCoinB.coinArg),
                 txb.pure.u64(remainingAmountA.toString()),
                 txb.pure.u64(remainingAmountB.toString()),
-                txb.pure.u128(adjustSlippage(liquidity, OPEN_POSITION_SLIPPAGE).toString()),
+                txb.pure.bool(true),
                 txb.object(SUI_CLOCK_OBJECT_ID)
             ],
         })

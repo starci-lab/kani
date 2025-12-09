@@ -11,7 +11,7 @@ import { Decimal } from "decimal.js"
 import { BN } from "turbos-clmm-sdk"
 import { FeeService } from "../../../math"
 import { SelectCoinsService } from "../../../tx-builder"
-import { DayjsService, LoadBalancerService } from "@modules/mixin"
+import { DayjsService } from "@modules/mixin"
 import { 
     FeeToAddressNotFoundException, 
     InvalidPoolTokensException, 
@@ -28,7 +28,6 @@ export class OpenPositionTxbService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
-        private readonly loadBalancerService: LoadBalancerService,
         private readonly dayjsService: DayjsService,
     ) {}
 
@@ -107,7 +106,6 @@ export class OpenPositionTxbService {
         const { spendCoin: feeCoinA } = this.selectCoinsService.splitCoin({
             txb,
             sourceCoin: sourceCoinA,
-
             requiredAmount: feeAmountA,
         })
         const { spendCoin: feeCoinB } = this.selectCoinsService.splitCoin({
@@ -115,10 +113,14 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB,
             requiredAmount: feeAmountB,
         })
-        txb.transferObjects([
-            feeCoinA.coinArg, 
-            feeCoinB.coinArg
-        ], feeToAddress)
+        txb.transferObjects(
+            [
+                feeCoinA.coinArg, 
+                feeCoinB.coinArg
+            ], 
+            txb.pure.address(feeToAddress)
+        )
+
         const {
             packageId,
             feeType,
@@ -165,9 +167,17 @@ export class OpenPositionTxbService {
                 // remaining amount B
                 txb.pure.u64(remainingAmountB.toString()),
                 // minimum amount A
-                txb.pure.u64(adjustSlippage(remainingAmountA, OPEN_POSITION_SLIPPAGE).toString()),
+                txb.pure.u64(
+                    adjustSlippage(
+                        remainingAmountA, 
+                        OPEN_POSITION_SLIPPAGE
+                    ).toString()),
                 // minimum amount B
-                txb.pure.u64(adjustSlippage(remainingAmountB, OPEN_POSITION_SLIPPAGE).toString()),
+                txb.pure.u64(
+                    adjustSlippage(
+                        remainingAmountB, 
+                        OPEN_POSITION_SLIPPAGE
+                    ).toString()),
                 // bot account address
                 txb.pure.address(bot.accountAddress),
                 // deadline

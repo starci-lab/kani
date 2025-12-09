@@ -5,7 +5,6 @@ import {
     LiquidityPoolState,
     OpenPositionParams,
 } from "../../interfaces"
-import { ClmmLiquidityMath, ClmmTickMath } from "@flowx-finance/sdk"
 import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
@@ -20,8 +19,6 @@ import {
 import {
     TickMathService,
 } from "../../math"
-import { createEventName, EventName } from "@modules/event"
-import { EventEmitter2 } from "@nestjs/event-emitter"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
@@ -103,14 +100,6 @@ export class FlowXActionService implements IActionService {
             state: _state,
             bot,
         })
-        const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
-            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
-            snapshotTargetBalanceAmountBN,
-            snapshotQuoteBalanceAmountBN,
-            true,
-        )
         const {
             txb: openPositionTxb,
             feeAmountA,
@@ -120,7 +109,7 @@ export class FlowXActionService implements IActionService {
             bot,
             amountAMax: snapshotTargetBalanceAmountBN,
             amountBMax: snapshotQuoteBalanceAmountBN,
-            liquidity: _liquidity,
+            liquidity: new BN(0),
             tickLower,
             state: _state,
             tickUpper,
