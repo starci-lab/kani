@@ -10,7 +10,8 @@ export const createRedlockProvider = (): Provider => ({
     inject: [
         createIoRedisKey(REDLOCK_KEY)
     ],
-    useFactory: (redis: Redis) => {
+    useFactory: async (redis: Redis) => {
+        // test the redis connection
         return new Redlock([
             redis,
         ], {

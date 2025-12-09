@@ -1,6 +1,6 @@
 import { OnWorkerEvent, WorkerHost, Processor as Worker } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
-import { RedlockKey, RedlockService } from "@modules/lock"
+import { MutexService } from "@modules/lock"
 import { Job } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
@@ -10,7 +10,6 @@ import {
     ClosePositionConfirmationPayload,
     ClosePositionSnapshotService,
     ProfitabilityMathService,
-    SwapTransactionSnapshotService,
 } from "@modules/blockchains"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
@@ -29,13 +28,12 @@ import { PrimaryMemoryStorageService } from "@modules/databases"
 @Worker(bullData[BullQueueName.ClosePositionConfirmation].name)
 export class ClosePositionConfirmationWorker extends WorkerHost {
     constructor(
-    private readonly redlockService: RedlockService,
     private readonly balanceService: BalanceService,
     private readonly balanceSnapshotService: BalanceSnapshotService,
     private readonly closePositionSnapshotService: ClosePositionSnapshotService,
-    private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
     private readonly profitabilityMathService: ProfitabilityMathService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly mutexService: MutexService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectWinston()
@@ -46,9 +44,7 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
     }
 
     async process(job: Job<ClosePositionConfirmationPayload>) {
-        const { bot, txHash, state, prevChain } = job.data
-        let { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } =
-      job.data
+        const { bot, txHash, state } = job.data
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id,
@@ -84,21 +80,16 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
                 "Snapshot balances before open not set",
             )
         }
-        if (!targetBalanceAmount || !quoteBalanceAmount || !gasBalanceAmount) {
-            const {
-                targetBalanceAmount: fetchedTargetBalanceAmount,
-                quoteBalanceAmount: fetchedQuoteBalanceAmount,
-                gasBalanceAmount: fetchedGasBalanceAmount,
-            } = await this.balanceService.fetchBalances({
-                bot,
-            })
-            targetBalanceAmount = fetchedTargetBalanceAmount.toString()
-            quoteBalanceAmount = fetchedQuoteBalanceAmount.toString()
-            gasBalanceAmount = fetchedGasBalanceAmount.toString()
-        }
-        const targetBalanceAmountBN = new BN(targetBalanceAmount)
-        const quoteBalanceAmountBN = new BN(quoteBalanceAmount)
-        const gasBalanceAmountBN = new BN(gasBalanceAmount)
+        const {
+            targetBalanceAmount: afterTargetBalanceAmount,
+            quoteBalanceAmount: afterQuoteBalanceAmount,
+            gasBalanceAmount: afterGasBalanceAmount,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        const targetBalanceAmountBN = new BN(afterTargetBalanceAmount)
+        const quoteBalanceAmountBN = new BN(afterQuoteBalanceAmount)
+        const gasBalanceAmountBN = new BN(afterGasBalanceAmount)
 
         const before: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
@@ -141,22 +132,15 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
                     positionId: bot.activePosition.id,
                     closeTxHash: txHash,
                     session,
-                    snapshotTargetBalanceAmountAfterClose: new BN(targetBalanceAmountBN || 0,),
-                    snapshotQuoteBalanceAmountAfterClose: new BN(quoteBalanceAmountBN || 0,),
-                    snapshotGasBalanceAmountAfterClose: new BN(gasBalanceAmountBN || 0,),
+                    snapshotTargetBalanceAmountAfterClose: new BN(
+                        targetBalanceAmountBN || 0,
+                    ),
+                    snapshotQuoteBalanceAmountAfterClose: new BN(
+                        quoteBalanceAmountBN || 0,
+                    ),
+                    snapshotGasBalanceAmountAfterClose: new BN(gasBalanceAmountBN || 0),
                 },
             )
-            if (prevChain) {
-                await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                    bot,
-                    txHash: prevChain.txHash,
-                    amountIn: new BN(prevChain.amountIn),
-                    tokenInId: prevChain.tokenInId,
-                    tokenOutId: prevChain.tokenOutId,
-                    session,
-                })
-            }
-
             // Emit events for other parts of the system to react to
             this.eventEmitter.emit(
                 createEventName(EventName.UpdateActiveBot, { botId: bot.id }),
@@ -164,17 +148,19 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
             this.eventEmitter.emit(
                 createEventName(EventName.PositionClosed, { botId: bot.id }),
             )
-
-            // Release the distributed lock after processing the position
-            await this.redlockService.releaseIfAcquired({
-                botId: bot.id,
-                redlockKey: RedlockKey.Action,
-            })
-
             // Log successful processing
-            this.logger.verbose(WinstonLog.ClosePositionConfirmationSuccess, {
-                botId: bot.id,
-                positionId: bot.activePosition.id,
+            this.logger.verbose(
+                WinstonLog.ClosePositionConfirmationSuccess, {
+                    botId: bot.id,
+                    positionId: bot.activePosition.id,
+                })
+            // Execute rebalance job
+            await this.balanceService.executeBalanceRebalancing({
+                bot,
+                snapshotTargetBalanceAmount: targetBalanceAmountBN,
+                snapshotQuoteBalanceAmount: quoteBalanceAmountBN,
+                snapshotGasBalanceAmount: gasBalanceAmountBN,
+                withoutAcquireLock: true,
             })
         })
     }

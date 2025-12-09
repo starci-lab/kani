@@ -28,10 +28,11 @@ import BN from "bn.js"
 import { SwapMathService } from "../math"
 import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
-import { RedlockKey, RedlockService } from "@modules/lock"
+import { getMutexKey, MutexKey } from "@modules/lock"
 import { Queue } from "bullmq"
 import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
+import { MutexService } from "@modules/lock"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -41,7 +42,7 @@ export class BalanceService implements IBalanceService {
         private readonly suiBalanceService: SuiBalanceService,
         private readonly gasStatusService: GasStatusService,
         private readonly swapMathService: SwapMathService,
-        private readonly redlockService: RedlockService,
+        private readonly mutexService: MutexService,
         @InjectQueue(bullData[BullQueueName.BalanceSnapshotConfirmation].name)
         private readonly balanceSnapshotConfirmationQueue: Queue<BalanceSnapshotConfirmationPayload>,
         @InjectQueue(bullData[BullQueueName.SwapConfirmation].name)
@@ -51,15 +52,25 @@ export class BalanceService implements IBalanceService {
     async executeBalanceRebalancing(
         {
             bot,
-            afterClose = false,
+            withoutAcquireLock = false,
+            snapshotTargetBalanceAmount,
+            snapshotQuoteBalanceAmount,
+            snapshotGasBalanceAmount,
         }: ExecuteBalanceRebalancingParams
     ) {
-        // we only acquire the lock if we are not taking snapshots
-        // mean that this fn is called outside
-        const lock = afterClose ? undefined : await this.redlockService.acquire({
-            botId: bot.id,
-            redlockKey: RedlockKey.Action,
-        })
+        const mutex = this.mutexService.mutex(
+            getMutexKey(
+                MutexKey.Action, 
+                bot.id
+            )
+        )
+        if (!withoutAcquireLock) {
+            await mutex.acquire()
+        } else {
+            if (mutex.isLocked()) {
+                return
+            }
+        }
         try {
             const targetToken = this.primaryMemoryStorageService.tokens.find(
                 (token) => token.id === bot.targetToken.toString()
@@ -73,13 +84,30 @@ export class BalanceService implements IBalanceService {
             if (!quoteToken) {
                 throw new TokenNotFoundException("Quote token not found")
             }
-            const { 
-                targetBalanceAmount, 
-                quoteBalanceAmount, 
-                gasBalanceAmount, 
-            } = await this.fetchBalances({
-                bot,
-            })
+            // if you pass the snapshot balances, we will use them instead of fetching the balances from on-chain
+            let targetBalanceAmount: BN
+            let quoteBalanceAmount: BN
+            let gasBalanceAmount: BN
+            if (
+                snapshotTargetBalanceAmount 
+                && snapshotQuoteBalanceAmount 
+                && snapshotGasBalanceAmount
+            ) {
+                targetBalanceAmount = snapshotTargetBalanceAmount
+                quoteBalanceAmount = snapshotQuoteBalanceAmount
+                gasBalanceAmount = snapshotGasBalanceAmount
+            } else {
+                const { 
+                    targetBalanceAmount: fetchedTargetBalanceAmount, 
+                    quoteBalanceAmount: fetchedQuoteBalanceAmount, 
+                    gasBalanceAmount: fetchedGasBalanceAmount, 
+                } = await this.fetchBalances({
+                    bot,
+                })
+                targetBalanceAmount = fetchedTargetBalanceAmount
+                quoteBalanceAmount = fetchedQuoteBalanceAmount
+                gasBalanceAmount = fetchedGasBalanceAmount
+            }
             const { 
                 processSwaps,
                 swapTargetToQuoteAmount, 
@@ -149,7 +177,6 @@ export class BalanceService implements IBalanceService {
                     {
                         bot,
                         txHash,
-                        afterClose,
                         amountIn: swapTargetToQuoteAmount.toString(),
                         tokenInId: targetToken.displayId,
                         tokenOutId: quoteToken.displayId,
@@ -157,7 +184,6 @@ export class BalanceService implements IBalanceService {
                 )
                 return
             }
-
             if (swapQuoteToTargetAmount) {
                 if (!estimatedSwappedTargetAmount) {
                     throw new EstimatedSwappedTargetAmountNotFoundException(
@@ -176,7 +202,6 @@ export class BalanceService implements IBalanceService {
                     {
                         bot,
                         txHash,
-                        afterClose,
                         amountIn: swapQuoteToTargetAmount.toString(),
                         tokenInId: quoteToken.displayId,
                         tokenOutId: targetToken.displayId,
@@ -185,7 +210,7 @@ export class BalanceService implements IBalanceService {
                 return
             }
         } catch (error) {
-            await lock?.release()
+            mutex.release()
             throw error
         }
     }

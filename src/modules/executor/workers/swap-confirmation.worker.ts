@@ -3,26 +3,24 @@ import {
     SwapTransactionSnapshotService,
     SwapConfirmationPayload,
     BalanceService,
-    ClosePositionConfirmationPayload,
 } from "@modules/blockchains"
-import { RedlockKey, RedlockService } from "@modules/lock"
+import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
 import { Job } from "bullmq"
 import { Connection } from "mongoose"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { InjectQueue, OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
+import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
 import { bullData } from "@modules/bullmq"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import BN from "bn.js"
-import { Queue } from "bullmq"
 
 @Worker(bullData[BullQueueName.SwapConfirmation].name)
 export class SwapConfirmationWorker extends WorkerHost {
     constructor(
-        private readonly redlockService: RedlockService,
+        private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
@@ -31,8 +29,6 @@ export class SwapConfirmationWorker extends WorkerHost {
         private readonly connection: Connection,
         @InjectWinston()
         private readonly logger: WinstonLogger,
-        @InjectQueue(bullData[BullQueueName.BalanceSnapshotConfirmation].name)
-        private readonly closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     ) {
         super()
     }
@@ -40,7 +36,8 @@ export class SwapConfirmationWorker extends WorkerHost {
     async process(
         job: Job<SwapConfirmationPayload>
     ) {
-        const { bot, txHash, amountIn, tokenInId, tokenOutId, afterClose } = job.data
+        const { bot, txHash, amountIn, tokenInId, tokenOutId } = job.data
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const session = await this.connection.startSession()
         const { 
             targetBalanceAmount, 
@@ -77,27 +74,8 @@ export class SwapConfirmationWorker extends WorkerHost {
                     botId: bot.id,
                     txHash,
                 })
-            // if this hook is called after a chain, we need to add the close position confirmation job
-            if (afterClose) {
-                await this.closePositionConfirmationQueue.add(
-                    bullData[BullQueueName.ClosePositionConfirmation].name,
-                    {
-                        bot,
-                        txHash: afterClose.closeTxHash,
-                        state: afterClose.state,
-                        targetBalanceAmount: targetBalanceAmount.toString(),
-                        quoteBalanceAmount: quoteBalanceAmount.toString(),
-                        gasBalanceAmount: gasBalanceAmount.toString(),
-                        prevChain: job.data,
-                    }
-                )
-                return
-            }
-            // Release the distributed lock after processing the balance snapshot
-            await this.redlockService.releaseIfAcquired({
-                botId: bot.id,
-                redlockKey: RedlockKey.Action,
-            })
+            // Release the mutex after processing the swap
+            mutex.release()
         })
     }
 

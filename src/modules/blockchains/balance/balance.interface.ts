@@ -23,12 +23,11 @@ export interface FetchBalanceResponse {
 
 export interface ExecuteBalanceRebalancingParams {
     bot: BotSchema
-    afterClose?: boolean
-}
-
-export interface ExecuteBalanceRebalancingInternalParams {
-    bot: BotSchema
-    afterClose?: boolean
+    withoutAcquireLock?: boolean
+    // if you pass those params, we will not fetch the balances from on-chain
+    snapshotTargetBalanceAmount?: BN
+    snapshotQuoteBalanceAmount?: BN
+    snapshotGasBalanceAmount?: BN
 }
 
 export interface ExecuteBalanceRebalancingResponse {

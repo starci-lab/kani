@@ -20,13 +20,15 @@ import { MeteoraActionService } from "./meteora"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
-import { computeDenomination, sleep } from "@utils"
+import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
 import { FlowXActionService } from "./flowx"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { RedlockKey, RedlockService } from "@modules/lock"
-import { envConfig } from "@modules/env"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import { CetusActionService } from "./cetus"
+import { TurbosActionService } from "./turbos"
+import { MomentumActionService } from "./momentum"
 
 @Injectable()
 export class DispatchOpenPositionService {
@@ -38,11 +40,14 @@ export class DispatchOpenPositionService {
         private readonly meteoraActionService: MeteoraActionService,
         private readonly quoteRatioService: QuoteRatioService,
         private readonly flowxActionService: FlowXActionService,
+        private readonly cetusActionService: CetusActionService,
+        private readonly turbosActionService: TurbosActionService,
+        private readonly momentumActionService: MomentumActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
-        private readonly redlockService: RedlockService,
+        private readonly mutexService: MutexService,
     ) {}
 
     async dispatchOpenPosition(
@@ -101,40 +106,62 @@ export class DispatchOpenPositionService {
             // your balance is not enough to open a position, return and remind user to deposit more tokens
             return
         }  
-        const lock = await this.redlockService.acquire({
-            botId: bot.id,
-            redlockKey: RedlockKey.Action,
-        })
-        try {
-            switch (dex.displayId) {
-            case DexId.Raydium:
-                return this.raydiumActionService.openPosition({
-                    state,
-                    bot,
-                })
-            case DexId.Orca:
-                return this.orcaActionService.openPosition({
-                    state,
-                    bot,
-                })
-            case DexId.Meteora:
-                return this.meteoraActionService.openPosition({
-                    state,
-                    bot,
-                })
-            case DexId.FlowX:
-                return this.flowxActionService.openPosition({
-                    state,
-                    bot,
-                })
-            default:
-                throw new Error(`DEX ${state.static.dex.toString()} not supported`)
-            }
-        } catch (error) {
-            await sleep(envConfig().lockCooldown.openPosition)
-            await lock.release()
-            throw error
+        // Retrieve the mutex for the bot
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        if (mutex.isLocked()) {
+            return
         }
+        // run the open position action under mutex lock
+        mutex.runExclusive(
+            async () => {
+                switch (dex.displayId) {
+                case DexId.Raydium: {
+                    return this.raydiumActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Orca: {
+                    return this.orcaActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Meteora: {
+                    return this.meteoraActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.FlowX: {
+                    return this.flowxActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Cetus: {
+                    return this.cetusActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Turbos: {
+                    return this.turbosActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Momentum: {
+                    return this.momentumActionService.openPosition({
+                        state,
+                        bot,
+                    })
+                }
+                default: {
+                    throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported`)
+                }
+                }
+            })
     }
 }
 

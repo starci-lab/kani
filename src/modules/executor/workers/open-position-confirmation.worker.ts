@@ -1,6 +1,6 @@
 import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
-import { RedlockKey, RedlockService } from "@modules/lock"
+import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
 import { Job } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
@@ -9,7 +9,7 @@ import {
     OpenPositionConfirmationPayload,
     OpenPositionSnapshotService,
 } from "@modules/blockchains"
-import { InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
+import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
 import BN from "bn.js"
 import { createEventName, EventName } from "@modules/event"
@@ -27,7 +27,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 @Worker(bullData[BullQueueName.OpenPositionConfirmation].name)
 export class OpenPositionConfirmationWorker extends WorkerHost {
     constructor(
-        private readonly redlockService: RedlockService,
+        private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         @InjectPrimaryMongoose()
@@ -66,22 +66,13 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
             amountA,
             amountB,
         } = job.data
-
-        // find if the tx is already in the database
-        const exists = await this.connection.model<PositionSchema>(
-            PositionSchema.name
-        ).exists({
-            openTxHash: txHash,
-        })
-        if (exists) {
-            // release the lock and return
-            await this.redlockService.releaseIfAcquired({
-                botId: bot.id,
-                redlockKey: RedlockKey.Action,
-            })
-            return
-        }
-
+        // Retrieve the mutex for the bot
+        const mutex = this.mutexService.mutex(
+            getMutexKey(
+                MutexKey.Action, 
+                bot.id
+            )
+        )
         // Convert snapshot balances to BN instances for precision
         const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmountBeforeOpen)
         const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmountBeforeOpen)
@@ -129,16 +120,13 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
             // Emit events for other parts of the system to react to
             this.eventEmitter.emit(createEventName(EventName.UpdateActiveBot, { botId: bot.id }))
             this.eventEmitter.emit(createEventName(EventName.PositionOpened, { botId: bot.id }))
-            // Release the distributed lock after processing the position
-            await this.redlockService.releaseIfAcquired({
-                botId: bot.id,
-                redlockKey: RedlockKey.Action,
-            })
             // Log successful processing
             this.logger.verbose(WinstonLog.OpenPositionConfirmationSuccess, {
                 botId: bot.id,
                 positionId,
             })
+            // Release the mutex after processing the position
+            mutex.release()
         })
     }
 

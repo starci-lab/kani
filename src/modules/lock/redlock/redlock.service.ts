@@ -13,6 +13,8 @@ export class RedlockService {
         private readonly redlock: Redlock,
     ) {}
 
+
+
     /**
      * Acquire a distributed lock for a given bot and key.
      * @param botId - The ID of the bot acquiring the lock
@@ -32,14 +34,6 @@ export class RedlockService {
         this.locks.set(getRedlockKey(redlockKey, botId), lock)
         return lock
     }
-
-    async isAcquired(
-        { botId, redlockKey }: AcquiredLockParams
-    ) {
-        const lock = this.locks.get(getRedlockKey(redlockKey, botId))
-        return lock ? true : false
-    }
-
     /**
      * Release a previously acquired lock for a given bot and key.
      * @param botId - The ID of the bot that holds the lock
@@ -54,6 +48,16 @@ export class RedlockService {
         }
         await this.redlock.release(lock)
         this.locks.delete(getRedlockKey(redlockKey, botId))
+    }
+
+    getLock(
+        { botId, redlockKey }: AcquiredLockParams
+    ) {
+        const lock = this.locks.get(getRedlockKey(redlockKey, botId))
+        if (!lock) {
+            throw new Error(`Lock not found for bot ${botId} and key ${redlockKey}`)
+        }
+        return lock
     }
 }
 

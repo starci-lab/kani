@@ -4,7 +4,7 @@ import {
     BalanceSnapshotService 
 } from "@modules/blockchains"
 import { bullData, BullQueueName } from "@modules/bullmq"
-import { RedlockKey, RedlockService } from "@modules/lock"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { Job } from "bullmq"
 import { Connection } from "mongoose"
@@ -14,7 +14,7 @@ import BN from "bn.js"
 @Worker(bullData[BullQueueName.BalanceSnapshotConfirmation].name)
 export class BalanceSnapshotConfirmationWorker extends WorkerHost {
     constructor(
-        private readonly redlockService: RedlockService,
+        private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,    
         private readonly balanceSnapshotService: BalanceSnapshotService,
         @InjectPrimaryMongoose()
@@ -27,6 +27,12 @@ export class BalanceSnapshotConfirmationWorker extends WorkerHost {
         job: Job<BalanceSnapshotConfirmationPayload>
     ) {
         const { bot } = job.data
+        const mutex = this.mutexService.mutex(
+            getMutexKey(
+                MutexKey.Action, 
+                bot.id
+            )
+        )
         const { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } = await this.balanceService.fetchBalances({ bot })
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
@@ -38,9 +44,6 @@ export class BalanceSnapshotConfirmationWorker extends WorkerHost {
                 session,
             })
         })
-        await this.redlockService.releaseIfAcquired({
-            botId: bot.id,
-            redlockKey: RedlockKey.Action,
-        })
+        mutex.release()
     }   
 }

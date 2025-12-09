@@ -51,20 +51,22 @@ export class DexesModule extends ConfigurableModuleClass {
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.FlowX)
         ) {
-            dexModules.push(FlowXModule.register({
-                isGlobal: options.isGlobal,
-                enabled: options.dexes?.find((dex) => dex.dexId === DexId.FlowX)?.enabled,
-            }))
+            dexModules.push(
+                FlowXModule.register({
+                    isGlobal: options.isGlobal,
+                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.FlowX)?.enabled,
+                }))
         }
 
         if (
             !options.dexes
             || options.dexes.find((dex) => dex.dexId === DexId.Raydium)
         ) {
-            dexModules.push(RaydiumModule.register({
-                isGlobal: options.isGlobal,
-                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Raydium)?.enabled,
-            }))
+            dexModules.push(
+                RaydiumModule.register({
+                    isGlobal: options.isGlobal,
+                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Raydium)?.enabled,
+                }))
         }
 
         if (

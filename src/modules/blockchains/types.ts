@@ -41,9 +41,11 @@ export enum GasStatus {
     IsGas = "isGas",
 }
 
-export interface OpenPositionConfirmationPayload {
-    // The bot ID used to identify the bot that created the position
+export interface BasePayload {
     bot: BotSchema
+}
+
+export interface OpenPositionConfirmationPayload extends BasePayload {
     // The transaction hash used to retry and identify the transaction that opened the position
     txHash: string
     // The liquidity pool ID to identify the liquidity pool where the position was opened
@@ -76,24 +78,14 @@ export interface OpenPositionConfirmationPayload {
     amountB?: string
 }
 
-export interface ClosePositionConfirmationPayload {
-    // The bot ID used to identify the bot that created the position
-    bot: BotSchema
+export interface ClosePositionConfirmationPayload extends BasePayload {
     // The transaction hash of the close position transaction
     txHash: string
     // The liquidity pool ID to identify the liquidity pool where the position was closed
     state: LiquidityPoolState | DlmmLiquidityPoolState
-    // The position ID to identify the closed position
-    // If you do not want to query on-chain, you can pass the balance amounts here
-    targetBalanceAmount?: string
-    quoteBalanceAmount?: string
-    gasBalanceAmount?: string
-    // swap confirmation
-    prevChain?: SwapConfirmationPayload
 }
 
-export interface BalanceSnapshotConfirmationPayload {
-    bot: BotSchema
+export interface BalanceSnapshotConfirmationPayload extends BasePayload {
     // The transaction hash of the balance snapshot transaction
     txHash?: string
     // The target balance amount after the balance snapshot
@@ -108,11 +100,6 @@ export interface SwapConfirmationPayload {
     bot: BotSchema
     // The transaction hash of the balance snapshot transaction
     txHash: string
-    // after close
-    afterClose: false | {
-        closeTxHash: string
-        state: LiquidityPoolState | DlmmLiquidityPoolState
-    }
     // The amount in
     amountIn: string
     // The token in ID

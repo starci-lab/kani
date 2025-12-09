@@ -7,9 +7,11 @@ import { OrcaActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraActionService } from "./meteora"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
-import { RedlockKey, RedlockService } from "@modules/lock"
-import { sleep } from "@utils"
-import { envConfig } from "@modules/env"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import { FlowXActionService } from "./flowx"
+import { CetusActionService } from "./cetus"
+import { TurbosActionService } from "./turbos"
+import { MomentumActionService } from "./momentum"
 
 @Injectable()
 export class DispatchClosePositionService {
@@ -19,9 +21,13 @@ export class DispatchClosePositionService {
         private readonly raydiumActionService: RaydiumActionService,
         private readonly orcaActionService: OrcaActionService,
         private readonly meteoraActionService: MeteoraActionService,
+        private readonly flowxActionService: FlowXActionService,
+        private readonly cetusActionService: CetusActionService,
+        private readonly turbosActionService: TurbosActionService,
+        private readonly momentumActionService: MomentumActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
-        private readonly redlockService: RedlockService,
+        private readonly mutexService: MutexService,
     ) {}
 
     async dispatchClosePosition(
@@ -30,6 +36,7 @@ export class DispatchClosePositionService {
             bot,
         }: DispatchClosePositionParams,
     ) {
+        // Retrieve the liquidity pool
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
@@ -51,35 +58,62 @@ export class DispatchClosePositionService {
         if (!bot.activePosition) {
             return
         }
-        const lock = await this.redlockService.acquire({
-            botId: bot.id,
-            redlockKey: RedlockKey.Action,
-        })
-        try {
-            switch (dex.displayId) {
-            case DexId.Raydium:
-                return this.raydiumActionService.closePosition({
-                    state,
-                    bot,
-                })
-            case DexId.Orca:
-                return this.orcaActionService.closePosition({
-                    state,
-                    bot,
-                })
-            case DexId.Meteora:
-                return this.meteoraActionService.closePosition({
-                    state,
-                    bot,
-                })
-            default:
-                throw new Error(`DEX ${state.static.dex.toString()} not supported`)
-            }
-        } catch (error) {
-            await sleep(envConfig().lockCooldown.closePosition)
-            await lock.release()
-            throw error
+        // Retrieve the mutex for the bot
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        if (mutex.isLocked()) {
+            return
         }
+        // run the close position action under mutex lock
+        mutex.runExclusive(
+            async () => {
+                switch (dex.displayId) {
+                case DexId.Raydium: {
+                    return this.raydiumActionService.closePosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Orca: {
+                    return this.orcaActionService.closePosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Meteora: {
+                    return this.meteoraActionService.closePosition({
+                        state,
+                        bot,
+                    })  
+                }
+                case DexId.FlowX: {
+                    return this.flowxActionService.closePosition({
+                        state,
+                        bot,
+                    })  
+                }
+                case DexId.Cetus: {
+                    return this.cetusActionService.closePosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Turbos: {
+                    return this.turbosActionService.closePosition({
+                        state,
+                        bot,
+                    })
+                }
+                case DexId.Momentum: {
+                    return this.momentumActionService.closePosition({
+                        state,
+                        bot,
+                    })
+                }
+                default: {
+                    throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported`)
+                }
+                }
+            })
     }
 }
 

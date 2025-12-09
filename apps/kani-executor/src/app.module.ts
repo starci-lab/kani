@@ -129,6 +129,27 @@ import { MixinModule } from "@modules/mixin"
                         action: true,
                     },
                 },
+                {
+                    dexId: DexId.Cetus,
+                    enabled: {
+                        observe: false,
+                        action: true,
+                    },
+                },
+                {
+                    dexId: DexId.Turbos,
+                    enabled: {
+                        observe: false,
+                        action: true,
+                    },
+                },
+                {
+                    dexId: DexId.Momentum,
+                    enabled: {
+                        observe: false,
+                        action: true,
+                    },
+                },
             ],
         }),
     ],
