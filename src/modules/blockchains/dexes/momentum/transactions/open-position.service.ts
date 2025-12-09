@@ -20,6 +20,7 @@ import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { adjustSlippage } from "@utils"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
+import { TickMath } from "@mmt-finance/clmm-sdk"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -109,11 +110,11 @@ export class OpenPositionTxbService {
             .metadata as MomentumLiquidityPoolMetadata
         const [lowerTick1] = txb.moveCall({
             target: `${packageId}::tick_math::get_tick_at_sqrt_price`,
-            arguments: [txb.pure.u128(BigInt(tickLower.toNumber()))],
+            arguments: [txb.pure.u128(TickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()).toString())],
         })
         const [upperTick1] = txb.moveCall({
             target: `${packageId}::tick_math::get_tick_at_sqrt_price`,
-            arguments: [txb.pure.u128(BigInt(tickUpper.toNumber()))],
+            arguments: [txb.pure.u128(TickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()).toString())],
         })
         const [tick_spacing] = txb.moveCall({
             target: `${packageId}::i32::from_u32`,
@@ -147,7 +148,6 @@ export class OpenPositionTxbService {
             ],
             typeArguments: [tokenA.tokenAddress, tokenB.tokenAddress],
         })
-        txb.transferObjects([positionObj], txb.pure.address(bot.accountAddress))
         const [coinAOut, coinBOut] = txb.moveCall({
             target: `${packageId}::liquidity::add_liquidity`,
             typeArguments: [tokenA.tokenAddress, tokenB.tokenAddress],

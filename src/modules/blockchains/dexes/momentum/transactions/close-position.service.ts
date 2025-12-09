@@ -4,7 +4,7 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionResult } from "@mysten/sui/transactions"
 import { 
     InvalidPoolTokensException, 
     ActivePositionNotFoundException 
@@ -59,48 +59,32 @@ export class ClosePositionTxbService {
                 txb.object(versionObject),
             ],
         })
-        txb.transferObjects([coinAOut, coinBOut], bot.accountAddress)
+        txb.transferObjects([coinAOut, coinBOut], txb.pure.address(bot.accountAddress))
+
         const rewards = state.dynamic.rewards as Array<PoolRewardInfo>
-        const rewardCoins: Array<string> = []
+        const rewardCoins: Array<TransactionResult> = []
         for (const reward of rewards) {
-            const [rewardCoin] = txb.moveCall({
+            let rewardCoinType = `0x${reward.rewardCoinType}`
+            if (rewardCoinType === "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI") {
+                rewardCoinType = "0x2::sui::SUI"
+            }
+            const rewardCoin = txb.moveCall({
                 target: `${packageId}::collect::reward`,
-                typeArguments: [
-                    tokenA.tokenAddress,
-                    tokenB.tokenAddress,
-                    reward.rewardCoinType,
-                ],
                 arguments: [
                     txb.object(state.static.poolAddress),
                     txb.object(bot.activePosition.positionId),
                     txb.object(SUI_CLOCK_OBJECT_ID),
                     txb.object(versionObject),
                 ],
+                typeArguments: [
+                    tokenA.tokenAddress,
+                    tokenB.tokenAddress,
+                    rewardCoinType,
+                ],
             })
-            rewardCoins.push(rewardCoin.toString())
+            rewardCoins.push(rewardCoin)
         }
-        txb.transferObjects(rewardCoins, bot.accountAddress)
-        const [feeCoinA, feeCoinB] = txb.moveCall({
-            target: `${packageId}::collect::fee`,
-            typeArguments: [
-                tokenA.tokenAddress,
-                tokenB.tokenAddress,
-            ],
-            arguments: [
-                txb.object(state.static.poolAddress),
-                txb.object(bot.activePosition.positionId),
-                txb.object(SUI_CLOCK_OBJECT_ID),
-                txb.object(versionObject),
-            ],
-        })
-        txb.transferObjects([feeCoinA, feeCoinB], bot.accountAddress)
-        txb.moveCall({
-            target: `${packageId}::liquidity::close_position`,
-            arguments: [
-                txb.object(bot.activePosition.positionId),
-                txb.object(versionObject),
-            ],
-        })
+        txb.transferObjects(rewardCoins, txb.pure.address(bot.accountAddress))
         return {
             txb,
         }

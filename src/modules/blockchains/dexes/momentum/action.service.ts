@@ -5,7 +5,8 @@ import {
     LiquidityPoolState,
     OpenPositionParams,
 } from "../../interfaces"
-import { ClmmLiquidityMath, ClmmTickMath } from "@flowx-finance/sdk"
+import { TickMath } from "@mmt-finance/clmm-sdk"
+import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
@@ -22,8 +23,7 @@ import {
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TokenNotFoundException, 
-    TransactionEventNotFoundException, 
-    TransactionStimulateFailedException
+    TransactionEventNotFoundException
 } from "@exceptions"
 import { 
     ClosePositionConfirmationPayload, 
@@ -39,6 +39,7 @@ import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -56,6 +57,7 @@ export class MomentumActionService implements IActionService {
     private readonly rpcPickerService: RpcPickerService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
+    private readonly mutexService: MutexService,
     ) {}
 
     /**
@@ -85,14 +87,20 @@ export class MomentumActionService implements IActionService {
             state: _state,
             bot,
         })
-        const _liquidity = ClmmLiquidityMath.maxLiquidityForAmounts(
-            ClmmTickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()),
-            ClmmTickMath.tickIndexToSqrtPriceX64(tickUpper.toNumber()),
-            snapshotTargetBalanceAmountBN,
-            snapshotQuoteBalanceAmountBN,
-            true
+        const maxAmountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const maxAmountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        const _liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
+            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            tickLower.toNumber(),
+            tickUpper.toNumber(),
+            {
+                coinA: maxAmountA,
+                coinB: maxAmountB,
+            }
         )
+        // get the amount of tokenA and tokenB
+        const amountAMax = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountBMax = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
 
         const { 
             txb: openPositionTxb,
@@ -101,16 +109,21 @@ export class MomentumActionService implements IActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax: snapshotTargetBalanceAmountBN,
-            amountBMax: snapshotQuoteBalanceAmountBN,
+            amountAMax,
+            amountBMax,
             liquidity: _liquidity,
             tickLower,
             state: _state,
             tickUpper,
         })
-        const { txHash, positionId, liquidity } = await this.rpcPickerService.withSuiClient<{ txHash: string, positionId: string, liquidity: string }>({
+        const { 
+            txHash, 
+            positionId, 
+            liquidity 
+        } = await this.rpcPickerService.withSuiClient({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.MomentumClmm,
+            withoutRetry: true,
             callback: async (client) => {
                 return await this.signerService.withSuiSigner({
                     bot,
@@ -125,15 +138,15 @@ export class MomentumActionService implements IActionService {
                         await client.waitForTransaction({
                             digest: txHash,
                         })
-                        const increaseLiquidityEvent = events?.find(
-                            event => event.type.includes("::position_manager::IncreaseLiquidity")
+                        const addLiquidityEvent = events?.find(
+                            event => event.type.includes("::liquidity::AddLiquidityEvent")
                         )
-                        if (!increaseLiquidityEvent) {
-                            throw new TransactionEventNotFoundException("IncreaseLiquidity event not found")
+                        if (!addLiquidityEvent) {
+                            throw new TransactionEventNotFoundException("AddLiquidity event not found")
                         }
-                        const increaseLiquidityEventParsed = increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
-                        const positionId = increaseLiquidityEventParsed.position_id
-                        const liquidity = increaseLiquidityEventParsed.liquidity
+                        const addLiquidityEventParsed = addLiquidityEvent.parsedJson as AddLiquidityEvent
+                        const positionId = addLiquidityEventParsed.position_id
+                        const liquidity = addLiquidityEventParsed.liquidity
                         // log the open position success
                         this.logger.verbose(
                             WinstonLog.OpenPositionSuccess, {
@@ -175,10 +188,11 @@ export class MomentumActionService implements IActionService {
     async closePosition(
         params: ClosePositionParams
     ): Promise<void> {
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, params.bot.id))
         const {
             bot,
             state,
-        } = params
+        } = params  
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
@@ -208,6 +222,7 @@ export class MomentumActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
+            mutex.release()
             return
         }
     }
@@ -289,21 +304,15 @@ export class MomentumActionService implements IActionService {
             state: _state,
             txb,
         })
-        const txHash = await this.rpcPickerService.withSuiClient<string>({
+        const { txHash } = await this.rpcPickerService.withSuiClient({
             clientType: ClientType.Write,
             mainLoadBalancerName: LoadBalancerName.MomentumClmm,
+            withoutRetry: true,
             callback: async (client) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({
                     bot,
-                    action: async (signer) => {
-                        const stimulateTransaction = await client.devInspectTransactionBlock({
-                            transactionBlock: closePositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                        }
+                    action: async (signer) => {    
                         const { digest } = await client.signAndExecuteTransaction({
                             transaction: closePositionTxb,
                             signer,
@@ -319,7 +328,9 @@ export class MomentumActionService implements IActionService {
                                 liquidityPoolId: _state.static.displayId,
                             })
                         // return the transaction hash
-                        return digest
+                        return {
+                            txHash: digest,
+                        }
                     },
                 })
             },
@@ -335,11 +346,13 @@ export class MomentumActionService implements IActionService {
     }
 }
 
-interface IncreaseLiquidityEvent {
-    amount_x: string;
-    amount_y: string;
-    liquidity: string;
-    pool_id: string;
-    position_id: string;
-    sender: string;
+interface AddLiquidityEvent {
+    amount_x: string,
+    amount_y: string,
+    liquidity: string,
+    pool_id: string,
+    position_id: string,
+    reserve_x: string,
+    reserve_y: string,
+    sender: string,
 }

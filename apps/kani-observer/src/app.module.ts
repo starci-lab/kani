@@ -99,20 +99,20 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
                 //         action: false,
                 //     },
                 // },
-                {
-                    dexId: DexId.Cetus,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                    },
-                },
                 // {
-                //     dexId: DexId.Momentum,
+                //     dexId: DexId.Cetus,
                 //     enabled: {
                 //         observe: true,
                 //         action: false,
                 //     },
                 // },
+                {
+                    dexId: DexId.Momentum,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                    },
+                },
                 // {
                 //     dexId: DexId.Turbos,
                 //     enabled: {

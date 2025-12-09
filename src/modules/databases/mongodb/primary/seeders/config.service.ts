@@ -115,7 +115,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             suiBalanceClientRpcs: {
                 read: [
                     "https://fullnode.mainnet.sui.io:443",
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 ],
                 write: [
                     "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
@@ -123,7 +122,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
             cetusAggregatorClientRpcs: {
                 read: [
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                     "https://fullnode.mainnet.sui.io:443"
                 ],
                 write: [
@@ -132,7 +130,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
             sevenKAggregatorClientRpcs: {
                 read: [
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                     "https://fullnode.mainnet.sui.io:443"
                 ],
                 write: [
@@ -142,7 +139,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             cetusClmmClientRpcs: {
                 read: [
                     "https://fullnode.mainnet.sui.io:443",
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 ],
                 write: [
                     "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
@@ -151,7 +147,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             momentumClmmClientRpcs: {
                 read: [
                     "https://fullnode.mainnet.sui.io:443",
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 ],
                 write: [
                     "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
@@ -160,7 +155,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             flowXClmmClientRpcs: {
                 read: [
                     "https://fullnode.mainnet.sui.io:443",
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 ],
                 write: [
                     "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
@@ -169,7 +163,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             turbosClmmClientRpcs: {
                 read: [
                     "https://fullnode.mainnet.sui.io:443",
-                    "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",
                 ],
                 write: [
                     "https://api.zan.top/node/v1/sui/mainnet/22d120019ccb45599c4c09f715e0f42b",

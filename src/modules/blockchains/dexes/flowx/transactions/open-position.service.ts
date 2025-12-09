@@ -177,7 +177,7 @@ export class OpenPositionTxbService {
                 txb.object(SUI_CLOCK_OBJECT_ID),
             ],
         })
-        txb.transferObjects([position], bot.accountAddress)
+        txb.transferObjects([position], txb.pure.address(bot.accountAddress))
         return {
             txb,
             feeAmountA,

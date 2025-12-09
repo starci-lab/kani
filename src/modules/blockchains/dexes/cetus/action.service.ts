@@ -94,15 +94,16 @@ export class CetusActionService implements IActionService {
             state: _state,
             bot,
         })
-        const snapshotCoinA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountAMax = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountBMax = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
         const snapshotCoinB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
         const _liquidity = ClmmPoolUtil.estimateLiquidityFromcoinAmounts(
             TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
             tickLower.toNumber(),
             tickUpper.toNumber(),
             {
-                coinA: snapshotCoinA,
-                coinB: snapshotCoinB,
+                coinA: amountAMax,
+                coinB: amountBMax,
             }
         )
         const { 
@@ -112,8 +113,8 @@ export class CetusActionService implements IActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax: snapshotCoinA,
-            amountBMax: snapshotCoinB,
+            amountAMax,
+            amountBMax,
             liquidity: _liquidity,
             tickLower,
             state: _state,
@@ -245,15 +246,15 @@ export class CetusActionService implements IActionService {
                 "Active position not found"
             )
         }
-        // const _state = state.dynamic as DynamicLiquidityPoolInfo
-        // if (
-        //     new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
-        //     && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
-        // ) {
-        //     // do nothing, since the position is still in the range
-        //     // return true to continue the assertion
-        //     return true
-        // }
+        const _state = state.dynamic as DynamicLiquidityPoolInfo
+        if (
+            new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) 
+            && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+        ) {
+            // do nothing, since the position is still in the range
+            // return true to continue the assertion
+            return true
+        }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
         const tokenB = this.primaryMemoryStorageService.tokens
