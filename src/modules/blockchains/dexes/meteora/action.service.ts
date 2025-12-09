@@ -30,25 +30,21 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import {
     PrimaryMemoryStorageService,
-    InjectPrimaryMongoose,
     LoadBalancerName
 } from "@modules/databases"
-import {
-    BalanceService,
-} from "../../balance"
-import { Connection as MongooseConnection } from "mongoose"
-import {
-    BalanceSnapshotService,
-    SwapTransactionSnapshotService,
-    OpenPositionSnapshotService,
-    ClosePositionSnapshotService,
-} from "../../snapshots"
-import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
 import { ClientType, RpcPickerService } from "../../clients"
 import Decimal from "decimal.js"
-import { DynamicDlmmLiquidityPoolInfo } from "../../types"
+import { 
+    ClosePositionConfirmationPayload, 
+    DynamicDlmmLiquidityPoolInfo, 
+    OpenPositionConfirmationPayload 
+} from "../../types"
+import { InjectQueue } from "@nestjs/bullmq"
+import { bullData, BullQueueName } from "@modules/bullmq"
+import { Queue } from "bullmq"
+import { v4 } from "uuid"
 
 @Injectable()
 export class MeteoraActionService implements IActionService {
@@ -57,16 +53,12 @@ export class MeteoraActionService implements IActionService {
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly signerService: SignerService,
-        private readonly balanceService: BalanceService,
-        private readonly openPositionSnapshotService: OpenPositionSnapshotService,
-        private readonly closePositionSnapshotService: ClosePositionSnapshotService,
-        private readonly balanceSnapshotService: BalanceSnapshotService,
-        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
-        private readonly profitabilityMathService: ProfitabilityMathService,
+        @InjectQueue(bullData[BullQueueName.OpenPositionConfirmation].name) 
+        private openPositionConfirmationQueue: Queue<OpenPositionConfirmationPayload>,
+        @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
+        private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
         @InjectWinston()
         private readonly logger: WinstonLogger,
-        @InjectPrimaryMongoose()
-        private readonly connection: MongooseConnection,
         private readonly eventEmitter: EventEmitter2,
         private readonly rpcPickerService: RpcPickerService,
     ) { }
@@ -96,10 +88,6 @@ export class MeteoraActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        // we define the snapshot balances here to avoid duplicate code
-        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
-        const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmount)
         // we log the desired amounts to the ora service
         // check if the tokens are in the pool
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
@@ -158,10 +146,10 @@ export class MeteoraActionService implements IActionService {
                                 commitment: "confirmed",
                                 maxRetries: BigInt(5)
                             })
-                        this.logger.debug(
+                        this.logger.verbose(
                             WinstonLog.OpenPositionSuccess, {
                                 txHash: transactionSignature.toString(),
-                                bot: bot.id,
+                                botId: bot.id,
                                 liquidityPoolId: _state.static.displayId,
                             })
                         return transactionSignature.toString()
@@ -169,56 +157,26 @@ export class MeteoraActionService implements IActionService {
                 })
             },
         })
-        // we refetch the balances after the position is opened
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        } = await this.balanceService.fetchBalances({
-            bot,
-        })
-        const session = await this.connection.startSession()
-        // we try to cache 
-        await session.withTransaction(
-            async () => {
-                // update the snapshot balances
-                await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
-                    snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
-                    snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
-                    snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
-                    bot,
-                    targetIsA,
-                    amountA,
-                    amountB,
-                    positionId: positionKeyPair.address.toString(),
-                    minBinId: minBinId.toNumber(),
-                    maxBinId: maxBinId.toNumber(),
-                    chainId: bot.chainId,
-                    liquidityPoolId: _state.static.displayId,
-                    openTxHash: txHash,
-                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
-                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
-                    session,
-                })
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount: new BN(targetBalanceAmount),
-                    quoteBalanceAmount: new BN(quoteBalanceAmount),
-                    gasBalanceAmount: new BN(gasBalanceAmount),
-                    session,
-                })
-            })
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.UpdateActiveBot, {
-                    botId: bot.id,
-                })
-        )
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.PositionOpened, {
-                    botId: bot.id,
-                })
+        // Enqueue the job to be processed by the worker.
+        // Logic is no longer executed immediately here.
+        // Using the worker ensures reliable and asynchronous processing.
+        await this.openPositionConfirmationQueue.add(
+            v4(), 
+            {
+                bot,
+                txHash,
+                state: _state,
+                positionId: positionKeyPair.address.toString(),
+                feeAmountTarget: (targetIsA ? feeAmountA : feeAmountB).toString(),
+                feeAmountQuote: (targetIsA ? feeAmountB : feeAmountA).toString(),
+                snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmount,
+                snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmount,
+                snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmount,
+                minBinId: minBinId.toNumber(),
+                maxBinId: maxBinId.toNumber(),
+                amountA: amountA.toString(),
+                amountB: amountB.toString(),
+            }
         )
     }
 
@@ -343,9 +301,6 @@ export class MeteoraActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
-        const targetToken = targetIsA ? tokenA : tokenB
-        const quoteToken = targetIsA ? tokenB : tokenA
         const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
@@ -388,10 +343,10 @@ export class MeteoraActionService implements IActionService {
                                 commitment: "confirmed",
                                 maxRetries: BigInt(5),
                             })
-                        this.logger.debug(
+                        this.logger.verbose(
                             WinstonLog.ClosePositionSuccess, {
                                 txHash: transactionSignature.toString(),
-                                bot: bot.id,
+                                botId: bot.id,
                                 liquidityPoolId: _state.static.displayId,
                             })
                         return transactionSignature.toString()
@@ -399,67 +354,13 @@ export class MeteoraActionService implements IActionService {
                 })
             },
         })
-        const {
-            balancesSnapshotsParams,
-            swapsSnapshotsParams,
-        } = await this.balanceService.executeBalanceRebalancing({
-            bot,
-            withoutSnapshot: true,
-        })
-        const before: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-            gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
-        }
-        const after: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-            quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
-        }
-        const {
-            roi,
-            pnl
-        } = await this.profitabilityMathService.calculateProfitability({
-            before,
-            after,
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            chainId: bot.chainId,
-        })
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async () => {
-                if (!bot.activePosition) {
-                    throw new ActivePositionNotFoundException(
-                        bot.id,
-                        "Active position not found"
-                    )
-                }
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                    gasBalanceAmount: balancesSnapshotsParams?.gasBalanceAmount || new BN(0),
-                    session,
-                })
-                await this.closePositionSnapshotService
-                    .updateClosePositionTransactionRecord({
-                        bot,
-                        pnl,
-                        roi,
-                        positionId: bot.activePosition.id,
-                        closeTxHash: txHash,
-                        session,
-                        snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-                        snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-                        snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
-                    })
-                if (swapsSnapshotsParams) {
-                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                        ...swapsSnapshotsParams,
-                        session,
-                    })
-                }
-            })
+        await this.closePositionConfirmationQueue.add(
+            v4(), 
+            {
+                bot,
+                txHash,
+                state: _state,
+            }
+        )
     }
 }

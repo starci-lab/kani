@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { ClosePositionParams, IActionService, LiquidityPoolState, OpenPositionParams } from "../../interfaces"
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
-import { Connection } from "mongoose"
 import {
-    InjectPrimaryMongoose,
     LoadBalancerName,
 } from "@modules/databases"
 import { SignerService } from "../../signers"
@@ -13,11 +11,14 @@ import {
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionMessageTooLargeException,
-    SnapshotBalancesBeforeOpenNotSetException,
     TokenNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
-import { DynamicLiquidityPoolInfo } from "../../types"
+import { 
+    ClosePositionConfirmationPayload, 
+    DynamicLiquidityPoolInfo, 
+    OpenPositionConfirmationPayload 
+} from "../../types"
 import { OPEN_POSITION_SLIPPAGE } from "../constants"
 import { 
     signTransaction,
@@ -35,39 +36,31 @@ import {
     appendTransactionMessageInstructions,
 } from "@solana/kit"
 import BN from "bn.js"
-import { BalanceService } from "../../balance"
-import { 
-    BalanceSnapshotService, 
-    ClosePositionSnapshotService, 
-    OpenPositionSnapshotService, 
-    SwapTransactionSnapshotService 
-} from "../../snapshots"
 import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
 import { adjustSlippage } from "@utils"
-import { CalculateProfitability, ProfitabilityMathService } from "../../math"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import Decimal from "decimal.js"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
 import { ClientType, RpcPickerService } from "../../clients"
+import { InjectQueue } from "@nestjs/bullmq"
+import { bullData, BullQueueName } from "@modules/bullmq"
+import { Queue } from "bullmq"
+import { v4 } from "uuid"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
     constructor(
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
         private readonly signerService: SignerService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly tickMathService: TickMathService,
-        private readonly balanceService: BalanceService,
-        private readonly balanceSnapshotService: BalanceSnapshotService,
-        private readonly openPositionSnapshotService: OpenPositionSnapshotService,
-        private readonly closePositionSnapshotService: ClosePositionSnapshotService,
-        private readonly closePositionInstructionService: ClosePositionInstructionService,
-        private readonly profitabilityMathService: ProfitabilityMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
-        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        private readonly closePositionInstructionService: ClosePositionInstructionService,
+        @InjectQueue(bullData[BullQueueName.OpenPositionConfirmation].name) 
+        private openPositionConfirmationQueue: Queue<OpenPositionConfirmationPayload>,
+        @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
+        private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
         private readonly eventEmitter: EventEmitter2,
         private readonly rpcPickerService: RpcPickerService,
         @InjectWinston()
@@ -177,18 +170,6 @@ export class RaydiumActionService implements IActionService {
                 "Active position not found"
             )
         }
-        const {
-            snapshotTargetBalanceAmountBeforeOpen,
-            snapshotQuoteBalanceAmountBeforeOpen,
-            snapshotGasBalanceAmountBeforeOpen,
-        } = bot.activePosition
-        if (
-            !snapshotTargetBalanceAmountBeforeOpen || 
-            !snapshotQuoteBalanceAmountBeforeOpen || 
-            !snapshotGasBalanceAmountBeforeOpen
-        ) {
-            throw new SnapshotBalancesBeforeOpenNotSetException("Snapshot balances before open not set")
-        }
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -197,9 +178,6 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
-        const targetToken = targetIsA ? tokenA : tokenB
-        const quoteToken = targetIsA ? tokenB : tokenA
         const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
@@ -241,10 +219,10 @@ export class RaydiumActionService implements IActionService {
                                 commitment: "confirmed",
                                 maxRetries: BigInt(5),
                             })
-                        this.logger.debug(
+                        this.logger.verbose(
                             WinstonLog.ClosePositionSuccess, {
                                 txHash: transactionSignature.toString(),
-                                bot: bot.id,
+                                botId: bot.id,
                                 liquidityPoolId: _state.static.displayId,
                             })
                         return transactionSignature.toString()
@@ -252,69 +230,14 @@ export class RaydiumActionService implements IActionService {
                 })
             },
         })
-
-        const {
-            balancesSnapshotsParams,
-            swapsSnapshotsParams,
-        } = await this.balanceService.executeBalanceRebalancing({
-            bot,
-            withoutSnapshot: true,
-        })
-        const before: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-            gasBalanceAmount:  new BN(snapshotGasBalanceAmountBeforeOpen),
-        }
-        const after: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-            quoteTokenBalanceAmount: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-            gasBalanceAmount: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
-        }
-        const { 
-            roi, 
-            pnl 
-        } = await this.profitabilityMathService.calculateProfitability({
-            before,
-            after,
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            chainId: bot.chainId,
-        })
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async () => {
-                if (!bot.activePosition) {
-                    throw new ActivePositionNotFoundException(
-                        bot.id, 
-                        "Active position not found"
-                    )
-                }
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount: balancesSnapshotsParams?.targetBalanceAmount || new BN(0),
-                    quoteBalanceAmount: balancesSnapshotsParams?.quoteBalanceAmount || new BN(0),
-                    gasBalanceAmount: balancesSnapshotsParams?.gasBalanceAmount || new BN(0),
-                    session,
-                })
-                await this.closePositionSnapshotService
-                    .updateClosePositionTransactionRecord({
-                        bot,
-                        pnl,
-                        roi,
-                        positionId: bot.activePosition.id,
-                        closeTxHash: txHash,
-                        session,
-                        snapshotTargetBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.targetBalanceAmount || 0),
-                        snapshotQuoteBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.quoteBalanceAmount || 0),
-                        snapshotGasBalanceAmountAfterClose: new BN(balancesSnapshotsParams?.gasBalanceAmount || 0),
-                    })
-                if (swapsSnapshotsParams) {
-                    await this.swapTransactionSnapshotService.addSwapTransactionRecord({
-                        ...swapsSnapshotsParams,
-                        session,
-                    })
-                }
-            })
+        await this.closePositionConfirmationQueue.add(
+            v4(), 
+            {
+                bot,
+                txHash,
+                state: _state,
+            }
+        )
     }
 
     async openPosition(
@@ -334,9 +257,6 @@ export class RaydiumActionService implements IActionService {
         if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
-        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
-        const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmount)
         // check if the tokens are in the pool
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === _state.static.tokenA.toString())
@@ -345,7 +265,6 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        // we log the desired amounts to the ora service
         // get the tick bounds
         const { 
             tickLower, 
@@ -443,58 +362,25 @@ export class RaydiumActionService implements IActionService {
                 })
             },
         })
-        // we refetch the balances after the position is opened
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        } = await this.balanceService.fetchBalances({
-            bot,
-        })
-        // update the snapshot balances
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async () => {
-                await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
-                    snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
-                    snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
-                    snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
-                    liquidity: new BN(liquidity),
-                    bot,
-                    targetIsA,
-                    tickLower: tickLower.toNumber(),
-                    tickUpper: tickUpper.toNumber(),
-                    chainId: bot.chainId,
-                    liquidityPoolId: _state.static.displayId,
-                    positionId: ataAddress.toString(),
-                    openTxHash: txHash,
-                    session,
-                    metadata: {
-                        nftMintAddress: mintKeyPair.address.toString(),
-                    },
-                    feeAmountTarget: targetIsA ? feeAmountA : feeAmountB,
-                    feeAmountQuote: targetIsA ? feeAmountB : feeAmountA,
-                })
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                    bot,
-                    targetBalanceAmount,
-                    quoteBalanceAmount,
-                    gasBalanceAmount,
-                    session,
-                })
-            })
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.UpdateActiveBot, 
-                {
-                    botId: bot.id,
-                })
-        )  
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.PositionOpened, {
-                    botId: bot.id,
-                })
+        // Enqueue the job to be processed by the worker.
+        // Logic is no longer executed immediately here.
+        // Using the worker ensures reliable and asynchronous processing.
+        await this.openPositionConfirmationQueue.add(
+            v4(), 
+            {
+                bot,
+                txHash,
+                state: _state,
+                positionId: ataAddress.toString(),
+                liquidity: liquidity.toString(),
+                feeAmountTarget: (targetIsA ? feeAmountA : feeAmountB).toString(),
+                feeAmountQuote: (targetIsA ? feeAmountB : feeAmountA).toString(),
+                snapshotTargetBalanceAmountBeforeOpen: bot.snapshotTargetBalanceAmount!,
+                snapshotQuoteBalanceAmountBeforeOpen: bot.snapshotQuoteBalanceAmount!,
+                snapshotGasBalanceAmountBeforeOpen: bot.snapshotGasBalanceAmount!,
+                tickLower: tickLower.toNumber(),
+                tickUpper: tickUpper.toNumber(),
+            }
         )
     }
 }

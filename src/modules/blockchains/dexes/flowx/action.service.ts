@@ -72,6 +72,7 @@ export class FlowXActionService implements IActionService {
             bot, 
             state 
         }: OpenPositionParams): Promise<void> {
+        console.log("openPosition", bot.id, state)
         const _state = state as LiquidityPoolState
         const txb = new Transaction()
         if (
