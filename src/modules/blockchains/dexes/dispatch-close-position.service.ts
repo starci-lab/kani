@@ -72,13 +72,11 @@ export class DispatchClosePositionService {
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         // if the mutex is locked, skip the execution
         if (mutex.isLocked()) {
-            console.log("mutex is locked, skipping close position")
             return
         }
         // acquire the mutex lock
         await mutex.acquire()
         try {
-            console.log("dispatching close position for bot", bot.id, "liquidity pool", liquidityPoolId)
             // run the close position action under mutex lock
             switch (dex.displayId) {
             case DexId.Raydium: {

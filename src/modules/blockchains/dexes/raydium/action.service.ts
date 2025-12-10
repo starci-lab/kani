@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { ClosePositionParams, IActionService, LiquidityPoolState, OpenPositionParams } from "../../interfaces"
+import { 
+    ClosePositionParams, 
+    IActionService, 
+    LiquidityPoolState, 
+    OpenPositionParams 
+} from "../../interfaces"
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import {
     LoadBalancerName,
@@ -36,10 +41,13 @@ import {
     appendTransactionMessageInstructions,
 } from "@solana/kit"
 import BN from "bn.js"
-import { ClosePositionInstructionService, OpenPositionInstructionService } from "./transactions"
+import { 
+    ClosePositionInstructionService, 
+    OpenPositionInstructionService 
+} from "./transactions"
 import { adjustSlippage } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
@@ -66,7 +74,7 @@ export class RaydiumActionService implements IActionService {
         private readonly rpcPickerService: RpcPickerService,
         private readonly mutexService: MutexService,
         @InjectWinston()
-        private readonly logger: winstonLogger,
+        private readonly logger: WinstonLogger,
     ) { }
 
     async closePosition(
