@@ -19,8 +19,8 @@ import { AsyncService, RandomDelayService } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
 
-// Implement analytics for Meteora DEX
-// We use the API provided by Meteora to get the analytics data
+// Implement analytics for Raydium DEX
+// We use the API provided by Raydium to get the analytics data
 @Injectable()
 export class RaydiumAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
@@ -58,10 +58,6 @@ implements OnModuleInit, OnApplicationBootstrap
                 "Liquidity pool not found",
             )
         }
-        console.log({
-            liquidityPoolId,
-            poolAddress: liquidityPool.poolAddress,
-        })
         const { data } = await this.axios.get<PoolResponse>(
             `https://api-v3.raydium.io/pools/info/ids?ids=${liquidityPool.poolAddress}`,
         )
