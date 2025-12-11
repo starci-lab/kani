@@ -4,6 +4,7 @@ import {
     JwtAccessTokenStrategy,
     JwtAccessTokenOnlyVerifiedTOTPStrategy,
     JwtRefreshTokenStrategy,
+    PrivyAuthTokenStrategy
 } from "./strategies"
 import { PassportModule as NestPassportModule } from "@nestjs/passport"
 import { ConfigurableModuleClass } from "./passport.module-definition"
@@ -21,6 +22,7 @@ import { JwtAuthService } from "./jwt"
         JwtAccessTokenOnlyVerifiedTOTPStrategy,
         JwtRefreshTokenStrategy,
         JwtAuthService,
+        PrivyAuthTokenStrategy,
     ],
     exports: [JwtAuthService],
 })

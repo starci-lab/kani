@@ -20,9 +20,10 @@ import { createObjectId } from "@utils"
 import { LbPair } from "./beets"
 import { createCacheKey } from "@modules/cache"
 import { CacheKey } from "@modules/cache"
-import { Cron, CronExpression } from "@nestjs/schedule"
+import { Interval } from "@nestjs/schedule"
 import { address, fetchEncodedAccount } from "@solana/kit"
 import { ClientType, RpcPickerService } from "../../clients"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap {
@@ -40,7 +41,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
     ) {}
 
   // fetch the pool every 10s to ensure if no event from websocket
-  @Cron(CronExpression.EVERY_10_SECONDS)
+  @Interval(envConfig().interval.poolStateUpdate)
     async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {

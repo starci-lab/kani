@@ -10,6 +10,7 @@ import { CookieService } from "@modules/cookie"
 import { Response } from "express"
 import { GraphQLTOTPGuard } from "@modules/totp"
 
+
 @Resolver()
 export class AuthResolvers {
     constructor(
@@ -22,6 +23,7 @@ export class AuthResolvers {
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtAccessTokenAuthGuard, GraphQLTOTPGuard)
     @Mutation(() => ConfirmTotpResponse, {
+        deprecationReason: "This mutation is deprecated. Use the privy authentication instead.",
         description: "Confirm a TOTP code for authentication.",
     })
     async confirmTotp(
@@ -42,6 +44,7 @@ export class AuthResolvers {
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtRefreshTokenAuthGuard, GraphQLTOTPGuard)
     @Mutation(() => RefreshResponse, {
+        deprecationReason: "This mutation is deprecated. Use the privy authentication instead.",
         description: "Refresh a JWT access token.",
     })
     async refresh(

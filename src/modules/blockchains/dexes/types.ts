@@ -17,5 +17,6 @@ export interface DexOptions {
     enabled?: boolean | {
         observe?: boolean
         action?: boolean
+        analytics?: boolean
     }
 }

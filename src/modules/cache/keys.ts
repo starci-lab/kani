@@ -17,6 +17,10 @@ export enum CacheKey {
     User = "user",
     UserIds = "userIds",
     SessionId = "sessionId",
+    Fee24H = "fee24H",
+    Volume24H = "volume24H",
+    Liquidity = "liquidity",
+    APR24H = "apr24H",
 }
 
 export interface PythTokenPriceCacheResult {

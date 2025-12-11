@@ -24,8 +24,8 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: Number })
         decimals: number
 
-    @Field(() => String, { description: "Contract address of the token on its chain" })
-    @Prop({ type: String })
+    @Field(() => String, { description: "Contract address of the token on its chain", nullable: true })
+    @Prop({ type: String, nullable: true })
         tokenAddress: string
 
     @Field(() => String, { 

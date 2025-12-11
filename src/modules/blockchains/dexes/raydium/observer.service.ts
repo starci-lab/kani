@@ -21,11 +21,11 @@ import { EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
-import { CronExpression } from "@nestjs/schedule"
-import { Cron } from "@nestjs/schedule"
+import { Interval } from "@nestjs/schedule"
 import { address, fetchEncodedAccount } from "@solana/kit"
 import { PublicKey } from "@solana/web3.js"
 import { ClientType, RpcPickerService } from "../../clients"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
@@ -53,7 +53,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         }
     }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    @Interval(envConfig().interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {

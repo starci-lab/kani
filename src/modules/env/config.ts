@@ -133,6 +133,10 @@ export const envConfig = () => ({
             encryptionSa: process.env.GCP_ENCRYPTION_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "encryption-sa.json"),
         },
     },
+    interval: {
+        poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || "10000", 10), // 10s
+        analytics: parseInt(process.env.INTERVAL_ANALYTICS || "30000", 10), // 30s
+    },
     lockCooldown: {
         openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "10000", 10), // 10s
         closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s

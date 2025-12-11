@@ -66,7 +66,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             // ============================================
             jupiterAggregatorClientRpcs: {
                 read: [
-                    //"https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                     "https://api.mainnet-beta.solana.com",
                 ],
                 write: [
@@ -76,7 +75,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             solanaBalanceClientRpcs: {
                 read: [
                     "https://api.mainnet-beta.solana.com",
-                    //"https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                 ],
                 write: [
                     "https://mainnet.helius-rpc.com/?api-key=195f7f46-73d5-46df-989e-9d743bf3caad",
@@ -84,7 +82,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
             meteoraDlmmClientRpcs: {
                 read: [
-                    //"https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                     "https://api.mainnet-beta.solana.com",
                 ],
                 write: [
@@ -93,7 +90,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
             raydiumClmmClientRpcs: {
                 read: [
-                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                     "https://api.mainnet-beta.solana.com",
                 ],
                 write: [
@@ -102,7 +98,6 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
             orcaClmmClientRpcs: {
                 read: [
-                    "https://solana-mainnet.g.alchemy.com/v2/wierg6LWs6JArNzP7lCHFItwg4PXqpGA",
                     "https://api.mainnet-beta.solana.com",
                 ],
                 write: [

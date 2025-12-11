@@ -13,6 +13,7 @@ import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
 import { WebsocketModule } from "@modules/websocket"
 import { EventEmitterModule } from "@nestjs/event-emitter"
+import { AxiosModule } from "@modules/axios"
 
 @Module({
     imports: [
@@ -55,6 +56,9 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         GcpModule.register({
             isGlobal: true,
         }),
+        AxiosModule.register({
+            isGlobal: true,
+        }),
         SignersModule.register({
             isGlobal: true,
         }),
@@ -71,13 +75,14 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         DexesModule.register({
             isGlobal: true,
             dexes: [
-                // {
-                //     dexId: DexId.Raydium,
-                //     enabled: {
-                //         observe: true,
-                //         action: false,
-                //     },
-                // },
+                {
+                    dexId: DexId.Raydium,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                        analytics: true,
+                    },
+                },
                 // {
                 //     dexId: DexId.Orca,
                 //     enabled: {
@@ -85,13 +90,14 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
                 //         action: false,
                 //     },
                 // },
-                // {
-                //     dexId: DexId.Meteora,
-                //     enabled: {
-                //         observe: true,
-                //         action: false,
-                //     },
-                // },
+                {
+                    dexId: DexId.Meteora,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                        analytics: true,
+                    },
+                },
                 // {
                 //     dexId: DexId.FlowX,
                 //     enabled: {

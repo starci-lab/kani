@@ -118,6 +118,7 @@
     "p-defer": "^4.0.1",
     "p-retry": "^7.0.0",
     "passport": "^0.7.0",
+    "passport-custom": "^1.1.1",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "prom-client": "^15.1.3",

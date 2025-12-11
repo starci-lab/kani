@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { GraphQLTypeOauthProviderName, OauthProviderName } from "../enums"
-import { WalletSchema, WalletSchemaClass } from "./wallet.schema"
 
 @Schema({
     timestamps: true,
@@ -12,23 +11,36 @@ import { WalletSchema, WalletSchemaClass } from "./wallet.schema"
     description: "User entity represents a registered user in the system, including their OAuth info and multi-chain wallets.",
 })
 export class UserSchema extends AbstractSchema {
+    /** @deprecated Use privyUserId instead */
     @Field(() => String, {
+        deprecationReason: "Use privyUserId instead",
         description: "Unique ID from the OAuth provider (e.g., Google user ID).",
         nullable: true,
     })
     @Prop({ type: String, required: false })
         oauthProviderId?: string
 
+    /** @deprecated Use privyProvider instead */
     @Field(() => GraphQLTypeOauthProviderName, {
+        deprecationReason: "Use privyProvider instead",
         description: "The OAuth provider that the user used to sign in (e.g., GOOGLE).",
         nullable: true,
     })
     @Prop({ type: String, enum: OauthProviderName, required: false })
         oauthProvider?: OauthProviderName
 
+    
+    @Field(() => String, {
+        description: "The unique ID of the user from Privy.",
+    })
+    @Prop({ type: String, required: true, unique: true, index: true })
+        privyUserId: string
+
+    /** @deprecated Use privy instead */
     @Field(() => String, {
         description: "User's email address.",
         nullable: true,
+        deprecationReason: "Use privy instead",
     })
     @Prop({ type: String, required: false })
         email?: string
@@ -46,27 +58,6 @@ export class UserSchema extends AbstractSchema {
     })
     @Prop({ type: String, required: false })
         picture?: string
-
-    @Field(() => WalletSchema, {
-        description: "User's Solana wallet information, if connected.",
-        nullable: true,
-    })
-    @Prop({ type: WalletSchema, required: false })
-        solana?: WalletSchema
-
-    @Field(() => WalletSchema, {
-        description: "User's Sui wallet information, if connected.",
-        nullable: true,
-    })
-    @Prop({ type: WalletSchema, required: false })
-        sui?: WalletSchema
-
-    @Field(() => WalletSchema, {
-        description: "User's EVM-compatible wallet information, if connected (e.g., MetaMask).",
-        nullable: true,
-    })
-    @Prop({ type: WalletSchema, required: false })
-        evm?: WalletSchema
 
     @Field(() => String, {
         description: "Encrypted TOTP secret for 2FA if user has enabled two-factor authentication.",
@@ -90,12 +81,6 @@ export class UserSchema extends AbstractSchema {
         nullable: true,
     })
         temporaryTotpToken?: string
-
-    @Field(() => [WalletSchema], {
-        description: "User's wallets information.",
-    })
-    @Prop({ type: [WalletSchemaClass], required: true })
-        wallets: Array<WalletSchema>
 }
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)

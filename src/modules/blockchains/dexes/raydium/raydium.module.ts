@@ -8,6 +8,7 @@ import {
     ClosePositionInstructionService,
     OpenPositionInstructionService
 } from "./transactions"
+import { RaydiumAnalyticsService } from "./analytics.service"
 
 @Injectable()
 export class RaydiumModule extends ConfigurableModuleClass {
@@ -33,6 +34,12 @@ export class RaydiumModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(RaydiumActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(RaydiumAnalyticsService)
         }
         return {
             ...dynamicModule,

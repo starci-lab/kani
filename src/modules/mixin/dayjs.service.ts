@@ -21,4 +21,8 @@ export class DayjsService {
     fromMs(msString: ms.StringValue) {
         return dayjs().add(this.msService.fromString(msString), "millisecond")
     }
+
+    from(config: dayjs.ConfigType) {
+        return dayjs(config)
+    }
 }

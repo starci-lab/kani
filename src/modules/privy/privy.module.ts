@@ -9,6 +9,7 @@ import { ConfigurableModuleClass } from "./privy.module-definition"
         PrivyService,
     ],
     exports: [
+        createPrivyClientProvider(),
         PrivyService,
     ],
 })

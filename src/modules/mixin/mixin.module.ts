@@ -1,8 +1,6 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { LockService } from "./lock.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mixin.module-definition"
 import { RetryService } from "./retry.service"
-import { DayjsService } from "./dayjs.service"
 import { NextJsQueryService } from "./nextjs-query.serivce"
 import { ReadinessWatcherFactoryService } from "./readiness-watcher-factory.service"
 import { InstanceIdService } from "./instance-id.service"
@@ -11,6 +9,7 @@ import { createSuperJsonServiceProvider } from "./superjson.providers"
 import { AsyncService } from "./async.service"
 import { MsService } from "./ms.service"
 import { LoadBalancerService } from "./load-balancer.service"
+import { DayjsService } from "./dayjs.service"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -19,12 +18,11 @@ export class MixinModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            LockService,
             RetryService,
-            DayjsService,
             ReadinessWatcherFactoryService,
             InstanceIdService,
             RandomDelayService,
+            DayjsService,
             createSuperJsonServiceProvider(),
             AsyncService,
             MsService,

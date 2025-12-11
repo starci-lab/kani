@@ -30,10 +30,11 @@ import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { CetusActionService } from "./cetus"
 import { TurbosActionService } from "./turbos"
 import { MomentumActionService } from "./momentum"
-import { DayjsService, MsService } from "@modules/mixin"
+import { MsService } from "@modules/mixin"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import dayjs from "dayjs"
 const OPEN_POSITION_SNAPSHOT_INTERVAL = "30 seconds"
 
 @Injectable()
@@ -49,7 +50,6 @@ export class DispatchOpenPositionService {
         private readonly cetusActionService: CetusActionService,
         private readonly turbosActionService: TurbosActionService,
         private readonly momentumActionService: MomentumActionService,
-        private readonly dayjsService: DayjsService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly msService: MsService,
@@ -71,7 +71,7 @@ export class DispatchOpenPositionService {
             || !bot.snapshotQuoteBalanceAmount
             || !bot.snapshotGasBalanceAmount
             || new Decimal(
-                this.dayjsService.now().diff(
+                dayjs().diff(
                     bot.lastBalancesSnapshotAt, "millisecond")).gt(
                 new Decimal(
                     this.msService.fromString(OPEN_POSITION_SNAPSHOT_INTERVAL)

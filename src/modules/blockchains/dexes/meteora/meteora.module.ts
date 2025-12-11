@@ -8,6 +8,7 @@ import {
     MeteoraSdkService, 
     ClosePositionInstructionService 
 } from "./transactions"
+import { MeteoraAnalyticsService } from "./analytics.service"
 
 @Injectable()
 export class MeteoraModule extends ConfigurableModuleClass {
@@ -33,6 +34,12 @@ export class MeteoraModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(MeteoraActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(MeteoraAnalyticsService)
         }
         return {
             ...dynamicModule    ,
