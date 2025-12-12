@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cetus.module-definition
 import { CetusObserverService } from "./observer.service"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 import { CetusActionService } from "./action.service"
+import { CetusAnalyticsService } from "./analytics.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -26,6 +27,12 @@ export class CetusModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(CetusActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(CetusAnalyticsService)
         }
         return {
             ...dynamicModule,

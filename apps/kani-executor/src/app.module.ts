@@ -16,7 +16,7 @@ import {
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
-import { MutexModule, RedlockModule } from "@modules/lock"
+import { MutexModule } from "@modules/lock"
 import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
 import { TxBuilderModule } from "@modules/blockchains"
 import { OraModule } from "@modules/ora"
@@ -38,9 +38,6 @@ import { MixinModule } from "@modules/mixin"
             isGlobal: true,
             withSeeders: true,
             memoryStorage: true,
-        }),
-        RedlockModule.register({
-            isGlobal: true,
         }),
         CacheModule.register({
             isGlobal: true,

@@ -36,7 +36,7 @@ export class FlowXObserverService {
         await this.handlePoolStateUpdateInterval()
     }
     
-    @Interval(envConfig().botExecutor.suiPoolFetchInterval)
+    @Interval(envConfig().interval.suiPoolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {

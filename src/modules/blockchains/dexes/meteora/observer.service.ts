@@ -90,6 +90,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
           this.cacheManager.set(
               createCacheKey(CacheKey.DynamicDlmmLiquidityPoolInfo, liquidityPoolId),
               this.superjson.stringify(dynamicDlmmLiquidityPoolInfo),
+              envConfig().cache.ttl.poolState,
           ),
           // event
           this.events.emit(

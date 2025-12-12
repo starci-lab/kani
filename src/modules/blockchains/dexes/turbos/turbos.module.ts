@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./turbos.module-definitio
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 import { TurbosActionService } from "./action.service"
 import { TurbosObserverService } from "./observer.service"
+import { TurbosAnalyticsService } from "./analytics.service"
 
 @Injectable()
 export class TurbosModule extends ConfigurableModuleClass {
@@ -26,6 +27,12 @@ export class TurbosModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(TurbosActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(TurbosAnalyticsService)
         }
         return {
             ...dynamicModule,

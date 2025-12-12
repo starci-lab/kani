@@ -8,6 +8,7 @@ import {
     ClosePositionInstructionService, 
     PositionService 
 } from "./transactions"
+import { OrcaAnalyticsService } from "./analytics.service"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -33,6 +34,12 @@ export class OrcaModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(OrcaActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(OrcaAnalyticsService)
         }
         return {
             ...dynamicModule,

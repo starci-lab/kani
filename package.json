@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@7kprotocol/sdk-ts": "^3.4.1",
+    "@apollo/client": "^4.0.10",
     "@cetusprotocol/aggregator-sdk": "^1.1.6",
     "@cetusprotocol/cetus-sui-clmm-sdk": "^5.4.0",
     "@cetusprotocol/sui-clmm-sdk": "^1.1.3",

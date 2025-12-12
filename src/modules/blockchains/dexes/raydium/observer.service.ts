@@ -87,6 +87,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 this.cacheManager.set(
                     createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
                     this.superjson.stringify(parsed),
+                    envConfig().cache.ttl.poolState,
                 ),
                 // event
                 this.events.emit(

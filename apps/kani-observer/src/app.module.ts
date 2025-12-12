@@ -14,6 +14,7 @@ import { GcpModule } from "@modules/gcp"
 import { WebsocketModule } from "@modules/websocket"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { AxiosModule } from "@modules/axios"
+import { ApolloClientModule } from "@modules/apollo-client"
 
 @Module({
     imports: [
@@ -59,6 +60,9 @@ import { AxiosModule } from "@modules/axios"
         AxiosModule.register({
             isGlobal: true,
         }),
+        ApolloClientModule.register({
+            isGlobal: true,
+        }),
         SignersModule.register({
             isGlobal: true,
         }),
@@ -83,13 +87,14 @@ import { AxiosModule } from "@modules/axios"
                         analytics: true,
                     },
                 },
-                // {
-                //     dexId: DexId.Orca,
-                //     enabled: {
-                //         observe: true,
-                //         action: false,
-                //     },
-                // },
+                {
+                    dexId: DexId.Orca,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                        analytics: true,
+                    },
+                },
                 {
                     dexId: DexId.Meteora,
                     enabled: {
@@ -98,34 +103,37 @@ import { AxiosModule } from "@modules/axios"
                         analytics: true,
                     },
                 },
-                // {
-                //     dexId: DexId.FlowX,
-                //     enabled: {
-                //         observe: true,
-                //         action: false,
-                //     },
-                // },
                 {
-                    dexId: DexId.Cetus,
+                    dexId: DexId.FlowX,
                     enabled: {
                         observe: true,
                         action: false,
                     },
                 },
-                // {
-                //     dexId: DexId.Momentum,
-                //     enabled: {
-                //         observe: true,
-                //         action: false,
-                //     },
-                // },
-                // {
-                //     dexId: DexId.Turbos,
-                //     enabled: {
-                //         observe: true,
-                //         action: false,
-                //     },
-                // },
+                {
+                    dexId: DexId.Cetus,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                        analytics: true,
+                    },
+                },
+                {
+                    dexId: DexId.Momentum,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                        analytics: true,
+                    },
+                },
+                {
+                    dexId: DexId.Turbos,
+                    enabled: {
+                        observe: true,
+                        action: false,
+                        analytics: true,
+                    },
+                },
             ],
         }),
         CexesModule.register({

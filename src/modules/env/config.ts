@@ -63,6 +63,10 @@ export const envConfig = () => ({
     cache: {
         memoryTtl: parseInt(process.env.CACHE_MEMORY_TTL || "3600000", 10), // 3600s
         redisTtl: parseInt(process.env.CACHE_REDIS_TTL || "3600000", 10), // 3600s
+        ttl: {
+            poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
+            poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
+        }
     },
     databases: {
         mongoose: {
@@ -135,6 +139,7 @@ export const envConfig = () => ({
     },
     interval: {
         poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || "10000", 10), // 10s
+        suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || "1000", 10), // 1s
         analytics: parseInt(process.env.INTERVAL_ANALYTICS || "30000", 10), // 30s
     },
     lockCooldown: {

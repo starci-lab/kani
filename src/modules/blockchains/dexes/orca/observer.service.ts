@@ -16,9 +16,10 @@ import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 import { Whirlpool } from "./beets"
-import { CronExpression, Cron } from "@nestjs/schedule"
 import { address, fetchEncodedAccount } from "@solana/kit"
 import { ClientType, RpcPickerService } from "@modules/blockchains"
+import { envConfig } from "@modules/env"
+import { Interval } from "@nestjs/schedule"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit {
@@ -55,7 +56,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         }
     }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    @Interval(envConfig().interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.primaryMemoryStorageService.liquidityPools) {
@@ -90,6 +91,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
                     liquidityPoolId
                 ),
                 this.superjson.stringify(parsed),
+                envConfig().cache.ttl.poolState,
             ),
             // event emit
             this.events.emit(

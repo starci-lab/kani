@@ -19,10 +19,10 @@ import { AsyncService } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
 
-// Implement analytics for Raydium DEX
-// We use the API provided by Raydium to get the analytics data
+// Implement analytics for Orca DEX
+// We use the API provided by Orca to get the analytics data
 @Injectable()
-export class RaydiumAnalyticsService
+export class OrcaAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
     private axios: AxiosInstance
@@ -31,7 +31,7 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     @InjectRedisCache()
     private readonly cacheManager: Cache,
-    private readonly asyncService: AsyncService
+    private readonly asyncService: AsyncService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -39,7 +39,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 
     async onModuleInit() {
-        const key = "raydium-analytics"
+        const key = "orca-analytics"
         this.axios = this.axiosService.create(key)
         this.axiosService.addRetry({ key })
     }
@@ -52,37 +52,38 @@ implements OnModuleInit, OnApplicationBootstrap
         if (!liquidityPools.length) {
             return
         }
-        const poolAddresses = liquidityPools.map((pool) => pool.poolAddress).join(",")
-        const { data } = await this.axios.get<PoolResponse>(
-            `https://api-v3.raydium.io/pools/info/ids?ids=${poolAddresses}`,
+        const poolAddresses = liquidityPools.map((liquidityPool) => liquidityPool.poolAddress).join(",")
+        const { data } = await this.axios.get<WhirlpoolPoolResponse>(
+            `https://api.orca.so/v2/solana/pools?addresses=${poolAddresses}`,
         )
         const cacheEntries: Array<CacheEntry> = []
-        for (const poolData of data.data) {
+        for (const item of data.data) {
             const liquidityPool = liquidityPools.find(
-                (pool) => pool.poolAddress === poolData.id,
+                (pool) => pool.poolAddress === item.address,
             )
             if (!liquidityPool) {
                 continue
             }
-            const { tvl, day } = poolData
+            const { stats, tvlUsdc } = item
+            const { fees, volume, yieldOverTvl } = stats["24h"]
             cacheEntries.push({
                 key: createCacheKey(CacheKey.Fee24H, liquidityPool.displayId),
-                value: new Decimal(day.volumeFee).toString(),
+                value: new Decimal(fees).toString(),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
             cacheEntries.push({
                 key: createCacheKey(CacheKey.Volume24H, liquidityPool.displayId),
-                value: new Decimal(day.volume).toString(),
+                value: new Decimal(volume).toString(),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
             cacheEntries.push({
                 key: createCacheKey(CacheKey.Liquidity, liquidityPool.displayId),
-                value: new Decimal(tvl).toString(),
+                value: new Decimal(tvlUsdc).toString(),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
             cacheEntries.push({
                 key: createCacheKey(CacheKey.APR24H, liquidityPool.displayId),
-                value: new Decimal(day.apr).div(365).div(100).toString(),
+                value: new Decimal(yieldOverTvl).toString(),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
         }
@@ -95,7 +96,7 @@ implements OnModuleInit, OnApplicationBootstrap
         this.primaryMemoryStorageService.liquidityPools.filter(
             (liquidityPool) =>
                 liquidityPool.dex.toString() ===
-            createObjectId(DexId.Raydium).toString(),
+            createObjectId(DexId.Orca).toString(),
         )
         // split into chunks of 10
         const chunks = liquidityPools.reduce(
@@ -118,75 +119,101 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface PoolResponse {
-    id: string;
-    success: boolean;
-    data: Array<RaydiumPool>;
+export interface WhirlpoolPoolResponse {
+    data: Array<WhirlpoolPool>
   }
   
-export interface RaydiumPool {
-    type: string;
-    programId: string;
-    id: string;
-    mintA: TokenInfo;
-    mintB: TokenInfo;
-    rewardDefaultPoolInfos: string;
-    rewardDefaultInfos: Array<RewardInfo>;
-    price: number;
-    mintAmountA: number;
-    mintAmountB: number;
-    feeRate: number;
-    openTime: string;
-    tvl: number;
-    day: PeriodStats;
-    week: PeriodStats;
-    month: PeriodStats;
-    pooltype: Array<string>;
-    farmUpcomingCount: number;
-    farmOngoingCount: number;
-    farmFinishedCount: number;
-    config: PoolConfig;
-    burnPercent: number;
-    launchMigratePool: boolean;
+export interface WhirlpoolPool {
+    address: string
+    whirlpoolsConfig: string
+    whirlpoolBump: Array<number>
+    tickSpacing: number
+    tickSpacingSeed: Array<number>
+    feeRate: number
+    protocolFeeRate: number
+    liquidity: string
+    sqrtPrice: string
+    tickCurrentIndex: number
+    protocolFeeOwedA: string
+    protocolFeeOwedB: string
+    tokenMintA: string
+    tokenVaultA: string
+    feeGrowthGlobalA: string
+    tokenMintB: string
+    tokenVaultB: string
+    feeGrowthGlobalB: string
+    rewardLastUpdatedTimestamp: string
+    updatedAt: string
+    updatedSlot: number
+    writeVersion: number
+    hasWarning: boolean
+    poolType: string
+    tokenA: TokenA
+    tokenB: TokenB
+    price: string
+    tvlUsdc: string
+    yieldOverTvl: string
+    tokenBalanceA: string
+    tokenBalanceB: string
+    stats: Stats
+    rewards: Array<Reward>
+    addressLookupTable: string
+    feeTierIndex: number
+    adaptiveFeeEnabled: boolean
+    tradeEnableTimestamp: string
   }
   
-export interface TokenInfo {
-    chainId: number;
-    address: string;
-    programId: string;
-    logoURI: string;
-    symbol: string;
-    name: string;
-    decimals: number;
-    tags: Array<string>;
-    extensions: Record<string, string>;
+export interface TokenA {
+    address: string
+    programId: string
+    imageUrl: string
+    name: string
+    symbol: string
+    decimals: number
   }
   
-export interface RewardInfo {
-    mint: TokenInfo;
-    perSecond: string;
-    startTime: string;
-    endTime: string;
+export interface TokenB {
+    address: string
+    programId: string
+    imageUrl: string
+    name: string
+    symbol: string
+    decimals: number
   }
   
-export interface PeriodStats {
-    volume: number;
-    volumeQuote: number;
-    volumeFee: number;
-    apr: number;
-    feeApr: number;
-    priceMin: number;
-    priceMax: number;
-    rewardApr: Array<number>;
+export interface Stats {
+    "24h": Stats24h
+    "7d": Stats7d
+    "30d": Stats30d
   }
   
-export interface PoolConfig {
-    id: string;
-    index: number;
-    protocolFeeRate: number;
-    tradeFeeRate: number;
-    tickSpacing: number;
-    fundFeeRate: number;
-    defaultRange: number;
-    defaultRangePoint: Array<number>;
+export interface Stats24h {
+    volume: string
+    fees: string
+    rewards?: string
+    yieldOverTvl: string
   }
+  
+export interface Stats7d {
+    volume: string
+    fees: string
+    rewards?: string
+    yieldOverTvl: string
+  }
+  
+export interface Stats30d {
+    volume: string
+    fees: string
+    rewards?: string
+    yieldOverTvl: string
+  }
+  
+export interface Reward {
+    mint: string
+    vault: string
+    authority: string
+    emissions_per_second_x64: string
+    growth_global_x64: string
+    active: boolean
+    emissionsPerSecond: string
+}

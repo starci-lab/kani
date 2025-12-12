@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./momentum.module-definit
 import { OpenPositionTxbService, ClosePositionTxbService } from "./transactions"
 import { MomentumObserverService } from "./observer.service"
 import { MomentumActionService } from "./action.service"
+import { MomentumAnalyticsService } from "./analytics.service"
 @Injectable()
 export class MomentumModule extends ConfigurableModuleClass {
     static register(
@@ -25,6 +26,12 @@ export class MomentumModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(MomentumActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(MomentumAnalyticsService)
         }
         return {
             ...dynamicModule,

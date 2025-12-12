@@ -50,3 +50,34 @@ export class SuiLiquidityPoolInvalidTypeException extends AbstractException {
         )
     }
 }
+
+export class CetusPoolInfoNotFoundException extends AbstractException {
+    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
+        super(
+            message || `Cetus pool info ${liquidityPoolId} not found`, 
+            "CETUS_POOL_INFO_NOT_FOUND_EXCEPTION", 
+            { liquidityPoolId }
+        )
+    }
+}
+
+export class FlowXPoolBatchInfoNotFoundException extends AbstractException {
+    constructor(liquidityPoolIds: Array<LiquidityPoolId>, message?: string) {
+        super(
+            message || `FlowX pool batch info ${liquidityPoolIds.join(", ")} not found`, 
+            "FLOWX_POOL_BATCH_INFO_NOT_FOUND_EXCEPTION", 
+            { liquidityPoolIds }
+        )
+    }
+}
+
+
+export class TurbosPoolBatchInfoNotFoundException extends AbstractException {
+    constructor(liquidityPoolIds: Array<LiquidityPoolId>, message?: string) {
+        super(
+            message || `Turbos pool batch info ${liquidityPoolIds.join(", ")} not found`, 
+            "TURBOS_POOL_BATCH_INFO_NOT_FOUND_EXCEPTION", 
+            { liquidityPoolIds }
+        )
+    }
+}

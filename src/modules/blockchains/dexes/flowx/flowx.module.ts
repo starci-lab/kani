@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./flowx.module-definition
 import { FlowXObserverService } from "./observer.service"
 import { FlowXActionService } from "./action.service"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
+import { FlowXAnalyticsService } from "./analytics.service"
 
 @Injectable()
 export class FlowXModule extends ConfigurableModuleClass {
@@ -26,6 +27,12 @@ export class FlowXModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
             providers.push(FlowXActionService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
+        ) {
+            providers.push(FlowXAnalyticsService)
         }
         return {
             ...dynamicModule,

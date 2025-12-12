@@ -1,16 +1,16 @@
 // app.module.ts
 import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./axios.module-definition"   
-import { AxiosService } from "./axios.service"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./apollo-client.module-definition"   
+import { ApolloClientService } from "./apollo-client.service"
 
 @Module({})
-export class AxiosModule extends ConfigurableModuleClass {
+export class ApolloClientModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers = [
-            AxiosService,
+            ApolloClientService,
         ]
         return {
             ...dynamicModule,
