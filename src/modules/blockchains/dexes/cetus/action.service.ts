@@ -31,8 +31,7 @@ import {
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TokenNotFoundException, 
-    TransactionEventNotFoundException, 
-    TransactionStimulateFailedException
+    TransactionEventNotFoundException
 } from "@exceptions"
 import { 
     ClosePositionConfirmationPayload, 
@@ -337,13 +336,6 @@ export class CetusActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const stimulateTransaction = await client.devInspectTransactionBlock({
-                            transactionBlock: closePositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (stimulateTransaction.effects.status.status === "failure") {
-                            throw new TransactionStimulateFailedException(stimulateTransaction.effects.status.error)
-                        }
                         const { digest } = await client.signAndExecuteTransaction({
                             transaction: closePositionTxb,
                             signer,
