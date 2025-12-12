@@ -11,13 +11,20 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
-import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { 
+    CacheEntry, 
+    CacheKey, 
+    createCacheKey, 
+    InjectRedisCache, 
+    PoolAnalyticsCacheResult
+} from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
+import SuperJSON from "superjson"
 
 // Implement analytics for Orca DEX
 // We use the API provided by Orca to get the analytics data
@@ -32,6 +39,8 @@ implements OnModuleInit, OnApplicationBootstrap
     @InjectRedisCache()
     private readonly cacheManager: Cache,
     private readonly asyncService: AsyncService,
+    @InjectSuperJson()
+    private readonly superjson: SuperJSON,
     ) {}
 
     async onApplicationBootstrap() {
@@ -66,24 +75,19 @@ implements OnModuleInit, OnApplicationBootstrap
             }
             const { stats, tvlUsdc } = item
             const { fees, volume, yieldOverTvl } = stats["24h"]
+            const poolAnalyticsCacheKey = createCacheKey(
+                CacheKey.PoolAnalytics,
+                liquidityPool.displayId
+            )
+            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                fee24H: new Decimal(fees).toString(),
+                volume24H: new Decimal(volume).toString(),
+                tvl: new Decimal(tvlUsdc).toString(),
+                apr24H: new Decimal(yieldOverTvl).toString(),
+            }
             cacheEntries.push({
-                key: createCacheKey(CacheKey.Fee24H, liquidityPool.displayId),
-                value: new Decimal(fees).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.Volume24H, liquidityPool.displayId),
-                value: new Decimal(volume).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.Liquidity, liquidityPool.displayId),
-                value: new Decimal(tvlUsdc).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.APR24H, liquidityPool.displayId),
-                value: new Decimal(yieldOverTvl).toString(),
+                key: poolAnalyticsCacheKey,
+                value: this.superjson.stringify(poolAnalyticsCacheResult),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
         }

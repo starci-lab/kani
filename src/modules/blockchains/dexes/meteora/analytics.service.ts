@@ -11,13 +11,14 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
-import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache, PoolAnalyticsCacheResult } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
+import SuperJSON from "superjson"
 
 // Implement analytics for Meteora DEX
 // We use the API provided by Meteora to get the analytics data
@@ -31,6 +32,8 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     @InjectRedisCache()
     private readonly cacheManager: Cache,
+    @InjectSuperJson()
+    private readonly superjson: SuperJSON,
     private readonly asyncService: AsyncService,
     ) {}
 
@@ -60,31 +63,26 @@ implements OnModuleInit, OnApplicationBootstrap
         const cacheEntries: Array<CacheEntry> = []
         for (const group of data.groups) {
             for (const pair of group.pairs) {
+                const poolAnalyticsCacheKey = createCacheKey(
+                    CacheKey.PoolAnalytics,
+                    pair.address
+                )
+                const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                    fee24H: new Decimal(pair.fees_24h).toString(),
+                    volume24H: new Decimal(pair.trade_volume_24h).toString(),
+                    tvl: pair.liquidity,
+                    apr24H: new Decimal(pair.apr).div(100).toString(),
+                }
                 cacheEntries.push({
-                    key: createCacheKey(CacheKey.Fee24H, pair.address),
-                    value: new Decimal(pair.fees_24h).toString(),
-                    ttl: envConfig().cache.ttl.poolAnalytics,
-                })
-                cacheEntries.push({
-                    key: createCacheKey(CacheKey.Volume24H, pair.address),
-                    value: new Decimal(pair.trade_volume_24h).toString(),
-                    ttl: envConfig().cache.ttl.poolAnalytics,
-                })
-                cacheEntries.push({
-                    key: createCacheKey(CacheKey.Liquidity, pair.address),
-                    value: new Decimal(pair.liquidity).toString(),
-                    ttl: envConfig().cache.ttl.poolAnalytics,
-                })
-                cacheEntries.push({
-                    key: createCacheKey(CacheKey.APR24H, pair.address),
-                    value: new Decimal(pair.apr).div(100).toString(),
+                    key: poolAnalyticsCacheKey,
+                    value: this.superjson.stringify(poolAnalyticsCacheResult),
                     ttl: envConfig().cache.ttl.poolAnalytics,
                 })
             }
-        }
+        }  
         await this.cacheManager.mset(cacheEntries)
     }
-
+    
   @Interval(envConfig().interval.analytics)
     async handleAnalyticsUpdateInterval() {
         const liquidityPools =

@@ -5,7 +5,7 @@ import { MixinModule } from "@modules/mixin"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { HttpModule } from "@modules/interfaces/http"
 import { PassportModule } from "@modules/passport"
-import { KeypairsModule } from "@modules/blockchains"
+import { KeypairsModule, MathModule, PythModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { GcpModule } from "@modules/gcp"
 import { CodeModule } from "@modules/code"
@@ -16,7 +16,8 @@ import { ThrottlerModule } from "@modules/throttler"
 import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
 import { PrivyModule } from "@modules/privy"
-
+import { EventModule } from "@modules/event"
+import { EventEmitterModule } from "@nestjs/event-emitter"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -28,10 +29,17 @@ import { PrivyModule } from "@modules/privy"
         PrivyModule.register({
             isGlobal: true,
         }),
+        EventEmitterModule.forRoot(),
         PassportModule.register({
             isGlobal: true,
         }),
         CryptoModule.register({
+            isGlobal: true,
+        }),
+        MathModule.register({
+            isGlobal: true,
+        }),
+        EventModule.register({
             isGlobal: true,
         }),
         CookieModule.register({
@@ -66,6 +74,9 @@ import { PrivyModule } from "@modules/privy"
             isGlobal: true,
             memoryStorage: true,
             withSeeders: true,
+        }),
+        PythModule.register({
+            isGlobal: true,
         }),
         HttpModule.register({
             isGlobal: true,

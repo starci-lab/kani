@@ -33,7 +33,7 @@ export class StaticResolver {
     @Query(() => LiquidityPoolsResponse, {
         description: "Fetch all supported liquidity pools.",
     })
-    liquidityPools(): Array<LiquidityPoolSchema> {
+    async liquidityPools(): Promise<Array<LiquidityPoolSchema>> {
         return this.staticService.liquidityPools()
     }
 

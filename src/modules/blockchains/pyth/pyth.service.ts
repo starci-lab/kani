@@ -6,8 +6,16 @@ import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import { computeDenomination } from "@utils"
 import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
-import { EventEmitterService, EventName } from "@modules/event"
-import { AsyncService, InjectSuperJson, RetryService } from "@modules/mixin"
+import { 
+    EventEmitterService, 
+    EventName 
+} from "@modules/event"
+import {
+    AsyncService, 
+    InjectSuperJson, 
+    ReadinessWatcherFactoryService, 
+    RetryService 
+} from "@modules/mixin"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { chunkArray } from "@utils"
@@ -29,9 +37,11 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
         private readonly events: EventEmitterService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     async onModuleInit() {
+        await this.readinessWatcherFactoryService.waitUntilReady(PrimaryMemoryStorageService.name)
         // we fetch the prices first to ensure the prices are cached
         await this.fetchPrices()
     }

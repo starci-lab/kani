@@ -15,15 +15,17 @@ import {
     CacheKey,
     createCacheKey,
     InjectRedisCache,
+    PoolAnalyticsCacheResult,
 } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Interval } from "@nestjs/schedule"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
 import { ApolloClientService } from "@modules/apollo-client"
 import { ApolloClient, gql } from "@apollo/client"
 import { createObjectId } from "@utils"
+import SuperJSON from "superjson"
 // Implement analytics for FlowX DEX
 // We use the API provided by FlowX to get the analytics data
 @Injectable()
@@ -36,6 +38,8 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     @InjectRedisCache()
     private readonly cacheManager: Cache,
+    @InjectSuperJson()
+    private readonly superjson: SuperJSON,
     private readonly asyncService: AsyncService,
     ) {}
 
@@ -121,24 +125,24 @@ implements OnModuleInit, OnApplicationBootstrap
         } = data
         const cacheEntries: Array<CacheEntry> = []
         for (const item of items) {
+            const liquidityPool = liquidityPools.find(
+                (liquidityPool) => liquidityPool.poolAddress === item.id,
+            )
+            if (!liquidityPool) {
+                continue
+            }
+            const poolAnalyticsCacheKey = createCacheKey(
+                CacheKey.PoolAnalytics,
+                liquidityPool.displayId)
+            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                fee24H: new Decimal(item.stats.fee24H).toString(),
+                volume24H: new Decimal(item.stats.volume24H).toString(),
+                tvl: item.stats.totalLiquidityInUSD,
+                apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
+            }
             cacheEntries.push({
-                key: createCacheKey(CacheKey.Fee24H, item.id),
-                value: new Decimal(item.stats.fee24H).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.Volume24H, item.id),
-                value: new Decimal(item.stats.volume24H).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.Liquidity, item.id),
-                value: new Decimal(item.stats.totalLiquidityInUSD).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.APR24H, item.id),
-                value: new Decimal(item.stats.apr).div(365).div(100).toString(),
+                key: poolAnalyticsCacheKey,
+                value: this.superjson.stringify(poolAnalyticsCacheResult),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
         }

@@ -11,13 +11,14 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
-import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache, PoolAnalyticsCacheResult } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
+import SuperJSON from "superjson"
 
 // Implement analytics for Raydium DEX
 // We use the API provided by Raydium to get the analytics data
@@ -31,7 +32,9 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     @InjectRedisCache()
     private readonly cacheManager: Cache,
-    private readonly asyncService: AsyncService
+    private readonly asyncService: AsyncService,
+    @InjectSuperJson()
+    private readonly superjson: SuperJSON,
     ) {}
 
     async onApplicationBootstrap() {
@@ -65,24 +68,19 @@ implements OnModuleInit, OnApplicationBootstrap
                 continue
             }
             const { tvl, day } = poolData
+            const poolAnalyticsCacheKey = createCacheKey(
+                CacheKey.PoolAnalytics,
+                liquidityPool.displayId
+            )
+            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                fee24H: new Decimal(day.volume).toString(),
+                volume24H: new Decimal(day.volumeQuote).toString(),
+                tvl: new Decimal(tvl).toString(),
+                apr24H: new Decimal(day.apr).div(365).div(100).toString(),
+            }
             cacheEntries.push({
-                key: createCacheKey(CacheKey.Fee24H, liquidityPool.displayId),
-                value: new Decimal(day.volumeFee).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.Volume24H, liquidityPool.displayId),
-                value: new Decimal(day.volume).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.Liquidity, liquidityPool.displayId),
-                value: new Decimal(tvl).toString(),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
-            cacheEntries.push({
-                key: createCacheKey(CacheKey.APR24H, liquidityPool.displayId),
-                value: new Decimal(day.apr).div(365).div(100).toString(),
+                key: poolAnalyticsCacheKey,
+                value: this.superjson.stringify(poolAnalyticsCacheResult),
                 ttl: envConfig().cache.ttl.poolAnalytics,
             })
         }

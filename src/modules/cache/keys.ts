@@ -17,10 +17,7 @@ export enum CacheKey {
     User = "user",
     UserIds = "userIds",
     SessionId = "sessionId",
-    Fee24H = "fee24H",
-    Volume24H = "volume24H",
-    Liquidity = "liquidity",
-    APR24H = "apr24H",
+    PoolAnalytics = "poolAnalytics",
 }
 
 export interface PythTokenPriceCacheResult {
@@ -37,4 +34,11 @@ export interface DynamicLiquidityPoolInfoCacheResult {
 export interface DynamicDlmmLiquidityPoolInfoCacheResult {
     activeId: number
     rewards: Array<unknown>
+}
+
+export interface PoolAnalyticsCacheResult {
+    fee24H: string
+    volume24H: string
+    tvl: string
+    apr24H: string
 }
