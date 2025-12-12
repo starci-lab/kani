@@ -21,8 +21,8 @@ import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
 import { AxiosService } from "@modules/axios"
 import { AxiosInstance } from "axios"
-// Implement analytics for FlowX DEX
-// We use the API provided by FlowX to get the analytics data
+// Implement analytics for Momentum DEX
+// We use the API provided by Momentum to get the analytics data
 @Injectable()
 export class MomentumAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap

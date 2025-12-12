@@ -24,8 +24,8 @@ import Decimal from "decimal.js"
 import { AxiosService } from "@modules/axios"
 import { AxiosInstance } from "axios"
 import { createObjectId } from "@utils"
-// Implement analytics for FlowX DEX
-// We use the API provided by FlowX to get the analytics data
+// Implement analytics for Turbos DEX
+// We use the API provided by Turbos to get the analytics data
 @Injectable()
 export class TurbosAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
