@@ -16,7 +16,6 @@ import {
 import { Cache } from "cache-manager"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { createObjectId } from "@utils"
 import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
 import { TickMathService } from "@modules/blockchains"
 import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
@@ -60,7 +59,7 @@ export class DynamicService {
                 throw new InvalidPoolTokensException("Invalid pool tokens")
             }
             const info: DynamicLiquidityPoolInfo = {
-                id: createObjectId(liquidityPoolId).toString(),
+                id: liquidityPool.id,
             }
             const dynamicLiquidityPoolInfoCacheKey = createCacheKey(
                 CacheKey.DynamicLiquidityPoolInfo,

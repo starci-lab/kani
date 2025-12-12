@@ -94,8 +94,11 @@ implements OnModuleInit, OnApplicationBootstrap
                         tvl: new Decimal(item.liquidity_usd).toString(),
                         apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
                     }
-                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
-                    console.log(poolAnalyticsCacheResult)
+                    await this.cacheManager.set(
+                        poolAnalyticsCacheKey, 
+                        this.superjson.stringify(poolAnalyticsCacheResult), 
+                        envConfig().cache.ttl.poolAnalytics
+                    )
                 })(),
             )
         }

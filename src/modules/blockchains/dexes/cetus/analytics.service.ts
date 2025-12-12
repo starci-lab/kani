@@ -96,9 +96,13 @@ implements OnModuleInit, OnApplicationBootstrap
                         fee24H: fee,
                         volume24H: vol,
                         tvl,
-                        apr24H: new Decimal(apr).div(365).toString(),
+                        apr24H: new Decimal(apr).toString(),
                     }
-                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                    await this.cacheManager.set(
+                        poolAnalyticsCacheKey, 
+                        this.superjson.stringify(poolAnalyticsCacheResult), 
+                        envConfig().cache.ttl.poolAnalytics
+                    )
                 })(),
             )
         }
