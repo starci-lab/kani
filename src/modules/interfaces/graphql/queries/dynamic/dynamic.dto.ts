@@ -15,20 +15,15 @@ export class DynamicLiquidityPoolInfo {
         id: string
     @Field(() => Float, {
         nullable: true,
-        description: "Annual percentage rate (APR) of the pool.",
-    })
-        apr?: number
-    @Field(() => Float, {
-        nullable: true,
         description: "Current tick index of the liquidity pool.",
     })
         tickCurrent?: number
 
     @Field(() => Float, {
         nullable: true,
-        description: "Current bin index of the liquidity pool.",
+        description: "Current active id of the liquidity pool.",
     })
-        binCurrent?: number
+        activeId?: number
 
     @Field(() => String, {
         nullable: true,

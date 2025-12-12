@@ -76,9 +76,9 @@ export class DynamicService {
             )
             // retrieve the pool dynamic & analytics data
             const [
-                dynamicLiquidityPoolInfo, 
-                dynamicDlmmLiquidityPoolInfo, 
-                poolAnalytics
+                serializedDynamicLiquidityPoolInfo, 
+                serializedDynamicDlmmLiquidityPoolInfo, 
+                serializedPoolAnalytics
             ] = await this.cacheManager.mget<string>(
                 [
                     dynamicLiquidityPoolInfoCacheKey, 
@@ -86,8 +86,8 @@ export class DynamicService {
                     poolAnalyticsCacheKey
                 ]
             )
-            if (dynamicLiquidityPoolInfo) {
-                const dynamicLiquidityPoolInfoData = this.superjson.parse<DynamicLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfo)
+            if (serializedDynamicLiquidityPoolInfo) {
+                const dynamicLiquidityPoolInfoData = this.superjson.parse<DynamicLiquidityPoolInfoCacheResult>(serializedDynamicLiquidityPoolInfo)
                 info.tickCurrent = dynamicLiquidityPoolInfoData.tickCurrent
                 info.liquidity = dynamicLiquidityPoolInfoData.liquidity.toString()
                 info.price = this.tickMathService.sqrtPriceX64ToPrice({
@@ -96,12 +96,12 @@ export class DynamicService {
                     decimalsB: tokenBEntity.decimals,
                 }).price.toNumber()
             }
-            if (dynamicDlmmLiquidityPoolInfo) {
-                const dynamicDlmmLiquidityPoolInfoData = this.superjson.parse<DynamicDlmmLiquidityPoolInfoCacheResult>(dynamicDlmmLiquidityPoolInfo)
-                info.binCurrent = dynamicDlmmLiquidityPoolInfoData.activeId
+            if (serializedDynamicDlmmLiquidityPoolInfo) {
+                const dynamicDlmmLiquidityPoolInfoData = this.superjson.parse<DynamicDlmmLiquidityPoolInfoCacheResult>(serializedDynamicDlmmLiquidityPoolInfo)
+                info.activeId = dynamicDlmmLiquidityPoolInfoData.activeId
             }
-            if (poolAnalytics) {
-                const poolAnalyticsData = this.superjson.parse<PoolAnalyticsCacheResult>(poolAnalytics)
+            if (serializedPoolAnalytics) {
+                const poolAnalyticsData = this.superjson.parse<PoolAnalyticsCacheResult>(serializedPoolAnalytics)
                 info.fees24H = new Decimal(poolAnalyticsData.fee24H).toNumber()
                 info.volume24H = new Decimal(poolAnalyticsData.volume24H).toNumber()
                 info.apr24H = new Decimal(poolAnalyticsData.apr24H).toNumber()

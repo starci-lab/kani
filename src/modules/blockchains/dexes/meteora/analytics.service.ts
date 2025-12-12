@@ -11,7 +11,12 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
-import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache, PoolAnalyticsCacheResult } from "@modules/cache"
+import { 
+    CacheKey, 
+    createCacheKey, 
+    InjectRedisCache, 
+    PoolAnalyticsCacheResult 
+} from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
@@ -60,27 +65,33 @@ implements OnModuleInit, OnApplicationBootstrap
             baseURL.searchParams.append("include_pool_token_pairs", liquidityPool.poolAddress)
         }
         const { data } = await this.axios.get<PoolAnalyticsResponse>(baseURL.toString())
-        const cacheEntries: Array<CacheEntry> = []
+        const promises: Array<Promise<void>> = []
         for (const group of data.groups) {
             for (const pair of group.pairs) {
-                const poolAnalyticsCacheKey = createCacheKey(
-                    CacheKey.PoolAnalytics,
-                    pair.address
+                promises.push(
+                    (async () => {
+                        const liquidityPool = liquidityPools.find(
+                            (liquidityPool) => liquidityPool.poolAddress === pair.address,
+                        )
+                        if (!liquidityPool || !liquidityPool.displayId) {
+                            return
+                        }
+                        const poolAnalyticsCacheKey = createCacheKey(
+                            CacheKey.PoolAnalytics,
+                            liquidityPool.displayId
+                        )
+                        const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                            fee24H: new Decimal(pair.fees_24h).toString(),
+                            volume24H: new Decimal(pair.trade_volume_24h).toString(),
+                            tvl: pair.liquidity,
+                            apr24H: new Decimal(pair.apr).div(100).toString(),
+                        }
+                        await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                    })(),
                 )
-                const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                    fee24H: new Decimal(pair.fees_24h).toString(),
-                    volume24H: new Decimal(pair.trade_volume_24h).toString(),
-                    tvl: pair.liquidity,
-                    apr24H: new Decimal(pair.apr).div(100).toString(),
-                }
-                cacheEntries.push({
-                    key: poolAnalyticsCacheKey,
-                    value: this.superjson.stringify(poolAnalyticsCacheResult),
-                    ttl: envConfig().cache.ttl.poolAnalytics,
-                })
             }
         }  
-        await this.cacheManager.mset(cacheEntries)
+        await this.asyncService.allIgnoreError(promises)
     }
     
   @Interval(envConfig().interval.analytics)

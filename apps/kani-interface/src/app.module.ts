@@ -16,8 +16,6 @@ import { ThrottlerModule } from "@modules/throttler"
 import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
 import { PrivyModule } from "@modules/privy"
-import { EventModule } from "@modules/event"
-import { EventEmitterModule } from "@nestjs/event-emitter"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -29,7 +27,6 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         PrivyModule.register({
             isGlobal: true,
         }),
-        EventEmitterModule.forRoot(),
         PassportModule.register({
             isGlobal: true,
         }),
@@ -37,9 +34,6 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
             isGlobal: true,
         }),
         MathModule.register({
-            isGlobal: true,
-        }),
-        EventModule.register({
             isGlobal: true,
         }),
         CookieModule.register({
@@ -77,6 +71,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
         }),
         PythModule.register({
             isGlobal: true,
+            utilitiesOnly: true,
         }),
         HttpModule.register({
             isGlobal: true,

@@ -11,7 +11,12 @@ import {
     OnModuleInit,
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
-import { CacheEntry, CacheKey, createCacheKey, InjectRedisCache, PoolAnalyticsCacheResult } from "@modules/cache"
+import {
+    CacheKey,
+    createCacheKey,
+    InjectRedisCache,
+    PoolAnalyticsCacheResult,
+} from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
@@ -47,54 +52,62 @@ implements OnModuleInit, OnApplicationBootstrap
         this.axiosService.addRetry({ key })
     }
 
-    private async setBatchPoolAnalytics(liquidityPoolIds: Array<LiquidityPoolId>) {
-        // Get the liquidity pool
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPools.filter(
-            (liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId),
-        )
+    private async setBatchPoolAnalytics(
+        liquidityPoolIds: Array<LiquidityPoolId>,
+    ) {
+    // Get the liquidity pool
+        const liquidityPools =
+      this.primaryMemoryStorageService.liquidityPools.filter((liquidityPool) =>
+          liquidityPoolIds.includes(liquidityPool.displayId),
+      )
         if (!liquidityPools.length) {
             return
         }
-        const poolAddresses = liquidityPools.map((pool) => pool.poolAddress).join(",")
+        const poolAddresses = liquidityPools
+            .map((pool) => pool.poolAddress)
+            .join(",")
         const { data } = await this.axios.get<PoolResponse>(
             `https://api-v3.raydium.io/pools/info/ids?ids=${poolAddresses}`,
         )
-        const cacheEntries: Array<CacheEntry> = []
+        const promises: Array<Promise<void>> = []
         for (const poolData of data.data) {
-            const liquidityPool = liquidityPools.find(
-                (pool) => pool.poolAddress === poolData.id,
+            promises.push(
+                (async () => {
+                    const liquidityPool = liquidityPools.find(
+                        (pool) => pool.poolAddress === poolData.id,
+                    )
+                    if (!liquidityPool || !liquidityPool.displayId) {
+                        return
+                    }
+                    const { tvl, day } = poolData
+                    const poolAnalyticsCacheKey = createCacheKey(
+                        CacheKey.PoolAnalytics,
+                        liquidityPool.displayId,
+                    )
+                    const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                        fee24H: new Decimal(day.volume).toString(),
+                        volume24H: new Decimal(day.volumeQuote).toString(),
+                        tvl: new Decimal(tvl).toString(),
+                        apr24H: new Decimal(day.apr).div(365).div(100).toString(),
+                    }
+                    await this.cacheManager.set(
+                        poolAnalyticsCacheKey,
+                        this.superjson.stringify(poolAnalyticsCacheResult),
+                        envConfig().cache.ttl.poolAnalytics,
+                    )
+                })(),
             )
-            if (!liquidityPool) {
-                continue
-            }
-            const { tvl, day } = poolData
-            const poolAnalyticsCacheKey = createCacheKey(
-                CacheKey.PoolAnalytics,
-                liquidityPool.displayId
-            )
-            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                fee24H: new Decimal(day.volume).toString(),
-                volume24H: new Decimal(day.volumeQuote).toString(),
-                tvl: new Decimal(tvl).toString(),
-                apr24H: new Decimal(day.apr).div(365).div(100).toString(),
-            }
-            cacheEntries.push({
-                key: poolAnalyticsCacheKey,
-                value: this.superjson.stringify(poolAnalyticsCacheResult),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
+            await this.asyncService.allIgnoreError(promises)
         }
-        await this.cacheManager.mset(cacheEntries)
     }
-
   @Interval(envConfig().interval.analytics)
     async handleAnalyticsUpdateInterval() {
         const liquidityPools =
-        this.primaryMemoryStorageService.liquidityPools.filter(
-            (liquidityPool) =>
-                liquidityPool.dex.toString() ===
-            createObjectId(DexId.Raydium).toString(),
-        )
+      this.primaryMemoryStorageService.liquidityPools.filter(
+          (liquidityPool) =>
+              liquidityPool.dex.toString() ===
+          createObjectId(DexId.Raydium).toString(),
+      )
         // split into chunks of 10
         const chunks = liquidityPools.reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
@@ -102,7 +115,7 @@ implements OnModuleInit, OnApplicationBootstrap
                 acc[chunkIndex] = [...(acc[chunkIndex] || []), liquidityPool]
                 return acc
             },
-        [] as Array<Array<LiquidityPoolSchema>>,
+      [] as Array<Array<LiquidityPoolSchema>>,
         )
         const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {
@@ -117,74 +130,74 @@ implements OnModuleInit, OnApplicationBootstrap
 }
 
 export interface PoolResponse {
-    id: string;
-    success: boolean;
-    data: Array<RaydiumPool>;
-  }
-  
+  id: string;
+  success: boolean;
+  data: Array<RaydiumPool>;
+}
+
 export interface RaydiumPool {
-    type: string;
-    programId: string;
-    id: string;
-    mintA: TokenInfo;
-    mintB: TokenInfo;
-    rewardDefaultPoolInfos: string;
-    rewardDefaultInfos: Array<RewardInfo>;
-    price: number;
-    mintAmountA: number;
-    mintAmountB: number;
-    feeRate: number;
-    openTime: string;
-    tvl: number;
-    day: PeriodStats;
-    week: PeriodStats;
-    month: PeriodStats;
-    pooltype: Array<string>;
-    farmUpcomingCount: number;
-    farmOngoingCount: number;
-    farmFinishedCount: number;
-    config: PoolConfig;
-    burnPercent: number;
-    launchMigratePool: boolean;
-  }
-  
+  type: string;
+  programId: string;
+  id: string;
+  mintA: TokenInfo;
+  mintB: TokenInfo;
+  rewardDefaultPoolInfos: string;
+  rewardDefaultInfos: Array<RewardInfo>;
+  price: number;
+  mintAmountA: number;
+  mintAmountB: number;
+  feeRate: number;
+  openTime: string;
+  tvl: number;
+  day: PeriodStats;
+  week: PeriodStats;
+  month: PeriodStats;
+  pooltype: Array<string>;
+  farmUpcomingCount: number;
+  farmOngoingCount: number;
+  farmFinishedCount: number;
+  config: PoolConfig;
+  burnPercent: number;
+  launchMigratePool: boolean;
+}
+
 export interface TokenInfo {
-    chainId: number;
-    address: string;
-    programId: string;
-    logoURI: string;
-    symbol: string;
-    name: string;
-    decimals: number;
-    tags: Array<string>;
-    extensions: Record<string, string>;
-  }
-  
+  chainId: number;
+  address: string;
+  programId: string;
+  logoURI: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  tags: Array<string>;
+  extensions: Record<string, string>;
+}
+
 export interface RewardInfo {
-    mint: TokenInfo;
-    perSecond: string;
-    startTime: string;
-    endTime: string;
-  }
-  
+  mint: TokenInfo;
+  perSecond: string;
+  startTime: string;
+  endTime: string;
+}
+
 export interface PeriodStats {
-    volume: number;
-    volumeQuote: number;
-    volumeFee: number;
-    apr: number;
-    feeApr: number;
-    priceMin: number;
-    priceMax: number;
-    rewardApr: Array<number>;
-  }
-  
+  volume: number;
+  volumeQuote: number;
+  volumeFee: number;
+  apr: number;
+  feeApr: number;
+  priceMin: number;
+  priceMax: number;
+  rewardApr: Array<number>;
+}
+
 export interface PoolConfig {
-    id: string;
-    index: number;
-    protocolFeeRate: number;
-    tradeFeeRate: number;
-    tickSpacing: number;
-    fundFeeRate: number;
-    defaultRange: number;
-    defaultRangePoint: Array<number>;
-  }
+  id: string;
+  index: number;
+  protocolFeeRate: number;
+  tradeFeeRate: number;
+  tickSpacing: number;
+  fundFeeRate: number;
+  defaultRange: number;
+  defaultRangePoint: Array<number>;
+}

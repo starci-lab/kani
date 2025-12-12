@@ -12,7 +12,6 @@ import {
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
 import { 
-    CacheEntry, 
     CacheKey, 
     createCacheKey, 
     InjectRedisCache, 
@@ -65,33 +64,33 @@ implements OnModuleInit, OnApplicationBootstrap
         const { data } = await this.axios.get<WhirlpoolPoolResponse>(
             `https://api.orca.so/v2/solana/pools?addresses=${poolAddresses}`,
         )
-        const cacheEntries: Array<CacheEntry> = []
+        const promises: Array<Promise<void>> = []
         for (const item of data.data) {
-            const liquidityPool = liquidityPools.find(
-                (pool) => pool.poolAddress === item.address,
+            promises.push(
+                (async () => {
+                    const liquidityPool = liquidityPools.find(
+                        (pool) => pool.poolAddress === item.address,
+                    )
+                    if (!liquidityPool || !liquidityPool.displayId) {
+                        return
+                    }
+                    const { stats, tvlUsdc } = item
+                    const { fees, volume, yieldOverTvl } = stats["24h"]
+                    const poolAnalyticsCacheKey = createCacheKey(
+                        CacheKey.PoolAnalytics,
+                        liquidityPool.displayId
+                    )
+                    const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                        fee24H: new Decimal(fees).toString(),
+                        volume24H: new Decimal(volume).toString(),
+                        tvl: new Decimal(tvlUsdc).toString(),
+                        apr24H: new Decimal(yieldOverTvl).toString(),
+                    }
+                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                })(),
             )
-            if (!liquidityPool) {
-                continue
-            }
-            const { stats, tvlUsdc } = item
-            const { fees, volume, yieldOverTvl } = stats["24h"]
-            const poolAnalyticsCacheKey = createCacheKey(
-                CacheKey.PoolAnalytics,
-                liquidityPool.displayId
-            )
-            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                fee24H: new Decimal(fees).toString(),
-                volume24H: new Decimal(volume).toString(),
-                tvl: new Decimal(tvlUsdc).toString(),
-                apr24H: new Decimal(yieldOverTvl).toString(),
-            }
-            cacheEntries.push({
-                key: poolAnalyticsCacheKey,
-                value: this.superjson.stringify(poolAnalyticsCacheResult),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
         }
-        await this.cacheManager.mset(cacheEntries)
+        await this.asyncService.allIgnoreError(promises)
     }
 
   @Interval(envConfig().interval.analytics)

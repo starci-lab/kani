@@ -12,7 +12,6 @@ import {
 } from "@nestjs/common"
 import { AxiosInstance } from "axios"
 import {
-    CacheEntry,
     CacheKey,
     createCacheKey,
     InjectRedisCache,
@@ -76,34 +75,34 @@ implements OnModuleInit, OnApplicationBootstrap
                 pools: liquidityPools.map((liquidityPool) => liquidityPool.poolAddress),
             },
         )
-        const cacheEntries: Array<CacheEntry> = []
+        const promises: Array<Promise<void>> = []
         for (const item of list) {
-            const liquidityPool = liquidityPools.find(
-                (liquidityPool) => liquidityPool.poolAddress === item.pool,
+            promises.push(
+                (async () => {
+                    const liquidityPool = liquidityPools.find(
+                        (liquidityPool) => liquidityPool.poolAddress === item.pool,
+                    )
+                    if (!liquidityPool || !liquidityPool.displayId) {
+                        return
+                    }
+                    const tvl = item.tvl
+                    const apr = item.totalApr
+                    const { fee, vol } = item.stats[0]
+                    const poolAnalyticsCacheKey = createCacheKey(
+                        CacheKey.PoolAnalytics,
+                        liquidityPool.displayId
+                    )
+                    const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                        fee24H: fee,
+                        volume24H: vol,
+                        tvl,
+                        apr24H: new Decimal(apr).div(365).toString(),
+                    }
+                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                })(),
             )
-            if (!liquidityPool) {
-                continue
-            }
-            const tvl = item.tvl
-            const apr = item.totalApr
-            const { fee, vol } = item.stats[0]
-            const poolAnalyticsCacheKey = createCacheKey(
-                CacheKey.PoolAnalytics,
-                liquidityPool.displayId
-            )
-            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                fee24H: fee,
-                volume24H: vol,
-                tvl,
-                apr24H: new Decimal(apr).div(365).toString(),
-            }
-            cacheEntries.push({
-                key: poolAnalyticsCacheKey,
-                value: this.superjson.stringify(poolAnalyticsCacheResult),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
         }
-        await this.cacheManager.mset(cacheEntries)
+        await this.asyncService.allIgnoreError(promises)
     }
 
   @Interval(envConfig().interval.analytics)

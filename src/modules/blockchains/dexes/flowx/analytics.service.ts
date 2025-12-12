@@ -11,7 +11,6 @@ import {
 } from "@nestjs/common"
 import { FlowXPoolBatchInfoNotFoundException } from "@exceptions"
 import {
-    CacheEntry,
     CacheKey,
     createCacheKey,
     InjectRedisCache,
@@ -123,30 +122,31 @@ implements OnModuleInit, OnApplicationBootstrap
         const {
             getClmmPoolsDetail: { items },
         } = data
-        const cacheEntries: Array<CacheEntry> = []
+        const promises: Array<Promise<void>> = []
         for (const item of items) {
-            const liquidityPool = liquidityPools.find(
-                (liquidityPool) => liquidityPool.poolAddress === item.id,
+            promises.push(
+                (async () => {
+                    const liquidityPool = liquidityPools.find(
+                        (liquidityPool) => liquidityPool.poolAddress === item.id,
+                    )
+                    if (!liquidityPool || !liquidityPool.displayId) {
+                        return
+                    }
+                    const poolAnalyticsCacheKey = createCacheKey(
+                        CacheKey.PoolAnalytics,
+                        liquidityPool.displayId
+                    )
+                    const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                        fee24H: new Decimal(item.stats.fee24H).toString(),
+                        volume24H: new Decimal(item.stats.volume24H).toString(),
+                        tvl: item.stats.totalLiquidityInUSD,
+                        apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
+                    }
+                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                })(),
             )
-            if (!liquidityPool) {
-                continue
-            }
-            const poolAnalyticsCacheKey = createCacheKey(
-                CacheKey.PoolAnalytics,
-                liquidityPool.displayId)
-            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                fee24H: new Decimal(item.stats.fee24H).toString(),
-                volume24H: new Decimal(item.stats.volume24H).toString(),
-                tvl: item.stats.totalLiquidityInUSD,
-                apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
-            }
-            cacheEntries.push({
-                key: poolAnalyticsCacheKey,
-                value: this.superjson.stringify(poolAnalyticsCacheResult),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
         }
-        await this.cacheManager.mset(cacheEntries)
+        await this.asyncService.allIgnoreError(promises)
     }
 
   @Interval(envConfig().interval.analytics)

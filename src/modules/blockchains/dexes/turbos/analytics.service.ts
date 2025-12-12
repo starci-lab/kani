@@ -11,7 +11,6 @@ import {
 } from "@nestjs/common"
 import { TurbosPoolBatchInfoNotFoundException } from "@exceptions"
 import {
-    CacheEntry,
     CacheKey,
     createCacheKey,
     InjectRedisCache,
@@ -75,25 +74,32 @@ implements OnModuleInit, OnApplicationBootstrap
                 "Pool batch info not found",
             )
         }
-        const cacheEntries: Array<CacheEntry> = []
+        const promises: Array<Promise<void>> = []
         for (const item of data) {
-            const poolAnalyticsCacheKey = createCacheKey(
-                CacheKey.PoolAnalytics,
-                item.pool_id
+            promises.push(
+                (async () => {
+                    const liquidityPool = liquidityPools.find(
+                        (liquidityPool) => liquidityPool.poolAddress === item.pool_id,
+                    )
+                    if (!liquidityPool || !liquidityPool.displayId) {
+                        return
+                    }
+                    const poolAnalyticsCacheKey = createCacheKey(
+                        CacheKey.PoolAnalytics,
+                        liquidityPool.displayId
+                    )
+                    const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
+                        fee24H: new Decimal(item.fee_24h_usd).toString(),
+                        volume24H: new Decimal(item.volume_24h_usd).toString(),
+                        tvl: new Decimal(item.liquidity_usd).toString(),
+                        apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
+                    }
+                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                    console.log(poolAnalyticsCacheResult)
+                })(),
             )
-            const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                fee24H: new Decimal(item.fee_24h_usd).toString(),
-                volume24H: new Decimal(item.volume_24h_usd).toString(),
-                tvl: new Decimal(item.liquidity_usd).toString(),
-                apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
-            }
-            cacheEntries.push({
-                key: poolAnalyticsCacheKey,
-                value: this.superjson.stringify(poolAnalyticsCacheResult),
-                ttl: envConfig().cache.ttl.poolAnalytics,
-            })
         }
-        await this.cacheManager.mset(cacheEntries)
+        await this.asyncService.allIgnoreError(promises)
     }
 
   @Interval(envConfig().interval.analytics)

@@ -22,7 +22,7 @@ export class DynamicResolver {
     ) {}
 
     @UseThrottler(ThrottlerConfig.Soft)
-    @GraphQLSuccessMessage("Liquidity pools fetched successfully")
+    @GraphQLSuccessMessage("Dynamic liquidity pools info fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLPrivyAuthGuard)
     @Query(() => DynamicLiquidityPoolsInfoResponse, {
