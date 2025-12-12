@@ -35,7 +35,7 @@ export class PrivyService {
         })
     }
 
-    private getWalletType(
+    public getWalletType(
         platformId: PlatformId
     ): WalletChainType {
         switch (platformId) {

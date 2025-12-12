@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://r2.starci.net/protocols/solana.png" width="96" alt="Kani" />
+  <img src="https://r2.kanibot.xyz/protocols/solana.png" width="96" alt="Kani" />
 </p>
 
 <h2 align="center">Kani — Automated Liquidity Bot for Ultra-Thin CLMM Ranges</h2>

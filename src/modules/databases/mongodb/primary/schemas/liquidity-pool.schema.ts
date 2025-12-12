@@ -89,6 +89,10 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
     @Prop({ type: MongooseSchema.Types.Mixed })
         metadata?: unknown
+
+    @Field(() => String, { description: "The URL of the liquidity pool" })
+    @Prop({ type: String })
+        url: string
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)

@@ -33,6 +33,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
         tickMultiplier: 1,
+        url: "https://app.cetus.zone/clmm?poolAddress=0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789",
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusUsdcSui005),
@@ -52,6 +53,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             clmmPackageId: "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb",
             rewarderGlobalVaultObject: "0xce7bceef26d3ad1f6d9b6f13a953f053e6ed3ca77907516481ce99ae8e588f2b",
         },
+        url: "https://app.cetus.zone/clmm?poolAddress=0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab",
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosSuiUsdc005),
@@ -71,6 +73,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             versionObject: "0xf1cf0e81048df168ebeb1b8030fad24b3e0b53ae827c25053fff0779c1445b6f",
             positionsObject: "0xf5762ae5ae19a2016bb233c72d9a4b2cba5a302237a82724af66292ae43ae52d",
         },
+        url: "https://app.turbos.finance/#/pools/0x0df4f02d0e210169cb6d5aabd03c3058328c06f2c4dbb0804faa041159c78443/add-liquidity",
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosIkaUsdc015),
@@ -84,6 +87,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
         tickMultiplier: 1,
+        url: "https://app.turbos.finance/pool/0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosDeepUsdc015),
@@ -97,6 +101,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
         tickMultiplier: 1,
+        url: "https://app.turbos.finance/pool/0x198af6ff81028c6577e94465d534c4e2cfcbbab06a95724ece7011c55a9d1f5a",
     },
     {
         _id: createObjectId(LiquidityPoolId.FlowXSuiUsdc03),
@@ -121,6 +126,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             poolFeeCollectEventType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::Collect",
             poolRewardCollectEventType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::CollectPoolReward",
         },
+        url: "https://flowx.finance/explore/pools/0x325239132e2b619147c00052986461cea02815172ea9d000c58e68484f514a90",
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusUsdcEth025),
@@ -133,6 +139,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
+        url: "https://app.cetus.zone/clmm?poolAddress=0x9e59de50d9e5979fc03ac5bcacdb581c823dbd27d63a036131e17b391f2fac88",
     },
     {
         _id: createObjectId(LiquidityPoolId.MomentumWalSui02),
@@ -145,6 +152,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
+        url: "https://app.mmt.finance/liquidity/0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
     },
     {
         _id: createObjectId(LiquidityPoolId.MomentumSuiUsdc0175),
@@ -161,7 +169,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         metadata: { 
             packageId: "0xcf60a40f45d46fc1e828871a647c1e25a0915dec860d2662eb10fdb382c3c1d1",
             versionObject: "0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a",
-        }
+        },
+        url: "https://app.mmt.finance/liquidity/0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388",
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdc004),
@@ -186,6 +195,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
                 }
             ]
         },
+        url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdt001),
@@ -199,6 +209,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Solana,
         tickSpacing: 1,
         tickMultiplier: 200,
+        url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
     },
     {
         _id: createObjectId(LiquidityPoolId.OrcaSolUsdc004),
@@ -217,6 +228,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tokenVault0: "EUuUbDcafPrmVTD5M6qoJAoyyNbihBhugADAxRMn5he9",
             tokenVault1: "2WLWEuKDgkDUccTpbwYp1GToYktiSB1cXvreHUwiSUVP",
         },
+        url: "https://www.orca.so/pools/Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
     },
     {
         _id: createObjectId(LiquidityPoolId.MeteoraSolUsdcBinStep4),
@@ -234,5 +246,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             reserveXAddress: "EYj9xKw6ZszwpyNibHY7JD5o3QgTVrSdcBp1fMJhrR9o",
             reserveYAddress: "CoaxzEh8p5YyGLcj36Eo3cUThVJxeKCs7qvLAGDYwBcz",
         },
+        url: "https://www.meteora.ag/dlmm/5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6?referrer=home",
     },
 ]
