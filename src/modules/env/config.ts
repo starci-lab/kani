@@ -151,6 +151,13 @@ export const envConfig = () => ({
         appId: process.env.PRIVY_APP_ID || "",
         appSecret: process.env.PRIVY_APP_SECRET || "",
     },
+    brevo: {
+        smtpHost: process.env.BREVO_SMTP_HOST || "",
+        smtpPort: process.env.BREVO_SMTP_PORT || "",
+        smtpUser: process.env.BREVO_SMTP_USER || "",
+        smtpKey: process.env.BREVO_SMTP_KEY || "",
+        smtpFrom: process.env.BREVO_SMTP_FROM || "",
+    },
     rpcs: {
         [ChainId.Sui]: {
             http: {

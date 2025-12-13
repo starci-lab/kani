@@ -16,6 +16,7 @@ import { ThrottlerModule } from "@modules/throttler"
 import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
 import { PrivyModule } from "@modules/privy"
+import { MailModule } from "@modules/mail"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -62,6 +63,9 @@ import { PrivyModule } from "@modules/privy"
             isGlobal: true,
         }),
         MixinModule.register({
+            isGlobal: true,
+        }),
+        MailModule.register({
             isGlobal: true,
         }),
         PrimaryMongoDbModule.register({
