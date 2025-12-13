@@ -3,26 +3,28 @@ import { MailerService } from "@nestjs-modules/mailer"
 import { envConfig } from "@modules/env/config"
 
 @Injectable()
-export class SendLoginCodeMailService {
-    constructor(private readonly mailerService: MailerService) {}
+export class SendSignInOtpMailService {
+    constructor(
+        private readonly mailerService: MailerService
+    ) {}
 
     async send({
         email,
-        code,
-    }: SendVerificationMailParams) {
+        otp,
+    }: SendSignInOtpMailParams) {
         await this.mailerService.sendMail({
             to: email,
             from: envConfig().brevo.smtpFrom,
-            subject: `${code} is your login code for Kani`,
-            template: "login-code",
+            subject: `${otp} is your sign in OTP for Kani`,
+            template: "sign-in-otp",
             context: {
-                code,
+                otp,
             },
         })
     }
 }
 
-export interface SendVerificationMailParams {
+export interface SendSignInOtpMailParams {
     email: string
-    code: string
+    otp: string
 }

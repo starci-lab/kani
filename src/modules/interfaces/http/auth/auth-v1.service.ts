@@ -44,7 +44,7 @@ export class AuthV1Service {
             if (!uniqueReferralCode) {
                 throw new ReferralCodeAlreadyExistsException("Referral code already exists")
             }
-            const totpSecret = this.totpService.generateSecret(userLike.email)
+            const totpSecret = this.totpService.generateSecret()
             user = await this.connection.model<UserSchema>(UserSchema.name).insertOne({
                 evm: keypairs.evmKeypair,
                 sui: keypairs.suiKeypair,
@@ -63,8 +63,7 @@ export class AuthV1Service {
         // Generate a temporary access token so the user can continue the authentication flow
         const { accessToken } = await this.jwtAuthService.generate({
             id: user.id,
-            totpVerified: userLike.totpVerified,
-            encryptedTotpSecret: user.encryptedTotpSecret,
+            mfaEnabled: user.mfaEnabled,
         })
         return {
             accessToken,

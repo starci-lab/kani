@@ -7,15 +7,15 @@ import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectPrimaryMongoose, SessionSchema } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { MsService, InjectSuperJson } from "@modules/mixin"
+import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 import { Cache } from "cache-manager"
-import SuperJSON from "superjson"
+import crypto from "crypto"
+import fs from "fs"
 
 export interface GenerateParams {
     id: string
-    totpVerified: boolean
-    encryptedTotpSecret?: string
+    mfaEnabled: boolean
     session?: ClientSession
 }
 
@@ -23,8 +23,6 @@ export interface GenerateParams {
 export class JwtAuthService {
     constructor(
         private readonly jwtService: NestJwtService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
@@ -34,17 +32,35 @@ export class JwtAuthService {
         private readonly asyncService: AsyncService
     ) { }
 
+    // get JWT secret key
+    // we require both secret key and salt to generate the key, ensure the key is not compromised
+    public getJwtSecretKey(): string {
+        const keyRaw = fs.readFileSync(
+            envConfig().mountPath.keys.jwtSecret, 
+            "utf8"
+        )
+        const keyBuffer = crypto.pbkdf2Sync(
+            keyRaw,                 // base key
+            envConfig().salt.jwt,// salt
+            100_000,                // number of hash rounds
+            32,                     // length of key (bytes)
+            "sha256"                // hash function
+        )
+        return keyBuffer.toString("hex")
+    }
+
     // generate access token and refresh token for authentication
     public async generate(
         {
             id,
-            totpVerified,
-            encryptedTotpSecret,
+            mfaEnabled,
             session,
         }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
-            throw new UserIdRequiredToGenerateAccessTokenException("User ID is required to generate access token and refresh token")
+            throw new UserIdRequiredToGenerateAccessTokenException(
+                "User ID is required to generate access token and refresh token"
+            )
         }
         // generate sessionId
         const sessionId = uuidv4()
@@ -53,16 +69,14 @@ export class JwtAuthService {
             // user id to determine the user
             id, 
             // whether the user has verified their TOTP
-            totpVerified, 
-            // encrypted TOTP secret
-            encryptedTotpSecret
+            mfaEnabled, 
         }, {
-            secret: envConfig().jwt.accessToken.secret,
+            secret: this.getJwtSecretKey(),
             expiresIn: envConfig().jwt.accessToken.expiration
         })
         let refreshToken: string | undefined
-        if (totpVerified) {
-        // generate refreshToken
+        if (mfaEnabled) {
+            // generate refreshToken
             refreshToken = await this.jwtService.signAsync(
                 {
                     // we need id to determine the user
@@ -71,7 +85,7 @@ export class JwtAuthService {
                     sessionId,
                 },
                 {
-                    secret: envConfig().jwt.refreshToken.secret,
+                    secret: this.getJwtSecretKey(),
                     expiresIn: envConfig().jwt.refreshToken.expiration
                 }
             )

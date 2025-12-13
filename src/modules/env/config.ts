@@ -91,9 +91,9 @@ export const envConfig = () => ({
     debug: {
         kaminoVaultFetch: Boolean(process.env.KAMINO_VAULT_FETCH_DEBUG) || true,
     },
-    cryptography: {
-        sha256Salt: process.env.SHA256_SALT || "ciswipesha256",
-        aesCbcKey: process.env.AES_CBC_KEY || "6E99BDF4DA700D7F002B6185985CEA9C",
+    salt: {
+        jwt: process.env.JWT_SALT || "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI",
+        aesCbc: process.env.AES_CBC_SALT || "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI",
     },
     loki: {
         host: process.env.LOKI_HOST || "http://localhost:3100",
@@ -135,6 +135,10 @@ export const envConfig = () => ({
     mountPath: {
         gcp: {
             encryptionSa: process.env.GCP_ENCRYPTION_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "encryption-sa.json"),
+        },
+        keys: {
+            jwtSecret: join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
+            aes: join(process.cwd(), ".mount", "keys", "aes.key"),
         },
     },
     interval: {

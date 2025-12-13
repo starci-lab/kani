@@ -10,12 +10,12 @@ export class TotpService {
         private readonly options: TotpOptions,
     ) {}
     // 1. Create secret for user
-    generateSecret(
-        email: string,
-    ) {
+    generateSecret() {
         const secret = speakeasy.generateSecret({
-            name: `${this.options.appName} (${email})`, 
             // Display name in Google Authenticator
+            name: this.options.appName, 
+            // Issuer in Google Authenticator
+            issuer: "KANI",
         })
         return secret // contains base32, otpauth_url,...
     }
@@ -27,6 +27,15 @@ export class TotpService {
             encoding: "base32",
             token,
             window: 1, // allow 1 step (30s)
+        })
+    }
+
+    generateTotpSecretUrl(secret: string) {
+        return speakeasy.otpauthURL({
+            secret: secret,
+            encoding: "base32",
+            issuer: "KANI",
+            label: this.options.appName,
         })
     }
 }

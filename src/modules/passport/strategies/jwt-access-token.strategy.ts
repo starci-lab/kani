@@ -4,6 +4,7 @@ import { PassportStrategy } from "@nestjs/passport"
 import { ExtractJwt, Strategy } from "passport-jwt"
 import { UserJwtLike } from "../types"
 import { UserHasNotCompletedTOTPVerificationException } from "@exceptions"
+import { JwtAuthService } from "../jwt"
 
 export const JWT_ACCESS_TOKEN_STRATEGY = "jwt-access-token"
 @Injectable()
@@ -11,11 +12,13 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     Strategy, 
     JWT_ACCESS_TOKEN_STRATEGY
 ) {
-    constructor() {
+    constructor(
+        jwtAuthService: JwtAuthService,
+    ) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: envConfig().jwt.accessToken.secret,
+            secretOrKey: jwtAuthService.getJwtSecretKey(),
         })
     }
 

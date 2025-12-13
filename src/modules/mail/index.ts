@@ -1,2 +1,2 @@
 export * from "./mail.module"
-export * from "./send-login-code-mail.service"
+export * from "./send-sign-in-otp-mail.service"

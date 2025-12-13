@@ -1,8 +1,23 @@
-import { Context, Mutation, Resolver } from "@nestjs/graphql"
+import { Args, Context, Mutation, Resolver } from "@nestjs/graphql"
 import { AuthService } from "./auth.service"
 import { UseGuards, UseInterceptors } from "@nestjs/common"
-import { GraphQLUser, GraphQLJwtRefreshTokenAuthGuard, UserJwtLike, GraphQLJwtAccessTokenAuthGuard } from "@modules/passport"
-import { ConfirmTotpResponse, ConfirmTotpResponseData, RefreshResponse, RefreshResponseData } from "./auth.dto"
+import { 
+    GraphQLUser, 
+    GraphQLJwtRefreshTokenAuthGuard, 
+    UserJwtLike, 
+    GraphQLJwtAccessTokenAuthGuard 
+} from "@modules/passport"
+import { 
+    ConfirmTotpResponse, 
+    ConfirmTotpResponseData, 
+    RefreshResponse, 
+    RefreshResponseData, 
+    RequestSignInOtpRequest, 
+    RequestSignInOtpResponse,
+    VerifySignInOtpRequest,
+    VerifySignInOtpResponse,
+    VerifySignInOtpResponseData,
+} from "./auth.dto"
 import { ThrottlerConfig } from "@modules/throttler"
 import { UseThrottler } from "@modules/throttler/throttler.decorators"
 import { GraphQLSuccessMessage, GraphQLTransformInterceptor } from "../../interceptors"
@@ -58,5 +73,30 @@ export class AuthResolvers {
         }
         this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)
         return { accessToken }
+    }
+
+    @GraphQLSuccessMessage("Sign in OTP sent successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @UseThrottler(ThrottlerConfig.Strict)
+    @Mutation(() => RequestSignInOtpResponse, {
+        description: "Request a sign in OTP for authentication.",
+    })
+    async requestSignInOtp(
+        @Args("request") request: RequestSignInOtpRequest,
+    ): Promise<void> {
+        return this.authService.requestSignInOtp(request)
+    }
+
+    @GraphQLSuccessMessage("Sign in OTP verified successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @UseThrottler(ThrottlerConfig.Strict)
+    @Mutation(() => VerifySignInOtpResponse, {
+        description: "Verify a sign in OTP for authentication.",
+    })
+    async verifySignInOtp(
+        @Args("request") request: VerifySignInOtpRequest,
+        @Context("res") res: Response,
+    ): Promise<VerifySignInOtpResponseData> {
+        return this.authService.verifySignInOtp(request, res)
     }
 }

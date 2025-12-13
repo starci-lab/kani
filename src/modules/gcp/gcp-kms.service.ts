@@ -33,7 +33,7 @@ export class GcpKmsService {
 
     async decrypt(
         ciphertext: string
-    ): Promise<Uint8Array> {
+    ): Promise<string> {
         const [result] = await this.kmsClient.decrypt({
             name: envConfig().googleCloud.kms.keyName,
             ciphertext: Buffer.from(ciphertext, "base64"),
@@ -41,6 +41,6 @@ export class GcpKmsService {
         if (!result.plaintext) {
             throw new KmsNotFoundException("KMS decryption failed: plaintext is empty")
         }
-        return new Uint8Array(result.plaintext as Buffer)
+        return Buffer.from(result.plaintext as Buffer).toString("utf8")
     }
 }

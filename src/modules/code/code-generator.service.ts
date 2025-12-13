@@ -1,5 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { nanoid } from "nanoid"
+import { customAlphabet, nanoid } from "nanoid"
+
+const numbers = "0123456789"
+const nanoidNumbers = customAlphabet(numbers, 6)
 
 @Injectable()
 export class CodeGeneratorService {
@@ -13,5 +16,9 @@ export class CodeGeneratorService {
 
     generateCodes(prefix: string, count: number): Array<string> {
         return Array.from({ length: count }, () => this.generateCode(prefix))
+    }
+
+    generateOtpCode(): string {
+        return nanoidNumbers()
     }
 }

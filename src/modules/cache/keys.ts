@@ -18,6 +18,7 @@ export enum CacheKey {
     UserIds = "userIds",
     SessionId = "sessionId",
     PoolAnalytics = "poolAnalytics",
+    SignInOtpCode = "signInOtpCode",
 }
 
 export interface PythTokenPriceCacheResult {
@@ -41,4 +42,8 @@ export interface PoolAnalyticsCacheResult {
     volume24H: string
     tvl: string
     apr24H: string
+}
+
+export interface SignInOtpCacheResult {
+    otp: string
 }

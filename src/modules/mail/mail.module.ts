@@ -1,6 +1,6 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mail.module-definition"
-import { SendLoginCodeMailService } from "./send-login-code-mail.service"
+import { SendSignInOtpMailService } from "./send-sign-in-otp-mail.service"
 import { MailerModule } from "@nestjs-modules/mailer"
 import { envConfig } from "@modules/env/config"
 import path from "path"
@@ -39,10 +39,10 @@ export class MailModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...(dynamicModule.providers || []),
-                SendLoginCodeMailService,
+                SendSignInOtpMailService,
             ],
             exports: [
-                SendLoginCodeMailService,
+                SendSignInOtpMailService,
             ],
         }
     }

@@ -29,14 +29,6 @@ export class UserSchema extends AbstractSchema {
     @Prop({ type: String, enum: OauthProviderName, required: false })
         oauthProvider?: OauthProviderName
 
-    
-    @Field(() => String, {
-        description: "The unique ID of the user from Privy.",
-    })
-    @Prop({ type: String, required: true, unique: true, index: true })
-        privyUserId: string
-
-    /** @deprecated Use privy instead */
     @Field(() => String, {
         description: "User's email address.",
         nullable: true,
@@ -81,6 +73,12 @@ export class UserSchema extends AbstractSchema {
         nullable: true,
     })
         temporaryTotpToken?: string
+
+    @Field(() => Boolean, {
+        description: "Whether the multi-factor authentication is enabled.",
+    })
+    @Prop({ type: Boolean, default: false })
+        mfaEnabled: boolean
 }
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)
