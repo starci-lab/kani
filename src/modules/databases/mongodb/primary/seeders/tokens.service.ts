@@ -281,7 +281,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         iconUrl: "https://r2.kanibot.xyz/tokens/usdt.png",
         projectUrl: "https://tether.to/",
         whichCex: CexId.Binance,
-        type: TokenType.Native,
+        type: TokenType.StableUsdc,
         pythFeedId: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
         selectable: false,
         minRequiredAmountInTotal: 30,

@@ -1,4 +1,3 @@
-import { ChainId, Network } from "@typedefs"
 import { TokenId } from "@modules/databases"
 
 export enum SocketIoEvent {
@@ -7,8 +6,10 @@ export enum SocketIoEvent {
 }
 
 export interface PythPricesUpdatedEvent {
-    network: Network
+    prices: Array<PythPriceUpdated>
+}
+
+export interface PythPriceUpdated {
     tokenId: TokenId
     price: number
-    chainId: ChainId
 }

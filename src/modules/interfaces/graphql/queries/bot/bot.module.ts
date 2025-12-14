@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common"
-import { BotResolver } from "./bot.resolvers"
+import { BotResolver } from "./bot.resolver"
 import { BotService } from "./bot.service"
 import { ConfigurableModuleClass } from "./bot.module-definition"
 

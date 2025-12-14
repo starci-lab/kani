@@ -2,7 +2,7 @@ export interface UserGoogleLike {
     email: string
     username: string
     picture: string
-    totpVerified: boolean
+    mfaEnabled: boolean
     referralCode?: string
     oauthProviderId: string
     destinationUrl?: string
@@ -10,7 +10,7 @@ export interface UserGoogleLike {
 
 export interface UserJwtLike {
     id: string
-    totpVerified: boolean
+    mfaEnabled: boolean
     encryptedTotpSecret?: string
 }
 

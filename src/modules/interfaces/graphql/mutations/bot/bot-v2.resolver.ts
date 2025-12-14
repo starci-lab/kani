@@ -1,8 +1,9 @@
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
 import { UseGuards, UseInterceptors } from "@nestjs/common"
 import {
-    GraphQLPrivyAuthGuard,
-    PrivyResponse,
+    GraphQLJwtAccessTokenAuthGuard,
+    GraphQLUser,
+    UserJwtLike,
 } from "@modules/passport"
 import { ThrottlerConfig } from "@modules/throttler"
 import { UseThrottler } from "@modules/throttler"
@@ -16,7 +17,6 @@ import {
     CreateBotResponseData, 
     CreateBotResponse 
 } from "./bot-v2.dto"
-import { VerifyAuthTokenResponse } from "@privy-io/node"
 
 @Resolver()
 export class BotV2Resolver {
@@ -31,15 +31,15 @@ export class BotV2Resolver {
     @GraphQLSuccessMessage("Bot created successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLPrivyAuthGuard)
+    @UseGuards(GraphQLJwtAccessTokenAuthGuard)
     @Mutation(() => CreateBotResponse, {
         description: "Creates a new bot for the authenticated user."
     })
     async createBot(
-        @PrivyResponse() response: VerifyAuthTokenResponse,
+        @GraphQLUser() user: UserJwtLike,
         @Args("request", { description: "The request payload for creating a new bot." })
             request: CreateBotRequest,
     ): Promise<CreateBotResponseData> {
-        return await this.botV2Service.createBot(response, request)
+        return await this.botV2Service.createBot(user, request)
     }
 }

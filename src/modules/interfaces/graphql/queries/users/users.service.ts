@@ -4,15 +4,15 @@ import { Connection } from "mongoose"
 import { UserMfaAlreadyEnabledException, UserNotFoundException, UserTotpSecretNotFoundException } from "@exceptions"
 import { UserJwtLike } from "@modules/passport"
 import { TotpSecretResponseData } from "./users.dto"
-import { GcpKmsService } from "@modules/gcp"
 import { TotpService } from "@modules/totp"
+import { EncryptionService } from "@modules/crypto"
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly gcpKmsService: GcpKmsService,
+        private readonly encryptionService: EncryptionService,
         private readonly totpService: TotpService
     ) {}
 
@@ -39,7 +39,7 @@ export class UsersService {
         if (!user.encryptedTotpSecret) {
             throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
-        const decryptedTotpSecret = await this.gcpKmsService.decrypt(user.encryptedTotpSecret)
+        const decryptedTotpSecret = this.encryptionService.decrypt(user.encryptedTotpSecret)
         return {
             totpSecret: decryptedTotpSecret,
             totpSecretUrl: this.totpService.generateTotpSecretUrl(decryptedTotpSecret),

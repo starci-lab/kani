@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import { Wallet } from "ethers"
-import { Keypair as SolanaKeypair } from "@solana/web3.js"
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519"
 import base58 from "bs58"
 import { WalletSchema } from "@modules/databases"
 import { GeneratedKeypair } from "./types"
 import { PlatformId } from "@typedefs"
-import { EncryptionService } from "@modules/crypto"
+import { Keypair as SolanaKeypair } from "@solana/web3.js"
+import { GcpKmsService } from "@modules/gcp"
+import { AsyncService } from "@modules/mixin"
 
 export interface Keypairs {
     evmKeypair: WalletSchema
@@ -17,17 +18,18 @@ export interface Keypairs {
 @Injectable()
 export class KeypairsService {
     constructor(
-        private readonly encryptionService: EncryptionService,
+        private readonly gcpKmsService: GcpKmsService,
+        private readonly asyncService: AsyncService,
     ) { }
 
-    public generateKeypair(
+    public async generateKeypair(
         platformId: PlatformId,
-    ): GeneratedKeypair {
+    ): Promise<GeneratedKeypair> {
         switch (platformId) {
         case PlatformId.Evm:
         {
             const evmWallet = Wallet.createRandom()
-            const evmEncryptedPrivateKey = this.encryptionService.encrypt(evmWallet.privateKey)
+            const evmEncryptedPrivateKey = await this.gcpKmsService.encrypt(evmWallet.privateKey)
             return { 
                 accountAddress: evmWallet.address, 
                 encryptedPrivateKey: evmEncryptedPrivateKey 
@@ -36,7 +38,7 @@ export class KeypairsService {
         case PlatformId.Sui:
         {
             const suiWallet = Ed25519Keypair.generate()
-            const suiEncryptedPrivateKey = this.encryptionService.encrypt(suiWallet.getSecretKey())
+            const suiEncryptedPrivateKey = await this.gcpKmsService.encrypt(suiWallet.getSecretKey())
             return { 
                 accountAddress: suiWallet.getPublicKey().toSuiAddress(), 
                 encryptedPrivateKey: suiEncryptedPrivateKey 
@@ -45,9 +47,9 @@ export class KeypairsService {
         case PlatformId.Solana:
         {
             const solanaWallet = SolanaKeypair.generate()
-            const solanaEncryptedPrivateKey = this.encryptionService.encrypt(base58.encode(solanaWallet.secretKey))
+            const solanaEncryptedPrivateKey = await this.gcpKmsService.encrypt(base58.encode(solanaWallet.secretKey))
             return { 
-                accountAddress: solanaWallet.publicKey.toBase58(), 
+                accountAddress: solanaWallet.publicKey.toString(), 
                 encryptedPrivateKey: solanaEncryptedPrivateKey 
             }
         }
@@ -62,12 +64,13 @@ export class KeypairsService {
             evmEncryptedPrivateKey, 
             suiEncryptedPrivateKey, 
             solanaEncryptedPrivateKey
-        ] =
+        ] = await this.asyncService.allMustDone(    
             [
-                this.encryptionService.encrypt(evmWallet.privateKey),
-                this.encryptionService.encrypt(suiWallet.getSecretKey()),
-                this.encryptionService.encrypt(base58.encode(solanaWallet.secretKey)),
+                (async () => await this.gcpKmsService.encrypt(evmWallet.privateKey))(),
+                (async () => await this.gcpKmsService.encrypt(suiWallet.getSecretKey()))(),
+                (async () => await this.gcpKmsService.encrypt(base58.encode(solanaWallet.secretKey)))(),
             ]
+        )
         return {
             evmKeypair: {
                 publicKey: evmWallet.address,
@@ -90,17 +93,17 @@ export class KeypairsService {
         }
     }
 
-    public getPrivateKey(
+    public async getPrivateKey(
         platformId: PlatformId, 
         encryptedPrivateKey: string
-    ): string {
+    ): Promise<string> {
         switch (platformId) {
         case PlatformId.Evm:
-            return Buffer.from(this.encryptionService.decrypt(encryptedPrivateKey)).toString("utf8")
+            return await this.gcpKmsService.decrypt(encryptedPrivateKey)
         case PlatformId.Sui:
-            return Buffer.from(this.encryptionService.decrypt(encryptedPrivateKey)).toString("utf8")
+            return await this.gcpKmsService.decrypt(encryptedPrivateKey)
         case PlatformId.Solana:
-            return Buffer.from(this.encryptionService.decrypt(encryptedPrivateKey)).toString("utf8")
+            return await this.gcpKmsService.decrypt(encryptedPrivateKey)
         }
     }
 }

@@ -55,6 +55,15 @@
         "tsConfigPath": "apps/bot-interface/tsconfig.app.json"
       }
     },
+    "cli": {
+      "type": "application",
+      "root": "apps/cli",
+      "entryFile": "main",
+      "sourceRoot": "apps/cli/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/cli/tsconfig.app.json"
+      }
+    },
     "core": {
       "type": "application",
       "root": "apps/core",
@@ -71,6 +80,15 @@
       "sourceRoot": "apps/data-fetcher/src",
       "compilerOptions": {
         "tsConfigPath": "apps/data-fetcher/tsconfig.app.json"
+      }
+    },
+    "kani-cli": {
+      "type": "application",
+      "root": "apps/kani-cli",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-cli/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-cli/tsconfig.app.json"
       }
     },
     "kani-coordinator": {

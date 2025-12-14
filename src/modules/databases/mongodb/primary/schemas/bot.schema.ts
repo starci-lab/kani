@@ -37,7 +37,6 @@ export class BotSchema extends AbstractSchema {
     @Prop({ type: String, required: false })
         accountAddress: string
  
-    /** @deprecated Use privyWalletId instead */
     /**
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
@@ -188,6 +187,13 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: String, enum: BotType, required: true, default: BotType.Standard })
         botType: BotType
+
+    @Field(() => Boolean, {
+        description: "Whether the bot is exiting to USDC",
+        defaultValue: false,
+    })
+    @Prop({ type: Boolean, required: true, default: false })
+        isExitToUsdc: boolean
     
     // active position
     activePosition?: PositionSchema

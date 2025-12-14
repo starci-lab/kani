@@ -1,23 +1,39 @@
 import { OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from "@nestjs/websockets"
-import { PythWebSocketGateway, socketIoAuthMiddleware } from "@modules/socketio"
+import { PythPricesUpdatedEvent, PythWebSocketGateway, socketIoAuthMiddleware } from "@modules/socketio"
 import { Logger } from "@nestjs/common"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import { TypedSocket } from "@modules/socketio"
-import { EventName, PythSuiPricesUpdatedEvent } from "@modules/event"
-import { OnEvent } from "@nestjs/event-emitter"
 import { Namespace } from "socket.io"
 import { WebSocketServer } from "@nestjs/websockets"
-import { PythPricesUpdatedEvent, SocketIoEvent } from "@modules/socketio/constants"
+import { Interval } from "@nestjs/schedule"
+import { PrimaryMemoryStorageService } from "@modules/databases"
+import { 
+    CacheKey, 
+    PythTokenPriceCacheResult, 
+    InjectRedisCache, 
+    createCacheKey 
+} from "@modules/cache"
+import { Cache } from "cache-manager"
+import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
+import { PythTokenPriceNotFoundException } from "@exceptions"
+import { SocketIoEvent, PythPriceUpdated } from "@modules/socketio"
 
 @PythWebSocketGateway()
 export class PythGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(PythGateway.name)
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonLogger: WinstonLogger,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
+        private readonly asyncService: AsyncService,
     ) {}
-
+    
     @WebSocketServer()
     private readonly server: Namespace
 
@@ -48,17 +64,48 @@ export class PythGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         )
     }
 
-    // handle the pyth sui prices updated
-    @OnEvent(EventName.PythSuiPricesUpdated)
-    handlePythSuiPricesUpdated(payload: PythSuiPricesUpdatedEvent) {
-        // define the event
-        const event: PythPricesUpdatedEvent = {
-            network: payload.network,
-            tokenId: payload.tokenId,
-            price: payload.price,
-            chainId: payload.chainId,
+    // handle the pyth sui prices updated with interval 5s
+    @Interval(5000)
+    async fetchPythPrices() {
+        const tokens = this.primaryMemoryStorageService.tokens
+        const promises: Array<Promise<void>> = []
+        const prices: Array<PythPriceUpdated> = []
+        for (const token of tokens) {
+            if (token.pythFeedId) {
+                promises.push(
+                    (
+                        async () => {
+                            const priceCacheResult = await this.cacheManager.get<string>(
+                                createCacheKey(
+                                    CacheKey.PythTokenPrice, 
+                                    token.displayId
+                                ),
+                            )
+                            if (!priceCacheResult) {
+                                throw new PythTokenPriceNotFoundException(
+                                    token.displayId, 
+                                    "Pyth token price not found"
+                                )
+                            }
+                            const { 
+                                price 
+                            } = this.superjson.parse<PythTokenPriceCacheResult>(priceCacheResult)
+                            prices.push({
+                                tokenId: token.displayId,
+                                price,
+                            })   
+                        })
+                    ()
+                )
+            }
         }
-        // emit the event to the client
-        this.server.emit(SocketIoEvent.PythPricesUpdated, event)
+        await this.asyncService.allMustDone(promises)
+        const event: PythPricesUpdatedEvent = {
+            prices,
+        }
+        this.server.emit(
+            SocketIoEvent.PythPricesUpdated, 
+            this.superjson.serialize(event)
+        )
     }
 }

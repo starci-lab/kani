@@ -42,7 +42,6 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
     }
 
     async process(job: Job<ClosePositionConfirmationPayload>) {
-        console.log("ClosePositionConfirmationWorker process started")
         const { bot, txHash, state } = job.data
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(

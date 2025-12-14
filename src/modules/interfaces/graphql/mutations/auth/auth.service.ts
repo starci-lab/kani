@@ -6,7 +6,7 @@ import {
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import {
-    ConfirmTotpResponseData,
+    EnableMFAResponseData,
     RefreshResponseData,
     RequestSignInOtpRequest,
     VerifySignInOtpRequest,
@@ -29,7 +29,7 @@ import ms from "ms"
 import { CookieService } from "@modules/cookie"
 import { Response } from "express"
 import { TotpService } from "@modules/totp"
-import { GcpKmsService } from "@modules/gcp"
+import { EncryptionService } from "@modules/crypto"
 
 @Injectable()
 export class AuthService {
@@ -43,10 +43,13 @@ export class AuthService {
     private readonly codeGeneratorService: CodeGeneratorService,
     private readonly cookieService: CookieService,
     private readonly totpService: TotpService,
-    private readonly gcpKmsService: GcpKmsService
+    private readonly encryptionService: EncryptionService
     ) {}
 
-    async confirmTotp(userLike: UserJwtLike): Promise<ConfirmTotpResponseData> {
+    async enableMFA(
+        res: Response,
+        userLike: UserJwtLike
+    ): Promise<EnableMFAResponseData> {
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
             .findById(userLike.id)
@@ -57,24 +60,35 @@ export class AuthService {
             throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
         // if the user not verified, set the totpVerified to true
-        if (!user.totpVerified) {
-            await this.connection.model<UserSchema>(UserSchema.name).updateOne(
-                {
-                    id: userLike.id,
-                },
-                {
-                    $set: {
-                        totpVerified: true,
-                    },
-                },
-            )
-        }
-        const { accessToken } = await this.jwtAuthService.generate({
-            id: user.id,
-            mfaEnabled: user.mfaEnabled,
-        })
-        // set the refresh token in the cookie
-        return { accessToken }
+        const session = await this.connection.startSession()
+        return await session.withTransaction(
+            async () => {
+                if (!user.mfaEnabled) {
+                    await this.connection.model<UserSchema>(UserSchema.name).updateOne(
+                        {
+                            _id: userLike.id,
+                        },
+                        {
+                            $set: {
+                                mfaEnabled: true,
+                            },
+                        },
+                    )
+                }
+                const { 
+                    accessToken, 
+                    refreshToken
+                } = await this.jwtAuthService.generate({
+                    id: user.id,
+                    mfaEnabled: user.mfaEnabled,
+                    encryptedTotpSecret: user.encryptedTotpSecret,
+                })
+                // set the refresh token in the cookie
+                if (refreshToken) {
+                    this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)
+                }
+                return { accessToken }
+            })
     }
 
     async refresh(userLike: UserJwtLike): Promise<RefreshResponseData> {
@@ -146,7 +160,7 @@ export class AuthService {
         )?.toJSON()
         if (!user) {
             const totpSecret = this.totpService.generateSecret()
-            const encryptedTotpSecret = await this.gcpKmsService.encrypt(totpSecret.base32)
+            const encryptedTotpSecret = this.encryptionService.encrypt(totpSecret.base32)
             // we create a new user
             const [userRaw] = await this
                 .connection
@@ -166,6 +180,7 @@ export class AuthService {
         } = await this.jwtAuthService.generate({
             id: user.id,
             mfaEnabled: user.mfaEnabled,
+            encryptedTotpSecret: user.encryptedTotpSecret,
         })
         if (refreshToken) {
             this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)

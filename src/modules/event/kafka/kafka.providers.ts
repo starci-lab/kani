@@ -11,7 +11,6 @@ export const createKafkaProvider = (): Provider => ({
     provide: KAFKA,
     inject: [MODULE_OPTIONS_TOKEN],
     useFactory: ({ clientId }: KafkaOptions): Kafka => {
-        console.log(envConfig().kafka)
         return new Kafka({
             brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
             clientId: clientId ?? v4(),

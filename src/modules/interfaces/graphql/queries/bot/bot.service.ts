@@ -38,7 +38,7 @@ export class BotService {
             throw new BotNotFoundException()
         }
         const platformId = chainIdToPlatformId(bot.chainId)
-        const privateKey = this.keypairsService.getPrivateKey(
+        const privateKey = await this.keypairsService.getPrivateKey(
             platformId, bot.encryptedPrivateKey)
         return {
             accountAddress: bot.accountAddress,

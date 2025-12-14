@@ -2,7 +2,7 @@ import { ExecutionContext, Injectable } from "@nestjs/common"
 import { AuthGuard } from "@nestjs/passport"
 import {
     JWT_ACCESS_TOKEN_STRATEGY,
-    JWT_ACCESS_TOKEN_ONLY_VERIFIED_TOTP_STRATEGY,
+    JWT_ACCESS_TOKEN_ONLY_MFA_ENABLED_STRATEGY,
     JWT_REFRESH_TOKEN_STRATEGY,
 } from "../strategies"
 import { GqlExecutionContext } from "@nestjs/graphql"
@@ -26,8 +26,8 @@ export class GraphQLJwtRefreshTokenAuthGuard extends AuthGuard(
 }
 
 @Injectable()
-export class GraphQLJwtOnlyVerifiedTOTPAuthGuard extends AuthGuard(
-    JWT_ACCESS_TOKEN_ONLY_VERIFIED_TOTP_STRATEGY
+export class GraphQLJwtOnlyMFAEnabledAuthGuard extends AuthGuard(
+    JWT_ACCESS_TOKEN_ONLY_MFA_ENABLED_STRATEGY
 ) {
     getRequest(context: ExecutionContext) {
         return GqlExecutionContext.create(context).getContext().req

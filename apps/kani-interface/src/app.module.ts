@@ -17,6 +17,8 @@ import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
 import { PrivyModule } from "@modules/privy"
 import { MailModule } from "@modules/mail"
+import { SocketIoModule } from "@modules/interfaces"
+import { ScheduleModule } from "@nestjs/schedule"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -65,6 +67,7 @@ import { MailModule } from "@modules/mail"
         MixinModule.register({
             isGlobal: true,
         }),
+        ScheduleModule.forRoot(),
         MailModule.register({
             isGlobal: true,
         }),
@@ -78,6 +81,9 @@ import { MailModule } from "@modules/mail"
             utilitiesOnly: true,
         }),
         HttpModule.register({
+            isGlobal: true,
+        }),
+        SocketIoModule.register({
             isGlobal: true,
         }),
         GraphQLModule.register({

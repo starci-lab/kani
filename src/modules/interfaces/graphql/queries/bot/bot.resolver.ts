@@ -2,7 +2,7 @@ import { Args, Query, Resolver } from "@nestjs/graphql"
 import { BotService } from "./bot.service"
 import { UseGuards, UseInterceptors } from "@nestjs/common"
 import {
-    GraphQLJwtOnlyVerifiedTOTPAuthGuard,
+    GraphQLJwtOnlyMFAEnabledAuthGuard,
     GraphQLUser,
     UserJwtLike,
 } from "@modules/passport"
@@ -13,11 +13,9 @@ import {
     BotRequest,
     BotResponse,
 } from "./bot.dto"
-import { GraphQLTOTPGuard } from "@modules/totp"
 import { UseThrottler, ThrottlerConfig } from "@modules/throttler"
 import { GraphQLSuccessMessage, GraphQLTransformInterceptor } from "../../interceptors"
-import { GraphQLJwtAccessTokenAuthGuard } from "@modules/passport"
-import { BotSchema } from "@modules/databases/mongodb/primary/schemas"
+import { BotSchema } from "@modules/databases"
 
 @Resolver()
 export class BotResolver {
@@ -28,7 +26,7 @@ export class BotResolver {
     @UseThrottler(ThrottlerConfig.Strict)
     @GraphQLSuccessMessage("Bot exported successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard, GraphQLTOTPGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Query(() => ExportedAccountResponse, {
         description:
             "Returns the exported wallet keypair (account address and private key) associated with a specific bot. This operation requires TOTP verification for security.",
@@ -47,8 +45,7 @@ export class BotResolver {
     @UseThrottler(ThrottlerConfig.Strict)
     @GraphQLSuccessMessage("Bot fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
-    //@UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
-    @UseGuards(GraphQLJwtAccessTokenAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Query(() => BotResponse, {
         description:
             "Returns the details of a bot associated with the current user.",

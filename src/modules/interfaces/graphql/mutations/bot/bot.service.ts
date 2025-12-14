@@ -55,7 +55,7 @@ export class BotService {
         }
         // we create a new bot
         const platformId = chainIdToPlatformId(request.chainId)
-        const wallet = this.keypairsService.generateKeypair(platformId)
+        const wallet = await this.keypairsService.generateKeypair(platformId)
         const bot = await this.connection.model<BotSchema>(BotSchema.name).insertOne({
             user: userLike.id,
             chainId: request.chainId,

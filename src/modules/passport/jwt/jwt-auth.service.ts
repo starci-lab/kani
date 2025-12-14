@@ -17,6 +17,7 @@ export interface GenerateParams {
     id: string
     mfaEnabled: boolean
     session?: ClientSession
+    encryptedTotpSecret?: string
 }
 
 @Injectable()
@@ -55,6 +56,7 @@ export class JwtAuthService {
             id,
             mfaEnabled,
             session,
+            encryptedTotpSecret,
         }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
@@ -70,6 +72,8 @@ export class JwtAuthService {
             id, 
             // whether the user has verified their TOTP
             mfaEnabled, 
+            // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
+            encryptedTotpSecret,
         }, {
             secret: this.getJwtSecretKey(),
             expiresIn: envConfig().jwt.accessToken.expiration
@@ -83,6 +87,8 @@ export class JwtAuthService {
                     id,
                     // we need sessionId to identify the session
                     sessionId,
+                    // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
+                    encryptedTotpSecret,
                 },
                 {
                     secret: this.getJwtSecretKey(),
@@ -134,7 +140,7 @@ export class JwtAuthService {
     public async verifyAccessToken(token: string): Promise<JwtAccessTokenPayload | null> {
         try {
             return await this.jwtService.verifyAsync<JwtAccessTokenPayload>(token, {
-                secret: envConfig().jwt.accessToken.secret
+                secret: this.getJwtSecretKey(),
             })
         } catch {
             return null

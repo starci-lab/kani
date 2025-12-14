@@ -6,7 +6,6 @@ import { Schema as MongooseSchema } from "mongoose"
 import { ObjectType } from "@nestjs/graphql"
 import { AbstractSchema } from "./abstract"
 import { ID } from "@nestjs/graphql"
-import BN from "bn.js"
 import { BotSchema } from "./bot.schema"
 import { ChainId, GraphQLTypeChainId } from "@typedefs"
 import { GraphQLJSON } from "graphql-type-json"
@@ -53,7 +52,7 @@ export class PositionSchema extends AbstractSchema {
 
     @Field(() => String, { description: "Liquidity amount minted for this position", nullable: true })
     @Prop({ type: String, required: false })
-        liquidity?: BN
+        liquidity?: string
 
     @Field(() => Int, { description: "Lower tick boundary of the position's price range", nullable: true })
     @Prop({ type: Number, required: false })
@@ -145,6 +144,10 @@ export class PositionSchema extends AbstractSchema {
     })
     @Prop({ type: String })
         feeAmountQuote: string
+
+    // whether the position is simulated
+    @Prop({ type: Boolean, default: false })
+        isSimulated?: boolean
 }
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
 

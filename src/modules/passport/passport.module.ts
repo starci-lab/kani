@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common"
 import {
     GoogleAuthStrategy,
     JwtAccessTokenStrategy,
-    JwtAccessTokenOnlyVerifiedTOTPStrategy,
+    JwtAccessTokenOnlyMFAEnabledStrategy,
     JwtRefreshTokenStrategy,
     PrivyAuthTokenStrategy
 } from "./strategies"
@@ -19,7 +19,7 @@ import { JwtAuthService } from "./jwt"
     providers: [
         GoogleAuthStrategy,
         JwtAccessTokenStrategy,
-        JwtAccessTokenOnlyVerifiedTOTPStrategy,
+        JwtAccessTokenOnlyMFAEnabledStrategy,
         JwtRefreshTokenStrategy,
         JwtAuthService,
         PrivyAuthTokenStrategy,

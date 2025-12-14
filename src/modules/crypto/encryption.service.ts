@@ -9,7 +9,7 @@ export class EncryptionService {
     private readonly ivLength = 16 // AES block size
     constructor() {}
     // Get AES-CBC key
-    private getAesCbcKey(): string {
+    private getAesCbcKey(): Buffer {
         const aseKeyPath = join(process.cwd(), ".mount", "keys", "aes.key")
         const keyRaw = fs.readFileSync(aseKeyPath, "utf8")
         const keyBuffer = crypto.pbkdf2Sync(
@@ -19,8 +19,7 @@ export class EncryptionService {
             32,                     // length of key (bytes)
             "sha256"                // hash function
         )
-        const aesCbcKey = keyBuffer.toString("hex")
-        return aesCbcKey
+        return keyBuffer
     }
     // Encrypt AES-CBC
     encrypt(

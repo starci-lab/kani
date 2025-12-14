@@ -33,6 +33,12 @@ export class CreateBotRequest {
         description: "List of liquidity pools where the bot will actively provide and manage liquidity. Must exist in the database.",
     })
         liquidityPoolIds?: Array<LiquidityPoolId>
+
+    @Field(() => Boolean, {
+        description: "Whether the bot is exiting to USDC",
+        defaultValue: false,
+    })
+        isExitToUsdc: boolean
 }
 
 @ObjectType({

@@ -1,9 +1,8 @@
-import { envConfig } from "@modules/env"
 import { Injectable } from "@nestjs/common"
 import { PassportStrategy } from "@nestjs/passport"
 import { ExtractJwt, Strategy } from "passport-jwt"
 import { UserJwtLike } from "../types"
-import { UserHasNotCompletedTOTPVerificationException } from "@exceptions"
+import { UserHasNotCompletedMFAAuthenticationException } from "@exceptions"
 import { JwtAuthService } from "../jwt"
 
 export const JWT_ACCESS_TOKEN_STRATEGY = "jwt-access-token"
@@ -27,24 +26,26 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     }
 }
 
-export const JWT_ACCESS_TOKEN_ONLY_VERIFIED_TOTP_STRATEGY = "jwt-access-token-only-verified-totp"
+export const JWT_ACCESS_TOKEN_ONLY_MFA_ENABLED_STRATEGY = "jwt-access-token-only-mfa-enabled"
 @Injectable()
-export class JwtAccessTokenOnlyVerifiedTOTPStrategy extends PassportStrategy(
+export class JwtAccessTokenOnlyMFAEnabledStrategy extends PassportStrategy(
     Strategy, 
-    JWT_ACCESS_TOKEN_ONLY_VERIFIED_TOTP_STRATEGY
+    JWT_ACCESS_TOKEN_ONLY_MFA_ENABLED_STRATEGY
 ) {
-    constructor() {
+    constructor(
+        jwtAuthService: JwtAuthService,
+    ) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: envConfig().jwt.accessToken.secret,
+            secretOrKey: jwtAuthService.getJwtSecretKey(),
         })
     }
 
     validate(payload: UserJwtLike) {
-        if (!payload.totpVerified) {
+        if (!payload.mfaEnabled) {
             // You can also throw UnauthorizedException here, but Forbidden is clearer for "logged in but not verified"
-            throw new UserHasNotCompletedTOTPVerificationException("User has not completed TOTP verification")
+            throw new UserHasNotCompletedMFAAuthenticationException("User has not completed MFA authentication")
         }
         return payload
     }

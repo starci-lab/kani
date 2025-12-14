@@ -5,7 +5,10 @@ import { InjectHermesClient } from "./pyth.decorators"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import { computeDenomination } from "@utils"
-import { PythTokenNotFoundException, TokenListIsEmptyException } from "@exceptions"
+import { 
+    PythTokenNotFoundException, 
+    TokenListIsEmptyException 
+} from "@exceptions"
 import { 
     EventEmitterService, 
     EventName 
@@ -19,6 +22,7 @@ import {
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { chunkArray } from "@utils"
+import { envConfig } from "@modules/env"
 
 interface PythTokenPrice {
     tokenId: TokenId
@@ -104,7 +108,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                             value: this.superjson.stringify({
                                 price: data.price,
                             }),
-                            ttl: 0, // 0 means no expiration
+                            ttl: envConfig().cache.ttl.pythTokenPrice,
                         }
                     }),
             ),
@@ -153,7 +157,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
                         this.superjson.stringify({
                             price: price.toNumber(),
                         }),
-                        0, // 0 means no expiration
+                        envConfig().cache.ttl.pythTokenPrice,
                     ),
                     // emit the event
                     this.events.emit(

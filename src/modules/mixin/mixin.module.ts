@@ -10,6 +10,7 @@ import { AsyncService } from "./async.service"
 import { MsService } from "./ms.service"
 import { LoadBalancerService } from "./load-balancer.service"
 import { DayjsService } from "./dayjs.service"
+import { createFakerServiceProvider } from "./faker.providers"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -24,6 +25,7 @@ export class MixinModule extends ConfigurableModuleClass {
             RandomDelayService,
             DayjsService,
             createSuperJsonServiceProvider(),
+            createFakerServiceProvider(),
             AsyncService,
             MsService,
             LoadBalancerService

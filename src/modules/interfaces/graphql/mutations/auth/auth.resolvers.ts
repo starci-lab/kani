@@ -8,8 +8,8 @@ import {
     GraphQLJwtAccessTokenAuthGuard 
 } from "@modules/passport"
 import { 
-    ConfirmTotpResponse, 
-    ConfirmTotpResponseData, 
+    EnableMFAResponse, 
+    EnableMFAResponseData, 
     RefreshResponse, 
     RefreshResponseData, 
     RequestSignInOtpRequest, 
@@ -37,21 +37,15 @@ export class AuthResolvers {
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtAccessTokenAuthGuard, GraphQLTOTPGuard)
-    @Mutation(() => ConfirmTotpResponse, {
+    @Mutation(() => EnableMFAResponse, {
         deprecationReason: "This mutation is deprecated. Use the privy authentication instead.",
         description: "Confirm a TOTP code for authentication.",
     })
-    async confirmTotp(
+    async enableMFA(
         @GraphQLUser() user: UserJwtLike,
         @Context("res") res: Response,
-    ): Promise<ConfirmTotpResponseData> {
-        const { accessToken, refreshToken } = await this.authService.confirmTotp(user)
-        if (!refreshToken) {
-            // simple check to ensure type-safety
-            throw new Error("Refresh token not found")
-        }
-        this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)
-        return { accessToken }
+    ): Promise<EnableMFAResponseData> {
+        return this.authService.enableMFA(res, user)
     }
 
     @GraphQLSuccessMessage("JWT access token refreshed successfully")

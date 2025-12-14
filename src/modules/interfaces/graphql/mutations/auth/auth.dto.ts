@@ -3,28 +3,26 @@ import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstrac
 import { IsEmail, IsJWT, IsString } from "class-validator"
 
 @ObjectType({
-    description: "Response data returned after successfully confirming a TOTP code.",
+    description: "Response data returned after successfully enabling MFA.",
 })
-export class ConfirmTotpResponseData {
+export class EnableMFAResponseData {
     @Field(() => String, {
-        description: "A short-lived JWT access token issued upon successful TOTP verification.",
+        description: "A short-lived JWT access token issued upon successful MFA enablement.",
     })
         accessToken: string
-    // non graphql field
-    refreshToken?: string
 }
 
 @ObjectType({
-    description: "Response returned after successfully confirming a TOTP code.",
+    description: "Response returned after successfully enabling MFA.",
 })
-export class ConfirmTotpResponse
+export class EnableMFAResponse
     extends AbstractGraphQLResponse
-    implements IAbstractGraphQLResponse<ConfirmTotpResponseData> {
-    @Field(() => ConfirmTotpResponseData, {
+    implements IAbstractGraphQLResponse<EnableMFAResponseData> {
+    @Field(() => EnableMFAResponseData, {
         nullable: true,
-        description: "The data returned after successfully confirming a TOTP code.",
+        description: "The data returned after successfully enabling MFA.",
     })
-        data: ConfirmTotpResponseData
+        data: EnableMFAResponseData
 }
 
 @ObjectType({

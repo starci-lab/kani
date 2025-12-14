@@ -9,8 +9,6 @@ import { OnEvent } from "@nestjs/event-emitter"
 import { Namespace } from "socket.io"
 import { WebSocketServer } from "@nestjs/websockets"
 import { SocketIoEvent } from "@modules/socketio/constants"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
 
 @CoreWebSocketGateway()
 export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -18,8 +16,6 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     constructor(
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
     ) {}
 
     @WebSocketServer()
@@ -54,7 +50,9 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
     // handle the liquidity pools updated
     @OnEvent(EventName.LiquidityPoolsFetched)
-    handleLiquidityPoolsUpdated(payload: LiquidityPoolsFetchedEvent) {
+    handleLiquidityPoolsUpdated(
+        payload: LiquidityPoolsFetchedEvent
+    ) {
         // emit the event to the client
         this.server.emit(
             SocketIoEvent.LiquidityPoolsFetched, 

@@ -66,6 +66,7 @@ export const envConfig = () => ({
         ttl: {
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
+            pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
         }
     },
     databases: {
@@ -125,7 +126,7 @@ export const envConfig = () => ({
     jwt: {
         accessToken: {
             secret: process.env.JWT_ACCESS_TOKEN_SECRET || "Cuong123_A",
-            expiration: (process.env.JWT_ACCESS_TOKEN_EXPIRATION || "1h") as ms.StringValue,
+            expiration: (process.env.JWT_ACCESS_TOKEN_EXPIRATION || "1d") as ms.StringValue,
         },
         refreshToken: {
             secret: process.env.JWT_REFRESH_TOKEN_SECRET || "Cuong123_A",

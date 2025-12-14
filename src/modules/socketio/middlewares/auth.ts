@@ -3,11 +3,12 @@ import { envConfig } from "@modules/env"
 import { TypedSocket } from "../types"
 import { JwtAccessTokenPayload } from "@modules/passport"
 import { 
-    SocketIoAccessTokenMissingException, 
-    SocketIoAccessTokenNotVerifiedException, 
+    SocketIoAccessTokenMissingException,
     SocketIoAccessTokenInvalidException,
     SocketIoAccessTokenExpiredException
 } from "@modules/errors"
+import fs from "fs"
+import crypto from "crypto"
 
 export const socketIoAuthMiddleware = (
     socket: TypedSocket, 
@@ -18,16 +19,22 @@ export const socketIoAuthMiddleware = (
         if (!token) {
             return next(new SocketIoAccessTokenMissingException())
         }
-
+        const keyRaw = fs.readFileSync(
+            envConfig().mountPath.keys.jwtSecret, 
+            "utf8"
+        )
+        const keyBuffer = crypto.pbkdf2Sync(
+            keyRaw,                 // base key
+            envConfig().salt.jwt,// salt
+            100_000,                // number of hash rounds
+            32,                     // length of key (bytes)
+            "sha256"                // hash function
+        )
+        const secret = keyBuffer.toString("hex")
         const payload = verify(
             token, 
-            envConfig().jwt.accessToken.secret
+            secret
         ) as JwtAccessTokenPayload
-
-        if (!payload.totpVerified) {
-            return next(new SocketIoAccessTokenNotVerifiedException())
-        }
-
         socket.data.userId = payload.id
         return next()
 

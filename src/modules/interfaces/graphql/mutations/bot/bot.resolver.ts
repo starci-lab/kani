@@ -4,7 +4,7 @@ import { UseGuards, UseInterceptors } from "@nestjs/common"
 import {
     GraphQLUser,
     UserJwtLike,
-    GraphQLJwtOnlyVerifiedTOTPAuthGuard,
+    GraphQLJwtOnlyMFAEnabledAuthGuard,
 } from "@modules/passport"
 import {
     AddBotResponse,
@@ -46,7 +46,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Bot added successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => AddBotResponse, {
         description: "Creates and registers a new bot for the authenticated user."
     })
@@ -62,7 +62,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Bot initialized successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => InitializeBotResponse, {
         description: "Initializes a bot for the authenticated user."
     })
@@ -77,7 +77,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Successfully updated liquidity pools for the bot.")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => UpdateBotLiquidityPoolsResponse, {
         description: "Updates the set of liquidity pools managed by a specific liquidity provision bot belonging to the authenticated user.",
     })
@@ -97,7 +97,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Liquidity provision bot started successfully.")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => RunBotResponse, {
         description: "Starts the execution of a liquidity provision bot owned by the authenticated user.",
     })
@@ -117,7 +117,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Liquidity provision bot stopped successfully.")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => StopBotResponse, {
         description: "Stops a currently running liquidity provision bot belonging to the authenticated user.",
     })
@@ -137,7 +137,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Liquidity provision bot RPCs updated successfully.")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => UpdateBotRpcsResponse, {
         description: "Updates the RPC endpoints used by a specific liquidity provision bot.",
     })
@@ -157,7 +157,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Liquidity provision bot explorer updated successfully.")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => UpdateBotExplorerIdResponse, {
         description: "Configures or updates the blockchain explorer integration for a liquidity provision bot.",
     })
@@ -174,7 +174,7 @@ export class BotResolver {
     @GraphQLSuccessMessage("Bot V2 added successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtOnlyVerifiedTOTPAuthGuard)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Mutation(() => AddBotV2Response, {
         description: "Creates and registers a new bot V2 for the authenticated user."
     })
