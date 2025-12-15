@@ -13,7 +13,7 @@ export class ClosePositionSnapshotService {
         private readonly dayjsService: DayjsService,
     ) { }
 
-    async updateClosePositionTransactionRecord(
+    async updateClosePositionRecord(
         {
             closeTxHash,
             positionId,
@@ -23,7 +23,7 @@ export class ClosePositionSnapshotService {
             snapshotTargetBalanceAmountAfterClose,
             snapshotQuoteBalanceAmountAfterClose,
             snapshotGasBalanceAmountAfterClose,
-        }: UpdateClosePositionTransactionRecordParams
+        }: UpdateClosePositionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
             PositionSchema.name
@@ -47,7 +47,7 @@ export class ClosePositionSnapshotService {
     }
 }
 
-export interface UpdateClosePositionTransactionRecordParams {
+export interface UpdateClosePositionRecordParams {
     positionId: string
     closeTxHash: string
     bot: BotSchema

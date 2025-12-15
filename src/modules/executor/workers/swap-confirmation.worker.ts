@@ -1,6 +1,6 @@
 import { 
     BalanceSnapshotService, 
-    SwapTransactionSnapshotService,
+    TransactionSnapshotService,
     SwapConfirmationPayload,
     BalanceService,
 } from "@modules/blockchains"
@@ -23,7 +23,7 @@ export class SwapConfirmationWorker extends WorkerHost {
         private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
-        private readonly swapTransactionSnapshotService: SwapTransactionSnapshotService,
+        private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly eventEmitter: EventEmitter2,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -53,7 +53,7 @@ export class SwapConfirmationWorker extends WorkerHost {
                 gasBalanceAmount: new BN(gasBalanceAmount),
                 session,
             })
-            await this.swapTransactionSnapshotService.addSwapTransactionRecord({
+            await this.transactionSnapshotService.addSwapTransactionRecord({
                 bot,
                 txHash,
                 session,

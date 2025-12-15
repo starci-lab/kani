@@ -92,3 +92,28 @@ registerEnumType(GraphQLTypeBotType, {
         }
     }
 })
+
+export enum TransactionType {
+    Swap = "swap",
+    OpenPosition = "openPosition",
+    ClosePosition = "closePosition",
+}
+
+export const GraphQLTypeTransactionType = createEnumType(TransactionType)
+
+registerEnumType(
+    GraphQLTypeTransactionType, {
+        name: "TransactionType",
+        description: "The type of the transaction",
+        valuesMap: {
+            [TransactionType.Swap]: {
+                description: "The swap transaction"
+            },
+            [TransactionType.OpenPosition]: {
+                description: "The open position transaction"
+            },
+            [TransactionType.ClosePosition]: {
+                description: "The close position transaction"
+            }
+        }
+    })

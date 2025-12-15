@@ -7,7 +7,6 @@ import { ethers } from "ethers"
 import { EncryptionService } from "@modules/crypto"
 import bs58 from "bs58"
 import { GcpKmsService } from "@modules/gcp"
-import { envConfig } from "@modules/env"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
   bot: BotSchema
@@ -31,12 +30,16 @@ export class SignerService {
     }: WithSignerParams<TSigner, TResponse>): Promise<TResponse> {
         let privateKey: string | null = null
         try {
-            if (platformId === PlatformId.Solana) {
+            switch (platformId) {
+            case PlatformId.Solana:
                 privateKey = await this.decryptPrivateKey(bot.encryptedPrivateKey ?? "")
-            } else if (platformId === PlatformId.Sui) {
+                break
+            case PlatformId.Sui:
                 privateKey = await this.decryptPrivateKey(bot.encryptedPrivateKey ?? "")
-            } else if (platformId === PlatformId.Evm) {
+                break
+            case PlatformId.Evm:
                 privateKey = await this.decryptPrivateKey(bot.encryptedPrivateKey ?? "")
+                break
             }
             if (!privateKey) throw new Error("Private key not found")
             const signer = await factory(privateKey)
@@ -90,26 +93,12 @@ export class SignerService {
     public async encryptPrivateKey(
         privateKey: string
     ): Promise<string> {
-        if (envConfig().isProduction) {
-            // we encrypt the private key aes cbc key first
-            const encryptedAesCbcKey = this.encryptionService.encrypt(privateKey)
-            // then we encrypt the private key with the aes cbc key
-            return await this.gcpKmsService.encrypt(encryptedAesCbcKey)
-        }
         return this.encryptionService.encrypt(privateKey)
     }
 
     private async decryptPrivateKey(
         privateKey: string
     ): Promise<string> {
-        if (envConfig().isProduction) {
-            // we decrypt the private key with the aes cbc key
-            const decryptedAesCbcKey = await this.gcpKmsService.decrypt(privateKey)
-            // then we decrypt the private key with the aes cbc key
-            return this.encryptionService.decrypt(
-                Buffer.from(decryptedAesCbcKey).toString("utf8")
-            )
-        }
-        return this.encryptionService.decrypt(privateKey)
+        return await this.gcpKmsService.decrypt(privateKey)
     }
 }

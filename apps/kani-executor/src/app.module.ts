@@ -24,6 +24,8 @@ import { GcpModule } from "@modules/gcp"
 import { SpinnerModule } from "@modules/topcli"
 import { BullModule } from "@modules/bullmq"
 import { MixinModule } from "@modules/mixin"
+import { AxiosModule } from "@modules/axios"
+import { ApolloClientModule } from "@modules/apollo-client"
 
 @Module({
     imports: [
@@ -40,6 +42,12 @@ import { MixinModule } from "@modules/mixin"
             memoryStorage: true,
         }),
         CacheModule.register({
+            isGlobal: true,
+        }),
+        AxiosModule.register({
+            isGlobal: true,
+        }),
+        ApolloClientModule.register({
             isGlobal: true,
         }),
         MixinModule.register({

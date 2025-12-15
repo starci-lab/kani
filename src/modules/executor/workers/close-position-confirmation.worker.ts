@@ -9,6 +9,7 @@ import {
     ClosePositionConfirmationPayload,
     ClosePositionSnapshotService,
     ProfitabilityMathService,
+    TransactionSnapshotService,
 } from "@modules/blockchains"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
@@ -37,6 +38,7 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
     @InjectWinston()
     private readonly logger: WinstonLogger,
     private readonly eventEmitter: EventEmitter2,
+    private readonly transactionSnapshotService: TransactionSnapshotService,
     ) {
         super()
     }
@@ -115,6 +117,11 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
                     "Active position not found",
                 )
             }
+            await this.transactionSnapshotService.addClosePositionTransactionRecord({
+                bot,
+                txHash,
+                session,
+            })
             await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                 bot,
                 targetBalanceAmount: targetBalanceAmountBN || new BN(0),
@@ -122,7 +129,7 @@ export class ClosePositionConfirmationWorker extends WorkerHost {
                 gasBalanceAmount: gasBalanceAmountBN || new BN(0),
                 session,
             })
-            await this.closePositionSnapshotService.updateClosePositionTransactionRecord(
+            await this.closePositionSnapshotService.updateClosePositionRecord(
                 {
                     bot,
                     pnl,

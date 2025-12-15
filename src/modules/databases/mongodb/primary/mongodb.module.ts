@@ -30,6 +30,8 @@ import {
     ConfigSchemaClass,
     SwapTransactionSchema,
     SwapTransactionSchemaClass,
+    TransactionSchema,
+    TransactionSchemaClass,
     PositionSchema,
     PositionSchemaClass,
 } from "./schemas"
@@ -180,6 +182,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: SwapTransactionSchema.name,
                         useFactory: () => SwapTransactionSchemaClass,
+                    },
+                    {
+                        name: TransactionSchema.name,
+                        useFactory: () => TransactionSchemaClass,
                     },
                 ], CONNECTION_NAME),
             ],

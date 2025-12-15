@@ -19,7 +19,7 @@ export class OpenPositionSnapshotService {
         private readonly dayjsService: DayjsService,
     ) {}
 
-    async addOpenPositionTransactionRecord(
+    async addOpenPositionRecord(
         {
             snapshotTargetBalanceAmountBeforeOpen,
             snapshotQuoteBalanceAmountBeforeOpen,
@@ -41,7 +41,7 @@ export class OpenPositionSnapshotService {
             session,
             feeAmountTarget,
             feeAmountQuote,
-        }: AddOpenPositionTransactionRecordParams
+        }: AddOpenPositionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
             PositionSchema.name
@@ -73,7 +73,7 @@ export class OpenPositionSnapshotService {
     }
 }
 
-export interface AddOpenPositionTransactionRecordParams {
+export interface AddOpenPositionRecordParams {
     // clmm
     tickUpper?: number
     tickLower?: number

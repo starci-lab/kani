@@ -8,6 +8,7 @@ import {
     BalanceSnapshotService,
     OpenPositionConfirmationPayload,
     OpenPositionSnapshotService,
+    TransactionSnapshotService,
 } from "@modules/blockchains"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
@@ -30,6 +31,7 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
         private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly transactionSnapshotService: TransactionSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly openPositionSnapshotService: OpenPositionSnapshotService,
@@ -87,7 +89,12 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
             // Record open position transaction snapshot
-            await this.openPositionSnapshotService.addOpenPositionTransactionRecord({
+            await this.transactionSnapshotService.addClosePositionTransactionRecord({
+                bot,
+                txHash,
+                session,
+            })
+            await this.openPositionSnapshotService.addOpenPositionRecord({
                 snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
                 snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
                 snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
