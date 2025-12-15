@@ -5,13 +5,15 @@ import {
     GraphQLUser, 
     GraphQLJwtRefreshTokenAuthGuard, 
     UserJwtLike, 
-    GraphQLJwtAccessTokenAuthGuard 
+    GraphQLJwtAccessTokenAuthGuard, 
+    GraphQLJwtOnlyMFAEnabledAuthGuard
 } from "@modules/passport"
 import { 
     EnableMFAResponse, 
     EnableMFAResponseData, 
     RefreshResponse, 
     RefreshResponseData, 
+    RequestSend2FactorOtpResponse, 
     RequestSignInOtpRequest, 
     RequestSignInOtpResponse,
     VerifySignInOtpRequest,
@@ -92,5 +94,18 @@ export class AuthResolvers {
         @Context("res") res: Response,
     ): Promise<VerifySignInOtpResponseData> {
         return this.authService.verifySignInOtp(request, res)
+    }
+
+    @GraphQLSuccessMessage("Send OTP sent successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @UseThrottler(ThrottlerConfig.Strict)
+    @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
+    @Mutation(() => RequestSend2FactorOtpResponse, {
+        description: "Request a send OTP for 2-factor authentication.",
+    })
+    async requestSend2FactorOtp(
+        @GraphQLUser() user: UserJwtLike,
+    ): Promise<void> {
+        return this.authService.requestSend2FactorOtp(user)
     }
 }

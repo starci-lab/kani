@@ -194,6 +194,13 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: Boolean, required: true, default: false })
         isExitToUsdc: boolean
+
+    @Field(() => Boolean, {
+        description: "Whether the bot backup private key is updated",
+        defaultValue: false,
+    })
+    @Prop({ type: Boolean, required: true, default: false })
+        backupPrivateKey: boolean
     
     // active position
     activePosition?: PositionSchema

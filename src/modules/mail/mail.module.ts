@@ -5,6 +5,7 @@ import { MailerModule } from "@nestjs-modules/mailer"
 import { envConfig } from "@modules/env/config"
 import path from "path"
 import { PugAdapter } from "@nestjs-modules/mailer/dist/adapters/pug.adapter"
+import { Send2FactorOtpMailService } from "./send-2-factor-otp-mail.service"
 
 @Module({})
 export class MailModule extends ConfigurableModuleClass {
@@ -40,9 +41,11 @@ export class MailModule extends ConfigurableModuleClass {
             providers: [
                 ...(dynamicModule.providers || []),
                 SendSignInOtpMailService,
+                Send2FactorOtpMailService,
             ],
             exports: [
                 SendSignInOtpMailService,
+                Send2FactorOtpMailService,
             ],
         }
     }

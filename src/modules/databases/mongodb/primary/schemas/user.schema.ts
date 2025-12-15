@@ -35,7 +35,7 @@ export class UserSchema extends AbstractSchema {
         deprecationReason: "Use privy instead",
     })
     @Prop({ type: String, required: false })
-        email?: string
+        email: string
 
     @Field(() => String, {
         description: "Public username chosen or derived for the user.",

@@ -2,6 +2,7 @@ import { Args, Mutation, Resolver } from "@nestjs/graphql"
 import { UseGuards, UseInterceptors } from "@nestjs/common"
 import {
     GraphQLJwtAccessTokenAuthGuard,
+    GraphQLJwtOnlyMFAEnabledAuthGuard,
     GraphQLUser,
     UserJwtLike,
 } from "@modules/passport"
@@ -15,8 +16,13 @@ import { BotV2Service } from "./bot-v2.service"
 import { 
     CreateBotRequest, 
     CreateBotResponseData, 
-    CreateBotResponse 
+    CreateBotResponse, 
+    BackupBotPrivateKeyRequest,
+    BackupBotPrivateKeyResponseData,
+    BackupBotPrivateKeyResponse
 } from "./bot-v2.dto"
+import { GraphQLTOTPGuard } from "@modules/totp"
+import { GraphQLEmailOtpGuard } from "@modules/mail"
 
 @Resolver()
 export class BotV2Resolver {
@@ -41,5 +47,24 @@ export class BotV2Resolver {
             request: CreateBotRequest,
     ): Promise<CreateBotResponseData> {
         return await this.botV2Service.createBot(user, request)
+    }
+
+    @GraphQLSuccessMessage("Bot private key exported successfully")
+    @UseInterceptors(GraphQLTransformInterceptor)
+    @UseThrottler(ThrottlerConfig.Strict)
+    @UseGuards(
+        GraphQLJwtOnlyMFAEnabledAuthGuard, 
+        GraphQLTOTPGuard,
+        GraphQLEmailOtpGuard
+    )
+    @Mutation(() => BackupBotPrivateKeyResponse, {
+        description: "Backups the private key of a bot for the authenticated user."
+    })
+    async backupBotPrivateKey(
+        @GraphQLUser() user: UserJwtLike,
+        @Args("request", { description: "The request payload for backing up a bot's private key." })
+            request: BackupBotPrivateKeyRequest,
+    ): Promise<BackupBotPrivateKeyResponseData> {
+        return await this.botV2Service.backupBotPrivateKey(user, request)
     }
 }

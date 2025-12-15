@@ -111,3 +111,11 @@ export class VerifySignInOtpResponse
     })
         data: VerifySignInOtpResponseData
 }
+
+@ObjectType({
+    description: "Response returned after successfully requesting a send 2-factor OTP.",
+})
+export class RequestSend2FactorOtpResponse
+    extends AbstractGraphQLResponse
+    implements IAbstractGraphQLResponse {
+}

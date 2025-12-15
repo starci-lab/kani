@@ -12,6 +12,18 @@ export class SnapshotBalancesNotSetException extends AbstractException {
     }
 }
 
+export class BotAlreadyBackupedPrivateKeyException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bot already backuped private key", "BOT_ALREADY_BACKUPED_PRIVATE_KEY_EXCEPTION")
+    }
+}
+
+export class BotNotOwnedByUserException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bot not owned by user", "BOT_NOT_OWNED_BY_USER_EXCEPTION")
+    }
+}
+
 export class SnapshotTargetTokenBalanceAmountNotSetException extends AbstractException {
     constructor(message?: string) {
         super(message || "Snapshot target token balance amount not set", "SNAPSHOT_TARGET_TOKEN_BALANCE_AMOUNT_NOT_SET_EXCEPTION")

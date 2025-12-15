@@ -20,7 +20,7 @@ import {
     UserNotFoundException,
     UserTotpSecretNotFoundException,
 } from "@exceptions"
-import { SendSignInOtpMailService } from "@modules/mail"
+import { SendSignInOtpMailService, Send2FactorOtpMailService } from "@modules/mail"
 import { CodeGeneratorService } from "@modules/code"
 import { createCacheKey, InjectRedisCache, SignInOtpCacheResult } from "@modules/cache"
 import { Cache } from "cache-manager"
@@ -30,6 +30,8 @@ import { CookieService } from "@modules/cookie"
 import { Response } from "express"
 import { TotpService } from "@modules/totp"
 import { EncryptionService } from "@modules/crypto"
+import SuperJSON from "superjson"
+import { InjectSuperJson } from "@modules/mixin"
 
 @Injectable()
 export class AuthService {
@@ -40,10 +42,13 @@ export class AuthService {
     private readonly cacheManager: Cache,
     private readonly jwtAuthService: JwtAuthService,
     private readonly sendSignInOtpMailService: SendSignInOtpMailService,
+    private readonly send2FactorOtpMailService: Send2FactorOtpMailService,
     private readonly codeGeneratorService: CodeGeneratorService,
     private readonly cookieService: CookieService,
     private readonly totpService: TotpService,
-    private readonly encryptionService: EncryptionService
+    private readonly encryptionService: EncryptionService,
+    @InjectSuperJson()
+    private readonly superJson: SuperJSON,
     ) {}
 
     async enableMFA(
@@ -191,5 +196,29 @@ export class AuthService {
             id: user.id,
             accessToken
         }
+    }
+
+    async requestSend2FactorOtp(
+        userLike: UserJwtLike
+    ): Promise<void> {
+        const user = await this.connection
+            .model<UserSchema>(UserSchema.name)
+            .findById(userLike.id)
+        if (!user) {
+            throw new UserNotFoundException("User not found")
+        }
+        const otp = this.codeGeneratorService.generateOtpCode()
+        await this.cacheManager.set(
+            createCacheKey(CacheKey.SendOtpCode, user.id),
+            this.superJson.stringify({
+                otp,
+            }),
+            // temporatory hardcoded to 10 minutes
+            ms("10m"),
+        )   
+        await this.send2FactorOtpMailService.send({
+            email: user.email,
+            otp,
+        })
     }
 }
