@@ -9,12 +9,14 @@ import { ClientSession, Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
 import { ChainId } from "@typedefs"
 import { BN } from "turbos-clmm-sdk"
+import { DayjsService } from "@modules/mixin"
 
 @Injectable()
 export class TransactionSnapshotService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     public async addSwapTransactionRecord(
@@ -40,13 +42,14 @@ export class TransactionSnapshotService {
                         chainId: ChainId.Solana,
                         txHash,
                         bot: bot.id,
+                        timestamp: this.dayjsService.now().toDate(),
                     }
                 ], {
                     session,
                 })
     }
 
-    public async addOpenPositionRecord(
+    public async addOpenPositionTransactionRecord(
         {
             bot,
             session,
@@ -61,6 +64,7 @@ export class TransactionSnapshotService {
                         chainId: ChainId.Solana,
                         txHash,
                         bot: bot.id,
+                        timestamp: this.dayjsService.now().toDate(),
                     }
                 ], {
                     session,
@@ -82,6 +86,7 @@ export class TransactionSnapshotService {
                         chainId: ChainId.Solana,
                         txHash,
                         bot: bot.id,
+                        timestamp: this.dayjsService.now().toDate(),
                     }
                 ], {
                     session,

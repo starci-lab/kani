@@ -9,7 +9,7 @@ import {
 } from "./dynamic.dto"
 import { GraphQLTransformInterceptor } from "../../interceptors"
 import { UseGuards, UseInterceptors } from "@nestjs/common"
-import { GraphQLPrivyAuthGuard } from "@modules/passport"
+import { GraphQLJwtAccessTokenAuthGuard } from "@modules/passport"
 
 /**
  * GraphQL resolver for serving static reference data
@@ -24,7 +24,7 @@ export class DynamicResolver {
     @UseThrottler(ThrottlerConfig.Soft)
     @GraphQLSuccessMessage("Dynamic liquidity pools info fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
-    @UseGuards(GraphQLPrivyAuthGuard)
+    @UseGuards(GraphQLJwtAccessTokenAuthGuard)
     @Query(() => DynamicLiquidityPoolsInfoResponse, {
         description: "Fetch all dynamic liquidity pools.",
     })

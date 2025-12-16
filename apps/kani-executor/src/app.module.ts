@@ -73,6 +73,7 @@ import { ApolloClientModule } from "@modules/apollo-client"
         }),
         PythModule.register({
             isGlobal: true,
+            utilitiesOnly: true,
         }),
         OraModule.register({
             isGlobal: true,

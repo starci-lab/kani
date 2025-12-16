@@ -76,6 +76,8 @@ export interface OpenPositionConfirmationPayload extends BasePayload {
     amountA?: string
     // amount b
     amountB?: string
+    // metadata
+    metadata?: unknown
 }
 
 export interface ClosePositionConfirmationPayload extends BasePayload {

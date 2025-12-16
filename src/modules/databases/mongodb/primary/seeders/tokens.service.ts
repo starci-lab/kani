@@ -252,8 +252,8 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 6,
         chainId: ChainId.Solana,
         tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        coinMarketCapId: "usdt",
-        coinGeckoId: "usdt",
+        coinMarketCapId: "usdc",
+        coinGeckoId: "usdc",
         cexSymbols: {
             [CexId.Binance]: "usdcusdt",
             [CexId.Gate]: "USDC_USDT",

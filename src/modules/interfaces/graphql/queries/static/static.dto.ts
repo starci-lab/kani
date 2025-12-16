@@ -1,6 +1,6 @@
 import { ObjectType, Field } from "@nestjs/graphql"
 import { DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
+import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstracts"
 /**
  * GraphQL response type for the tokens query.
  */

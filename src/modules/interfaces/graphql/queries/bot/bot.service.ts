@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 
-import { InjectPrimaryMongoose, BotSchema, UserSchema } from "@modules/databases"
+import { InjectPrimaryMongoose, BotSchema, UserSchema, PositionSchema } from "@modules/databases"
 import { Connection } from "mongoose"
 import { UserNotFoundException } from "@modules/errors"
 import { 
@@ -59,6 +59,15 @@ export class BotService {
         if (!bot) {
             throw new BotNotFoundException()
         }
-        return bot
+        const botJson = bot.toJSON<BotSchema>()
+        const activePosition = await this.connection
+            .model<PositionSchema>(PositionSchema.name).findOne({
+                bot: bot.id,
+                isActive: true,
+            })
+        if (activePosition) {
+            botJson.activePosition = activePosition.toJSON<PositionSchema>()
+        }
+        return botJson
     }
 }

@@ -1,5 +1,5 @@
 import { Field, InputType, ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
+import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstracts"
 import { BotSchema } from "@modules/databases"
 
 @ObjectType({

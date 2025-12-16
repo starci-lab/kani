@@ -3,6 +3,7 @@ import { ClosePositionParams, IActionService, LiquidityPoolState, OpenPositionPa
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import {
     LoadBalancerName,
+    OrcaPositionMetadata,
 } from "@modules/databases"
 import { SignerService } from "../../signers"
 import { PrimaryMemoryStorageService } from "@modules/databases"
@@ -373,6 +374,9 @@ export class OrcaActionService implements IActionService {
         // Enqueue the job to be processed by the worker.
         // Logic is no longer executed immediately here.
         // Using the worker ensures reliable and asynchronous processing.
+        const metadata: OrcaPositionMetadata = {
+            nftMintAddress: mintKeyPair.address.toString(),
+        }
         await this.openPositionConfirmationQueue.add(
             v4(), 
             {
@@ -388,6 +392,7 @@ export class OrcaActionService implements IActionService {
                 snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmount,
                 tickLower: tickLower.toNumber(),
                 tickUpper: tickUpper.toNumber(),
+                metadata,
             }
         )
     }

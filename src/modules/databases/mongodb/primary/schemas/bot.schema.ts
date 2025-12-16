@@ -203,7 +203,11 @@ export class BotSchema extends AbstractSchema {
         backupPrivateKey: boolean
     
     // active position
-    activePosition?: PositionSchema
+    @Field(() => PositionSchema, {
+        description: "The active position of the bot",
+        nullable: true,
+    })
+        activePosition?: PositionSchema
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

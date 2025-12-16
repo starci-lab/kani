@@ -4,6 +4,7 @@ import { UsersModule } from "./users"
 import { BotModule } from "./bot"
 import { StaticModule } from "./static"
 import { DynamicGraphQLModule } from "./dynamic"
+import { ActivityModule } from "./activity"
 
 @Module({
     imports: [
@@ -11,6 +12,7 @@ import { DynamicGraphQLModule } from "./dynamic"
         BotModule.register({}),
         StaticModule.register({}),
         DynamicGraphQLModule.register({}),
+        ActivityModule.register({}),
     ],
 })
 export class QueriesModule extends ConfigurableModuleClass {}

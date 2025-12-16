@@ -1,5 +1,5 @@
 import { Field, ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
+import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstracts"
 
 @ObjectType({
     description: "Response data returned after successfully verifying a Privy access token.",

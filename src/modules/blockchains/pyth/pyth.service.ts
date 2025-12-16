@@ -6,7 +6,6 @@ import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import { computeDenomination } from "@utils"
 import { 
-    PythTokenNotFoundException, 
     TokenListIsEmptyException 
 } from "@exceptions"
 import { 
@@ -126,6 +125,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
     }
 
     async subscribe() {
+        
         const tokens = this.primaryMemoryStorageService.tokens
             .filter(
                 token => !!token.pythFeedId
@@ -135,7 +135,7 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
         }
         // we use new set to avoid duplicate feed IDs
         const feedIds = [...new Set(tokens.map(token => token.pythFeedId!))]
-
+        // we split the feed ids into chunks of 5
         const stream = await this.hermesClient.getPriceUpdatesStream(
             feedIds
         )
@@ -143,31 +143,36 @@ export class PythService implements OnApplicationBootstrap, OnModuleInit {
         stream.addEventListener("message", async (data: MessageEvent<string>) => {
             const update: PriceUpdate = JSON.parse(data.data)
             for (const data of update.parsed ?? []) {
-                const token = tokens.find(token => token.pythFeedId?.includes(data.id))
-                if (!token) throw new PythTokenNotFoundException(data.id, `Pyth token not found for ${data.id}`)
+                const filteredTokens = tokens.filter(token => token.pythFeedId?.includes(data.id))
+                if (!filteredTokens.length) return
                 const price = computeDenomination(new BN(data.ema_price.price), -data.ema_price.expo)
-                // cache the price and emit the event in parallel
-                await this.asyncService.allIgnoreError([
-                    // cache the price
-                    this.cacheManager.set(
-                        createCacheKey(
-                            CacheKey.PythTokenPrice, 
-                            token.displayId
-                        ),
-                        this.superjson.stringify({
-                            price: price.toNumber(),
-                        }),
-                        envConfig().cache.ttl.pythTokenPrice,
-                    ),
-                    // emit the event
-                    this.events.emit(
-                        EventName.WsPythLastPricesUpdated, {
-                            tokenId: token.displayId,
-                            price: price.toNumber(),
-                        }, {
-                            withoutLocal: true,
-                        })
-                ])
+                const promises: Array<Promise<void>> = []
+                for (const token of filteredTokens) {
+                    promises.push(
+                        (async () => {
+                            await this.cacheManager.set(
+                                createCacheKey(
+                                    CacheKey.PythTokenPrice, 
+                                    token.displayId
+                                ),
+                                this.superjson.stringify({
+                                    price: price.toNumber(),
+                                }),
+                                envConfig().cache.ttl.pythTokenPrice,
+                            )})())   
+                    promises.push((
+                        async () => {
+                            await this.events.emit(
+                                EventName.WsPythLastPricesUpdated, {
+                                    tokenId: token.displayId,
+                                    price: price.toNumber(),
+                                }, {
+                                    withoutLocal: true,
+                                })
+                        })()
+                    )
+                }
+                await this.asyncService.allIgnoreError(promises)
             }
         })
     }

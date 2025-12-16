@@ -4,7 +4,7 @@ import { ChainId, GraphQLTypeChainId } from "@typedefs"
 import {
     AbstractGraphQLResponse,
     IAbstractGraphQLResponse,
-} from "../../abstract"
+} from "../../abstracts"
 import {
     ExplorerId,
     GraphQLTypeExplorerId,

@@ -1,15 +1,18 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { Field, ID } from "@nestjs/graphql"
+import { Field, ID, ObjectType } from "@nestjs/graphql"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { BotSchema } from "./bot.schema"
 import { ChainId, GraphQLTypeChainId } from "@typedefs"
 import { GraphQLTypeTransactionType, TokenId, TransactionType } from "../enums"
 import GraphQLJSON from "graphql-type-json"
 
+@ObjectType({
+    description: "Represents a transaction",
+})
 @Schema({
     timestamps: true,
-    collection: "swap-transactions",
+    collection: "transactions",
 })
 export class TransactionSchema extends AbstractSchema {
     @Field(() => String, {
@@ -42,6 +45,12 @@ export class TransactionSchema extends AbstractSchema {
     })
     @Prop({ type: MongooseSchema.Types.Mixed })
         metadata?: unknown 
+
+    @Field(() => Date, {
+        description: "The timestamp of the transaction",
+    })
+    @Prop({ type: Date, required: true })
+        timestamp: Date
 }
 
 export const TransactionSchemaClass = SchemaFactory.createForClass(TransactionSchema)

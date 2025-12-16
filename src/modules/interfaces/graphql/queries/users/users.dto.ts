@@ -1,5 +1,5 @@
 import { ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
+import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstracts"
 import { UserSchema } from "@modules/databases"
 import { Field } from "@nestjs/graphql"
 

@@ -1,5 +1,5 @@
 import { ObjectType, Field, Float, ID, InputType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstract"
+import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../abstracts"
 import { GraphQLTypeLiquidityPoolId, LiquidityPoolId } from "@modules/databases"
 /**
  * GraphQL response type for the dynamic liquidity pools query.

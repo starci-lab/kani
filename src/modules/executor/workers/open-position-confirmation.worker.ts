@@ -67,6 +67,7 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
             maxBinId,
             amountA,
             amountB,
+            metadata,
         } = job.data
         // Retrieve the mutex for the bot
         const mutex = this.mutexService.mutex(
@@ -89,7 +90,7 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
             // Record open position transaction snapshot
-            await this.transactionSnapshotService.addClosePositionTransactionRecord({
+            await this.transactionSnapshotService.addOpenPositionTransactionRecord({
                 bot,
                 txHash,
                 session,
@@ -114,8 +115,8 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
                 minBinId,
                 amountA: amountA ? new BN(amountA) : undefined,
                 amountB: amountB ? new BN(amountB) : undefined,
+                metadata
             })
-
             // Update bot snapshot balances after the position is opened
             await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                 bot,
