@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-
+ 
     steps:
       # Checkout source
       - name: Checkout code
