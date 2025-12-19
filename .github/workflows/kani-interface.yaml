@@ -6,7 +6,7 @@ on:
     paths:
       - "src/**"
       - "apps/kani-interface/**"
-
+      - ".github/workflows/kani-interface.yaml"
 env:
   IMAGE_NAME: kani-interface
   DOCKERFILE_PATH: apps/kani-interface/Dockerfile
