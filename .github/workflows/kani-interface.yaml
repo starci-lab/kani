@@ -2,8 +2,11 @@ name: build-and-push-kani-interface
 
 on:
   push:
-    branches: [main, master]
- 
+    branches: [main, build]
+    paths:
+      - "src/**"
+      - "apps/kani-interface/**"
+
 env:
   IMAGE_NAME: kani-interface
   DOCKERFILE_PATH: apps/kani-interface/Dockerfile
@@ -15,22 +18,28 @@ jobs:
     environment: kani
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
+      # Setup Docker Buildx (required for multi-arch)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login Docker Registry
       - name: Docker login
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | \
-          docker login ${{ secrets.DOCKER_REGISTRY || 'docker.io' }} \
-            -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build image (single arch)
-        run: |
-          docker build \
-            -f ${{ env.DOCKERFILE_PATH }} \
-            -t ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
-            ${{ env.BUILD_CONTEXT }}
-
-      - name: Push image
-        run: |
-          docker push \
+      # Build & Push Multi-Arch image
+      - name: Build and push (multi-arch)
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.BUILD_CONTEXT }}
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
             ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
