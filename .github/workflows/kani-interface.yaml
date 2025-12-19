@@ -2,28 +2,7 @@ name: build-and-push-kani-interface
 
 on:
   push:
-    branches:
-      - main
-      - master
-    paths:
-      - 'src/**'
-      - 'apps/kani-interface/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/kani-interface.yaml'
-
-  pull_request:
-    branches:
-      - main
-      - master
-    paths:
-      - 'src/**'
-      - 'apps/kani-interface/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/kani-interface.yaml'
-
-  workflow_dispatch:
+    branches: [main, master]
 
 env:
   IMAGE_NAME: kani-interface
@@ -35,53 +14,23 @@ jobs:
     runs-on: self-hosted
     environment: kani
 
-    permissions:
-      contents: read
-      packages: write
-   
     steps:
-      # Checkout source
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Setup Docker Buildx (BuildKit)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Docker login
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | \
+          docker login ${{ secrets.DOCKER_REGISTRY || 'docker.io' }} \
+            -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
-      # Login registry
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build image (single arch)
+        run: |
+          docker build \
+            -f ${{ env.DOCKERFILE_PATH }} \
+            -t ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.BUILD_CONTEXT }}
 
-      # Generate tags & labels
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      # Build & Push image
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ env.BUILD_CONTEXT }}
-          file: ${{ env.DOCKERFILE_PATH }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # Print image digest
-      - name: Image digest
-        run: echo "DIGEST=${{ steps.meta.outputs.digest }}"
+      - name: Push image
+        run: |
+          docker push \
+            ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
