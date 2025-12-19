@@ -1,7 +1,7 @@
 import { ConfigId } from "../enums"
 import { ChainId, DeepPartial } from "@typedefs"
 import { ConfigSchema } from "../schemas"
-import { Seeder } from "nestjs-seeder"
+import { Seeder } from "./seeder.interface"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"

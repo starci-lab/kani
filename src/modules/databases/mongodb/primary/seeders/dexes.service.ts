@@ -1,7 +1,7 @@
 import { DexId } from "../enums"
 import { DeepPartial } from "@typedefs"
 import { DexSchema } from "../schemas"
-import { Seeder } from "nestjs-seeder"
+import { Seeder } from "./seeder.interface"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"

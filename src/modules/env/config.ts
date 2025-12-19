@@ -2,6 +2,7 @@ import { ChainId, Network } from "@typedefs"
 import { v4 } from "uuid"
 import { join } from "path"
 import ms from "ms"
+import Decimal from "decimal.js"
 
 export enum LpBotType {
     System = "system",       // bot self run, use own key
@@ -68,6 +69,14 @@ export const envConfig = () => ({
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
         }
+    },
+    resources: {
+        ram: {
+            threadhold: parseInt(process.env.RAM_ALLOCATION_THRESHOLD || new Decimal(250).mul(1024).mul(1024).mul(1024).toString(), 10),
+        },
+        disk: {
+            threadholdPercent: new Decimal(process.env.DISK_ALLOCATION_THRESHOLD || "0.8").toNumber(),
+        },
     },
     databases: {
         mongoose: {

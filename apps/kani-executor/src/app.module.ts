@@ -26,6 +26,7 @@ import { BullModule } from "@modules/bullmq"
 import { MixinModule } from "@modules/mixin"
 import { AxiosModule } from "@modules/axios"
 import { ApolloClientModule } from "@modules/apollo-client"
+import { TerminusModule } from "@modules/terminus"
 
 @Module({
     imports: [
@@ -156,6 +157,9 @@ import { ApolloClientModule } from "@modules/apollo-client"
             ],
         }),
         ExecutorModule.register({
+            isGlobal: true,
+        }),
+        TerminusModule.register({
             isGlobal: true,
         }),
     ],

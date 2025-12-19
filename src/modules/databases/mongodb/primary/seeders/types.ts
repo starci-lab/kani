@@ -1,4 +1,4 @@
-import { Seeder } from "nestjs-seeder"
+import { Seeder } from "./seeder.interface"
 
 export interface SeedersOptions {
     seeders?: Array<Seeder> | Seeder 

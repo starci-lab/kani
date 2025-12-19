@@ -1,7 +1,7 @@
 import { CexId, TokenId } from "../enums"
 import { ChainId, DeepPartial, TokenType } from "@typedefs"
 import { TokenSchema } from "../schemas"
-import { Seeder } from "nestjs-seeder"
+import { Seeder } from "./seeder.interface"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"

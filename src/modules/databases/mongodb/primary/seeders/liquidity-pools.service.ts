@@ -3,7 +3,7 @@ import { DexId, LiquidityPoolId, LiquidityPoolType, TokenId } from "../enums"
 import { LiquidityPoolSchema } from "../schemas"
 import { DeepPartial, ChainId } from "@typedefs"
 import { createObjectId } from "@utils"
-import { Seeder } from "nestjs-seeder"
+import { Seeder } from "./seeder.interface"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
 

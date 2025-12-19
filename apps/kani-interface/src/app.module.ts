@@ -19,6 +19,7 @@ import { PrivyModule } from "@modules/privy"
 import { MailModule } from "@modules/mail"
 import { SocketIoModule } from "@modules/interfaces"
 import { ScheduleModule } from "@nestjs/schedule"
+import { DependencyName, TerminusModule } from "@modules/terminus"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -90,6 +91,18 @@ import { ScheduleModule } from "@nestjs/schedule"
             isGlobal: true,
             useFederation: false,
             registerAllResolvers: true,
+        }),
+        TerminusModule.register({
+            isGlobal: true,
+            dependencies: [
+                DependencyName.Disk,
+                DependencyName.Memory,
+                DependencyName.Kafka,
+                DependencyName.MongodbPrimary,
+                DependencyName.CacheRedis,
+                DependencyName.AdapterRedis,
+                DependencyName.ThrottlerRedis,
+            ],
         }),
     ],
 })
