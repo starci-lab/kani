@@ -1,13 +1,7 @@
-import { ChainId, Network } from "@typedefs"
 import { v4 } from "uuid"
 import { join } from "path"
 import ms from "ms"
 import Decimal from "decimal.js"
-
-export enum LpBotType {
-    System = "system",       // bot self run, use own key
-    UserBased = "user-based" // bot get user from DB to run
-  }
 
 export const envConfig = () => ({
     isProduction: process.env.NODE_ENV === "production",
@@ -16,9 +10,6 @@ export const envConfig = () => ({
     },
     frontend: {
         url: process.env.FRONTEND_URL || "http://localhost:3000/callback/google",
-    },
-    coinMarketCap: {
-        apiKey: process.env.COIN_MARKET_CAP_API_KEY || "",
     },
     totp: {
         logo: process.env.TOTP_LOGO || "https://scontent.fsgn8-4.fna.fbcdn.net/v/t39.30808-1/534136898_749293854666581_1584213272352607870_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=1d2534&_nc_eui2=AeFqh_r3g1VaKKx2wFccqASXzBUDs9FLWU_MFQOz0UtZT0Pflcmod5znN1RtZH6geE4rZxAs1W7G0U1ZjE0oRwUb&_nc_ohc=HZoHHQaSGX0Q7kNvwFfrVZq&_nc_oc=Adk2goBox0pzD9vSz44dUTtPLaDeFbqBwz4c5LW3gaIyi5a8zCQvMSsKPV_0n2FR_q0&_nc_zt=24&_nc_ht=scontent.fsgn8-4.fna&_nc_gid=v9zPPrhoxGVDOHOHmPQtdw&oh=00_Afbr9TMLXtHZ_BxLmnjH1AVQeq3Q4QJCq5Wtsan6LC5tqg&oe=68DF1667",
@@ -70,6 +61,11 @@ export const envConfig = () => ({
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
         }
     },
+    gcp: {
+        kms: {
+            keyName: process.env.GCP_KMS_KEY_NAME || "projects/kani-473603/locations/global/keyRings/kani-crypto-keyring/cryptoKeys/kani-crypto-key",
+        },
+    },
     resources: {
         ram: {
             threadhold: parseInt(process.env.RAM_ALLOCATION_THRESHOLD || new Decimal(250).mul(1024).mul(1024).mul(1024).toString(), 10),
@@ -81,25 +77,13 @@ export const envConfig = () => ({
     databases: {
         mongoose: {
             primary: {
-                host: process.env.MONGOOSE_HOST || "localhost",
-                port: parseInt(process.env.MONGOOSE_PORT || "27018", 10),
-                password: process.env.MONGOOSE_PASSWORD || "Cuong123_A",
-                username: process.env.MONGOOSE_USERNAME || "root",
-                dbName: process.env.MONGOOSE_DB_NAME || "cicore",
+                host: process.env.PRIMARY_MONGO_DB_HOST || "localhost",
+                port: parseInt(process.env.PRIMARY_MONGO_DB_PORT || "27018", 10),
+                password: process.env.PRIMARY_MONGO_DB_PASSWORD || "Cuong123_A",
+                username: process.env.PRIMARY_MONGO_DB_USERNAME || "root",
+                dbName: process.env.PRIMARY_MONGO_DB_NAME || "cicore",
             },
         },
-    },
-    volume: {
-        data: {
-            path: process.env.VOLUME_DATA_PATH || join(process.cwd(), ".db"),
-        },
-    },
-    deepseek: {
-        apiKey: process.env.DEEPSEEK_API_KEY || "",
-        apiUrl: process.env.DEEPSEEK_API_URL || "https://api.deepseek.ai/v1/analyze",
-    },
-    debug: {
-        kaminoVaultFetch: Boolean(process.env.KAMINO_VAULT_FETCH_DEBUG) || true,
     },
     salt: {
         jwt: process.env.JWT_SALT || "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI",
@@ -110,27 +94,6 @@ export const envConfig = () => ({
         requireAuth: Boolean(process.env.LOKI_REQUIRE_AUTH) || false,
         username: process.env.LOKI_USERNAME,
         password: process.env.LOKI_PASSWORD,
-    },
-    crypto: {
-        cipher: {
-            secret: process.env.CIPHER_SECRET || "Cuong123_A",
-        },
-        bcrypt: {
-            salt: process.env.BCRYPT_SALT || "Cuong123_A",
-        },
-    },
-    googleCloud: {
-        oauth: {
-            clientId: process.env.GOOGLE_CLOUD_OAUTH_CLIENT_ID || "",
-            clientSecret: process.env.GOOGLE_CLOUD_OAUTH_CLIENT_SECRET || "",
-            redirectUri: process.env.GOOGLE_CLOUD_OAUTH_REDIRECT_URI || "",
-        },
-        kms: {
-            keyName: process.env.GOOGLE_CLOUD_KMS_KEY_NAME || "",
-        },
-        secret: {
-            secretName: process.env.GOOGLE_CLOUD_SECRET_NAME || "",
-        },
     },
     jwt: {
         accessToken: {
@@ -144,11 +107,14 @@ export const envConfig = () => ({
     },
     mountPath: {
         gcp: {
-            encryptionSa: process.env.GCP_ENCRYPTION_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "encryption-sa.json"),
+            cryptoKeyEdSa: process.env.GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "crypto-key-ed-sa.json"),
         },
         keys: {
-            jwtSecret: join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
             aes: join(process.cwd(), ".mount", "keys", "aes.key"),
+            jwtSecret: join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
+        },
+        apiKeys: {
+            smtp: join(process.cwd(), ".mount", "api-keys", "smtp.json"),
         },
     },
     interval: {
@@ -161,55 +127,6 @@ export const envConfig = () => ({
         closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s
         rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
     },
-    privy: {
-        appId: process.env.PRIVY_APP_ID || "",
-        appSecret: process.env.PRIVY_APP_SECRET || "",
-    },
-    brevo: {
-        smtpHost: process.env.BREVO_SMTP_HOST || "",
-        smtpPort: process.env.BREVO_SMTP_PORT || "",
-        smtpUser: process.env.BREVO_SMTP_USER || "",
-        smtpKey: process.env.BREVO_SMTP_KEY || "",
-        smtpFrom: process.env.BREVO_SMTP_FROM || "",
-    },
-    rpcs: {
-        [ChainId.Sui]: {
-            http: {
-                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SUI_RPC_URL_${i + 1}`] || ""
-                ).filter((url) => url !== ""),
-                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SUI_RPC_URL_${i + 1}_TESTNET`] || ""
-                ).filter((url) => url !== ""),
-            },
-            ws: {
-                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SUI_WS_URL_${i + 1}`] || ""
-                ).filter((url) => url !== ""),
-                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SUI_WS_URL_${i + 1}_TESTNET`] || ""
-                ).filter((url) => url !== ""),
-            },
-        },
-        [ChainId.Solana]: {
-            http: {
-                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SOLANA_RPC_URL_${i + 1}`] || ""
-                ).filter((url) => url !== ""),
-                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SOLANA_RPC_URL_${i + 1}_TESTNET`] || ""
-                ).filter((url) => url !== ""),
-            },
-            ws: {
-                [Network.Mainnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SOLANA_WS_URL_${i + 1}`] || ""
-                ).filter((url) => url !== ""),
-                [Network.Testnet]: Array.from({ length: 10 }, (_, i) =>
-                    process.env[`SOLANA_WS_URL_${i + 1}_TESTNET`] || ""
-                ).filter((url) => url !== ""),
-            },
-        },
-    },
     bullmq: {
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
         failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
@@ -218,36 +135,6 @@ export const envConfig = () => ({
         origins: Array.from({ length: 10 }, (_, i) =>
             process.env[`CORS_ORIGIN_${i + 1}`] || ""
         ).filter((url) => url !== ""),
-    },
-    lpBot: {
-        // Determine bot type:
-        // - System: a local NestJS bot running without external connections.  
-        //   It charges a fixed fee of (1% ROI) for each processed transaction.  
-        // - User-based: a cloud-enabled bot that fetches user info from the DB,  
-        //   used when users want to run their own bots on the cloud.
-        type: process.env.LP_BOT_TYPE || LpBotType.System,
-        // Env for system bot
-        // we use userId to identify the user
-        userId: process.env.LP_BOT_USER_ID,
-        exitToUsdc: Boolean(process.env.LP_BOT_EXIT_TO_USDC) || false,
-        priorityToken: process.env.LP_BOT_PRIORITY_TOKEN,
-        // Env for user-based bot
-        // we use instanceId to identify the instance
-        instanceId: process.env.LP_BOT_INSTANCE_ID,
-        appName: process.env.APP_NAME || "lp-bot",
-        enablePriceFetcher: Boolean(process.env.ENABLE_PRICE_FETCHER) || true,
-        suiWallet: {
-            accountAddress: process.env.LP_BOT_WALLET_ACCOUNT_ADDRESS || "",
-            encryptedPrivateKey: process.env.LP_BOT_SUI_WALLET_ENCRYPTED_PRIVATE_KEY || "",
-        },
-        evmWallet: {
-            accountAddress: process.env.LP_BOT_EVM_WALLET_ACCOUNT_ADDRESS || "",
-            encryptedPrivateKey: process.env.LP_BOT_EVM_WALLET_ENCRYPTED_PRIVATE_KEY || "",
-        },
-        solanaWallet: {
-            accountAddress: process.env.LP_BOT_SOLANA_WALLET_ACCOUNT_ADDRESS || "",
-            encryptedPrivateKey: process.env.LP_BOT_SOLANA_WALLET_ENCRYPTED_PRIVATE_KEY || "",
-        },
     },
     kafka: {
         clientId: process.env.KAFKA_CLIENT_ID || v4(),

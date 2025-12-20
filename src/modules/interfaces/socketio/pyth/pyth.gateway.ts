@@ -17,7 +17,6 @@ import {
 import { Cache } from "cache-manager"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { PythTokenPriceNotFoundException } from "@exceptions"
 import { SocketIoEvent, PythPriceUpdated } from "@modules/socketio"
 
 @PythWebSocketGateway()
@@ -75,18 +74,22 @@ export class PythGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
                 promises.push(
                     (
                         async () => {
+                            // get the price from the cache
                             const priceCacheResult = await this.cacheManager.get<string>(
                                 createCacheKey(
                                     CacheKey.PythTokenPrice, 
                                     token.displayId
                                 ),
                             )
+                            // if the price is not found, push the price 0
                             if (!priceCacheResult) {
-                                throw new PythTokenPriceNotFoundException(
-                                    token.displayId, 
-                                    "Pyth token price not found"
-                                )
+                                prices.push({
+                                    tokenId: token.displayId,
+                                    price: 0,
+                                })
+                                return
                             }
+                            // if the price is found, push the price
                             const { 
                                 price 
                             } = this.superjson.parse<PythTokenPriceCacheResult>(priceCacheResult)

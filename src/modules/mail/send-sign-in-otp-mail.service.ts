@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { MailerService } from "@nestjs-modules/mailer"
-import { envConfig } from "@modules/env/config"
+import { KeyStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class SendSignInOtpMailService {
     constructor(
-        private readonly mailerService: MailerService
+        private readonly mailerService: MailerService,
+        private readonly keyStorageService: KeyStorageService
     ) {}
 
     async send({
@@ -14,7 +15,7 @@ export class SendSignInOtpMailService {
     }: SendSignInOtpMailParams) {
         await this.mailerService.sendMail({
             to: email,
-            from: envConfig().brevo.smtpFrom,
+            from: this.keyStorageService.smtpConfig.from,
             subject: `${otp} is your sign in OTP for Kani`,
             template: "sign-in-otp",
             context: {

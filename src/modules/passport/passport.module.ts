@@ -1,10 +1,8 @@
 import { Module } from "@nestjs/common"
 import {
-    GoogleAuthStrategy,
     JwtAccessTokenStrategy,
     JwtAccessTokenOnlyMFAEnabledStrategy,
     JwtRefreshTokenStrategy,
-    PrivyAuthTokenStrategy
 } from "./strategies"
 import { PassportModule as NestPassportModule } from "@nestjs/passport"
 import { ConfigurableModuleClass } from "./passport.module-definition"
@@ -17,12 +15,10 @@ import { JwtAuthService } from "./jwt"
         JwtModule
     ],
     providers: [
-        GoogleAuthStrategy,
         JwtAccessTokenStrategy,
         JwtAccessTokenOnlyMFAEnabledStrategy,
         JwtRefreshTokenStrategy,
         JwtAuthService,
-        PrivyAuthTokenStrategy,
     ],
     exports: [JwtAuthService],
 })

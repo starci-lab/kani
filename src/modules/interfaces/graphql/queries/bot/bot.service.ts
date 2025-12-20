@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 
 import { InjectPrimaryMongoose, BotSchema, UserSchema, PositionSchema } from "@modules/databases"
 import { Connection } from "mongoose"
-import { UserNotFoundException } from "@modules/errors"
+import { UserNotFoundException } from "@exceptions"
 import { 
     ExportedAccountRequest, 
     ExportedAccountResponseData,

@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { KeyManagementServiceClient } from "@google-cloud/kms"
-import { envConfig } from "../env/config"
 import { InjectGcpKmsClient } from "./gpc.decorators"
 import { KmsNotFoundException } from "@exceptions"
+import { envConfig } from "@modules/env/config"
 
 @Injectable()
 export class GcpKmsService {
@@ -18,16 +18,15 @@ export class GcpKmsService {
       typeof plaintext === "string"
           ? Buffer.from(plaintext, "utf8")
           : plaintext
+
         
         const [result] = await this.kmsClient.encrypt({
-            name: envConfig().googleCloud.kms.keyName,
+            name: envConfig().gcp.kms.keyName,
             plaintext: rawData,
         })
-
         if (!result.ciphertext) {
             throw new KmsNotFoundException("KMS encryption failed: ciphertext is empty")
         }
-
         return Buffer.from(result.ciphertext).toString("base64")
     }
 
@@ -35,7 +34,7 @@ export class GcpKmsService {
         ciphertext: string
     ): Promise<string> {
         const [result] = await this.kmsClient.decrypt({
-            name: envConfig().googleCloud.kms.keyName,
+            name: envConfig().gcp.kms.keyName,
             ciphertext: Buffer.from(ciphertext, "base64"),
         })
         if (!result.plaintext) {

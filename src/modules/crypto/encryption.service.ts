@@ -1,45 +1,74 @@
 import { Injectable } from "@nestjs/common"
 import crypto from "crypto"
-import fs from "fs"
-import { join } from "path"
 import { envConfig } from "@modules/env"
+import { KeyStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class EncryptionService {
-    private readonly ivLength = 16 // AES block size
-    constructor() {}
-    // Get AES-CBC key
-    private getAesCbcKey(): Buffer {
-        const aseKeyPath = join(process.cwd(), ".mount", "keys", "aes.key")
-        const keyRaw = fs.readFileSync(aseKeyPath, "utf8")
+    // AES block size for CBC mode (16 bytes = 128 bits)
+    private readonly ivLength = 16
+
+    constructor(
+        // Service used to securely retrieve the base AES key
+        private readonly keyStorageService: KeyStorageService,
+    ) {}
+
+    /**
+     * Derive a 256-bit AES-CBC key using PBKDF2.
+     * - Base key is retrieved from the filesystem
+     * - Salt comes from environment configuration
+     * - PBKDF2 strengthens the key against brute-force attacks
+     */
+    private async getAesKey(): Promise<Buffer> {
+        // Retrieve base AES key (secret material)
+        // Derive a strong 256-bit key using PBKDF2
         const keyBuffer = crypto.pbkdf2Sync(
-            keyRaw,                 // base key
-            envConfig().salt.aesCbc,// salt
-            100_000,                // number of hash rounds
-            32,                     // length of key (bytes)
-            "sha256"                // hash function
+            this.keyStorageService.aes,                  // Base key material
+            envConfig().salt.aesCbc, // Salt value
+            100_000,                 // Number of iterations
+            32,                      // Output key length (32 bytes = 256 bits)
+            "sha256"                 // Hash algorithm
         )
+        // Return the derived key
         return keyBuffer
     }
-    // Encrypt AES-CBC
-    encrypt(
-        plainText: string
-    ): string {
+
+    /**
+     * Encrypt plaintext using AES-256-CBC.
+     * - Generates a random IV for each encryption
+     * - Returns IV and ciphertext encoded in Base64
+     * - Output format: iv:ciphertext
+     */
+    async encrypt(plainText: string): Promise<string> {
+        const key = await this.getAesKey()
+        // Generate a random Initialization Vector (IV)
         const iv = crypto.randomBytes(this.ivLength)
-        const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(this.getAesCbcKey()), iv)
+        // Create AES-CBC cipher
+        const cipher = crypto.createCipheriv("aes-256-cbc", key, iv)
+        // Encrypt plaintext
         let encrypted = cipher.update(plainText, "utf8", "base64")
         encrypted += cipher.final("base64")
+        // Prepend IV so it can be used during decryption
         return iv.toString("base64") + ":" + encrypted
     }
-    // Decrypt AES-CBC
-    decrypt(
-        cipherText: string
-    ): string {
+
+    /**
+     * Decrypt AES-256-CBC encrypted data.
+     * - Expects input format: iv:ciphertext
+     * - Uses the same derived key and extracted IV
+     */
+    async decrypt(cipherText: string): Promise<string> {
+        const key = await this.getAesKey()
+        // Split IV and encrypted payload
         const [ivBase64, encrypted] = cipherText.split(":")
+        // Decode IV from Base64
         const iv = Buffer.from(ivBase64, "base64")
-        const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(this.getAesCbcKey()), iv)
+        // Create AES-CBC decipher
+        const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv)
+        // Decrypt ciphertext
         let decrypted = decipher.update(encrypted, "base64", "utf8")
         decrypted += decipher.final("utf8")
+        // Return decrypted plaintext
         return decrypted
     }
 }

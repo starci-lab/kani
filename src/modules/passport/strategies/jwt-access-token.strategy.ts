@@ -4,6 +4,8 @@ import { ExtractJwt, Strategy } from "passport-jwt"
 import { UserJwtLike } from "../types"
 import { UserHasNotCompletedMFAAuthenticationException } from "@exceptions"
 import { JwtAuthService } from "../jwt"
+import { KeyStorageService } from "@modules/filesystem"
+import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 export const JWT_ACCESS_TOKEN_STRATEGY = "jwt-access-token"
 @Injectable()
@@ -12,12 +14,16 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     JWT_ACCESS_TOKEN_STRATEGY
 ) {
     constructor(
-        jwtAuthService: JwtAuthService,
+        private readonly jwtAuthService: JwtAuthService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: jwtAuthService.getJwtSecretKey(),
+            secretOrKeyProvider: async () => {
+                await this.readinessWatcherFactoryService.waitUntilReady(KeyStorageService.name)
+                return this.jwtAuthService.getJwtSecretKey()
+            },
         })
     }
 
@@ -33,12 +39,16 @@ export class JwtAccessTokenOnlyMFAEnabledStrategy extends PassportStrategy(
     JWT_ACCESS_TOKEN_ONLY_MFA_ENABLED_STRATEGY
 ) {
     constructor(
-        jwtAuthService: JwtAuthService,
+        private readonly jwtAuthService: JwtAuthService,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: jwtAuthService.getJwtSecretKey(),
+            secretOrKeyProvider: async () => {
+                await this.readinessWatcherFactoryService.waitUntilReady(KeyStorageService.name)
+                return this.jwtAuthService.getJwtSecretKey()
+            },
         })
     }
 

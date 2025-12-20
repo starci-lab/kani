@@ -39,7 +39,7 @@ export class UsersService {
         if (!user.encryptedTotpSecret) {
             throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
-        const decryptedTotpSecret = this.encryptionService.decrypt(user.encryptedTotpSecret)
+        const decryptedTotpSecret = await this.encryptionService.decrypt(user.encryptedTotpSecret)
         return {
             totpSecret: decryptedTotpSecret,
             totpSecretUrl: this.totpService.generateTotpSecretUrl(decryptedTotpSecret),

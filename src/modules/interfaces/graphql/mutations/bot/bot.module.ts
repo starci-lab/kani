@@ -1,16 +1,12 @@
 import { Module } from "@nestjs/common"
-import { BotService } from "./bot.service"
 import { ConfigurableModuleClass } from "./bot.module-definition"
-import { BotResolver } from "./bot.resolver"
-import { BotV2Service } from "./bot-v2.service"
-import { BotV2Resolver } from "./bot-v2.resolver"
+import { BackupBotPrivateKeyModule } from "./backup-bot-private-key"
+import { CreateBotModule } from "./create-bot"
 
 @Module({
-    providers: [
-        BotService, 
-        BotResolver, 
-        BotV2Service, 
-        BotV2Resolver
+    imports: [
+        BackupBotPrivateKeyModule,
+        CreateBotModule,
     ],
 })
 export class BotModule extends ConfigurableModuleClass {}

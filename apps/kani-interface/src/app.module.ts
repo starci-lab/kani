@@ -15,21 +15,22 @@ import { GraphQLModule } from "@modules/interfaces"
 import { ThrottlerModule } from "@modules/throttler"
 import { CookieModule } from "@modules/cookie"
 import { SentryModule } from "@modules/sentry"
-import { PrivyModule } from "@modules/privy"
 import { MailModule } from "@modules/mail"
 import { SocketIoModule } from "@modules/interfaces"
 import { ScheduleModule } from "@nestjs/schedule"
 import { DependencyName, TerminusModule } from "@modules/terminus"
+import { FilesystemModule } from "@modules/filesystem"
+
 @Module({
     imports: [
         EnvModule.forRoot(),
+        FilesystemModule.register({
+            isGlobal: true,
+        }),
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-interface",
             level: WinstonLevel.Info,
-        }),
-        PrivyModule.register({
-            isGlobal: true,
         }),
         PassportModule.register({
             isGlobal: true,

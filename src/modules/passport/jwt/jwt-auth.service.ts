@@ -11,7 +11,7 @@ import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 import { Cache } from "cache-manager"
 import crypto from "crypto"
-import fs from "fs"
+import { KeyStorageService } from "@modules/filesystem"
 
 export interface GenerateParams {
     id: string
@@ -30,18 +30,15 @@ export class JwtAuthService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly msService: MsService,
-        private readonly asyncService: AsyncService
+        private readonly asyncService: AsyncService,
+        private readonly keyStorageService: KeyStorageService
     ) { }
 
     // get JWT secret key
     // we require both secret key and salt to generate the key, ensure the key is not compromised
     public getJwtSecretKey(): string {
-        const keyRaw = fs.readFileSync(
-            envConfig().mountPath.keys.jwtSecret, 
-            "utf8"
-        )
         const keyBuffer = crypto.pbkdf2Sync(
-            keyRaw,                 // base key
+            this.keyStorageService.jwtSecret,                 // base key
             envConfig().salt.jwt,// salt
             100_000,                // number of hash rounds
             32,                     // length of key (bytes)

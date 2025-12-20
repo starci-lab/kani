@@ -27,7 +27,7 @@ export class GraphQLTOTPGuard implements CanActivate {
         if (!user.encryptedTotpSecret) {
             throw new UnauthorizedException("Encrypted TOTP secret is required in JWT payload")
         }
-        const decryptedTotpSecret = this.encryptionService.decrypt(user.encryptedTotpSecret)
+        const decryptedTotpSecret = await this.encryptionService.decrypt(user.encryptedTotpSecret)
         const verified = this.totpService.verifyTotp(totpCode, decryptedTotpSecret)
         if (!verified) {
             throw new UnauthorizedException("Invalid TOTP code")

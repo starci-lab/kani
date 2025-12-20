@@ -1,16 +1,18 @@
 import { Module } from "@nestjs/common"
-import { AuthResolvers } from "./auth.resolvers"
-import { AuthService } from "./auth.service"
 import { ConfigurableModuleClass } from "./auth.module-definition"
-import { AuthPrivyResolvers } from "./auth-privy.resolvers"
-import { AuthPrivyService } from "./auth-privy.service"
+import { EnableMFAModule } from "./enable-mfa"
+import { RefreshModule } from "./refresh"
+import { RequestSignInOtpModule } from "./request-sign-in-otp"
+import { VerifySignInOtpModule } from "./verify-sign-in-otp"
+import { RequestSend2FactorOtpModule } from "./request-send-2-factor-otp"
 
 @Module({
-    providers: [
-        AuthResolvers, 
-        AuthService, 
-        AuthPrivyResolvers, 
-        AuthPrivyService
+    imports: [
+        EnableMFAModule,
+        RefreshModule,
+        RequestSignInOtpModule,
+        VerifySignInOtpModule,
+        RequestSend2FactorOtpModule,
     ],
 })
 export class AuthModule extends ConfigurableModuleClass {}
