@@ -66,4 +66,4 @@ COPY --from=build /usr/src/app/dist/apps/kani-interface ./dist
 # Expose the port that the application listens on.
 EXPOSE 3001
 # Run the application.
-CMD ["node", "main"]
+CMD ["node", "dist/main"]
