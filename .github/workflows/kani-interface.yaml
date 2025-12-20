@@ -51,4 +51,4 @@ jobs:
           push: true                             # Push image after successful build
           platforms: linux/amd64                 # Target CPU architecture
           tags: |
-            ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:1.0.0
