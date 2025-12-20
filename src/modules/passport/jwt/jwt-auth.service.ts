@@ -150,7 +150,7 @@ export class JwtAuthService {
     ): Promise<JwtRefreshTokenPayload | null> {
         try {
             const decoded = await this.jwtService.verifyAsync<JwtRefreshTokenPayload>(token, {
-                secret: envConfig().jwt.refreshToken.secret
+                secret: this.getJwtSecretKey(),
             })
             return {
                 sessionId: decoded.sessionId,
