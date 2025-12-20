@@ -110,11 +110,11 @@ export const envConfig = () => ({
             cryptoKeyEdSa: process.env.GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "crypto-key-ed-sa.json"),
         },
         keys: {
-            aes: join(process.cwd(), ".mount", "keys", "aes.key"),
-            jwtSecret: join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
+            aes: process.env.AES_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "aes.key"),
+            jwtSecret: process.env.JWT_SECRET_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
         },
         apiKeys: {
-            smtp: join(process.cwd(), ".mount", "api-keys", "smtp.json"),
+            smtp: process.env.SMTP_MOUNT_PATH || join(process.cwd(), ".mount", "api-keys", "smtp.json"),
         },
     },
     interval: {
