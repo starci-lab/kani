@@ -50,5 +50,7 @@ jobs:
           file: ${{ env.DOCKERFILE_PATH }}       # Dockerfile location
           push: true                             # Push image after successful build
           platforms: linux/amd64                 # Target CPU architecture
+          cache-from: type=registry,ref=repo/kani-interface:buildcache
+          cache-to: type=registry,ref=repo/kani-interface:buildcache,mode=max
           tags: |
-            ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:1.0.0
+            ${{ secrets.DOCKER_REGISTRY || 'docker.io' }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
