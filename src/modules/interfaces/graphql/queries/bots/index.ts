@@ -1,1 +1,1 @@
-export * from "./bot.module"
+export * from "./bots.module"

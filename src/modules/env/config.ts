@@ -17,6 +17,9 @@ export const envConfig = () => ({
         dsn: process.env.SENTRY_DSN || "https://4b08d10ac2853aaf7c60950ad2eb6114@o4510097305042944.ingest.de.sentry.io/4510097307074640",
         version: process.env.VERSION || "0.0.1",
     },
+    intervalLimits: {
+        history: parseInt(process.env.INTERVAL_LIMITS_HISTORY_LIMIT || "1000", 10),
+    },
     redis: {
         cache: {
             host: process.env.REDIS_CACHE_HOST || "localhost",
@@ -59,6 +62,7 @@ export const envConfig = () => ({
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
+            api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
         }
     },
     gcp: {

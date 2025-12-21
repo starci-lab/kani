@@ -19,8 +19,8 @@ export class BotResolver {
     constructor(
         private readonly botService: BotService,
     ) { }
-    
-    @UseThrottler(ThrottlerConfig.Strict)
+
+    @UseThrottler(ThrottlerConfig.Soft)
     @GraphQLSuccessMessage("Bot fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)

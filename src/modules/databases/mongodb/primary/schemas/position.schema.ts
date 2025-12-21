@@ -150,6 +150,8 @@ export class PositionSchema extends AbstractSchema {
         isSimulated?: boolean
 }
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
+// index the position by bot, isActive and positionClosedAt
+PositionSchemaClass.index({ bot: 1, isActive: 1, positionClosedAt: 1 }, { unique: true })
 
 export interface RaydiumPositionMetadata {
     nftMintAddress: string
@@ -158,3 +160,4 @@ export interface RaydiumPositionMetadata {
 export interface OrcaPositionMetadata {
     nftMintAddress: string
 }
+

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import crypto from "crypto"
-import { envConfig } from "@modules/env"
 import { KeyStorageService } from "@modules/filesystem"
 
 @Injectable()
@@ -19,18 +18,8 @@ export class EncryptionService {
      * - Salt comes from environment configuration
      * - PBKDF2 strengthens the key against brute-force attacks
      */
-    private async getAesKey(): Promise<Buffer> {
-        // Retrieve base AES key (secret material)
-        // Derive a strong 256-bit key using PBKDF2
-        const keyBuffer = crypto.pbkdf2Sync(
-            this.keyStorageService.aes,                  // Base key material
-            envConfig().salt.aesCbc, // Salt value
-            100_000,                 // Number of iterations
-            32,                      // Output key length (32 bytes = 256 bits)
-            "sha256"                 // Hash algorithm
-        )
-        // Return the derived key
-        return keyBuffer
+    private getAesKey(): string {
+        return this.keyStorageService.aesKey
     }
 
     /**
@@ -40,7 +29,7 @@ export class EncryptionService {
      * - Output format: iv:ciphertext
      */
     async encrypt(plainText: string): Promise<string> {
-        const key = await this.getAesKey()
+        const key = this.getAesKey()
         // Generate a random Initialization Vector (IV)
         const iv = crypto.randomBytes(this.ivLength)
         // Create AES-CBC cipher
@@ -58,7 +47,7 @@ export class EncryptionService {
      * - Uses the same derived key and extracted IV
      */
     async decrypt(cipherText: string): Promise<string> {
-        const key = await this.getAesKey()
+        const key = this.getAesKey()
         // Split IV and encrypted payload
         const [ivBase64, encrypted] = cipherText.split(":")
         // Decode IV from Base64

@@ -1,6 +1,8 @@
 import BN from "bn.js"
 
 export enum CacheKey {
+    History = "history",
+    HistoryNeedRevalidated = "historyNeedRevalidated",
     OpenPositionTransaction = "openPositionTransaction",
     ClosePositionTransaction = "closePositionTransaction",
     WsCexLastPrice = "wsCexLastPrice",
@@ -20,6 +22,7 @@ export enum CacheKey {
     PoolAnalytics = "poolAnalytics",
     SignInOtpCode = "signInOtpCode",
     SendOtpCode = "sendOtpCode",
+
 }
 
 export interface PythTokenPriceCacheResult {

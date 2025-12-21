@@ -4,7 +4,7 @@ import { DynamicLiquidityPoolsInfoModule } from "./dynamic-liquidity-pools-info"
 
 @Module({
     imports: [
-        DynamicLiquidityPoolsInfoModule,
+        DynamicLiquidityPoolsInfoModule.register({}),
     ],
 })
 export class DynamicGraphQLModule extends ConfigurableModuleClass {}

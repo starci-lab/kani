@@ -10,7 +10,6 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 import { Cache } from "cache-manager"
-import crypto from "crypto"
 import { KeyStorageService } from "@modules/filesystem"
 
 export interface GenerateParams {
@@ -34,17 +33,8 @@ export class JwtAuthService {
         private readonly keyStorageService: KeyStorageService
     ) { }
 
-    // get JWT secret key
-    // we require both secret key and salt to generate the key, ensure the key is not compromised
     public getJwtSecretKey(): string {
-        const keyBuffer = crypto.pbkdf2Sync(
-            this.keyStorageService.jwtSecret,                 // base key
-            envConfig().salt.jwt,// salt
-            100_000,                // number of hash rounds
-            32,                     // length of key (bytes)
-            "sha256"                // hash function
-        )
-        return keyBuffer.toString("hex")
+        return this.keyStorageService.jwtSecretKey
     }
 
     // generate access token and refresh token for authentication

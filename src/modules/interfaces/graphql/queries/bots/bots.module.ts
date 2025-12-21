@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./bot.module-definition"
+import { ConfigurableModuleClass } from "./bots.module-definition"
 import { BotModule } from "./bot"
 
 @Module({
     imports: [
-        BotModule
+        BotModule.register({}),
     ],
 })
 export class BotsModule extends ConfigurableModuleClass {}

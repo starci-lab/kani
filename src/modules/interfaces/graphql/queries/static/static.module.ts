@@ -6,9 +6,9 @@ import { DexesModule } from "./dexes"
 
 @Module({
     imports: [
-        TokensModule,
-        LiquidityPoolsModule,
-        DexesModule,
+        TokensModule.register({}),
+        LiquidityPoolsModule.register({}),
+        DexesModule.register({}),
     ],
 })
 export class StaticModule extends ConfigurableModuleClass {}

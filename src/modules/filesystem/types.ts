@@ -24,3 +24,11 @@ export interface GcpConfig {
 export interface KmsConfig {
     keyName: string
 }
+
+export interface SmtpConfig {
+    host: string
+    port: number
+    user: string
+    key: string
+    from: string
+}

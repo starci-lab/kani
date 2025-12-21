@@ -5,8 +5,8 @@ import { TotpSecretModule } from "./totp-secret"
 
 @Module({
     imports: [
-        UserModule,
-        TotpSecretModule,
+        UserModule.register({}),
+        TotpSecretModule.register({}),
     ],
 })
 export class UsersModule extends ConfigurableModuleClass {}

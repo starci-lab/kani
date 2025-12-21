@@ -1,7 +1,6 @@
-import { envConfig } from "@modules/env/config"
 import { Injectable } from "@nestjs/common"
-import { promises as fs } from "fs"
-
+import { SmtpConfig } from "./types"
+import { getAesKey, getCryptoKeyEdSa, getJwtSecretKey, getSmtpConfig } from "./pure"
 /**
  * Service responsible for reading secrets mounted into the container filesystem.
  *
@@ -14,45 +13,19 @@ import { promises as fs } from "fs"
  */
 @Injectable()
 export class MountFilesystemService {
-    /**
-     * Reads the EdDSA (Ed25519) private key from the filesystem.
-     * - Used for cryptographic signing and verification
-     * - Key is mounted as a read-only Kubernetes Secret volume
-     */
-    async cryptoKeyEdSa(): Promise<string> {
-        return await fs.readFile(
-            envConfig().mountPath.gcp.cryptoKeyEdSa,
-            "utf8"
-        )
+    smtpConfig(): SmtpConfig {
+        return getSmtpConfig()
     }
 
-    async aes(): Promise<string> {
-        return await fs.readFile(
-            envConfig().mountPath.keys.aes,
-            "utf8"
-        )
+    jwtSecretKey(): string {
+        return getJwtSecretKey()
     }
 
-    async jwtSecret(): Promise<string> {
-        return await fs.readFile(
-            envConfig().mountPath.keys.jwtSecret,
-            "utf8"
-        )
+    aesKey(): string {
+        return getAesKey()
     }
 
-    async smtpConfig(): Promise<SmtpConfig> {
-        const config = await fs.readFile(
-            envConfig().mountPath.apiKeys.smtp,
-            "utf8"
-        )
-        return JSON.parse(config) as SmtpConfig
+    cryptoKeyEdSa(): string {
+        return getCryptoKeyEdSa()
     }
-}
-
-export interface SmtpConfig {
-    host: string
-    port: number
-    user: string
-    key: string
-    from: string
 }
