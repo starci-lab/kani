@@ -29,7 +29,9 @@ for powering Kani's applications and integrations.",
     setupCors(app)
     // use the authenticated redis io adapter
     const redisIoAdapter = new AuthenticatedRedisIoAdapter(app)
-    await redisIoAdapter.connectToRedis()
+    const redis = 
+    redisIoAdapter.setClient(redisClientOrCluster)
+    await redisIoAdapter.connect()
     app.useWebSocketAdapter(redisIoAdapter)
     app.use(compression())
     // start the app

@@ -1,9 +1,10 @@
 import { Module } from "@nestjs/common"
-import { DynamicResolver } from "./dynamic.resolver"
-import { DynamicService } from "./dynamic.service"
 import { ConfigurableModuleClass } from "./dynamic.module-definition"
+import { DynamicLiquidityPoolsInfoModule } from "./dynamic-liquidity-pools-info"
 
 @Module({
-    providers: [DynamicResolver, DynamicService],
+    imports: [
+        DynamicLiquidityPoolsInfoModule,
+    ],
 })
 export class DynamicGraphQLModule extends ConfigurableModuleClass {}

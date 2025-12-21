@@ -1,33 +1,27 @@
-import { IoAdapter } from "@nestjs/platform-socket.io"
 import { createAdapter } from "@socket.io/redis-adapter"
-import { ServerOptions, Server } from "socket.io"
-import { envConfig } from "@modules/env"
-import { createClient } from "redis"
+import { ServerOptions } from "http"
+import { RedisOrCluster } from "@modules/native"
+import { IoAdapter } from "@nestjs/platform-socket.io"
 
 export class AuthenticatedRedisIoAdapter extends IoAdapter {
     private adapterConstructor: ReturnType<typeof createAdapter>
+    private redisClientOrCluster: RedisOrCluster
 
-    async connectToRedis() {
-        // create the client for the publisher
-        // temporarily use the createClient instead of createCluster
-        // tech-debt: we need to use the createCluster instead of createClient
-        const pubClient = createClient({
-            url: `redis://${envConfig().redis.adapter.host}:${envConfig().redis.adapter.port}`,
-            password: envConfig().redis.adapter.password,
-        })
-        // duplicate the client for the subscriber
-        const subClient = pubClient.duplicate()
-        // connect to redis
-        await Promise.all([pubClient.connect(), subClient.connect()])
+    public setClient(redisClientOrCluster: RedisOrCluster) {
+        this.redisClientOrCluster = redisClientOrCluster
+    }
+
+    public async connect(): Promise<void> {
+        // if cluster is enabled,
+        const pubClient = this.redisClientOrCluster.duplicate()
+        const subClient = this.redisClientOrCluster.duplicate() 
         this.adapterConstructor = createAdapter(pubClient, subClient)
     }
 
-    createIOServer(port: number, options?: ServerOptions) {
-        // create the server
-        const server: Server = super.createIOServer(port, options)
-        // set the adapter
+    public createIOServer(port: number, options?: ServerOptions) {
+        const server = super.createIOServer(port, options)
         server.adapter(this.adapterConstructor)
-        // return the server
+        
         return server
     }
 }

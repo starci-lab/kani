@@ -9,10 +9,7 @@ export const createIoRedisProvider = (key?: string): Provider => ({
     useFactory: (
         options: typeof OPTIONS_TYPE,
     ) => {
-        const { host, port, password, useCluster, additionalOptions } = options
-        if (useCluster) {
-            throw new Error("Cluster mode is not supported yet")
-        }
-        return new Redis(`redis://${host}:${port}`, { ...additionalOptions, password })
+        const { host, port, password, additionalOptions } = options
+        return new Redis(`redis://${host}:${port}`, { password, ...additionalOptions })
     },
 })

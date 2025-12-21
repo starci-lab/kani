@@ -1,15 +1,16 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./activity.module-definition"
-import { ActivityService } from "./activity.service"
-import { ActivityResolver } from "./activity.resolver"
-import { Activity2Service } from "./activity2.service"
-import { Activity2Resolver } from "./activity2.resolver"
+import { TransactionsModule } from "./transactions"
+import { PositionsModule } from "./positions"
+import { Transactions2Module } from "./transactions2"
+import { Positions2Module } from "./positions2"
+
 @Module({
-    providers: [
-        ActivityService,
-        ActivityResolver,
-        Activity2Service, 
-        Activity2Resolver
+    imports: [
+        TransactionsModule,
+        PositionsModule,
+        Transactions2Module,
+        Positions2Module,
     ],
 })
 export class ActivityModule extends ConfigurableModuleClass {}

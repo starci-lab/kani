@@ -3,9 +3,6 @@ services:
     build:
       context: ../..
       dockerfile: apps/kani-interface/Dockerfile
-    env_file:
-      - ../../.env.secret
-    environment:
-      NODE_ENV: production
 
-#docker compose -f apps/kani-interface/compose.yaml up -d --build
+# docker build -t kanibot/kani-interface:latest -f apps/kani-interface/Dockerfile . && docker push kanibot/kani-interface:latest
+

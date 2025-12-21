@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common"
-import { EnvModule } from "@modules/env"
+import { envConfig, EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
 import { PrimaryMongoDbModule } from "@modules/databases"
@@ -20,12 +20,22 @@ import { SocketIoModule } from "@modules/interfaces"
 import { ScheduleModule } from "@nestjs/schedule"
 import { DependencyName, TerminusModule } from "@modules/terminus"
 import { FilesystemModule } from "@modules/filesystem"
+import { IoRedisModule } from "@modules/native"
+import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
         FilesystemModule.register({
             isGlobal: true,
+        }),
+        IoRedisModule.register({
+            isGlobal: true,
+            additionalInstanceKeys: [SOCKETIO_ADAPTER_KEY],
+            host: envConfig().redis.adapter.host,
+            port: envConfig().redis.adapter.port,
+            password: envConfig().redis.adapter.password,
+            useCluster: envConfig().redis.adapter.useCluster,
         }),
         WinstonModule.register({
             isGlobal: true,

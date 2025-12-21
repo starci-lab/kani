@@ -23,11 +23,13 @@ export const envConfig = () => ({
             port: parseInt(process.env.REDIS_CACHE_PORT || "6379", 10),
             password: process.env.REDIS_CACHE_PASSWORD || "Cuong123_A",
             ttl: parseInt(process.env.CACHE_CACHE_REDIS_TTL || "3600000", 10), // 3600s
+            useCluster: Boolean(process.env.REDIS_CACHE_USE_CLUSTER) || false,
         },
         adapter: {
             host: process.env.REDIS_ADAPTER_HOST || "localhost",
             port: parseInt(process.env.REDIS_ADAPTER_PORT || "6379", 10),
             password: process.env.REDIS_ADAPTER_PASSWORD || "Cuong123_A",
+            useCluster: Boolean(process.env.REDIS_ADAPTER_USE_CLUSTER) || false,
         },
         bullmq: {
             host: process.env.REDIS_BULLMQ_HOST || "localhost",
@@ -39,6 +41,7 @@ export const envConfig = () => ({
             host: process.env.REDIS_THROTTLER_HOST || "localhost",
             port: parseInt(process.env.REDIS_THROTTLER_PORT || "6379", 10),
             password: process.env.REDIS_THROTTLER_PASSWORD || "Cuong123_A",
+            useCluster: Boolean(process.env.REDIS_THROTTLER_USE_CLUSTER) || false,
             ttl: parseInt(process.env.THROTTLER_REDIS_TTL || "3600000", 10), // 3600s
         },
         lock: {

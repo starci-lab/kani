@@ -13,3 +13,5 @@ export interface PythPriceUpdated {
     tokenId: TokenId
     price: number
 }
+
+export const SOCKETIO_ADAPTER_KEY = "socketio_adapter"

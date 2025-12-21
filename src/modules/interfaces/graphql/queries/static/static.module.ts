@@ -1,9 +1,14 @@
 import { Module } from "@nestjs/common"
-import { StaticResolver } from "./static.resolver"
-import { StaticService } from "./static.service"
 import { ConfigurableModuleClass } from "./static.module-definition"
+import { TokensModule } from "./tokens"
+import { LiquidityPoolsModule } from "./liquidity-pools"
+import { DexesModule } from "./dexes"
 
 @Module({
-    providers: [StaticResolver, StaticService],
+    imports: [
+        TokensModule,
+        LiquidityPoolsModule,
+        DexesModule,
+    ],
 })
 export class StaticModule extends ConfigurableModuleClass {}

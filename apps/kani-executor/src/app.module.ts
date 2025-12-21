@@ -19,18 +19,21 @@ import { AggregatorsModule } from "@modules/blockchains"
 import { MutexModule } from "@modules/lock"
 import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
 import { TxBuilderModule } from "@modules/blockchains"
-import { OraModule } from "@modules/ora"
 import { GcpModule } from "@modules/gcp"
 import { SpinnerModule } from "@modules/topcli"
 import { BullModule } from "@modules/bullmq"
 import { MixinModule } from "@modules/mixin"
 import { AxiosModule } from "@modules/axios"
 import { ApolloClientModule } from "@modules/apollo-client"
-import { TerminusModule } from "@modules/terminus"
+import { TerminusModule, DependencyName } from "@modules/terminus"
+import { FilesystemModule } from "@modules/filesystem"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
+        FilesystemModule.register({
+            isGlobal: true,
+        }),
         EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
@@ -75,9 +78,6 @@ import { TerminusModule } from "@modules/terminus"
         PythModule.register({
             isGlobal: true,
             utilitiesOnly: true,
-        }),
-        OraModule.register({
-            isGlobal: true,
         }),
         ScheduleModule.forRoot(),
         AggregatorsModule.register({
@@ -161,6 +161,13 @@ import { TerminusModule } from "@modules/terminus"
         }),
         TerminusModule.register({
             isGlobal: true,
+            dependencies: [
+                DependencyName.MongodbPrimary,
+                DependencyName.CacheRedis,
+                DependencyName.AdapterRedis,
+                DependencyName.ThrottlerRedis,
+                DependencyName.Kafka,
+            ],
         }),
     ],
 })

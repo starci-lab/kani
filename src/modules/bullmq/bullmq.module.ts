@@ -40,8 +40,8 @@ export class BullModule extends ConfigurableModuleClass {
                             host: envConfig().redis.bullmq.host,
                             port: envConfig().redis.bullmq.port,
                             password: envConfig().redis.bullmq.password,
-                            additionalInstanceKeys: [BULLMQ_KEY],
                             useCluster: envConfig().redis.bullmq.useCluster,
+                            additionalInstanceKeys: [BULLMQ_KEY],
                             additionalOptions: {
                                 maxRetriesPerRequest: null,
                             },

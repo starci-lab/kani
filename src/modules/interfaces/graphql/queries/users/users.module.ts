@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common"
-import { UsersResolver } from "./users.resolver"
-import { UsersService } from "./users.service"
 import { ConfigurableModuleClass } from "./users.module-definition"
+import { UserModule } from "./user"
+import { TotpSecretModule } from "./totp-secret"
 
 @Module({
-    providers: [UsersResolver, UsersService],
+    imports: [
+        UserModule,
+        TotpSecretModule,
+    ],
 })
 export class UsersModule extends ConfigurableModuleClass {}
