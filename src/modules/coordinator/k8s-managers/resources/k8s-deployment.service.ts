@@ -129,13 +129,13 @@ export class DeploymentManagerService  {
                                         ],
                                         envFrom: [
                                             {
-                                                "configMapRef": {
-                                                    "name": envConfig().k8s.kaniExecutor.envVarsConfigMapName,
+                                                configMapRef: {
+                                                    name: envConfig().k8s.kaniExecutor.envVarsConfigMapName,
                                                 }
                                             },
                                             {
-                                                "secretRef": {
-                                                    "name": envConfig().k8s.kaniExecutor.envVarsSecretName,
+                                                secretRef: {
+                                                    name: envConfig().k8s.kaniExecutor.envVarsSecretName,
                                                 }
                                             }
                                         ],
@@ -208,24 +208,24 @@ export class DeploymentManagerService  {
                                         },
                                         volumeMounts: [
                                             {
-                                                "mountPath": envConfig().mountPath.keys.aes,
-                                                "name": "aes",
-                                                "readOnly": true
+                                                mountPath: envConfig().mountPath.keys.aes.replace(/\/data$/, ""),
+                                                name: "aes",
+                                                readOnly: true
                                             },
                                             {
-                                                "mountPath": envConfig().mountPath.gcp.cryptoKeyEdSa,
-                                                "name": "crypto-key-ed-sa",
-                                                "readOnly": true
+                                                mountPath: envConfig().mountPath.gcp.cryptoKeyEdSa.replace(/\/data$/, ""),
+                                                name: "crypto-key-ed-sa",
+                                                readOnly: true
                                             },
                                             {
-                                                "mountPath": envConfig().mountPath.keys.jwtSecret,
-                                                "name": "jwt-secret",
-                                                "readOnly": true
+                                                mountPath: envConfig().mountPath.keys.jwtSecret.replace(/\/data$/, ""),
+                                                name: "jwt-secret",
+                                                readOnly: true
                                             },
                                             {
-                                                "mountPath": envConfig().mountPath.apiKeys.smtp,
-                                                "name": "smtp",
-                                                "readOnly": true
+                                                mountPath: envConfig().mountPath.apiKeys.smtp.replace(/\/data$/, ""),
+                                                name: "smtp",
+                                                readOnly: true
                                             }
                                         ],
                                     },

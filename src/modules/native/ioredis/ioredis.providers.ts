@@ -9,7 +9,24 @@ export const createIoRedisProvider = (key?: string): Provider => ({
     useFactory: (
         options: typeof OPTIONS_TYPE,
     ) => {
-        const { host, port, password, additionalOptions } = options
+        const { host, port, password, additionalOptions, useCluster } = options
+        if (useCluster) {
+            return new Redis.Cluster(
+                [
+                    {
+                        host,
+                        port,
+                    }
+                ],
+                {
+                    redisOptions: {
+                        password,
+                        enableAutoPipelining: true,
+                        ...additionalOptions,
+                    },
+                }
+            )
+        }
         return new Redis(`redis://${host}:${port}`, { password, ...additionalOptions })
     },
 })

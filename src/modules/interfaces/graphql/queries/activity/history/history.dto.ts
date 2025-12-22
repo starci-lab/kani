@@ -12,8 +12,8 @@ import {
     ILineChartResponseData,
     LineChartRequestFilters,
     LineChartResponseData,
+    IAbstractGraphQLResponse
 } from "../../../abstracts"
-import { IAbstractGraphQLResponse } from "../../../abstracts"
 
 /**
  * Represents the asset snapshot of a bot at a specific point in time.
