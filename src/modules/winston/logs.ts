@@ -1,6 +1,7 @@
 export enum WinstonLog {
     ExecutorManagerInitialized = "Executor.Manager.Initialized",
     DeploymentCreated = "Deployment.Created",
+    DeploymentRecreated = "Deployment.Recreated",
     OpenPositionTransactionCommitFailed = "Open.Position.Transaction.Commit.Failed",
     ClosePositionTransactionCommitFailed = "Close.Position.Transaction.Commit.Failed",
     WebsocketConnected = "Websocket.Connected",

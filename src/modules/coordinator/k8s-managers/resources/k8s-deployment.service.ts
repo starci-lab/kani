@@ -5,9 +5,10 @@ import { envConfig } from "@modules/env"
 import { InjectKubernetesApi } from "@modules/kubernetes"
 import { AppsV1Api } from "@kubernetes/client-node"
 import { creatExecutorName } from "../../utils"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { PatchOperation } from "../../types"
 
 // DeploymentManagerService is responsible for ensuring that an executor Deployment
 // exists and is running for a given executorId.
@@ -40,6 +41,7 @@ export class DeploymentManagerService  {
         private readonly asyncService: AsyncService,
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -82,6 +84,9 @@ export class DeploymentManagerService  {
                                     "app.kubernetes.io/component": "service",
                                     "app.kubernetes.io/instance": name,
                                     "app.kubernetes.io/name": "service",
+                                },
+                                annotations: {
+                                    "kubectl.kubernetes.io/patchedAt": new Date().toISOString(),
                                 },
                             },
                             spec: {
@@ -265,6 +270,25 @@ export class DeploymentManagerService  {
             })
             this.winstonLogger.verbose(
                 WinstonLog.DeploymentCreated, {
+                    executorId: this.request.executorId,
+                })
+            return
+        } else if (envConfig().k8s.kaniExecutor.recreate) {
+            const patchBody: Array<PatchOperation> = [
+                {
+                    op: "replace",
+                    path: "/spec/template/metadata/annotations/kubectl.kubernetes.io~1patchedAt",
+                    value: this.dayjsService.now().toISOString(),
+                }
+            ] 
+            await this.kubernetesApi.patchNamespacedDeployment({
+                name: creatExecutorName(this.request.executorId),
+                namespace: envConfig().kubernetes.podNamespace,
+                body: patchBody,
+            }
+            )
+            this.winstonLogger.verbose(
+                WinstonLog.DeploymentRecreated, {
                     executorId: this.request.executorId,
                 })
             return

@@ -13,6 +13,7 @@ export const envConfig = () => ({
     },
     k8s: {
         kaniExecutor: {
+            recreate: Boolean(process.env.KANI_EXECUTOR_RECREATE) || true,
             probes: {
                 liveness: {
                     failureThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD || "3", 10),
@@ -124,7 +125,7 @@ export const envConfig = () => ({
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
         }
-    },
+    }, 
     gcp: {
         kms: {
             keyName: process.env.GCP_KMS_KEY_NAME || "projects/kani-473603/locations/global/keyRings/kani-crypto-keyring/cryptoKeys/kani-crypto-key",
