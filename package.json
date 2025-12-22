@@ -31,6 +31,8 @@
     "@flowx-finance/sdk": "^1.13.2",
     "@google-cloud/kms": "^5.1.0",
     "@google-cloud/secret-manager": "^6.1.0",
+    "@grpc/grpc-js": "^1.14.3",
+    "@grpc/proto-loader": "^0.8.0",
     "@jup-ag/api": "^6.0.46",
     "@keyv/redis": "^5.1.1",
     "@kubernetes/client-node": "^1.4.0",

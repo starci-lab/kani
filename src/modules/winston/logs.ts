@@ -1,4 +1,6 @@
 export enum WinstonLog {
+    ExecutorManagerInitialized = "Executor.Manager.Initialized",
+    DeploymentCreated = "Deployment.Created",
     OpenPositionTransactionCommitFailed = "Open.Position.Transaction.Commit.Failed",
     ClosePositionTransactionCommitFailed = "Close.Position.Transaction.Commit.Failed",
     WebsocketConnected = "Websocket.Connected",
@@ -52,6 +54,7 @@ export enum WinstonLog {
     WebsocketReconnect = "Websocket.Reconnect",
     WebsocketMaxRetriesReached = "Websocket.Max.Retries.Reached",
     UsersLoaded = "Users.Loaded",
+    UsersCountLoaded = "Users.Count.Loaded",
     MongooseChangeStreamClose = "Mongoose.Change.Stream.Close",
     MongooseChangeStreamStarted = "Mongoose.Change.Stream.Started",
     MongooseChangeStreamError = "Mongoose.Change.Stream.Error",

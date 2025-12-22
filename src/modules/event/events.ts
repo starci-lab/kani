@@ -5,6 +5,9 @@ import BN from "bn.js"
 import crypto from "crypto"
 
 export enum EventName {
+    ExecutorCreated = "executorCreated",
+    ExecutorLoaded = "executorLoaded",
+    ExecutorDeleted = "executorDeleted",
     CoinMarketCapPricesFetched = "coinMarketCapPricesFetched",
     CoinGeckoPricesFetched = "coinGeckoPricesFetched",
     PoolsUpdated = "poolsUpdated",
@@ -87,4 +90,8 @@ export interface OrderBook {
 export interface WsPythLastPricesUpdatedEvent {
     tokenId: TokenId
     price: number
+}
+
+export interface ExecutorCreatedEvent {
+    id: string
 }

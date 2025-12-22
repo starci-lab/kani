@@ -1,0 +1,8 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/kani-executor/Dockerfile
+
+# docker build -t kanibot/kani-executor:latest -f apps/kani-executor/Dockerfile . && docker push kanibot/kani-executor:latest
+

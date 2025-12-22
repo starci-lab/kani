@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package executor;
+
+// ==================================
+// Executor gRPC Service
+// ==================================
+//
+// ExecutorService defines the gRPC interface exposed by an executor instance
+// running inside a Kubernetes Pod.
+//
+// This service is responsible for:
+// - Exposing executor-level APIs to the control plane
+// - Reporting executor availability and responsiveness
+//
+// Design notes:
+// - This service runs inside the executor container
+// - Kubernetes resources are managed externally by the coordinator
+// - The executor focuses only on runtime behavior and health reporting
+//
+
+service ExecutorService {
+  // Ping is a lightweight health-check RPC.
+  //
+  // It can be used to:
+  // - Verify that the executor process is running
+  // - Confirm gRPC connectivity to the executor
+  // - Perform liveness checks without triggering side effects
+  rpc Ping ()
+      returns (PingResponse);
+}

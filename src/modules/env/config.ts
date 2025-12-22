@@ -8,6 +8,66 @@ export const envConfig = () => ({
     port: {
         core: Number(process.env.CORE_PORT) || 3010,
     },
+    kubernetes: {
+        podNamespace: process.env.POD_NAMESPACE || "default",
+    },
+    k8s: {
+        kaniExecutor: {
+            probes: {
+                liveness: {
+                    failureThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD || "3", 10),
+                    httpGet: {
+                        path: process.env.KANI_EXECUTOR_PROBES_LIVENESS_PATH || "/api/terminus/liveness",
+                        port: process.env.KANI_EXECUTOR_PROBES_LIVENESS_PORT || "app",
+                        scheme: process.env.KANI_EXECUTOR_PROBES_LIVENESS_SCHEME || "HTTP",
+                    },
+                    initialDelaySeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS || "30", 10),
+                    periodSeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS || "10", 10),
+                    successThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD || "1", 10),
+                    timeoutSeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS || "5", 10),
+                },
+                readiness: {
+                    failureThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_READINESS_FAILURE_THRESHOLD || "3", 10),
+                    httpGet: {
+                        path: process.env.KANI_EXECUTOR_PROBES_READINESS_PATH || "/api/terminus/readiness",
+                        port: process.env.KANI_EXECUTOR_PROBES_READINESS_PORT || "app",
+                        scheme: process.env.KANI_EXECUTOR_PROBES_READINESS_SCHEME || "HTTP",
+                    },
+                    initialDelaySeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS || "30", 10),
+                    periodSeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS || "10", 10),
+                    successThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD || "1", 10),
+                    timeoutSeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS || "5", 10),
+                },
+                startup: {
+                    failureThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_STARTUP_FAILURE_THRESHOLD || "3", 10),
+                    httpGet: {
+                        path: process.env.KANI_EXECUTOR_PROBES_STARTUP_PATH || "/api/terminus/startup",
+                        port: process.env.KANI_EXECUTOR_PROBES_STARTUP_PORT || "app",
+                        scheme: process.env.KANI_EXECUTOR_PROBES_STARTUP_SCHEME || "HTTP",
+                    },
+                    initialDelaySeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS || "30", 10),
+                    periodSeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS || "10", 10),
+                    successThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD || "1", 10),
+                    timeoutSeconds: parseInt(process.env.KANI_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS || "5", 10),
+                }
+            },
+            image: process.env.KANI_EXECUTOR_IMAGE || "nginx:alpine",
+            replicas: parseInt(process.env.KANI_EXECUTOR_REPLICAS || "1", 10),
+            envVarsConfigMapName: process.env.KANI_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME || "kani-executor-service-env-vars",
+            envVarsSecretName: process.env.KANI_EXECUTOR_ENV_VARS_SECRET_NAME || "kani-executor-service-env-vars",
+            resources: {
+                limits: {
+                    cpu: process.env.KANI_EXECUTOR_RESOURCES_LIMITS_CPU || "512m",
+                    memory: process.env.KANI_EXECUTOR_RESOURCES_LIMITS_MEMORY || "1Gi",
+                },
+                requests: {
+                    cpu: process.env.KANI_EXECUTOR_RESOURCES_REQUESTS_CPU || "64m",
+                    memory: process.env.KANI_EXECUTOR_RESOURCES_REQUESTS_MEMORY || "128Mi",
+                },
+            },
+            nodePool: process.env.KANI_EXECUTOR_NODE_POOL || "kani-primary-node-pool",
+        },
+    },
     totp: {
         logo: process.env.TOTP_LOGO || "https://scontent.fsgn8-4.fna.fbcdn.net/v/t39.30808-1/534136898_749293854666581_1584213272352607870_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=1d2534&_nc_eui2=AeFqh_r3g1VaKKx2wFccqASXzBUDs9FLWU_MFQOz0UtZT0Pflcmod5znN1RtZH6geE4rZxAs1W7G0U1ZjE0oRwUb&_nc_ohc=HZoHHQaSGX0Q7kNvwFfrVZq&_nc_oc=Adk2goBox0pzD9vSz44dUTtPLaDeFbqBwz4c5LW3gaIyi5a8zCQvMSsKPV_0n2FR_q0&_nc_zt=24&_nc_ht=scontent.fsgn8-4.fna&_nc_gid=v9zPPrhoxGVDOHOHmPQtdw&oh=00_Afbr9TMLXtHZ_BxLmnjH1AVQeq3Q4QJCq5Wtsan6LC5tqg&oe=68DF1667",
         color: process.env.TOTP_COLOR || "#4267b2",
@@ -156,6 +216,11 @@ export const envConfig = () => ({
             endpoint: process.env.SOLANA_PYTH_ENDPOINT || "https://hermes-beta.pyth.network",
         },
     },
+    capacity: {
+        executor: {
+            maxUsers: process.env.CAPACITY_EXECUTOR_MAX_USERS ? parseInt(process.env.CAPACITY_EXECUTOR_MAX_USERS, 10) : 1000,
+        },
+    },
     botExecutor: {
         batchId: process.env.BOX_EXECUTOR_BATCH_ID ? parseInt(process.env.BOX_EXECUTOR_BATCH_ID, 10) : 0,
         balanceEvaluationInterval: process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL, 10) : 10000,
@@ -165,8 +230,10 @@ export const envConfig = () => ({
     },
     ports: {
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,
+        kaniCoordinator: process.env.KANI_COORDINATOR_PORT ? parseInt(process.env.KANI_COORDINATOR_PORT, 10) : 3002,
+        kaniExecutor: process.env.KANI_EXECUTOR_PORT ? parseInt(process.env.KANI_EXECUTOR_PORT, 10) : 3003,
         botCoordinator: process.env.BOT_COORDINATOR_PORT ? parseInt(process.env.BOT_COORDINATOR_PORT, 10) : 3002,
-        botExecutor: process.env.BOT_EXECUTOR_PORT ? parseInt(process.env.BOT_EXECUTOR_PORT, 10) : 3003,
-        kaniObserver: process.env.KANI_OBSERVER_PORT ? parseInt(process.env.KANI_OBSERVER_PORT, 10) : 3004,
+        botExecutor: process.env.BOT_EXECUTOR_PORT ? parseInt(process.env.BOT_EXECUTOR_PORT, 10) : 3004,
+        kaniObserver: process.env.KANI_OBSERVER_PORT ? parseInt(process.env.KANI_OBSERVER_PORT, 10) : 3005,
     },
 })

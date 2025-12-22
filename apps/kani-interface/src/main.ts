@@ -36,7 +36,6 @@ for powering Kani's applications and integrations.",
     redisIoAdapter.setClient(redis)
     await redisIoAdapter.connect()
     app.useWebSocketAdapter(redisIoAdapter)
-    app.use(compression())
     await app.listen(envConfig().ports.kaniInterface)
 }
 bootstrap()

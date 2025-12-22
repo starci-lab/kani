@@ -1,4 +1,4 @@
-import { Inject } from "@nestjs/common"
-import { KUBERNETES_CLIENT } from "./constants"
-
-export const InjectKubernetesClient = () => Inject(KUBERNETES_CLIENT)   
+export * from "./deployment.service" 
+export * from "./kubernetes.decorators"
+export * from "./kubernetes.providers"
+export * from "./kubernetes.module"

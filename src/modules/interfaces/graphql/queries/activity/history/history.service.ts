@@ -70,7 +70,10 @@ export class HistoryService {
             lastSerie &&
             this.dayjsService
                 .from(lastSerie.timestamp)
-                .isSame(lastPosition.positionClosedAt)
+                .isSame(
+                    lastPosition.positionClosedAt, 
+                    "millisecond"
+                )
         ) {
             return response
         }
@@ -213,7 +216,7 @@ export class HistoryService {
         // Build series
         const firstPosition = positions.at(0)
         let positionIndex = 0
-        const series: HistoryChartSerie[] = []
+        const series: Array<HistoryChartSerie> = []
 
         for (let i = 0; i < timestamps.length - 1; i++) {
             const timestamp = timestamps[i + 1]

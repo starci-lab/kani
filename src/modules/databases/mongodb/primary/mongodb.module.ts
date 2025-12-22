@@ -34,6 +34,10 @@ import {
     TransactionSchemaClass,
     PositionSchema,
     PositionSchemaClass,
+    ExecutorSchema,
+    ExecutorSchemaClass,
+    AssignedUserSchemaClass,
+    AssignedUserSchema,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {
@@ -130,6 +134,14 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: WalletSchema.name,
                         useFactory: () => WalletSchemaClass,
+                    },
+                    {
+                        name: ExecutorSchema.name,
+                        useFactory: () => ExecutorSchemaClass,
+                    },
+                    {
+                        name: AssignedUserSchema.name,
+                        useFactory: () => AssignedUserSchemaClass,
                     },
                     {
                         name: UserWalletSchema.name,

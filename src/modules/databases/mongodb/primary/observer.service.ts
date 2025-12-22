@@ -18,10 +18,11 @@ export type ChangeDoc<T extends AbstractSchema> =
     | ChangeStreamDeleteDocument<T>
     | ChangeStreamReplaceDocument<T>;
 
-export interface ObserveParams<TFilter, TSchema extends AbstractSchema> {
+export interface ObserveParams<TFilter, TSchema extends AbstractSchema, TransformResult = TSchema> {
     filter: Array<TFilter>;
     model: Model<TSchema>;
     list: Array<TSchema>;
+    transform?: (data: TSchema) => TransformResult;
     insertCondition?: (data: TSchema) => boolean;
     updateCondition?: (data: TSchema) => boolean;
     deleteCondition?: (id: string) => boolean;
