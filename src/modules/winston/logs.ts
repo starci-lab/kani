@@ -1,4 +1,7 @@
 export enum WinstonLog {
+    P2CBalancersInitialized = "P2C.Balancers.Initialized",
+    AllRpcsEjected = "All.RPCs.Ejected",
+    NoAvailableRpc = "No.Available.RPC",
     ExecutorManagerInitialized = "Executor.Manager.Initialized",
     DeploymentCreated = "Deployment.Created",
     DeploymentRecreated = "Deployment.Recreated",

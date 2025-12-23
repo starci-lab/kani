@@ -4,10 +4,6 @@ import { createEnumType } from "@utils"
 export enum ChainId {
   // Solana
   Solana = "solana",
-  // Monad
-  Monad = "monad",
-  // BSC
-  Bsc = "bsc",
   // Sui
   Sui = "sui",
 }
@@ -20,12 +16,6 @@ registerEnumType(GraphQLTypeChainId, {
     valuesMap: {
         [ChainId.Solana]: {
             description: "The chain is solana",
-        },
-        [ChainId.Monad]: {
-            description: "The chain is monad",
-        },
-        [ChainId.Bsc]: {
-            description: "The chain is bsc",
         },
         [ChainId.Sui]: {
             description: "The chain is sui",
@@ -55,10 +45,6 @@ export const chainIdToPlatformId = (chainId: ChainId): PlatformId => {
     switch (chainId) {
     case ChainId.Solana:
         return PlatformId.Solana
-    case ChainId.Monad:
-        return PlatformId.Evm
-    case ChainId.Bsc:
-        return PlatformId.Evm
     case ChainId.Sui:
         return PlatformId.Sui
     }

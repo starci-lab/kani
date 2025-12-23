@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { MailerService } from "@nestjs-modules/mailer"
-import { KeyStorageService } from "@modules/filesystem"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class Send2FactorOtpMailService {
     constructor(
         private readonly mailerService: MailerService,
-        private readonly keyStorageService: KeyStorageService
+        private readonly mountStorageService: MountStorageService
     ) {}
 
     async send({
@@ -15,7 +15,7 @@ export class Send2FactorOtpMailService {
     }: Send2FactorOtpMailParams) {
         await this.mailerService.sendMail({
             to: email,  
-            from: this.keyStorageService.smtpConfig.from,
+            from: this.mountStorageService.smtpConfig.from,
             subject: `${otp} is your 2-factor authentication OTP for Kani`,
             template: "2-factor-otp",
             context: {

@@ -127,6 +127,15 @@
         "tsConfigPath": "apps/kani-observer/tsconfig.app.json"
       }
     },
+    "kani-test-rpc": {
+      "type": "application",
+      "root": "apps/kani-test-rpc",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-test-rpc/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-test-rpc/tsconfig.app.json"
+      }
+    },
     "lp-bot": {
       "type": "application",
       "root": "apps/lp-bot",

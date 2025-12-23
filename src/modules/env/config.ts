@@ -130,6 +130,7 @@ export const envConfig = () => ({
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
+            ejectRpcs: parseInt(process.env.CACHE_EJECT_RPCS_TTL || ms("1d").toString(), 10), // 1 day
         }
     }, 
     gcp: {
@@ -182,8 +183,9 @@ export const envConfig = () => ({
             aes: process.env.AES_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "aes.key"),
             jwtSecret: process.env.JWT_SECRET_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
         },
-        apiKeys: {
-            smtp: process.env.SMTP_MOUNT_PATH || join(process.cwd(), ".mount", "api-keys", "smtp.json"),
+        config: {
+            smtp: process.env.SMTP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "smtp.json"),
+            rpcs: process.env.RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
         },
     },
     interval: {

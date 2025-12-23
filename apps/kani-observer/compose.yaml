@@ -1,0 +1,8 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/kani-observer/Dockerfile
+
+# docker build -t kanibot/kani-observer:latest -f apps/kani-observer/Dockerfile . && docker push kanibot/kani-observer:latest
+

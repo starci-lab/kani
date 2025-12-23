@@ -15,10 +15,15 @@ import { WebsocketModule } from "@modules/websocket"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { AxiosModule } from "@modules/axios"
 import { ApolloClientModule } from "@modules/apollo-client"
+import { FilesystemModule } from "@modules/filesystem"
+import { DependencyName, TerminusModule } from "@modules/terminus"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
+        FilesystemModule.register({
+            isGlobal: true,
+        }),
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-observer",
@@ -75,6 +80,15 @@ import { ApolloClientModule } from "@modules/apollo-client"
         }),
         SnapshotsModule.register({
             isGlobal: true,
+        }),
+        TerminusModule.register({
+            isGlobal: true,
+            dependencies: [
+                DependencyName.MongodbPrimary,
+                DependencyName.CacheRedis,
+                DependencyName.AdapterRedis,
+                DependencyName.ThrottlerRedis,
+            ],
         }),
         DexesModule.register({
             isGlobal: true,

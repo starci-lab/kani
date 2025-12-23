@@ -1,16 +1,16 @@
 import { Module } from "@nestjs/common"
 import { MountFilesystemService } from "./mount.service"
 import { ConfigurableModuleClass } from "./filesystem.module-definition"
-import { KeyStorageService } from "./key-storage.service"
+import { MountStorageService } from "./mount-storage.service"
 
 @Module({
     providers: [
         MountFilesystemService,
-        KeyStorageService,
+        MountStorageService,
     ],
     exports: [
         MountFilesystemService,
-        KeyStorageService,
+        MountStorageService,
     ],
 })
 export class FilesystemModule extends ConfigurableModuleClass {}

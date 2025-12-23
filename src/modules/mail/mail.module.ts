@@ -21,14 +21,14 @@ export class MailModule extends ConfigurableModuleClass {
                     transport: {
                         host: smtpConfig.host,
                         port: smtpConfig.port,
-                        secure: false,
+                        secure: smtpConfig.secure,
                         auth: {
                             user: smtpConfig.user,
-                            pass: smtpConfig.key,
+                            pass: smtpConfig.password,
                         },
                     },
                     defaults: {
-                        from: `Kani <${smtpConfig.from}>`,
+                        from: smtpConfig.from,
                     },
                     template: {
                         dir: path.join(process.cwd(), "templates"),

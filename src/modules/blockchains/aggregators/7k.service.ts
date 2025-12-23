@@ -12,6 +12,7 @@ import { ChainId } from "@typedefs"
 import SevenK, { QuoteResponse as SevenKQuoteResponse } from "@7kprotocol/sdk-ts"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import BN from "bn.js"
+import { getRpcAccessConfigs } from "@modules/filesystem"
 
 const balancerName = "7k-aggregator"
 @Injectable()
@@ -27,13 +28,14 @@ export class SevenKAggregatorService implements IAggregatorService {
     }
 
     private createSevenKAggregatorClient(): typeof SevenK {
-        SevenK.Config.setSuiClient(new SuiClient({
-            url: this.loadBalancerService.balanceP2c(
-                balancerName, 
-                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs.read
-            ),
-            network: "mainnet",
-        }))
+        SevenK.Config.setSuiClient(
+            new SuiClient({
+                url: this.loadBalancerService.balanceP2c(
+                    balancerName, 
+                    getRpcAccessConfigs()[ChainId.Sui].read
+                ),
+                network: "mainnet",
+            }))
         return SevenK
     }
 

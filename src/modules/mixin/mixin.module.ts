@@ -8,7 +8,6 @@ import { RandomDelayService } from "./random-delay.service"
 import { createSuperJsonServiceProvider } from "./superjson.providers"
 import { AsyncService } from "./async.service"
 import { MsService } from "./ms.service"
-import { LoadBalancerService } from "./load-balancer.service"
 import { DayjsService } from "./dayjs.service"
 import { createFakerServiceProvider } from "./faker.providers"
 
@@ -28,7 +27,6 @@ export class MixinModule extends ConfigurableModuleClass {
             createFakerServiceProvider(),
             AsyncService,
             MsService,
-            LoadBalancerService
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)

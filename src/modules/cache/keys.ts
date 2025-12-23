@@ -1,6 +1,8 @@
+import { ChainId } from "@typedefs"
 import BN from "bn.js"
 
 export enum CacheKey {
+    EjectRpcs = "ejectRpcs",
     History = "history",
     HistoryNeedRevalidated = "historyNeedRevalidated",
     OpenPositionTransaction = "openPositionTransaction",
@@ -55,3 +57,5 @@ export interface SignInOtpCacheResult {
 export interface SendOtpCacheResult {
     otp: string
 }
+
+export type EjectedRpcsCacheResult = Partial<Record<ChainId, Array<string>>>

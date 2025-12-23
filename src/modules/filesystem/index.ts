@@ -1,4 +1,5 @@
 export * from "./filesystem.module"
 export * from "./mount.service"
-export * from "./key-storage.service"
+export * from "./mount-storage.service"
 export * from "./pure"
+export * from "./types"

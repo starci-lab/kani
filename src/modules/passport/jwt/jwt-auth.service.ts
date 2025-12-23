@@ -10,7 +10,7 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 import { Cache } from "cache-manager"
-import { KeyStorageService } from "@modules/filesystem"
+import { MountStorageService } from "@modules/filesystem"
 
 export interface GenerateParams {
     id: string
@@ -30,11 +30,11 @@ export class JwtAuthService {
         private readonly connection: Connection,
         private readonly msService: MsService,
         private readonly asyncService: AsyncService,
-        private readonly keyStorageService: KeyStorageService
+        private readonly mountStorageService: MountStorageService
     ) { }
 
     public getJwtSecretKey(): string {
-        return this.keyStorageService.jwtSecretKey
+        return this.mountStorageService.jwtSecretKey
     }
 
     // generate access token and refresh token for authentication

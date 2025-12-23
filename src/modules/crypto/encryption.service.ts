@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import crypto from "crypto"
-import { KeyStorageService } from "@modules/filesystem"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class EncryptionService {
@@ -9,7 +9,7 @@ export class EncryptionService {
 
     constructor(
         // Service used to securely retrieve the base AES key
-        private readonly keyStorageService: KeyStorageService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     /**
@@ -19,7 +19,7 @@ export class EncryptionService {
      * - PBKDF2 strengthens the key against brute-force attacks
      */
     private getAesKey(): string {
-        return this.keyStorageService.aesKey
+        return this.mountStorageService.aesKey
     }
 
     /**

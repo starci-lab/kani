@@ -4,10 +4,10 @@ import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { AsyncService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
-import { ConfigSchema, ClientConfig } from "../schemas"
+import { ConfigSchema } from "../schemas"
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
-import { ClientConfigNotFoundException, FeeConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
+import { FeeConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
@@ -16,7 +16,6 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
     public dexes: Array<DexSchema> = []
     public feeConfig: FeeConfig
     public gasConfig: GasConfig
-    public clientConfig: ClientConfig
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -84,20 +83,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         this.feeConfig = feeConfig.value as unknown as FeeConfig
                     },
                 })
-            })(),
-            (async () => {
-                await this.retryService.retry({
-                    action: async () => {
-                        const clientConfig = await this.connection
-                            .model<ConfigSchema>(ConfigSchema.name)
-                            .findById(createObjectId(ConfigId.Client))
-                        if (!clientConfig) {
-                            throw new ClientConfigNotFoundException("Client config not found")
-                        }
-                        this.clientConfig = clientConfig.value as unknown as ClientConfig
-                    },
-                })
-            })(),
+            })()
         ])
     }
 

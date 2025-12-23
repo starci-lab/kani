@@ -1,7 +1,8 @@
 import { envConfig } from "@modules/env"
 import crypto from "crypto"
 import { readFileSync } from "fs"
-import { SmtpConfig } from "./types"
+import { RpcAccessConfigs, SmtpConfig } from "./types"
+
 // pure function to get the jwt secret key
 // in case there is component that not depends on nestjs DI
 export const getJwtSecretKey = (jwtSecret?: string) => {
@@ -48,7 +49,7 @@ export const getAesKey = (aes?: string) => {
 export const getSmtpConfig = (smtpConfig?: SmtpConfig) => {
     if (!smtpConfig) {
         const smtpConfigPlainText = readFileSync(
-            envConfig().mountPath.apiKeys.smtp,
+            envConfig().mountPath.config.smtp,
             "utf8"
         )
         return JSON.parse(smtpConfigPlainText) as SmtpConfig
@@ -69,3 +70,18 @@ export const getCryptoKeyEdSa = (cryptoKeyEdSa?: string) => {
     }
     return cryptoKeyEdSa
 }
+
+/**
+ * Pure function to get the rpc config
+ * in case there is component that not depends on nestjs DI
+ */
+export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
+    if (!rpcAccessConfigs) {
+        rpcAccessConfigs = JSON.parse(
+            readFileSync(
+                envConfig().mountPath.config.rpcs,
+                "utf8"
+            )) as RpcAccessConfigs
+    }
+    return rpcAccessConfigs
+}   
