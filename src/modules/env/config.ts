@@ -3,6 +3,12 @@ import { join } from "path"
 import ms from "ms"
 import Decimal from "decimal.js"
 
+export enum K8SRecreateStrategy {
+    Never = "never",
+    Patch = "patch",
+    Recreate = "recreate",
+}
+
 export const envConfig = () => ({
     isProduction: process.env.NODE_ENV === "production",
     port: {
@@ -13,7 +19,7 @@ export const envConfig = () => ({
     },
     k8s: {
         kaniExecutor: {
-            recreate: Boolean(process.env.KANI_EXECUTOR_RECREATE) || true,
+            recreate: (process.env.KANI_EXECUTOR_RECREATE_STRATEGY || K8SRecreateStrategy.Recreate) as K8SRecreateStrategy,
             probes: {
                 liveness: {
                     failureThreshold: parseInt(process.env.KANI_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD || "3", 10),
@@ -223,7 +229,7 @@ export const envConfig = () => ({
         },
     },
     botExecutor: {
-        batchId: process.env.BOX_EXECUTOR_BATCH_ID ? parseInt(process.env.BOX_EXECUTOR_BATCH_ID, 10) : 0,
+        executorId: process.env.BOT_EXECUTOR_ID || "694900f2e951fd6ca285945c",
         balanceEvaluationInterval: process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL, 10) : 10000,
         activeBotInterval: process.env.BOT_EXECUTOR_ACTIVE_BOT_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_ACTIVE_BOT_INTERVAL, 10) : 10000,
         suiPoolFetchInterval: process.env.BOT_EXECUTOR_SUI_POOL_FETCH_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_SUI_POOL_FETCH_INTERVAL, 10) : 1000,

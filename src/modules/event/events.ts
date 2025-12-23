@@ -8,6 +8,10 @@ export enum EventName {
     ExecutorCreated = "executorCreated",
     ExecutorLoaded = "executorLoaded",
     ExecutorDeleted = "executorDeleted",
+    UserCreated = "userCreated",
+    UserDeleted = "userDeleted",
+    BotCreated = "botCreated",
+    BotDeleted = "botDeleted",
     CoinMarketCapPricesFetched = "coinMarketCapPricesFetched",
     CoinGeckoPricesFetched = "coinGeckoPricesFetched",
     PoolsUpdated = "poolsUpdated",
@@ -93,5 +97,21 @@ export interface WsPythLastPricesUpdatedEvent {
 }
 
 export interface ExecutorCreatedEvent {
+    id: string
+}
+
+export interface UserCreatedEvent {
+    id: string
+}
+
+export interface UserDeletedEvent {
+    id: string
+}
+
+export interface BotCreatedEvent {
+    id: string
+}
+
+export interface BotDeletedEvent {
     id: string
 }

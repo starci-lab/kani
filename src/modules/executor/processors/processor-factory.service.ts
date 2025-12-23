@@ -12,7 +12,12 @@ import {
 import { OpenPositionProcessorRequest } from "./actions"
 import { BotsLoaderService } from "../loaders"
 import { AsyncService } from "@modules/mixin"
-import { ActiveBotProcessorRequest, ActiveBotProcessorService } from "./actions/active-bot.service"
+import { 
+    ActiveBotProcessorRequest, 
+    ActiveBotProcessorService
+} from "./actions/active-bot.service"
+import { BotCreatedEvent, BotDeletedEvent, EventName } from "@modules/event"
+import { OnEvent } from "@nestjs/event-emitter"
 
 @Injectable()
 export class ProcessorFactoryService implements OnApplicationBootstrap {
@@ -22,12 +27,22 @@ export class ProcessorFactoryService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
     ) {}
 
-    async onApplicationBootstrap() {
+    onApplicationBootstrap() {
         // resolve all processors
-        await this.asyncService.allMustDone(
-            this.botsLoaderService.botIds.map(async (botId) => {
-                await this.resolveProcessor(botId)
+        this.asyncService.allMustDone(
+            this.botsLoaderService.bots.map(async (bot) => {
+                await this.resolveProcessor(bot.id ?? "")
             }))
+    }
+
+    @OnEvent(EventName.BotCreated)
+    async onBotCreated({ id }: BotCreatedEvent) {
+        await this.resolveProcessor(id)
+    }
+
+    @OnEvent(EventName.BotDeleted)
+    async onBotDeleted({ id }: BotDeletedEvent) {
+        console.log("Bot deleted", id)
     }
 
     async resolveProcessor(botId: string) {

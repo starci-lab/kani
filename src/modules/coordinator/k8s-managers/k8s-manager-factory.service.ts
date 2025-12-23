@@ -3,14 +3,15 @@ import { ContextIdFactory, ModuleRef } from "@nestjs/core"
 import { 
     DeploymentManagerRequest,
     DeploymentManagerService,
-    MetadataManagerRequest,
-    MetadataManagerService,
+    ServiceManagerRequest,
+    ServiceManagerService,
 } from "./resources"
 import { AsyncService } from "@modules/mixin"
 import { ExecutorsLoaderService } from "../loaders"
 import { ExecutorSchema } from "@modules/databases"
 import { EventName, ExecutorCreatedEvent } from "@modules/event"
 import { OnEvent } from "@nestjs/event-emitter"
+import { MetadataManagerRequest, MetadataManagerService } from "./metadata"
 
 @Injectable()
 export class K8sManagerFactoryService implements OnApplicationBootstrap {
@@ -20,9 +21,9 @@ export class K8sManagerFactoryService implements OnApplicationBootstrap {
         private readonly executorsLoaderService: ExecutorsLoaderService,
     ) {}
 
-    async onApplicationBootstrap() {
+    onApplicationBootstrap() {
         // resolve all processors
-        await this.asyncService.allMustDone(
+        this.asyncService.allMustDone(
             this.executorsLoaderService.executors.map(async (executor) => {
                 await this.resolveK8sManager(executor)
             }))
@@ -62,6 +63,18 @@ export class K8sManagerFactoryService implements OnApplicationBootstrap {
                     contextId
                 )
                 await metadataManager.initialize()
+            })(),
+            (async () => {
+                const contextId = ContextIdFactory.create()
+                this.moduleRef.registerRequestByContextId<ServiceManagerRequest>(
+                    { executorId: executor.id?.toString() || "" }, 
+                    contextId
+                )
+                const serviceManager = await this.moduleRef.resolve(
+                    ServiceManagerService, 
+                    contextId
+                )
+                await serviceManager.initialize()
             })(),
         ])
 

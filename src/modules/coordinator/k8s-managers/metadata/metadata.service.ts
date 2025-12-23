@@ -20,9 +20,12 @@ export class MetadataManagerService  {
     // Register event listeners for this processor instance.
     // This lets every user have their own isolated event handling logic.
     async initialize() {
-        this.winstonLogger.info(WinstonLog.ExecutorManagerInitialized, {
-            executorId: this.request.executorId,
-        })
+        this.winstonLogger.info(
+            WinstonLog.ExecutorManagerInitialized, 
+            {
+                executorId: this.request.executorId,
+            }
+        )
     }
 }
 

@@ -6,10 +6,12 @@ import { Logger as WinstonLogger } from "winston"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { UsersLoaderService } from "./users-loader.service"
 import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import { EventEmitter2, OnEvent } from "@nestjs/event-emitter"
+import { EventName, UserCreatedEvent } from "@modules/event"
 
 @Injectable()
 export class BotsLoaderService implements OnModuleInit {
-    public botIds: Array<string> = []
+    public bots: Array<Partial<BotSchema>> = []
 
     constructor(
         private readonly usersLoaderService: UsersLoaderService,
@@ -18,6 +20,7 @@ export class BotsLoaderService implements OnModuleInit {
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly eventEmitter2: EventEmitter2,
     ) {}
 
     async onModuleInit() {
@@ -27,11 +30,26 @@ export class BotsLoaderService implements OnModuleInit {
         await this.load()
     }
 
+    @OnEvent(EventName.UserCreated)
+    async onUserCreated({ id }: UserCreatedEvent) {
+        const bots = await this.connection
+            .model<BotSchema>(BotSchema.name)
+            .find({
+                user: { $in: [id] },
+            })
+            .lean()
+            .exec()
+        this.bots = bots.map((bot) => ({ id: bot._id.toString() }))
+        for (const bot of this.bots) {
+            this.eventEmitter2.emit(EventName.BotCreated, { id: bot.id })
+        }
+    }
+
     // Load bot IDs from database, based on assigned users
     async load(): Promise<void> {
-        const userIds = this.usersLoaderService.userIds
+        const userIds = this.usersLoaderService.users.map((user) => user.id)
         if (userIds.length === 0) {
-            this.botIds = []
+            this.bots = []
             return
         }
         const bots = await this.connection
@@ -46,10 +64,12 @@ export class BotsLoaderService implements OnModuleInit {
             )
             .lean()                      // return plain objects, no mongoose wrappers
             .exec()
-        this.botIds = bots.map((bot) => bot._id.toString())
+        this.bots = bots.map((bot) => ({
+            id: bot._id.toString(),
+        }))
         this.winstonLogger.debug(
             WinstonLog.BotsLoaded, {
-                bots: this.botIds.length,
+                bots: this.bots.length,
             })
     }
 

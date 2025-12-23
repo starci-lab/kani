@@ -1,7 +1,8 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./k8s-resourse-managers.module-definition"
 import { K8sManagerFactoryService } from "./k8s-manager-factory.service"
-import { DeploymentManagerService, MetadataManagerService } from "./resources"
+import { DeploymentManagerService, ServiceManagerService } from "./resources"
+import { MetadataManagerService } from "./metadata"
 
 @Module({})
 export class K8sResourseManagersModule extends ConfigurableModuleClass {
@@ -13,6 +14,7 @@ export class K8sResourseManagersModule extends ConfigurableModuleClass {
             K8sManagerFactoryService,
             DeploymentManagerService,
             MetadataManagerService,
+            ServiceManagerService,
         ]
         return {
             ...dynamicModule,

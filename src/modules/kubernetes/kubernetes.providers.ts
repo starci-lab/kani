@@ -1,4 +1,4 @@
-import { KUBERNETES_API, KUBERNETES_CLIENT } from "./constants"
+import { KUBERNETES_API, KUBERNETES_CLIENT, KUBERNETES_CORE_API } from "./constants"
 import * as k8s from "@kubernetes/client-node"
 import { KubeConfig } from "@kubernetes/client-node"
 import { Provider } from "@nestjs/common"
@@ -17,5 +17,13 @@ export const createKubernetesApiProvider = (): Provider => ({
     inject: [KUBERNETES_CLIENT],
     useFactory: (kubeConfig: KubeConfig ) => {
         return kubeConfig.makeApiClient(k8s.AppsV1Api)
+    }
+})
+
+export const createKubernetesCoreApiProvider = (): Provider => ({
+    provide: KUBERNETES_CORE_API,
+    inject: [KUBERNETES_CLIENT],
+    useFactory: (kubeConfig: KubeConfig ) => {
+        return kubeConfig.makeApiClient(k8s.CoreV1Api)
     }
 })

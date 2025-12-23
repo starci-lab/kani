@@ -37,7 +37,7 @@ import { FilesystemModule } from "@modules/filesystem"
         EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
-            appName: `kani-executor-${envConfig().botExecutor.batchId}`,
+            appName: `kani-executor-${envConfig().botExecutor.executorId}`,
             level: WinstonLevel.Verbose,
         }),
         PrimaryMongoDbModule.register({
