@@ -8,6 +8,10 @@ on:
       - "apps/kani-observer/**"
       - ".github/workflows/kani-observer.yaml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
 env:
   IMAGE_NAME: kani-observer
   DOCKERFILE_PATH: apps/kani-observer/Dockerfile

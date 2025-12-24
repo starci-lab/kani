@@ -8,6 +8,10 @@ on:
       - "apps/kani-coordinator/**"
       - ".github/workflows/kani-coordinator.yaml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
 env:
   IMAGE_NAME: kani-coordinator
   DOCKERFILE_PATH: apps/kani-coordinator/Dockerfile
