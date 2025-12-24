@@ -81,7 +81,7 @@ export class BalanceProcessorService  {
 
         setInterval(
             executeBalanceRebalancing,
-            envConfig().botExecutor.balanceEvaluationInterval,
+            envConfig().timeConfig.interval.rebalancing,
         )
         this.readinessWatcherFactoryService.setReady(
             createReadinessWatcherName(BalanceProcessorService.name, {

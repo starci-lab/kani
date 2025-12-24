@@ -73,7 +73,7 @@ export class ActiveBotProcessorService {
         this.load()
         setInterval(() => {
             this.load()
-        }, envConfig().botExecutor.activeBotInterval)
+        }, envConfig().timeConfig.interval.activeBot)
     }
 
     async load() {

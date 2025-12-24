@@ -274,10 +274,21 @@ export class DeploymentManagerService  {
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.apiKeys.smtp.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.config.smtp.replace(/\/data$/, ""),
                                             name: "smtp",
                                             readOnly: true
-                                        }
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.config.apiKeys.replace(/\/data$/, ""),
+                                            name: "api-keys",
+                                            readOnly: true
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.config.rpcs.replace(/\/data$/, ""),
+                                            name: "rpcs",
+                                            readOnly: true
+                                        },
+
                                     ],
                                 },
                             ],
@@ -313,6 +324,18 @@ export class DeploymentManagerService  {
                                         secretName: "smtp",
                                     },
                                 },  
+                                {
+                                    name: "api-keys",
+                                    secret: {
+                                        secretName: "api-keys",
+                                    },
+                                },
+                                {
+                                    name: "rpcs",
+                                    secret: {
+                                        secretName: "rpcs",
+                                    },
+                                },
                             ],
                         },
                     },

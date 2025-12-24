@@ -227,12 +227,13 @@ export class P2CBalancerService {
         const filteredConfigs = entry.rpcAccessConfigs.filter(
             rpcAccessConfig => !ejectedRpcs.some(
                 ejected => {
-                    return ejected.chainId === chainId
-                    && ejected.rpcId === rpcAccessConfig.id
-                    && new Decimal(now.diff(
+                    const timeDiff = now.diff(
                         this.dayjsService.from(ejected.ejectedAt),
                         "millisecond"
-                    )).lt(ttl)
+                    )
+                    return ejected.chainId === chainId
+                    && ejected.rpcId === rpcAccessConfig.id
+                    && new Decimal(timeDiff).lt(ttl)
 
                 }),
         )

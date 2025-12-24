@@ -27,6 +27,7 @@ import { AxiosModule } from "@modules/axios"
 import { ApolloClientModule } from "@modules/apollo-client"
 import { TerminusModule, DependencyName } from "@modules/terminus"
 import { FilesystemModule } from "@modules/filesystem"
+import { P2CBalancerModule } from "@modules/p2c-balancer"
 
 @Module({
     imports: [
@@ -64,6 +65,9 @@ import { FilesystemModule } from "@modules/filesystem"
             isGlobal: true,
         }),
         BullModule.forRoot({
+            isGlobal: true,
+        }),
+        P2CBalancerModule.register({
             isGlobal: true,
         }),
         GcpModule.register({

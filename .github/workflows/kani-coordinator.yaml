@@ -1,16 +1,16 @@
-name: build-and-push-kani-interface
+name: build-and-push-kani-coordinator
 
 on:
   push:
     branches: [main, build]
     paths:
       - "src/**"
-      - "apps/kani-interface/**"
-      - ".github/workflows/kani-interface.yaml"
+      - "apps/kani-coordinator/**"
+      - ".github/workflows/kani-coordinator.yaml"
 
 env:
-  IMAGE_NAME: kani-interface
-  DOCKERFILE_PATH: apps/kani-interface/Dockerfile
+  IMAGE_NAME: kani-coordinator
+  DOCKERFILE_PATH: apps/kani-coordinator/Dockerfile
   BUILD_CONTEXT: .
   IMAGE_TAG: latest
 
@@ -54,4 +54,4 @@ jobs:
 
       - name: Call Jenkins API to deploy the image
         run: |
-          curl -X POST -H "Content-Type: application/json" -d '${{ secrets.JENKINS_URL }}/generic-webhook-trigger/invoke?token=${{ secrets.KANI_INTERFACE_DEPLOYMENT_ROLLOUT_WEBHOOK_TOKEN }}'
+          curl -X POST -H "Content-Type: application/json" -d '${{ secrets.JENKINS_URL }}/generic-webhook-trigger/invoke?token=${{ secrets.KANI_COORDINATOR_DEPLOYMENT_ROLLOUT_WEBHOOK_TOKEN }}'

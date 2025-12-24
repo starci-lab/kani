@@ -17,6 +17,7 @@ import { AxiosModule } from "@modules/axios"
 import { ApolloClientModule } from "@modules/apollo-client"
 import { FilesystemModule } from "@modules/filesystem"
 import { DependencyName, TerminusModule } from "@modules/terminus"
+import { P2CBalancerModule } from "@modules/p2c-balancer"
 
 @Module({
     imports: [
@@ -31,6 +32,9 @@ import { DependencyName, TerminusModule } from "@modules/terminus"
         }),
         EventEmitterModule.forRoot(),
         MixinModule.register({
+            isGlobal: true,
+        }),
+        P2CBalancerModule.register({
             isGlobal: true,
         }),
         MathModule.register({

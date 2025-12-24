@@ -204,6 +204,8 @@ export const envConfig = () => ({
             rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
         },
         interval: {
+            activeBot: parseInt(process.env.INTERVAL_ACTIVE_BOT_INTERVAL || "10000", 10), // 10s
+            rebalancing: parseInt(process.env.INTERVAL_REBALANCING || "10000", 10), // 10s
             poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || "10000", 10), // 10s
             suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || "1000", 10), // 1s
             analytics: parseInt(process.env.INTERVAL_ANALYTICS || "30000", 10), // 30s
