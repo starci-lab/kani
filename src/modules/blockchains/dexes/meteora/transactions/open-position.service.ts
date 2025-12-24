@@ -5,7 +5,7 @@ import {
     Instruction,
 } from "@solana/kit"
 import { AtaInstructionService, AnchorUtilsService, KeypairGeneratorsService } from "../../../tx-builder"
-import { BotSchema, LoadBalancerName, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import { BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { i32, BeetArgsStruct } from "@metaplex-foundation/beet"
 import { 
     buildLiquidityStrategyParameters, 
@@ -136,7 +136,6 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -153,7 +152,6 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -173,7 +171,6 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(feeToAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                loadBalancerName: LoadBalancerName.MeteoraDlmm,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -195,7 +192,6 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(feeToAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                loadBalancerName: LoadBalancerName.MeteoraDlmm,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {

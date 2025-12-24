@@ -7,7 +7,6 @@ import { LiquidityPoolState } from "../../../interfaces"
 import { 
     BotSchema, 
     FlowXLiquidityPoolMetadata, 
-    LoadBalancerName, 
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import { Transaction } from "@mysten/sui/transactions"
@@ -93,7 +92,6 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinA 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                loadBalancerName: LoadBalancerName.FlowXClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenA.tokenAddress,
@@ -104,7 +102,6 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                loadBalancerName: LoadBalancerName.FlowXClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenB.tokenAddress,

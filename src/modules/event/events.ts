@@ -1,12 +1,13 @@
 import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@typedefs"
-import { CexId, LiquidityPoolId, TokenId } from "@modules/databases"
+import { CexId, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import crypto from "crypto"
 
 export enum EventName {
     ExecutorCreated = "executorCreated",
     ExecutorLoaded = "executorLoaded",
+    ReinitializeBalancers = "reinitializeBalancers",
     ExecutorDeleted = "executorDeleted",
     UserCreated = "userCreated",
     UserDeleted = "userDeleted",
@@ -114,4 +115,8 @@ export interface BotCreatedEvent {
 
 export interface BotDeletedEvent {
     id: string
+}
+
+export interface ReinitializeBalancersEvent {
+    ejectedRpcs: Array<RpcEjection>
 }

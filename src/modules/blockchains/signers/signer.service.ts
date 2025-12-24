@@ -2,24 +2,28 @@ import { Injectable } from "@nestjs/common"
 import { PlatformId } from "@typedefs"
 import { BotSchema } from "@modules/databases"
 import { Ed25519Keypair as SuiEd25519Keypair } from "@mysten/sui/keypairs/ed25519"
-import { createKeyPairFromBytes, createSignerFromKeyPair, KeyPairSigner } from "@solana/kit"
+import {
+    createKeyPairFromBytes,
+    createSignerFromKeyPair,
+    KeyPairSigner,
+} from "@solana/kit"
 import { ethers } from "ethers"
 import { EncryptionService } from "@modules/crypto"
 import bs58 from "bs58"
 import { GcpKmsService } from "@modules/gcp"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
-  bot: BotSchema
-  platformId: PlatformId
-  action: (signer: TSigner) => Promise<TResponse>
-  factory: (privateKey: string) => Promise<TSigner>
+  bot: BotSchema;
+  platformId: PlatformId;
+  action: (signer: TSigner) => Promise<TResponse>;
+  factory: (privateKey: string) => Promise<TSigner>;
 }
 
 @Injectable()
 export class SignerService {
     constructor(
     private readonly encryptionService: EncryptionService,
-    private readonly gcpKmsService: GcpKmsService
+    private readonly gcpKmsService: GcpKmsService,
     ) {}
 
     private async withSigner<TSigner, TResponse = void>({
@@ -32,13 +36,19 @@ export class SignerService {
         try {
             switch (platformId) {
             case PlatformId.Solana:
-                privateKey = await this.decryptPrivateKey(bot.encryptedPrivateKey ?? "")
+                privateKey = await this.decryptPrivateKey(
+                    bot.encryptedPrivateKey ?? "",
+                )
                 break
             case PlatformId.Sui:
-                privateKey = await this.decryptPrivateKey(bot.encryptedPrivateKey ?? "")
+                privateKey = await this.decryptPrivateKey(
+                    bot.encryptedPrivateKey ?? "",
+                )
                 break
             case PlatformId.Evm:
-                privateKey = await this.decryptPrivateKey(bot.encryptedPrivateKey ?? "")
+                privateKey = await this.decryptPrivateKey(
+                    bot.encryptedPrivateKey ?? "",
+                )
                 break
             }
             if (!privateKey) throw new Error("Private key not found")
@@ -54,19 +64,20 @@ export class SignerService {
     // ------------------------
 
     public withSuiSigner<TResponse = void>(params: {
-    bot: BotSchema
-    action: (signer: SuiEd25519Keypair) => Promise<TResponse>
+    bot: BotSchema;
+    action: (signer: SuiEd25519Keypair) => Promise<TResponse>;
   }) {
         return this.withSigner<SuiEd25519Keypair, TResponse>({
             ...params,
             platformId: PlatformId.Sui,
-            factory: async (privateKey) => SuiEd25519Keypair.fromSecretKey(privateKey),
+            factory: async (privateKey) =>
+                SuiEd25519Keypair.fromSecretKey(privateKey),
         })
     }
 
     public withSolanaSigner<TResponse = void>(params: {
-    bot: BotSchema
-    action: (signer: KeyPairSigner) => Promise<TResponse>
+    bot: BotSchema;
+    action: (signer: KeyPairSigner) => Promise<TResponse>;
   }) {
         return this.withSigner<KeyPairSigner, TResponse>({
             ...params,
@@ -80,8 +91,8 @@ export class SignerService {
     }
 
     public withEvmSigner<TResponse = void>(params: {
-    bot: BotSchema
-    action: (signer: ethers.Wallet) => Promise<TResponse>
+    bot: BotSchema;
+    action: (signer: ethers.Wallet) => Promise<TResponse>;
   }) {
         return this.withSigner<ethers.Wallet, TResponse>({
             ...params,
@@ -90,15 +101,11 @@ export class SignerService {
         })
     }
 
-    public async encryptPrivateKey(
-        privateKey: string
-    ): Promise<string> {
+    public async encryptPrivateKey(privateKey: string): Promise<string> {
         return this.encryptionService.encrypt(privateKey)
     }
 
-    private async decryptPrivateKey(
-        privateKey: string
-    ): Promise<string> {
+    private async decryptPrivateKey(privateKey: string): Promise<string> {
         return await this.gcpKmsService.decrypt(privateKey)
     }
 }

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
 import {
     BotSchema,
-    LoadBalancerName,
     OrcaLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -44,9 +43,9 @@ import {
     TOKEN_2022_PROGRAM_ADDRESS,
 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
-import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
 import { TokenType } from "@typedefs"
 import { FeeService } from "../../../math"
+import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
 
 @Injectable()
 export class OpenPositionInstructionService {
@@ -138,7 +137,6 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            loadBalancerName: LoadBalancerName.OrcaClmm,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -155,7 +153,6 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            loadBalancerName: LoadBalancerName.OrcaClmm,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -180,7 +177,6 @@ export class OpenPositionInstructionService {
                     ? address(tokenA.tokenAddress)
                     : undefined,
                 is2022Token: tokenA.is2022Token,
-                loadBalancerName: LoadBalancerName.OrcaClmm,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -205,7 +201,6 @@ export class OpenPositionInstructionService {
                     ? address(tokenB.tokenAddress)
                     : undefined,
                 is2022Token: tokenB.is2022Token,
-                loadBalancerName: LoadBalancerName.OrcaClmm,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {
@@ -225,7 +220,6 @@ export class OpenPositionInstructionService {
           tokenMint: mintKeyPair.address,
           ownerAddress: address(bot.accountAddress),
           is2022Token: true,
-          loadBalancerName: LoadBalancerName.OrcaClmm,
           pdaOnly: true,
       })
         const { pda: positionPda } = await this.positionService.getPda({

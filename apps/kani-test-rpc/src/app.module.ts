@@ -8,6 +8,8 @@ import { CacheModule } from "@modules/cache"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { EventModule } from "@modules/event"
 import { AppService } from "./app.service"
+import { PrimaryMongoDbModule } from "@modules/databases"
+import { ClientsModule } from "@modules/blockchains"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -15,6 +17,11 @@ import { AppService } from "./app.service"
             isGlobal: true,
             appName: "kani-test-rpc",
             level: WinstonLevel.Info,
+        }),
+        PrimaryMongoDbModule.register({
+            withSeeders: true,
+            memoryStorage: true,
+            isGlobal: true,
         }),
         FilesystemModule.register({
             isGlobal: true,
@@ -27,6 +34,9 @@ import { AppService } from "./app.service"
         }),
         EventEmitterModule.forRoot(),
         MixinModule.register({
+            isGlobal: true,
+        }),
+        ClientsModule.register({
             isGlobal: true,
         }),
         P2CBalancerModule.register({

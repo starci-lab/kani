@@ -8,7 +8,6 @@ import {
     ProcessSwapTransactionResponse,
 } from "./balance.interface"
 import { 
-    LoadBalancerName,
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
@@ -56,12 +55,13 @@ import { BotSchema, TokenSchema } from "@modules/databases"
 import Decimal from "decimal.js"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
-import { ClientType, RpcPickerService } from "../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
     constructor(
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
@@ -82,10 +82,9 @@ export class SolanaBalanceService implements IBalanceService {
         if (!token) {
             throw new TokenNotFoundException("Token not found")
         }
-        return await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.SolanaBalance,
-            callback: async ({ rpc }) => {
+        return await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
+            callback: async ({ rpc}) => {
                 // return the native token balance
                 if (token.type === TokenType.Native) {
                     const balance = await rpc.getBalance(address(bot.accountAddress)).send()
@@ -172,10 +171,8 @@ export class SolanaBalanceService implements IBalanceService {
         const compiledSwapTransactionMessage = getCompiledTransactionMessageDecoder().decode(
             swapTransaction.messageBytes,
         )
-        const loadBalancerName = this.solanaAggregatorSelectorService.aggregatorIdToLoadBalancerName(batchQuoteResponse.aggregatorId)
-        return await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: loadBalancerName,
+        return await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 const swapTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
                     compiledSwapTransactionMessage,

@@ -7,7 +7,6 @@ import {
 } from "../../interfaces"
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import {
-    LoadBalancerName,
     RaydiumPositionMetadata,
 } from "@modules/databases"
 import { SignerService } from "../../signers"
@@ -52,7 +51,8 @@ import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
@@ -72,7 +72,7 @@ export class RaydiumActionService implements IActionService {
         @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
         private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
         private readonly eventEmitter: EventEmitter2,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly mutexService: MutexService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
@@ -191,10 +191,8 @@ export class RaydiumActionService implements IActionService {
             bot,
             state: _state,
         })
-        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.RaydiumClmm,
-            withoutRetry: true,
+        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 // sign the transaction
                 return await this.signerService.withSolanaSigner({
@@ -323,10 +321,8 @@ export class RaydiumActionService implements IActionService {
         })
         // convert the transaction to a transaction with lifetime
         // sign the transaction
-        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.RaydiumClmm,
-            withoutRetry: true,
+        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 return await this.signerService.withSolanaSigner({
                     bot,

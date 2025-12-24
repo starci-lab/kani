@@ -35,3 +35,17 @@ export interface FeeInfo {
     feeRate: number
     feeToAddress: string
 }
+
+export interface RpcEjection {
+    chainId: ChainId
+    rpcId: string
+    ejectedAt: Date
+}
+
+export interface RpcEjectionConfig {
+    data: Array<RpcEjection>
+}
+
+export interface ConfigRecord<T> {
+    value: T
+}

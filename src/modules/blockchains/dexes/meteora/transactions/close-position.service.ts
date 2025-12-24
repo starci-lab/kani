@@ -5,7 +5,7 @@ import {
     address,
 } from "@solana/kit"
 import { AtaInstructionService, AnchorUtilsService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, LoadBalancerName, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import { BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { DlmmLiquidityPoolState } from "../../../interfaces"
 import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { EventAuthorityService } from "./event-authority.service"
@@ -62,7 +62,6 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: new BN(0),
         })
         if (createAtaAInstructions?.length) {
@@ -79,7 +78,6 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            loadBalancerName: LoadBalancerName.MeteoraDlmm,
             amount: new BN(0),
         })
         if (createAtaBInstructions?.length) {
@@ -273,7 +271,6 @@ export class ClosePositionInstructionService {
                 tokenMint: address(rewardInfo.mint.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
-                loadBalancerName: LoadBalancerName.MeteoraDlmm,
             })
             if (createAtaRewardInstructions?.length) {
                 instructions.push(...createAtaRewardInstructions)

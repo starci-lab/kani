@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AsyncService, LoadBalancerService } from "@modules/mixin"
+import { AsyncService } from "@modules/mixin"
 import { AggregatorNotFoundException } from "@exceptions"
 import { ChainId } from "@typedefs"
 import { AggregatorId } from "./types"
@@ -12,21 +12,18 @@ import {
 } from "./aggregator-selector.interface"
 import { SevenKAggregatorService } from "./7k.service"
 import { CetusAggregatorService } from "./cetus-aggregator.service"
-import { SuiClient } from "@mysten/sui/client"
-import { PrimaryMemoryStorageService, LoadBalancerName } from "@modules/databases"
+import { RpcExecutorService } from "@modules/blockchains"
 @Injectable()
 export class SuiAggregatorSelectorService implements IAggregatorSelectorService {
     constructor(
         private readonly cetusAggregatorService: CetusAggregatorService,
         private readonly sevenKService: SevenKAggregatorService,
         private readonly asyncService: AsyncService,
-        private readonly loadBalancerService: LoadBalancerService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly rpcExecutorService: RpcExecutorService,
     ) { }
 
     async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResponse> {
         const promises: Array<Promise<BatchQuoteResponse>> = []
-
         // Cetus Aggregator
         if (this.cetusAggregatorService.supportedChains().includes(ChainId.Sui)) {
             promises.push(
@@ -64,66 +61,11 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
     async selectorSwap(
         params: SelectorSwapParams
     ): Promise<SelectorSwapResponse> {
-        switch (params.aggregatorId) {
-        case AggregatorId.CetusAggregator: {
-            const { payload, outputCoin, txb } = await this.cetusAggregatorService.swap(params.base)
-            return {
-                payload,
-                outputCoin,
-                txb,
-            }
-        }
-        case AggregatorId.SevenK: {
-            const { payload, outputCoin, txb } = await this.sevenKService.swap(params.base)
-            return {
-                payload,
-                outputCoin,
-                txb,
-            }
-        }
-        default:
-            throw new AggregatorNotFoundException("Aggregator not found")
-        }
-    }
-
-    async getSuiRpc(
-        { aggregatorId }: GetSuiRpcParams
-    ): Promise<GetSuiRpcResponse> {
-        switch (aggregatorId) {
-        case AggregatorId.CetusAggregator: {
-            const url = this.loadBalancerService.balanceP2c(
-                LoadBalancerName.CetusAggregator,
-                this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs.write
-            )
-            return {
-                client: new SuiClient({
-                    url,
-                    network: "mainnet",
-                }),
-            }
-        }
-        case AggregatorId.SevenK: {
-            const url = this.loadBalancerService.balanceP2c(
-                LoadBalancerName.SevenKAggregator,
-                this.primaryMemoryStorageService.clientConfig.sevenKAggregatorClientRpcs.write
-            )
-            return {
-                client: new SuiClient({
-                    url,
-                    network: "mainnet",
-                }),
-            }
-        }
-        default:
-            throw new AggregatorNotFoundException("Aggregator not found")
+        const { payload, outputCoin, txb } = await this.cetusAggregatorService.swap(params.base)
+        return {
+            payload,
+            outputCoin,
+            txb,
         }
     }
 }   
-
-export interface GetSuiRpcParams {
-    aggregatorId: AggregatorId
-}
-
-export interface GetSuiRpcResponse {
-    client: SuiClient
-}

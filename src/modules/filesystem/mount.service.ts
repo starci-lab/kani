@@ -1,6 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { RpcAccessConfigs, SmtpConfig } from "./types"
-import { getAesKey, getCryptoKeyEdSa, getJwtSecretKey, getRpcAccessConfigs, getSmtpConfig } from "./pure"
+import { ApiKeys, RpcAccessConfigs, SmtpConfig } from "./types"
+import { 
+    getAesKey, 
+    getApiKeys, 
+    getCryptoKeyEdSa, 
+    getJwtSecretKey, 
+    getRpcAccessConfigs, 
+    getSmtpConfig 
+} from "./pure"
 /**
  * Service responsible for reading secrets mounted into the container filesystem.
  *
@@ -31,5 +38,9 @@ export class MountFilesystemService {
 
     rpcAccessConfigs(): RpcAccessConfigs {
         return getRpcAccessConfigs()
+    }
+
+    apiKeys(): ApiKeys {
+        return getApiKeys()
     }
 }

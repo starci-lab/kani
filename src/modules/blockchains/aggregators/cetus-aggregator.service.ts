@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
 import { AggregatorClient, RouterDataV3 } from "@cetusprotocol/aggregator-sdk"
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { LoadBalancerService } from "@modules/mixin"
+import { RpcExecutorService } from "@modules/blockchains"
 import { SuiClient } from "@mysten/sui/client"
 import { RetryService } from "@modules/mixin"
 import { 
@@ -11,13 +11,14 @@ import {
 } from "@exceptions"
 import { Transaction } from "@mysten/sui/transactions"
 import { ChainId } from "@typedefs"
+import { RpcAccessType } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
 
-const balancerName = "cetus-aggregator"
 @Injectable()
 export class CetusAggregatorService implements IAggregatorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly retryService: RetryService,
     ) {}
 
@@ -25,15 +26,9 @@ export class CetusAggregatorService implements IAggregatorService {
         return [ChainId.Sui]
     }
 
-    private createCetusAggregatorClient(): AggregatorClient {
+    private createCetusAggregatorClient(client: SuiClient): AggregatorClient {
         return new AggregatorClient({
-            client: new SuiClient({
-                url: this.loadBalancerService.balanceP2c(
-                    balancerName, 
-                    this.primaryMemoryStorageService.clientConfig.cetusAggregatorClientRpcs.read
-                ),
-                network: "mainnet",
-            }),
+            client,
         })
     }
 
@@ -57,10 +52,11 @@ export class CetusAggregatorService implements IAggregatorService {
             throw new TokenNotFoundException(`Token not found with display id: ${tokenOut}`)
         }
 
-        const client = this.createCetusAggregatorClient()
-        return await this.retryService.retry({
-            action: async () => {   
-                const quote = await client.findRouters({
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async (client) => {
+                const cetusAggregatorClient = this.createCetusAggregatorClient(client)
+                const quote = await cetusAggregatorClient.findRouters({
                     from: tokenInInstance.tokenAddress,
                     target: tokenOutInstance.tokenAddress,
                     amount: amountIn,
@@ -74,48 +70,48 @@ export class CetusAggregatorService implements IAggregatorService {
                     payload: quote,
                 }   
             },
-            maxRetries: 3,
-            delay: 500,
-            factor: 2,
         })
     }
-
-    async swap(
-        { 
-            payload, 
-            inputCoin, 
-            txb 
-        }: SwapRequest): Promise<SwapResponse> {
-        txb = txb || new Transaction()
-        const client = this.createCetusAggregatorClient()
-        const router = payload as RouterDataV3 
-        // no slippage
-        const slippage = 0.999
-        const outputCoin = await this.retryService.retry({
-            action: async () => {
-                if (!inputCoin) {
-                    await client.fastRouterSwap({
-                        router,
-                        slippage,
-                        txb,
-                    })
-                    return undefined
-                }
-                return await client.routerSwap({
-                    router,
-                    slippage,
-                    txb,
-                    inputCoin,
+    async swap({ 
+        payload, 
+        txb,
+        inputCoin
+    }: SwapRequest): Promise<SwapResponse> {
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async (client) => {
+                const cetusAggregatorClient = this.createCetusAggregatorClient(client)
+                const _txb = txb || new Transaction()
+                const router = payload as RouterDataV3 
+                // no slippage
+                const slippage = 0.999
+                const outputCoin = await this.retryService.retry({
+                    action: async () => {
+                        if (!inputCoin) {
+                            await cetusAggregatorClient.fastRouterSwap({
+                                router,
+                                slippage,
+                                txb: _txb,
+                            })
+                            return undefined
+                        }
+                        return await cetusAggregatorClient.routerSwap({
+                            router,
+                            slippage,
+                            txb: _txb,
+                            inputCoin,
+                        })
+                    },
+                    maxRetries: envConfig().timeConfig.retry.maxRetries,
+                    delay: envConfig().timeConfig.retry.delay,
+                    factor: envConfig().timeConfig.retry.factor,
                 })
+                return {
+                    outputCoin,
+                    payload: null,
+                    txb
+                }
             },
-            maxRetries: 3,
-            delay: 500,
-            factor: 2,
         })
-        return {
-            outputCoin,
-            payload: null,
-            txb
-        }
     }
 }

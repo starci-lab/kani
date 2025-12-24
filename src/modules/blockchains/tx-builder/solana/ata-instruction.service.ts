@@ -28,8 +28,8 @@ import { getCreateAccountWithSeedInstruction } from "@solana-program/system"
 import BN from "bn.js"
 import { sha256 } from "@noble/hashes/sha2"
 import { PublicKey } from "@solana/web3.js"
-import { LoadBalancerName } from "@modules/databases"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 export const WSOL_MINT_ADDRESS = address(
     "So11111111111111111111111111111111111111112",
@@ -37,20 +37,20 @@ export const WSOL_MINT_ADDRESS = address(
 
 @Injectable()
 export class AtaInstructionService {
-    constructor(private readonly rpcPickerService: RpcPickerService) {}
+    constructor(
+        private readonly rpcExecutorService: RpcExecutorService,
+    ) {}
 
     async getOrCreateAtaInstructions({
         tokenMint,
         ownerAddress,
         is2022Token = false,
-        loadBalancerName,
         pdaOnly = false,
         amount = new BN(0),
     }: GetOrCreateAtaInstructionsParams): Promise<GetOrCreateAtaInstructionsResponse> {
         if (!tokenMint) {
             return await this.createWSolAccountInstructions({
                 ownerAddress,
-                loadBalancerName,
                 is2022Token,
                 amount,
                 pdaOnly,
@@ -73,9 +73,8 @@ export class AtaInstructionService {
             }
         }
         // we fetch the encoded account to check if it exists
-        const encodedAccount = await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: loadBalancerName,
+        const encodedAccount = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
                 return await fetchEncodedAccount(rpc, ataAddress)
             },
@@ -104,7 +103,6 @@ export class AtaInstructionService {
 
     async createWSolAccountInstructions({
         ownerAddress,
-        loadBalancerName,
         is2022Token = false,
         amount,
     }: CreateWSolAccountInstructionsParams): Promise<CreateWSolAccountInstructionsResponse> {
@@ -112,9 +110,8 @@ export class AtaInstructionService {
             ? TOKEN_2022_PROGRAM_ADDRESS
             : TOKEN_PROGRAM_ADDRESS
         const space = is2022Token ? getToken2022Size() : getTokenSize()
-        const balanceNeeded = await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: loadBalancerName,
+        const balanceNeeded = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
                 return await rpc
                     .getMinimumBalanceForRentExemption(
@@ -197,7 +194,6 @@ export interface GetOrCreateAtaInstructionsParams {
   tokenMint?: Address;
   ownerAddress: Address;
   is2022Token?: boolean;
-  loadBalancerName: LoadBalancerName;
   amount?: BN;
   pdaOnly?: boolean;
 }
@@ -210,7 +206,6 @@ export interface GetOrCreateAtaInstructionsResponse {
 
 export interface CreateWSolAccountInstructionsParams {
   ownerAddress: Address;
-  loadBalancerName: LoadBalancerName;
   is2022Token?: boolean;
   amount: BN;
   pdaOnly?: boolean;

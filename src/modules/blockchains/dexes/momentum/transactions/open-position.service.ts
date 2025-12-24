@@ -1,7 +1,6 @@
 import { LiquidityPoolState } from "../../../interfaces"
 import {
     BotSchema,
-    LoadBalancerName,
     MomentumLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -79,7 +78,6 @@ export class OpenPositionTxbService {
         }
         const { sourceCoin: sourceCoinA } =
       await this.selectCoinsService.fetchAndMergeCoins({
-          loadBalancerName: LoadBalancerName.MomentumClmm,
           txb,
           owner: bot.accountAddress,
           coinType: tokenA.tokenAddress,
@@ -88,7 +86,6 @@ export class OpenPositionTxbService {
       })
         const { sourceCoin: sourceCoinB } =
       await this.selectCoinsService.fetchAndMergeCoins({
-          loadBalancerName: LoadBalancerName.MomentumClmm,
           txb,
           owner: bot.accountAddress,
           coinType: tokenB.tokenAddress,

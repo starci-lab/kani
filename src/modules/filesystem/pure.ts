@@ -1,7 +1,7 @@
 import { envConfig } from "@modules/env"
 import crypto from "crypto"
 import { readFileSync } from "fs"
-import { RpcAccessConfigs, SmtpConfig } from "./types"
+import { ApiKeys, RpcAccessConfigs, SmtpConfig } from "./types"
 
 // pure function to get the jwt secret key
 // in case there is component that not depends on nestjs DI
@@ -85,3 +85,18 @@ export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
     }
     return rpcAccessConfigs
 }   
+
+/**
+ * Pure function to get the api keys
+ * in case there is component that not depends on nestjs DI
+ */
+export const getApiKeys = (apiKeys?: ApiKeys) => {
+    if (!apiKeys) {
+        apiKeys = JSON.parse(
+            readFileSync(
+                envConfig().mountPath.config.apiKeys,
+                "utf8"
+            )) as ApiKeys
+    }
+    return apiKeys
+}

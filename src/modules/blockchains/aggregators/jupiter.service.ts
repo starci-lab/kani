@@ -7,6 +7,8 @@ import BN from "bn.js"
 import { RetryService } from "@modules/mixin"
 import { ChainId } from "@typedefs"
 import { Address, address } from "@solana/kit"
+import { MountStorageService } from "@modules/filesystem"
+
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 
 @Injectable()
@@ -16,6 +18,7 @@ export class JupiterService implements IAggregatorService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         // Generic retry helper to re-run any async action with backoff
         private readonly retryService: RetryService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
 
     private jupiterReferralTokenAccounts(): Partial<Record<TokenId, Address>> {
@@ -28,7 +31,7 @@ export class JupiterService implements IAggregatorService {
 
     private createJupiterClient(): SwapApi {
         return createJupiterApiClient({
-            apiKey: "bf7f948e-1a9c-4cf9-8d6f-5c0d9effcfdb",
+            apiKey: this.mountStorageService.apiKeys.jupiter,
         })
     }
 
@@ -103,32 +106,25 @@ export class JupiterService implements IAggregatorService {
     SwapRequest): 
     Promise<SwapResponse> 
     {
+        const referralTokenAccount = this.jupiterReferralTokenAccounts()[tokenOut]?.toString()
         return await this.retryService.retry({
             action: async () => {
-                const referralTokenAccount = this.jupiterReferralTokenAccounts()[tokenOut]?.toString()
-                return await this.retryService.retry({
-                    action: async () => {
-                        const client = this.createJupiterClient()
-                        const { 
-                            swapTransaction
-                        } = await client.swapPost({
-                            swapRequest: {
-                                quoteResponse: payload as JupiterQuoteResponse,
-                                userPublicKey: accountAddress,
-                                dynamicComputeUnitLimit: true,
-                                dynamicSlippage: true,
-                                feeAccount: referralTokenAccount,   
-                            } 
-                        })
-                        return {
-                            payload: swapTransaction,
-                        }
-                    },
+                const client = this.createJupiterClient()
+                const { 
+                    swapTransaction
+                } = await client.swapPost({
+                    swapRequest: {
+                        quoteResponse: payload as JupiterQuoteResponse,
+                        userPublicKey: accountAddress,
+                        dynamicComputeUnitLimit: true,
+                        dynamicSlippage: true,
+                        feeAccount: referralTokenAccount,   
+                    } 
                 })
+                return {
+                    payload: swapTransaction,
+                }
             },
-            maxRetries: 10,
-            delay: 200,
-            factor: 2,
         })
     }
 

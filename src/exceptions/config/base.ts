@@ -14,6 +14,12 @@ export class FeeConfigNotFoundException extends AbstractException {
     }
 }
 
+export class RpcEjectionConfigNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Rpc ejection config not found", "RPC_EJECTION_CONFIG_NOT_FOUND_EXCEPTION")
+    }
+}
+
 export class MinGasRequiredNotFoundException extends AbstractException {
     constructor(chainId: ChainId, network: Network, message?: string) {
         super(message || `Min gas required not found for chain ${chainId} and network ${network}`, "MIN_GAS_REQUIRED_NOT_FOUND_EXCEPTION_EXCEPTION")

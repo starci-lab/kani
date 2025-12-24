@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { JupiterService } from "./jupiter.service"
 import { AsyncService } from "@modules/mixin"
-import { LoadBalancerName } from "@modules/databases"
 import { AggregatorNotFoundException } from "@exceptions"
 import { ChainId } from "@typedefs"
 import { AggregatorId } from "./types"
@@ -12,7 +11,6 @@ import {
     SelectorSwapParams, 
     SelectorSwapResponse 
 } from "./aggregator-selector.interface"
-import { Rpc, SolanaRpcApi, RpcSubscriptions, SolanaRpcSubscriptionsApi } from "@solana/kit"
 
 @Injectable()
 export class SolanaAggregatorSelectorService implements IAggregatorSelectorService {
@@ -52,36 +50,9 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
     async selectorSwap(
         params: SelectorSwapParams
     ): Promise<SelectorSwapResponse> {
-        switch (params.aggregatorId) {
-        case AggregatorId.Jupiter: {
-            const { payload } = await this.jupiterService.swap(params.base)
-            return {
-                payload,
-            }
-        }
-        default:
-            throw new AggregatorNotFoundException("Aggregator not found")
-        }
-    }
-
-    aggregatorIdToLoadBalancerName(
-        aggregatorId: AggregatorId
-    ): LoadBalancerName {
-        switch (aggregatorId) {
-        case AggregatorId.Jupiter: {
-            return LoadBalancerName.JupiterAggregator
-        }
-        default:
-            throw new AggregatorNotFoundException("Aggregator not found")
+        const { payload } = await this.jupiterService.swap(params.base)
+        return {
+            payload,
         }
     }
 }   
-
-export interface GetSolanaRpcsParams {
-    aggregatorId: AggregatorId
-}
-
-export interface GetSolanaRpcsResponse {
-    rpc: Rpc<SolanaRpcApi>
-    rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
-}

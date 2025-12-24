@@ -6,10 +6,8 @@ import {
     ProcessSwapTransactionParams, 
     ProcessSwapTransactionResponse
 } from "./balance.interface"
-import { LoadBalancerService } from "@modules/mixin"
-import { LoadBalancerName, PrimaryMemoryStorageService } from "@modules/databases"
+import { PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenNotFoundException, TransactionNotFoundException } from "@exceptions"
-import { SuiClient } from "@mysten/sui/client"
 import BN from "bn.js"
 import { SuiAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
@@ -17,11 +15,13 @@ import Decimal from "decimal.js"
 import { SignerService } from "../signers"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
     constructor(
-        private readonly loadBalancerService: LoadBalancerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
@@ -69,32 +69,29 @@ export class SuiBalanceService implements IBalanceService {
         if (outputCoin) {
             txb.transferObjects([outputCoin], bot.accountAddress)
         }
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.SuiBalance,
-            this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs.write
-        )
-        const client = new SuiClient({
-            url,
-            network: "mainnet",
-        })
         const txHash = await this.signerService.withSuiSigner<string>({
             bot,
             action: async (signer) => {
-                const { digest } = await client.signAndExecuteTransaction({
-                    transaction: txb,
-                    signer,
+                return await this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Write,
+                    callback: async (suiClient) => {
+                        const { digest } = await suiClient.signAndExecuteTransaction({
+                            transaction: txb,
+                            signer,
+                        })
+                        await suiClient.waitForTransaction({   
+                            digest,
+                        })
+                        this.logger.debug(
+                            WinstonLog.SwapTransactionSuccess, {
+                                txHash: digest,
+                                bot: bot.id,
+                                tokenInId: tokenIn.displayId,
+                                tokenOutId: tokenOut.displayId,
+                            })
+                        return digest
+                    }   
                 })
-                await client.waitForTransaction({   
-                    digest,
-                })
-                this.logger.debug(
-                    WinstonLog.SwapTransactionSuccess, {
-                        txHash: digest,
-                        bot: bot.id,
-                        tokenInId: tokenIn.displayId,
-                        tokenOutId: tokenOut.displayId,
-                    })
-                return digest
             },
         })
         return {
@@ -114,20 +111,17 @@ export class SuiBalanceService implements IBalanceService {
         if (!token) {
             throw new TokenNotFoundException("Token not found")
         }
-        const url = this.loadBalancerService.balanceP2c(
-            LoadBalancerName.SuiBalance,
-            this.primaryMemoryStorageService.clientConfig.suiBalanceClientRpcs.read
-        )
-        const client = new SuiClient({
-            url,
-            network: "mainnet",
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async (suiClient) => {
+                const { totalBalance } = await suiClient.getBalance({
+                    owner: bot.accountAddress,
+                    coinType: token.tokenAddress,
+                })
+                return {
+                    balanceAmount: new BN(totalBalance.toString()),
+                }
+            },
         })
-        const { totalBalance } = await client.getBalance({
-            owner: bot.accountAddress,
-            coinType: token.tokenAddress,
-        })
-        return {
-            balanceAmount: new BN(totalBalance.toString()),
-        }
     }   
 }   

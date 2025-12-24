@@ -29,12 +29,12 @@ import {
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import {
-    PrimaryMemoryStorageService,
-    LoadBalancerName
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 import Decimal from "decimal.js"
 import { 
     ClosePositionConfirmationPayload, 
@@ -61,7 +61,7 @@ export class MeteoraActionService implements IActionService {
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly eventEmitter: EventEmitter2,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly mutexService: MutexService,
     ) { }
     async openPosition({
@@ -111,10 +111,8 @@ export class MeteoraActionService implements IActionService {
         // append the fee instructions
         // convert the transaction to a transaction with lifetime
         // sign the transaction
-        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.MeteoraDlmm,
-            withoutRetry: true,
+        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 return await this.signerService.withSolanaSigner({
                     bot,
@@ -305,10 +303,8 @@ export class MeteoraActionService implements IActionService {
             bot,
             state: _state,
         })
-        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.MeteoraDlmm,
-            withoutRetry: true,
+        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 // sign the transaction
                 return await this.signerService.withSolanaSigner({

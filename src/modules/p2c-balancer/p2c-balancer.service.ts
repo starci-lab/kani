@@ -2,17 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { ChainId } from "@typedefs"
 import { P2cBalancer } from "load-balancers"
 import {
-    CacheKey,
-    createCacheKey,
-    EjectedRpcsCacheResult,
-    InjectRedisCache,
-} from "@modules/cache"
-import { Cache } from "cache-manager"
-import {
-    InjectSuperJson,
     ReadinessWatcherFactoryService,
 } from "@modules/mixin"
-import SuperJSON from "superjson"
 import { MountStorageService, RpcAccessType } from "@modules/filesystem"
 import { RpcAccessConfig } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -20,8 +11,23 @@ import { Logger as WinstonLogger } from "winston"
 import {
     AllRpcsEjectedException,
     NoAvailableRpcException,
+    RpcEjectionConfigNotFoundException,
 } from "@exceptions"
+import { 
+    ConfigRecord, 
+    ConfigSchema, 
+    RpcEjection, 
+    ConfigId, 
+    RpcEjectionConfig, 
+    InjectPrimaryMongoose 
+} from "@modules/databases"
+import { DayjsService } from "@modules/mixin"
+import { Connection } from "mongoose"
+import { createObjectId } from "@utils"
 import { envConfig } from "@modules/env"
+import { Decimal } from "decimal.js"
+import { OnEvent } from "@nestjs/event-emitter"
+import { EventEmitterService, EventName, ReinitializeBalancersEvent } from "@modules/event"
 
 /* =========================================================
  * Types & Enums
@@ -78,14 +84,14 @@ export class P2CBalancerService {
     > = {}
 
     constructor(
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly mountStorageService: MountStorageService,
         @InjectWinston()
         private readonly winstonLogger: WinstonLogger,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly dayjsService: DayjsService,
+        private readonly eventEmitterService: EventEmitterService,
     ) {}
 
     /* ---------------------------------------------------------
@@ -103,28 +109,25 @@ export class P2CBalancerService {
      * 5. Restore ejected RPCs from Redis
      */
     async onModuleInit(): Promise<void> {
+        // wait until mount storage and primary memory storage are ready
         await this.readinessWatcherFactoryService.waitUntilReady(
             MountStorageService.name,
         )
-
-        for (const chainId of Object.keys(
-            this.mountStorageService.rpcAccessConfigs,
-        )) {
+        for (
+            const chainId of Object.keys(
+                this.mountStorageService.rpcAccessConfigs,
+            )) {
             const _chainId = chainId as ChainId
             const baseConfigs =
                 this.mountStorageService.rpcAccessConfigs[_chainId]
 
             const expanded = this.expandByWeight(baseConfigs)
-
             this.balancers[_chainId] = {}
-
             for (const accessType of Object.values(RpcAccessType)) {
                 const accessFiltered = expanded.filter(cfg =>
                     cfg.accessTypes?.includes(accessType),
                 )
-
                 if (!accessFiltered.length) continue
-
                 const http = accessFiltered
                 const ws = accessFiltered.filter(cfg => cfg.supportWs)
 
@@ -136,7 +139,7 @@ export class P2CBalancerService {
                 }
             }
         }
-        await this.restoreEjectedRpcs()
+        await this.initializeBalancers()
         this.winstonLogger.info(WinstonLog.P2CBalancersInitialized)
     }
 
@@ -147,9 +150,11 @@ export class P2CBalancerService {
     /**
      * Pick an RPC endpoint using P2C.
      */
-    balance(params: BalanceParams): string {
-        const { chainId, transport, accessType } = params
-
+    balance({ 
+        chainId, 
+        transport, 
+        accessType 
+    }: BalanceParams): RpcAccessConfig {
         const entry =
             this.balancers[chainId]?.[accessType]?.[transport]
 
@@ -159,9 +164,8 @@ export class P2CBalancerService {
                 `No available ${transport} RPC for ${accessType} on chain ${chainId}`,
             )
         }
-
         const index = entry.instance.pick()
-        return entry.rpcAccessConfigs[index].url
+        return entry.rpcAccessConfigs[index]
     }
 
     /**
@@ -172,30 +176,80 @@ export class P2CBalancerService {
         chainId: ChainId,
         rpcIds: Array<string>,
     ): Promise<void> {
-        if (!rpcIds.length) return
+        if (!rpcIds.length) throw new Error("No RPC IDs to eject")
+        await this.addEjectedRpc(chainId, rpcIds)
+        const ejectedRpcs = await this.loadEjectedCache()
+        await this.eventEmitterService.emit<ReinitializeBalancersEvent>(
+            EventName.ReinitializeBalancers, 
+            {
+                ejectedRpcs,
+            },
+            {
+                withoutKafka: false,
+                withoutLocal: false,
+            }
+        )
+    }
 
-        const ejected = await this.loadEjectedCache()
+    @OnEvent(EventName.ReinitializeBalancers)
+    async handleReinitializeBalancers(
+        event?: ReinitializeBalancersEvent
+    ) {
+        await this.initializeBalancers(event)
+    }
 
-        ejected[chainId] ??= []
-
-        for (const id of rpcIds) {
-            if (!ejected[chainId].includes(id)) {
-                ejected[chainId].push(id)
+    private async initializeBalancers(event?: ReinitializeBalancersEvent) {
+        const ejectedRpcs = event?.ejectedRpcs ?? await this.loadEjectedCache()
+        for (const chainId of Object.values(ChainId)) {
+            for (const accessType of Object.values(RpcAccessType)) {
+                for (const transport of Object.values(RpcTransport)) {
+                    this.initializeBalancer(
+                        chainId,
+                        accessType,
+                        transport,
+                        ejectedRpcs,
+                    )
+                }
             }
         }
+    }
 
-        await this.saveEjectedCache(ejected)
+    private initializeBalancer(
+        chainId: ChainId,
+        accessType: RpcAccessType,
+        transport: RpcTransport,
+        ejectedRpcs: Array<RpcEjection>,
+    ) {
+        const entry = this.balancers[chainId]?.[accessType]?.[transport]
+        if (!entry) return
+        const now = this.dayjsService.now()
+        const ttl = envConfig().ejection.rpcTtl
+        // filter out the ejected RPCs
+        const filteredConfigs = entry.rpcAccessConfigs.filter(
+            rpcAccessConfig => !ejectedRpcs.some(
+                ejected => {
+                    return ejected.chainId === chainId
+                    && ejected.rpcId === rpcAccessConfig.id
+                    && new Decimal(now.diff(
+                        this.dayjsService.from(ejected.ejectedAt),
+                        "millisecond"
+                    )).lt(ttl)
 
-        for (const accessType of Object.values(RpcAccessType)) {
-            for (const transport of Object.values(RpcTransport)) {
-                this.rebuildBalancer(
+                }),
+        )
+        if (!filteredConfigs.length) {
+            this.winstonLogger.error(
+                WinstonLog.AllRpcsEjected, {
                     chainId,
                     accessType,
                     transport,
-                    ejected[chainId],
-                )
-            }
+                })
+            throw new AllRpcsEjectedException(
+                chainId,
+                `All ${transport} RPCs ejected for ${accessType} on chain ${chainId}`,
+            )
         }
+        this.balancers[chainId]![accessType]![transport] = this.createBalancer(filteredConfigs)
     }
 
     /* ---------------------------------------------------------
@@ -206,46 +260,12 @@ export class P2CBalancerService {
      * Create a new P2C balancer.
      */
     private createBalancer(
-        configs: Array<RpcAccessConfig>,
+        rpcAccessConfigs: Array<RpcAccessConfig>,
     ): P2CBalancerData {
         return {
-            instance: new P2cBalancer(configs.length),
-            rpcAccessConfigs: configs,
+            instance: new P2cBalancer(rpcAccessConfigs.length),
+            rpcAccessConfigs,
         }
-    }
-
-    /**
-     * Rebuild a balancer after ejecting RPCs.
-     */
-    private rebuildBalancer(
-        chainId: ChainId,
-        accessType: RpcAccessType,
-        transport: RpcTransport,
-        ejectedIds: Array<string>,
-    ): void {
-        const entry =
-            this.balancers[chainId]?.[accessType]?.[transport]
-
-        if (!entry) return
-
-        const rest = entry.rpcAccessConfigs.filter(
-            cfg => !ejectedIds.includes(cfg.id),
-        )
-
-        if (!rest.length) {
-            this.winstonLogger.error(WinstonLog.AllRpcsEjected, {
-                chainId,
-                accessType,
-                transport,
-            })
-            throw new AllRpcsEjectedException(
-                chainId,
-                `All ${transport} RPCs ejected for ${accessType} on chain ${chainId}`,
-            )
-        }
-
-        this.balancers[chainId]![accessType]![transport] =
-            this.createBalancer(rest)
     }
 
     /**
@@ -257,14 +277,14 @@ export class P2CBalancerService {
      * [A, A, A, B]
      */
     private expandByWeight(
-        configs: Array<RpcAccessConfig>,
+        rpcAccessConfigs: Array<RpcAccessConfig>,
     ): Array<RpcAccessConfig> {
         const expanded: Array<RpcAccessConfig> = []
 
-        for (const rpc of configs) {
-            const weight = Math.max(1, Math.floor(rpc.weight ?? 1))
+        for (const rpcAccessConfig of rpcAccessConfigs) {
+            const weight = Math.max(1, Math.floor(rpcAccessConfig.weight ?? 1))
             for (let i = 0; i < weight; i++) {
-                expanded.push(rpc)
+                expanded.push(rpcAccessConfig)
             }
         }
 
@@ -272,48 +292,72 @@ export class P2CBalancerService {
     }
 
     /**
-     * Load eject state from Redis.
+     * Load eject state from database.
      */
-    private async loadEjectedCache(): Promise<EjectedRpcsCacheResult> {
-        const serialized = await this.cacheManager.get<string>(
-            createCacheKey(CacheKey.EjectRpcs),
-        )
-        return serialized
-            ? this.superjson.parse<EjectedRpcsCacheResult>(serialized)
-            : {}
-    }
-
-    /**
-     * Persist eject state to Redis.
-     */
-    private async saveEjectedCache(
-        data: EjectedRpcsCacheResult,
-    ): Promise<void> {
-        await this.cacheManager.set(
-            createCacheKey(CacheKey.EjectRpcs),
-            this.superjson.stringify(data),
-            envConfig().cache.ttl.ejectRpcs,
-        )
-    }
-
-    /**
-     * Restore ejected RPCs on startup.
-     */
-    private async restoreEjectedRpcs(ejected?: EjectedRpcsCacheResult): Promise<void> {
-        ejected = ejected ?? await this.loadEjectedCache()
-        for (const chainId of Object.keys(this.balancers)) {
-            const ids = ejected[chainId as ChainId] ?? []
-            if (!ids.length) continue
-            for (const accessType of Object.values(RpcAccessType)) {
-                for (const transport of Object.values(RpcTransport)) {
-                    this.rebuildBalancer(
-                        chainId as ChainId,
-                        accessType,
-                        transport,
-                        ids,
-                    )
-                }
-            }
+    private async loadEjectedCache(): Promise<Array<RpcEjection>> {
+        const config = await this.connection.model<ConfigSchema>(ConfigSchema.name)
+            .findById<ConfigRecord<RpcEjectionConfig>>(
+                createObjectId(ConfigId.RpcEjection)
+            )
+        if (!config) {
+            throw new RpcEjectionConfigNotFoundException("Rpc ejection config not found")
         }
+        return config.value.data
+    }
+
+    /**
+     * Persist ejected RPCs to database.
+     */
+    async addEjectedRpc(
+        chainId: ChainId,
+        rpcIds: Array<string>,
+    ): Promise<void> {
+        await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .updateOne(
+                { _id: createObjectId(ConfigId.RpcEjection) },
+                {
+                    $push: {
+                        value: {
+                            data: {
+                                $each: rpcIds.map(
+                                    rpcId => 
+                                        (
+                                            {
+                                                chainId,
+                                                rpcId,
+                                                ejectedAt: this.dayjsService.now().toDate(),
+                                            }
+                                        )
+                                ),
+                            },
+                        },
+                    },
+                }
+            )
+    }
+
+    /**
+     * Remove ejected RPCs from database.
+     */
+    async removeEjectedRpcs(
+        chainId: ChainId,
+        rpcIds: Array<string>,
+    ): Promise<void> {
+        await this.connection
+            .model<ConfigSchema>(ConfigSchema.name)
+            .updateOne(
+                { _id: createObjectId(ConfigId.RpcEjection) },
+                {
+                    $pull: {
+                        value: {
+                            data: {
+                                chainId,
+                                rpcId: { $in: rpcIds },
+                            },
+                        },
+                    },
+                },
+            )
     }
 }

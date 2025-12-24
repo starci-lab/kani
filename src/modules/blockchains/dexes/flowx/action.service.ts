@@ -10,7 +10,6 @@ import { SignerService } from "../../signers"
 import BN from "bn.js"
 import {
     PrimaryMemoryStorageService,
-    LoadBalancerName,
 } from "@modules/databases"
 import {
     ClosePositionTxbService,
@@ -33,7 +32,8 @@ import {
     OpenPositionConfirmationPayload 
 } from "../../types"
 import Decimal from "decimal.js"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
@@ -42,7 +42,6 @@ import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { v4 } from "uuid"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
-import {  } from "@modules/lock"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -56,7 +55,7 @@ export class FlowXActionService implements IActionService {
     @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
     private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     private readonly closePositionTxbService: ClosePositionTxbService,
-    private readonly rpcPickerService: RpcPickerService,
+    private readonly rpcExecutorService: RpcExecutorService,
     private readonly mutexService: MutexService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
@@ -117,11 +116,8 @@ export class FlowXActionService implements IActionService {
             txHash,
             positionId,
             liquidity,
-        } = await this.rpcPickerService.withSuiClient({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.FlowXClmm,
-            // we do not proccess retries here, since we dont want to wait for the retries to complete
-            withoutRetry: true,
+        } = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
             callback: async (client) => {
                 return await this.signerService.withSuiSigner({
                     bot,
@@ -310,9 +306,8 @@ export class FlowXActionService implements IActionService {
           state: _state,
           txb,
       })
-        const txHash = await this.rpcPickerService.withSuiClient<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.FlowXClmm,
+        const txHash = await this.rpcExecutorService.withSuiClient<string>({
+            accessType: RpcAccessType.Write,
             callback: async (client) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({

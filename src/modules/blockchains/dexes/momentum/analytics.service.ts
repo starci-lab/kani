@@ -39,8 +39,8 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly asyncService: AsyncService,
     ) {}
 
-    async onApplicationBootstrap() {
-        await this.handleAnalyticsUpdateInterval()
+    onApplicationBootstrap() {
+        this.handleAnalyticsUpdateInterval()
     }
 
     async onModuleInit() {
@@ -95,7 +95,7 @@ implements OnModuleInit, OnApplicationBootstrap
         await this.asyncService.allIgnoreError(promises)
     }
 
-  @Interval(envConfig().interval.analytics)
+  @Interval(envConfig().timeConfig.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         const promises: Array<Promise<void>> = []
         promises.push(this.setAllPoolAnalytics())

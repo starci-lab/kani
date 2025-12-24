@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import { ClosePositionParams, IActionService, LiquidityPoolState, OpenPositionParams } from "../../interfaces"
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import {
-    LoadBalancerName,
     OrcaPositionMetadata,
 } from "@modules/databases"
 import { SignerService } from "../../signers"
@@ -15,10 +14,6 @@ import {
     TokenNotFoundException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
-import { 
-    ClientType,  
-    RpcPickerService
-} from "../../clients"
 import { 
     ClosePositionConfirmationPayload, 
     DynamicLiquidityPoolInfo, 
@@ -56,6 +51,8 @@ import {
     OpenPositionInstructionService
 } from "./transactions"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 @Injectable()
 export class OrcaActionService implements IActionService {
@@ -70,7 +67,7 @@ export class OrcaActionService implements IActionService {
         @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
         private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
         private readonly eventEmitter: EventEmitter2,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly mutexService: MutexService,
         @InjectWinston()
         private readonly logger: winstonLogger,
@@ -187,10 +184,8 @@ export class OrcaActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.OrcaClmm,
-            withoutRetry: true,
+        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 const instructions = await this.closePositionInstructionService.createCloseInstructions({
                     bot,
@@ -323,10 +318,8 @@ export class OrcaActionService implements IActionService {
         })
         // convert the transaction to a transaction with lifetime
         // sign the transaction
-        const txHash = await this.rpcPickerService.withSolanaRpc<string>({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.OrcaClmm,
-            withoutRetry: true,
+        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+            accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 return await this.signerService.withSolanaSigner({
                     bot,

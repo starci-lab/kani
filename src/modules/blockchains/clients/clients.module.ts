@@ -1,6 +1,6 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./clients.module-definition"
-import { RpcPickerService } from "./rpc-picker.service"
+import { RpcExecutorService } from "./rpc-executor.service"
 
 @Module({})
 export class ClientsModule extends ConfigurableModuleClass {
@@ -10,7 +10,7 @@ export class ClientsModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
 
         const providers: Array<Provider> = [
-            RpcPickerService,
+            RpcExecutorService,
         ]
         return {
             ...dynamicModule,

@@ -130,9 +130,11 @@ export const envConfig = () => ({
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
-            ejectRpcs: parseInt(process.env.CACHE_EJECT_RPCS_TTL || ms("1d").toString(), 10), // 1 day
         }
     }, 
+    ejection: {
+        rpcTtl: parseInt(process.env.EJECTION_RPC_TTL || ms("1d").toString(), 10), // 1 day
+    },
     gcp: {
         kms: {
             keyName: process.env.GCP_KMS_KEY_NAME || "projects/kani-473603/locations/global/keyRings/kani-crypto-keyring/cryptoKeys/kani-crypto-key",
@@ -186,17 +188,26 @@ export const envConfig = () => ({
         config: {
             smtp: process.env.SMTP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "smtp.json"),
             rpcs: process.env.RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
+            apiKeys: process.env.API_KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "api-keys.json"),
         },
     },
-    interval: {
-        poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || "10000", 10), // 10s
-        suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || "1000", 10), // 1s
-        analytics: parseInt(process.env.INTERVAL_ANALYTICS || "30000", 10), // 30s
-    },
-    lockCooldown: {
-        openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "10000", 10), // 10s
-        closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s
-        rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
+    timeConfig: {
+        retry: {
+            maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call
+            delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || "1000", 10), // 1s delay between retries
+            factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
+        },
+        wsTimeout: parseInt(process.env.TIME_CONFIG_WS_TIMEOUT || "10000", 10), // 10s
+        lockCooldown: {
+            openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "10000", 10), // 10s
+            closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s
+            rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
+        },
+        interval: {
+            poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || "10000", 10), // 10s
+            suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || "1000", 10), // 1s
+            analytics: parseInt(process.env.INTERVAL_ANALYTICS || "30000", 10), // 30s
+        },
     },
     bullmq: {
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
@@ -232,10 +243,6 @@ export const envConfig = () => ({
     },
     botExecutor: {
         executorId: process.env.BOT_EXECUTOR_ID || "694900f2e951fd6ca285945c",
-        balanceEvaluationInterval: process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_BALANCE_EVALUATION_INTERVAL, 10) : 10000,
-        activeBotInterval: process.env.BOT_EXECUTOR_ACTIVE_BOT_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_ACTIVE_BOT_INTERVAL, 10) : 10000,
-        suiPoolFetchInterval: process.env.BOT_EXECUTOR_SUI_POOL_FETCH_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_SUI_POOL_FETCH_INTERVAL, 10) : 1000,
-        transactionCommitInterval: process.env.BOT_EXECUTOR_TRANSACTION_COMMIT_INTERVAL ? parseInt(process.env.BOT_EXECUTOR_TRANSACTION_COMMIT_INTERVAL, 10) : 10000,
     },
     ports: {
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,

@@ -4,7 +4,7 @@ import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { AsyncService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
-import { ConfigSchema } from "../schemas"
+import { ConfigRecord, ConfigSchema } from "../schemas"
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
 import { FeeConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
@@ -63,11 +63,11 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                     action: async () => {
                         const gasConfig = await this.connection
                             .model<ConfigSchema>(ConfigSchema.name)
-                            .findById(createObjectId(ConfigId.Gas))
+                            .findById<ConfigRecord<GasConfig>>(createObjectId(ConfigId.Gas))
                         if (!gasConfig) {
                             throw new GasConfigNotFoundException("Gas config not found")
                         }
-                        this.gasConfig = gasConfig.value as unknown as GasConfig
+                        this.gasConfig = gasConfig.value
                     },
                 })
             })(),
@@ -76,11 +76,11 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                     action: async () => {
                         const feeConfig = await this.connection
                             .model<ConfigSchema>(ConfigSchema.name)
-                            .findById(createObjectId(ConfigId.Fee))
+                            .findById<ConfigRecord<FeeConfig>>(createObjectId(ConfigId.Fee))
                         if (!feeConfig) {
                             throw new FeeConfigNotFoundException("Fee config not found")
                         }
-                        this.feeConfig = feeConfig.value as unknown as FeeConfig
+                        this.feeConfig = feeConfig.value
                     },
                 })
             })()

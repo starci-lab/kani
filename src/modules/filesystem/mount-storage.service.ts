@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
-import { RpcAccessConfigs, SmtpConfig } from "./types"
+import { ApiKeys, RpcAccessConfigs, SmtpConfig } from "./types"
 import { MountFilesystemService } from "./mount.service"
 import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
@@ -9,6 +9,7 @@ export class MountStorageService implements OnModuleInit {
     public jwtSecretKey: string
     public smtpConfig: SmtpConfig
     public rpcAccessConfigs: RpcAccessConfigs
+    public apiKeys: ApiKeys
     constructor(
         private readonly mountFilesystemService: MountFilesystemService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -20,6 +21,7 @@ export class MountStorageService implements OnModuleInit {
         this.jwtSecretKey = this.mountFilesystemService.jwtSecretKey()
         this.smtpConfig = this.mountFilesystemService.smtpConfig()
         this.rpcAccessConfigs = this.mountFilesystemService.rpcAccessConfigs()
+        this.apiKeys = this.mountFilesystemService.apiKeys()
         this.readinessWatcherFactoryService.setReady(MountStorageService.name)
     }
 }

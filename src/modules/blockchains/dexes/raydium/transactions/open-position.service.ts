@@ -12,7 +12,7 @@ import {
     getTransferInstruction as getTransferInstruction2022 
 } from "@solana-program/token-2022" 
 import { AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, LoadBalancerName, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata } from "@modules/databases"
+import { BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata } from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
 import { FeeToAddressNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
@@ -127,7 +127,6 @@ export class OpenPositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: remainingAmountA,
         })
         if (createAtaAInstructions?.length) {
@@ -144,7 +143,6 @@ export class OpenPositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: remainingAmountB,
         })
         if (createAtaBInstructions?.length) {
@@ -163,7 +161,6 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
-                loadBalancerName: LoadBalancerName.RaydiumClmm,
                 amount: feeAmountA,
             })
             if (createAtaAInstructions?.length) {
@@ -185,7 +182,6 @@ export class OpenPositionInstructionService {
                 ownerAddress: address(bot.accountAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
-                loadBalancerName: LoadBalancerName.RaydiumClmm,
                 amount: feeAmountB,
             })
             if (createAtaBInstructions?.length) {
@@ -205,7 +201,6 @@ export class OpenPositionInstructionService {
             tokenMint: mintKeyPair.address,
             ownerAddress: address(bot.accountAddress),
             is2022Token: true,
-            loadBalancerName: LoadBalancerName.RaydiumClmm,
             pdaOnly: true,
         })
         const tickArrayLowerStartIndex = this.tickArrayService.getArrayStartIndex(

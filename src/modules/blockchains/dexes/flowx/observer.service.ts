@@ -1,5 +1,7 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { ClientType, DynamicLiquidityPoolInfo, RpcPickerService } from "@modules/blockchains"
+import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
@@ -15,7 +17,6 @@ import SuperJSON from "superjson"
 import { EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
 import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
-import { LoadBalancerName } from "@modules/databases"
 
 @Injectable()
 export class FlowXObserverService {
@@ -29,14 +30,14 @@ export class FlowXObserverService {
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
         private readonly events: EventEmitterService,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
     ) {}
 
-    async onApplicationBootstrap() {
-        await this.handlePoolStateUpdateInterval()
+    onApplicationBootstrap() {
+        this.handlePoolStateUpdateInterval()
     }
     
-    @Interval(envConfig().interval.suiPoolStateUpdate)
+    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
@@ -59,9 +60,8 @@ export class FlowXObserverService {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const accountInfo = await this.rpcPickerService.withSuiClient({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.FlowXClmm,
+        const accountInfo = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
             callback: async (client) => {
                 return await client.getObject({
                     id: liquidityPool.poolAddress,

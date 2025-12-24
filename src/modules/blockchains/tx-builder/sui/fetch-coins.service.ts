@@ -3,26 +3,24 @@ import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { Transaction, TransactionResult } from "@mysten/sui/transactions"
 import { CoinAssetNotFoundException } from "@exceptions"
-import { LoadBalancerName } from "@modules/databases"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 @Injectable()
 export class FetchCoinsService {
     constructor(
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
     ) {}
 
     async fetchCoins({
         owner,
         coinType,
-        loadBalancerName,
     }: FetchCoinsParams): Promise<FetchCoinsResponse> {
         let cursor: string | null | undefined = undefined
         const coinAssets: Array<CoinAsset> = []
         do {
-            const result = await this.rpcPickerService.withSuiClient({
-                clientType: ClientType.Read,
-                mainLoadBalancerName: loadBalancerName,
+            const result = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Read,
                 callback: async (client) => {
                     return await client.getCoins({ 
                         owner, 
@@ -79,7 +77,6 @@ export class FetchCoinsService {
 export interface FetchCoinsParams {
     owner: string
     coinType: string
-    loadBalancerName: LoadBalancerName
 }
 
 export interface FetchCoinsResponse {

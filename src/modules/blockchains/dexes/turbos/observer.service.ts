@@ -1,7 +1,8 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
 import { DynamicLiquidityPoolInfo } from "../../types"
-import { ClientType, RpcPickerService } from "../../clients"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId, LoadBalancerName } from "@modules/databases"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
+import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
@@ -29,14 +30,14 @@ export class TurbosObserverService {
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
         private readonly events: EventEmitterService,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
     ) {}
 
-    async onApplicationBootstrap() {
-        await this.handlePoolStateUpdateInterval()
+    onApplicationBootstrap() {
+        this.handlePoolStateUpdateInterval()
     }
     
-    @Interval(envConfig().interval.suiPoolStateUpdate)
+    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
@@ -59,9 +60,8 @@ export class TurbosObserverService {
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const accountInfo = await this.rpcPickerService.withSuiClient({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.TurbosClmm,
+        const accountInfo = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
             callback: async (client) => {
                 return await client.getObject({
                     id: liquidityPool.poolAddress,

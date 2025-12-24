@@ -9,8 +9,7 @@ import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
-    PrimaryMemoryStorageService,
-    LoadBalancerName
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 import { TickMathService } from "../../math"
@@ -29,7 +28,8 @@ import {
     OpenPositionConfirmationPayload 
 } from "../../types"
 import Decimal from "decimal.js"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
@@ -52,7 +52,7 @@ export class MomentumActionService implements IActionService {
     @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
     private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
     private readonly closePositionTxbService: ClosePositionTxbService,
-    private readonly rpcPickerService: RpcPickerService,
+    private readonly rpcExecutorService: RpcExecutorService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     private readonly mutexService: MutexService,
@@ -105,10 +105,8 @@ export class MomentumActionService implements IActionService {
             txHash, 
             positionId, 
             liquidity 
-        } = await this.rpcPickerService.withSuiClient({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.MomentumClmm,
-            withoutRetry: true,
+        } = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
             callback: async (client) => {
                 return await this.signerService.withSuiSigner({
                     bot,
@@ -289,10 +287,8 @@ export class MomentumActionService implements IActionService {
             state: _state,
             txb,
         })
-        const { txHash } = await this.rpcPickerService.withSuiClient({
-            clientType: ClientType.Write,
-            mainLoadBalancerName: LoadBalancerName.MomentumClmm,
-            withoutRetry: true,
+        const { txHash } = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
             callback: async (client) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({

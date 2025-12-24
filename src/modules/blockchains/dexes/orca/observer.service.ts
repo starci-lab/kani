@@ -1,11 +1,10 @@
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
 import BN from "bn.js"
 import {
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
-    LoadBalancerName,
 } from "@modules/databases"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
@@ -17,12 +16,13 @@ import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
 import { Whirlpool } from "./beets"
 import { address, fetchEncodedAccount } from "@solana/kit"
-import { ClientType, RpcPickerService } from "@modules/blockchains"
 import { envConfig } from "@modules/env"
 import { Interval } from "@nestjs/schedule"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 @Injectable()
-export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit {
+export class OrcaObserverService implements OnApplicationBootstrap {
     constructor(
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
@@ -30,33 +30,26 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
     ) {}
 
-    async onModuleInit() {
-        for (
-            const liquidityPool of this.primaryMemoryStorageService.liquidityPools
-        ) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
-            await this.fetchPoolInfo(liquidityPool.displayId)
-        }
-    }
     // ============================================
     // Main bootstrap
     // ============================================
-    async onApplicationBootstrap() {
-        await this.handlePoolStateUpdateInterval()
-        // observe
-        for (const liquidityPool of this.primaryMemoryStorageService.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
-            this.observeClmmPool(liquidityPool.displayId)
-        }
+    onApplicationBootstrap() {
+        this.handlePoolStateUpdateInterval().then(() => {
+            // observe
+            for (const liquidityPool of this.primaryMemoryStorageService.liquidityPools) {
+                if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
+                this.observeClmmPool(liquidityPool.displayId)
+            }
+        })
     }
 
-    @Interval(envConfig().interval.poolStateUpdate)
+    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.primaryMemoryStorageService.liquidityPools) {
@@ -123,9 +116,8 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.OrcaClmm,
+        await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
                 const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
                     commitment: "confirmed",
@@ -146,26 +138,33 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             (pool) => pool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-
-        await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.OrcaClmm,
-            callback: async ({ rpcSubscriptions }) => {
-                const controller = new AbortController()
-                const accountNotifications = await rpcSubscriptions.accountNotifications(
-                    address(liquidityPool.poolAddress),
-                    {
-                        commitment: "confirmed",
-                        encoding: "base64",
-                    }
-                ).subscribe({
-                    abortSignal: controller.signal,
-                })
-                for await (const accountNotification of accountNotifications) {
-                    const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
-                    await this.handlePoolStateUpdate(liquidityPoolId, state)
-                }
-            },
-        })
+        // infinite loop to ensure the connection is alive
+        while (true) {
+            await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                requiredWs: true,
+                callback: async ({ rpcSubscriptions }) => {
+                    await this.asyncService.suppressErrorAfterTimeout(
+                        async () => {
+                            const controller = new AbortController()
+                            const accountNotifications = await rpcSubscriptions.accountNotifications(
+                                address(liquidityPool.poolAddress),
+                                {
+                                    commitment: "confirmed",
+                                    encoding: "base64",
+                                }
+                            ).subscribe({
+                                abortSignal: controller.signal,
+                            })
+                            for await (const accountNotification of accountNotifications) {
+                                const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
+                                await this.handlePoolStateUpdate(liquidityPoolId, state)
+                            }
+                        },
+                        envConfig().timeConfig.wsTimeout,
+                    )
+                },
+            })
+        }
     }
 }

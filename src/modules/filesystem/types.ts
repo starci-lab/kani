@@ -61,3 +61,8 @@ export interface RpcAccessConfigs {
     [ChainId.Solana]: Array<RpcAccessConfig>
     [ChainId.Sui]: Array<RpcAccessConfig>
 }
+
+// API keys for external services
+export interface ApiKeys {
+    jupiter: string
+}

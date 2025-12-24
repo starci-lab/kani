@@ -57,20 +57,11 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
             },
         },
     },
+    {
+        _id: createObjectId(ConfigId.RpcEjection),
+        displayId: ConfigId.RpcEjection,
+        value: {
+            data: [],
+        },
+    },
 ]
-
-
-export enum LoadBalancerName {
-    CetusAggregator = "cetus-aggregator",
-    SevenKAggregator = "7k-aggregator",
-    CetusClmm = "cetus-clmm",
-    TurbosClmm = "turbos-clmm",
-    MomentumClmm = "momentum-clmm",
-    FlowXClmm = "flowx-clmm",
-    JupiterAggregator = "jupiter-aggregator",
-    RaydiumClmm = "raydium-clmm",
-    OrcaClmm = "orca-clmm",
-    MeteoraDlmm = "meteora-dlmm",
-    SolanaBalance = "solana-balance",
-    SuiBalance = "sui-balance",
-}

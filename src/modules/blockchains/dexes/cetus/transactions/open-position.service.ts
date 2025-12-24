@@ -1,6 +1,6 @@
 import { asUintN } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { LiquidityPoolState } from "../../../interfaces"
-import { BotSchema, CetusLiquidityPoolMetadata, LoadBalancerName, PrimaryMemoryStorageService } from "@modules/databases"
+import { BotSchema, CetusLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import { InvalidPoolTokensException } from "src/exceptions/tokens"
@@ -74,7 +74,6 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinA 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                loadBalancerName: LoadBalancerName.CetusClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenA.tokenAddress,
@@ -85,7 +84,6 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB 
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
-                loadBalancerName: LoadBalancerName.CetusClmm,
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenB.tokenAddress,

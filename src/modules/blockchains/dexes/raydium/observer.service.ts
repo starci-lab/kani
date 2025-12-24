@@ -11,7 +11,6 @@ import {
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
-    LoadBalancerName,
 } from "@modules/databases"
 import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
@@ -24,7 +23,8 @@ import { createObjectId } from "@utils"
 import { Interval } from "@nestjs/schedule"
 import { address, fetchEncodedAccount } from "@solana/kit"
 import { PublicKey } from "@solana/web3.js"
-import { ClientType, RpcPickerService } from "../../clients"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
 
 @Injectable()
@@ -36,7 +36,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        private readonly rpcPickerService: RpcPickerService,
+        private readonly rpcExecutorService: RpcExecutorService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly events: EventEmitterService,
@@ -45,15 +45,16 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     // ============================================
     // Main bootstrap
     // ============================================
-    async onApplicationBootstrap() {
-        await this.handlePoolStateUpdateInterval()
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
-            this.observeClmmPool(liquidityPool.displayId)
-        }
+    onApplicationBootstrap() {
+        this.handlePoolStateUpdateInterval().then(() => {
+            for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+                if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
+                this.observeClmmPool(liquidityPool.displayId)
+            }
+        })
     }
 
-    @Interval(envConfig().interval.poolStateUpdate)
+    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.memoryStorageService.liquidityPools) {
@@ -120,9 +121,8 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.RaydiumClmm,
+        await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
                 const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
                     commitment: "confirmed",
@@ -144,9 +144,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        await this.rpcPickerService.withSolanaRpc({
-            clientType: ClientType.Read,
-            mainLoadBalancerName: LoadBalancerName.RaydiumClmm,
+        await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
+            requiredWs: true,
             callback: async ({ rpcSubscriptions }) => {
                 const controller = new AbortController()
                 const accountNotifications = await rpcSubscriptions.accountNotifications(

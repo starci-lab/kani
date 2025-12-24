@@ -9,7 +9,6 @@ import {
     PrimaryMemoryStorageService,
     RaydiumLiquidityPoolMetadata,
     OrcaPositionMetadata,
-    LoadBalancerName,
 } from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
 import {
@@ -71,7 +70,6 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            loadBalancerName: LoadBalancerName.OrcaClmm,
         })
         if (createAtaAInstructions?.length) {
             instructions.push(...createAtaAInstructions)
@@ -87,7 +85,6 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            loadBalancerName: LoadBalancerName.OrcaClmm,
         })
         if (createAtaBInstructions?.length) {
             instructions.push(...createAtaBInstructions)

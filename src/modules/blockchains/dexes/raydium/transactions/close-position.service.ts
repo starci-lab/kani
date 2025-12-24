@@ -16,7 +16,6 @@ import {
 } from "../../../tx-builder"
 import {
     BotSchema,
-    LoadBalancerName, 
     PrimaryMemoryStorageService, 
     RaydiumLiquidityPoolMetadata, 
     RaydiumPositionMetadata
@@ -95,7 +94,6 @@ export class ClosePositionInstructionService {
             tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenA.is2022Token,
-            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: new BN(0),
         })
         if (createAtaAInstructions?.length) {
@@ -112,7 +110,6 @@ export class ClosePositionInstructionService {
             tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
             ownerAddress: address(bot.accountAddress),
             is2022Token: tokenB.is2022Token,
-            loadBalancerName: LoadBalancerName.RaydiumClmm,
             amount: new BN(0),
         })
         if (createAtaBInstructions?.length) {
@@ -139,7 +136,6 @@ export class ClosePositionInstructionService {
                 tokenMint: address(_reward.tokenMint.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
-                loadBalancerName: LoadBalancerName.RaydiumClmm,
             })
             if (createAtaRewardInstructions?.length) {
                 instructions.push(...createAtaRewardInstructions)

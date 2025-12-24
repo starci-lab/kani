@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { RetryService } from "./retry.service"
+import { DayjsService } from "./dayjs.service"
 
 @Injectable()
 export class AsyncService {
     constructor(
-        private readonly retryService: RetryService
+        private readonly retryService: RetryService,
+        private readonly dayjsService: DayjsService
     ) {}
     //allSettled<T extends readonly unknown[] | []>(values: T): Promise<{ -readonly [P in keyof T]: PromiseSettledResult<Awaited<T[P]>>; }>;
     async allIgnoreError<T extends readonly unknown[]>(
@@ -39,6 +41,21 @@ export class AsyncService {
             return [await promise, null]
         } catch (error) {
             return [null, error]
+        }
+    }   
+
+    async suppressErrorAfterTimeout<T>(
+        action: () => Promise<T>,
+        timeoutMs: number
+    ): Promise<T | null> {
+        const timeAtStart = this.dayjsService.now()
+        try {
+            return await action()
+        } catch (error) {
+            if (this.dayjsService.now().diff(timeAtStart, "millisecond") > timeoutMs) {
+                return null
+            }
+            throw error
         }
     }   
 }
