@@ -1,4 +1,4 @@
-name: build-and-push-kani-interface
+name: build-and-push-kani-observer
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - ".github/workflows/kani-observer.yaml"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-kani-observer
   cancel-in-progress: true
   
 env:

@@ -1,4 +1,4 @@
-name: build-and-push-kani-interface
+name: build-and-push-kani-coordinator
 
 on:
   push:
@@ -9,9 +9,9 @@ on:
       - ".github/workflows/kani-coordinator.yaml"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-kani-coordinator
   cancel-in-progress: true
-  
+
 env:
   IMAGE_NAME: kani-coordinator
   DOCKERFILE_PATH: apps/kani-coordinator/Dockerfile

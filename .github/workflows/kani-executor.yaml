@@ -9,7 +9,7 @@ on:
       - ".github/workflows/kani-executor.yaml"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-kani-executor
   cancel-in-progress: true
   
 env:
