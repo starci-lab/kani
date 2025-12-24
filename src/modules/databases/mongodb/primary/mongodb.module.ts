@@ -28,6 +28,8 @@ import {
     BotSchemaClass,
     ConfigSchema,
     ConfigSchemaClass,
+    StateSchema,
+    StateSchemaClass,
     SwapTransactionSchema,
     SwapTransactionSchemaClass,
     TransactionSchema,
@@ -198,6 +200,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: TransactionSchema.name,
                         useFactory: () => TransactionSchemaClass,
+                    },
+                    {
+                        name: StateSchema.name,
+                        useFactory: () => StateSchemaClass,
                     },
                 ], CONNECTION_NAME),
             ],

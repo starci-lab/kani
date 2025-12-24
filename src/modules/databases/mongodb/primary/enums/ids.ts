@@ -212,26 +212,11 @@ registerEnumType(GraphQLTypeCexId, {
 export enum ConfigId {
     Gas = "gas",
     Fee = "fee",
-    RpcEjection = "rpcEjection",
 }
 
-export const GraphQLTypeConfigId = createEnumType(ConfigId)
-
-registerEnumType(GraphQLTypeConfigId, {
-    name: "ConfigId",
-    description: "The id of the config",
-    valuesMap: {
-        [ConfigId.Gas]: {
-            description: "The gas config",
-        },
-        [ConfigId.Fee]: {
-            description: "The fee config",
-        },
-        [ConfigId.RpcEjection]: {
-            description: "The rpc ejection config",
-        },
-    },
-})
+export enum StateId {
+    RpcEjection = "rpcEjection",
+}
 
 export enum ExplorerId {
     // SUI

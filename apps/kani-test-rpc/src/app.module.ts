@@ -10,6 +10,8 @@ import { EventModule } from "@modules/event"
 import { AppService } from "./app.service"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { ClientsModule } from "@modules/blockchains"
+import { ScheduleModule } from "@nestjs/schedule"
+import { SuiService } from "./sui.service"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -29,6 +31,7 @@ import { ClientsModule } from "@modules/blockchains"
         CacheModule.register({
             isGlobal: true,
         }),
+        ScheduleModule.forRoot(),
         EventModule.register({
             isGlobal: true,
         }),
@@ -43,6 +46,6 @@ import { ClientsModule } from "@modules/blockchains"
             isGlobal: true,
         }),
     ],
-    providers: [AppService],
+    providers: [SuiService],
 })
 export class AppModule {}

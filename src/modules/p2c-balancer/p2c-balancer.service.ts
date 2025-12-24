@@ -11,15 +11,14 @@ import { Logger as WinstonLogger } from "winston"
 import {
     AllRpcsEjectedException,
     NoAvailableRpcException,
-    RpcEjectionConfigNotFoundException,
 } from "@exceptions"
 import { 
-    ConfigRecord, 
-    ConfigSchema, 
     RpcEjection, 
-    ConfigId, 
-    RpcEjectionConfig, 
-    InjectPrimaryMongoose 
+    InjectPrimaryMongoose, 
+    StateId,
+    StateSchema,
+    StateRecord,
+    RpcEjectionState
 } from "@modules/databases"
 import { DayjsService } from "@modules/mixin"
 import { Connection } from "mongoose"
@@ -177,8 +176,8 @@ export class P2CBalancerService {
         rpcIds: Array<string>,
     ): Promise<void> {
         if (!rpcIds.length) throw new Error("No RPC IDs to eject")
-        await this.addEjectedRpc(chainId, rpcIds)
-        const ejectedRpcs = await this.loadEjectedCache()
+        await this.addEjectedRpcs(chainId, rpcIds)
+        const ejectedRpcs = await this.loadRpcEjectionState()
         await this.eventEmitterService.emit<ReinitializeBalancersEvent>(
             EventName.ReinitializeBalancers, 
             {
@@ -199,7 +198,7 @@ export class P2CBalancerService {
     }
 
     private async initializeBalancers(event?: ReinitializeBalancersEvent) {
-        const ejectedRpcs = event?.ejectedRpcs ?? await this.loadEjectedCache()
+        const ejectedRpcs = event?.ejectedRpcs ?? await this.loadRpcEjectionState()
         for (const chainId of Object.values(ChainId)) {
             for (const accessType of Object.values(RpcAccessType)) {
                 for (const transport of Object.values(RpcTransport)) {
@@ -294,43 +293,46 @@ export class P2CBalancerService {
     /**
      * Load eject state from database.
      */
-    private async loadEjectedCache(): Promise<Array<RpcEjection>> {
-        const config = await this.connection.model<ConfigSchema>(ConfigSchema.name)
-            .findById<ConfigRecord<RpcEjectionConfig>>(
-                createObjectId(ConfigId.RpcEjection)
+    private async loadRpcEjectionState(): Promise<Array<RpcEjection>> {
+        const state = await this.connection.model<StateSchema>(StateSchema.name)
+            .findById<StateRecord<RpcEjectionState>>(
+                createObjectId(StateId.RpcEjection)
             )
-        if (!config) {
-            throw new RpcEjectionConfigNotFoundException("Rpc ejection config not found")
+        if (!state) {
+            // create a new state
+            await this.connection.model<StateSchema>(StateSchema.name)
+                .create(
+                    [
+                        {
+                            _id: createObjectId(StateId.RpcEjection),
+                            displayId: StateId.RpcEjection,
+                            value: {
+                                data: [],
+                            },
+                        }
+                    ]
+                )
+            return []
         }
-        return config.value.data
-    }
+        return state.value.data
+    }   
 
-    /**
-     * Persist ejected RPCs to database.
-     */
-    async addEjectedRpc(
+    private async addEjectedRpcs(
         chainId: ChainId,
         rpcIds: Array<string>,
     ): Promise<void> {
         await this.connection
-            .model<ConfigSchema>(ConfigSchema.name)
+            .model<StateSchema>(StateSchema.name)
             .updateOne(
-                { _id: createObjectId(ConfigId.RpcEjection) },
+                { _id: createObjectId(StateId.RpcEjection) },
                 {
                     $push: {
-                        value: {
-                            data: {
-                                $each: rpcIds.map(
-                                    rpcId => 
-                                        (
-                                            {
-                                                chainId,
-                                                rpcId,
-                                                ejectedAt: this.dayjsService.now().toDate(),
-                                            }
-                                        )
-                                ),
-                            },
+                        "value.data": {
+                            $each: rpcIds.map(rpcId => ({
+                                chainId,
+                                rpcId,
+                                ejectedAt: this.dayjsService.now().toDate(),
+                            })),
                         },
                     },
                 }
@@ -345,9 +347,9 @@ export class P2CBalancerService {
         rpcIds: Array<string>,
     ): Promise<void> {
         await this.connection
-            .model<ConfigSchema>(ConfigSchema.name)
+            .model<StateSchema>(StateSchema.name)
             .updateOne(
-                { _id: createObjectId(ConfigId.RpcEjection) },
+                { _id: createObjectId(StateId.RpcEjection) },
                 {
                     $pull: {
                         value: {

@@ -7,6 +7,7 @@ export interface RetryParams<T> {
   maxRetries?: number;
   delay?: number;
   factor?: number;
+  log?: boolean;
 }
 
 @Injectable()
@@ -21,6 +22,7 @@ export class RetryService {
         maxRetries = 5,
         delay = 100,
         factor = 2,
+        log = true,
     }: RetryParams<T>): Promise<T> {
         try {
             return await pRetry(
@@ -33,10 +35,12 @@ export class RetryService {
                     signal
                 })
         } catch (error) {
-            this.logger.error(
-                `Error retrying action: ${error.message}`,
-                error.stack,
-            ) 
+            if (log) {
+                this.logger.error(
+                    `Error retrying action: ${error.message}`,
+                    error.stack,
+                ) 
+            }
             throw error
         }
     }

@@ -56,12 +56,5 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 },
             },
         },
-    },
-    {
-        _id: createObjectId(ConfigId.RpcEjection),
-        displayId: ConfigId.RpcEjection,
-        value: {
-            data: [],
-        },
-    },
+    }
 ]
