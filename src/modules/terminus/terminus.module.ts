@@ -15,6 +15,7 @@ import {
     imports: [
         NestTerminusModule.forRoot({
             gracefulShutdownTimeoutMs: 1000,
+            logger: false,
         })
     ],
     controllers: [TerminusController],

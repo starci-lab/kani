@@ -3,10 +3,11 @@ import { AppModule } from "./app.module"
 import compression from "compression"
 import { envConfig } from "@modules/env"
 import { setupCors } from "@modules/cors"
+import { ContextLoggerService } from "@modules/logger"
 
 const bootstrap = async () => {
     const app = await NestFactory.create(AppModule, {
-        logger: ["log", "error"],
+        logger: new ContextLoggerService(),
     })
     setupCors(app)
     app.setGlobalPrefix("api")

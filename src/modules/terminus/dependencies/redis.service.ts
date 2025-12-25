@@ -35,28 +35,28 @@ export class RedisService {
     }
 
     async pingCacheRedis(): Promise<HealthIndicatorResult> {
-        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.CacheRedis,
             this.buildRedisOptions("cache"),
         )
     }
 
     async pingAdapterRedis(): Promise<HealthIndicatorResult> {
-        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.AdapterRedis,
             this.buildRedisOptions("adapter"),
         )
     }
 
     async pingBullmqRedis(): Promise<HealthIndicatorResult> {
-        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.BullmqRedis,
             this.buildRedisOptions("bullmq"),
         )
     }
 
     async pingThrottlerRedis(): Promise<HealthIndicatorResult> {
-        return this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.ThrottlerRedis,
             this.buildRedisOptions("throttler"),
         )

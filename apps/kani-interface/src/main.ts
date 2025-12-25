@@ -7,9 +7,12 @@ import { swaggerBuilder } from "@modules/docs"
 import { AuthenticatedRedisIoAdapter } from "@modules/socketio"
 import { createIoRedisKey } from "@modules/native"
 import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
+import { ContextLoggerService } from "@modules/logger"
 
 const bootstrap = async () => {
-    const app = await NestFactory.create(AppModule)
+    const app = await NestFactory.create(AppModule, {
+        logger: new ContextLoggerService(),
+    })
     setupCors(app)
     swaggerBuilder({
         app,
