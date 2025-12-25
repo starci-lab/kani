@@ -229,7 +229,7 @@ export class PythService implements OnApplicationBootstrap {
                     )
                 })
                 return await promise
-            },
+            }, 
             onReconnect: async (error) => {
                 this.logger.warn(
                     WinstonLog.WebsocketReconnect, 
