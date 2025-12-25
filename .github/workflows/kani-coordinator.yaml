@@ -1,4 +1,4 @@
-name: build-and-push-kani-coordinator
+name: build-and-rollout-kani-coordinator-deployment
 
 on:
   push:

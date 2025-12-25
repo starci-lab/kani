@@ -1,4 +1,4 @@
-name: build-and-push-kani-interface
+name: build-and-rollout-kani-interface-deployment
 
 on:
   push:

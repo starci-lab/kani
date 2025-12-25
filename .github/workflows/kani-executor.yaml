@@ -1,4 +1,4 @@
-name: build-and-push-kani-executor
+name: build-and-rollout-kani-executor-deployment
 
 on:
   push:
