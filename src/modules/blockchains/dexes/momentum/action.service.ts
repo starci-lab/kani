@@ -33,6 +33,8 @@ import { RpcAccessType } from "@modules/filesystem"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { AsyncService } from "@modules/mixin"
+import { SuiEvent } from "@mysten/sui/client"
 
 @Injectable()
 export class MomentumActionService implements IActionService {
@@ -42,6 +44,7 @@ export class MomentumActionService implements IActionService {
     private readonly openPositionTxbService: OpenPositionTxbService,
     private readonly tickMathService: TickMathService,
     private readonly closePositionTxbService: ClosePositionTxbService,
+    private readonly asyncService: AsyncService,
     private readonly rpcExecutorService: RpcExecutorService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
@@ -91,7 +94,7 @@ export class MomentumActionService implements IActionService {
             tickUpper,
         })
         let txHash: string | null = null
-        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        let execute: ((isRetry: boolean) => Promise<CreateExecuteResponse>) | null = null
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         await this.rpcExecutorService.withSuiClient({
@@ -108,17 +111,32 @@ export class MomentumActionService implements IActionService {
                             }
                         })
                         txHash = digest
-                        execute = async (): Promise<CreateExecuteResponse> => {
+                        execute = async (isRetry: boolean): Promise<CreateExecuteResponse> => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                if (txBlock !== null) {
+                                    const { liquidity, positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                                    return {
+                                        metadata: {
+                                            liquidity,
+                                        },
+                                        feeAmountTarget,
+                                        feeAmountQuote,
+                                        positionId,
+                                    }
+                                }
+                            }
                             await suiClient.waitForTransaction({
                                 digest,
                             })
-                            const addLiquidityEvent = events?.find(
-                                event => event.type.includes("::liquidity::AddLiquidityEvent")
-                            )
-                            if (!addLiquidityEvent) {
-                                throw new TransactionEventNotFoundException("AddLiquidity event not found")
-                            }
-                            const addLiquidityEventParsed = addLiquidityEvent.parsedJson as AddLiquidityEvent
+                            const { liquidity, positionId } = this.parseAddLiquidityEvent(events || [])
                             // log the open position success
                             this.logger.verbose(
                                 WinstonLog.OpenPositionSuccess, {
@@ -128,11 +146,11 @@ export class MomentumActionService implements IActionService {
                                 })
                             return {
                                 metadata: {
-                                    liquidity: addLiquidityEventParsed.liquidity,
+                                    liquidity,
                                 },
                                 feeAmountTarget,
                                 feeAmountQuote,
-                                positionId: addLiquidityEventParsed.position_id,
+                                positionId,
                             }
                         }
                     },
@@ -253,7 +271,7 @@ export class MomentumActionService implements IActionService {
             txb,
         })
         let txHash: string | null = null
-        let execute: (() => Promise<void>) | null = null
+        let execute: ((isRetry: boolean) => Promise<void>) | null = null
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
@@ -261,15 +279,28 @@ export class MomentumActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {    
-                        txHash = await closePositionTxb.getDigest()
-                        execute = async () => {
-                            const { digest } = await suiClient.signAndExecuteTransaction({
-                                transaction: closePositionTxb,
-                                signer,
-                                options: {
-                                    showEvents: true,
+                        const { digest } = await suiClient.signAndExecuteTransaction({
+                            transaction: closePositionTxb,
+                            signer,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                        txHash = digest
+                        execute = async (isRetry: boolean) => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                if (txBlock !== null) {
+                                    return
                                 }
-                            })
+                            }
                             await suiClient.waitForTransaction({
                                 digest,
                             })
@@ -292,6 +323,25 @@ export class MomentumActionService implements IActionService {
         return {
             txHash,
             execute,
+        }
+    }
+
+    private parseAddLiquidityEvent(
+        events?: Array<SuiEvent>,
+    ): {
+        liquidity: string
+        positionId: string
+    } {
+        const event = events?.find(
+            event => event.type.includes("::liquidity::AddLiquidityEvent")
+        )
+        if (!event) {
+            throw new TransactionEventNotFoundException("AddLiquidity event not found")
+        }
+        const parsed = event.parsedJson as AddLiquidityEvent
+        return {
+            liquidity: parsed.liquidity,
+            positionId: parsed.position_id,
         }
     }
 }

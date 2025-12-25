@@ -35,7 +35,7 @@ import { Mutex } from "async-mutex"
  * allowing better fault tolerance, retry mechanisms, and system scalability.
  */
 @Worker(bullData[BullQueueName.OpenPosition].name)
-export class OpenPositionWorker extends WorkerHost implements OnModuleInit {
+export class OpenPositionWorker extends WorkerHost {
     private readonly mutex: Mutex
     constructor(
         private readonly mutexService: MutexService,
@@ -53,29 +53,30 @@ export class OpenPositionWorker extends WorkerHost implements OnModuleInit {
     ) {
         super()
     }
-
-    // initialize the mutex
-    async onModuleInit() {
-        await this.mutex.acquire()
-    }
-
     /**
      * Event handler triggered when a job becomes active.
      * Handles updating snapshot balances, recording open position transactions,
      * emitting events, and releasing distributed locks.
      */
     async process(
-        { bot, liquidityPoolId }: OpenPositionPayload
+        { data: { bot, liquidityPoolId }, attemptsMade }: Job<OpenPositionPayload>
     ) {
+        // retrieve the mutex
+        const mutex = this.mutexService.mutex(
+            getMutexKey(MutexKey.Action, bot.id),
+        )
+        // check if the mutex is locked
+        const isRetry = attemptsMade > 0
         // acquire the mutex
         await this.mutex.acquire()
- 
+        // get the liquidity pool
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
             (liquidityPool) => liquidityPool.displayId === liquidityPoolId
         )
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException(liquidityPoolId, `Liquidity pool ${liquidityPoolId} not found`)
         }
+        // create the job
         const [ jobRaw ] = await this.connection.model<JobSchema>(
             JobSchema.name
         ).create(
@@ -89,9 +90,56 @@ export class OpenPositionWorker extends WorkerHost implements OnModuleInit {
             ])
         // we take the id from the jobRaw object
         const jobId = jobRaw.toJSON().id
-        await this.openPositionOrchestratorService.execute({
+        // execute the transaction and get the result
+        const { execute, txHash } = await this.openPositionOrchestratorService.execute({
             liquidityPoolId: liquidityPoolId,
             bot,
+        })
+        await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).updateOne(
+            { _id: jobId },
+            {
+                status: JobStatus.TxHashSaved,
+                txHash,
+            }
+        )
+        // execute the transaction and get the result
+        const { 
+            feeAmountQuote, 
+            feeAmountTarget, 
+            positionId, 
+            liquidity,
+            metadata 
+        } = await execute(isRetry)
+        // update the job tx hash
+        await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).updateOne(
+            { _id: jobId }, 
+            {
+                status: JobStatus.TxExecuted,
+            }
+        )
+        // update the job status to tx executed
+        await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).updateOne({ _id: jobId }, {
+            status: JobStatus.TxExecuted,
+        })
+        // fetch the bot snapshot balances
+        const { 
+            gasBalanceAmount,
+            targetBalanceAmount,
+            quoteBalanceAmount,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        // update the job status to tx executed
+        await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).updateOne({ _id: jobId }, {
+            status: JobStatus.TxExecuted,
         })
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
@@ -103,9 +151,9 @@ export class OpenPositionWorker extends WorkerHost implements OnModuleInit {
                 session,
             })
             await this.openPositionSnapshotService.addOpenPositionRecord({
-                snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBN,
-                snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBN,
-                snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBN,
+                snapshotTargetBalanceAmountBeforeOpen: new BN(targetBalanceAmount),
+                snapshotQuoteBalanceAmountBeforeOpen: new BN(quoteBalanceAmount),
+                snapshotGasBalanceAmountBeforeOpen: new BN(gasBalanceAmount),
                 liquidity: new BN(liquidity || 0),
                 bot,
                 targetIsA,

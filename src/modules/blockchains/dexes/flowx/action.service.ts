@@ -39,6 +39,8 @@ import { RpcAccessType } from "@modules/filesystem"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { AsyncService } from "@modules/mixin"
+import { SuiEvent } from "@mysten/sui/client"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
@@ -48,6 +50,7 @@ export class FlowXActionService implements IActionService {
         private readonly openPositionTxbService: OpenPositionTxbService,
         private readonly tickMathService: TickMathService,
         private readonly closePositionTxbService: ClosePositionTxbService,
+        private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
@@ -105,7 +108,7 @@ export class FlowXActionService implements IActionService {
             tickUpper,
         })
         let txHash: string | null = null
-        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        let execute: ((isRetry: boolean) => Promise<CreateExecuteResponse>) | null = null
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         await this.rpcExecutorService.withSuiClient({
@@ -122,20 +125,30 @@ export class FlowXActionService implements IActionService {
                             },
                         })
                         txHash = digest
-                        execute = async (): Promise<CreateExecuteResponse> => {
+                        execute = async (isRetry: boolean): Promise<CreateExecuteResponse> => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                if (txBlock !== null) {
+                                    const { liquidity, positionId } = this.parseIncreaseLiquidityEvent(txBlock?.events || [])
+                                    return {
+                                        liquidity: new BN(liquidity),
+                                        feeAmountTarget,
+                                        feeAmountQuote,
+                                        positionId,
+                                    }
+                                }
+                            }
                             await suiClient.waitForTransaction({
                                 digest,
                             })
-                            const increaseLiquidityEvent = events?.find((event) =>
-                                event.type.includes("::position_manager::IncreaseLiquidity"),
-                            )
-                            if (!increaseLiquidityEvent) {
-                                throw new TransactionEventNotFoundException(
-                                    "IncreaseLiquidity event not found",
-                                )
-                            }
-                            const increaseLiquidityEventParsed =
-                                increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
+                            const { liquidity, positionId } = this.parseIncreaseLiquidityEvent(events || [])
                             // log the open position success
                             this.logger.verbose(
                                 WinstonLog.OpenPositionSuccess, {
@@ -144,12 +157,10 @@ export class FlowXActionService implements IActionService {
                                     liquidityPoolId: _state.static.displayId,
                                 })
                             return {
-                                metadata: {
-                                    liquidity: increaseLiquidityEventParsed.liquidity,
-                                },
+                                liquidity: new BN(liquidity),
                                 feeAmountTarget,
                                 feeAmountQuote,
-                                positionId: increaseLiquidityEventParsed.position_id,
+                                positionId,
                             }
                         }
                     },
@@ -283,7 +294,7 @@ export class FlowXActionService implements IActionService {
                 txb,
             })
         let txHash: string | null = null
-        let execute: (() => Promise<void>) | null = null
+        let execute: ((isRetry: boolean) => Promise<void>) | null = null
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
@@ -291,15 +302,28 @@ export class FlowXActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        txHash = await closePositionTxb.getDigest()
-                        execute = async () => {
-                            const { digest } = await suiClient.signAndExecuteTransaction({
-                                transaction: closePositionTxb,
-                                signer,
-                                options: {
-                                    showEvents: true,
-                                },
-                            })
+                        const { digest } = await suiClient.signAndExecuteTransaction({
+                            transaction: closePositionTxb,
+                            signer,
+                            options: {
+                                showEvents: true,
+                            },
+                        })
+                        txHash = digest
+                        execute = async (isRetry: boolean) => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                if (txBlock !== null) {
+                                    return
+                                }
+                            }
                             await suiClient.waitForTransaction({
                                 digest,
                             })
@@ -322,6 +346,27 @@ export class FlowXActionService implements IActionService {
         return {
             txHash,
             execute,
+        }
+    }
+
+    private parseIncreaseLiquidityEvent(
+        events?: Array<SuiEvent>,
+    ): {
+        liquidity: string
+        positionId: string
+    } {
+        const event = events?.find((event) =>
+            event.type.includes("::position_manager::IncreaseLiquidity"),
+        )
+        if (!event) {
+            throw new TransactionEventNotFoundException(
+                "IncreaseLiquidity event not found",
+            )
+        }
+        const parsed = event.parsedJson as IncreaseLiquidityEvent
+        return {
+            liquidity: parsed.liquidity,
+            positionId: parsed.position_id,
         }
     }
 }

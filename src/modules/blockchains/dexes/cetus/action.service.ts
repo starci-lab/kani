@@ -44,6 +44,8 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { toScaledBN } from "@utils"
 import { envConfig } from "@modules/env"
+import { AsyncService } from "@modules/mixin"
+import { SuiEvent } from "@mysten/sui/client"
 
 @Injectable()
 export class CetusActionService implements IActionService {
@@ -53,6 +55,7 @@ export class CetusActionService implements IActionService {
     private readonly openPositionTxbService: OpenPositionTxbService,
     private readonly tickMathService: TickMathService,
     private readonly closePositionTxbService: ClosePositionTxbService,
+    private readonly asyncService: AsyncService,
     private readonly rpcExecutorService: RpcExecutorService,
     private readonly ensureMathService: EnsureMathService,
     @InjectWinston()
@@ -127,7 +130,7 @@ export class CetusActionService implements IActionService {
             tickUpper,
         })
         let txHash: string | null = null
-        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        let execute: ((isRetry: boolean) => Promise<CreateExecuteResponse>) | null = null
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         await this.rpcExecutorService.withSuiClient({
@@ -144,17 +147,30 @@ export class CetusActionService implements IActionService {
                             }
                         })
                         txHash = digest
-                        execute = async (): Promise<CreateExecuteResponse> => {
+                        execute = async (isRetry: boolean): Promise<CreateExecuteResponse> => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                const { liquidity, positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                                if (txBlock !== null) {
+                                    return {
+                                        liquidity: new BN(liquidity),
+                                        feeAmountTarget,
+                                        feeAmountQuote,
+                                        positionId,
+                                    }
+                                }
+                            }
                             await suiClient.waitForTransaction({
                                 digest,
                             })
-                            const addLiquidityV2Event = events?.find(
-                                event => event.type.includes("::pool::AddLiquidityV2Event")
-                            )
-                            if (!addLiquidityV2Event) {
-                                throw new TransactionEventNotFoundException("AddLiquidityV2Event event not found")
-                            }
-                            const addLiquidityV2EventParsed = addLiquidityV2Event.parsedJson as AddLiquidityV2Event
+                            const { liquidity, positionId } = this.parseAddLiquidityEvent(events || [])
                             // log the open position success
                             this.logger.verbose(
                                 WinstonLog.OpenPositionSuccess, {
@@ -163,12 +179,10 @@ export class CetusActionService implements IActionService {
                                     liquidityPoolId: _state.static.displayId,
                                 })
                             return {
-                                metadata: {
-                                    liquidity: addLiquidityV2EventParsed.liquidity,
-                                },
+                                liquidity: new BN(liquidity),
                                 feeAmountTarget,
                                 feeAmountQuote,
-                                positionId: addLiquidityV2EventParsed.position,
+                                positionId,
                             }
                         }
                     },
@@ -181,6 +195,27 @@ export class CetusActionService implements IActionService {
         return {
             txHash,
             execute,
+        }
+    }
+
+    private parseAddLiquidityEvent(
+        events?: Array<SuiEvent>,
+    ): {
+        liquidity: string
+        positionId: string
+      } {
+        const event = events?.find(event =>
+            event.type.includes("::pool::AddLiquidityV2Event"),
+        )
+        if (!event) {
+            throw new TransactionEventNotFoundException(
+                "AddLiquidityV2Event event not found",
+            )
+        }
+        const parsed = event.parsedJson as AddLiquidityV2Event 
+        return {
+            liquidity: parsed.liquidity,
+            positionId: parsed.position.toString(),
         }
     }
 

@@ -29,6 +29,10 @@ export class JobSchema extends AbstractSchema {
     @Field(() => GraphQLTypeJobStatus, { description: "The status of the job" })
     @Prop({ type: String, enum: JobStatus })
         status: JobStatus
+    
+    @Field(() => String, { description: "The transaction hash of the job" })
+    @Prop({ type: String, required: false })
+        txHash?: string
 }
 
 export const JobSchemaClass = SchemaFactory.createForClass(JobSchema)

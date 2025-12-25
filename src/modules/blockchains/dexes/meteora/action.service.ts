@@ -42,6 +42,7 @@ import {
 } from "@modules/databases"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
 import { 
     DynamicDlmmLiquidityPoolInfo, 
@@ -103,7 +104,7 @@ export class MeteoraActionService implements IActionService {
         // convert the transaction to a transaction with lifetime
         // sign the transaction
         let txHash: string | null = null
-        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        let execute: ((isRetry: boolean) => Promise<CreateExecuteResponse>) | null = null
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         await this.rpcExecutorService.withSolanaRpc({
@@ -137,7 +138,19 @@ export class MeteoraActionService implements IActionService {
                         })
                         const transactionSignature = getSignatureFromTransaction(signedTransaction)
                         txHash = transactionSignature.toString()
-                        execute = async (): Promise<CreateExecuteResponse> => {
+                        const response: CreateExecuteResponse = {
+                            liquidity: new BN(0),
+                            feeAmountTarget,
+                            feeAmountQuote,
+                            positionId: positionKeyPair.address.toString(),
+                        }
+                        execute = async (isRetry: boolean): Promise<CreateExecuteResponse> => {
+                            if (isRetry) {
+                                const transactionExisted = await rpc.getTransaction(transactionSignature).send()
+                                if (transactionExisted) {
+                                    return response
+                                }
+                            }
                             await sendAndConfirmTransaction(
                                 signedTransaction, {
                                     commitment: "confirmed",
@@ -149,17 +162,7 @@ export class MeteoraActionService implements IActionService {
                                     botId: bot.id,
                                     liquidityPoolId: _state.static.displayId,
                                 })
-                            return {
-                                metadata: {
-                                    minBinId: minBinId.toNumber(),
-                                    maxBinId: maxBinId.toNumber(),
-                                    amountA: amountA.toString(),
-                                    amountB: amountB.toString(),
-                                },
-                                feeAmountTarget,
-                                feeAmountQuote,
-                                positionId: positionKeyPair.address.toString(),
-                            }
+                            return response
                         }
                     },
                 })
@@ -278,7 +281,7 @@ export class MeteoraActionService implements IActionService {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
         let txHash: string | null = null
-        let execute: (() => Promise<void>) | null = null
+        let execute: ((isRetry: boolean) => Promise<void>) | null = null
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
@@ -315,11 +318,17 @@ export class MeteoraActionService implements IActionService {
                         })
                         const transactionSignature = getSignatureFromTransaction(signedTransaction)
                         txHash = transactionSignature.toString()
-                        execute = async () => {
+                        execute = async (isRetry: boolean) => {
+                            if (isRetry) {
+                                const transactionExisted = await rpc.getTransaction(transactionSignature).send()
+                                if (transactionExisted) {
+                                    return
+                                }
+                            }
                             await sendAndConfirmTransaction(
                                 signedTransaction, {
                                     commitment: "confirmed",
-                                    maxRetries: BigInt(5),
+                                    maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                                 })
                             this.logger.verbose(
                                 WinstonLog.ClosePositionSuccess, {

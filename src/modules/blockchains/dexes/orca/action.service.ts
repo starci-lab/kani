@@ -157,7 +157,7 @@ export class OrcaActionService implements IActionService {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
         let txHash: string | null = null
-        let execute: (() => Promise<void>) | null = null
+        let execute: ((isRetry: boolean) => Promise<void>) | null = null
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
@@ -193,11 +193,18 @@ export class OrcaActionService implements IActionService {
                         })
                         const transactionSignature = getSignatureFromTransaction(signedTransaction)
                         txHash = transactionSignature.toString()
-                        execute = async () => {
+                        execute = async (isRetry: boolean) => {
+                            if (isRetry) {
+                                const transactionExisted = await rpc.getTransaction(transactionSignature).send()
+                                if (transactionExisted) {
+                                    return 
+                                }
+                            }
+                            // if this is a 
                             await sendAndConfirmTransaction(
                                 signedTransaction, {
                                     commitment: "confirmed",
-                                    maxRetries: BigInt(5),
+                                    maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                                 })
                             this.logger.verbose(
                                 WinstonLog.ClosePositionSuccess, {
@@ -296,7 +303,7 @@ export class OrcaActionService implements IActionService {
         // convert the transaction to a transaction with lifetime
         // sign the transaction
         let txHash: string | null = null
-        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        let execute: ((isRetry: boolean) => Promise<CreateExecuteResponse>) | null = null
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         await this.rpcExecutorService.withSolanaRpc({
@@ -330,7 +337,21 @@ export class OrcaActionService implements IActionService {
                         })
                         const transactionSignature = getSignatureFromTransaction(signedTransaction)
                         txHash = transactionSignature.toString()
-                        execute = async (): Promise<CreateExecuteResponse> => {
+                        execute = async (isRetry: boolean): Promise<CreateExecuteResponse> => {
+                            const response: CreateExecuteResponse = {
+                                metadata: {
+                                    nftMintAddress: mintKeyPair.address.toString(),
+                                },
+                                feeAmountTarget,
+                                feeAmountQuote,
+                                positionId: ataAddress.toString(),
+                            }
+                            if (isRetry) {
+                                const transactionExisted = await rpc.getTransaction(transactionSignature).send()
+                                if (transactionExisted) {
+                                    return response
+                                }
+                            }
                             await sendAndConfirmTransaction(
                                 signedTransaction, {
                                     commitment: "confirmed",
@@ -342,14 +363,7 @@ export class OrcaActionService implements IActionService {
                                     botId: bot.id,
                                     liquidityPoolId: _state.static.displayId,
                                 })
-                            return {
-                                metadata: {
-                                    nftMintAddress: mintKeyPair.address.toString(),
-                                },
-                                feeAmountTarget,
-                                feeAmountQuote,
-                                positionId: ataAddress.toString(),
-                            }
+                            return response
                         }
                     },
                 })

@@ -17,6 +17,7 @@ import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { ClosePositionPayload } from "../types"
 import { v4 } from "uuid"
+import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -34,6 +35,7 @@ export class ClosePositionOrchestratorService {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
+        private readonly mutexService: MutexService,
     ) {}
 
     async enqueue(
@@ -42,6 +44,16 @@ export class ClosePositionOrchestratorService {
             bot,
         }: EnqueueClosePositionParams,
     ) {
+        /**
+         * Retrieve mutex to prevent concurrent actions on the same bot
+         */
+        const mutex = this.mutexService.mutex(
+            getMutexKey(MutexKey.Action, bot.id),
+        )
+        // if the mutex is locked, skip the execution
+        if (mutex.isLocked()) {
+            return
+        }
         /**
          * Safety check, if the active position is not set, return and remind user to open a position first
          */

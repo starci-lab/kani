@@ -36,7 +36,8 @@ import { Queue } from "bullmq"
 import { OpenPositionPayload } from "../types"
 import { envConfig } from "@modules/env"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import { getMutexKey, MutexKey } from "@modules/lock"
+import { MutexService } from "@modules/lock"
 
 @Injectable()
 export class OpenPositionOrchestratorService {
@@ -51,13 +52,13 @@ export class OpenPositionOrchestratorService {
         private readonly cetusActionService: CetusActionService,
         private readonly turbosActionService: TurbosActionService,
         private readonly momentumActionService: MomentumActionService,
-        private readonly mutexService: MutexService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
         private readonly openPositionQueue: Queue<OpenPositionPayload>,
+        private readonly mutexService: MutexService,
     ) {}
 
     async enqueue(
@@ -66,6 +67,17 @@ export class OpenPositionOrchestratorService {
             bot,
         }: EnqueueOpenPositionParams,
     ) {
+        
+        /**
+         * Retrieve mutex to prevent concurrent actions on the same bot
+         */
+        const mutex = this.mutexService.mutex(
+            getMutexKey(MutexKey.Action, bot.id),
+        )
+        // if the mutex is locked, skip the execution
+        if (mutex.isLocked()) {
+            return
+        }
         /**
          * Skip job if:
          * - balance snapshot is missing
@@ -278,16 +290,7 @@ export class OpenPositionOrchestratorService {
             // Insufficient balance to open a position
             return
         }
-        /**
-         * Retrieve mutex to prevent concurrent actions on the same bot
-         */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
-        )
-        // if the mutex is locked, skip the execution
-        if (mutex.isLocked()) {
-            return
-        }
+
         // add the open position job to the queue
         this.openPositionQueue.add(
             v4(),

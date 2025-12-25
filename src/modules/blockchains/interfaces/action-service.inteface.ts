@@ -66,21 +66,23 @@ export interface IActionService {
 export interface OpenPositionResponse {
   txHash: string;
   // unknown mean something that is not known at the time of the response
-  execute: () => Promise<CreateExecuteResponse>;
+  execute: (isRetry: boolean) => Promise<CreateExecuteResponse>;
 }
 
 export interface CreateExecuteResponse {
-  metadata: unknown;
+  metadata?: unknown;
   // fee amount in target token
   feeAmountTarget: BN;
   // fee amount in quote token
   feeAmountQuote: BN;
   // position id
   positionId: string;
+  // liquidity
+  liquidity?: BN;
 }
 
 export interface ClosePositionResponse {
   txHash: string;
   // unknown mean something that is not known at the time of the response
-  execute: () => Promise<void>;
+  execute: (isRetry: boolean) => Promise<void>;
 }

@@ -37,6 +37,8 @@ import { Logger as WinstonLogger } from "winston"
 import { Network, TurbosSdk } from "turbos-clmm-sdk"
 import { EnsureMathService } from "../../math"
 import { toScaledBN } from "@utils"
+import { AsyncService } from "@modules/mixin"
+import { SuiEvent } from "@mysten/sui/client"
 
 @Injectable()
 export class TurbosActionService implements IActionService {
@@ -46,6 +48,7 @@ export class TurbosActionService implements IActionService {
     private readonly openPositionTxbService: OpenPositionTxbService,
     private readonly tickMathService: TickMathService,
     private readonly closePositionTxbService: ClosePositionTxbService,
+    private readonly asyncService: AsyncService,
     private readonly rpcExecutorService: RpcExecutorService,
     private readonly ensureMathService: EnsureMathService,
     @InjectWinston()
@@ -119,7 +122,7 @@ export class TurbosActionService implements IActionService {
             tickUpper,
         })
         let txHash: string | null = null
-        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        let execute: ((isRetry: boolean) => Promise<CreateExecuteResponse>) | null = null
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         await this.rpcExecutorService.withSuiClient({
@@ -136,26 +139,32 @@ export class TurbosActionService implements IActionService {
                             }
                         })
                         txHash = digest
-                        execute = async (): Promise<CreateExecuteResponse> => {
+                        execute = async (isRetry: boolean): Promise<CreateExecuteResponse> => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                if (txBlock !== null) {
+                                    const { liquidity, positionId } = this.parseMintEvents(txBlock?.events || [])
+                                    return {
+                                        metadata: {
+                                            liquidity: liquidity.toString(),
+                                        },
+                                        feeAmountTarget,
+                                        feeAmountQuote,
+                                        positionId,
+                                    }
+                                }
+                            }
                             await suiClient.waitForTransaction({
                                 digest,
                             })
-                            const mintNftEvent = events?.find(
-                                event => event.type.includes("position_manager::MintNftEvent")
-                            )
-                            if (!mintNftEvent) {
-                                throw new TransactionEventNotFoundException("MintNft event not found")
-                            }
-                            const mintNftEventParsed = mintNftEvent.parsedJson as MintNftEvent
-                            const positionId = mintNftEventParsed.nft_address
-                            const mintEvent = events?.find(
-                                event => event.type.includes("pool::MintEvent")
-                            )
-                            if (!mintEvent) {
-                                throw new TransactionEventNotFoundException("Mint event not found")
-                            }
-                            const mintEventParsed = mintEvent.parsedJson as MintEvent
-                            const liquidity = new BN(mintEventParsed.liquidity_delta)
+                            const { liquidity, positionId } = this.parseMintEvents(events || [])
                             // log the open position success
                             this.logger.verbose(
                                 WinstonLog.OpenPositionSuccess, {
@@ -286,7 +295,7 @@ export class TurbosActionService implements IActionService {
             txb,
         })
         let txHash: string | null = null
-        let execute: (() => Promise<void>) | null = null
+        let execute: ((isRetry: boolean) => Promise<void>) | null = null
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
@@ -294,15 +303,28 @@ export class TurbosActionService implements IActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        txHash = await closePositionTxb.getDigest()
-                        execute = async () => {
-                            const { digest } = await suiClient.signAndExecuteTransaction({
-                                transaction: closePositionTxb,
-                                signer,
-                                options: {
-                                    showEvents: true,
+                        const { digest } = await suiClient.signAndExecuteTransaction({
+                            transaction: closePositionTxb,
+                            signer,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                        txHash = digest
+                        execute = async (isRetry: boolean) => {
+                            if (isRetry) {
+                                const [txBlock] = await this.asyncService.resolveTuple(
+                                    suiClient.getTransactionBlock({
+                                        digest,
+                                        options: {
+                                            showEvents: true,
+                                        }
+                                    })
+                                )
+                                if (txBlock !== null) {
+                                    return
                                 }
-                            })
+                            }
                             await suiClient.waitForTransaction({
                                 digest
                             })
@@ -325,6 +347,34 @@ export class TurbosActionService implements IActionService {
         return {
             txHash,
             execute,
+        }
+    }
+
+    private parseMintEvents(
+        events?: Array<SuiEvent>,
+    ): {
+        liquidity: BN
+        positionId: string
+    } {
+        const mintNftEvent = events?.find(
+            event => event.type.includes("position_manager::MintNftEvent")
+        )
+        if (!mintNftEvent) {
+            throw new TransactionEventNotFoundException("MintNft event not found")
+        }
+        const mintNftEventParsed = mintNftEvent.parsedJson as MintNftEvent
+        const positionId = mintNftEventParsed.nft_address
+        const mintEvent = events?.find(
+            event => event.type.includes("pool::MintEvent")
+        )
+        if (!mintEvent) {
+            throw new TransactionEventNotFoundException("Mint event not found")
+        }
+        const mintEventParsed = mintEvent.parsedJson as MintEvent
+        const liquidity = new BN(mintEventParsed.liquidity_delta)
+        return {
+            liquidity,
+            positionId,
         }
     }
 }
