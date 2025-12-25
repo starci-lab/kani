@@ -171,7 +171,6 @@ export class RpcExecutorService {
                         maxRetries: envConfig().timeConfig.retry.maxRetries,
                         delay: envConfig().timeConfig.retry.delay,
                         factor: envConfig().timeConfig.retry.factor,
-                        log: false,
                     })
                 } catch (error) {
                     if (error.message === RpcErrorType.Fatal) {
@@ -261,7 +260,6 @@ export class RpcExecutorService {
                         maxRetries: envConfig().timeConfig.retry.maxRetries,
                         delay: envConfig().timeConfig.retry.delay,
                         factor: envConfig().timeConfig.retry.factor,
-                        log: false,
                     })
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
@@ -276,7 +274,6 @@ export class RpcExecutorService {
             maxRetries: envConfig().timeConfig.retry.maxRetries,
             delay: envConfig().timeConfig.retry.delay,
             factor: envConfig().timeConfig.retry.factor,
-            log: false,
         })  
     }   
 }

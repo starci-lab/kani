@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./gate.module-definition"
 import { GateLastPriceService } from "./gate-last-price.service"
-import { GateOrderBookService } from "./gate-order-book"
+import { GateOrderBookService } from "./gate-order-book.service.service"
 
 @Module({})
 export class GateModule extends ConfigurableModuleClass {

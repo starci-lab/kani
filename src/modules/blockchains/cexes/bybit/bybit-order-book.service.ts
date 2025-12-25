@@ -5,7 +5,7 @@ import {
 import { EventEmitterService, EventName } from "@modules/event"
 import { BYBIT_WS_URL } from "./constants"
 import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException } from "@exceptions"
+import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
@@ -46,83 +46,97 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
         // Split symbols into chunks of maximum 10, due to Bybit API limit
         const symbolChunks = chunkArray(symbols, 10)
 
-        this.retryService.retryWs({
-            // create a new connection each time the retry is called
-            createConnection: () => {
-                return new WebSocket(BYBIT_WS_URL)
-            },
-            // register the listener
-            onOpen: (ws) => {
-                // handle the open event
-                ws.on("open", () => {
-                    this.logger.info(WinstonLog.WebsocketConnected, { streamName: "bybit-order-book" })
-                    // Subscribe to each chunk separately
-                    symbolChunks.forEach(chunk => {
-                        ws.send(JSON.stringify({
-                            op: "subscribe",
-                            args: chunk.map(symbol => `orderbook.50.${symbol}`)
-                        }))
-                    })
-                })
-
-                // handle the error - don't throw, let retryWs handle reconnection
-                ws.on("error", (err) => {
-                    this.logger.error(
-                        WinstonLog.WebsocketCloseError,
-                        {
-                            error: err instanceof Error ? err.message : String(err),
+        this.retryService.retryWs<WebSocket>({
+            closeFnName: "close",
+            // create a new connection
+            createConnection: () => new WebSocket(BYBIT_WS_URL),
+            // on open event
+            onOpen: async (ws) => {
+                const promise = new Promise<void>((_, reject) => {
+                    // open event
+                    ws.on("open", () => {
+                        this.logger.info(WinstonLog.WebsocketConnected, {
                             streamName: "bybit-order-book",
-                        }
-                    )
-                    ws.close()
-                    // retryWs will handle reconnection automatically
-                })
-
-                ws.on("message", async (data: WebSocket.RawData) => {
-                    const parsed = JSON.parse(data.toString()) as BybitOrderBookUpdate | BybitOrderBookWsSubscribeResponse
-                    if ("success" in parsed && !parsed.success) {
-                        return
-                    }
-                    if ("data" in parsed) {
-                        // Find token in local memory
-                        const token = this.primaryMemoryStorageService.tokens
-                            .find(t => t.cexSymbols?.[CexId.Bybit] === parsed.data.s)
-                        if (!token) return
-
-                        const bestBidPrice = parseFloat(parsed.data.b?.[0]?.[0] || "0") // first level bid price
-                        const bestBidQty = parseFloat(parsed.data.b?.[0]?.[1] || "0")   // first level bid qty
-                        const bestAskPrice = parseFloat(parsed.data.a?.[0]?.[0] || "0") // first level ask price
-                        const bestAskQty = parseFloat(parsed.data.a?.[0]?.[1] || "0")   // first level ask qty
-
-                        const orderBook: OrderBook = {
-                            bidPrice: bestBidPrice,
-                            bidQty: bestBidQty,
-                            askPrice: bestAskPrice,
-                            askQty: bestAskQty,
-                        }
-
-                        await this.asyncService.allIgnoreError([
-                            this.cacheManager.set(
-                                createCacheKey(CacheKey.WsCexOrderBook, {
-                                    cexId: CexId.Bybit,
-                                    tokenId: token.displayId,
-                                }),
-                                orderBook
-                            ),
-                            this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
-                                cexId: CexId.Bybit,
-                                tokenId: token.displayId,
-                                ...orderBook,
-                            })
-                        ])
-                    }
-                })
-            },
-            onError: (err: Error) => {
-                this.logger.error(
-                    WinstonLog.WebsocketCloseError, {
-                        error: err.message,
+                        })
+                        // Subscribe to each chunk separately
+                        symbolChunks.forEach(chunk => {
+                            ws.send(JSON.stringify({
+                                op: "subscribe",
+                                args: chunk.map(symbol => `orderbook.50.${symbol}`)
+                            }))
+                        })
                     })
+                    // message event
+                    ws.on("message", async (data: WebSocket.RawData) => {
+                        try {
+                            const parsed = JSON.parse(data.toString()) as BybitOrderBookUpdate | BybitOrderBookWsSubscribeResponse
+                            if ("success" in parsed && !parsed.success) {
+                                return
+                            }
+                            if ("data" in parsed) {
+                                // Find token in local memory
+                                const token = this.primaryMemoryStorageService.tokens
+                                    .find(t => t.cexSymbols?.[CexId.Bybit] === parsed.data.s)
+                                if (!token) return
+
+                                const bestBidPrice = parseFloat(parsed.data.b?.[0]?.[0] || "0") // first level bid price
+                                const bestBidQty = parseFloat(parsed.data.b?.[0]?.[1] || "0")   // first level bid qty
+                                const bestAskPrice = parseFloat(parsed.data.a?.[0]?.[0] || "0") // first level ask price
+                                const bestAskQty = parseFloat(parsed.data.a?.[0]?.[1] || "0")   // first level ask qty
+
+                                const orderBook: OrderBook = {
+                                    bidPrice: bestBidPrice,
+                                    bidQty: bestBidQty,
+                                    askPrice: bestAskPrice,
+                                    askQty: bestAskQty,
+                                }
+
+                                await this.asyncService.allIgnoreError([
+                                    this.cacheManager.set(
+                                        createCacheKey(CacheKey.WsCexOrderBook, {
+                                            cexId: CexId.Bybit,
+                                            tokenId: token.displayId,
+                                        }),
+                                        orderBook
+                                    ),
+                                    this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
+                                        cexId: CexId.Bybit,
+                                        tokenId: token.displayId,
+                                        ...orderBook,
+                                    })
+                                ])
+                            }
+                        } catch (error) {
+                            this.logger.error(WinstonLog.WebsocketMessageError, {
+                                error: error.message,
+                            })
+                        }
+                    })
+                    // error event → close WS
+                    ws.on("error", (err) => {
+                        ws.close()
+                        reject(new WsConnectionErrorException(err.message))
+                    })
+                    // close event → signal retryWs reconnect
+                    ws.on("close", () => {
+                        reject(new WsConnectionClosedException("WS closed"))
+                    })
+                })
+                return await promise
+            },
+            onCloseOrError: async (error) => {
+                this.logger.warn(
+                    WinstonLog.WebsocketReconnect, 
+                    {
+                        reason: error?.message,
+                        streamName: "bybit-order-book",
+                    })
+            },
+            onFatal: async () => {
+                this.logger.error(WinstonLog.WebsocketFatalError, {
+                    error: "WS connection failed",
+                    streamName: "bybit-order-book",
+                })
             },
             options: {
                 baseDelay: envConfig().timeConfig.retry.delay,
@@ -130,7 +144,8 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                 maxDelay: envConfig().timeConfig.retry.maxDelay,
                 maxRetries: envConfig().timeConfig.retry.maxRetries,
                 jitter: true,
-            }
+            },
+            throwOnFatal: false,
         })
     }
 }

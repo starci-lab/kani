@@ -6,7 +6,9 @@ import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import { computeDenomination } from "@utils"
 import { 
-    TokenListIsEmptyException 
+    TokenListIsEmptyException,
+    WsConnectionClosedException,
+    WsConnectionErrorException,
 } from "@exceptions"
 import { 
     EventEmitterService, 
@@ -142,92 +144,105 @@ export class PythService implements OnApplicationBootstrap {
         const feedIds = [...new Set(tokens.map(token => token.pythFeedId!))]
         // we split the feed ids into chunks of 5
         this.retryService.retryWs({
+            closeFnName: "close",
             // create a new connection each time the retry is called
             createConnection: async () => {
                 return this.hermesClient.getPriceUpdatesStream(feedIds)
             },
             // register the listener
-            onOpen: (stream) => {
-                // handle the open event
-                stream.addEventListener("open", () => {
-                    this.logger.info(WinstonLog.WebsocketConnected, { streamName: "pyth-price-updates" })
-                })
-
-                // handle the error - don't throw, let retryWs handle reconnection
-                stream.addEventListener("error", (err) => {
-                    this.logger.error(
-                        WinstonLog.WebsocketCloseError,
-                        {
-                            error: err instanceof Error ? err.message : String(err),
-                            streamName: "pyth-price-updates",
+            onOpen: async (stream) => {
+                const promise = new Promise<void>((_, reject) => {
+                    // handle the open event
+                    stream.addEventListener("open", () => {
+                        this.logger.info(WinstonLog.WebsocketConnected, { streamName: "pyth-price-updates" })
+                    })
+                    // handle the error - reject to signal retryWs reconnect
+                    stream.addEventListener("error", (err) => {
+                        stream.close()
+                        reject(new WsConnectionErrorException(err.message))
+                    })
+                    // handle the close event - reject to signal retryWs reconnect
+                    stream.addEventListener("close", () => {
+                        reject(new WsConnectionClosedException("WS closed"))
+                    })
+                    stream.addEventListener(
+                        "message",
+                        async (event: MessageEvent<string>) => {
+                            try {
+                                const update: PriceUpdate = JSON.parse(event.data)
+                                // handle the price updates
+                                for (const priceData of update.parsed ?? []) {
+                                    // filter the tokens by the feed id
+                                    const filteredTokens = tokens.filter(
+                                        token => token.pythFeedId?.includes(priceData.id)
+                                    )
+            
+                                    // if no tokens are found, continue
+                                    if (!filteredTokens.length) continue
+                                    // compute the price and cache the price and emit the event in parallel
+                                    const price = computeDenomination(
+                                        new BN(priceData.ema_price.price),
+                                        -priceData.ema_price.expo
+                                    )
+                                    // cache the price and emit the event in parallel
+                                    const promises: Array<Promise<void>> = []
+                                    // loop through the filtered tokens and cache the price and emit the event in parallel
+                                    for (const token of filteredTokens) {
+                                        // cache the price
+                                        promises.push(
+                                            (async () => { 
+                                                await this.cacheManager.set(
+                                                    createCacheKey(
+                                                        CacheKey.PythTokenPrice,
+                                                        token.displayId
+                                                    ),
+                                                    this.superjson.stringify({
+                                                        price: price.toNumber(),
+                                                    }),
+                                                    envConfig().cache.ttl.pythTokenPrice
+                                                )}
+                                            )()
+                                        )
+                                        // emit the event
+                                        promises.push(
+                                            (async () => {
+                                                await this.events.emit(
+                                                    EventName.WsPythLastPricesUpdated,
+                                                    {
+                                                        tokenId: token.displayId,
+                                                        price: price.toNumber(),
+                                                    },
+                                                    { withoutLocal: true }
+                                                )}
+                                            )()
+                                        )
+                                    }
+                                    // wait for all promises to complete
+                                    await this.asyncService.allIgnoreError(promises)
+                                }
+                            } catch (error) {
+                                this.logger.error(WinstonLog.WebsocketMessageError, {
+                                    error: error.message,
+                                })
+                            }
                         }
                     )
-                    stream.close()
-                    // retryWs will handle reconnection automatically
                 })
-
-                stream.addEventListener(
-                    "message",
-                    async (event: MessageEvent<string>) => {
-                        const update: PriceUpdate = JSON.parse(event.data)
-                        // handle the price updates
-                        for (const priceData of update.parsed ?? []) {
-                            // filter the tokens by the feed id
-                            const filteredTokens = tokens.filter(
-                                token => token.pythFeedId?.includes(priceData.id)
-                            )
-        
-                            // if no tokens are found, continue
-                            if (!filteredTokens.length) continue
-                            // compute the price and cache the price and emit the event in parallel
-                            const price = computeDenomination(
-                                new BN(priceData.ema_price.price),
-                                -priceData.ema_price.expo
-                            )
-                            // cache the price and emit the event in parallel
-                            const promises: Array<Promise<void>> = []
-                            // loop through the filtered tokens and cache the price and emit the event in parallel
-                            for (const token of filteredTokens) {
-                                // cache the price
-                                promises.push(
-                                    (async () => { 
-                                        await this.cacheManager.set(
-                                            createCacheKey(
-                                                CacheKey.PythTokenPrice,
-                                                token.displayId
-                                            ),
-                                            this.superjson.stringify({
-                                                price: price.toNumber(),
-                                            }),
-                                            envConfig().cache.ttl.pythTokenPrice
-                                        )}
-                                    )()
-                                )
-                                // emit the event
-                                promises.push(
-                                    (async () => {
-                                        await this.events.emit(
-                                            EventName.WsPythLastPricesUpdated,
-                                            {
-                                                tokenId: token.displayId,
-                                                price: price.toNumber(),
-                                            },
-                                            { withoutLocal: true }
-                                        )}
-                                    )()
-                                )
-                            }
-                            // wait for all promises to complete
-                            await this.asyncService.allIgnoreError(promises)
-                        }
-                    }
-                )
+                return await promise
             },
-            onError: (err: Error) => {
-                this.logger.error(
-                    WinstonLog.WebsocketCloseError, {
-                        error: err.message,
+            onCloseOrError: async (error) => {
+                this.logger.warn(
+                    WinstonLog.WebsocketReconnect, 
+                    {
+                        reason: error?.message,
+                        streamName: "pyth-price-updates",
                     })
+            },
+            onFatal: async () => {
+                this.logger.error(WinstonLog.WebsocketFatalError, {
+                    error: "WS connection failed",
+                    streamName: "pyth-price-updates",
+                })
             },
             options: {
                 baseDelay: envConfig().timeConfig.retry.delay,
@@ -235,7 +250,8 @@ export class PythService implements OnApplicationBootstrap {
                 maxDelay: envConfig().timeConfig.retry.maxDelay,
                 maxRetries: envConfig().timeConfig.retry.maxRetries,
                 jitter: true,
-            }
+            },
+            throwOnFatal: false,
         })
     }
 }

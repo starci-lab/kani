@@ -10,20 +10,21 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
 import { AsyncService, DayjsService, RetryService } from "@modules/mixin"
+import { OrderBook } from "../types"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
   
 @Injectable()
-export class GateLastPriceService implements OnApplicationBootstrap {
+export class GateOrderBookService implements OnApplicationBootstrap {
     constructor(
       @InjectRedisCache()
       private readonly cacheManager: Cache,
       private readonly eventEmitterService: EventEmitterService,
       private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+      private readonly retryService: RetryService,
       private readonly dayjsService: DayjsService,
       private readonly asyncService: AsyncService,
-      private readonly retryService: RetryService,
       @InjectWinston()
       private readonly logger: WinstonLogger,
     ) {}
@@ -54,10 +55,10 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                     // open event
                     ws.on("open", () => {
                         this.logger.info(WinstonLog.WebsocketConnected, {
-                            streamName: "gate-last-price",
+                            streamName: "gate-order-book",
                         })
                         ws.send(JSON.stringify({
-                            channel: "spot.tickers",
+                            channel: "spot.book_ticker",
                             event: "subscribe",
                             time: this.dayjsService.now().unix(),
                             payload: symbols,
@@ -66,30 +67,42 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                     // message event
                     ws.on("message", async (data: WebSocket.RawData) => {
                         try {
-                            const parsed = JSON.parse(data.toString()) as GateTickerUpdate
+                            const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
                             const token = this.primaryMemoryStorageService.tokens
-                                .find(token => token.cexSymbols?.[CexId.Gate] === parsed.result.currency_pair)
+                                .find(token => token.cexSymbols?.[CexId.Gate] === parsed.result.s)
                             if (!token) return
-                            const lastPrice = parseFloat(parsed.result.last)
+                            const bestBidPrice = parseFloat(parsed.result.b)
+                            const bestAskPrice = parseFloat(parsed.result.a)
+                            const bestBidQty = parseFloat(parsed.result.B)
+                            const bestAskQty = parseFloat(parsed.result.A)
                             // cache the last price and emit the event in parallel
+                            const orderBook: OrderBook = {
+                                bidPrice: bestBidPrice,
+                                bidQty: bestBidQty,
+                                askPrice: bestAskPrice,
+                                askQty: bestAskQty,
+                            }   
                             await this.asyncService.allIgnoreError([
                                 this.cacheManager.set(
-                                    createCacheKey(CacheKey.WsCexLastPrice, {
+                                    createCacheKey(CacheKey.WsCexOrderBook, {
                                         cexId: CexId.Gate,
                                         tokenId: token.displayId,
                                     }),
-                                    lastPrice
+                                    orderBook
                                 ),  
-                                this.eventEmitterService.emit(EventName.WsCexLastPricesUpdated, {
-                                    cexId: CexId.Gate,
-                                    tokenId: token.displayId,
-                                    lastPrice,
-                                })
+                                this.eventEmitterService.emit(
+                                    EventName.WsCexOrderBookUpdated, {
+                                        cexId: CexId.Gate,
+                                        tokenId: token.displayId,
+                                        ...orderBook,
+                                    })
                             ])
                         } catch (error) {
-                            this.logger.error(WinstonLog.WebsocketMessageError, {
-                                error: error.message,
-                            })
+                            this.logger.error(
+                                WinstonLog.WebsocketMessageError, {
+                                    error: error.message,
+                                }
+                            )
                         }
                     })
                     // error event → close WS
@@ -109,13 +122,13 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                     WinstonLog.WebsocketReconnect, 
                     {
                         reason: error?.message,
-                        streamName: "gate-last-price",
+                        streamName: "gate-order-book",
                     })
             },
             onFatal: async () => {
                 this.logger.error(WinstonLog.WebsocketFatalError, {
                     error: "WS connection failed",
-                    streamName: "gate-last-price",
+                    streamName: "gate-order-book",
                 })
             },
             options: {
@@ -130,22 +143,20 @@ export class GateLastPriceService implements OnApplicationBootstrap {
     }
 }
   
-export interface GateTickerUpdate {
-    time: number;       // current timestamp in seconds
-    time_ms: number;    // current timestamp in milliseconds
-    channel: "spot.tickers";
+export interface GateBookTickerUpdate {
+    time: number;       // timestamp in seconds
+    time_ms: number;    // timestamp in milliseconds
+    channel: "spot.book_ticker";
     event: "update";
-    result: GateTickerResult;
+    result: GateBookTickerResult;
   }
   
-export interface GateTickerResult {
-    currency_pair: string;      // e.g., "SOL_USDT"
-    last: string;               // last price
-    lowest_ask: string;         // lowest ask price
-    highest_bid: string;        // highest bid price
-    change_percentage: string;  // 24h change percentage
-    base_volume: string;        // base currency volume
-    quote_volume: string;       // quote currency volume
-    high_24h: string;           // 24h high price
-    low_24h: string;            // 24h low price
-}
+export interface GateBookTickerResult {
+    t: number;   // update time in milliseconds
+    u: number;   // update ID or sequence number
+    s: string;   // currency pair, e.g., "DEEP_USDT"
+    b: string;   // best bid price
+    B: string;   // best bid quantity
+    a: string;   // best ask price
+    A: string;   // best ask quantity
+  }

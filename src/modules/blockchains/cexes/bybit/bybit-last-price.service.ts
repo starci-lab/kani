@@ -4,7 +4,7 @@ import {
 } from "@nestjs/common"
 import { EventEmitterService, EventName } from "@modules/event"
 import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException } from "@exceptions"
+import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
@@ -48,71 +48,85 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
         // Split symbols into chunks of maximum 10, due to Bybit API limit
         const symbolChunks = chunkArray(symbols, 10)
 
-        this.retryService.retryWs({
-            // create a new connection each time the retry is called
-            createConnection: () => {
-                return new WebSocket(BYBIT_WS_URL)
-            },
-            // register the listener
-            onOpen: (ws) => {
-                // handle the open event
-                ws.on("open", () => {
-                    this.logger.info(WinstonLog.WebsocketConnected, { streamName: "bybit-last-price" })
-                    // Subscribe to each chunk separately
-                    symbolChunks.forEach(chunk => {
-                        ws.send(JSON.stringify({
-                            op: "subscribe",
-                            args: chunk.map(symbol => `tickers.${symbol}`)
-                        }))
-                    })
-                })
-
-                // handle the error - don't throw, let retryWs handle reconnection
-                ws.on("error", (err) => {
-                    this.logger.error(
-                        WinstonLog.WebsocketCloseError,
-                        {
-                            error: err instanceof Error ? err.message : String(err),
+        this.retryService.retryWs<WebSocket>({
+            closeFnName: "close",
+            // create a new connection
+            createConnection: () => new WebSocket(BYBIT_WS_URL),
+            // on open event
+            onOpen: async (ws) => {
+                const promise = new Promise<void>((_, reject) => {
+                    // open event
+                    ws.on("open", () => {
+                        this.logger.info(WinstonLog.WebsocketConnected, {
                             streamName: "bybit-last-price",
-                        }
-                    )
-                    ws.close()
-                    // retryWs will handle reconnection automatically
-                })
-
-                ws.on("message", async (data: WebSocket.RawData) => {
-                    const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResponse
-                    if ("success" in parsed && !parsed.success) {
-                        return
-                    }
-                    if ("data" in parsed) {
-                        const token = this.primaryMemoryStorageService.tokens
-                            .find(token => token.cexSymbols?.[CexId.Bybit] === parsed.data.symbol)
-                        if (!token) return
-                        const lastPrice = parseFloat(parsed.data.lastPrice)
-                        await this.asyncService.allIgnoreError([
-                            this.cacheManager.set(
-                                createCacheKey(CacheKey.WsCexLastPrice, {
-                                    cexId: CexId.Bybit,
-                                    tokenId: token.displayId,
-                                }),
-                                lastPrice
-                            ),
-                            this.eventEmitterService.emit(
-                                EventName.WsCexLastPricesUpdated, {
-                                    cexId: CexId.Bybit,
-                                    tokenId: token.displayId,
-                                    lastPrice,
-                                })
-                        ])
-                    }
-                })
-            },
-            onError: (err: Error) => {
-                this.logger.error(
-                    WinstonLog.WebsocketCloseError, {
-                        error: err.message,
+                        })
+                        // Subscribe to each chunk separately
+                        symbolChunks.forEach(chunk => {
+                            ws.send(JSON.stringify({
+                                op: "subscribe",
+                                args: chunk.map(symbol => `tickers.${symbol}`)
+                            }))
+                        })
                     })
+                    // message event
+                    ws.on("message", async (data: WebSocket.RawData) => {
+                        try {
+                            const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResponse
+                            if ("success" in parsed && !parsed.success) {
+                                return
+                            }
+                            if ("data" in parsed) {
+                                const token = this.primaryMemoryStorageService.tokens
+                                    .find(token => token.cexSymbols?.[CexId.Bybit] === parsed.data.symbol)
+                                if (!token) return
+                                const lastPrice = parseFloat(parsed.data.lastPrice)
+                                await this.asyncService.allIgnoreError([
+                                    this.cacheManager.set(
+                                        createCacheKey(CacheKey.WsCexLastPrice, {
+                                            cexId: CexId.Bybit,
+                                            tokenId: token.displayId,
+                                        }),
+                                        lastPrice
+                                    ),
+                                    this.eventEmitterService.emit(
+                                        EventName.WsCexLastPricesUpdated, {
+                                            cexId: CexId.Bybit,
+                                            tokenId: token.displayId,
+                                            lastPrice,
+                                        })
+                                ])
+                            }
+                        } catch (error) {
+                            this.logger.error(WinstonLog.WebsocketMessageError, {
+                                error: error.message,
+                            })
+                        }
+                    })
+                    // error event → close WS
+                    ws.on("error", (err) => {
+                        ws.close()
+                        reject(new WsConnectionErrorException(err.message))
+                    })
+                    // close event → signal retryWs reconnect
+                    ws.on("close", () => {
+                        reject(new WsConnectionClosedException("WS closed"))
+                    })
+                })
+                return await promise
+            },
+            onCloseOrError: async (error) => {
+                this.logger.warn(
+                    WinstonLog.WebsocketReconnect, 
+                    {
+                        reason: error?.message,
+                        streamName: "bybit-last-price",
+                    })
+            },
+            onFatal: async () => {
+                this.logger.error(WinstonLog.WebsocketFatalError, {
+                    error: "WS connection failed",
+                    streamName: "bybit-last-price",
+                })
             },
             options: {
                 baseDelay: envConfig().timeConfig.retry.delay,
@@ -120,7 +134,8 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                 maxDelay: envConfig().timeConfig.retry.maxDelay,
                 maxRetries: envConfig().timeConfig.retry.maxRetries,
                 jitter: true,
-            }
+            },
+            throwOnFatal: false,
         })
     }
 }
