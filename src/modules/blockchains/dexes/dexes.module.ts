@@ -8,8 +8,8 @@ import { FlowXModule } from "./flowx"
 import { RaydiumModule } from "./raydium"
 import { OrcaModule } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
-import { DispatchOpenPositionService } from "./dispatch-open-position.service"
-import { DispatchClosePositionService } from "./dispatch-close-position.service"
+import { OpenPositionOrchestratorService } from "./open-position-orchestrator.service"
+import { ClosePositionOrchestratorService } from "./close-position-orchestrator.service"
 import { MeteoraModule } from "./meteora"
 import { FeeService } from "../math/fee.service"
 
@@ -91,8 +91,8 @@ export class DexesModule extends ConfigurableModuleClass {
         const utilities: Array<Provider> = []
         if (options.withUtilities) {
             utilities.push(LiquidityPoolStateService)
-            utilities.push(DispatchOpenPositionService)
-            utilities.push(DispatchClosePositionService)
+            utilities.push(OpenPositionOrchestratorService)
+            utilities.push(ClosePositionOrchestratorService)
         }
         
         return {

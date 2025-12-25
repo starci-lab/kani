@@ -1,22 +1,31 @@
 import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
-import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
+import { MutexKey, getMutexKey, MutexService } from "@modules/lock"
 import { Job } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
     BalanceService,
     BalanceSnapshotService,
-    OpenPositionConfirmationPayload,
     OpenPositionSnapshotService,
     TransactionSnapshotService,
+    OpenPositionPayload,
+    OpenPositionOrchestratorService
 } from "@modules/blockchains"
-import { InjectPrimaryMongoose } from "@modules/databases"
+import { 
+    InjectPrimaryMongoose, 
+    JobSchema, 
+    JobType, 
+    JobStatus
+} from "@modules/databases"
 import { Connection } from "mongoose"
 import BN from "bn.js"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
+import { PrimaryMemoryStorageService } from "@modules/databases"
+import { LiquidityPoolNotFoundException } from "@exceptions"
+import { Mutex } from "async-mutex"
 
 /**
  * Worker responsible for processing open position confirmations.
@@ -25,8 +34,9 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
  * This ensures that confirmations are processed **reliably** and **asynchronously**,
  * allowing better fault tolerance, retry mechanisms, and system scalability.
  */
-@Worker(bullData[BullQueueName.OpenPositionConfirmation].name)
-export class OpenPositionConfirmationWorker extends WorkerHost {
+@Worker(bullData[BullQueueName.OpenPosition].name)
+export class OpenPositionWorker extends WorkerHost implements OnModuleInit {
+    private readonly mutex: Mutex
     constructor(
         private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
@@ -38,8 +48,15 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
         private readonly eventEmitter: EventEmitter2,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService
     ) {
         super()
+    }
+
+    // initialize the mutex
+    async onModuleInit() {
+        await this.mutex.acquire()
     }
 
     /**
@@ -48,44 +65,34 @@ export class OpenPositionConfirmationWorker extends WorkerHost {
      * emitting events, and releasing distributed locks.
      */
     async process(
-        job: Job<OpenPositionConfirmationPayload>
+        { bot, liquidityPoolId }: OpenPositionPayload
     ) {
-        const {
-            bot,
-            txHash,
-            state,
-            positionId,
-            snapshotTargetBalanceAmountBeforeOpen,
-            snapshotQuoteBalanceAmountBeforeOpen,
-            snapshotGasBalanceAmountBeforeOpen,
-            liquidity,
-            feeAmountTarget,
-            feeAmountQuote,
-            tickLower,
-            tickUpper,
-            minBinId,
-            maxBinId,
-            amountA,
-            amountB,
-            metadata,
-        } = job.data
-        // Retrieve the mutex for the bot
-        const mutex = this.mutexService.mutex(
-            getMutexKey(
-                MutexKey.Action, 
-                bot.id
-            )
+        // acquire the mutex
+        await this.mutex.acquire()
+ 
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
+            (liquidityPool) => liquidityPool.displayId === liquidityPoolId
         )
-        // Convert snapshot balances to BN instances for precision
-        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmountBeforeOpen)
-        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmountBeforeOpen)
-        const snapshotGasBalanceAmountBN = new BN(snapshotGasBalanceAmountBeforeOpen)
-
-        // Refetch current balances after the position is opened
-        const { targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount } =
-            await this.balanceService.fetchBalances({ bot })
-
-        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
+        if (!liquidityPool) {
+            throw new LiquidityPoolNotFoundException(liquidityPoolId, `Liquidity pool ${liquidityPoolId} not found`)
+        }
+        const [ jobRaw ] = await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).create(
+            [
+                {
+                    liquidityPool: liquidityPool.id,
+                    botId: bot.id,
+                    type: JobType.OpenPosition,
+                    status: JobStatus.Pending,
+                }
+            ])
+        // we take the id from the jobRaw object
+        const jobId = jobRaw.toJSON().id
+        await this.openPositionOrchestratorService.execute({
+            liquidityPoolId: liquidityPoolId,
+            bot,
+        })
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {

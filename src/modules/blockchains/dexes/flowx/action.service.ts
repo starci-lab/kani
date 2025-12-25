@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import {
     ClosePositionParams,
+    ClosePositionResponse,
+    CreateExecuteResponse,
     IActionService,
     LiquidityPoolState,
     OpenPositionParams,
+    OpenPositionResponse,
 } from "../../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
@@ -25,11 +28,10 @@ import {
     SnapshotBalancesNotSetException,
     TokenNotFoundException,
     TransactionEventNotFoundException,
+    TransactionExecutionFailedException,
 } from "@exceptions"
-import { 
-    ClosePositionConfirmationPayload, 
-    DynamicLiquidityPoolInfo, 
-    OpenPositionConfirmationPayload 
+import {
+    DynamicLiquidityPoolInfo,
 } from "../../types"
 import Decimal from "decimal.js"
 import { RpcExecutorService } from "@modules/blockchains"
@@ -37,44 +39,34 @@ import { RpcAccessType } from "@modules/filesystem"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { InjectQueue } from "@nestjs/bullmq"
-import { bullData, BullQueueName } from "@modules/bullmq"
-import { Queue } from "bullmq"
-import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 
 @Injectable()
 export class FlowXActionService implements IActionService {
     constructor(
-    private readonly signerService: SignerService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly openPositionTxbService: OpenPositionTxbService,
-    private readonly tickMathService: TickMathService,
-    @InjectQueue(bullData[BullQueueName.OpenPositionConfirmation].name) 
-    private openPositionConfirmationQueue: Queue<OpenPositionConfirmationPayload>,
-    @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
-    private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
-    private readonly closePositionTxbService: ClosePositionTxbService,
-    private readonly rpcExecutorService: RpcExecutorService,
-    private readonly mutexService: MutexService,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
-    ) {}
+        private readonly signerService: SignerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly openPositionTxbService: OpenPositionTxbService,
+        private readonly tickMathService: TickMathService,
+        private readonly closePositionTxbService: ClosePositionTxbService,
+        private readonly rpcExecutorService: RpcExecutorService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
+    ) { }
 
     /**
    * Open LP position on FlowX CLMM
    */
     async openPosition(
-        { 
-            bot, 
-            state 
-        }: OpenPositionParams): Promise<void> {
+        {
+            bot,
+            state
+        }: OpenPositionParams): Promise<OpenPositionResponse> {
         const _state = state as LiquidityPoolState
         const txb = new Transaction()
         if (
             !bot.snapshotTargetBalanceAmount ||
-      !bot.snapshotQuoteBalanceAmount ||
-      !bot.snapshotGasBalanceAmount
+            !bot.snapshotQuoteBalanceAmount ||
+            !bot.snapshotGasBalanceAmount
         ) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
@@ -93,7 +85,7 @@ export class FlowXActionService implements IActionService {
                 "Either token A or token B is not in the pool",
             )
         }
-        // we log the desired amounts to the ora service
+        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const { tickLower, tickUpper } = await this.tickMathService.getTickBounds({
             state: _state,
             bot,
@@ -112,11 +104,11 @@ export class FlowXActionService implements IActionService {
             state: _state,
             tickUpper,
         })
-        const {
-            txHash,
-            positionId,
-            liquidity,
-        } = await this.rpcExecutorService.withSuiClient({
+        let txHash: string | null = null
+        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
+        const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
+        await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 return await this.signerService.withSuiSigner({
@@ -129,65 +121,53 @@ export class FlowXActionService implements IActionService {
                                 showEvents: true,
                             },
                         })
-                        await suiClient.waitForTransaction({
-                            digest,  
-                        })
-                        const increaseLiquidityEvent = events?.find((event) =>
-                            event.type.includes("::position_manager::IncreaseLiquidity"),
-                        )
-                        if (!increaseLiquidityEvent) {
-                            throw new TransactionEventNotFoundException(
-                                "IncreaseLiquidity event not found",
-                            )
-                        }
-                        const increaseLiquidityEventParsed =
-              increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
-                        const positionId = increaseLiquidityEventParsed.position_id
-                        const liquidity = increaseLiquidityEventParsed.liquidity
-                        const txHash = digest
-                        // log the open position success
-                        this.logger.verbose(
-                            WinstonLog.OpenPositionSuccess, {
-                                botId: bot.id,
-                                txHash,
-                                liquidityPoolId: _state.static.displayId,
+                        txHash = digest
+                        execute = async (): Promise<CreateExecuteResponse> => {
+                            await suiClient.waitForTransaction({
+                                digest,
                             })
-                        // return the transaction hash, position id and liquidity
-                        return {
-                            txHash,
-                            positionId,
-                            liquidity,
+                            const increaseLiquidityEvent = events?.find((event) =>
+                                event.type.includes("::position_manager::IncreaseLiquidity"),
+                            )
+                            if (!increaseLiquidityEvent) {
+                                throw new TransactionEventNotFoundException(
+                                    "IncreaseLiquidity event not found",
+                                )
+                            }
+                            const increaseLiquidityEventParsed =
+                                increaseLiquidityEvent.parsedJson as IncreaseLiquidityEvent
+                            // log the open position success
+                            this.logger.verbose(
+                                WinstonLog.OpenPositionSuccess, {
+                                    botId: bot.id,
+                                    txHash: digest,
+                                    liquidityPoolId: _state.static.displayId,
+                                })
+                            return {
+                                metadata: {
+                                    liquidity: increaseLiquidityEventParsed.liquidity,
+                                },
+                                feeAmountTarget,
+                                feeAmountQuote,
+                                positionId: increaseLiquidityEventParsed.position_id,
+                            }
                         }
                     },
                 })
             },
         })
-        // Enqueue the job to be processed by the worker.
-        // Logic is no longer executed immediately here.
-        // Using the worker ensures reliable and asynchronous processing.
-        await this.openPositionConfirmationQueue.add(
-            v4(), 
-            {
-                bot,
-                txHash,
-                state: _state,
-                positionId,
-                liquidity: liquidity.toString(),
-                feeAmountTarget: feeAmountA.toString(),
-                feeAmountQuote: feeAmountB.toString(),
-                snapshotTargetBalanceAmountBeforeOpen: bot.snapshotTargetBalanceAmount,
-                snapshotQuoteBalanceAmountBeforeOpen: bot.snapshotQuoteBalanceAmount,
-                snapshotGasBalanceAmountBeforeOpen: bot.snapshotGasBalanceAmount,
-                tickLower: tickLower.toNumber(),
-                tickUpper: tickUpper.toNumber(),
-            }
-        )
+        if (!txHash || !execute) {
+            throw new TransactionExecutionFailedException("Transaction execution failed")
+        }
+        return {
+            txHash,
+            execute,
+        }
     }
 
     async closePosition(
         { bot, state }: ClosePositionParams
-    ): Promise<void> {
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+    ): Promise<ClosePositionResponse | null> {
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -212,22 +192,20 @@ export class FlowXActionService implements IActionService {
         // 2. our detection find a potential dump from CEX
         // 3. the position is not profitable, we close it
         const shouldProceedAfterIsPositionOutOfRange =
-      await this.assertIsPositionOutOfRange({
-          bot,
-          state: _state,
-      })
-        if (!shouldProceedAfterIsPositionOutOfRange) {
-            // release the mutex
-            mutex.release()
-            // return false to terminate the assertion
-            return
+            await this.assertIsPositionOutOfRange({
+                bot,
+                state: _state,
+            })
+        if (shouldProceedAfterIsPositionOutOfRange) {
+            return shouldProceedAfterIsPositionOutOfRange
         }
+        return null
     }
 
     private async assertIsPositionOutOfRange({
         bot,
         state,
-    }: ClosePositionParams): Promise<boolean> {
+    }: ClosePositionParams): Promise<ClosePositionResponse | null> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id,
@@ -237,11 +215,11 @@ export class FlowXActionService implements IActionService {
         const _state = state.dynamic as DynamicLiquidityPoolInfo
         if (
             new Decimal(_state.tickCurrent).gte(bot.activePosition.tickLower || 0) &&
-          new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
+            new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
         ) {
             // do nothing, since the position is still in the range
-            // return true to continue the assertion
-            return true
+            // return null to continue the assertion
+            return null
         }
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString(),
@@ -254,18 +232,16 @@ export class FlowXActionService implements IActionService {
                 "Either token A or token B is not in the pool",
             )
         }
-        // proccess the close position transaction
-        await this.proccessClosePositionTransaction({
+        return await this.proccessClosePositionTransaction({
             bot,
             state,
         })
-        return false
     }
 
     private async proccessClosePositionTransaction({
         bot,
         state,
-    }: ClosePositionParams): Promise<void> {
+    }: ClosePositionParams): Promise<ClosePositionResponse> {
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -280,8 +256,8 @@ export class FlowXActionService implements IActionService {
         } = bot.activePosition
         if (
             !snapshotTargetBalanceAmountBeforeOpen ||
-      !snapshotQuoteBalanceAmountBeforeOpen ||
-      !snapshotGasBalanceAmountBeforeOpen
+            !snapshotQuoteBalanceAmountBeforeOpen ||
+            !snapshotGasBalanceAmountBeforeOpen
         ) {
             throw new SnapshotBalancesBeforeOpenNotSetException(
                 "Snapshot balances before open not set",
@@ -301,57 +277,60 @@ export class FlowXActionService implements IActionService {
         }
         const txb = new Transaction()
         const { txb: closePositionTxb } =
-      await this.closePositionTxbService.createClosePositionTxb({
-          bot,
-          state: _state,
-          txb,
-      })
-        const txHash = await this.rpcExecutorService.withSuiClient<string>({
+            await this.closePositionTxbService.createClosePositionTxb({
+                bot,
+                state: _state,
+                txb,
+            })
+        let txHash: string | null = null
+        let execute: (() => Promise<void>) | null = null
+        await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const { digest } = await suiClient.signAndExecuteTransaction({
-                            transaction: closePositionTxb,
-                            signer,
-                            options: {
-                                showEvents: true,
-                            },
-                        })
-                        await suiClient.waitForTransaction({
-                            digest,
-                        })
-                        // log the close position success
-                        this.logger.verbose(
-                            WinstonLog.ClosePositionSuccess, {
-                                botId: bot.id,
-                                txHash: digest,
-                                liquidityPoolId: _state.static.displayId,
+                        txHash = await closePositionTxb.getDigest()
+                        execute = async () => {
+                            const { digest } = await suiClient.signAndExecuteTransaction({
+                                transaction: closePositionTxb,
+                                signer,
+                                options: {
+                                    showEvents: true,
+                                },
                             })
-                        // return the transaction hash
-                        return digest
+                            await suiClient.waitForTransaction({
+                                digest,
+                            })
+                            // log the close position success
+                            this.logger.verbose(
+                                WinstonLog.ClosePositionSuccess, {
+                                    botId: bot.id,
+                                    txHash: txHash,
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
+                        }
                     },
                 })
             },
         })
-        await this.closePositionConfirmationQueue.add(
-            v4(), 
-            {
-                bot,
-                txHash,
-                state: _state,
-            }
-        )
+        if (!txHash || !execute) {
+            throw new TransactionExecutionFailedException("Transaction execution failed")
+        }
+        return {
+            txHash,
+            execute,
+        }
     }
 }
 
 interface IncreaseLiquidityEvent {
-  amount_x: string;
-  amount_y: string;
-  liquidity: string;
-  pool_id: string;
-  position_id: string;
-  sender: string;
+    amount_x: string;
+    amount_y: string;
+    liquidity: string;
+    pool_id: string;
+    position_id: string;
+    sender: string;
 }

@@ -5,10 +5,10 @@ import { BulkJobOptions } from "bullmq"
  * Each name corresponds to a specific type of background job queue.
  */
 export enum BullQueueName {
-    OpenPositionConfirmation = "openPositionConfirmation",
-    ClosePositionConfirmation = "closePositionConfirmation",
-    SwapConfirmation = "swapConfirmation",
-    BalanceSnapshotConfirmation = "balanceSnapshotConfirmation",
+    OpenPosition = "openPosition",
+    ClosePosition = "closePosition",
+    Swap = "swap",
+    BalanceSnapshot = "balanceSnapshot",
 }
 
 /**

@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { 
     ClosePositionParams, 
+    ClosePositionResponse, 
+    CreateExecuteResponse,
     IActionService, 
     LiquidityPoolState, 
-    OpenPositionParams 
+    OpenPositionParams,
+    OpenPositionResponse
 } from "../../interfaces"
 import { LiquidityMath,  SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
-import {
-    RaydiumPositionMetadata,
-} from "@modules/databases"
 import { SignerService } from "../../signers"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
@@ -17,14 +17,12 @@ import {
     SnapshotBalancesNotSetException,
     TransactionMessageTooLargeException,
     TokenNotFoundException,
+    TransactionExecutionFailedException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { 
-    ClosePositionConfirmationPayload, 
     DynamicLiquidityPoolInfo, 
-    OpenPositionConfirmationPayload 
 } from "../../types"
-import { OPEN_POSITION_SLIPPAGE } from "../constants"
 import { 
     signTransaction,
     pipe,
@@ -49,15 +47,9 @@ import { adjustSlippage } from "@utils"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { createEventName, EventName } from "@modules/event"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
-import { InjectQueue } from "@nestjs/bullmq"
-import { bullData, BullQueueName } from "@modules/bullmq"
-import { Queue } from "bullmq"
-import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class RaydiumActionService implements IActionService {
@@ -67,21 +59,14 @@ export class RaydiumActionService implements IActionService {
         private readonly tickMathService: TickMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly closePositionInstructionService: ClosePositionInstructionService,
-        @InjectQueue(bullData[BullQueueName.OpenPositionConfirmation].name) 
-        private openPositionConfirmationQueue: Queue<OpenPositionConfirmationPayload>,
-        @InjectQueue(bullData[BullQueueName.ClosePositionConfirmation].name) 
-        private closePositionConfirmationQueue: Queue<ClosePositionConfirmationPayload>,
-        private readonly eventEmitter: EventEmitter2,
         private readonly rpcExecutorService: RpcExecutorService,
-        private readonly mutexService: MutexService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
 
     async closePosition(
         { bot, state }: ClosePositionParams
-    ): Promise<void> {
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+    ): Promise<ClosePositionResponse | null> {  
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) 
         {
@@ -111,9 +96,9 @@ export class RaydiumActionService implements IActionService {
             state: _state,
         })
         if (!shouldProceedAfterIsPositionOutOfRange) {
-            mutex.release()
-            return
+            return null
         }
+        return null
     }
 
     private async assertIsPositionOutOfRange(
@@ -121,7 +106,7 @@ export class RaydiumActionService implements IActionService {
             bot,
             state,
         }: ClosePositionParams
-    ): Promise<boolean> {
+    ): Promise<ClosePositionResponse | null> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
@@ -134,8 +119,8 @@ export class RaydiumActionService implements IActionService {
             && new Decimal(_state.tickCurrent).lte(bot.activePosition.tickUpper || 0)
         ) {
             // do nothing, since the position is still in the range
-            // return true to continue the assertion
-            return true
+            // return null to continue the assertion
+            return null
         }
         const tokenA = this.primaryMemoryStorageService.tokens
             .find((token) => token.id === state.static.tokenA.toString())
@@ -144,26 +129,14 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        await this.proccessClosePositionTransaction({
+        const result = await this.proccessClosePositionTransaction({
             bot,
             state,
         })
-        // return false to terminate the assertion
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.UpdateActiveBot, 
-                {
-                    botId: bot.id,
-                })
-        )
-        this.eventEmitter.emit(
-            createEventName(
-                EventName.PositionClosed, 
-                {
-                    botId: bot.id,
-                })
-        )
-        return false
+        if (result) {
+            await result.execute()
+        }
+        return null
     }
 
     private async proccessClosePositionTransaction(
@@ -171,7 +144,7 @@ export class RaydiumActionService implements IActionService {
             bot,
             state,
         }: ClosePositionParams
-    ): Promise<void> {
+    ): Promise<ClosePositionResponse> {
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
@@ -187,13 +160,15 @@ export class RaydiumActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
-            bot,
-            state: _state,
-        })
-        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+        let txHash: string | null = null
+        let execute: (() => Promise<void>) | null = null
+        await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
+                const closePositionInstructions = await this.closePositionInstructionService.createCloseInstructions({
+                    bot,
+                    state: _state,
+                })
                 // sign the transaction
                 return await this.signerService.withSolanaSigner({
                     bot,
@@ -221,30 +196,33 @@ export class RaydiumActionService implements IActionService {
                             rpcSubscriptions,
                         })
                         const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        await sendAndConfirmTransaction(
-                            signedTransaction, {
-                                commitment: "confirmed",
-                                maxRetries: BigInt(5),
-                            })
-                        return transactionSignature.toString()
+                        txHash = transactionSignature.toString()
+                        execute = async () => {
+                            await sendAndConfirmTransaction(
+                                signedTransaction, {
+                                    commitment: "confirmed",
+                                    maxRetries: BigInt(5),
+                                })
+                            this.logger.verbose(
+                                WinstonLog.ClosePositionSuccess, {
+                                    txHash: transactionSignature.toString(),
+                                    botId: bot.id,
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
+                        }
                     },
-                })
+                },
+                )
             },
         })
-        this.logger.verbose(
-            WinstonLog.ClosePositionSuccess, {
-                txHash,
-                botId: bot.id,
-                liquidityPoolId: _state.static.displayId,
-            })
-        await this.closePositionConfirmationQueue.add(
-            v4(), 
-            {
-                bot,
-                txHash,
-                state: _state,
-            }
-        )
+        if (!txHash || !execute) {
+            throw new TransactionExecutionFailedException("Transaction execution failed")
+        }
+        return {
+            txHash,
+            execute,
+        }
     }
 
     async openPosition(
@@ -252,9 +230,9 @@ export class RaydiumActionService implements IActionService {
             state,
             bot,
         }: OpenPositionParams
-    ): Promise<void> {
+    ): Promise<OpenPositionResponse> {
         const _state = state as LiquidityPoolState
-        const slippage = OPEN_POSITION_SLIPPAGE
+        const slippage = new Decimal(envConfig().slippage.openPosition)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,
@@ -321,7 +299,11 @@ export class RaydiumActionService implements IActionService {
         })
         // convert the transaction to a transaction with lifetime
         // sign the transaction
-        const txHash = await this.rpcExecutorService.withSolanaRpc<string>({
+        let txHash: string | null = null
+        let execute: (() => Promise<CreateExecuteResponse>) | null = null
+        const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
+        const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
+        await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
                 return await this.signerService.withSolanaSigner({
@@ -351,46 +333,38 @@ export class RaydiumActionService implements IActionService {
                             rpcSubscriptions,
                         })
                         const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        await sendAndConfirmTransaction(
-                            signedTransaction, {
-                                commitment: "confirmed",
-                                maxRetries: BigInt(5),
-                            })
-                        this.logger.verbose(
-                            WinstonLog.OpenPositionSuccess, {
-                                txHash: transactionSignature.toString(),
-                                botId: bot.id,
-                                liquidityPoolId: _state.static.displayId,
-                            })
-                        return transactionSignature.toString()
+                        txHash = transactionSignature.toString()
+                        execute = async (): Promise<CreateExecuteResponse> => {
+                            await sendAndConfirmTransaction(
+                                signedTransaction, {
+                                    commitment: "confirmed",
+                                    maxRetries: BigInt(5),
+                                })
+                            this.logger.verbose(
+                                WinstonLog.OpenPositionSuccess, {
+                                    txHash: transactionSignature.toString(),
+                                    botId: bot.id,
+                                    liquidityPoolId: _state.static.displayId,
+                                })
+                            return {
+                                metadata: {
+                                    nftMintAddress: mintKeyPair.address.toString(),
+                                },
+                                feeAmountTarget,
+                                feeAmountQuote,
+                                positionId: ataAddress.toString(),
+                            }
+                        }
                     },
                 })
             },
         })
-        // Enqueue the job to be processed by the worker.
-        // Logic is no longer executed immediately here.
-        // Using the worker ensures reliable and asynchronous processing.
-        const metadata: RaydiumPositionMetadata = {
-            nftMintAddress: mintKeyPair.address.toString(),
+        if (!txHash || !execute) {
+            throw new TransactionExecutionFailedException("Transaction execution failed")
         }
-        await this.openPositionConfirmationQueue.add(
-            v4(), 
-            {
-                bot,
-                txHash,
-                state: _state,
-                positionId: ataAddress.toString(),
-                liquidity: liquidity.toString(),
-                feeAmountTarget: (targetIsA ? feeAmountA : feeAmountB).toString(),
-                feeAmountQuote: (targetIsA ? feeAmountB : feeAmountA).toString(),
-                snapshotTargetBalanceAmountBeforeOpen: bot.snapshotTargetBalanceAmount!,
-                snapshotQuoteBalanceAmountBeforeOpen: bot.snapshotQuoteBalanceAmount!,
-                snapshotGasBalanceAmountBeforeOpen: bot.snapshotGasBalanceAmount!,
-                tickLower: tickLower.toNumber(),
-                tickUpper: tickUpper.toNumber(),
-                metadata,
-            }
-        )
+        return {
+            txHash,
+            execute,
+        }
     }
 }
-

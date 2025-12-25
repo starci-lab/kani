@@ -6,12 +6,12 @@ import { formatWithBraces } from "./utils"
  * Each queue has its own prefix, batch size, and cleanup policies.
  */
 export const bullData: Record<BullQueueName, BullQueueData> = {
-    [BullQueueName.OpenPositionConfirmation]: {
+    [BullQueueName.OpenPosition]: {
         // Prefix for Redis keys to keep liquidity pool jobs organized and isolated
-        prefix: formatWithBraces("open_position_confirmation"),
+        prefix: formatWithBraces("open_position"),
 
         // Queue name used internally by BullMQ
-        name: "open_position_confirmation",
+        name: "open_position",
 
         // Max number of jobs processed per batch in this queue
         batchSize: 1000,
@@ -25,6 +25,61 @@ export const bullData: Record<BullQueueName, BullQueueData> = {
             // Retry the job up to 10 times if it fails
             attempts: 10,
             // Delay between retries in milliseconds
+            backoff: {
+                type: "exponential",
+                delay: 1000,
+            },
+        },
+    },
+    [BullQueueName.ClosePosition]: {
+        prefix: formatWithBraces("close_position"),
+        name: "close_position",
+        batchSize: 1000,
+        opts: {
+            removeOnComplete: true,
+            removeOnFail: false,
+            attempts: 10,
+            backoff: {
+                type: "exponential",
+                delay: 1000,
+            },
+        },
+    },
+    [BullQueueName.Swap]: {
+        prefix: formatWithBraces("swap"),
+        name: "swap",
+        batchSize: 1000,
+        opts: {
+            removeOnComplete: true,
+            removeOnFail: false,
+            attempts: 10,
+            backoff: {
+                type: "exponential",
+                delay: 1000,
+            },
+        },
+    },
+    [BullQueueName.BalanceSnapshot]: {
+        prefix: formatWithBraces("balance_snapshot"),
+        name: "balance_snapshot",
+        batchSize: 1000,
+        opts: {
+            removeOnComplete: true,
+            removeOnFail: false,
+            backoff: {
+                type: "exponential",
+                delay: 1000,
+            },
+        },
+    },
+    [BullQueueName.OpenPositionConfirmation]: {
+        prefix: formatWithBraces("open_position_confirmation"),
+        name: "open_position_confirmation",
+        batchSize: 1000,
+        opts: {
+            removeOnComplete: true,
+            removeOnFail: false,
+            attempts: 10,
             backoff: {
                 type: "exponential",
                 delay: 1000,
@@ -46,7 +101,7 @@ export const bullData: Record<BullQueueName, BullQueueData> = {
         },
     },
     [BullQueueName.SwapConfirmation]: {
-        prefix: formatWithBraces("swap_confirmations"),
+        prefix: formatWithBraces("swap_confirmation"),
         name: "swap_confirmation",
         batchSize: 1000,
         opts: {
@@ -66,10 +121,11 @@ export const bullData: Record<BullQueueName, BullQueueData> = {
         opts: {
             removeOnComplete: true,
             removeOnFail: false,
+            attempts: 10,
             backoff: {
                 type: "exponential",
                 delay: 1000,
             },
         },
-    }
+    },
 }

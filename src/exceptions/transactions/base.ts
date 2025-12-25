@@ -11,3 +11,9 @@ export class CreateAtaInstructionException extends AbstractException {
         super(message || "Create Ata Instruction is not found", "CREATE_ATA_INSTRUCTION_EXCEPTION")
     }
 }
+
+export class TransactionExecutionFailedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Transaction execution failed", "TRANSACTION_EXECUTION_FAILED_EXCEPTION")
+    }
+}

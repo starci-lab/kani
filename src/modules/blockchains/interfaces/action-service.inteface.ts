@@ -1,82 +1,86 @@
 import BN from "bn.js"
 import { FetchedPool } from "./types"
 import { ActionResponse } from "../dexes"
-import { BotSchema, LiquidityPoolSchema, TokenId, TokenSchema, UserSchema } from "@modules/databases"
+import {
+    BotSchema,
+    LiquidityPoolSchema,
+    TokenId,
+    UserSchema,
+} from "@modules/databases"
 import { Network } from "@typedefs"
-import { Transaction } from "@mysten/sui/transactions"
 import { SuiClient } from "@mysten/sui/client"
-import { DynamicDlmmLiquidityPoolInfo, DynamicLiquidityPoolInfo } from "../types"
+import {
+    DynamicDlmmLiquidityPoolInfo,
+    DynamicLiquidityPoolInfo,
+} from "../types"
 
 export interface LiquidityPoolState {
-    static: LiquidityPoolSchema
-    dynamic: DynamicLiquidityPoolInfo
+  static: LiquidityPoolSchema;
+  dynamic: DynamicLiquidityPoolInfo;
 }
 
 export interface DlmmLiquidityPoolState {
-    static: LiquidityPoolSchema
-    dynamic: DynamicDlmmLiquidityPoolInfo
+  static: LiquidityPoolSchema;
+  dynamic: DynamicDlmmLiquidityPoolInfo;
 }
 
 export interface ClosePositionParams {
-    bot: BotSchema
-    state: LiquidityPoolState | DlmmLiquidityPoolState
+  bot: BotSchema;
+  state: LiquidityPoolState | DlmmLiquidityPoolState;
 }
 
 export interface OpenPositionParams {
-    bot: BotSchema
-    state: LiquidityPoolState | DlmmLiquidityPoolState
+  bot: BotSchema;
+  state: LiquidityPoolState | DlmmLiquidityPoolState;
 }
 
 export interface ClosePositionResponse extends ActionResponse {
-    suiTokenOuts?: Partial<Record<TokenId, BN>>
+  suiTokenOuts?: Partial<Record<TokenId, BN>>;
 }
 
 export interface SwapParams {
-    pool: FetchedPool
-    network?: Network
-    accountAddress: string
-    tokenInId: TokenId
-    tokenOutId: TokenId
-    amountIn: BN
-    slippage?: number
-    priceLimit?: number
-    // user to sign the tx
-    user?: UserSchema
-    suiClient?: SuiClient
-}
-
-export interface SuiFlexibleSwapParams {
-    network?: Network
-    txb?: Transaction
-    accountAddress: string
-    tokens: Array<TokenSchema>
-    suiTokenIns: Partial<Record<TokenId, BN>>
-    tokenOut: TokenId
-    slippage?: number
-    // user to sign the tx
-    user?: UserSchema
-    suiClient?: SuiClient
-    // deposit amount
-    depositAmount: BN
-    stimulateOnly?: boolean
-}
-
-export interface SuiFlexibleSwapResponse extends ActionResponse {
-    receivedAmountOut: BN
-    profitAmount: BN
-}
-
-export interface OpenPositionResponse extends ActionResponse {
-    tickLower: number
-    tickUpper: number
-    liquidity: BN
-    depositAmount: BN
-    positionId: string
+  pool: FetchedPool;
+  network?: Network;
+  accountAddress: string;
+  tokenInId: TokenId;
+  tokenOutId: TokenId;
+  amountIn: BN;
+  slippage?: number;
+  priceLimit?: number;
+  // user to sign the tx
+  user?: UserSchema;
+  suiClient?: SuiClient;
 }
 
 export interface IActionService {
-    // close position
-    closePosition(params: ClosePositionParams): Promise<void>
-    // open position
-    openPosition(params: OpenPositionParams): Promise<void>
+  // close position
+  closePosition(
+    params: ClosePositionParams,
+  ): Promise<ClosePositionResponse | null>;
+  // open position
+  openPosition(
+    params: OpenPositionParams,
+  ): Promise<OpenPositionResponse | null>;
+}
+
+export interface OpenPositionResponse {
+  txHash: string;
+  // unknown mean something that is not known at the time of the response
+  execute: () => Promise<CreateExecuteResponse>;
+}
+
+export interface CreateExecuteResponse {
+  metadata: unknown;
+  // fee amount in target token
+  feeAmountTarget: BN;
+  // fee amount in quote token
+  feeAmountQuote: BN;
+  // position id
+  positionId: string;
+}
+
+export interface ClosePositionResponse {
+  txHash: string;
+  // unknown mean something that is not known at the time of the response
+  execute: () => Promise<void>;
 }

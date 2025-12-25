@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workers.module-definition"
 import { ClosePositionConfirmationWorker } from "./close-position-confirmation.worker"
-import { OpenPositionConfirmationWorker } from "./open-position-confirmation.worker"
+import { OpenPositionConfirmationWorker } from "./open-position.worker"
 import { SwapConfirmationWorker } from "./swap-confirmation.worker"
 
 @Module({})

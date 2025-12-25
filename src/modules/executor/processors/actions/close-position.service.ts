@@ -10,7 +10,7 @@ import {
     BotSchema, 
 } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { DispatchClosePositionService } from "@modules/blockchains"
+import { ClosePositionOrchestratorService } from "@modules/blockchains"
 import { 
     createReadinessWatcherName, 
     ReadinessWatcherFactoryService 
@@ -39,7 +39,7 @@ export class ClosePositionProcessorService {
         // Used to manually subscribe to events. We bind listeners here instead
         // of using @OnEvent so Nest doesn't override our request context.
         private readonly eventEmitter: EventEmitter2,
-        private readonly dispatchClosePositionService: DispatchClosePositionService,
+        private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
@@ -80,7 +80,7 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                await this.dispatchClosePositionService.dispatchClosePosition({
+                await this.closePositionOrchestratorService.enqueue({
                     liquidityPoolId: payload.liquidityPoolId,
                     bot: this.bot,
                 })
@@ -94,7 +94,7 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                await this.dispatchClosePositionService.dispatchClosePosition({
+                await this.closePositionOrchestratorService.enqueue({
                     liquidityPoolId: payload.liquidityPoolId,
                     bot: this.bot,
                 })

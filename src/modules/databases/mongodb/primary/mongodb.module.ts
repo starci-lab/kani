@@ -40,6 +40,8 @@ import {
     ExecutorSchemaClass,
     AssignedUserSchemaClass,
     AssignedUserSchema,
+    JobSchema,
+    JobSchemaClass,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {
@@ -204,6 +206,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: StateSchema.name,
                         useFactory: () => StateSchemaClass,
+                    },
+                    {
+                        name: JobSchema.name,
+                        useFactory: () => JobSchemaClass,
                     },
                 ], CONNECTION_NAME),
             ],

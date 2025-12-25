@@ -116,4 +116,67 @@ registerEnumType(
                 description: "The close position transaction"
             }
         }
-    })
+    }
+)
+
+export enum JobType {
+    OpenPosition = "openPosition",
+    ClosePosition = "closePosition",
+    Swap = "swap",
+}
+
+export const GraphQLTypeJobType = createEnumType(JobType)
+
+registerEnumType(GraphQLTypeJobType, {
+    name: "JobType",
+    description: "The type of the job",
+    valuesMap: {
+        [JobType.OpenPosition]: {
+            description: "The open position job"
+        },
+        [JobType.ClosePosition]: {
+            description: "The close position job"
+        },
+        [JobType.Swap]: {
+            description: "The swap job"
+        }
+    }
+})
+
+export enum JobStatus {
+    Pending = "pending",
+  
+    TxHashSaved = "tx_hash_saved",   // transaction hash stored (before sending to chain)
+    TxExecuted = "tx_executed",      // transaction sent and executed on chain
+    DbPersisted = "db_persisted",    // job result persisted in database
+  
+    Completed = "completed",         // job fully completed
+    Failed = "failed",               // job failed
+  }
+  
+export const GraphQLTypeJobStatus = createEnumType(JobStatus)
+  
+registerEnumType(GraphQLTypeJobStatus, {
+    name: "JobStatus",
+    description: "Represents the lifecycle status of a background job",
+    valuesMap: {
+        [JobStatus.Pending]: {
+            description: "The job has been created but not processed yet",
+        },
+        [JobStatus.TxHashSaved]: {
+            description: "The transaction hash has been saved before sending the transaction to the blockchain",
+        },
+        [JobStatus.TxExecuted]: {
+            description: "The transaction has been sent and executed on the blockchain",
+        },
+        [JobStatus.DbPersisted]: {
+            description: "The job result has been persisted to the database",
+        },
+        [JobStatus.Completed]: {
+            description: "The job has been fully completed",
+        },
+        [JobStatus.Failed]: {
+            description: "The job has failed",
+        },
+    },
+})

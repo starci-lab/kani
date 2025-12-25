@@ -2,9 +2,8 @@
 
 import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
 import BN from "bn.js"
-import { BotSchema, TokenId } from "@modules/databases"
+import { BotSchema, LiquidityPoolId, TokenId } from "@modules/databases"
 import { sendAndConfirmTransactionFactory, signTransaction } from "@solana/kit"
-import { DlmmLiquidityPoolState, LiquidityPoolState } from "./interfaces"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -45,49 +44,17 @@ export interface BasePayload {
     bot: BotSchema
 }
 
-export interface OpenPositionConfirmationPayload extends BasePayload {
-    // The transaction hash used to retry and identify the transaction that opened the position
-    txHash: string
-    // The liquidity pool ID to identify the liquidity pool where the position was opened
-    state: LiquidityPoolState | DlmmLiquidityPoolState
-    // The position ID to identify the opened position
-    positionId: string
-    // Snapshot of the target balance amount before opening the position
-    snapshotTargetBalanceAmountBeforeOpen: string
-    // Snapshot of the quote balance amount before opening the position
-    snapshotQuoteBalanceAmountBeforeOpen: string
-    // Snapshot of the gas balance amount before opening the position
-    snapshotGasBalanceAmountBeforeOpen: string
-    // liquidity amount
-    liquidity?: string
-    // fee amount for the target token
-    feeAmountTarget: string
-    // fee amount for the quote token
-    feeAmountQuote: string
-    // tick lower
-    tickLower?: number
-    // tick upper
-    tickUpper?: number
-    // bin min id
-    minBinId?: number
-    // bin max id
-    maxBinId?: number
-    // amount a
-    amountA?: string
-    // amount b
-    amountB?: string
-    // metadata
-    metadata?: unknown
+export interface OpenPositionPayload extends BasePayload {
+    liquidityPoolId: LiquidityPoolId
+    bot: BotSchema
 }
 
-export interface ClosePositionConfirmationPayload extends BasePayload {
-    // The transaction hash of the close position transaction
-    txHash: string
-    // The liquidity pool ID to identify the liquidity pool where the position was closed
-    state: LiquidityPoolState | DlmmLiquidityPoolState
+export interface ClosePositionPayload extends BasePayload {
+    liquidityPoolId: LiquidityPoolId
+    bot: BotSchema
 }
 
-export interface BalanceSnapshotConfirmationPayload extends BasePayload {
+export interface BalanceSnapshotPayload extends BasePayload {
     // The transaction hash of the balance snapshot transaction
     txHash?: string
     // The target balance amount after the balance snapshot
@@ -98,7 +65,7 @@ export interface BalanceSnapshotConfirmationPayload extends BasePayload {
     gasBalanceAmount: string
 }
 
-export interface SwapConfirmationPayload {
+export interface SwapPayload {
     bot: BotSchema
     // The transaction hash of the balance snapshot transaction
     txHash: string
