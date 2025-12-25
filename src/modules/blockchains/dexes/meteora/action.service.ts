@@ -204,8 +204,8 @@ export class MeteoraActionService implements IActionService {
             bot,
             state: _state,
         })
-        if (!shouldProceedAfterIsPositionOutOfRange) {
-            return null
+        if (shouldProceedAfterIsPositionOutOfRange) {
+            return shouldProceedAfterIsPositionOutOfRange
         }
         return null
     }
@@ -238,14 +238,10 @@ export class MeteoraActionService implements IActionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const result = await this.proccessClosePositionTransaction({
+        return await this.proccessClosePositionTransaction({
             bot,
             state,
         })
-        if (result) {
-            await result.execute()
-        }
-        return null
     }
 
     private async proccessClosePositionTransaction(

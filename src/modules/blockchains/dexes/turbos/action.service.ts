@@ -216,8 +216,8 @@ export class TurbosActionService implements IActionService {
             bot,
             state: _state,
         })
-        if (!shouldProceedAfterIsPositionOutOfRange) {
-            return null
+        if (shouldProceedAfterIsPositionOutOfRange) {
+            return shouldProceedAfterIsPositionOutOfRange
         }
         return null
     }
