@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { APP_FILTER } from "@nestjs/core"
 import { EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
@@ -7,7 +8,12 @@ import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { PythModule } from "@modules/blockchains"
-import { SignersModule, SnapshotsModule, TxBuilderModule, MathModule } from "@modules/blockchains"
+import { 
+    SignersModule, 
+    SnapshotsModule, 
+    TxBuilderModule, 
+    MathModule 
+} from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
@@ -17,11 +23,15 @@ import { ApolloClientModule } from "@modules/apollo-client"
 import { FilesystemModule } from "@modules/filesystem"
 import { DependencyName, TerminusModule } from "@modules/terminus"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
+import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
         FilesystemModule.register({
+            isGlobal: true,
+        }),
+        SentryModule.register({
             isGlobal: true,
         }),
         WinstonModule.register({
@@ -153,6 +163,12 @@ import { P2CBalancerModule } from "@modules/p2c-balancer"
         CexesModule.register({
             isGlobal: true,
         }), 
+    ],
+    providers: [
+        {
+            provide: APP_FILTER,
+            useClass: SentryCatchAllExceptionFilter,
+        },
     ],
 })
 export class AppModule {}

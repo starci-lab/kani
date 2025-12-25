@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { APP_FILTER } from "@nestjs/core"
 import { EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { CoordinatorModule } from "@modules/coordinator"
@@ -7,10 +8,14 @@ import { MixinModule } from "@modules/mixin"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { KubernetesModule } from "@modules/kubernetes"
 import { DependencyName, TerminusModule } from "@modules/terminus"
+import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
+        SentryModule.register({
+            isGlobal: true,
+        }),
         EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
@@ -41,6 +46,12 @@ import { DependencyName, TerminusModule } from "@modules/terminus"
         CoordinatorModule.register({
             isGlobal: true,
         }),
+    ],
+    providers: [
+        {
+            provide: APP_FILTER,
+            useClass: SentryCatchAllExceptionFilter,
+        },
     ],
 })
 export class AppModule {}

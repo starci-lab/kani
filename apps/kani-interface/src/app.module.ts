@@ -14,7 +14,7 @@ import { CacheModule } from "@modules/cache"
 import { GraphQLModule } from "@modules/interfaces"
 import { ThrottlerModule } from "@modules/throttler"
 import { CookieModule } from "@modules/cookie"
-import { SentryModule } from "@modules/sentry"
+import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { MailModule } from "@modules/mail"
 import { SocketIoModule } from "@modules/interfaces"
 import { ScheduleModule } from "@nestjs/schedule"
@@ -22,6 +22,7 @@ import { DependencyName, TerminusModule } from "@modules/terminus"
 import { FilesystemModule } from "@modules/filesystem"
 import { IoRedisModule } from "@modules/native"
 import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
+import { APP_FILTER } from "@nestjs/core"
 
 @Module({
     imports: [
@@ -41,6 +42,9 @@ import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
             isGlobal: true,
             appName: "kani-interface",
             level: WinstonLevel.Info,
+        }),
+        SentryModule.register({
+            isGlobal: true,
         }),
         PassportModule.register({
             isGlobal: true,
@@ -116,5 +120,11 @@ import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
             ],
         }),
     ],
+    providers: [
+        {
+            provide: APP_FILTER,
+            useClass: SentryCatchAllExceptionFilter,
+        },
+    ]
 })
 export class AppModule { }

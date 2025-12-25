@@ -1,3 +1,6 @@
+// we need to initialize sentry before anything else
+import "@modules/sentry/instrument"
+
 import { NestFactory } from "@nestjs/core"
 import { AppModule } from "./app.module"
 import { envConfig } from "@modules/env"

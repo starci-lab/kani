@@ -78,7 +78,7 @@
     "@raydium-io/raydium-sdk": "^1.3.1-beta.58",
     "@raydium-io/raydium-sdk-v2": "^0.2.30-alpha",
     "@scalar/nestjs-api-reference": "^1.0.1",
-    "@sentry/nestjs": "^10.15.0",
+    "@sentry/nestjs": "^10.32.1",
     "@sentry/node": "^10.15.0",
     "@sentry/tracing": "^7.120.4",
     "@socket.io/redis-adapter": "^8.3.0",

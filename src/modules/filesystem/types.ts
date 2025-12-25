@@ -65,4 +65,5 @@ export interface RpcAccessConfigs {
 // API keys for external services
 export interface ApiKeys {
     jupiter: string
+    sentryDsn: string
 }

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { APP_FILTER } from "@nestjs/core"
 import { ExecutorModule } from "@modules/executor"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { envConfig, EnvModule } from "@modules/env"
@@ -28,11 +29,15 @@ import { ApolloClientModule } from "@modules/apollo-client"
 import { TerminusModule, DependencyName } from "@modules/terminus"
 import { FilesystemModule } from "@modules/filesystem"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
+import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
         FilesystemModule.register({
+            isGlobal: true,
+        }),
+        SentryModule.register({
             isGlobal: true,
         }),
         EventEmitterModule.forRoot(),
@@ -173,6 +178,12 @@ import { P2CBalancerModule } from "@modules/p2c-balancer"
                 DependencyName.Kafka,
             ],
         }),
+    ],
+    providers: [
+        {
+            provide: APP_FILTER,
+            useClass: SentryCatchAllExceptionFilter,
+        },
     ],
 })
 export class AppModule {}
