@@ -195,6 +195,7 @@ export const envConfig = () => ({
         retry: {
             maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call
             delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || "1000", 10), // 1s delay between retries
+            maxDelay: parseInt(process.env.TIME_CONFIG_RETRY_MAX_DELAY || "30000", 10), // 30s max delay
             factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
         },
         wsTimeout: parseInt(process.env.TIME_CONFIG_WS_TIMEOUT || "10000", 10), // 10s

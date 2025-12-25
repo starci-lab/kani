@@ -117,21 +117,29 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const liquidityPool = this.memoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
-        )
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
-            callback: async ({ rpc }) => {
-                const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
-                    commitment: "confirmed",
+        try {
+            const liquidityPool = this.memoryStorageService.liquidityPools.find(
+                liquidityPool => liquidityPool.displayId === liquidityPoolId,
+            )
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                callback: async ({ rpc }) => {
+                    const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
+                        commitment: "confirmed",
+                    })
+                    if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+                    const state = PoolInfoLayout.decode(Buffer.from(accountInfo.data))
+                    return await this.handlePoolStateUpdate(liquidityPoolId, state)
+                },
+            })
+        } catch (error) {
+            this.winstonLogger.error(
+                WinstonLog.FetchClmmPoolError, {
+                    liquidityPoolId,
+                    error: error.message,
                 })
-                if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-                const state = PoolInfoLayout.decode(Buffer.from(accountInfo.data))
-                return await this.handlePoolStateUpdate(liquidityPoolId, state)
-            },
-        })
+        }
     }
 
     // ============================================
@@ -140,30 +148,38 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     private async observeClmmPool(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const liquidityPool = this.memoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
-        )
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
-            requiredWs: true,
-            callback: async ({ rpcSubscriptions }) => {
-                const controller = new AbortController()
-                const accountNotifications = await rpcSubscriptions.accountNotifications(
-                    address(liquidityPool.poolAddress),
-                    {
-                        commitment: "confirmed",
-                        encoding: "base64",
+        try {
+            const liquidityPool = this.memoryStorageService.liquidityPools.find(
+                liquidityPool => liquidityPool.displayId === liquidityPoolId,
+            )
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                requiredWs: true,
+                callback: async ({ rpcSubscriptions }) => {
+                    const controller = new AbortController()
+                    const accountNotifications = await rpcSubscriptions.accountNotifications(
+                        address(liquidityPool.poolAddress),
+                        {
+                            commitment: "confirmed",
+                            encoding: "base64",
+                        }
+                    ).subscribe({
+                        abortSignal: controller.signal,
+                    })
+                    for await (const accountNotification of accountNotifications) {
+                        const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data.toString(), "base64"))
+                        await this.handlePoolStateUpdate(liquidityPoolId, state)
                     }
-                ).subscribe({
-                    abortSignal: controller.signal,
+                },
+            })
+        } catch (error) {
+            this.winstonLogger.error(
+                WinstonLog.ObserveClmmPoolError, {
+                    liquidityPoolId,
+                    error: error.message,
                 })
-                for await (const accountNotification of accountNotifications) {
-                    const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data.toString(), "base64"))
-                    await this.handlePoolStateUpdate(liquidityPoolId, state)
-                }
-            },
-        })
+        }
     }
 }
 

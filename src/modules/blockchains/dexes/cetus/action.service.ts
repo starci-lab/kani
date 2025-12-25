@@ -142,18 +142,18 @@ export class CetusActionService implements IActionService {
             liquidity 
         } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
-            callback: async (client) => {
+            callback: async ({ suiClient }) => {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const { digest, events } = await client.signAndExecuteTransaction({
+                        const { digest, events } = await suiClient.signAndExecuteTransaction({
                             transaction: openPositionTxb,
                             signer,
                             options: {
                                 showEvents: true,
                             }
                         })
-                        await client.waitForTransaction({
+                        await suiClient.waitForTransaction({
                             digest,
                         })
                         const addLiquidityV2Event = events?.find(
@@ -327,12 +327,12 @@ export class CetusActionService implements IActionService {
         })
         const txHash = await this.rpcExecutorService.withSuiClient<string>({
             accessType: RpcAccessType.Write,
-            callback: async (client) => {
+            callback: async ({ suiClient }) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const { digest } = await client.signAndExecuteTransaction({
+                        const { digest } = await suiClient.signAndExecuteTransaction({
                             transaction: closePositionTxb,
                             signer,
                             options: {

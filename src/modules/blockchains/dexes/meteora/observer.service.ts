@@ -87,7 +87,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
           rewards: state.reward_infos,
       }
       await this.asyncService.allIgnoreError([
-      // cache
+          // cache
           this.cacheManager.set(
               createCacheKey(CacheKey.DynamicDlmmLiquidityPoolInfo, liquidityPoolId),
               this.superjson.stringify(dynamicDlmmLiquidityPoolInfo),
@@ -105,7 +105,6 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
       this.winstonLogger.debug(WinstonLog.ObserveDlmmPool, {
           liquidityPoolId,
       })
-
       return state
   }
 
@@ -113,68 +112,85 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
   // Fetch once
   // ============================================
   private async fetchPoolInfo(liquidityPoolId: LiquidityPoolId) {
-      const liquidityPool = this.memoryStorageService.liquidityPools.find(
-          (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
-      )
-      if (!liquidityPool)
-          throw new LiquidityPoolNotFoundException(liquidityPoolId)
+      try {
+          const liquidityPool = this.memoryStorageService.liquidityPools.find(
+              (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
+          )
+          if (!liquidityPool)
+              throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-      const accountInfo = await this.rpcExecutorService.withSolanaRpc({
-          accessType: RpcAccessType.Read,
-          callback: async ({ rpc }) => {
-              return await fetchEncodedAccount(
-                  rpc,
-                  address(liquidityPool.poolAddress),
-                  {
-                      commitment: "confirmed",
-                  },
-              )
-          },
-      })
-      if (!accountInfo || !accountInfo.exists)
-          throw new LiquidityPoolNotFoundException(liquidityPoolId)
-      const state = LbPair.struct.read(Buffer.from(accountInfo.data), 8)
-      return await this.handlePoolStateUpdate(liquidityPoolId, state)
+          const accountInfo = await this.rpcExecutorService.withSolanaRpc({
+              accessType: RpcAccessType.Read,
+              callback: async ({ rpc }) => {
+                  return await fetchEncodedAccount(
+                      rpc,
+                      address(liquidityPool.poolAddress),
+                      {
+                          commitment: "confirmed",
+                      },
+                  )
+              },
+          })
+          if (!accountInfo || !accountInfo.exists)
+              throw new LiquidityPoolNotFoundException(liquidityPoolId)
+          const state = LbPair.struct.read(Buffer.from(accountInfo.data), 8)
+          return await this.handlePoolStateUpdate(liquidityPoolId, state)
+      } catch (error) {
+          this.winstonLogger.error(
+              WinstonLog.FetchDlmmPoolError, {
+                  liquidityPoolId,
+                  error: error.message,
+              })
+      }
   }
 
   // ============================================
   // Observe (subscribe)
   // ============================================
   private async observeDlmmPool(liquidityPoolId: LiquidityPoolId) {
-      const liquidityPool = this.memoryStorageService.liquidityPools.find(
-          (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
-      )
-      if (!liquidityPool)
-          throw new LiquidityPoolNotFoundException(liquidityPoolId)
-      // infinite loop to observe the pool
-      while (true) {
-          await this.rpcExecutorService.withSolanaRpc({
-              accessType: RpcAccessType.Read,
-              requiredWs: true,
-              callback: async ({ rpcSubscriptions }) => {
-                  await this.asyncService.suppressErrorAfterTimeout(async () => {
-                      const controller = new AbortController()
-                      const accountNotifications = await rpcSubscriptions
-                          .accountNotifications(address(liquidityPool.poolAddress), {
-                              commitment: "confirmed",
-                              encoding: "base64",
-                          })
-                          .subscribe({
-                              abortSignal: controller.signal,
-                          })
-                      for await (const accountNotification of accountNotifications) {
-                          const state = LbPair.struct.read(
-                              Buffer.from(
-                                  accountNotification.value?.data.toString(),
-                                  "base64",
-                              ),
-                              8,
-                          )
-                          await this.handlePoolStateUpdate(liquidityPoolId, state)
-                      }
-                  }, envConfig().timeConfig.wsTimeout)
-              },
-          })
+      try {
+          const liquidityPool = this.memoryStorageService.liquidityPools.find(
+              (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
+          )
+          if (!liquidityPool)
+              throw new LiquidityPoolNotFoundException(liquidityPoolId)
+          // infinite loop to observe the pool
+          while (true) {
+              await this.rpcExecutorService.withSolanaRpc({
+                  accessType: RpcAccessType.Read,
+                  requiredWs: true,
+                  callback: async ({ rpcSubscriptions }) => {
+                      await this.asyncService.suppressErrorAfterTimeout(
+                          async () => {
+                              const controller = new AbortController()
+                              const accountNotifications = await rpcSubscriptions
+                                  .accountNotifications(address(liquidityPool.poolAddress), {
+                                      commitment: "confirmed",
+                                      encoding: "base64",
+                                  })
+                                  .subscribe({
+                                      abortSignal: controller.signal,
+                                  })
+                              for await (const accountNotification of accountNotifications) {
+                                  const state = LbPair.struct.read(
+                                      Buffer.from(
+                                          accountNotification.value?.data.toString(),
+                                          "base64",
+                                      ),
+                                      8,
+                                  )
+                                  await this.handlePoolStateUpdate(liquidityPoolId, state)
+                              }
+                          }, envConfig().timeConfig.wsTimeout)
+                  },
+              })
+          }
+      } catch (error) {
+          this.winstonLogger.error(
+              WinstonLog.ObserveDlmmPoolError, {
+                  liquidityPoolId,
+                  error: error.message,
+              })
       }
   }
 }

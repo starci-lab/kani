@@ -74,7 +74,7 @@ export class SuiBalanceService implements IBalanceService {
             action: async (signer) => {
                 return await this.rpcExecutorService.withSuiClient({
                     accessType: RpcAccessType.Write,
-                    callback: async (suiClient) => {
+                    callback: async ({ suiClient }) => {
                         const { digest } = await suiClient.signAndExecuteTransaction({
                             transaction: txb,
                             signer,
@@ -113,7 +113,7 @@ export class SuiBalanceService implements IBalanceService {
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Read,
-            callback: async (suiClient) => {
+            callback: async ({ suiClient }) => {
                 const { totalBalance } = await suiClient.getBalance({
                     owner: bot.accountAddress,
                     coinType: token.tokenAddress,

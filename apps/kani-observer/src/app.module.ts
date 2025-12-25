@@ -11,7 +11,6 @@ import { SignersModule, SnapshotsModule, TxBuilderModule, MathModule } from "@mo
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
-import { WebsocketModule } from "@modules/websocket"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { AxiosModule } from "@modules/axios"
 import { ApolloClientModule } from "@modules/apollo-client"
@@ -41,9 +40,6 @@ import { P2CBalancerModule } from "@modules/p2c-balancer"
             isGlobal: true,
         }),
         GcpModule.register({
-            isGlobal: true,
-        }),
-        WebsocketModule.register({
             isGlobal: true,
         }),
         PrimaryMongoDbModule.register({

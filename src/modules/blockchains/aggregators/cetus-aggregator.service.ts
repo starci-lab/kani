@@ -54,8 +54,8 @@ export class CetusAggregatorService implements IAggregatorService {
 
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Read,
-            callback: async (client) => {
-                const cetusAggregatorClient = this.createCetusAggregatorClient(client)
+            callback: async ({ suiClient }) => {
+                const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                 const quote = await cetusAggregatorClient.findRouters({
                     from: tokenInInstance.tokenAddress,
                     target: tokenOutInstance.tokenAddress,
@@ -79,8 +79,8 @@ export class CetusAggregatorService implements IAggregatorService {
     }: SwapRequest): Promise<SwapResponse> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
-            callback: async (client) => {
-                const cetusAggregatorClient = this.createCetusAggregatorClient(client)
+            callback: async ({ suiClient }) => {
+                const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                 const _txb = txb || new Transaction()
                 const router = payload as RouterDataV3 
                 // no slippage

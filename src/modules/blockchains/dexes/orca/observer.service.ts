@@ -111,22 +111,29 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-            (pool) => pool.displayId === liquidityPoolId,
-        )
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-
-        await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
-            callback: async ({ rpc }) => {
-                const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
-                    commitment: "confirmed",
+        try {
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
+                (pool) => pool.displayId === liquidityPoolId,
+            )
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            const accountInfo = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                callback: async ({ rpc }) => {
+                    return await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
+                        commitment: "confirmed",
+                    })
+                },
+            })
+            if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
+            await this.handlePoolStateUpdate(liquidityPoolId, state)
+        } catch (error) {
+            this.winstonLogger.error(
+                WinstonLog.FetchClmmPoolError, {
+                    liquidityPoolId,
+                    error: error.message,
                 })
-                if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-                const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
-                await this.handlePoolStateUpdate(liquidityPoolId, state)
-            },
-        })
+        }
     }
     // ============================================
     // Observe (subscribe)
@@ -134,37 +141,45 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     private async observeClmmPool(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-            (pool) => pool.displayId === liquidityPoolId,
-        )
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        // infinite loop to ensure the connection is alive
-        while (true) {
-            await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
-                requiredWs: true,
-                callback: async ({ rpcSubscriptions }) => {
-                    await this.asyncService.suppressErrorAfterTimeout(
-                        async () => {
-                            const controller = new AbortController()
-                            const accountNotifications = await rpcSubscriptions.accountNotifications(
-                                address(liquidityPool.poolAddress),
-                                {
-                                    commitment: "confirmed",
-                                    encoding: "base64",
+        try {
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
+                (pool) => pool.displayId === liquidityPoolId,
+            )
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            // infinite loop to ensure the connection is alive
+            while (true) {
+                await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Read,
+                    requiredWs: true,
+                    callback: async ({ rpcSubscriptions }) => {
+                        await this.asyncService.suppressErrorAfterTimeout(
+                            async () => {
+                                const controller = new AbortController()
+                                const accountNotifications = await rpcSubscriptions.accountNotifications(
+                                    address(liquidityPool.poolAddress),
+                                    {
+                                        commitment: "confirmed",
+                                        encoding: "base64",
+                                    }
+                                ).subscribe({
+                                    abortSignal: controller.signal,
+                                })
+                                for await (const accountNotification of accountNotifications) {
+                                    const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
+                                    await this.handlePoolStateUpdate(liquidityPoolId, state)
                                 }
-                            ).subscribe({
-                                abortSignal: controller.signal,
-                            })
-                            for await (const accountNotification of accountNotifications) {
-                                const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
-                                await this.handlePoolStateUpdate(liquidityPoolId, state)
-                            }
-                        },
-                        envConfig().timeConfig.wsTimeout,
-                    )
-                },
-            })
+                            },
+                            envConfig().timeConfig.wsTimeout,
+                        )
+                    },
+                })
+            }
+        } catch (error) {
+            this.winstonLogger.error(
+                WinstonLog.ObserveClmmPoolError, {
+                    liquidityPoolId,
+                    error: error.message,
+                })
         }
     }
 }

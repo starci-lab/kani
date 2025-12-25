@@ -146,7 +146,7 @@ export class RpcExecutorService {
                         action: async () => {
                             // resolve the tuple of response and error
                             const [response, error] = await this.asyncService.resolveTuple(
-                                callback({ rpc, rpcSubscriptions })
+                                callback({ rpc, rpcSubscriptions, rpcUrl })
                             )
                             // if the response is not null, return the response
                             if (response !== null) {
@@ -239,7 +239,7 @@ export class RpcExecutorService {
                         action: async () => {
                             // resolve the tuple of response and error
                             const [response, error] = await this.asyncService.resolveTuple(
-                                callback(suiClient)
+                                callback({ suiClient, rpcUrl })
                             )
                             // if the response is not null, return the response
                             if (response !== null) {
@@ -290,9 +290,15 @@ export interface WithSolanaRpcParams<TResponse = void> {
 export interface WithSolanaRpcCallbackParams {
     rpc: Rpc<SolanaRpcApi>
     rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
+    rpcUrl: string
 }
 
 export interface WithSuiClientParams<TResponse = void> {
-    callback: (client: SuiClient) => Promise<TResponse>
+    callback: (params: WithSuiClientCallbackParams) => Promise<TResponse>
     accessType: RpcAccessType
 }   
+
+export interface WithSuiClientCallbackParams {
+    suiClient: SuiClient
+    rpcUrl: string
+}

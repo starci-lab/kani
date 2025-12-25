@@ -107,18 +107,18 @@ export class MomentumActionService implements IActionService {
             liquidity 
         } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
-            callback: async (client) => {
+            callback: async ({ suiClient }) => {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        const { digest: txHash, events } = await client.signAndExecuteTransaction({
+                        const { digest: txHash, events } = await suiClient.signAndExecuteTransaction({
                             transaction: openPositionTxb,
                             signer,
                             options: {
                                 showEvents: true,
                             }
                         })
-                        await client.waitForTransaction({
+                        await suiClient.waitForTransaction({
                             digest: txHash,
                         })
                         const addLiquidityEvent = events?.find(
@@ -289,12 +289,12 @@ export class MomentumActionService implements IActionService {
         })
         const { txHash } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
-            callback: async (client) => {
+            callback: async ({ suiClient }) => {
                 // sign the transaction
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {    
-                        const { digest } = await client.signAndExecuteTransaction({
+                        const { digest } = await suiClient.signAndExecuteTransaction({
                             transaction: closePositionTxb,
                             signer,
                             options: {

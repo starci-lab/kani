@@ -41,8 +41,8 @@ export class SevenKAggregatorService implements IAggregatorService {
     ): Promise<QuoteResponse> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Read,
-            callback: async (client) => {
-                const sevenKAggregatorClient = this.createSevenKAggregatorClient(client)
+            callback: async ({ suiClient }) => {
+                const sevenKAggregatorClient = this.createSevenKAggregatorClient(suiClient)
                 const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
                     token => token.displayId === tokenIn,
                 )
@@ -85,8 +85,8 @@ export class SevenKAggregatorService implements IAggregatorService {
         }: SwapRequest): Promise<SwapResponse> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
-            callback: async (client) => {
-                const sevenKAggregatorClient = this.createSevenKAggregatorClient(client)
+            callback: async ({ suiClient }) => {
+                const sevenKAggregatorClient = this.createSevenKAggregatorClient(suiClient)
                 if (!inputCoin) {
                     throw new CoinArgumentNotFoundException("Input coin is required")
                 }

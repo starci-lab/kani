@@ -139,7 +139,7 @@ export class P2CBalancerService {
             }
         }
         await this.initializeBalancers()
-        this.winstonLogger.info(WinstonLog.P2CBalancersInitialized)
+        this.winstonLogger.debug(WinstonLog.P2CBalancersInitialized)
     }
 
     /* ---------------------------------------------------------

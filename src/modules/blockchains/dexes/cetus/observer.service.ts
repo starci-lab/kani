@@ -55,28 +55,36 @@ export class CetusObserverService {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const liquidityPool = this.memoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
-        )
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        try {
+            const liquidityPool = this.memoryStorageService.liquidityPools.find(
+                liquidityPool => liquidityPool.displayId === liquidityPoolId,
+            )
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
 
-        const objectInfo = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
-            callback: async (client) => {
-                return await client.getObject({
-                    id: liquidityPool.poolAddress,
-                    options: {
-                        showContent: true,
-                    },
+            const objectInfo = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Read,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.getObject({
+                        id: liquidityPool.poolAddress,
+                        options: {
+                            showContent: true,
+                        },
+                    })
+                },
+            })
+            if (!objectInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (objectInfo.data?.content?.dataType !== "moveObject")
+                throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
+            const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
+            const pool = parseSuiPoolObject(fields)
+            await this.handlePoolStateUpdate(liquidityPoolId, pool)
+        } catch (error) {
+            this.winstonLogger.error(
+                WinstonLog.FetchClmmPoolError, {
+                    liquidityPoolId,
+                    error: error.message,
                 })
-            },
-        })
-        if (!objectInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-        if (objectInfo.data?.content?.dataType !== "moveObject")
-            throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
-        const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
-        const pool = parseSuiPoolObject(fields)
-        await this.handlePoolStateUpdate(liquidityPoolId, pool)
+        }
     }
 
     private async handlePoolStateUpdate(

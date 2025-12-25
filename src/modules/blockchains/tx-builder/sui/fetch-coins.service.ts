@@ -21,8 +21,8 @@ export class FetchCoinsService {
         do {
             const result = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Read,
-                callback: async (client) => {
-                    return await client.getCoins({ 
+                callback: async ({ suiClient }) => {
+                    return await suiClient.getCoins({ 
                         owner, 
                         coinType, 
                         cursor,

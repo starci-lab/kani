@@ -1,7 +1,6 @@
 import {
     Injectable,
     OnApplicationBootstrap,
-    OnApplicationShutdown,
 } from "@nestjs/common"
 import { EventEmitterService, EventName } from "@modules/event"
 import { GATE_WS_URL } from "./constants"
@@ -10,86 +9,120 @@ import { TokenListIsEmptyException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
-import { WebsocketService } from "@modules/websocket"
-import { AsyncService, DayjsService } from "@modules/mixin"
+import { AsyncService, DayjsService, RetryService } from "@modules/mixin"
 import { OrderBook } from "../types"
+import { envConfig } from "@modules/env"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
   
-  @Injectable()
-export class GateOrderBookService implements OnApplicationShutdown, OnApplicationBootstrap {
-    private ws: WebSocket
-  
+@Injectable()
+export class GateOrderBookService implements OnApplicationBootstrap {
     constructor(
       @InjectRedisCache()
       private readonly cacheManager: Cache,
       private readonly eventEmitterService: EventEmitterService,
       private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-      private readonly websocketService: WebsocketService,
+      private readonly retryService: RetryService,
       private readonly dayjsService: DayjsService,
       private readonly asyncService: AsyncService,
+      @InjectWinston()
+      private readonly logger: WinstonLogger,
     ) {}
   
     onApplicationBootstrap() {
-        this.ws = this.websocketService.createWebSocket({
-            streamName: "gate-order-book",
-            url: GATE_WS_URL,
-            onMessage:async (data: GateBookTickerUpdate) => {
-                const token = this.primaryMemoryStorageService.tokens
-                    .find(token => token.cexSymbols?.[CexId.Gate] === data.result.s)
-                if (!token) return
-                const bestBidPrice = parseFloat(data.result.b)
-                const bestAskPrice = parseFloat(data.result.a)
-                const bestBidQty = parseFloat(data.result.B)
-                const bestAskQty = parseFloat(data.result.A)
-                // cache the last price and emit the event in parallel
-                const orderBook: OrderBook = {
-                    bidPrice: bestBidPrice,
-                    bidQty: bestBidQty,
-                    askPrice: bestAskPrice,
-                    askQty: bestAskQty,
-                }   
-                await this.asyncService.allIgnoreError([
-                    this.cacheManager.set(
-                        createCacheKey(CacheKey.WsCexOrderBook, {
-                            cexId: CexId.Gate,
-                            tokenId: token.displayId,
-                        }),
-                        orderBook
-                    ),  
-                    this.eventEmitterService.emit(
-                        EventName.WsCexOrderBookUpdated, {
-                            cexId: CexId.Gate,
-                            tokenId: token.displayId,
-                            ...orderBook,
-                        })
-                ])
+        const tokens = this.primaryMemoryStorageService.tokens
+            .filter(
+                token => !!token.cexIds?.includes(CexId.Gate)
+            )
+
+        if (!tokens.length) {
+            throw new TokenListIsEmptyException("No Gate.io tokens found for mainnet")
+        }
+
+        // Gate.io stream format: "<symbol_lowercase>.ticker"
+        const symbols = tokens
+            .map(token => token.cexSymbols?.[CexId.Gate])
+            .filter(Boolean)
+            .map(symbol => `${symbol}`)
+
+        this.retryService.retryWs({
+            // create a new connection each time the retry is called
+            createConnection: () => {
+                return new WebSocket(GATE_WS_URL)
             },
-            onOpen: () => {
-                const tokens = this.primaryMemoryStorageService.tokens
-                    .filter(
-                        token => !!token.cexIds?.includes(CexId.Gate)
+            // register the listener
+            onOpen: (ws) => {
+                // handle the open event
+                ws.on("open", () => {
+                    this.logger.info(WinstonLog.WebsocketConnected, { streamName: "gate-order-book" })
+                    ws.send(JSON.stringify({
+                        channel: "spot.book_ticker",
+                        event: "subscribe",
+                        time: this.dayjsService.now().unix(),
+                        payload: symbols,
+                    }))
+                })
+
+                // handle the error - don't throw, let retryWs handle reconnection
+                ws.on("error", (err) => {
+                    this.logger.error(
+                        WinstonLog.WebsocketCloseError,
+                        {
+                            error: err instanceof Error ? err.message : String(err),
+                            streamName: "gate-order-book",
+                        }
                     )
-  
-                if (!tokens.length) {
-                    throw new TokenListIsEmptyException("No Gate.io tokens found for mainnet")
-                }
-  
-                // Gate.io stream format: "<symbol_lowercase>.ticker"
-                const symbols = tokens
-                    .map(token => token.cexSymbols?.[CexId.Gate])
-                    .filter(Boolean)
-                    .map(symbol => `${symbol}`)
-                this.ws.send(JSON.stringify({
-                    channel: "spot.book_ticker",
-                    event: "subscribe",
-                    time: this.dayjsService.now().unix(),
-                    payload: symbols,
-                }))
+                    ws.close()
+                    // retryWs will handle reconnection automatically
+                })
+
+                ws.on("message", async (data: WebSocket.RawData) => {
+                    const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
+                    const token = this.primaryMemoryStorageService.tokens
+                        .find(token => token.cexSymbols?.[CexId.Gate] === parsed.result.s)
+                    if (!token) return
+                    const bestBidPrice = parseFloat(parsed.result.b)
+                    const bestAskPrice = parseFloat(parsed.result.a)
+                    const bestBidQty = parseFloat(parsed.result.B)
+                    const bestAskQty = parseFloat(parsed.result.A)
+                    // cache the last price and emit the event in parallel
+                    const orderBook: OrderBook = {
+                        bidPrice: bestBidPrice,
+                        bidQty: bestBidQty,
+                        askPrice: bestAskPrice,
+                        askQty: bestAskQty,
+                    }   
+                    await this.asyncService.allIgnoreError([
+                        this.cacheManager.set(
+                            createCacheKey(CacheKey.WsCexOrderBook, {
+                                cexId: CexId.Gate,
+                                tokenId: token.displayId,
+                            }),
+                            orderBook
+                        ),  
+                        this.eventEmitterService.emit(
+                            EventName.WsCexOrderBookUpdated, {
+                                cexId: CexId.Gate,
+                                tokenId: token.displayId,
+                                ...orderBook,
+                            })
+                    ])
+                })
             },
+            onError: (err: Error) => {
+                this.logger.error(
+                    WinstonLog.WebsocketCloseError, {
+                        error: err.message,
+                    })
+            },
+            options: {
+                baseDelay: envConfig().timeConfig.retry.delay,
+                factor: envConfig().timeConfig.retry.factor,
+                maxDelay: envConfig().timeConfig.retry.maxDelay,
+                maxRetries: envConfig().timeConfig.retry.maxRetries,
+                jitter: true,
+            }
         })
-    }
-  
-    onApplicationShutdown() {
-        this.ws.close()
     }
 }
   
