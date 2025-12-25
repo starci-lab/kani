@@ -37,7 +37,7 @@ export class RetryService {
             closeFnName = "close",
             createConnection,
             onOpen,
-            onCloseOrError,
+            onReconnect,
             onFatal,
             options,
         } = params
@@ -79,8 +79,8 @@ export class RetryService {
             // schedule the next reconnect if the connection is closed or an error occurs
             const scheduleReconnect = async (err?: Error) => {
                 if (aborted) return
-                // call the onCloseOrError callback
-                await safe(async () => onCloseOrError?.(err))
+                // call the onReconnect callback
+                await safe(async () => onReconnect?.(err))
                 // cleanup the connection
                 cleanup()
                 // increment the retries
@@ -144,7 +144,7 @@ export interface WsRetryParams<T> {
     closeFnName?: string
     createConnection: () => Promise<T> | T
     onOpen: (connection: T) => Promise<void>
-    onCloseOrError?: (error?: Error) => Promise<void>
+    onReconnect?: (error?: Error) => Promise<void>
     onFatal?: () => Promise<void>
     options: WsRetryOptions
     throwOnFatal?: boolean

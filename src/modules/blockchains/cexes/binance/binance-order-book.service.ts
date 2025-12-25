@@ -116,7 +116,7 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                 })
                 return await promise
             },
-            onCloseOrError: async (error) => {
+            onReconnect: async (error) => {
                 this.logger.warn(
                     WinstonLog.WebsocketReconnect, 
                     {
