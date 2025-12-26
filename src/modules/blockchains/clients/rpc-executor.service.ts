@@ -248,7 +248,6 @@ export class RpcExecutorService {
                                 throw new AbortError("Unknown error")
                             }
                             const errorType = this.getSuiRpcErrorType(error)
-                            console.log(errorType)
                             if (errorType === RpcErrorType.Fatal) {
                                 throw new AbortError(RpcErrorType.Fatal)
                             }

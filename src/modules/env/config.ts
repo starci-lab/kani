@@ -14,6 +14,18 @@ export const envConfig = () => ({
     port: {
         core: Number(process.env.CORE_PORT) || 3010,
     },
+    bounds: {
+        solana: {
+            swap: {
+                lowerBound: parseFloat(process.env.SOLANA_SWAP_LOWER_BOUND || "0.95"),
+            },
+        },
+        sui: {
+            swap: {
+                lowerBound: parseFloat(process.env.SUI_SWAP_LOWER_BOUND || "0.95"),
+            },
+        },
+    },
     slippage: {
         openPosition: parseFloat(process.env.SLIPPAGE_OPEN_POSITION || "0.05"),
         closePosition: parseFloat(process.env.SLIPPAGE_CLOSE_POSITION || "0.9999"),
@@ -139,11 +151,6 @@ export const envConfig = () => ({
     ejection: {
         rpcTtl: parseInt(process.env.EJECTION_RPC_TTL || ms("1d").toString(), 10), // 1 day
     },
-    gcp: {
-        kms: {
-            keyName: process.env.GCP_KMS_KEY_NAME || "projects/kani-473603/locations/global/keyRings/kani-crypto-keyring/cryptoKeys/kani-crypto-key",
-        },
-    },
     resources: {
         ram: {
             threadhold: parseInt(process.env.RAM_ALLOCATION_THRESHOLD || new Decimal(250).mul(1024).mul(1024).mul(1024).toString(), 10),
@@ -209,8 +216,9 @@ export const envConfig = () => ({
             rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
         },
         interval: {
+            mutex: parseInt(process.env.INTERVAL_MUTEX || ms("30m").toString(), 10), // 30 minutes
             activeBot: parseInt(process.env.INTERVAL_ACTIVE_BOT_INTERVAL || ms("10s").toString(), 10), // 10s
-            rebalancing: parseInt(process.env.INTERVAL_REBALANCING || ms("10s").toString(), 10), // 10s
+            rebalancing: parseInt(process.env.INTERVAL_REBALANCING || ms("10s").toString(), 10), // 10 seconds
             poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || ms("10s").toString(), 10), // 10s
             suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || ms("1s").toString(), 10), // 1s
             analytics: parseInt(process.env.INTERVAL_ANALYTICS || ms("30s").toString(), 10), // 30s
@@ -218,6 +226,11 @@ export const envConfig = () => ({
         },
     },
     bullmq: {
+        attempts: parseInt(process.env.BULLMQ_ATTEMPTS || "5", 10),
+        delay: parseInt(process.env.BULLMQ_DELAY || "200", 10),
+        concurrency: parseInt(process.env.BULLMQ_CONCURRENCY || "1000", 10),
+        batchSize: parseInt(process.env.BULLMQ_BATCH_SIZE || "1000", 10),
+        lockDuration: parseInt(process.env.BULLMQ_LOCK_DURATION || "10000", 10),
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
         failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
     },

@@ -122,7 +122,7 @@ registerEnumType(
 export enum JobType {
     OpenPosition = "openPosition",
     ClosePosition = "closePosition",
-    Swap = "swap",
+    ReconcileBalance = "reconcileBalance",
 }
 
 export const GraphQLTypeJobType = createEnumType(JobType)
@@ -137,22 +137,19 @@ registerEnumType(GraphQLTypeJobType, {
         [JobType.ClosePosition]: {
             description: "The close position job"
         },
-        [JobType.Swap]: {
-            description: "The swap job"
+        [JobType.ReconcileBalance]: {
+            description: "The reconcile balance job"
         }
     }
 })
 
 export enum JobStatus {
     Pending = "pending",
-  
-    TxHashSaved = "tx_hash_saved",   // transaction hash stored (before sending to chain)
-    TxExecuted = "tx_executed",      // transaction sent and executed on chain
-    DbPersisted = "db_persisted",    // job result persisted in database
-  
-    Completed = "completed",         // job fully completed
-    Failed = "failed",               // job failed
-  }
+    Prepared = "prepared",
+    Executed = "executed",
+    Completed = "completed",
+    Failed = "failed",
+}
   
 export const GraphQLTypeJobStatus = createEnumType(JobStatus)
   
@@ -163,17 +160,14 @@ registerEnumType(GraphQLTypeJobStatus, {
         [JobStatus.Pending]: {
             description: "The job has been created but not processed yet",
         },
-        [JobStatus.TxHashSaved]: {
-            description: "The transaction hash has been saved before sending the transaction to the blockchain",
+        [JobStatus.Prepared]: {
+            description: "The job has been prepared",
         },
-        [JobStatus.TxExecuted]: {
-            description: "The transaction has been sent and executed on the blockchain",
-        },
-        [JobStatus.DbPersisted]: {
-            description: "The job result has been persisted to the database",
+        [JobStatus.Executed]: {
+            description: "The job has been executed",
         },
         [JobStatus.Completed]: {
-            description: "The job has been fully completed",
+            description: "The job has been completed",
         },
         [JobStatus.Failed]: {
             description: "The job has failed",

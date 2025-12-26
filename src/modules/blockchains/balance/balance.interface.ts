@@ -1,7 +1,8 @@
 import { BotSchema, TokenId, TokenSchema } from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { UpdateBotSnapshotBalancesRecordParams, AddSwapTransactionRecordParams } from "../snapshots"
+import { SolanaTx } from "../interfaces"
+import { Transaction } from "@mysten/sui/transactions"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
@@ -9,9 +10,27 @@ import { UpdateBotSnapshotBalancesRecordParams, AddSwapTransactionRecordParams }
  */
 export interface IBalanceService {
     fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
-    processSwapTransaction(params: ProcessSwapTransactionParams): Promise<ProcessSwapTransactionResponse>
+    prepareSwapTransaction(params: PrepareSwapTransactionParams): Promise<PrepareSwapTransactionResponse>
+    executeSwapTransaction(params: ExecuteSwapTransactionParams): Promise<void>
 }
 
+export interface DetermineReconcileBalancePlanParams {
+    bot: BotSchema
+    // if you pass those params, we will not fetch the balances from on-chain
+    snapshotTargetBalanceAmount?: BN
+    snapshotQuoteBalanceAmount?: BN
+    snapshotGasBalanceAmount?: BN
+}
+
+export interface DetermineReconcileBalancePlanResponse {
+    needsSwap: boolean
+    needsSnapshot: boolean
+    swapDirection?: "targetToQuote" | "quoteToTarget"
+    tokenIn?: TokenSchema
+    tokenOut?: TokenSchema
+    amountIn?: BN
+    estimatedSwappedAmount?: BN
+}
 export interface FetchBalanceParams {
     bot: BotSchema
     tokenId: TokenId
@@ -19,27 +38,6 @@ export interface FetchBalanceParams {
 
 export interface FetchBalanceResponse {
     balanceAmount: BN
-}
-
-export interface ExecuteBalanceRebalancingParams {
-    bot: BotSchema
-    withoutAcquireLock?: boolean
-    // if you pass those params, we will not fetch the balances from on-chain
-    snapshotTargetBalanceAmount?: BN
-    snapshotQuoteBalanceAmount?: BN
-    snapshotGasBalanceAmount?: BN
-}
-
-export interface ExecuteBalanceRebalancingResponse {
-    balancesSnapshotsParams?: UpdateBotSnapshotBalancesRecordParams
-    swapsSnapshotsParams?: AddSwapTransactionRecordParams
-}
-
-export enum ExecuteBalanceRebalancingStatus {
-    OK = "ok",
-    InsufficientTargetBalance = "InsufficientTargetBalance",
-    InsufficientGasBalance = "InsufficientGasBalance",
-    GasLowButConvertible = "GasLowButConvertible",
 }
 
 export enum GasStatus {
@@ -74,12 +72,40 @@ export interface ProcessTransferFeesResponse {
 
 export interface ProcessSwapTransactionParams {
     bot: BotSchema
-    tokenIn: TokenSchema
-    tokenOut: TokenSchema
+    tokenIn: TokenId
+    tokenOut: TokenId
     amountIn: BN
     estimatedSwappedAmount: BN
 }
 
 export interface ProcessSwapTransactionResponse {
     txHash: string
+}
+
+export interface PrepareSwapTransactionParams {
+    bot: BotSchema
+    tokenIn: TokenId
+    tokenOut: TokenId
+    amountIn: BN
+    estimatedSwappedAmount: BN
+}
+
+export interface PrepareSwapTransactionResponse {
+    txHash: string
+    solanaTx?: SolanaTx // Solana Transaction object
+    txb?: Transaction // Sui Transaction object
+}
+
+export interface ExecuteSwapTransactionParams {
+    bot: BotSchema
+    txHash: string
+    solanaTx?: SolanaTx // Solana Transaction object
+    txb?: Transaction // Sui Transaction object
+    isRetry: boolean
+    tokenIn: TokenId
+    tokenOut: TokenId
+}
+
+export interface EnqueueBalanceRebalancingParams {
+    bot: BotSchema
 }

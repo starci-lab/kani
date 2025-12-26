@@ -12,9 +12,9 @@ import {
     OpenPositionOrchestratorService
 } from "@modules/blockchains"
 import { 
+    getJobStatusOrder,
     InjectPrimaryMongoose, 
     JobSchema, 
-    JobType, 
     JobStatus
 } from "@modules/databases"
 import { Connection } from "mongoose"
@@ -22,10 +22,11 @@ import BN from "bn.js"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Logger as WinstonLogger } from "winston"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { PrimaryMemoryStorageService } from "@modules/databases"
-import { LiquidityPoolNotFoundException } from "@exceptions"
-import { Mutex } from "async-mutex"
+import { InjectWinston, WinstonLog } from "@modules/winston"   
+import { Transaction } from "@mysten/sui/transactions"
+import { Decimal } from "decimal.js"
+import { AsyncService } from "@modules/mixin"
+import { KeyPairSigner } from "@solana/kit"
 
 /**
  * Worker responsible for processing open position confirmations.
@@ -36,7 +37,6 @@ import { Mutex } from "async-mutex"
  */
 @Worker(bullData[BullQueueName.OpenPosition].name)
 export class OpenPositionWorker extends WorkerHost {
-    private readonly mutex: Mutex
     constructor(
         private readonly mutexService: MutexService,
         private readonly balanceService: BalanceService,
@@ -48,8 +48,8 @@ export class OpenPositionWorker extends WorkerHost {
         private readonly eventEmitter: EventEmitter2,
         @InjectWinston()
         private readonly logger: WinstonLogger,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly asyncService: AsyncService
     ) {
         super()
     }
@@ -59,7 +59,16 @@ export class OpenPositionWorker extends WorkerHost {
      * emitting events, and releasing distributed locks.
      */
     async process(
-        { data: { bot, liquidityPoolId }, attemptsMade }: Job<OpenPositionPayload>
+        { 
+            data: 
+            { 
+                jobId,
+                bot, 
+                state 
+            }, 
+            attemptsMade,
+            
+        }: Job<OpenPositionPayload>
     ) {
         // retrieve the mutex
         const mutex = this.mutexService.mutex(
@@ -67,66 +76,133 @@ export class OpenPositionWorker extends WorkerHost {
         )
         // check if the mutex is locked
         const isRetry = attemptsMade > 0
-        // acquire the mutex
-        await this.mutex.acquire()
-        // get the liquidity pool
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-            (liquidityPool) => liquidityPool.displayId === liquidityPoolId
-        )
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(liquidityPoolId, `Liquidity pool ${liquidityPoolId} not found`)
+        // if isRetry, we get the job
+        let job: JobSchema | null = null
+        if (isRetry) {
+            job = await this.connection.model<JobSchema>(
+                JobSchema.name
+            ).findById(jobId)
+            if (!job) {
+                // job not found, cancel the job
+                return
+            }
         }
-        // create the job
-        const [ jobRaw ] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
+        const order = getJobStatusOrder(job?.status || JobStatus.Pending)
+        let txHash: string
+        let txb: Transaction | undefined = undefined
+        let feeAmountA: BN
+        let feeAmountB: BN
+        let tickLower: Decimal | undefined = undefined
+        let tickUpper: Decimal | undefined = undefined
+        let amountA: BN | undefined = undefined
+        let amountB: BN | undefined = undefined
+        let minBinId: Decimal | undefined = undefined
+        let maxBinId: Decimal | undefined = undefined
+        let metadata: unknown | undefined = undefined
+        let ataAddress: string | undefined = undefined
+        let liquidity: BN | undefined = undefined
+        let mintKeyPair: KeyPairSigner | undefined = undefined
+        if (order < getJobStatusOrder(JobStatus.Prepared)) {
+            // prepare the transaction and get the result
+            const { 
+                txHash: preparedTxHash,
+                txb: preparedTxb,
+                feeAmountA: preparedFeeAmountA,
+                feeAmountB: preparedFeeAmountB,
+                tickLower: preparedTickLower,
+                tickUpper: preparedTickUpper,
+                amountA: preparedAmountA,
+                amountB: preparedAmountB,
+                minBinId: preparedMinBinId,
+                maxBinId: preparedMaxBinId,
+                metadata: preparedMetadata,
+                ataAddress: preparedAtaAddress,
+                liquidity: preparedLiquidity,
+                mintKeyPair: preparedMintKeyPair,
+            } = await this.openPositionOrchestratorService.prepare({
+                state,
+                bot,
+            })
+            await this.connection.model<JobSchema>(
+                JobSchema.name
+            ).updateOne(
+                { _id: jobId },
                 {
-                    liquidityPool: liquidityPool.id,
-                    botId: bot.id,
-                    type: JobType.OpenPosition,
-                    status: JobStatus.Pending,
+                    status: JobStatus.Prepared,
+                    txHash: preparedTxHash,
+                    feeAmountA: preparedFeeAmountA.toString(),
+                    feeAmountB: preparedFeeAmountB.toString(),
+                    tickLower: preparedTickLower?.toString(),
+                    tickUpper: preparedTickUpper?.toString(),
+                    amountA: preparedAmountA?.toString(),
+                    amountB: preparedAmountB?.toString(),
+                    minBinId: preparedMinBinId?.toString(),
+                    maxBinId: preparedMaxBinId?.toString(),
+                    metadata: preparedMetadata,
                 }
-            ])
-        // we take the id from the jobRaw object
-        const jobId = jobRaw.toJSON().id
-        // execute the transaction and get the result
-        const { execute, txHash } = await this.openPositionOrchestratorService.execute({
-            liquidityPoolId: liquidityPoolId,
-            bot,
-        })
+            )
+            txHash = preparedTxHash
+            txb = preparedTxb
+            feeAmountA = preparedFeeAmountA
+            feeAmountB = preparedFeeAmountB
+            tickLower = preparedTickLower
+            tickUpper = preparedTickUpper
+            amountA = preparedAmountA ? new BN(preparedAmountA) : undefined
+            amountB = preparedAmountB ? new BN(preparedAmountB) : undefined
+            minBinId = preparedMinBinId ? new Decimal(preparedMinBinId) : undefined
+            maxBinId = preparedMaxBinId ? new Decimal(preparedMaxBinId) : undefined
+            metadata = preparedMetadata
+            ataAddress = preparedAtaAddress
+            liquidity = preparedLiquidity ? new BN(preparedLiquidity) : undefined
+            mintKeyPair = preparedMintKeyPair
+        } else {
+            if (!job?.txHash || !job?.feeAmountA || !job?.feeAmountB) {
+                return
+            }
+            txHash = job.txHash
+            feeAmountA = new BN(job.feeAmountA)
+            feeAmountB = new BN(job.feeAmountB)
+            tickLower = job.tickLower ? new Decimal(job.tickLower) : undefined
+            tickUpper = job.tickUpper ? new Decimal(job.tickUpper) : undefined
+            amountA = job.amountA ? new BN(job.amountA) : undefined
+            amountB = job.amountB ? new BN(job.amountB) : undefined
+            minBinId = job.minBinId ? new Decimal(job.minBinId) : undefined
+            maxBinId = job.maxBinId ? new Decimal(job.maxBinId) : undefined
+            metadata = job.metadata
+        }
+        const [response, error] = await this.asyncService.resolveTuple(
+            this.openPositionOrchestratorService.execute({
+                bot,
+                state,
+                isRetry,
+                txHash,
+                txb,
+                feeAmountA,
+                feeAmountB,
+                ataAddress,
+                liquidity,
+                mintKeyPair,
+            }))
+        // if error found, return, cancel the job
+        if (error) {
+            await this.connection.model<JobSchema>(
+                JobSchema.name
+            ).updateOne(
+                { _id: jobId },
+                {
+                    status: JobStatus.Failed,
+                }
+            )
+            throw error
+        }
         await this.connection.model<JobSchema>(
             JobSchema.name
         ).updateOne(
             { _id: jobId },
             {
-                status: JobStatus.TxHashSaved,
-                txHash,
+                status: JobStatus.Executed,
             }
         )
-        // execute the transaction and get the result
-        const { 
-            feeAmountQuote, 
-            feeAmountTarget, 
-            positionId, 
-            liquidity,
-            metadata 
-        } = await execute(isRetry)
-        // update the job tx hash
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne(
-            { _id: jobId }, 
-            {
-                status: JobStatus.TxExecuted,
-            }
-        )
-        // update the job status to tx executed
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne({ _id: jobId }, {
-            status: JobStatus.TxExecuted,
-        })
         // fetch the bot snapshot balances
         const { 
             gasBalanceAmount,
@@ -135,12 +211,9 @@ export class OpenPositionWorker extends WorkerHost {
         } = await this.balanceService.fetchBalances({
             bot,
         })
-        // update the job status to tx executed
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne({ _id: jobId }, {
-            status: JobStatus.TxExecuted,
-        })
+        const targetIsA = state.static.tokenA.toString() === bot.targetToken.toString()
+        const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
+        const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
@@ -154,20 +227,20 @@ export class OpenPositionWorker extends WorkerHost {
                 snapshotTargetBalanceAmountBeforeOpen: new BN(targetBalanceAmount),
                 snapshotQuoteBalanceAmountBeforeOpen: new BN(quoteBalanceAmount),
                 snapshotGasBalanceAmountBeforeOpen: new BN(gasBalanceAmount),
-                liquidity: new BN(liquidity || 0),
+                liquidity: new BN(response.liquidity || 0),
                 bot,
                 targetIsA,
-                tickLower,
-                tickUpper,
+                tickLower: tickLower ? tickLower.toNumber() : undefined,
+                tickUpper: tickUpper ? tickUpper.toNumber() : undefined,
                 chainId: bot.chainId,
                 liquidityPoolId: state.static.displayId,
-                positionId,
+                positionId: response.positionId,
                 openTxHash: txHash,
                 session,
                 feeAmountTarget: new BN(feeAmountTarget),
                 feeAmountQuote: new BN(feeAmountQuote),
-                maxBinId,
-                minBinId,
+                maxBinId: maxBinId ? maxBinId.toNumber() : undefined,
+                minBinId: minBinId ? minBinId.toNumber() : undefined,
                 amountA: amountA ? new BN(amountA) : undefined,
                 amountB: amountB ? new BN(amountB) : undefined,
                 metadata
@@ -186,28 +259,31 @@ export class OpenPositionWorker extends WorkerHost {
         this.eventEmitter.emit(createEventName(EventName.PositionOpened, { botId: bot.id }))
         // Log successful processing
         this.logger.verbose(
-            WinstonLog.OpenPositionConfirmationSuccess, {
+            WinstonLog.OpenPositionSuccess, {
                 botId: bot.id,
-                positionId,
+                positionId: response.positionId,
             })
         // Release the mutex after processing the position
         mutex.release()
+        // update the job status to completed
+        await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).updateOne(
+            { _id: jobId },
+            {
+                status: JobStatus.Completed,
+            }
+        )
     }
 
-    /**
-     * Event handler triggered when a job fails.
-     * Logs the error details for debugging and monitoring purposes.
-     */
     @OnWorkerEvent("failed")
-    async onFailed(job: Job<OpenPositionConfirmationPayload>, error: Error) {
-        const { bot, txHash } = job.data
-        this.logger.error(
-            WinstonLog.OpenPositionConfirmationFailed, 
-            {
-                botId: bot.id,
-                error: error.message,
-                stack: error.stack,
-                txHash,
-            })
+    async onFailed(job: Job<OpenPositionPayload>, error: Error) {
+        const { bot, jobId } = job.data
+        this.logger.error(WinstonLog.OpenPositionFailed, {
+            botId: bot.id,
+            jobId,
+            error: error.message,
+            stack: error.stack,
+        })
     }
 }

@@ -65,20 +65,10 @@ export class BalanceProcessorService  {
             if (this.bot.activePosition) {
                 return
             }
-            try {   
-                await this.balanceService.executeBalanceRebalancing({
-                    bot: this.bot,
-                })
-            } catch (error) {
-                this.logger.error(
-                    WinstonLog.BalanceRebalancingFailed, {
-                        botId: this.bot.id,
-                        error: error.message,
-                        stack: error.stack,
-                    })
-            }
+            await this.balanceService.enqueue({
+                bot: this.bot,
+            })
         }
-
         setInterval(
             executeBalanceRebalancing,
             envConfig().timeConfig.interval.rebalancing,
@@ -86,7 +76,8 @@ export class BalanceProcessorService  {
         this.readinessWatcherFactoryService.setReady(
             createReadinessWatcherName(BalanceProcessorService.name, {
                 botId: this.request.botId,
-            }))
+            })
+        )
     }
 }
 

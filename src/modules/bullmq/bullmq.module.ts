@@ -14,11 +14,20 @@ export const BULLMQ_KEY = "BullMQ"
 export class BullModule extends ConfigurableModuleClass {
     // register the queue
     public static registerQueue(options: RegisterQueueOptions = {}): DynamicModule {
-        const queueName = options.queueName || BullQueueName.OpenPositionConfirmation
+        const queueName = options.queueName || BullQueueName.ReconcileBalance
         // register the queue
         const registerQueueDynamicModule = NestBullModule.registerQueue({
             name: `${bullData[queueName].name}`,
-            prefix: bullData[queueName].prefix
+            prefix: bullData[queueName].prefix,
+            defaultJobOptions: {
+                removeOnComplete: true,
+                removeOnFail: false,
+                attempts: envConfig().bullmq.attempts,
+                backoff: {
+                    type: "exponential",
+                    delay: envConfig().bullmq.delay,
+                },
+            }
         })
         return {
             global: options.isGlobal,

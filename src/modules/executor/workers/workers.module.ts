@@ -1,8 +1,8 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workers.module-definition"
-import { ClosePositionConfirmationWorker } from "./close-position-confirmation.worker"
-import { OpenPositionConfirmationWorker } from "./open-position.worker"
-import { SwapConfirmationWorker } from "./swap-confirmation.worker"
+import { ClosePositionWorker } from "./close-position.worker"
+import { OpenPositionWorker } from "./open-position.worker"
+import { ReconcileBalanceWorker } from "./reconcile-balance.worker"
 
 @Module({})
 export class WorkersModule extends ConfigurableModuleClass {
@@ -17,9 +17,9 @@ export class WorkersModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [], 
-                ClosePositionConfirmationWorker,
-                OpenPositionConfirmationWorker,
-                SwapConfirmationWorker,
+                ClosePositionWorker,
+                OpenPositionWorker,
+                ReconcileBalanceWorker,
             ],
         }
     }

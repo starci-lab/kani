@@ -66,4 +66,5 @@ export interface RpcAccessConfigs {
 export interface ApiKeys {
     jupiter: string
     sentryDsn: string
+    cryptoKeyName: string
 }

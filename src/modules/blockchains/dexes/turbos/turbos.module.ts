@@ -1,7 +1,8 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./turbos.module-definition"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
-import { TurbosActionService } from "./action.service"
+import { TurbosOpenPositionActionService } from "./open-position-action.service"
+import { TurbosClosePositionActionService } from "./close-position-action.service"
 import { TurbosObserverService } from "./observer.service"
 import { TurbosAnalyticsService } from "./analytics.service"
 
@@ -26,7 +27,8 @@ export class TurbosModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(TurbosActionService)
+            providers.push(TurbosOpenPositionActionService)
+            providers.push(TurbosClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

@@ -1,7 +1,8 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./meteora.module-definition"
 import { MeteoraObserverService } from "./observer.service"
-import { MeteoraActionService } from "./action.service"
+import { MeteoraOpenPositionActionService } from "./open-position-action.service"
+import { MeteoraClosePositionActionService } from "./close-position-action.service"
 import { 
     EventAuthorityService, 
     OpenPositionInstructionService, 
@@ -33,7 +34,8 @@ export class MeteoraModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(MeteoraActionService)
+            providers.push(MeteoraOpenPositionActionService)
+            providers.push(MeteoraClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

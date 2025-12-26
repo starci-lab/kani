@@ -1,7 +1,8 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orca.module-definition"
 import { OrcaObserverService } from "./observer.service"
-import { OrcaActionService } from "./action.service"
+import { OrcaOpenPositionActionService } from "./open-position-action.service"
+import { OrcaClosePositionActionService } from "./close-position-action.service"
 import { 
     TickArrayService, 
     OpenPositionInstructionService, 
@@ -33,7 +34,8 @@ export class OrcaModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(OrcaActionService)
+            providers.push(OrcaOpenPositionActionService)
+            providers.push(OrcaClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

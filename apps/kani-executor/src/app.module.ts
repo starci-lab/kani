@@ -44,7 +44,7 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
         WinstonModule.register({
             isGlobal: true,
             appName: `kani-executor-${envConfig().botExecutor.executorId}`,
-            level: WinstonLevel.Verbose,
+            level: WinstonLevel.Debug,
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,

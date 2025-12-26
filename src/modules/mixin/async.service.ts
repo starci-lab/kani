@@ -36,7 +36,7 @@ export class AsyncService {
     // go-like async resolve tuple
     async resolveTuple<T>(
         promise: Promise<T>
-    ): Promise<[T | null, Error | null]> {
+    ): Promise<ResolveTupleResult<T>> {
         try {
             return [await promise, null]
         } catch (error) {
@@ -59,3 +59,5 @@ export class AsyncService {
         }
     }   
 }
+
+export type ResolveTupleResult<T> = [T,null] | [null, Error]

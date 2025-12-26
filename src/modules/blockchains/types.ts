@@ -2,8 +2,9 @@
 
 import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
 import BN from "bn.js"
-import { BotSchema, LiquidityPoolId, TokenId } from "@modules/databases"
+import { BotSchema, TokenId } from "@modules/databases"
 import { sendAndConfirmTransactionFactory, signTransaction } from "@solana/kit"
+import { DlmmLiquidityPoolState, LiquidityPoolState } from "./interfaces"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -45,34 +46,21 @@ export interface BasePayload {
 }
 
 export interface OpenPositionPayload extends BasePayload {
-    liquidityPoolId: LiquidityPoolId
+    jobId: string
+    state: LiquidityPoolState | DlmmLiquidityPoolState
     bot: BotSchema
 }
 
 export interface ClosePositionPayload extends BasePayload {
-    liquidityPoolId: LiquidityPoolId
+    jobId: string
+    state: LiquidityPoolState | DlmmLiquidityPoolState
     bot: BotSchema
 }
 
-export interface BalanceSnapshotPayload extends BasePayload {
-    // The transaction hash of the balance snapshot transaction
-    txHash?: string
-    // The target balance amount after the balance snapshot
-    targetBalanceAmount: string
-    // The quote balance amount after the balance snapshot
-    quoteBalanceAmount: string
-    // The gas balance amount after the balance snapshot
-    gasBalanceAmount: string
-}
-
-export interface SwapPayload {
+export interface ReconcileBalancePayload extends BasePayload {
+    jobId: string
     bot: BotSchema
-    // The transaction hash of the balance snapshot transaction
-    txHash: string
-    // The amount in
-    amountIn: string
-    // The token in ID
-    tokenInId: TokenId
-    // The token out ID
-    tokenOutId: TokenId
+    targetBalanceAmount?: BN
+    quoteBalanceAmount?: BN
+    gasBalanceAmount?: BN
 }

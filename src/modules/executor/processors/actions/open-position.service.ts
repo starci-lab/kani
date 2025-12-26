@@ -8,7 +8,7 @@ import {
 import { REQUEST } from "@nestjs/core"
 import { BotSchema } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { DispatchOpenPositionService } from "@modules/blockchains"
+import { OpenPositionOrchestratorService } from "@modules/blockchains"
 import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 
 // open position processor service is to process the open position of the liquidity pools
@@ -34,7 +34,7 @@ export class OpenPositionProcessorService  {
         // of using @OnEvent so Nest doesn't override our request context.
         private readonly eventEmitter: EventEmitter2,
         // inject the connection to the database
-        private readonly dispatchOpenPositionService: DispatchOpenPositionService,
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
@@ -73,10 +73,10 @@ export class OpenPositionProcessorService  {
                 if (!this.bot) {
                     return
                 }
-                await this.dispatchOpenPositionService.dispatchOpenPosition({
-                    liquidityPoolId: payload.liquidityPoolId,
-                    bot: this.bot,
-                })
+                // await this.openPositionOrchestratorService.enqueue({
+                //     liquidityPoolId: payload.liquidityPoolId,
+                //     bot: this.bot,
+                // })
             
             }
         )
@@ -91,7 +91,7 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // run the open position
-                await this.dispatchOpenPositionService.dispatchOpenPosition({
+                await this.openPositionOrchestratorService.enqueue({
                     liquidityPoolId: payload.liquidityPoolId,
                     bot: this.bot,
                 })

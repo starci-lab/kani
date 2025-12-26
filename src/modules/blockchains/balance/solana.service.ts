@@ -4,15 +4,15 @@ import {
     FetchBalanceParams,
     FetchBalanceResponse,
     IBalanceService,
-    ProcessSwapTransactionParams,
-    ProcessSwapTransactionResponse,
+    PrepareSwapTransactionParams,
+    PrepareSwapTransactionResponse,
+    ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { 
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
     TokenNotFoundException,
-    TransactionMessageTooLargeException
 } from "@exceptions"
 import BN from "bn.js"
 import {
@@ -23,13 +23,11 @@ import {
     decompileTransactionMessageFetchingLookupTables,
     setTransactionMessageLifetimeUsingBlockhash,
     appendTransactionMessageInstructions,
-    isTransactionMessageWithinSizeLimit,
     compileTransaction,
     signTransaction,
     setTransactionMessageFeePayerSigner,
     pipe,
     createTransactionMessage,
-    addSignersToTransactionMessage,
     Rpc,
     SolanaRpcApi,
     assertIsSendableTransaction,
@@ -38,6 +36,8 @@ import {
     RpcSubscriptions,
     getSignatureFromTransaction,
     SolanaRpcSubscriptionsApi,
+    createNoopSigner,
+    signature,
 } from "@solana/kit"
 import { 
     findAssociatedTokenPda, 
@@ -57,6 +57,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -84,7 +85,7 @@ export class SolanaBalanceService implements IBalanceService {
         }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Read,
-            callback: async ({ rpc}) => {
+            callback: async ({ rpc }) => {
                 // return the native token balance
                 if (token.type === TokenType.Native) {
                     const balance = await rpc.getBalance(address(bot.accountAddress)).send()
@@ -135,32 +136,32 @@ export class SolanaBalanceService implements IBalanceService {
         
     }
 
-    public async processSwapTransaction(
+    public async prepareSwapTransaction(
         {
             bot,
             tokenIn,
             tokenOut,
             amountIn,
             estimatedSwappedAmount,
-        }: ProcessSwapTransactionParams
-    ): Promise<ProcessSwapTransactionResponse> {
+        }: PrepareSwapTransactionParams
+    ): Promise<PrepareSwapTransactionResponse> {
         const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
-            tokenIn: tokenIn.displayId,
-            tokenOut: tokenOut.displayId,
+            tokenIn,
+            tokenOut,
             amountIn: amountIn,
             senderAddress: bot.accountAddress,
         })
         this.ensureMathService.ensureActualNotAboveExpected({
             expected: estimatedSwappedAmount,
             actual: batchQuoteResponse.response.amountOut,
-            lowerBound: new Decimal(0.95),
+            lowerBound: new Decimal(envConfig().bounds.solana.swap.lowerBound),
         })
         // we fetch the serialized transaction from the aggregator
         const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
             base: {
                 payload: batchQuoteResponse.response.payload,
-                tokenIn: tokenIn.displayId,
-                tokenOut: tokenOut.displayId,
+                tokenIn,
+                tokenOut,
                 accountAddress: bot.accountAddress,
             },
             aggregatorId: batchQuoteResponse.aggregatorId,
@@ -172,8 +173,8 @@ export class SolanaBalanceService implements IBalanceService {
             swapTransaction.messageBytes,
         )
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
-            callback: async ({ rpc, rpcSubscriptions }) => {
+            accessType: RpcAccessType.Read,
+            callback: async ({ rpc }) => {
                 const swapTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
                     compiledSwapTransactionMessage,
                     rpc
@@ -182,51 +183,90 @@ export class SolanaBalanceService implements IBalanceService {
                 const swapInstructions = swapTransactionMessage.instructions
                 // we get the latest blockhash
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                // we sign the transaction
-                const txHash = await this.signerService.withSolanaSigner({
+                return await this.signerService.withSolanaSigner({
                     bot,
                     action: async (signer) => {
                         const transactionMessage = pipe(
                             createTransactionMessage({ version: 0 }),
-                            (tx) => addSignersToTransactionMessage([signer], tx),
-                            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+                            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
                             (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                             (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
                         )
-                        if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                            throw new TransactionMessageTooLargeException("Transaction message is too large")
-                        }
                         const transaction = compileTransaction(transactionMessage)
                         // sign the transaction
                         const signedTransaction = await signTransaction(
                             [signer.keyPair],
                             transaction,
                         )
+                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                        const txHash = transactionSignature.toString()
                         assertIsSendableTransaction(signedTransaction)
                         assertIsTransactionWithinSizeLimit(signedTransaction)
-                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                            rpc,
-                            rpcSubscriptions,
-                        })
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        await sendAndConfirmTransaction(
-                            signedTransaction, {
-                                commitment: "confirmed",
-                                maxRetries: BigInt(5),
-                            })
-                        this.logger.debug(
-                            WinstonLog.SwapTransactionSuccess, {
-                                txHash: transactionSignature.toString(),
-                                bot: bot.id,
-                                tokenInId: tokenIn.displayId,
-                                tokenOutId: tokenOut.displayId,
-                            })
-                        return transactionSignature.toString()
+                        return {
+                            txHash,
+                            solanaTx: signedTransaction,
+                        }
                     },
                 })
-                return {
-                    txHash,
+            },
+        })
+    }
+
+    public async executeSwapTransaction(
+        {
+            bot,
+            txHash,
+            solanaTx,
+            isRetry,
+            tokenIn,
+            tokenOut,
+        }: ExecuteSwapTransactionParams
+    ): Promise<void> {
+        await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Write,
+            callback: async ({ rpc, rpcSubscriptions }) => {
+                if (isRetry) {
+                    const transactionExisted = await rpc.getTransaction(
+                        signature(txHash),
+                        { 
+                            commitment: "confirmed", 
+                            encoding: "base58", 
+                            maxSupportedTransactionVersion: 0
+                        }
+                    ).send()
+                    if (transactionExisted) {
+                        this.logger.debug(
+                            WinstonLog.TransactionAlreadyExecuted, {
+                                txHash: txHash,
+                                bot: bot.id,
+                                tokenIn,
+                                tokenOut,
+                            }
+                        )
+                        return
+                    }
                 }
+                if (!solanaTx) {
+                    throw new Error("Solana transaction not prepared")
+                }
+                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                    rpc,
+                    rpcSubscriptions,
+                })
+                const transactionSignature = getSignatureFromTransaction(solanaTx)
+                await sendAndConfirmTransaction(
+                    solanaTx, {
+                        commitment: "confirmed",
+                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
+                    })
+                this.logger.verbose(
+                    WinstonLog.SwapTransactionExecuted, {
+                        txHash: transactionSignature.toString(),
+                        bot: bot.id,
+                        tokenIn,
+                        tokenOut,
+                    }
+                )
             },
         })
     }

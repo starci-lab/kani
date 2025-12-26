@@ -1,2 +1,3 @@
 export * from "./types"
-export * from "./action-service.inteface"
+export * from "./open-position-action.interface"
+export * from "./close-position-action.interface"

@@ -3,8 +3,9 @@ import {
     FetchBalanceParams, 
     FetchBalanceResponse, 
     IBalanceService, 
-    ProcessSwapTransactionParams, 
-    ProcessSwapTransactionResponse
+    PrepareSwapTransactionParams,
+    PrepareSwapTransactionResponse,
+    ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenNotFoundException, TransactionNotFoundException } from "@exceptions"
@@ -13,7 +14,7 @@ import { SuiAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
 import Decimal from "decimal.js"
 import { SignerService } from "../signers"
-import { InjectWinston, WinstonLog } from "@modules/winston"
+import { InjectWinston } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
@@ -30,21 +31,21 @@ export class SuiBalanceService implements IBalanceService {
         private readonly logger: winstonLogger,
     ) {}
 
-    async processSwapTransaction(
+    async prepareSwapTransaction(
         {
             bot,
             tokenIn,
             tokenOut,
             amountIn,
             estimatedSwappedAmount,
-        }: ProcessSwapTransactionParams
-    ): Promise<ProcessSwapTransactionResponse> {
+        }: PrepareSwapTransactionParams
+    ): Promise<PrepareSwapTransactionResponse> {
         const { 
             aggregatorId, 
             response
         } = await this.suiAggregatorSelectorService.batchQuote({
-            tokenIn: tokenIn.displayId,
-            tokenOut: tokenOut.displayId,
+            tokenIn,
+            tokenOut,
             amountIn: amountIn,
             senderAddress: bot.accountAddress,
         })
@@ -56,8 +57,8 @@ export class SuiBalanceService implements IBalanceService {
         const { outputCoin, txb } = await this.suiAggregatorSelectorService.selectorSwap({
             base: {
                 payload: response.payload,
-                tokenIn: tokenIn.displayId,
-                tokenOut: tokenOut.displayId,
+                tokenIn,
+                tokenOut,
                 accountAddress: bot.accountAddress,
             },
             aggregatorId: aggregatorId,
@@ -69,35 +70,48 @@ export class SuiBalanceService implements IBalanceService {
         if (outputCoin) {
             txb.transferObjects([outputCoin], bot.accountAddress)
         }
-        const txHash = await this.signerService.withSuiSigner<string>({
+        // Calculate txHash from transaction bytes
+        const txHash = await txb.getDigest()
+        return {
+            txHash,
+            txb,
+        }
+    }
+
+    async executeSwapTransaction(
+        {
             bot,
-            action: async (signer) => {
-                return await this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Write,
-                    callback: async ({ suiClient }) => {
-                        const { digest } = await suiClient.signAndExecuteTransaction({
+            txHash,
+            txb,
+            isRetry,
+        }: ExecuteSwapTransactionParams
+    ): Promise<void> {
+        if (!txb) {
+            throw new TransactionNotFoundException("Transaction not prepared")
+        }
+        await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                if (isRetry) {
+                    const transactionExisted = await suiClient.getTransactionBlock({
+                        digest: txHash,
+                    })
+                    if (transactionExisted) {
+                        return
+                    }
+                }
+                await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        await suiClient.signAndExecuteTransaction({
                             transaction: txb,
                             signer,
                         })
-                        await suiClient.waitForTransaction({   
-                            digest,
-                        })
-                        this.logger.debug(
-                            WinstonLog.SwapTransactionSuccess, {
-                                txHash: digest,
-                                bot: bot.id,
-                                tokenInId: tokenIn.displayId,
-                                tokenOutId: tokenOut.displayId,
-                            })
-                        return digest
-                    }   
+                    },
                 })
-            },
+            }
         })
-        return {
-            txHash,
-        }
-    }   
+    }
 
     async fetchBalance(
         {

@@ -2,13 +2,14 @@ import { Injectable } from "@nestjs/common"
 import { KeyManagementServiceClient } from "@google-cloud/kms"
 import { InjectGcpKmsClient } from "./gpc.decorators"
 import { KmsNotFoundException } from "@exceptions"
-import { envConfig } from "@modules/env/config"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class GcpKmsService {
     constructor(
     @InjectGcpKmsClient()
     private readonly kmsClient: KeyManagementServiceClient,
+    private readonly mountStorageService: MountStorageService,
     ) {}
 
     async encrypt(
@@ -21,7 +22,7 @@ export class GcpKmsService {
 
         
         const [result] = await this.kmsClient.encrypt({
-            name: envConfig().gcp.kms.keyName,
+            name: this.mountStorageService.apiKeys.cryptoKeyName,
             plaintext: rawData,
         })
         if (!result.ciphertext) {
@@ -34,7 +35,7 @@ export class GcpKmsService {
         ciphertext: string
     ): Promise<string> {
         const [result] = await this.kmsClient.decrypt({
-            name: envConfig().gcp.kms.keyName,
+            name: this.mountStorageService.apiKeys.cryptoKeyName,
             ciphertext: Buffer.from(ciphertext, "base64"),
         })
         if (!result.plaintext) {

@@ -1,7 +1,8 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./flowx.module-definition"
 import { FlowXObserverService } from "./observer.service"
-import { FlowXActionService } from "./action.service"
+import { FlowXOpenPositionActionService } from "./open-position-action.service"
+import { FlowXClosePositionActionService } from "./close-position-action.service"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 import { FlowXAnalyticsService } from "./analytics.service"
 
@@ -26,7 +27,8 @@ export class FlowXModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(FlowXActionService)
+            providers.push(FlowXOpenPositionActionService)
+            providers.push(FlowXClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

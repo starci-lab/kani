@@ -67,10 +67,6 @@ export class BotsLoaderService implements OnModuleInit {
         this.bots = bots.map((bot) => ({
             id: bot._id.toString(),
         }))
-        this.winstonLogger.debug(
-            WinstonLog.BotsLoaded, {
-                bots: this.bots.length,
-            })
     }
 
     @Cron(CronExpression.EVERY_10_SECONDS)

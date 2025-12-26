@@ -17,3 +17,33 @@ export class TransactionExecutionFailedException extends AbstractException {
         super(message || "Transaction execution failed", "TRANSACTION_EXECUTION_FAILED_EXCEPTION")
     }
 }
+
+export class TransactionNotPreparedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Transaction not prepared", "TRANSACTION_NOT_PREPARED_EXCEPTION")
+    }
+}
+
+export class TransactionNotExecutedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Transaction not executed", "TRANSACTION_NOT_EXECUTED_EXCEPTION")
+    }
+}
+
+export class MintKeyPairNotSetException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Mint key pair not set", "MINT_KEY_PAIR_NOT_SET_EXCEPTION")
+    }
+}
+
+export class LiquidityNotSetException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Liquidity not set", "LIQUIDITY_NOT_SET_EXCEPTION")
+    }
+}
+
+export class AtaAddressNotSetException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Ata address not set", "ATA_ADDRESS_NOT_SET_EXCEPTION")
+    }
+}

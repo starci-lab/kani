@@ -2,7 +2,8 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./momentum.module-definition"
 import { OpenPositionTxbService, ClosePositionTxbService } from "./transactions"
 import { MomentumObserverService } from "./observer.service"
-import { MomentumActionService } from "./action.service"
+import { MomentumOpenPositionActionService } from "./open-position-action.service"
+import { MomentumClosePositionActionService } from "./close-position-action.service"
 import { MomentumAnalyticsService } from "./analytics.service"
 @Injectable()
 export class MomentumModule extends ConfigurableModuleClass {
@@ -25,7 +26,8 @@ export class MomentumModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(MomentumActionService)
+            providers.push(MomentumOpenPositionActionService)
+            providers.push(MomentumClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

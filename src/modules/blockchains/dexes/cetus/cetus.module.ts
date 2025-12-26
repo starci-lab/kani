@@ -2,8 +2,9 @@ import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cetus.module-definition"
 import { CetusObserverService } from "./observer.service"
 import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
-import { CetusActionService } from "./action.service"
+import { CetusOpenPositionActionService } from "./open-position-action.service"
 import { CetusAnalyticsService } from "./analytics.service"
+import { CetusClosePositionActionService } from "./close-position-action.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -26,7 +27,8 @@ export class CetusModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(CetusActionService)
+            providers.push(CetusOpenPositionActionService)
+            providers.push(CetusClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

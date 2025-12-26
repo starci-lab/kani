@@ -1,7 +1,8 @@
 import { DynamicModule, Injectable, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./raydium.module-definition"
 import { RaydiumObserverService } from "./observer.service"
-import { RaydiumActionService } from "./action.service"
+import { RaydiumOpenPositionActionService } from "./open-position-action.service"
+import { RaydiumClosePositionActionService } from "./close-position-action.service"
 import { 
     TickArrayService, 
     PersonalPositionService,
@@ -33,7 +34,8 @@ export class RaydiumModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(RaydiumActionService)
+            providers.push(RaydiumOpenPositionActionService)
+            providers.push(RaydiumClosePositionActionService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

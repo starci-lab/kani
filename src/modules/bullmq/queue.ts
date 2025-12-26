@@ -9,67 +9,15 @@ export const bullData: Record<BullQueueName, BullQueueData> = {
     [BullQueueName.OpenPosition]: {
         // Prefix for Redis keys to keep liquidity pool jobs organized and isolated
         prefix: formatWithBraces("open_position"),
-
         // Queue name used internally by BullMQ
         name: "open_position",
-
-        // Max number of jobs processed per batch in this queue
-        batchSize: 1000,
-
-        // BullMQ cleanup policy and other job options
-        opts: {
-            // Automatically remove completed jobs to keep the queue clean
-            removeOnComplete: true,
-            // Store failed jobs to analyze and improve the bot
-            removeOnFail: true,
-            // Retry the job up to 10 times if it fails
-            attempts: 10,
-            // Delay between retries in milliseconds
-            backoff: {
-                type: "exponential",
-                delay: 1000,
-            },
-        },
     },
     [BullQueueName.ClosePosition]: {
         prefix: formatWithBraces("close_position"),
         name: "close_position",
-        batchSize: 1000,
-        opts: {
-            removeOnComplete: true,
-            removeOnFail: false,
-            attempts: 10,
-            backoff: {
-                type: "exponential",
-                delay: 1000,
-            },
-        },
     },
-    [BullQueueName.Swap]: {
-        prefix: formatWithBraces("swap"),
-        name: "swap",
-        batchSize: 1000,
-        opts: {
-            removeOnComplete: true,
-            removeOnFail: false,
-            attempts: 10,
-            backoff: {
-                type: "exponential",
-                delay: 1000,
-            },
-        },
-    },
-    [BullQueueName.BalanceSnapshot]: {
-        prefix: formatWithBraces("balance_snapshot"),
-        name: "balance_snapshot",
-        batchSize: 1000,
-        opts: {
-            removeOnComplete: true,
-            removeOnFail: false,
-            backoff: {
-                type: "exponential",
-                delay: 1000,
-            },
-        },
+    [BullQueueName.ReconcileBalance]: {
+        prefix: formatWithBraces("reconcile_balance"),
+        name: "reconcile_balance",
     }
 }
