@@ -29,8 +29,9 @@ export enum WinstonLog {
     GateRestError = "Gate.REST.Error",
     PriceImpactTooHigh = "Price.Impact.Too.High",
     FetchedPools = "Fetched.Pools",
-    OpenPositionExecutionSuccess = "Open.Position.Execution.Success",
+    OpenPositionExecuted = "Open.Position.Executed",
     OpenPositionFailed = "Open.Position.Failed",
+    OpenPositionRetrying = "Open.Position.Retrying",
     OpenPositionSuccess = "Open.Position.Confirmation.Success",
     OpenPositionConfirmationFailed = "Open.Position.Confirmation.Failed",
     ClosePositionConfirmationSuccess = "Close.Position.Confirmation.Success",
@@ -89,4 +90,6 @@ export enum WinstonLog {
     ReconcileBalanceSuccess = "Reconcile.Balance.Success",
     SwapConfirmationFailed = "Swap.Confirmation.Failed",
     ReconcileBalanceEnqueued = "Reconcile.Balance.Enqueued",
+    OpenPositionEnqueued = "Open.Position.Enqueued",
+    ClosePositionEnqueued = "Close.Position.Enqueued",
 }

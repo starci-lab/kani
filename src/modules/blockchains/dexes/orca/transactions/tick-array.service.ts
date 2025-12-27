@@ -1,17 +1,20 @@
 import { Injectable } from "@nestjs/common"
-import { getProgramDerivedAddress, getAddressEncoder, Address, address, fetchEncodedAccount, Rpc, SolanaRpcApi, Instruction, AccountRole } from "@solana/kit"
+import { getProgramDerivedAddress, getAddressEncoder, Address, address, fetchEncodedAccount, Instruction, AccountRole } from "@solana/kit"
 import { Decimal } from "decimal.js"
 import { getTickArrayStartTickIndex } from "@orca-so/whirlpools-core"
 import { BotSchema } from "@modules/databases"
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
 import { BeetArgsStruct, i32 } from "@metaplex-foundation/beet"
 import { AnchorUtilsService } from "../../../tx-builder"
-import { BotMissingParametersException, RpcMissingParametersException } from "@exceptions"
+import { BotMissingParametersException } from "@exceptions"
+import { RpcExecutorService } from "@modules/blockchains"
+import { RpcAccessType } from "@modules/filesystem"
 
 @Injectable()
 export class TickArrayService {
     constructor(
         private readonly anchorUtilsService: AnchorUtilsService,
+        private readonly rpcExecutorService: RpcExecutorService,
     ) { }
     /**
      * Internal helper that derives a TickArray PDA directly from:
@@ -91,7 +94,6 @@ export class TickArrayService {
             tickIndex,
             tickSpacing,
             programAddress,
-            rpc, 
             bot,
             pdaOnly
         }: GetTickArrayPdaParams
@@ -110,14 +112,15 @@ export class TickArrayService {
         ] = InitializeTickArrayArgs.serialize({
             startTickIndex: startIndex,
         })
-
-        if (!rpc) {
-            throw new RpcMissingParametersException("Rpc is required")
-        }
         if (!bot) {
             throw new BotMissingParametersException("Bot is required")
         }
-        const account = await fetchEncodedAccount(rpc, pda)
+        const account = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
+            callback: async ({ rpc }) => {
+                return await fetchEncodedAccount(rpc, pda)
+            },
+        })
         if (account.exists) {
             const instructions: Array<Instruction> = []
             const initializeTickArrayInstruction: Instruction = {
@@ -173,7 +176,6 @@ export interface GetTickArrayPdaParams {
     tickIndex: number
     tickSpacing: number
     programAddress: Address
-    rpc?: Rpc<SolanaRpcApi>
     bot?: BotSchema
     pdaOnly?: boolean
 }

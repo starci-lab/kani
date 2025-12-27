@@ -11,7 +11,6 @@ import { AppService } from "./app.service"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { ClientsModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
-import { SuiService } from "./sui.service"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -46,6 +45,6 @@ import { SuiService } from "./sui.service"
             isGlobal: true,
         }),
     ],
-    providers: [SuiService],
+    providers: [AppService],
 })
 export class AppModule {}

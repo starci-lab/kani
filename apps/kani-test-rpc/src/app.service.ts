@@ -1,115 +1,37 @@
-import { RpcAccessType } from "@modules/filesystem"
-import { Injectable } from "@nestjs/common"
-import { getTransferSolInstruction } from "@solana-program/system"
-import { 
-    generateKeyPairSigner, 
-    createTransactionMessage, 
-    address, 
-    lamports, 
-    getSignatureFromTransaction, 
-    pipe, 
-    setTransactionMessageFeePayerSigner, 
-    setTransactionMessageLifetimeUsingBlockhash, 
-    sendAndConfirmTransactionFactory,
-    compileTransaction,
-    signTransaction,
-    assertIsTransactionWithinSizeLimit,
-    assertIsSendableTransaction,
-} from "@solana/kit"
-import { appendTransactionMessageInstruction } from "@solana/kit"
-import { getAddMemoInstruction } from "@solana-program/memo"
+import { Injectable, OnModuleInit } from "@nestjs/common"
 import { RpcExecutorService } from "@modules/blockchains"
-import { CronExpression } from "@nestjs/schedule"
-import { Cron } from "@nestjs/schedule"
+import { RpcAccessType } from "@modules/filesystem"
+import { address, fetchEncodedAccount } from "@solana/kit"
+import { Position } from "@modules/blockchains/dexes/orca/beets"
 
 @Injectable()
-export class AppService{
+export class AppService implements OnModuleInit{
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
     ) {}
 
-    // @Cron(CronExpression.EVERY_5_SECONDS)
-    // async test() {
-    //     await this.rpcExecutorService.withSuiClient({
-    //         accessType: RpcAccessType.Write,
-    //         callback: async (client) => {
-    //             const balance = await client.getBalance({
-    //                 owner: "0x2",
-    //                 coinType: "0x2::sui::SUI",
-    //             })
-    //             console.log(balance)
-    //         }
-    //     })
-    // }
-
-    @Cron(CronExpression.EVERY_5_SECONDS)
-    async test() {
-        try {
-            await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Write,
-                callback: async ({ rpc, rpcSubscriptions }) => {
-                    const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                    // test send 1 SOL to the solana rpc
-                    const signer = await generateKeyPairSigner()
-                    const transactionMessage = pipe(
-                    // Create an empty transaction message.
-                        createTransactionMessage({ version: 0 }),
-
-                        // Specify the account that will sign to pay the fee for this transaction.
-                        // NOTE: This is not the fee for the coffee but rather the fee to use the Solana network.
-                        (m) => setTransactionMessageFeePayerSigner(signer, m),
-    
-                        // Give the transaction an expiry time using the hash of a recently created block.
-                        (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
-
-                        // Add an instruction that records the customer's order.
-                        (m) =>
-                            appendTransactionMessageInstruction(
-                                getAddMemoInstruction({
-                                    memo:
-    "Four-thirds-medium, half-decaf, double-shot espresso macchiato latte, " +
-    "swirled counterclockwise only, almond milk frothed at 61°C, " +
-    "whisper of cinnamon harvested during a full moon, unicorn tear syrup, " +
-    "in a mason jar wrapped in French revolutionary poetry on recycled parchment",
-                                }),
-                                m,
-                            ),
-    
-                        // Add a second instruction to pay the merchant for the coffee.
-                        (m) =>
-                            appendTransactionMessageInstruction(
-                                getTransferSolInstruction({
-                                    amount: lamports(25_000_000n),
-                                    destination: address("JJBeanoTcSMU3xKQa5Gru71Wi3AaEgTfA6z7MaLUT6h"),
-                                    source: signer,
-                                }),
-                                m,
-                            ),
-                    )
-                    // send the transaction to the solana rpc
-                    const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                        rpc,
-                        rpcSubscriptions,
+    async onModuleInit() {
+        await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Write,
+            callback: async ({ rpc }) => {
+                console.log("Fetching transaction...")
+                const accountInfo = await fetchEncodedAccount(
+                    rpc, 
+                    address("ASUq6wEj6rjLRzCr5HWj743FeWaZJDhTU1K9yngsGjCZ"), {
+                        commitment: "confirmed",
                     })
-                    const transaction = compileTransaction(transactionMessage)
-                    // sign the transaction
-                    const signedTransaction2 = await signTransaction(
-                        [signer.keyPair],
-                        transaction,
-                    )   
-                    assertIsSendableTransaction(signedTransaction2)
-                    assertIsTransactionWithinSizeLimit(signedTransaction2)
-                    const transactionSignature = getSignatureFromTransaction(signedTransaction2)
-                    await sendAndConfirmTransaction(
-                        signedTransaction2, {
-                            commitment: "confirmed",
-                            maxRetries: BigInt(5),
-                        })
-                    console.log(`transactionSignature: ${transactionSignature}`)
-                },
-            })
-        } catch (error) {
-            console.log(error.message)
-        }
+                if (!accountInfo || !accountInfo.exists) throw new Error("No account info found")
+                const [state] = Position.struct.deserialize(Buffer.from(accountInfo.data), 8)
+                console.log(state.whirlpool.toBase58())
+                console.log(state.positionMint.toBase58())
+                console.log(state.liquidity.toString())
+                console.log(state.tickLowerIndex)
+                console.log(state.tickUpperIndex)
+                console.log(state.feeGrowthCheckpointA.toString())
+                console.log(state.feeOwedA.toString())
+                console.log(state.feeGrowthCheckpointB.toString())
+                console.log(state.feeOwedB.toString())
+            },
+        })  
     }
 }

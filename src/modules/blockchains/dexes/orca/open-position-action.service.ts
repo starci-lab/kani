@@ -13,20 +13,15 @@ import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
-    TransactionMessageTooLargeException,
     TransactionNotPreparedException,
-    TransactionNotExecutedException,
-    MintKeyPairNotSetException,
     LiquidityNotSetException,
     AtaAddressNotSetException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { 
     pipe,
-    addSignersToTransactionMessage,
     setTransactionMessageFeePayerSigner,
     setTransactionMessageLifetimeUsingBlockhash,
-    isTransactionMessageWithinSizeLimit,
     compileTransaction,
     getSignatureFromTransaction,
     createTransactionMessage,
@@ -34,6 +29,10 @@ import {
     signature,
     sendAndConfirmTransactionFactory,
     signTransaction,
+    assertIsTransactionWithinSizeLimit,
+    assertIsSendableTransaction,
+    createNoopSigner,
+    address,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -129,7 +128,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             tickUpper,
         })
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
                 return await this.signerService.withSolanaSigner({
                     bot,
@@ -137,20 +136,23 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                         const transactionMessage = pipe(
                             createTransactionMessage({ version: 0 }),
-                            (tx) => addSignersToTransactionMessage([signer, mintKeyPair], tx),
-                            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+                            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
                             (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
                             (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                         )
-                        if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                            throw new TransactionMessageTooLargeException("Transaction message is too large")
-                        }
                         const transaction = compileTransaction(transactionMessage)
-                        const transactionSignature = getSignatureFromTransaction(transaction)
+                        const signedTransaction = await signTransaction(
+                            [signer.keyPair, 
+                                mintKeyPair.keyPair]
+                            , transaction
+                        )
+                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                        assertIsSendableTransaction(signedTransaction)
+                        assertIsTransactionWithinSizeLimit(signedTransaction)
                         const txHash = transactionSignature.toString()
                         return {
                             txHash,
-                            solanaTx: transaction,
+                            solanaTx: signedTransaction,
                             feeAmountA,
                             feeAmountB,
                             tickLower,
@@ -178,7 +180,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         solanaTx,
         ataAddress,
         liquidity,
-        mintKeyPair,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         if (!liquidity) {
             throw new LiquidityNotSetException("Liquidity not set")
@@ -189,50 +190,44 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         const _state = state as LiquidityPoolState
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
-            callback: async ({ rpc, rpcSubscriptions }) => {
-                return await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        if (isRetry) {
-                            const transactionExisted = await rpc.getTransaction(signature(txHash)).send()
-                            if (transactionExisted) {
-                                return {
-                                    liquidity,
-                                    positionId: ataAddress,
-                                }
-                            }
-                            throw new TransactionNotExecutedException("Transaction not executed")
-                        }
-                        if (!solanaTx) {
-                            throw new TransactionNotPreparedException("Transaction not prepared")
-                        }
-                        if (!mintKeyPair) {
-                            throw new MintKeyPairNotSetException("Mint key pair not set")
-                        }
-                        const signedTransaction = await signTransaction([signer.keyPair, mintKeyPair.keyPair], solanaTx)
-                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                            rpc,
-                            rpcSubscriptions,
-                        })
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        await sendAndConfirmTransaction(
-                            signedTransaction, {
-                                commitment: "confirmed",
-                                maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
-                            })
-                        this.logger.info(
-                            WinstonLog.OpenPositionExecutionSuccess, {
-                                botId: bot.id,
-                                txHash: transactionSignature.toString(),
-                                liquidityPoolId: _state.static.displayId,
-                            }
-                        )
+            callback: async (
+                { 
+                    rpc, 
+                    rpcSubscriptions 
+                }
+            ) => {
+                if (isRetry) {
+                    const transactionExisted = await rpc.getTransaction(signature(txHash)).send()
+                    if (transactionExisted) {
                         return {
                             liquidity,
                             positionId: ataAddress,
                         }
-                    },
+                    }
+                }
+                if (!solanaTx) {
+                    throw new TransactionNotPreparedException("Transaction not prepared")
+                }
+                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                    rpc,
+                    rpcSubscriptions,
                 })
+                await sendAndConfirmTransaction(
+                    solanaTx, {
+                        commitment: "confirmed",
+                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
+                    })
+                this.logger.info(
+                    WinstonLog.OpenPositionExecuted, {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
+                return {
+                    liquidity,
+                    positionId: ataAddress,
+                }
             },
         })
     }

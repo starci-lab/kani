@@ -22,7 +22,14 @@ import { RaydiumOpenPositionActionService } from "./raydium"
 import { OrcaOpenPositionActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraOpenPositionActionService } from "./meteora"
-import { DlmmLiquidityPoolState, ExecuteOpenPositionParams, ExecuteOpenPositionResponse, LiquidityPoolState, PrepareOpenPositionParams, PrepareOpenPositionResponse } from "../interfaces"
+import { 
+    DlmmLiquidityPoolState, 
+    ExecuteOpenPositionParams, 
+    ExecuteOpenPositionResponse, 
+    LiquidityPoolState, 
+    PrepareOpenPositionParams, 
+    PrepareOpenPositionResponse 
+} from "../interfaces"
 import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
 import { computeDenomination, createObjectId } from "@utils"
@@ -43,6 +50,9 @@ import { v4 } from "uuid"
 import { getMutexKey, MutexKey } from "@modules/lock"
 import { MutexService } from "@modules/lock"
 import { Connection } from "mongoose"
+import { WinstonLog } from "@modules/winston"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class OpenPositionOrchestratorService {
@@ -66,6 +76,8 @@ export class OpenPositionOrchestratorService {
         private readonly mutexService: MutexService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) { }
 
     async enqueue(
@@ -318,12 +330,20 @@ export class OpenPositionOrchestratorService {
                 }
             ])
         // add the open position job to the queue
-        this.openPositionQueue.add(
+        await this.openPositionQueue.add(
             v4(),
             {
                 jobId: jobRaw.toJSON().id,
                 state,
                 bot,
+            }
+        )
+        // log the event
+        this.logger.verbose(
+            WinstonLog.OpenPositionEnqueued,
+            {
+                botId: bot.id,
+                liquidityPoolId,
             }
         )
     }

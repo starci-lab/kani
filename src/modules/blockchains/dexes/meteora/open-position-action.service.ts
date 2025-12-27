@@ -12,10 +12,7 @@ import { PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
-    TransactionMessageTooLargeException,
     TransactionNotPreparedException,
-    TransactionNotExecutedException,
-    MintKeyPairNotSetException,
     AtaAddressNotSetException,
 } from "@exceptions"
 import { 
@@ -23,7 +20,6 @@ import {
     addSignersToTransactionMessage,
     setTransactionMessageFeePayerSigner,
     setTransactionMessageLifetimeUsingBlockhash,
-    isTransactionMessageWithinSizeLimit,
     compileTransaction,
     getSignatureFromTransaction,
     createTransactionMessage,
@@ -31,6 +27,8 @@ import {
     signature,
     sendAndConfirmTransactionFactory,
     signTransaction,
+    assertIsTransactionWithinSizeLimit,
+    assertIsSendableTransaction,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -107,15 +105,15 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
                             (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                         )
-                        if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                            throw new TransactionMessageTooLargeException("Transaction message is too large")
-                        }
                         const transaction = compileTransaction(transactionMessage)
+                        const signedTransaction = await signTransaction([signer.keyPair, positionKeyPair.keyPair], transaction)
+                        assertIsSendableTransaction(signedTransaction)
+                        assertIsTransactionWithinSizeLimit(signedTransaction)
                         const transactionSignature = getSignatureFromTransaction(transaction)
                         const txHash = transactionSignature.toString()
                         return {
                             txHash,
-                            solanaTx: transaction,
+                            solanaTx: signedTransaction,
                             feeAmountA,
                             feeAmountB,
                             amountA,
@@ -135,62 +133,47 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         bot,
         state,
         isRetry,
-        txHash,
         solanaTx,
         ataAddress,
-        mintKeyPair,
+        txHash,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         if (!ataAddress) {
             throw new AtaAddressNotSetException("Ata address not set")
-        }
-        if (!mintKeyPair) {
-            throw new MintKeyPairNotSetException("Mint key pair not set")
         }
         const _state = state as DlmmLiquidityPoolState
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
-                return await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        if (isRetry) {
-                            const transactionExisted = await rpc.getTransaction(signature(txHash)).send()
-                            if (transactionExisted) {
-                                return {
-                                    positionId: ataAddress,
-                                }
-                            }
-                            throw new TransactionNotExecutedException("Transaction not executed")
-                        }
-                        if (!solanaTx) {
-                            throw new TransactionNotPreparedException("Transaction not prepared")
-                        }
-                        if (!mintKeyPair) {
-                            throw new MintKeyPairNotSetException("Mint key pair not set")
-                        }
-                        const signedTransaction = await signTransaction([signer.keyPair, mintKeyPair.keyPair], solanaTx)
-                        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                            rpc,
-                            rpcSubscriptions,
-                        })
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        await sendAndConfirmTransaction(
-                            signedTransaction, {
-                                commitment: "confirmed",
-                                maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
-                            })
-                        this.logger.info(
-                            WinstonLog.OpenPositionExecutionSuccess, {
-                                botId: bot.id,
-                                txHash: transactionSignature.toString(),
-                                liquidityPoolId: _state.static.displayId,
-                            }
-                        )
+                if (isRetry) {
+                    const transactionExisted = await rpc.getTransaction(signature(txHash.toString())).send()
+                    if (transactionExisted) {
                         return {
                             positionId: ataAddress,
                         }
-                    },
+                    }
+                }
+                if (!solanaTx) {
+                    throw new TransactionNotPreparedException("Transaction not prepared")
+                }
+                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                    rpc,
+                    rpcSubscriptions,
                 })
+                await sendAndConfirmTransaction(
+                    solanaTx, {
+                        commitment: "confirmed",
+                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
+                    })
+                this.logger.info(
+                    WinstonLog.OpenPositionExecuted, {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
+                return {
+                    positionId: ataAddress,
+                }
             },
         })
     }

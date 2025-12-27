@@ -180,7 +180,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             digest,
                         })
                         this.logger.info(
-                            WinstonLog.OpenPositionExecutionSuccess, {
+                            WinstonLog.OpenPositionExecuted, {
                                 botId: bot.id,
                                 txHash: digest,
                                 liquidityPoolId: _state.static.displayId,

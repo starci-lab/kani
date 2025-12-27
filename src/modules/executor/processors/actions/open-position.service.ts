@@ -73,10 +73,12 @@ export class OpenPositionProcessorService  {
                 if (!this.bot) {
                     return
                 }
-                // await this.openPositionOrchestratorService.enqueue({
-                //     liquidityPoolId: payload.liquidityPoolId,
-                //     bot: this.bot,
-                // })
+                await this.openPositionOrchestratorService.enqueue(
+                    {
+                        liquidityPoolId: payload.liquidityPoolId,
+                        bot: this.bot,
+                    }
+                )
             
             }
         )

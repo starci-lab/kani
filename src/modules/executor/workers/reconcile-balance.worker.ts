@@ -13,7 +13,7 @@ import {
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
-import { BullQueueName } from "@modules/bullmq/types"
+import { BullQueueName } from "@modules/bullmq"
 import { bullData } from "@modules/bullmq"
 import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
@@ -22,7 +22,7 @@ import { BN } from "turbos-clmm-sdk"
 import { SolanaTx } from "@modules/blockchains"
 import { Transaction } from "@mysten/sui/transactions"
 import { envConfig } from "@modules/env"
-
+import { AsyncService } from "@modules/mixin"
 @Worker(
     bullData[
         BullQueueName.ReconcileBalance].name, 
@@ -41,6 +41,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
     private readonly logger: WinstonLogger,
     private readonly balanceService: BalanceService,
     private readonly balanceSnapshotService: BalanceSnapshotService,
+    private readonly asyncService: AsyncService,
     ) {
         super()
     }
@@ -136,6 +137,9 @@ export class ReconcileBalanceWorker extends WorkerHost {
             if (!job?.txHash) {
                 throw new UnrecoverableError("Transaction hash not found")
             }
+            if (!job.data) {
+                throw new UnrecoverableError("Job data not found")
+            }
             txHash = job.txHash
             const data = job.data as ReconcileBalanceJobData
             tokenIn = data.tokenIn
@@ -165,7 +169,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 if (!tokenIn || !tokenOut) {
                     throw new UnrecoverableError("Token in or token out not found during swap execution")
                 }
-                await this.balanceService.executeSwapTransaction(
+                const [, error] = await this.asyncService.resolveTuple(this.balanceService.executeSwapTransaction(
                     {
                         bot,
                         txHash,
@@ -174,8 +178,25 @@ export class ReconcileBalanceWorker extends WorkerHost {
                         isRetry,
                         solanaTx,
                         txb,
-                    }
+                    }),
                 )
+                if (error) {
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: jobId,
+                        },
+                        {
+                            $set: {
+                                status: JobStatus.Failed,
+                            },
+                            $unset: {
+                                txHash: 1,
+                                data: 1,
+                            },
+                        },
+                    )
+                    throw new UnrecoverableError("Failed to execute swap transaction")
+                }
                 await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                     {
                         _id: jobId,
@@ -217,6 +238,10 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 $set: {
                     status: JobStatus.Completed,
                 },
+                $unset: {
+                    txHash: 1,
+                    data: 1,
+                },
             },
         )
     }
@@ -232,7 +257,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 botId: bot.id,
                 jobId,
                 error: error.message,
-                stack: error.stack,
             })
             mutex.release()
         }

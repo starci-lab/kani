@@ -156,14 +156,13 @@ export class RpcExecutorService {
                             if (isSolanaError(error)) {
                                 const errorType = this.getSolanaRpcErrorType(error)
                                 if (errorType === RpcErrorType.Fatal) {
-                                    throw new AbortError(RpcErrorType.Fatal)
+                                    throw new AbortError(error)
                                 }
                                 if (errorType === RpcErrorType.Retryable) {
-                                    this.logger.error(`Retrying rpc ${id} because of retryable error`)
                                     throw new SolanaRpcRetryableError(error?.message)
                                 }
                                 if (errorType === RpcErrorType.Ignorable) {
-                                    throw new AbortError(RpcErrorType.Ignorable)
+                                    throw new AbortError(error)
                                 }
                             }
                             throw new AbortError(error?.message ?? "Unknown error")
@@ -173,13 +172,14 @@ export class RpcExecutorService {
                         factor: envConfig().timeConfig.retry.factor,
                     })
                 } catch (error) {
-                    if (error.message === RpcErrorType.Fatal) {
-                        this.logger.error(`Ejecting rpc ${id} because of fatal error`)
-                        await this.p2cBalancerService.ejectRpcs(ChainId.Solana, [id])
+                    if (error instanceof AbortError) {
+                        if (error.originalError.message === RpcErrorType.Fatal) {
+                            this.logger.error(`Ejecting rpc ${id} because of fatal error`)
+                            await this.p2cBalancerService.ejectRpcs(ChainId.Solana, [id])
+                        }
                         throw error
                     }
-                    // if the error is not a fatal error, throw the error, retry are useless in this case
-                    throw new AbortError(error.message)
+                    throw error
                 } 
             },
             maxRetries: envConfig().timeConfig.retry.maxRetries,

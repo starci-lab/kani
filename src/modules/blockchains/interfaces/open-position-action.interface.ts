@@ -11,6 +11,7 @@ import { KeyPairSigner } from "@solana/kit"
 export interface PrepareOpenPositionResponse {
   txHash: string;
   txb?: Transaction;
+  solanaTx?: SolanaTx;
   feeAmountA: BN;
   feeAmountB: BN;
   tickLower?: Decimal;
@@ -37,7 +38,6 @@ export interface ExecuteOpenPositionParams {
     metadata?: unknown;
     ataAddress?: string;
     liquidity?: BN;
-    mintKeyPair?: KeyPairSigner;
 }
 
 export interface ExecuteOpenPositionResponse {

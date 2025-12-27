@@ -10,37 +10,8 @@ import {
 } from "@metaplex-foundation/beet"
 import { publicKey } from "@metaplex-foundation/beet-solana"
 import { PublicKey } from "@solana/web3.js"
+import { WhirlpoolRewardInfo } from "./whirlpool-reward-info"
 
-// ==================== WhirlpoolRewardInfo ====================
-export class WhirlpoolRewardInfo {
-    constructor(
-        readonly mint: PublicKey,
-        readonly vault: PublicKey,
-        readonly extension: Uint8Array,
-        readonly emissionsPerSecondX64: bignum,
-        readonly growthGlobalX64: bignum
-    ) {}
-
-    static readonly struct = new BeetStruct<WhirlpoolRewardInfo>(
-        [
-            ["mint", publicKey],
-            ["vault", publicKey],
-            ["extension", fixedSizeUint8Array(32)],
-            ["emissionsPerSecondX64", u128],
-            ["growthGlobalX64", u128],
-        ],
-        (args) => new WhirlpoolRewardInfo(
-            args.mint!,
-            args.vault!,
-            args.extension!,
-            args.emissionsPerSecondX64!,
-            args.growthGlobalX64!
-        ),
-        "WhirlpoolRewardInfo"
-    )
-}
-
-// ==================== Whirlpool ====================
 export class Whirlpool {
     constructor(
         readonly whirlpoolsConfig: PublicKey,
@@ -111,34 +82,3 @@ export class Whirlpool {
     )
 }
 
-// ==================== WhirlpoolExtensionSegmentPrimary ====================
-export class WhirlpoolExtensionSegmentPrimary {
-    constructor(
-        readonly controlFlags: number,
-        readonly reserved: Uint8Array
-    ) {}
-
-    static readonly struct = new BeetStruct<WhirlpoolExtensionSegmentPrimary>(
-        [
-            ["controlFlags", u16],
-            ["reserved", fixedSizeUint8Array(30)],
-        ],
-        (args) => new WhirlpoolExtensionSegmentPrimary(args.controlFlags!, args.reserved!),
-        "WhirlpoolExtensionSegmentPrimary"
-    )
-}
-
-// ==================== WhirlpoolExtensionSegmentSecondary ====================
-export class WhirlpoolExtensionSegmentSecondary {
-    constructor(
-        readonly reserved: Uint8Array
-    ) {}
-
-    static readonly struct = new BeetStruct<WhirlpoolExtensionSegmentSecondary>(
-        [
-            ["reserved", fixedSizeUint8Array(32)],
-        ],
-        (args) => new WhirlpoolExtensionSegmentSecondary(args.reserved!),
-        "WhirlpoolExtensionSegmentSecondary"
-    )
-}

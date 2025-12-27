@@ -1,5 +1,4 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { PoolInfoLayout } from "@raydium-io/raydium-sdk-v2"
 import {
     CacheKey,
     DynamicLiquidityPoolInfoCacheResult,
@@ -26,6 +25,7 @@ import { PublicKey } from "@solana/web3.js"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
+import { PoolState } from "./beets"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
@@ -74,13 +74,15 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     // ============================================
     private async handlePoolStateUpdate(
         liquidityPoolId: LiquidityPoolId,
-        state: ReturnType<typeof PoolInfoLayout["decode"]>
+        state: PoolState
     ) {
         const parsed: DynamicLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickCurrent,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPriceX64),
-            rewards: state.rewardInfos,
+            rewards: state.rewardInfos.filter(
+                rewardInfo => rewardInfo.tokenMint.toString() !== "11111111111111111111111111111111"
+            ),
         }
         await this.asyncService.allIgnoreError(
             [
@@ -98,7 +100,6 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 ),
             ]
         )
-
         // logging
         this.winstonLogger.debug(
             WinstonLog.ObserveClmmPool, {
@@ -129,7 +130,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                         commitment: "confirmed",
                     })
                     if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
-                    const state = PoolInfoLayout.decode(Buffer.from(accountInfo.data))
+                    const [state] = PoolState.struct.deserialize(Buffer.from(accountInfo.data), 8)
                     return await this.handlePoolStateUpdate(liquidityPoolId, state)
                 },
             })
@@ -168,7 +169,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                         abortSignal: controller.signal,
                     })
                     for await (const accountNotification of accountNotifications) {
-                        const state = PoolInfoLayout.decode(Buffer.from(accountNotification.value?.data.toString(), "base64"))
+                        const [state] = PoolState.struct.deserialize(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
                         await this.handlePoolStateUpdate(liquidityPoolId, state)
                     }
                 },
