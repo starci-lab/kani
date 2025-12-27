@@ -5,18 +5,20 @@ import {
     PrepareOpenPositionParams,
     PrepareOpenPositionResponse,
     ExecuteOpenPositionParams,
+    ConfirmOpenPositionParams,
     ExecuteOpenPositionResponse,
+    ConfirmOpenPositionResponse,
 } from "../../interfaces"
 import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import { SignerService } from "../../signers"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import { PrimaryMemoryStorageService, RaydiumPositionMetadata } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionNotPreparedException,
+    PositionIdNotSetException,
+    PositionNotFoundException,
     TransactionNotExecutedException,
-    LiquidityNotSetException,
-    AtaAddressNotSetException,
 } from "@exceptions"
 import { TickMathService } from "../../math"
 import { 
@@ -27,13 +29,14 @@ import {
     getSignatureFromTransaction,
     createTransactionMessage,
     appendTransactionMessageInstructions,
-    signature,
     sendAndConfirmTransactionFactory,
     signTransaction,
     assertIsSendableTransaction,
     assertIsTransactionWithinSizeLimit,
     createNoopSigner,
     address,
+    signature,
+    fetchEncodedAccount,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -46,6 +49,7 @@ import Decimal from "decimal.js"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
+import { PersonalPositionState } from "./beets"
 
 @Injectable()
 export class RaydiumOpenPositionActionService implements IOpenActionService {
@@ -119,6 +123,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             ataAddress,
             feeAmountA,
             feeAmountB,
+            personalPosition,
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
@@ -148,6 +153,11 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         assertIsSendableTransaction(signedTransaction)
                         assertIsTransactionWithinSizeLimit(signedTransaction)   
                         const txHash = transactionSignature.toString()
+                        // get the raydium position metadata
+                        const metadata: RaydiumPositionMetadata = {
+                            nftMintAddress: mintKeyPair.address.toString(),
+                            ataAddress: ataAddress.toString(),
+                        }
                         return {
                             txHash,
                             solanaTx: signedTransaction,
@@ -157,12 +167,8 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                             tickUpper,
                             amountA,
                             amountB,
-                            metadata: {
-                                nftMintAddress: mintKeyPair.address.toString(),
-                            },
-                            ataAddress: ataAddress.toString(),
-                            liquidity,
-                            mintKeyPair,
+                            metadata,  
+                            positionId: personalPosition.toString(),
                         }
                     },
                 })
@@ -171,37 +177,40 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     }
 
     async execute({
-        bot,
-        state,
         isRetry,
         txHash,
         solanaTx,
-        ataAddress,
-        liquidity,
+        positionId,
+        bot,
+        state,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
-        if (!liquidity) {
-            throw new LiquidityNotSetException("Liquidity not set")
-        }
-        if (!ataAddress) {
-            throw new AtaAddressNotSetException("Ata address not set")
+        if (!positionId) {
+            throw new PositionIdNotSetException("Position id not set")
         }
         const _state = state as LiquidityPoolState
-        return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
-            callback: async ({ rpc, rpcSubscriptions }) => {
-                if (isRetry) {
-                    const transactionExisted = await rpc.getTransaction(signature(txHash)).send()
-                    if (transactionExisted) {
+        if (isRetry) {
+            return await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                callback: async ({ rpc }) => {
+                    const transaction = await rpc.getTransaction(
+                        signature(txHash), 
+                        { commitment: "confirmed", encoding: "base58" }
+                    ).send()
+                    if (transaction) {
                         return {
-                            liquidity,
-                            positionId: ataAddress,
+                            positionId: positionId.toString(),
                         }
                     }
                     throw new TransactionNotExecutedException("Transaction not executed")
-                }
-                if (!solanaTx) {
-                    throw new TransactionNotPreparedException("Transaction not prepared")
-                }
+                },
+            })  
+        }
+        if (!solanaTx) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
+        return await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Write,
+            callback: async ({ rpc, rpcSubscriptions }) => {    
                 const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                     rpc,
                     rpcSubscriptions,
@@ -221,8 +230,31 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     }
                 )
                 return {
-                    liquidity,
-                    positionId: ataAddress,
+                    positionId,
+                }
+            },
+        })
+    }
+
+    async confirm(
+        {
+            positionId,
+        }: ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResponse> {
+        return await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
+            callback: async ({ rpc }) => {
+                const positionInfo = await fetchEncodedAccount(
+                    rpc, 
+                    address(positionId), {
+                        commitment: "confirmed",
+                    })
+                if (!positionInfo || !positionInfo.exists) {
+                    throw new PositionNotFoundException("Position not found")
+                }
+                const [personalPositionState] = PersonalPositionState.struct.deserialize(Buffer.from(positionInfo.data), 8)
+                return {
+                    liquidity: new BN(personalPositionState.liquidity.toString()),
                 }
             },
         })

@@ -13,6 +13,7 @@ import {
 } from "@modules/databases"
 import {
     TokenNotFoundException,
+    TransactionNotExecutedException,
 } from "@exceptions"
 import BN from "bn.js"
 import {
@@ -222,33 +223,24 @@ export class SolanaBalanceService implements IBalanceService {
             tokenOut,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
+        if (isRetry) {
+            return await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                callback: async ({ rpc }) => {
+                    const transaction = await rpc.getTransaction(signature(txHash), { commitment: "confirmed", encoding: "base58" }).send()
+                    if (transaction) {
+                        return
+                    }
+                    throw new TransactionNotExecutedException("Transaction not executed")
+                },
+            })
+        }
+        if (!solanaTx) {
+            throw new Error("Solana transaction not prepared")
+        }
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
-                if (isRetry) {
-                    const transactionExisted = await rpc.getTransaction(
-                        signature(txHash),
-                        { 
-                            commitment: "confirmed", 
-                            encoding: "base58", 
-                            maxSupportedTransactionVersion: 0
-                        }
-                    ).send()
-                    if (transactionExisted) {
-                        this.logger.debug(
-                            WinstonLog.TransactionAlreadyExecuted, {
-                                txHash: txHash,
-                                bot: bot.id,
-                                tokenIn,
-                                tokenOut,
-                            }
-                        )
-                        return
-                    }
-                }
-                if (!solanaTx) {
-                    throw new Error("Solana transaction not prepared")
-                }
                 const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                     rpc,
                     rpcSubscriptions,

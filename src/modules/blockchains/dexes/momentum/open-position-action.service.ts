@@ -6,6 +6,8 @@ import {
     PrepareOpenPositionResponse,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResponse,
+    ConfirmOpenPositionParams,
+    ConfirmOpenPositionResponse,
 } from "../../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
@@ -41,6 +43,10 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) {}
+    
+    confirm(params: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
+        throw new Error("Method not implemented.")
+    }
 
     async prepare(
         {

@@ -23,9 +23,10 @@ import { SolanaTx } from "@modules/blockchains"
 import { Transaction } from "@mysten/sui/transactions"
 import { envConfig } from "@modules/env"
 import { AsyncService } from "@modules/mixin"
+
 @Worker(
     bullData[
-        BullQueueName.ReconcileBalance].name, 
+        BullQueueName.ReconcileBalance].name,
     {
         concurrency: envConfig().bullmq.concurrency,
         lockDuration: envConfig().bullmq.lockDuration,
@@ -33,15 +34,15 @@ import { AsyncService } from "@modules/mixin"
 )
 export class ReconcileBalanceWorker extends WorkerHost {
     constructor(
-    private readonly mutexService: MutexService,
-    private readonly eventEmitter: EventEmitter2,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
-    private readonly balanceService: BalanceService,
-    private readonly balanceSnapshotService: BalanceSnapshotService,
-    private readonly asyncService: AsyncService,
+        private readonly mutexService: MutexService,
+        private readonly eventEmitter: EventEmitter2,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
+        private readonly balanceService: BalanceService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly asyncService: AsyncService,
     ) {
         super()
     }
@@ -56,7 +57,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         },
         attemptsMade,
     }: Job<ReconcileBalancePayload>) {
-    // check if the mutex is locked
+        // check if the mutex is locked
         const isRetry = attemptsMade > 0
         let job: JobSchema | null = null
         if (isRetry) {
@@ -75,8 +76,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
         // if the snapshot balances are provided, use them
         if (
             !targetBalanceAmount ||
-      !quoteBalanceAmount ||
-      !gasBalanceAmount
+            !quoteBalanceAmount ||
+            !gasBalanceAmount
         ) {
             const {
                 targetBalanceAmount: fetchedTargetBalanceAmount,
@@ -122,17 +123,34 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 }
                 // prepare for the swap
                 const { txHash: preparedTxHash, solanaTx: preparedSolanaTx, txb: preparedTxb } =
-          await this.balanceService.prepareSwapTransaction({
-              bot,
-              tokenIn,
-              tokenOut,
-              amountIn: plan.amountIn,
-              estimatedSwappedAmount: plan.estimatedSwappedAmount,
-          })
+                    await this.balanceService.prepareSwapTransaction({
+                        bot,
+                        tokenIn,
+                        tokenOut,
+                        amountIn: plan.amountIn,
+                        estimatedSwappedAmount: plan.estimatedSwappedAmount,
+                    })
                 txHash = preparedTxHash
                 solanaTx = preparedSolanaTx
                 txb = preparedTxb
             }
+            // update the job with the swap transaction
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                {
+                    _id: jobId,
+                },
+                {
+                    $set: {
+                        txHash,
+                        status: JobStatus.Prepared,
+                        data: {
+                            tokenIn,
+                            tokenOut,
+                            needsSwap
+                        },
+                    },
+                },
+            )
         } else {
             if (!job?.txHash) {
                 throw new UnrecoverableError("Transaction hash not found")
@@ -146,55 +164,25 @@ export class ReconcileBalanceWorker extends WorkerHost {
             tokenOut = data.tokenOut
             needsSwap = data.needsSwap
         }
-        // update the job with the swap transaction
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: jobId,
-            },
-            {
-                $set: {
-                    txHash,
-                    status: JobStatus.Prepared,
-                    data: {
-                        tokenIn,
-                        tokenOut,
-                        needsSwap
-                    },
-                },
-            },
-        )
         // we send the transaction to the network
         if (order < getJobStatusOrder(JobStatus.Executed)) {
             if (needsSwap) {
                 if (!tokenIn || !tokenOut) {
                     throw new UnrecoverableError("Token in or token out not found during swap execution")
                 }
-                const [, error] = await this.asyncService.resolveTuple(this.balanceService.executeSwapTransaction(
-                    {
-                        bot,
-                        txHash,
-                        tokenIn,
-                        tokenOut,
-                        isRetry,
-                        solanaTx,
-                        txb,
-                    }),
+                const [, error] = await this.asyncService.resolveTuple(
+                    this.balanceService.executeSwapTransaction(
+                        {
+                            bot,
+                            txHash,
+                            tokenIn,
+                            tokenOut,
+                            isRetry,
+                            solanaTx,
+                            txb,
+                        }),
                 )
                 if (error) {
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        {
-                            _id: jobId,
-                        },
-                        {
-                            $set: {
-                                status: JobStatus.Failed,
-                            },
-                            $unset: {
-                                txHash: 1,
-                                data: 1,
-                            },
-                        },
-                    )
                     throw new UnrecoverableError("Failed to execute swap transaction")
                 }
                 await this.connection.model<JobSchema>(JobSchema.name).updateOne(
@@ -229,24 +217,9 @@ export class ReconcileBalanceWorker extends WorkerHost {
             quoteBalanceAmount,
             gasBalanceAmount,
         })
-        // we turn the job to completed
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            {
-                _id: jobId,
-            },
-            {
-                $set: {
-                    status: JobStatus.Completed,
-                },
-                $unset: {
-                    txHash: 1,
-                    data: 1,
-                },
-            },
-        )
     }
 
-  @OnWorkerEvent("failed")
+    @OnWorkerEvent("failed")
     async onFailed(job: Job<ReconcileBalancePayload>, error: Error) {
         const { bot, jobId } = job.data
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
@@ -258,6 +231,10 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 jobId,
                 error: error.message,
             })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                { _id: jobId },
+                { $set: { status: JobStatus.Failed } }
+            )
             mutex.release()
         }
         this.logger.warn(WinstonLog.ReconcileBalanceRetrying, {
@@ -267,19 +244,23 @@ export class ReconcileBalanceWorker extends WorkerHost {
         })
     }
 
-  @OnWorkerEvent("completed")
-  async onCompleted(job: Job<ReconcileBalancePayload>) {
-      const { bot, jobId } = job.data
-      const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
-      this.eventEmitter.emit(
-          createEventName(EventName.UpdateActiveBot, {
-              botId: bot.id,
-          }),
-      )
-      this.logger.info(WinstonLog.ReconcileBalanceSuccess, {
-          botId: bot.id,
-          jobId,
-      })
-      mutex.release()
-  }
+    @OnWorkerEvent("completed")
+    async onCompleted(job: Job<ReconcileBalancePayload>) {
+        const { bot, jobId } = job.data
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        this.eventEmitter.emit(
+            createEventName(EventName.UpdateActiveBot, {
+                botId: bot.id,
+            }),
+        )
+        this.logger.info(WinstonLog.ReconcileBalanceSuccess, {
+            botId: bot.id,
+            jobId,
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            { _id: jobId },
+            { $set: { status: JobStatus.Completed } }
+        )
+        mutex.release()
+    }
 }

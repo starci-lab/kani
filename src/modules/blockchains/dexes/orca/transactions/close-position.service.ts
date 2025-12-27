@@ -45,6 +45,7 @@ export class ClosePositionInstructionService {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
+        const { ataAddress, nftMintAddress } = bot.activePosition.metadata as OrcaPositionMetadata
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString(),
         )
@@ -55,9 +56,7 @@ export class ClosePositionInstructionService {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
         const { programAddress, tokenVault0, tokenVault1 } = state.static
-            .metadata as RaydiumLiquidityPoolMetadata
-        const { nftMintAddress } = bot.activePosition
-            .metadata as OrcaPositionMetadata
+            .metadata as RaydiumLiquidityPoolMetadata 
         const { pda: positionPda } = await this.positionService.getPda({
             nftMintAddress: address(nftMintAddress),
             programAddress: address(programAddress),
@@ -132,7 +131,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(ataAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {

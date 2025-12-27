@@ -94,3 +94,22 @@ export interface ReconcileBalanceJobData {
     tokenIn: TokenId
     tokenOut: TokenId
 }
+
+export interface ClosePositionJobData {
+    positionId: string
+}
+
+export interface OpenPositionJobData {
+    txHash: string
+    feeAmountA: string
+    feeAmountB: string
+    tickLower: string
+    tickUpper: string
+    amountA: string
+    amountB: string
+    minBinId: string
+    maxBinId: string
+    metadata: unknown
+    ataAddress: string
+    positionId: string
+}

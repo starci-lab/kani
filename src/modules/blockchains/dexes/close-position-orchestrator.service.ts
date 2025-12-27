@@ -21,6 +21,9 @@ import { v4 } from "uuid"
 import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Connection } from "mongoose"
 import { envConfig } from "@modules/env"
+import { ExitStrategyEngineOutputService } from "../exit-strategy-engine"
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -41,6 +44,9 @@ export class ClosePositionOrchestratorService {
         private readonly mutexService: MutexService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     async enqueue(
@@ -105,6 +111,23 @@ export class ClosePositionOrchestratorService {
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
             throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }
+        /**
+         * Check if the position can be closed
+         */
+        const { willExit, reasons } = await this.exitStrategyEngineOutputService.willExit({
+            bot,
+            state,
+        })
+        if (willExit) {
+            this.logger.verbose(
+                WinstonLog.ClosePositionNotExitable, {
+                    botId: bot.id,
+                    liquidityPoolId,
+                    reasons,
+                }
+            )
+            return
+        }
         /* 
          * Lock the mutex to prevent concurrent actions on the same bot
          */
@@ -127,12 +150,19 @@ export class ClosePositionOrchestratorService {
                     status: JobStatus.Pending,
                 }
             ])
-        this.closePositionQueue.add(
+        await this.closePositionQueue.add(
             v4(),
             {
                 jobId: jobRaw.toJSON().id,
                 state,
                 bot,
+            }
+        )
+        this.logger.verbose(
+            WinstonLog.ClosePositionEnqueued, {
+                botId: bot.id,
+                jobId: jobRaw.toJSON().id,
+                liquidityPoolId,
             }
         )
     }

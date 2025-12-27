@@ -18,8 +18,12 @@ import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
 import { MutexModule } from "@modules/lock"
-import { BalancesModule, SnapshotsModule } from "@modules/blockchains"
-import { TxBuilderModule } from "@modules/blockchains"
+import { 
+    TxBuilderModule, 
+    ExitStrategyEngineModule, 
+    BalancesModule, 
+    SnapshotsModule 
+} from "@modules/blockchains"
 import { GcpModule } from "@modules/gcp"
 import { SpinnerModule } from "@modules/topcli"
 import { BullModule } from "@modules/bullmq"
@@ -45,6 +49,9 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
             isGlobal: true,
             appName: `kani-executor-${envConfig().botExecutor.executorId}`,
             level: WinstonLevel.Debug,
+        }),
+        ExitStrategyEngineModule.register({
+            isGlobal: true,
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,

@@ -94,10 +94,10 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.activePosition) {
                     return
                 }
-                // await this.closePositionOrchestratorService.enqueue({
-                //     liquidityPoolId: payload.liquidityPoolId,
-                //     bot: this.bot,
-                // })
+                await this.closePositionOrchestratorService.enqueue({
+                    liquidityPoolId: payload.liquidityPoolId,
+                    bot: this.bot,
+                })
             }
         )
         this.readinessWatcherFactoryService.setReady(

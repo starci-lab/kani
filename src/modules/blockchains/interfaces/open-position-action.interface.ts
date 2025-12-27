@@ -6,7 +6,6 @@ import { Decimal } from "decimal.js"
 import { Transaction } from "@mysten/sui/transactions"
 import { SolanaTx } from "./types"
 import { DlmmLiquidityPoolState, LiquidityPoolState, PrepareOpenPositionParams } from "./types"
-import { KeyPairSigner } from "@solana/kit"
 
 export interface PrepareOpenPositionResponse {
   txHash: string;
@@ -21,9 +20,7 @@ export interface PrepareOpenPositionResponse {
   minBinId?: Decimal;
   maxBinId?: Decimal;
   metadata?: unknown;
-  ataAddress?: string;
-  liquidity?: BN;
-  mintKeyPair?: KeyPairSigner;
+  positionId?: string;
 }
 
 export interface ExecuteOpenPositionParams {
@@ -35,13 +32,10 @@ export interface ExecuteOpenPositionParams {
     txHash: string;
     feeAmountA: BN;
     feeAmountB: BN;
-    metadata?: unknown;
-    ataAddress?: string;
-    liquidity?: BN;
+    positionId?: string;
 }
 
 export interface ExecuteOpenPositionResponse {
-  liquidity?: BN;
   positionId: string;
 }
 
@@ -53,6 +47,10 @@ export interface IOpenActionService {
   execute(
     params: ExecuteOpenPositionParams,
   ): Promise<ExecuteOpenPositionResponse>;
+  // confirm open position
+  confirm(
+    params: ConfirmOpenPositionParams,
+  ): Promise<ConfirmOpenPositionResponse>;
 }
 
 export interface CreateExecuteResponse {
@@ -77,4 +75,13 @@ export interface CreateExecuteResponse {
   amountA?: BN;
   // amount b
   amountB?: BN;
+}
+
+export interface ConfirmOpenPositionParams {
+  positionId: string;
+  state: LiquidityPoolState | DlmmLiquidityPoolState;
+}
+
+export interface ConfirmOpenPositionResponse {
+  liquidity?: BN;
 }

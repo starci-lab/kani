@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import {
+    ConfirmOpenPositionParams,
+    ConfirmOpenPositionResponse,
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
@@ -53,6 +55,10 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
+
+    confirm(params: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
+        throw new Error("Method not implemented.")
+    }
 
     async prepare(
         {
@@ -121,11 +127,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             state: _state,
             tickUpper,
         })
-        // get the tx hash
-        const txHash = await openPositionTxb.getDigest()
-        // return the prepare response
+        // sign the txb
         return {
-            txHash,
             txb: openPositionTxb,
             feeAmountA,
             feeAmountB,
@@ -179,7 +182,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         await suiClient.waitForTransaction({
                             digest,
                         })
-                        this.logger.info(
+                        this.logger.verbose(
                             WinstonLog.OpenPositionExecuted, {
                                 botId: bot.id,
                                 txHash: digest,

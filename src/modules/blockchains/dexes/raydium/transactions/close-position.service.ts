@@ -24,7 +24,6 @@ import { LiquidityPoolState } from "../../../interfaces"
 import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
 import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
-import { PersonalPositionService } from "./personal-position.service"
 import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
 import { RaydiumRewardInfo } from "../observer.service"
 
@@ -40,7 +39,6 @@ export class ClosePositionInstructionService {
         private readonly ataInstructionService: AtaInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly tickArrayService: TickArrayService,
-        private readonly personalPositionService: PersonalPositionService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -67,13 +65,9 @@ export class ClosePositionInstructionService {
         } = state.static.metadata as RaydiumLiquidityPoolMetadata
         const {
             nftMintAddress,
+            ataAddress
         } = bot.activePosition.metadata as RaydiumPositionMetadata
-        const {
-            pda: personalPositionPda,
-        } = await this.personalPositionService.getPda({
-            nftMintAddress: address(nftMintAddress),
-            programAddress: address(programAddress),
-        })
+        const personalPositionPda = address(bot.activePosition.positionId)  
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
             tickIndex: bot.activePosition.tickLower ?? 0,
@@ -165,7 +159,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE_SIGNER,
                 },
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(ataAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -245,11 +239,11 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(ataAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(personalPositionPda),
+                    address: personalPositionPda,
                     role: AccountRole.WRITABLE,
                 },
                 {

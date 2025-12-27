@@ -6,6 +6,8 @@ import {
     PrepareOpenPositionResponse,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResponse,
+    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionParams,
 } from "../../interfaces"
 import { SignerService } from "../../signers"
 import { PrimaryMemoryStorageService } from "@modules/databases"
@@ -13,7 +15,9 @@ import {
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionNotPreparedException,
-    AtaAddressNotSetException,
+    PositionNotFoundException,
+    TransactionNotExecutedException,
+    PositionIdNotSetException,
 } from "@exceptions"
 import { 
     pipe,
@@ -29,6 +33,8 @@ import {
     signTransaction,
     assertIsTransactionWithinSizeLimit,
     assertIsSendableTransaction,
+    address,
+    fetchEncodedAccount,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -134,27 +140,36 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         state,
         isRetry,
         solanaTx,
-        ataAddress,
         txHash,
+        positionId,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
-        if (!ataAddress) {
-            throw new AtaAddressNotSetException("Ata address not set")
+        if (!positionId) {
+            throw new PositionIdNotSetException("Position id not set")
         }
         const _state = state as DlmmLiquidityPoolState
+        if (isRetry) {
+            return await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Read,
+                callback: async ({ rpc }) => {
+                    const transaction = await rpc.getTransaction(
+                        signature(txHash), 
+                        { commitment: "confirmed", encoding: "base58" }
+                    ).send()
+                    if (transaction) {
+                        return {
+                            positionId: positionId.toString(),
+                        }
+                    }
+                    throw new TransactionNotExecutedException("Transaction not executed")
+                },
+            })
+        }
+        if (!solanaTx) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
-                if (isRetry) {
-                    const transactionExisted = await rpc.getTransaction(signature(txHash.toString())).send()
-                    if (transactionExisted) {
-                        return {
-                            positionId: ataAddress,
-                        }
-                    }
-                }
-                if (!solanaTx) {
-                    throw new TransactionNotPreparedException("Transaction not prepared")
-                }
                 const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                     rpc,
                     rpcSubscriptions,
@@ -172,10 +187,32 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     }
                 )
                 return {
-                    positionId: ataAddress,
+                    positionId,
+                }
+            },
+        })
+    }
+
+    async confirm(
+        {
+            positionId,
+        }: ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResponse> {
+        return await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Read,
+            callback: async ({ rpc }) => {
+                const positionInfo = await fetchEncodedAccount(
+                    rpc, 
+                    address(positionId), {
+                        commitment: "confirmed",
+                    })
+                if (!positionInfo || !positionInfo.exists) {
+                    throw new PositionNotFoundException("Position not found")
+                }
+                return {
+                    // temporary empty, will need other logic to get liquidity
                 }
             },
         })
     }
 }
-

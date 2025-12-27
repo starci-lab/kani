@@ -356,6 +356,7 @@ export class OpenPositionInstructionService {
         return {
             mintKeyPair,
             ataAddress,
+            personalPosition: positionPda,
             instructions,
             feeAmountA: amountAMax,
             feeAmountB: amountBMax,
@@ -376,6 +377,7 @@ export interface CreateOpenPositionInstructionsParams {
 export interface CreateOpenPositionInstructionsResponse {
   instructions: Array<Instruction>;
   mintKeyPair: KeyPairSigner;
+  personalPosition: Address;
   ataAddress: Address;
   feeAmountA: BN;
   feeAmountB: BN;

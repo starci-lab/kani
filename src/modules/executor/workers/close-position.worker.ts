@@ -1,7 +1,7 @@
 import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
 import { MutexKey, getMutexKey, MutexService } from "@modules/lock"
-import { Job } from "bullmq"
+import { Job, UnrecoverableError } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
     BalanceService,
@@ -13,7 +13,7 @@ import {
     ProfitabilityMathService,
     CalculateProfitability,
 } from "@modules/blockchains"
-import { 
+import {
     getJobStatusOrder,
     InjectPrimaryMongoose, 
     JobSchema, 
@@ -79,10 +79,10 @@ export class ClosePositionWorker extends WorkerHost {
             attemptsMade,
         }: Job<ClosePositionPayload>
     ) {
-        // retrieve the mutex
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
-        )
+        // Validate active position exists
+        if (!bot.activePosition) {
+            throw new UnrecoverableError("Active position not found")
+        }
         // check if the mutex is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
@@ -93,14 +93,13 @@ export class ClosePositionWorker extends WorkerHost {
             ).findById(jobId)
             if (!job) {
                 // job not found, cancel the job
-                return
+                throw new UnrecoverableError("Job not found")
             }
         }
         const order = getJobStatusOrder(job?.status || JobStatus.Pending)
         let txHash: string
         let txb: Transaction | undefined = undefined
         let solanaTx: SolanaTx | undefined = undefined
-
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
             // prepare the transaction and get the result
             const { 
@@ -128,51 +127,35 @@ export class ClosePositionWorker extends WorkerHost {
             solanaTx = preparedSolanaTx
         } else {
             if (!job?.txHash) {
-                return
+                throw new UnrecoverableError("Transaction hash not found")
             }
             txHash = job.txHash
-            txb = (job.metadata as { txb?: Transaction })?.txb
-            solanaTx = (job.metadata as { solanaTx?: SolanaTx })?.solanaTx
         }
-
-        const [, error] = await this.asyncService.resolveTuple(
-            this.closePositionOrchestratorService.execute({
-                bot,
-                state,
-                isRetry,
-                txHash,
-                txb,
-                solanaTx,
-            }))
-        // if error found, return, cancel the job
-        if (error) {
+        if (order < getJobStatusOrder(JobStatus.Executed)) {
+            const [, error] = await this.asyncService.resolveTuple(
+                this.closePositionOrchestratorService.execute({
+                    bot,
+                    state,
+                    isRetry,
+                    txHash,
+                    txb,
+                    solanaTx,
+                }))
+            // if error found, return, cancel the job
+            if (error) {
+                throw new UnrecoverableError("Failed to execute close position transaction")
+            }
             await this.connection.model<JobSchema>(
                 JobSchema.name
             ).updateOne(
                 { _id: jobId },
                 {
-                    status: JobStatus.Failed,
+                    $set: {
+                        status: JobStatus.Executed,
+                    },
                 }
             )
-            throw error
         }
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne(
-            { _id: jobId },
-            {
-                status: JobStatus.Executed,
-            }
-        )
-
-        // Validate active position exists
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException(
-                bot.id,
-                "Active position not found",
-            )
-        }
-
         // Get tokens for profitability calculation
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString(),
@@ -189,7 +172,6 @@ export class ClosePositionWorker extends WorkerHost {
         const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
-
         // Get snapshot balances before open
         const {
             snapshotTargetBalanceAmountBeforeOpen,
@@ -277,42 +259,57 @@ export class ClosePositionWorker extends WorkerHost {
                 snapshotGasBalanceAmountAfterClose: new BN(gasBalanceAmountBN || 0),
             })
         })
-
-        // Emit events for other parts of the system to react to
-        this.eventEmitter.emit(
-            createEventName(EventName.UpdateActiveBot, { botId: bot.id }),
-        )
-        this.eventEmitter.emit(
-            createEventName(EventName.PositionClosed, { botId: bot.id }),
-        )
-
-        // Log successful processing
-        this.logger.verbose(
-            WinstonLog.ClosePositionSuccess, {
-                botId: bot.id,
-                positionId: bot.activePosition.id,
-            })
-        // Release the mutex after processing the position
-        mutex.release()
-        // update the job status to completed
-        await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).updateOne(
-            { _id: jobId },
-            {
-                status: JobStatus.Completed,
-            }
-        )
     }
 
     @OnWorkerEvent("failed")
     async onFailed(job: Job<ClosePositionPayload>, error: Error) {
         const { bot, jobId } = job.data
-        this.logger.error(WinstonLog.ClosePositionFailed, {
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const maxAttempts = job.opts.attempts ?? 1
+        const isPermanentFailure = job.attemptsMade >= maxAttempts
+        if (isPermanentFailure) {
+            this.logger.error(WinstonLog.ClosePositionFailed, {
+                botId: bot.id,
+                jobId,
+                error: error.message,
+                stack: error.stack,
+            })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                { _id: jobId },
+                { $set: { status: JobStatus.Failed } }
+            )
+            mutex.release()
+        }
+        this.logger.warn(WinstonLog.ClosePositionRetrying, {
             botId: bot.id,
             jobId,
             error: error.message,
             stack: error.stack,
         })
+    }
+
+    @OnWorkerEvent("completed")
+    async onCompleted(job: Job<ClosePositionPayload>) {
+        const { bot, jobId } = job.data
+        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        this.eventEmitter.emit(
+            createEventName(EventName.UpdateActiveBot, {
+                botId: bot.id,
+            }),
+        )
+        this.eventEmitter.emit(
+            createEventName(EventName.PositionClosed, {
+                botId: bot.id,
+            }),
+        )
+        this.logger.info(WinstonLog.ClosePositionSuccess, {
+            botId: bot.id,
+            jobId,
+        })
+        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+            { _id: jobId },
+            { $set: { status: JobStatus.Completed } }
+        )
+        mutex.release()
     }
 }

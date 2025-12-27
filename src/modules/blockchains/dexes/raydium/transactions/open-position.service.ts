@@ -330,6 +330,7 @@ export class OpenPositionInstructionService {
             ataAddress,
             feeAmountA,
             feeAmountB,
+            personalPosition: personalPositionPda,
         }
     }
 }
@@ -340,6 +341,7 @@ export interface CreateOpenPositionInstructionsResponse {
     ataAddress: Address
     feeAmountA: BN
     feeAmountB: BN
+    personalPosition: Address
 }
 
 export const OpenPositionArgs = new BeetArgsStruct(

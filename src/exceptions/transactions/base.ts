@@ -47,3 +47,15 @@ export class AtaAddressNotSetException extends AbstractException {
         super(message || "Ata address not set", "ATA_ADDRESS_NOT_SET_EXCEPTION")
     }
 }
+
+export class PositionIdNotSetException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Position id not set", "POSITION_ID_NOT_SET_EXCEPTION")
+    }
+}
+
+export class PositionNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Position not found", "POSITION_NOT_FOUND_EXCEPTION")
+    }
+}

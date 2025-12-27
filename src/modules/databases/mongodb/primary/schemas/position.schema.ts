@@ -155,9 +155,14 @@ PositionSchemaClass.index({ bot: 1, isActive: 1, positionClosedAt: 1 }, { unique
 
 export interface RaydiumPositionMetadata {
     nftMintAddress: string
+    ataAddress: string
 }
 
 export interface OrcaPositionMetadata {
     nftMintAddress: string
+    ataAddress: string
 }
 
+export interface MeteoraPositionMetadata {
+    ataAddress: string
+}

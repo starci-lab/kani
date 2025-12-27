@@ -23,6 +23,8 @@ import { OrcaOpenPositionActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraOpenPositionActionService } from "./meteora"
 import { 
+    ConfirmOpenPositionParams,
+    ConfirmOpenPositionResponse,
     DlmmLiquidityPoolState, 
     ExecuteOpenPositionParams, 
     ExecuteOpenPositionResponse, 
@@ -445,6 +447,41 @@ export class OpenPositionOrchestratorService {
         }
         default: {
             throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported for execute`)
+        }
+        }
+    }
+
+    async confirm(
+        params: ConfirmOpenPositionParams,
+    ): Promise<ConfirmOpenPositionResponse> {
+        const { state } = params
+        const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
+        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
+        if (!dex) throw new DexNotFoundException("Dex not found")
+        if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
+            throw new DexNotImplementedException(`Dex ${_state.static.dex.toString()} not supported`)
+        }
+        switch (dex.displayId) {
+        case DexId.FlowX: {
+            return await this.flowxOpenPositionActionService.confirm(params)
+        }
+        case DexId.Cetus: {
+            return await this.cetusOpenPositionActionService.confirm(params)
+        }
+        case DexId.Turbos: {
+            return await this.turbosOpenPositionActionService.confirm(params)
+        }
+        case DexId.Momentum: {
+            return await this.momentumOpenPositionActionService.confirm(params)
+        }
+        case DexId.Raydium: {
+            return await this.raydiumOpenPositionActionService.confirm(params)
+        }
+        case DexId.Orca: {
+            return await this.orcaOpenPositionActionService.confirm(params)
+        }
+        default: {
+            throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported for confirm`)
         }
         }
     }

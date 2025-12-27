@@ -38,6 +38,7 @@ export enum WinstonLog {
     ClosePositionConfirmationFailed = "Close.Position.Confirmation.Failed",
     ClosePositionSuccess = "Close.Position.Success",
     ClosePositionFailed = "Close.Position.Failed",
+    ClosePositionRetrying = "Close.Position.Retrying",
     PoolNotOpenable = "Pool.Not.Openable",
     PoolOpened = "Pool.Opened",
     NoOpenablePools = "No.Openable.Pools",
@@ -92,4 +93,6 @@ export enum WinstonLog {
     ReconcileBalanceEnqueued = "Reconcile.Balance.Enqueued",
     OpenPositionEnqueued = "Open.Position.Enqueued",
     ClosePositionEnqueued = "Close.Position.Enqueued",
+    ClosePositionExecuted = "Close.Position.Executed",
+    ClosePositionNotExitable = "Close.Position.Not.Exitable",
 }
