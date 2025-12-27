@@ -168,7 +168,6 @@ export class ClosePositionWorker extends WorkerHost {
                 "Either token A or token B is not in the pool",
             )
         }
-
         const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
@@ -187,7 +186,6 @@ export class ClosePositionWorker extends WorkerHost {
                 "Snapshot balances before open not set",
             )
         }
-
         // Fetch current balances after close
         const {
             targetBalanceAmount: afterTargetBalanceAmount,
@@ -199,7 +197,6 @@ export class ClosePositionWorker extends WorkerHost {
         const targetBalanceAmountBN = new BN(afterTargetBalanceAmount)
         const quoteBalanceAmountBN = new BN(afterQuoteBalanceAmount)
         const gasBalanceAmountBN = new BN(afterGasBalanceAmount)
-
         // Calculate profitability
         const before: CalculateProfitability = {
             targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
@@ -218,7 +215,6 @@ export class ClosePositionWorker extends WorkerHost {
             quoteTokenId: quoteToken.displayId,
             chainId: bot.chainId,
         })
-
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
@@ -272,7 +268,6 @@ export class ClosePositionWorker extends WorkerHost {
                 botId: bot.id,
                 jobId,
                 error: error.message,
-                stack: error.stack,
             })
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
@@ -280,12 +275,12 @@ export class ClosePositionWorker extends WorkerHost {
             )
             mutex.release()
         }
-        this.logger.warn(WinstonLog.ClosePositionRetrying, {
-            botId: bot.id,
-            jobId,
-            error: error.message,
-            stack: error.stack,
-        })
+        this.logger.warn(
+            WinstonLog.ClosePositionRetrying, {
+                botId: bot.id,
+                jobId,
+                error: error.message,
+            })
     }
 
     @OnWorkerEvent("completed")

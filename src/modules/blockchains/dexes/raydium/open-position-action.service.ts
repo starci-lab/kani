@@ -222,7 +222,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     }
                 )
-                this.logger.info(
+                this.logger.verbose(
                     WinstonLog.OpenPositionExecuted, {
                         botId: bot.id,
                         txHash,

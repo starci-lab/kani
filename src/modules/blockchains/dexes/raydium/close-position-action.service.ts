@@ -38,7 +38,7 @@ import {
     signature,
     assertIsSendableTransaction,
     assertIsTransactionWithinSizeLimit,
-    signTransaction,
+    signTransaction
 } from "@solana/kit"
 import { envConfig } from "@modules/env"
 
@@ -81,6 +81,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                     bot,
                     action: async (signer) => {
                         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                        // stimulate the transaction
                         const transactionMessage = pipe(
                             createTransactionMessage({ version: 0 }),
                             (tx) => addSignersToTransactionMessage([signer], tx),

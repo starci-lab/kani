@@ -181,7 +181,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(ataAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -228,7 +228,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(ataAddress),
                     role: AccountRole.WRITABLE,
                 },
                 {

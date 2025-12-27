@@ -38,7 +38,7 @@ import {
     signature,
     assertIsSendableTransaction,
     assertIsTransactionWithinSizeLimit,
-    signTransaction,
+    signTransaction
 } from "@solana/kit"
 import { envConfig } from "@modules/env"
 
@@ -110,6 +110,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
     async execute(
         { bot, state, isRetry, solanaTx, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
+
         if (!solanaTx) {
             throw new TransactionNotPreparedException("Transaction not prepared")
         }

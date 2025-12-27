@@ -86,7 +86,6 @@ export class ClosePositionOrchestratorService {
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException(liquidityPoolId, `Liquidity pool ${liquidityPoolId} not found`)
         }
-      
         /**
          * Fetch latest liquidity pool state
          * (DLMM and non-DLMM pools have different state handlers)
@@ -97,7 +96,6 @@ export class ClosePositionOrchestratorService {
         } else {
             state = await this.liquidityPoolStateService.getState(liquidityPoolId)
         }
-      
         /**
          * Validate that the pool's DEX exists
          */

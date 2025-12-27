@@ -99,6 +99,12 @@ export class OpenPositionOrchestratorService {
         if (mutex.isLocked()) {
             return
         }
+        /*
+         * Skip if the bot is not running
+         */
+        if (!bot.running) {
+            return
+        }
         /**
          * Skip job if:
          * - balance snapshot is missing
@@ -119,7 +125,6 @@ export class OpenPositionOrchestratorService {
             // Balance snapshot is not valid or not up to date
             return
         }
-
         /**
          * Retrieve target token from in-memory storage
          */
@@ -479,6 +484,9 @@ export class OpenPositionOrchestratorService {
         }
         case DexId.Orca: {
             return await this.orcaOpenPositionActionService.confirm(params)
+        }
+        case DexId.Meteora: {
+            return await this.meteoraOpenPositionActionService.confirm(params)
         }
         default: {
             throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported for confirm`)

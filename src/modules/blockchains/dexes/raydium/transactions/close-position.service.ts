@@ -67,6 +67,8 @@ export class ClosePositionInstructionService {
             nftMintAddress,
             ataAddress
         } = bot.activePosition.metadata as RaydiumPositionMetadata
+        console.log("nftMintAddress", nftMintAddress)
+        console.log("ataAddress", ataAddress)
         const personalPositionPda = address(bot.activePosition.positionId)  
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),

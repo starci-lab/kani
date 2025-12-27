@@ -115,7 +115,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         const signedTransaction = await signTransaction([signer.keyPair, positionKeyPair.keyPair], transaction)
                         assertIsSendableTransaction(signedTransaction)
                         assertIsTransactionWithinSizeLimit(signedTransaction)
-                        const transactionSignature = getSignatureFromTransaction(transaction)
+                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
                         const txHash = transactionSignature.toString()
                         return {
                             txHash,
@@ -179,7 +179,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         commitment: "confirmed",
                         maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
-                this.logger.info(
+                this.logger.verbose(
                     WinstonLog.OpenPositionExecuted, {
                         botId: bot.id,
                         txHash,
