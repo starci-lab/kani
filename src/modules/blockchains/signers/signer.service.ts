@@ -102,7 +102,7 @@ export class SignerService {
     }
 
     public async encryptPrivateKey(privateKey: string): Promise<string> {
-        return this.encryptionService.encrypt(privateKey)
+        return this.gcpKmsService.encrypt(privateKey)
     }
 
     private async decryptPrivateKey(privateKey: string): Promise<string> {

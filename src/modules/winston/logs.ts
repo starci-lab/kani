@@ -81,7 +81,7 @@ export enum WinstonLog {
     BalanceEvaluateOk = "Balance.Evaluate.Ok",
     SwapTransactionSuccess = "Swap.Transactions.Success",
     TransactionAlreadyExecuted = "Transaction.Already.Executed",
-    SwapTransactionExecuted = "Swap.Transactions.Executed",
+    SwapExecuted = "Swap.Executed",
     BotSnapshotBalancesUpdated = "Bot.Snapshot.Balances.Updated",
     ReconcileBalanceFailed = "Reconcile.Balance.Failed",
     ReconcileBalanceRetrying = "Reconcile.Balance.Retrying",

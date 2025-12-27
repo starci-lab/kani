@@ -237,11 +237,14 @@ export class ReconcileBalanceWorker extends WorkerHost {
             )
             mutex.release()
         }
-        this.logger.warn(WinstonLog.ReconcileBalanceRetrying, {
-            botId: bot.id,
-            jobId,
-            error: error.message,
-        })
+        this.logger.warn(
+            WinstonLog.ReconcileBalanceRetrying, {
+                botId: bot.id,
+                jobId,
+                error: error.message,
+                stack: error.stack,
+            }
+        )
     }
 
     @OnWorkerEvent("completed")

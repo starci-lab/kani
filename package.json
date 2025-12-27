@@ -42,7 +42,7 @@
     "@meteora-sdk/core": "^1.4.6",
     "@mmt-finance/clmm-sdk": "^1.3.20",
     "@mysten/bcs": "^1.7.0",
-    "@mysten/sui": "^1.37.6",
+    "@mysten/sui": "^1.45.2",
     "@nest-lab/throttler-storage-redis": "^1.1.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/apollo": "^13.1.0",

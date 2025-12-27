@@ -75,29 +75,30 @@ export class CetusAggregatorService implements IAggregatorService {
     async swap({ 
         payload, 
         txb,
-        inputCoin
+        inputCoin,
+        accountAddress,
     }: SwapRequest): Promise<SwapResponse> {
+        const _payload = payload as unknown as RouterDataV3 
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
+            accessType: RpcAccessType.Read,
             callback: async ({ suiClient }) => {
                 const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                 const _txb = txb || new Transaction()
-                const router = payload as RouterDataV3 
+                _txb.setSender(accountAddress)
                 // no slippage
-                const slippage = 0.999
                 const outputCoin = await this.retryService.retry({
                     action: async () => {
                         if (!inputCoin) {
                             await cetusAggregatorClient.fastRouterSwap({
-                                router,
-                                slippage,
+                                router: _payload,
+                                slippage: envConfig().slippage.swap,
                                 txb: _txb,
                             })
                             return undefined
                         }
                         return await cetusAggregatorClient.routerSwap({
-                            router,
-                            slippage,
+                            router: _payload,
+                            slippage: envConfig().slippage.swap,
                             txb: _txb,
                             inputCoin,
                         })
@@ -109,7 +110,7 @@ export class CetusAggregatorService implements IAggregatorService {
                 return {
                     outputCoin,
                     payload: null,
-                    txb
+                    txb: _txb,
                 }
             },
         })

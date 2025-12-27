@@ -29,6 +29,7 @@ export const envConfig = () => ({
     slippage: {
         openPosition: parseFloat(process.env.SLIPPAGE_OPEN_POSITION || "0.05"),
         closePosition: parseFloat(process.env.SLIPPAGE_CLOSE_POSITION || "0.9999"),
+        swap: parseFloat(process.env.SLIPPAGE_SWAP || "0.9999"),
     },
     kubernetes: {
         podNamespace: process.env.POD_NAMESPACE || "default",

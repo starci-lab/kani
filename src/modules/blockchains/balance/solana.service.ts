@@ -252,7 +252,7 @@ export class SolanaBalanceService implements IBalanceService {
                         maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
                 this.logger.verbose(
-                    WinstonLog.SwapTransactionExecuted, {
+                    WinstonLog.SwapExecuted, {
                         txHash: transactionSignature.toString(),
                         bot: bot.id,
                         tokenIn,

@@ -33,11 +33,13 @@ export class JwtAccessTokenOnlyMFAEnabledStrategy extends PassportStrategy(
 ) {
     constructor(
     ) {
-        super({
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            ignoreExpiration: false,
-            secretOrKey: getJwtSecretKey(),
-        })
+        super(
+            {
+                jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+                ignoreExpiration: false,
+                secretOrKey: getJwtSecretKey(),
+            }
+        )
     }
 
     validate(payload: UserJwtLike) {

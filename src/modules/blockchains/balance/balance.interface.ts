@@ -3,6 +3,7 @@ import BN from "bn.js"
 import Decimal from "decimal.js"
 import { SolanaTx } from "../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
@@ -93,7 +94,8 @@ export interface PrepareSwapTransactionParams {
 export interface PrepareSwapTransactionResponse {
     txHash: string
     solanaTx?: SolanaTx // Solana Transaction object
-    txb?: Transaction // Sui Transaction object
+    signatureWithBytes?: SignatureWithBytes
+    txb?: Transaction
 }
 
 export interface ExecuteSwapTransactionParams {

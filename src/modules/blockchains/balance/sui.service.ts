@@ -14,10 +14,12 @@ import { SuiAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
 import Decimal from "decimal.js"
 import { SignerService } from "../signers"
-import { InjectWinston } from "@modules/winston"
+import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
+import { Transaction } from "@mysten/sui/transactions"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -52,7 +54,7 @@ export class SuiBalanceService implements IBalanceService {
         this.ensureMathService.ensureActualNotAboveExpected({
             expected: estimatedSwappedAmount,
             actual: response.amountOut,
-            lowerBound: new Decimal(0.95),
+            lowerBound: new Decimal(envConfig().bounds.sui.swap.lowerBound),
         })
         const { outputCoin, txb } = await this.suiAggregatorSelectorService.selectorSwap({
             base: {
@@ -61,21 +63,25 @@ export class SuiBalanceService implements IBalanceService {
                 tokenOut,
                 accountAddress: bot.accountAddress,
             },
-            aggregatorId: aggregatorId,
+            aggregatorId,
         })
         if (!txb) {
-            throw new TransactionNotFoundException("Transaction is required")
+            throw new TransactionNotFoundException("Transaction not prepared")
         }
         // transfer the output coin to the bot's account address
         if (outputCoin) {
             txb.transferObjects([outputCoin], bot.accountAddress)
         }
-        // Calculate txHash from transaction bytes
-        const txHash = await txb.getDigest()
-        return {
-            txHash,
-            txb,
-        }
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                const txHash = await txb.getDigest({ client: suiClient })
+                return {
+                    txHash,
+                    txb,
+                }
+            },
+        })
     }
 
     async executeSwapTransaction(
@@ -84,6 +90,8 @@ export class SuiBalanceService implements IBalanceService {
             txHash,
             txb,
             isRetry,
+            tokenIn,
+            tokenOut,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
         if (!txb) {
@@ -93,20 +101,31 @@ export class SuiBalanceService implements IBalanceService {
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (isRetry) {
-                    const transactionExisted = await suiClient.getTransactionBlock({
+                    const transaction = await suiClient.getTransactionBlock({
                         digest: txHash,
                     })
-                    if (transactionExisted) {
+                    if (transaction) {
                         return
                     }
                 }
                 await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        await suiClient.signAndExecuteTransaction({
+                        const { digest } = await suiClient.signAndExecuteTransaction({
                             transaction: txb,
                             signer,
                         })
+                        await suiClient.waitForTransaction({
+                            digest,
+                        })
+                        this.logger.verbose(
+                            WinstonLog.SwapExecuted, {
+                                botId: bot.id,
+                                txHash,
+                                tokenIn,
+                                tokenOut,
+                            }
+                        )
                     },
                 })
             }
