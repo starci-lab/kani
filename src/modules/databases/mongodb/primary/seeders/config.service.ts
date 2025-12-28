@@ -40,21 +40,5 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 },
             },
         },
-    },
-    {
-        _id: createObjectId(ConfigId.Fee),
-        displayId: ConfigId.Fee,
-        value: {
-            feeInfo: {
-                [ChainId.Solana]: {
-                    feeRate: new Decimal(0.00005).toNumber(), // 0.005%
-                    feeToAddress: "8xqsA3rsyXesnrGTimQM7CamXLoptskrN6L423buggsZ",
-                },
-                [ChainId.Sui]: {
-                    feeRate: new Decimal(0.00005).toNumber(), // 0.005%
-                    feeToAddress: "0x99c8f234bc7b483ce7a00176b8294805388c165b5c3d6eae909ab333ff601030",
-                },
-            },
-        },
     }
 ]

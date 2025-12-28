@@ -23,6 +23,8 @@ import {
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
+    PositionInvalidTypeException,
+    PositionNotFoundException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -30,6 +32,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
+import { MomentumClmmPosition } from "./struct"
 
 @Injectable()
 export class MomentumOpenPositionActionService implements IOpenActionService {
@@ -44,8 +47,30 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         private readonly logger: WinstonLogger,
     ) {}
     
-    confirm(params: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
-        throw new Error("Method not implemented.")
+    async confirm(
+        { positionId }: ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResponse> {
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                const objectInfo = await suiClient.getObject({
+                    id: positionId,
+                    options: {
+                        showContent: true,
+                    }
+                })
+                if (!objectInfo) {
+                    throw new PositionNotFoundException("Position not found")
+                }
+                if (objectInfo?.data?.content?.dataType !== "moveObject") {
+                    throw new PositionInvalidTypeException("Position is not a move object")
+                }
+                const fields = objectInfo.data.content.fields as unknown as MomentumClmmPosition
+                return {
+                    liquidity: new BN(fields.liquidity),
+                }
+            },
+        })
     }
 
     async prepare(
@@ -90,7 +115,12 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             state: _state,
             tickUpper,
         })
-        const txHash = await openPositionTxb.getDigest()
+        const txHash = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                return await txb.getDigest({ client: suiClient })
+            },
+        })
         return {
             txHash,
             txb: openPositionTxb,
@@ -111,6 +141,28 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         txb,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         const _state = state as LiquidityPoolState
+        if (isRetry) {
+            const [txBlock] = await this.asyncService.resolveTuple(
+                this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Read,
+                    callback: async ({ suiClient }) => {
+                        return suiClient.getTransactionBlock({
+                            digest: txHash,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                    },
+                })
+            )
+            if (txBlock !== null) {
+                const { positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                return {
+                    positionId,
+                }
+            }
+            throw new TransactionNotExecutedException("Transaction not executed")
+        }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
@@ -127,9 +179,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                 })
                             )
                             if (txBlock !== null) {
-                                const { liquidity, positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                                const { positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
                                 return {
-                                    liquidity: new BN(liquidity),
                                     positionId,
                                 }
                             }
@@ -155,9 +206,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                 liquidityPoolId: _state.static.displayId,
                             }
                         )
-                        const { liquidity, positionId } = this.parseAddLiquidityEvent(events || [])
+                        const { positionId } = this.parseAddLiquidityEvent(events || [])
                         return {
-                            liquidity: new BN(liquidity),
                             positionId,
                         }
                     },
@@ -168,10 +218,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 
     private parseAddLiquidityEvent(
         events?: Array<SuiEvent>,
-    ): {
-        liquidity: string
-        positionId: string
-    } {
+    ): ParseAddLiquidityEventResponse {
         const event = events?.find(
             event => event.type.includes("::liquidity::AddLiquidityEvent")
         )
@@ -180,7 +227,6 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         }
         const parsed = event.parsedJson as AddLiquidityEvent
         return {
-            liquidity: parsed.liquidity,
             positionId: parsed.position_id,
         }
     }
@@ -197,3 +243,6 @@ interface AddLiquidityEvent {
     sender: string,
 }
 
+interface ParseAddLiquidityEventResponse {
+    positionId: string
+}

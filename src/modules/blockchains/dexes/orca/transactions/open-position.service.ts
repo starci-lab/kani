@@ -16,7 +16,6 @@ import {
 } from "@solana/kit"
 import { LiquidityPoolState } from "@modules/blockchains"
 import {
-    FeeToAddressNotFoundException,
     InvalidPoolTokensException,
 } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
@@ -46,6 +45,7 @@ import { getTransferInstruction } from "@solana-program/token"
 import { TokenType } from "@typedefs"
 import { FeeService } from "../../../math"
 import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class OpenPositionInstructionService {
@@ -55,6 +55,7 @@ export class OpenPositionInstructionService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly tickArrayService: TickArrayService,
     private readonly positionService: PositionService,
+    private readonly mountStorageService: MountStorageService,
     private readonly feeService: FeeService,
     ) {}
 
@@ -79,12 +80,7 @@ export class OpenPositionInstructionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
-        const feeToAddress =
-      this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]
-          ?.feeToAddress
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
-        }
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.solana.feeToAddress
         const { feeAmount: feeAmountA, remainingAmount: remainingAmountA } =
       this.feeService.splitAmount({
           amount: amountAMax,
@@ -172,7 +168,7 @@ export class OpenPositionInstructionService {
                 instructions: createAtaAInstructions,
                 ataAddress: feeToAAtaAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
+                ownerAddress: address(feeToAddress),
                 tokenMint: tokenA.tokenAddress
                     ? address(tokenA.tokenAddress)
                     : undefined,
@@ -196,7 +192,7 @@ export class OpenPositionInstructionService {
                 instructions: createAtaBInstructions,
                 ataAddress: feeToBAtaAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
+                ownerAddress: address(feeToAddress),
                 tokenMint: tokenB.tokenAddress
                     ? address(tokenB.tokenAddress)
                     : undefined,

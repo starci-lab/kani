@@ -1,148 +1,122 @@
-/** ========== GENERIC STRUCTS ========== */
-
 import { parseI32 } from "@utils"
-
-export interface SuiObjectID {
-    id: string;
-}
-
-export interface SuiObjectI32 {
-    type: string;
-    fields: {
-        bits: number;
-    };
-}
-
-export interface SuiObjectI64 {
-    type: string;
-    fields: {
-        bits: string;
-    };
-}
-
-export interface TypeName {
-    type: string;
-    fields: {
-        name: string;
-    };
-}
+import { SuiObjectI32, SuiObjectI64, SuiObjectID, TypeName } from "./types"
 
 /** ========== OBSERVATION ========== */
 
 export interface PoolObservation {
-    type: string;
+    type: string
     fields: {
-        initialized: boolean;
-        seconds_per_liquidity_cumulative: string;
-        tick_cumulative: SuiObjectI64;
-        timestamp_s: string;
-    };
+        initialized: boolean
+        seconds_per_liquidity_cumulative: string
+        tick_cumulative: SuiObjectI64
+        timestamp_s: string
+    }
 }
 
 export interface Observation {
-    initialized: boolean;
-    secondsPerLiquidityCumulative: string;
-    tickCumulative: number;
-    timestamp: number;
+    initialized: boolean
+    secondsPerLiquidityCumulative: string
+    tickCumulative: number
+    timestamp: number
 }
 
 /** ========== REWARD INFO ========== */
 
 export interface PoolRewardInfo {
-    type: string;
+    type: string
     fields: {
-        ended_at_seconds: string;
-        last_update_time: string;
-        reward_coin_type: TypeName;
-        reward_growth_global: string;
-        reward_per_seconds: string;
-        total_reward: string;
-        total_reward_allocated: string;
-    };
+        ended_at_seconds: string
+        last_update_time: string
+        reward_coin_type: TypeName
+        reward_growth_global: string
+        reward_per_seconds: string
+        total_reward: string
+        total_reward_allocated: string
+    }
 }
 
 export interface RewardInfo {
-    endedAtSeconds: number;
-    lastUpdateTime: number;
-    rewardCoinType: string;
-    rewardGrowthGlobal: string;
-    rewardPerSeconds: string;
-    totalReward: string;
-    totalRewardAllocated: string;
+    endedAtSeconds: number
+    lastUpdateTime: number
+    rewardCoinType: string
+    rewardGrowthGlobal: string
+    rewardPerSeconds: string
+    totalReward: string
+    totalRewardAllocated: string
 }
 
 /** ========== RAW POOL STRUCT (SuiObjectPool) ========== */
 
 export interface SuiObjectPool {
-    coin_type_x: TypeName;
-    coin_type_y: TypeName;
+    coin_type_x: TypeName
+    coin_type_y: TypeName
 
-    fee_growth_global_x: string;
-    fee_growth_global_y: string;
+    fee_growth_global_x: string
+    fee_growth_global_y: string
 
-    id: SuiObjectID;
+    id: SuiObjectID
 
-    liquidity: string;
-    locked: boolean;
-    max_liquidity_per_tick: string;
+    liquidity: string
+    locked: boolean
+    max_liquidity_per_tick: string
 
-    observation_cardinality: string;
-    observation_cardinality_next: string;
-    observation_index: string;
-    observations: Array<PoolObservation>;
+    observation_cardinality: string
+    observation_cardinality_next: string
+    observation_index: string
+    observations: Array<PoolObservation>
 
-    protocol_fee_rate: string;
-    protocol_fee_x: string;
-    protocol_fee_y: string;
+    protocol_fee_rate: string
+    protocol_fee_x: string
+    protocol_fee_y: string
 
-    reserve_x: string;
-    reserve_y: string;
+    reserve_x: string
+    reserve_y: string
 
-    reward_infos: Array<PoolRewardInfo>;
+    reward_infos: Array<PoolRewardInfo>
 
-    sqrt_price: string;
-    swap_fee_rate: string;
+    sqrt_price: string
+    swap_fee_rate: string
 
-    tick_index: SuiObjectI32;
+    tick_index: SuiObjectI32
 
-    tick_spacing: number;
+    tick_spacing: number
 }
 
 /** ========== PARSED POOL STRUCT ========== */
 
 export interface Pool {
-    coinTypeX: string;
-    coinTypeY: string;
+    coinTypeX: string
+    coinTypeY: string
 
-    feeGrowthGlobalX: string;
-    feeGrowthGlobalY: string;
+    feeGrowthGlobalX: string
+    feeGrowthGlobalY: string
 
-    id: string;
+    id: string
 
-    liquidity: string;
-    locked: boolean;
-    maxLiquidityPerTick: string;
+    liquidity: string
+    locked: boolean
+    maxLiquidityPerTick: string
 
-    observationCardinality: number;
-    observationCardinalityNext: number;
-    observationIndex: number;
+    observationCardinality: number
+    observationCardinalityNext: number
+    observationIndex: number
 
-    observations: Array<Observation>;
+    observations: Array<Observation>
 
-    protocolFeeRate: string;
-    protocolFeeX: string;
-    protocolFeeY: string;
+    protocolFeeRate: string
+    protocolFeeX: string
+    protocolFeeY: string
 
-    reserveX: string;
-    reserveY: string;
+    reserveX: string
+    reserveY: string
 
-    rewardInfos: Array<RewardInfo>;
+    rewardInfos: Array<RewardInfo>
 
-    sqrtPrice: string;
-    swapFeeRate: string;
+    sqrtPrice: string
+    swapFeeRate: string
 
-    tickIndex: number;
-    tickSpacing: number;
+    tickIndex: number
+    tickSpacing: number
 }
 
 /** ========== PARSER ========== */

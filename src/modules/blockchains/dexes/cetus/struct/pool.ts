@@ -1,4 +1,6 @@
 import { parseI32 } from "@utils"
+import { SuiObjectI32, SuiObjectID } from "./types"
+
 /** ========== POOL OBJECT ROOT ========== */
 
 export interface SuiObjectPool {
@@ -25,19 +27,6 @@ export interface SuiObjectPool {
 
     tick_spacing: number;
     url: string;
-}
-
-/** ========== GENERIC STRUCTS ========== */
-
-export interface SuiObjectID {
-    id: string;
-}
-
-export interface SuiObjectI32 {
-    type: string;
-    fields: {
-        bits: number;
-    };
 }
 
 /** ========== POSITION MANAGER ========== */

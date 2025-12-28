@@ -4,11 +4,13 @@ import { toScaledBN } from "@utils"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { Decimal } from "decimal.js"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class FeeService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
     
     public splitAmount(
@@ -17,7 +19,7 @@ export class FeeService {
             chainId 
         }: SplitAmountParams
     ): SplitAmountResponse {
-        const feePercentage = this.primaryMemoryStorageService.feeConfig.feeInfo?.[chainId]?.feeRate
+        const feePercentage = this.mountStorageService.apiKeys.fees.openPosition[chainId].bps
         if (!feePercentage) {
             throw new Error("Fee percentage not found")
         }

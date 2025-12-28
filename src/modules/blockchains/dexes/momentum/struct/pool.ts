@@ -1,128 +1,109 @@
-/** ---------- GENERIC STRUCTS ---------- */
-
 import { parseI32 } from "@utils"
+import { SuiObjectI32, SuiObjectI64, SuiObjectID, TypeName } from "./types"
 
-export interface SuiObjectID {
-    id: string;
-}
-
-export interface SuiObjectI32 {
-    type: string;
-    fields: { bits: number };
-}
-
-export interface SuiObjectI64 {
-    type: string;
-    fields: { bits: string };
-}
-
-export interface TypeName {
-    type: string;
-    fields: { name: string };
-}
 /** ---------- OBSERVATION ---------- */
 
 export interface SuiObjectPoolObservation {
-    type: string; // oracle::Observation
+    type: string // oracle::Observation
     fields: {
-        initialized: boolean;
-        seconds_per_liquidity_cumulative: string;
-        tick_cumulative: SuiObjectI64;
-        timestamp_s: string;
-    };
+        initialized: boolean
+        seconds_per_liquidity_cumulative: string
+        tick_cumulative: SuiObjectI64
+        timestamp_s: string
+    }
 }
 
 /** ---------- REWARD INFO ---------- */
 
 export interface SuiObjectPoolRewardInfo {
-    type: string; // pool::PoolRewardInfo
+    type: string // pool::PoolRewardInfo
     fields: {
-        ended_at_seconds: string;
-        last_update_time: string;
-        reward_coin_type: TypeName;
-        reward_growth_global: string;
-        reward_per_seconds: string;
-        total_reward: string;
-        total_reward_allocated: string;
-    };
+        ended_at_seconds: string
+        last_update_time: string
+        reward_coin_type: TypeName
+        reward_growth_global: string
+        reward_per_seconds: string
+        total_reward: string
+        total_reward_allocated: string
+    }
 }
 
 /** ---------- ROOT POOL INTERFACE ---------- */
 
 export interface SuiObjectPool {
-    fee_growth_global_x: string;
-    fee_growth_global_y: string;
-    flash_loan_fee_rate: string;
-    id: SuiObjectID;
-    liquidity: string;
-    max_liquidity_per_tick: string;
-    observation_cardinality: string;
-    observation_cardinality_next: string;
-    observation_index: string;
-    observations: Array<SuiObjectPoolObservation>;
-    protocol_fee_share: string;
-    protocol_fee_x: string;
-    protocol_fee_y: string;
-    protocol_flash_loan_fee_share: string;
-    reserve_x: string;
-    reserve_y: string;
-    reward_infos: Array<SuiObjectPoolRewardInfo>;
-    sqrt_price: string;
-    swap_fee_rate: string;
-    tick_index: SuiObjectI32;
-    tick_spacing: number;
-    type_x: TypeName;
-    type_y: TypeName;
+    fee_growth_global_x: string
+    fee_growth_global_y: string
+    flash_loan_fee_rate: string
+    id: SuiObjectID
+    liquidity: string
+    max_liquidity_per_tick: string
+    observation_cardinality: string
+    observation_cardinality_next: string
+    observation_index: string
+    observations: Array<SuiObjectPoolObservation>
+    protocol_fee_share: string
+    protocol_fee_x: string
+    protocol_fee_y: string
+    protocol_flash_loan_fee_share: string
+    reserve_x: string
+    reserve_y: string
+    reward_infos: Array<SuiObjectPoolRewardInfo>
+    sqrt_price: string
+    swap_fee_rate: string
+    tick_index: SuiObjectI32
+    tick_spacing: number
+    type_x: TypeName
+    type_y: TypeName
 }
 
 export interface PoolObservation {
-    type: string;
+    type: string
     fields: {
-        initialized: boolean;
-        secondsPerLiquidityCumulative: string;
-        tickCumulative: SuiObjectI64;
-        timestampS: string;
-    };
+        initialized: boolean
+        secondsPerLiquidityCumulative: string
+        tickCumulative: SuiObjectI64
+        timestampS: string
+    }
 }
 
 /** ---------- REWARD INFO ---------- */
 
 export interface PoolRewardInfo {
-    endedAtSeconds: string;
-    lastUpdateTime: string;
-    rewardCoinType: string;
-    rewardGrowthGlobal: string;
-    rewardPerSeconds: string;
-    totalReward: string;
-    totalRewardAllocated: string;
+    endedAtSeconds: string
+    lastUpdateTime: string
+    rewardCoinType: string
+    rewardGrowthGlobal: string
+    rewardPerSeconds: string
+    totalReward: string
+    totalRewardAllocated: string
 }
 
 /** ---------- ROOT POOL INTERFACE ---------- */
 
 export interface Pool {
-    feeGrowthGlobalX: string;
-    feeGrowthGlobalY: string;
-    flashLoanFeeRate: string;
-    id: SuiObjectID;
-    liquidity: string;
-    maxLiquidityPerTick: string;
-    observationCardinality: string;
-    observationCardinalityNext: string;
-    observationIndex: string;
-    observations: Array<PoolObservation>;
-    protocolFeeShare: string;
-    protocolFeeX: string;
-    protocolFeeY: string;
-    protocolFlashLoanFeeShare: string;
-    reserveX: string;
-    reserveY: string;
-    rewardInfos: Array<PoolRewardInfo>;
-    sqrtPrice: string;
-    swapFeeRate: string;
-    tickIndex: number;
-    tickSpacing: number;
-    typeX: string;
-    typeY: string;
+    feeGrowthGlobalX: string
+    feeGrowthGlobalY: string
+    flashLoanFeeRate: string
+    id: SuiObjectID
+    liquidity: string
+    maxLiquidityPerTick: string
+    observationCardinality: string
+    observationCardinalityNext: string
+    observationIndex: string
+    observations: Array<PoolObservation>
+    protocolFeeShare: string
+    protocolFeeX: string
+    protocolFeeY: string
+    protocolFlashLoanFeeShare: string
+    reserveX: string
+    reserveY: string
+    rewardInfos: Array<PoolRewardInfo>
+    sqrtPrice: string
+    swapFeeRate: string
+    tickIndex: number
+    tickSpacing: number
+    typeX: string
+    typeY: string
 }
 
 export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {

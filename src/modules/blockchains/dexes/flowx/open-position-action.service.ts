@@ -27,6 +27,8 @@ import {
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
+    PositionNotFoundException,
+    PositionInvalidTypeException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -34,6 +36,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
+import { FlowxClmmPosition } from "./struct"
 
 @Injectable()
 export class FlowXOpenPositionActionService implements IOpenActionService {
@@ -48,10 +51,32 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         private readonly logger: WinstonLogger,
     ) { }
     
-    confirm(params: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
-        throw new Error("Method not implemented.")
+    async confirm(
+        { positionId }: ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResponse> {
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                const objectInfo = await suiClient.getObject({
+                    id: positionId,
+                    options: {
+                        showContent: true,
+                    }
+                })
+                if (!objectInfo) {
+                    throw new PositionNotFoundException("Position not found")
+                }
+                if (objectInfo?.data?.content?.dataType !== "moveObject") {
+                    throw new PositionInvalidTypeException("Position is not a move object")
+                }
+                const fields = objectInfo.data.content.fields as unknown as FlowxClmmPosition
+                return {
+                    liquidity: new BN(fields.liquidity),
+                }
+            },
+        })
     }
-
+    
     async prepare(
         {
             bot,
@@ -100,7 +125,12 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             state: _state,
             tickUpper,
         })
-        const txHash = await openPositionTxb.getDigest()
+        const txHash = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                return await txb.getDigest({ client: suiClient })
+            },
+        })
         return {
             txHash,
             txb: openPositionTxb,
@@ -119,30 +149,36 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         txb,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         const _state = state as LiquidityPoolState
+        if (isRetry) {
+
+            const [txBlock] = await this.asyncService.resolveTuple(
+                this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Read,
+                    callback: async ({ suiClient }) => {
+                        return suiClient.getTransactionBlock({
+                            digest: txHash,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                    },
+                })
+            )
+            if (txBlock !== null) {
+                const { positionId } = this.parseIncreaseLiquidityEvent(txBlock?.events || [])
+                return {
+                    positionId,
+                }
+            }
+            throw new TransactionNotExecutedException("Transaction not executed")
+        }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
-                        if (isRetry) {
-                            const [txBlock] = await this.asyncService.resolveTuple(
-                                suiClient.getTransactionBlock({
-                                    digest: txHash,
-                                    options: {
-                                        showEvents: true,
-                                    }
-                                })
-                            )
-                            if (txBlock !== null) {
-                                const { liquidity, positionId } = this.parseIncreaseLiquidityEvent(txBlock?.events || [])
-                                return {
-                                    liquidity: new BN(liquidity),
-                                    positionId,
-                                }
-                            }
-                            throw new TransactionNotExecutedException("Transaction not executed")
-                        }
+                        
                         if (!txb) {
                             throw new TransactionNotPreparedException("Transaction not prepared")
                         }
@@ -163,9 +199,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                                 liquidityPoolId: _state.static.displayId,
                             }
                         )
-                        const { liquidity, positionId } = this.parseIncreaseLiquidityEvent(events || [])
+                        const { positionId } = this.parseIncreaseLiquidityEvent(events || [])
                         return {
-                            liquidity: new BN(liquidity),
                             positionId,
                         }
                     },
@@ -176,10 +211,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
     private parseIncreaseLiquidityEvent(
         events?: Array<SuiEvent>,
-    ): {
-        liquidity: string
-        positionId: string
-    } {
+    ): ParseIncreaseLiquidityEventResponse {
         const event = events?.find((event) =>
             event.type.includes("::position_manager::IncreaseLiquidity"),
         )
@@ -190,7 +222,6 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         }
         const parsed = event.parsedJson as IncreaseLiquidityEvent
         return {
-            liquidity: parsed.liquidity,
             positionId: parsed.position_id,
         }
     }
@@ -205,3 +236,6 @@ interface IncreaseLiquidityEvent {
     sender: string;
 }
 
+interface ParseIncreaseLiquidityEventResponse {
+    positionId: string
+}

@@ -13,7 +13,7 @@ import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
 import { SelectCoinsService } from "../tx-builder"
-import { SignerService } from "../signers"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class SevenKAggregatorService implements IAggregatorService {
@@ -22,7 +22,7 @@ export class SevenKAggregatorService implements IAggregatorService {
         private readonly retryService: RetryService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly selectCoinsService: SelectCoinsService,
-        private readonly signerService: SignerService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     supportedChains(): Array<ChainId> {
@@ -108,8 +108,8 @@ export class SevenKAggregatorService implements IAggregatorService {
                             accountAddress,
                             slippage: envConfig().slippage.swap,
                             commission: {
-                                partner: "0xb36ba968411da3eda4f9703010e602a9493398d293503483add061f0143d3212",
-                                commissionBps: 2,
+                                partner: this.mountStorageService.apiKeys.fees.swapReferral.sui.feeToAddress,
+                                commissionBps: this.mountStorageService.apiKeys.fees.swapReferral.sui.bps,
                             }, 
                             extendTx: {
                                 tx: txb,

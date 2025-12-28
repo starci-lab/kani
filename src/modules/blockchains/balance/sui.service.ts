@@ -19,7 +19,6 @@ import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
-import { Transaction } from "@mysten/sui/transactions"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {

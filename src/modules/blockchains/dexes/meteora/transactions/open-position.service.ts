@@ -17,7 +17,7 @@ import {
 import { DlmmLiquidityPoolState } from "../../../interfaces"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { FeeToAddressNotFoundException, InvalidPoolTokensException, MultipleDlmmPositionsNotSupportedException } from "@exceptions"
+import { InvalidPoolTokensException, MultipleDlmmPositionsNotSupportedException } from "@exceptions"
 import { getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
 import { SYSVAR_RENT_ADDRESS } from "@solana/sysvars"
 import { EventAuthorityService } from "./event-authority.service"
@@ -28,6 +28,7 @@ import { FeeService } from "../../../math"
 import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
 import { TokenType } from "@typedefs"
+import { MountStorageService } from "@modules/filesystem"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -54,7 +55,8 @@ export class OpenPositionInstructionService {
         private readonly keypairGeneratorsService: KeypairGeneratorsService,
         private readonly anchorUtilsService: AnchorUtilsService,
         private readonly meteoraSdkService: MeteoraSdkService,
-        private readonly feeService: FeeService
+        private readonly feeService: FeeService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
     async createOpenPositionInstructions({
         bot,
@@ -85,10 +87,7 @@ export class OpenPositionInstructionService {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
         // transfer the fees to the fee address
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
-        }
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.solana.feeToAddress
         const instructions: Array<Instruction> = []
         // if A or B is sol, we must transfer the fees to the fee address
         if (tokenA.type === TokenType.Native) {

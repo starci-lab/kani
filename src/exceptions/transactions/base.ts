@@ -59,3 +59,9 @@ export class PositionNotFoundException extends AbstractException {
         super(message || "Position not found", "POSITION_NOT_FOUND_EXCEPTION")
     }
 }
+
+export class PositionInvalidTypeException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Position is not a move object", "POSITION_INVALID_TYPE_EXCEPTION")
+    }
+}

@@ -8,6 +8,7 @@ import { RetryService } from "@modules/mixin"
 import { ChainId } from "@typedefs"
 import { Address, address } from "@solana/kit"
 import { MountStorageService } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
 
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 
@@ -22,11 +23,7 @@ export class JupiterService implements IAggregatorService {
     ) { }
 
     private jupiterReferralTokenAccounts(): Partial<Record<TokenId, Address>> {
-        return {
-            [TokenId.SolNative]: address("JRiWp4o5k9mJSKbp9DsbkZw1FHQNWmJCDDa6aUYKHzn"),
-            [TokenId.SolUsdc]: address("7n59ZyqB6i3aoakFvF8TneHYGHhnwUNEYMHmvJMLz37R"),
-            [TokenId.SolUsdt]: address("J3dpR4zciXDr75wTXzSMT28tYwpVEdMTJT5G7v58TfMz"),
-        }
+        return this.mountStorageService.apiKeys.fees.swapReferral.solana.referralTokenAccounts
     }
 
     private createJupiterClient(): SwapApi {
@@ -78,8 +75,7 @@ export class JupiterService implements IAggregatorService {
                         inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         amount: amountIn.toNumber(),
-                        // we charge 0.02% platform fee as protocol fee
-                        platformFeeBps: 2,
+                        platformFeeBps: this.mountStorageService.apiKeys.fees.swapReferral.solana.bps,
                     })
                     return {
                         amountOut: new BN(quote.outAmount),
@@ -91,9 +87,9 @@ export class JupiterService implements IAggregatorService {
                 }
             },
             // Retry config
-            maxRetries: 3, // up to 3 attempts
-            delay: 500,     // 500ms initial delay
-            factor: 2,      // exponential backoff factor
+            maxRetries: envConfig().timeConfig.retry.maxRetries,
+            delay: envConfig().timeConfig.retry.delay,
+            factor: envConfig().timeConfig.retry.factor,
         })
     }
 

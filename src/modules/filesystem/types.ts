@@ -1,3 +1,5 @@
+import { TokenId } from "@modules/databases"
+import { Address } from "@solana/kit"
 import { ChainId } from "@typedefs"
 
 export interface AppSecrets {
@@ -67,4 +69,26 @@ export interface ApiKeys {
     jupiter: string
     sentryDsn: string
     cryptoKeyName: string
+    fees: {
+        openPosition: {
+            solana: {
+                feeToAddress: string
+                bps: number
+            }
+            sui: {
+                feeToAddress: string
+                bps: number
+            }
+        }
+        swapReferral: {
+            solana: {
+                referralTokenAccounts: Record<TokenId, Address>
+                bps: number
+            }
+            sui: {
+                feeToAddress: string
+                bps: number
+            }
+        }
+    }
 }

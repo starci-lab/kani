@@ -14,7 +14,7 @@ import {
 import { AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
 import { BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata } from "@modules/databases"
 import { LiquidityPoolState } from "../../../interfaces"
-import { FeeToAddressNotFoundException, InvalidPoolTokensException } from "@exceptions"
+import { InvalidPoolTokensException } from "@exceptions"
 import { TickArrayService } from "./tick-array.service"
 import { PersonalPositionService } from "./personal-position.service"
 import { createNoopSigner, generateKeyPairSigner, KeyPairSigner } from "@solana/signers"
@@ -25,6 +25,7 @@ import { Decimal } from "decimal.js"
 import { u128, u64, i32, bool, BeetArgsStruct, u8  } from "@metaplex-foundation/beet"
 import { FeeService } from "../../../math"
 import { TokenType } from "@typedefs"
+import { MountStorageService } from "@modules/filesystem"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -45,6 +46,7 @@ export class OpenPositionInstructionService {
         private readonly tickArrayService: TickArrayService,
         private readonly personalPositionService: PersonalPositionService,
         private readonly feeService: FeeService,
+        private readonly mountStorageService: MountStorageService,
     ) { }
     /**
    * Build & append decrease_liquidity_v2 (close position) instruction
@@ -68,10 +70,7 @@ export class OpenPositionInstructionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
-        }
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.solana.feeToAddress
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,
@@ -92,7 +91,9 @@ export class OpenPositionInstructionService {
                     source: createNoopSigner(address(bot.accountAddress)),
                     destination: address(feeToAddress),
                     amount: BigInt(feeAmountA.toString()),
-                }))
+                }
+                )
+            )
         }
         if (tokenB.type === TokenType.Native) {
             instructions.push(
@@ -100,7 +101,9 @@ export class OpenPositionInstructionService {
                     source: createNoopSigner(address(bot.accountAddress)),
                     destination: address(feeToAddress),
                     amount: BigInt(feeAmountB.toString()),
-                }))
+                }
+                )
+            )
         }
         const {
             programAddress,
@@ -158,7 +161,7 @@ export class OpenPositionInstructionService {
                 instructions: createAtaAInstructions,
                 ataAddress: feeToAAtaAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
+                ownerAddress: address(feeToAddress),
                 tokenMint: tokenA.tokenAddress ? address(tokenA.tokenAddress) : undefined,
                 is2022Token: tokenA.is2022Token,
                 amount: feeAmountA,
@@ -179,7 +182,7 @@ export class OpenPositionInstructionService {
                 instructions: createAtaBInstructions,
                 ataAddress: feeToBAtaAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                ownerAddress: address(bot.accountAddress),
+                ownerAddress: address(feeToAddress),
                 tokenMint: tokenB.tokenAddress ? address(tokenB.tokenAddress) : undefined,
                 is2022Token: tokenB.is2022Token,
                 amount: feeAmountB,

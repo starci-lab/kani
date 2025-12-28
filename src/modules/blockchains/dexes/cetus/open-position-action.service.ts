@@ -30,6 +30,8 @@ import {
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
+    PositionNotFoundException,
+    PositionInvalidTypeException,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { ExecuteOpenPositionParams, ExecuteOpenPositionResponse } from "../../interfaces"
@@ -41,6 +43,7 @@ import { toScaledBN } from "@utils"
 import { envConfig } from "@modules/env"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
+import { CetusLiquidityPosition } from "./struct"
 
 @Injectable()
 export class CetusOpenPositionActionService implements IOpenActionService {
@@ -56,8 +59,45 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     private readonly logger: WinstonLogger,
     ) {}
 
-    confirm(params: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
-        throw new Error("Method not implemented.")
+    async confirm({ positionId }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                const objectInfo = await suiClient.getObject({
+                    id: positionId,
+                    options: {
+                        showContent: true,
+                    }
+                })
+                if (!objectInfo) {
+                    throw new PositionNotFoundException("Position not found")
+                }
+                if (objectInfo?.data?.content?.dataType !== "moveObject") {
+                    throw new PositionInvalidTypeException("Position is not a move object")
+                }
+                const fields = objectInfo.data.content.fields as unknown as CetusLiquidityPosition
+                return {
+                    liquidity: new BN(fields.liquidity),
+                }
+            },
+        })
+    }
+
+    private parseAddLiquidityEvent(
+        events?: Array<SuiEvent>,
+    ): ParseAddLiquidityEventResponse {
+        const event = events?.find(event =>
+            event.type.includes("::pool::AddLiquidityV2Event"),
+        )
+        if (!event) {
+            throw new TransactionEventNotFoundException(
+                "AddLiquidityV2Event event not found",
+            )
+        }
+        const parsed = event.parsedJson as AddLiquidityV2Event 
+        return {
+            positionId: parsed.position.toString(),
+        }
     }
 
     async prepare(
@@ -126,9 +166,16 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             tickLower,
             state: _state,
             tickUpper,
+        }
+        )
+        const txHash = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                return txb.getDigest({ client: suiClient })
+            },
         })
-        // sign the txb
         return {
+            txHash,
             txb: openPositionTxb,
             feeAmountA,
             feeAmountB,
@@ -145,33 +192,37 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         txb, // the txb of the open position transaction    
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         const _state = state as LiquidityPoolState
+        if (isRetry) {
+            const [txBlock] = await this.asyncService.resolveTuple(
+                this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Read,
+                    callback: async ({ suiClient }) => {
+                        return suiClient.getTransactionBlock({
+                            digest: txHash,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                    },
+                })
+            )
+            if (txBlock !== null) {
+                const { positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                return {
+                    positionId,
+                }
+            }
+            throw new TransactionNotExecutedException("Transaction not executed")
+        }
+        if (!txb) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 return await this.signerService.withSuiSigner({
                     bot,
-                    action: async (signer) => {
-                        if (isRetry) {
-                            const [txBlock] = await this.asyncService.resolveTuple(
-                                suiClient.getTransactionBlock({
-                                    digest: txHash,
-                                    options: {
-                                        showEvents: true,
-                                    }
-                                })
-                            )
-                            const { liquidity, positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
-                            if (txBlock !== null) {
-                                return {
-                                    liquidity: new BN(liquidity),
-                                    positionId,
-                                }
-                            }
-                            throw new TransactionNotExecutedException("Transaction not executed")
-                        }
-                        if (!txb) {
-                            throw new TransactionNotPreparedException("Transaction not prepared")
-                        }
+                    action: async (signer) => {      
                         const { digest, events } = await suiClient.signAndExecuteTransaction({
                             transaction: txb,
                             signer,
@@ -190,36 +241,14 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             }
                         )
                         // parse the add liquidity event
-                        const { liquidity, positionId } = this.parseAddLiquidityEvent(events || [])
+                        const { positionId } = this.parseAddLiquidityEvent(events || [])
                         return {
-                            liquidity: new BN(liquidity),
                             positionId,
                         }
                     },
                 })
             },
         })
-    }
-
-    private parseAddLiquidityEvent(
-        events?: Array<SuiEvent>,
-    ): {
-        liquidity: string
-        positionId: string
-      } {
-        const event = events?.find(event =>
-            event.type.includes("::pool::AddLiquidityV2Event"),
-        )
-        if (!event) {
-            throw new TransactionEventNotFoundException(
-                "AddLiquidityV2Event event not found",
-            )
-        }
-        const parsed = event.parsedJson as AddLiquidityV2Event 
-        return {
-            liquidity: parsed.liquidity,
-            positionId: parsed.position.toString(),
-        }
     }
 }
 
@@ -231,4 +260,8 @@ export interface AddLiquidityV2Event {
     liquidity: string,
     pool: string,
     position: string,
+}
+
+export interface ParseAddLiquidityEventResponse {
+    positionId: string
 }

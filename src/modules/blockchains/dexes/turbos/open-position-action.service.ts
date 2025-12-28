@@ -24,6 +24,8 @@ import {
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
+    PositionNotFoundException,
+    PositionInvalidTypeException,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { RpcExecutorService } from "../../clients"
@@ -35,6 +37,7 @@ import { EnsureMathService } from "../../math"
 import { toScaledBN } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
+import { MintNftEvent, TurbosClmmPosition, TurbosPositionNFT } from "./struct"
 
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -50,8 +53,37 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly logger: WinstonLogger,
     ) {}
     
-    confirm(params: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
-        throw new Error("Method not implemented.")
+    async confirm(
+        { positionId }: ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResponse> {
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                const positionNft = await suiClient.getObject({
+                    id: positionId,
+                })
+                if (!positionNft) {
+                    throw new PositionNotFoundException("Position not found")
+                }
+                if (positionNft?.data?.content?.dataType !== "moveObject") {
+                    throw new PositionInvalidTypeException("Position is not a move object")
+                }
+                const positionNftFields = positionNft.data.content.fields as unknown as TurbosPositionNFT
+                const clmmPosition = await suiClient.getObject({
+                    id: positionNftFields.pool_id,
+                })
+                if (!clmmPosition) {
+                    throw new PositionNotFoundException("CLMM position not found")
+                }
+                if (clmmPosition?.data?.content?.dataType !== "moveObject") {
+                    throw new PositionInvalidTypeException("CLMM position is not a move object")
+                }
+                const clmmPositionFields = clmmPosition.data.content.fields as unknown as TurbosClmmPosition
+                return {
+                    liquidity: new BN(clmmPositionFields.liquidity),
+                }
+            },
+        })
     }
 
     async prepare(
@@ -118,7 +150,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             state: _state,
             tickUpper,
         })
-        const txHash = await openPositionTxb.getDigest()
+        const txHash = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Read,
+            callback: async ({ suiClient }) => {
+                return await txb.getDigest({ client: suiClient })
+            },
+        })
         return {
             txHash,
             txb: openPositionTxb,
@@ -139,6 +176,31 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         txb,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         const _state = state as LiquidityPoolState
+        if (isRetry) {
+            const [txBlock] = await this.asyncService.resolveTuple(
+                this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Read,
+                    callback: async ({ suiClient }) => {
+                        return suiClient.getTransactionBlock({
+                            digest: txHash,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                    },
+                })
+            )
+            if (txBlock !== null) {
+                const { positionId } = this.parseMintEvents(txBlock?.events || [])
+                return {
+                    positionId,
+                }
+            }
+            throw new TransactionNotExecutedException("Transaction not executed")
+        }
+        if (!txb) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
@@ -155,9 +217,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                 })
                             )
                             if (txBlock !== null) {
-                                const { liquidity, positionId } = this.parseMintEvents(txBlock?.events || [])
+                                const { positionId } = this.parseMintEvents(txBlock?.events || [])
                                 return {
-                                    liquidity: new BN(liquidity),
                                     positionId,
                                 }
                             }
@@ -183,9 +244,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                 liquidityPoolId: _state.static.displayId,
                             }
                         )
-                        const { liquidity, positionId } = this.parseMintEvents(events || [])
+                        const { positionId } = this.parseMintEvents(events || [])
                         return {
-                            liquidity: new BN(liquidity),
                             positionId,
                         }
                     },
@@ -196,10 +256,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
 
     private parseMintEvents(
         events?: Array<SuiEvent>,
-    ): {
-        liquidity: BN
-        positionId: string
-    } {
+    ): ParseMintEventsResponse {
         const mintNftEvent = events?.find(
             event => event.type.includes("position_manager::MintNftEvent")
         )
@@ -208,32 +265,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }
         const mintNftEventParsed = mintNftEvent.parsedJson as MintNftEvent
         const positionId = mintNftEventParsed.nft_address
-        const mintEvent = events?.find(
-            event => event.type.includes("pool::MintEvent")
-        )
-        if (!mintEvent) {
-            throw new TransactionEventNotFoundException("Mint event not found")
-        }
-        const mintEventParsed = mintEvent.parsedJson as MintEvent
-        const liquidity = new BN(mintEventParsed.liquidity_delta)
         return {
-            liquidity,
             positionId,
         }
     }
 }
 
-interface MintNftEvent {
-    nft_address: string;
-    pool_id: string;
-    position_id: string;
+interface ParseMintEventsResponse {
+    positionId: string
 }
-
-interface MintEvent {
-    amount_a: string;
-    amount_b: string;
-    liquidity_delta: string;
-    owner: string;
-    pool: string;
-}
-

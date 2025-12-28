@@ -1,114 +1,88 @@
-/** ========== GENERIC STRUCTS ========== */
-
 import { parseI32 } from "@utils"
-
-export interface SuiObjectID {
-    id: string;
-}
-
-export interface SuiObjectI32 {
-    type: string;
-    fields: {
-        bits: number;
-    };
-}
-
-export interface SuiObjectI64 {
-    type: string;
-    fields: {
-        bits: string;
-    };
-}
-
-export interface TypeName {
-    type: string;
-    fields: {
-        name: string;
-    };
-}
+import { SuiObjectI32, SuiObjectID } from "./types"
 
 /** ========== REWARD INFO RAW ========== */
 
 export interface SuiObjectRewardInfo {
-    type: string;
+    type: string
     fields: {
-        emissions_per_second: string;
-        growth_global: string;
-        id: SuiObjectID;
-        manager: string;
-        vault: string;
-        vault_coin_type: string;
-    };
+        emissions_per_second: string
+        growth_global: string
+        id: SuiObjectID
+        manager: string
+        vault: string
+        vault_coin_type: string
+    }
 }
 
 /** ========== RAW POOL STRUCT (FROM RPC) ========== */
 
 export interface SuiObjectPool {
-    coin_a: string;
-    coin_b: string;
+    coin_a: string
+    coin_b: string
 
-    deploy_time_ms: string;
+    deploy_time_ms: string
 
-    fee: number;
+    fee: number
 
-    fee_growth_global_a: string;
-    fee_growth_global_b: string;
+    fee_growth_global_a: string
+    fee_growth_global_b: string
 
-    fee_protocol: number;
+    fee_protocol: number
 
-    id: SuiObjectID;
+    id: SuiObjectID
 
-    liquidity: string;
-    max_liquidity_per_tick: string;
+    liquidity: string
+    max_liquidity_per_tick: string
 
-    protocol_fees_a: string;
-    protocol_fees_b: string;
+    protocol_fees_a: string
+    protocol_fees_b: string
 
-    reward_infos: Array<SuiObjectRewardInfo>;
+    reward_infos: Array<SuiObjectRewardInfo>
 
-    reward_last_updated_time_ms: string;
+    reward_last_updated_time_ms: string
 
-    sqrt_price: string;
+    sqrt_price: string
 
-    tick_current_index: SuiObjectI32;
+    tick_current_index: SuiObjectI32
 
-    tick_spacing: number;
+    tick_spacing: number
 
-    unlocked: boolean;
+    unlocked: boolean
 }
 
 /** ========== PARSED REWARD INFO ========== */
 
 export interface RewardInfo {
-    emissionsPerSecond: string;
-    growthGlobal: string;
-    rewardId: string;
-    manager: string;
-    vault: string;
-    vaultCoinType: string;
+    emissionsPerSecond: string
+    growthGlobal: string
+    rewardId: string
+    manager: string
+    vault: string
+    vaultCoinType: string
 }
 
 /** ========== PARSED POOL STRUCT =========== */
 
 export interface Pool {
-    coinA: string;
-    coinB: string;
-    deployTimeMs: number;
-    fee: number;
-    feeGrowthGlobalA: string;
-    feeGrowthGlobalB: string;
-    feeProtocol: number;
-    id: string;
-    liquidity: string;
-    maxLiquidityPerTick: string;
-    protocolFeesA: string;
-    protocolFeesB: string;
-    rewardInfos: Array<RewardInfo>;
-    rewardLastUpdatedTimeMs: number;
-    sqrtPrice: string;
-    tickCurrentIndex: number;
-    tickSpacing: number;
-    unlocked: boolean;
+    coinA: string
+    coinB: string
+    deployTimeMs: number
+    fee: number
+    feeGrowthGlobalA: string
+    feeGrowthGlobalB: string
+    feeProtocol: number
+    id: string
+    liquidity: string
+    maxLiquidityPerTick: string
+    protocolFeesA: string
+    protocolFeesB: string
+    rewardInfos: Array<RewardInfo>
+    rewardLastUpdatedTimeMs: number
+    sqrtPrice: string
+    tickCurrentIndex: number
+    tickSpacing: number
+    unlocked: boolean
 }
 
 /** ========== PARSER ========== */

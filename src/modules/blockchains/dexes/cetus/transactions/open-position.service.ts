@@ -5,12 +5,13 @@ import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
 import { InvalidPoolTokensException } from "src/exceptions/tokens"
 import Decimal from "decimal.js"
-import { FeeToAddressNotFoundException, TargetOperationalGasAmountNotFoundException } from "@exceptions"
+import { TargetOperationalGasAmountNotFoundException } from "@exceptions"
 import { FeeService } from "../../../math"
 import { SelectCoinsService } from "../../../tx-builder"
 import BN from "bn.js"
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -18,6 +19,7 @@ export class OpenPositionTxbService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     async createOpenPositionTxb(
@@ -41,10 +43,7 @@ export class OpenPositionTxbService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
-        if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
-        }
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.sui.feeToAddress
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,

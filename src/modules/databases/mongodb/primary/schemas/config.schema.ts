@@ -27,15 +27,6 @@ export interface GasAmountRequired {
     targetOperationalAmount: string
 }
 
-export interface FeeConfig {
-    feeInfo: Partial<Record<ChainId, FeeInfo>>
-}
-
-export interface FeeInfo {
-    feeRate: number
-    feeToAddress: string
-}
-
 export interface ConfigRecord<T> {
     value: T
 }
