@@ -20,6 +20,7 @@ export interface TickToSqrtPriceX64Params {
 
 const Q64 = new Decimal(2).pow(64)
 
+
 @Injectable()
 export class TickMathService {
     constructor(

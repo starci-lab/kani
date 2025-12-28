@@ -20,6 +20,7 @@ import { ChainId } from "@typedefs"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { adjustSlippage } from "@utils"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -28,6 +29,7 @@ export class OpenPositionTxbService {
         private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly dayjsService: DayjsService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     async createOpenPositionTxb(
@@ -51,7 +53,7 @@ export class OpenPositionTxbService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }

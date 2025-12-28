@@ -8,7 +8,7 @@ import {
 import { REQUEST } from "@nestjs/core"
 import { BotSchema } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { OpenPositionOrchestratorService } from "@modules/blockchains"
+import { BalanceService, OpenPositionOrchestratorService } from "@modules/blockchains"
 import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 
 // open position processor service is to process the open position of the liquidity pools
@@ -36,6 +36,7 @@ export class OpenPositionProcessorService  {
         // inject the connection to the database
         private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+        private readonly balanceService: BalanceService,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -72,9 +73,18 @@ export class OpenPositionProcessorService  {
             async (
                 payload: LiquidityPoolsFetchedEvent
             ) => {
-                if (!this.bot || !this.bot.running) {
+                // if the bot is not running, or has an active position, return
+                if (!this.bot || !this.bot.running || this.bot.activePosition) {
                     return
                 }
+                // check if the balance is sufficient
+                const { isSufficient } = await this.balanceService.isBalanceSufficient({
+                    bot: this.bot,
+                })
+                if (!isSufficient) {
+                    return
+                }
+                // enqueue the open position
                 await this.openPositionOrchestratorService.enqueue(
                     {
                         liquidityPoolId: payload.liquidityPoolId,
@@ -90,10 +100,18 @@ export class OpenPositionProcessorService  {
                     botId: this.request.botId,
                 }),
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
-                if (!this.bot || !this.bot.running) {
+                // if the bot is not running, or has an active position, return
+                if (!this.bot || !this.bot.running || this.bot.activePosition) {
                     return
                 }
-                // run the open position
+                // if the balance is not sufficient, return
+                const { isSufficient } = await this.balanceService.isBalanceSufficient({
+                    bot: this.bot,
+                })
+                if (!isSufficient) {
+                    return
+                }
+                // enqueue the open position
                 await this.openPositionOrchestratorService.enqueue({
                     liquidityPoolId: payload.liquidityPoolId,
                     bot: this.bot,

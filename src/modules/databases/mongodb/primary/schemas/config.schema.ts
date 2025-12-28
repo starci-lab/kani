@@ -30,3 +30,15 @@ export interface GasAmountRequired {
 export interface ConfigRecord<T> {
     value: T
 }
+
+export interface BalanceRequired {
+    minRequiredAmountInUsd: number
+}
+
+export interface BalanceConfig {
+    balanceRequired: Partial<Record<ChainId, BalanceRequired>>
+}
+
+export interface ConfigRecord<T> {
+    value: T
+}

@@ -19,7 +19,7 @@ import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
-import { TransactionDataBuilder } from "@mysten/sui/dist/cjs/transactions"
+import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { AsyncService } from "@modules/mixin"
 
 @Injectable()

@@ -22,6 +22,7 @@ import { SelectCoinsService } from "../../../tx-builder"
 import { ChainId } from "@typedefs"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { FeeService } from "../../../math"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -30,6 +31,7 @@ export class OpenPositionTxbService {
         private readonly selectCoinsService: SelectCoinsService,
         private readonly dayjsService: DayjsService,
         private readonly feeService: FeeService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
 
     async createOpenPositionTxb(
@@ -69,7 +71,7 @@ export class OpenPositionTxbService {
                 "Target operational gas amount not found"
             )
         }
-        const feeToAddress = this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]?.feeToAddress
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }

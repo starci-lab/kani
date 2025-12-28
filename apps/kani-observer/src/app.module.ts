@@ -102,6 +102,7 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
         }),
         DexesModule.register({
             isGlobal: true,
+            withUtilities: true,
             dexes: [
                 {
                     dexId: DexId.Raydium,

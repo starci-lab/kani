@@ -15,7 +15,14 @@ import {
 import { SolanaBalanceService } from "./solana.service"
 import { TokenType, ChainId } from "@typedefs"
 import { SuiBalanceService } from "./sui.service"
-import { JobType, JobStatus, PrimaryMemoryStorageService, InjectPrimaryMongoose, JobSchema } from "@modules/databases"
+import { 
+    JobType, 
+    JobStatus, 
+    PrimaryMemoryStorageService, 
+    InjectPrimaryMongoose, 
+    JobSchema, 
+    BotSchema 
+} from "@modules/databases"
 import {
     InsufficientMinGasBalanceAmountException,
     TargetOperationalGasAmountNotFoundException,
@@ -40,6 +47,8 @@ import { ReconcileBalancePayload } from "../types"
 import { InjectQueue } from "@nestjs/bullmq"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { AsyncService } from "@modules/mixin"
+import { PythPriceService } from "../pyth"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -50,10 +59,12 @@ export class BalanceService implements IBalanceService {
     private readonly gasStatusService: GasStatusService,
     private readonly swapMathService: SwapMathService,
     private readonly mutexService: MutexService,
+    private readonly pythPriceService: PythPriceService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
     private readonly reconcileBalanceQueue: Queue<ReconcileBalancePayload>,
+    private readonly asyncService: AsyncService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -373,5 +384,102 @@ export class BalanceService implements IBalanceService {
             throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
         }
     }
+
+    public async isBalanceSufficient({
+        bot,
+    }: IsBalanceSufficientParams): Promise<IsBalanceSufficientResponse> {
+        // get the snapshot balances
+        const snapshotTargetBalanceAmount = bot.snapshotTargetBalanceAmount
+        const snapshotQuoteBalanceAmount = bot.snapshotQuoteBalanceAmount
+        const snapshotGasBalanceAmount = bot.snapshotGasBalanceAmount
+        // if the snapshot balances are not set, return false
+        if (
+            !snapshotTargetBalanceAmount ||
+            !snapshotQuoteBalanceAmount ||
+            !snapshotGasBalanceAmount
+        ) {
+            return {
+                isSufficient: false,
+            }
+        }
+        // get the target and quote tokens
+        const targetToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.targetToken.toString(),
+        )
+        if (!targetToken) {
+            throw new TokenNotFoundException("Target token not found")
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === bot.quoteToken.toString(),
+        )
+        if (!quoteToken) {
+            throw new TokenNotFoundException("Quote token not found")
+        }
+        const gasToken = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.type === TokenType.Native && token.chainId === bot.chainId,
+        )
+        if (!gasToken) {
+            throw new TokenNotFoundException("Gas token not found")
+        }
+        // get the target, quote and gas prices
+        const [
+            targetPrice,
+            quotePrice,
+            gasPrice,
+        ] = await this.asyncService.allMustDone(
+            [
+                this.pythPriceService.getPrice({
+                    tokenId: targetToken.displayId,
+                }),
+                this.pythPriceService.getPrice({
+                    tokenId: quoteToken.displayId,
+                }),
+                this.pythPriceService.getPrice({
+                    tokenId: gasToken.displayId,
+                }),
+            ]
+        )
+        const targetBalanceAmountDecimal = computeDenomination(
+            new BN(snapshotTargetBalanceAmount),
+            targetToken.decimals,
+        )
+        const quoteBalanceAmountDecimal = computeDenomination(
+            new BN(snapshotQuoteBalanceAmount),
+            quoteToken.decimals,
+        )
+        const gasBalanceAmountDecimal = computeDenomination(
+            new BN(snapshotGasBalanceAmount),
+            gasToken.decimals,
+        )
+        const totalTargetBalanceAmountInUsd = targetBalanceAmountDecimal.mul(targetPrice)
+        const totalQuoteBalanceAmountInUsd = quoteBalanceAmountDecimal.mul(quotePrice)
+        const totalGasBalanceAmountInUsd = gasBalanceAmountDecimal.mul(gasPrice)
+        const totalBalanceAmountInUsd = totalTargetBalanceAmountInUsd
+            .add(totalQuoteBalanceAmountInUsd)
+            .add(totalGasBalanceAmountInUsd)
+        this.logger.debug(
+            WinstonLog.UserBalanceAmountInUsd,
+            {
+                botId: bot.id,
+                totalBalanceAmountInUsd: totalBalanceAmountInUsd.toNumber(),
+            }
+        )
+        if (totalBalanceAmountInUsd.lt(new Decimal(this.primaryMemoryStorageService.balanceConfig.balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd ?? 0))) {
+            return {
+                isSufficient: false,
+            }
+        }
+        return {
+            isSufficient: true,
+        }
+    }
+}
+
+export interface IsBalanceSufficientParams {
+    bot: BotSchema
+}
+
+export interface IsBalanceSufficientResponse {
+    isSufficient: boolean
 }
 

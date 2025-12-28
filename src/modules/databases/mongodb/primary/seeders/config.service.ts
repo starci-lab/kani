@@ -40,5 +40,19 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 },
             },
         },
+    },
+    {
+        _id: createObjectId(ConfigId.Balance),
+        displayId: ConfigId.Balance,
+        value: {
+            balanceRequired: {
+                [ChainId.Sui]: {
+                    minRequiredAmountInUsd: 20,
+                },
+                [ChainId.Solana]: {
+                    minRequiredAmountInUsd: 50,
+                },
+            },
+        },
     }
 ]

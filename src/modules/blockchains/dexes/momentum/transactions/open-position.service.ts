@@ -20,6 +20,7 @@ import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { adjustSlippage } from "@utils"
 import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { TickMath } from "@mmt-finance/clmm-sdk"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -27,6 +28,7 @@ export class OpenPositionTxbService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly feeService: FeeService,
     private readonly selectCoinsService: SelectCoinsService,
+    private readonly mountStorageService: MountStorageService,
     ) {}
 
     async createOpenPositionTxb({
@@ -50,9 +52,7 @@ export class OpenPositionTxbService {
                 "Either token A or token B is not in the pool",
             )
         }
-        const feeToAddress =
-      this.primaryMemoryStorageService.feeConfig.feeInfo?.[bot.chainId]
-          ?.feeToAddress
+        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }

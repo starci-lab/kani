@@ -4,10 +4,11 @@ import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { AsyncService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
-import { ConfigRecord, ConfigSchema } from "../schemas"
+import { BalanceConfig, ConfigRecord, ConfigSchema } from "../schemas"
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
-import { GasConfigNotFoundException } from "@exceptions"
+import { BalanceConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
@@ -15,6 +16,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
     public liquidityPools: Array<LiquidityPoolSchema> = []
     public dexes: Array<DexSchema> = []
     public gasConfig: GasConfig
+    public balanceConfig: BalanceConfig
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -55,6 +57,9 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                             .find()
                         this.dexes = dexes.map(dex => dex.toJSON())
                     },
+                    delay: envConfig().timeConfig.retry.delay,
+                    maxRetries: envConfig().timeConfig.retry.maxRetries,
+                    factor: envConfig().timeConfig.retry.factor,
                 })
             })(),
             (async () => {
@@ -68,8 +73,27 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         }
                         this.gasConfig = gasConfig.value
                     },
+                    delay: envConfig().timeConfig.retry.delay,
+                    maxRetries: envConfig().timeConfig.retry.maxRetries,
+                    factor: envConfig().timeConfig.retry.factor,
                 })
-            })()
+            })(),
+            (async () => {
+                await this.retryService.retry({
+                    action: async () => {
+                        const balanceConfig = await this.connection
+                            .model<ConfigSchema>(ConfigSchema.name)
+                            .findById<ConfigRecord<BalanceConfig>>(createObjectId(ConfigId.Balance))
+                        if (!balanceConfig) {
+                            throw new BalanceConfigNotFoundException("Balance config not found")
+                        }
+                        this.balanceConfig = balanceConfig.value
+                    },
+                    delay: envConfig().timeConfig.retry.delay,
+                    maxRetries: envConfig().timeConfig.retry.maxRetries,
+                    factor: envConfig().timeConfig.retry.factor,
+                })
+            })(),
         ])
     }
 

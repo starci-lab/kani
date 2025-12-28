@@ -95,4 +95,5 @@ export enum WinstonLog {
     ClosePositionEnqueued = "Close.Position.Enqueued",
     ClosePositionExecuted = "Close.Position.Executed",
     ClosePositionNotExitable = "Close.Position.Not.Exitable",
+    UserBalanceAmountInUsd = "User.Balance.Amount.In.USD",
 }

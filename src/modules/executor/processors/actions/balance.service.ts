@@ -55,15 +55,21 @@ export class BalanceProcessorService  {
         )
         // Periodic evaluation cycle
         const executeBalanceRebalancing = async () => {
-            if (!this.bot || !this.bot.running) {
+            // if the bot is not running, or has an active position, return
+            if (!this.bot || !this.bot.running || this.bot.activePosition) {
                 return
             }
-            if (this.bot.activePosition) {
-                return
-            }
-            await this.balanceService.enqueue({
+            // check if the balance is sufficient
+            const { isSufficient } = await this.balanceService.isBalanceSufficient({
                 bot: this.bot,
             })
+            if (!isSufficient) return
+            // enqueue the balance rebalancing
+            await this.balanceService.enqueue(
+                {
+                    bot: this.bot,
+                }
+            )
         }
         setInterval(
             executeBalanceRebalancing,

@@ -8,6 +8,12 @@ export class GasConfigNotFoundException extends AbstractException {
     }
 }
 
+export class BalanceConfigNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Balance config not found", "BALANCE_CONFIG_NOT_FOUND_EXCEPTION")
+    }
+}
+
 export class FeeConfigNotFoundException extends AbstractException {
     constructor(message?: string) {
         super(message || "Fee config not found", "FEE_CONFIG_NOT_FOUND_EXCEPTION")
