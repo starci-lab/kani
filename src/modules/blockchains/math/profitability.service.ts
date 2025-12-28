@@ -1,19 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import Decimal from "decimal.js"
-import { OraclePriceService } from "../pyth"
+import { PythOraclePriceService } from "../pyth"
 import { BotSchema, PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { TokenType } from "@typedefs"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import BN from "bn.js"
-import { SpotPriceService } from "../dexes"
+import { SpotPriceService } from "../spot"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 
 @Injectable()
 export class ProfitabilityMathService {
     constructor(
-        private readonly oraclePriceService: OraclePriceService,
+        private readonly pythOraclePriceService: PythOraclePriceService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly spotPriceService: SpotPriceService,
@@ -50,7 +50,7 @@ export class ProfitabilityMathService {
             [
                 this.asyncService.executeWithFallbacks({
                     action: async () => {
-                        return await this.oraclePriceService.getOraclePrice({
+                        return await this.pythOraclePriceService.getPythOraclePrice({
                             tokenA: quoteToken.displayId,
                             tokenB: targetToken.displayId,
                         })
@@ -58,7 +58,7 @@ export class ProfitabilityMathService {
                     fallbacks: [
                         async () => {
                             return await this.spotPriceService.getSpotPrice({
-                                liquidityPoolId: state.static.displayId,
+                                state,
                             })
                         },
                         async () => {
@@ -69,7 +69,7 @@ export class ProfitabilityMathService {
                 }),
                 this.asyncService.executeWithFallbacks({
                     action: async () => {
-                        return await this.oraclePriceService.getOraclePrice({
+                        return await this.pythOraclePriceService.getPythOraclePrice({
                             tokenA: gasToken.displayId,
                             tokenB: targetToken.displayId,
                         })
@@ -77,7 +77,7 @@ export class ProfitabilityMathService {
                     fallbacks: [
                         async () => {
                             return await this.spotPriceService.getSpotPrice({
-                                liquidityPoolId: state.static.displayId,
+                                state,
                             })
                         },
                         async () => {

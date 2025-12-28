@@ -1,62 +1,27 @@
 import { Injectable } from "@nestjs/common"
-import { 
-    CacheKey, 
-    createCacheKey, 
-    InjectRedisCache, 
-    PythTokenPriceCacheResult 
-} from "@modules/cache"
-import { Cache } from "cache-manager"
-import { PythTokenPriceNotFoundException } from "@exceptions"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
-import { AsyncService } from "@modules/mixin"
-import Decimal from "decimal.js"
 import { TokenId } from "@modules/databases"
+import { PythPriceService } from "./price.service"
 
 @Injectable()
-export class OraclePriceService {
+export class PythOraclePriceService {
     constructor(
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
-        private readonly asyncService: AsyncService,
+        private readonly priceService: PythPriceService,
     ) {}
 
-    async getOraclePrice(
+    async getPythOraclePrice(
         { 
             tokenA, 
             tokenB
         }
-        : GetOraclePriceParams
+        : GetPythOraclePriceParams
     ) {
-        const keyA = createCacheKey(CacheKey.PythTokenPrice, tokenA)
-        const keyB = createCacheKey(CacheKey.PythTokenPrice, tokenB)
-        const [
-            priceACacheResult, 
-            priceBCacheResult
-        ] = await this.asyncService.allMustDone(
-            [
-                this.cacheManager.get<string>(keyA),
-                this.cacheManager.get<string>(keyB),
-            ])
-        if (!priceACacheResult) {
-            throw new PythTokenPriceNotFoundException(tokenA) 
-        }
-        const priceA = new Decimal(
-            this.superjson.parse<PythTokenPriceCacheResult>(priceACacheResult)?.price ?? 0
-        )
-        if (!priceBCacheResult) {
-            throw new PythTokenPriceNotFoundException(tokenB)
-        }
-        const priceB = new Decimal(
-            this.superjson.parse<PythTokenPriceCacheResult>(priceBCacheResult)?.price ?? 0
-        )
+        const priceA = await this.priceService.getPrice({ tokenId: tokenA })
+        const priceB = await this.priceService.getPrice({ tokenId: tokenB })
         return priceA.div(priceB)
     }
 }
 
-export interface GetOraclePriceParams {
+export interface GetPythOraclePriceParams {
     tokenA: TokenId
     tokenB: TokenId
 }

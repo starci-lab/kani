@@ -11,8 +11,6 @@ import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { OpenPositionOrchestratorService } from "./open-position-orchestrator.service"
 import { ClosePositionOrchestratorService } from "./close-position-orchestrator.service"
 import { MeteoraModule } from "./meteora"
-import { FeeService } from "../math/fee.service"
-import { SpotPriceService } from "./spot-price.service"
 
 @Module({})
 export class DexesModule extends ConfigurableModuleClass {
@@ -94,9 +92,8 @@ export class DexesModule extends ConfigurableModuleClass {
             utilities.push(LiquidityPoolStateService)
             utilities.push(OpenPositionOrchestratorService)
             utilities.push(ClosePositionOrchestratorService)
-            utilities.push(SpotPriceService)
         }
-        
+
         return {
             ...dynamicModule,
             imports: [
@@ -104,7 +101,6 @@ export class DexesModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [],
-                FeeService,
                 ...utilities,
             ],
             exports: [

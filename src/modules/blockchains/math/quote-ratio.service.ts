@@ -3,7 +3,7 @@ import { Injectable } from "@nestjs/common"
 import { ComputeQuoteRatioParams, ComputeQuoteRatioResponse } from "./swap.service"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
-import { OraclePriceService } from "../pyth"
+import { PythOraclePriceService } from "../pyth"
 import { SAFE_QUOTE_RATIO_ABOVE, SAFE_QUOTE_RATIO_BELOW } from "."
 import { Decimal } from "decimal.js"
 
@@ -11,7 +11,7 @@ import { Decimal } from "decimal.js"
 export class QuoteRatioService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly oraclePriceService: OraclePriceService,
+        private readonly pythOraclePriceService: PythOraclePriceService,
     ) {}
 
     public async computeQuoteRatio(
@@ -32,7 +32,7 @@ export class QuoteRatioService {
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
         }
-        const oraclePrice = await this.oraclePriceService.getOraclePrice({
+        const oraclePrice = await this.pythOraclePriceService.getPythOraclePrice({
             tokenA: targetToken.displayId,
             tokenB: quoteToken.displayId,
         })

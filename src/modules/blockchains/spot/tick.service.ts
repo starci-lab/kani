@@ -1,7 +1,8 @@
 import Decimal from "decimal.js"
 import { Injectable } from "@nestjs/common"
-import { computeDenomination } from "@utils"
+import { computeDenomination, toUnitDecimal } from "@utils"
 import BN from "bn.js"
+import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { LiquidityPoolState } from "../interfaces"
 import {
@@ -12,8 +13,12 @@ import { PythOraclePriceService } from "../pyth"
 import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
 import { SpotPriceService } from "../spot"
 import { AsyncService } from "@modules/mixin"
-import { ClmmTickFormulaService } from "../formulas"
-import { DlmmBinFormulaService } from "../formulas"
+
+export interface TickToSqrtPriceX64Params {
+    tickIndex: Decimal
+}
+
+const Q64 = new Decimal(2).pow(64)
 
 @Injectable()
 export class TickMathService {
@@ -22,10 +27,17 @@ export class TickMathService {
         private readonly pythOraclePriceService: PythOraclePriceService,
         private readonly spotPriceService: SpotPriceService,
         private readonly asyncService: AsyncService,
-        private readonly clmmTickFormulaService: ClmmTickFormulaService,
-        private readonly dlmmBinFormulaService: DlmmBinFormulaService,
     ) {}
 
+    public tickToSqrtPriceX64(
+        {
+            tickIndex,
+        }: TickToSqrtPriceX64Params
+    ): BN {
+        // we use sui fomular with high-precision to calculate the sqrt price
+        return TickMath.tickIndexToSqrtPriceX64(tickIndex.toNumber())
+    }
+    
     public async getTickBounds(
         {
             state,
@@ -118,15 +130,15 @@ export class TickMathService {
         const computeR = (tickLower: Decimal, tickUpper: Decimal) => {
             const amountA = new BN(1_000_000_000)
             const liquidity = LiquidityMath.getLiquidityFromTokenAmountA(
-                this.clmmTickFormulaService.tickToSqrtPriceX64({ tickIndex: tickLower }),
-                this.clmmTickFormulaService.tickToSqrtPriceX64({ tickIndex: tickUpper }),
+                this.tickToSqrtPriceX64({ tickIndex: tickLower }),
+                this.tickToSqrtPriceX64({ tickIndex: tickUpper }),
                 amountA,
                 false,
             )
             const { amountA: amountAOut, amountB: amountBOut } = LiquidityMath.getAmountsFromLiquidity(
-                this.clmmTickFormulaService.tickToSqrtPriceX64({ tickIndex: new Decimal(tickCurrent) }),
-                this.clmmTickFormulaService.tickToSqrtPriceX64({ tickIndex: tickLower }),
-                this.clmmTickFormulaService.tickToSqrtPriceX64({ tickIndex: tickUpper }),
+                this.tickToSqrtPriceX64({ tickIndex: new Decimal(tickCurrent) }),
+                this.tickToSqrtPriceX64({ tickIndex: tickLower }),
+                this.tickToSqrtPriceX64({ tickIndex: tickUpper }),
                 liquidity,
                 false,
             )
@@ -161,6 +173,92 @@ export class TickMathService {
             tickUpper: closestTickRecord.tickUpper,
         }
     }
+
+    public sqrtPriceX64ToPrice(
+        params: SqrtPriceX64ToPriceParams
+    ): SqrtPriceX64ToPriceResponse {
+        const { sqrtPriceX64, decimalsA, decimalsB } = params
+
+        const sqrtPrice = new Decimal(sqrtPriceX64.toString())
+        if (sqrtPrice.isZero()) {
+            return { price: new Decimal(0) }
+        }
+
+        // ratio = sqrtPrice / 2^64
+        const ratio = sqrtPrice.div(Q64)
+
+        // price = ratio^2 * 10^(decimalsA - decimalsB)
+        return {
+            price: ratio.pow(2).div(toUnitDecimal(decimalsB - decimalsA)),
+        }
+    }
+
+    public tickIndexToPrice(
+        { 
+            tickIndex, 
+            decimalsA, 
+            decimalsB 
+        }: TickIndexToPriceParams
+    ): TickIndexToPriceResponse {
+        const sqrtPriceX64 = TickMath.tickIndexToSqrtPriceX64(tickIndex)
+        return this.sqrtPriceX64ToPrice({
+            sqrtPriceX64,
+            decimalsA,
+            decimalsB,
+        })
+    }
+
+    public activeIdToPrice(
+        { 
+            activeId, 
+            decimalsA, 
+            decimalsB, 
+            basisPointMax = 10000, 
+            binStep 
+        }: ActiveIdToPriceParams
+    ): ActiveIdToPriceResponse {
+        // ?: price = (1 + binStep / basisPointMax)^activeId * 10^(decimalsA - decimalsB)
+        const base = new Decimal(1).add(
+            new Decimal(binStep).div(basisPointMax)
+        )
+        const rawPrice = base.pow(activeId)
+        const price = rawPrice.mul(
+            new Decimal(10).pow(new Decimal(decimalsA).sub(decimalsB))
+        )
+        return { price }
+    }
+}
+
+export interface ActiveIdToPriceParams {
+    activeId: number
+    decimalsA: number
+    decimalsB: number
+    basisPointMax?: number
+    binStep: number
+}
+
+export interface ActiveIdToPriceResponse {
+    price: Decimal
+}
+
+export interface TickIndexToPriceParams {
+    tickIndex: number
+    decimalsA: number
+    decimalsB: number
+}
+
+export interface TickIndexToPriceResponse {
+    price: Decimal
+}
+
+export interface SqrtPriceX64ToPriceParams {
+    sqrtPriceX64: BN
+    decimalsA: number
+    decimalsB: number
+}
+
+export interface SqrtPriceX64ToPriceResponse {
+    price: Decimal
 }
 
 export interface GetTickBoundsParams {

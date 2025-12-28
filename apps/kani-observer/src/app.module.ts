@@ -7,12 +7,13 @@ import { CexesModule, ClientsModule, DexesModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
-import { PythModule } from "@modules/blockchains"
+import { PythModule, SpotModule } from "@modules/blockchains"
 import { 
     SignersModule, 
     SnapshotsModule, 
     TxBuilderModule, 
-    MathModule 
+    MathModule,
+    FormulasModule 
 } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
@@ -38,6 +39,9 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
             isGlobal: true,
             appName: "kani-observer",
             level: WinstonLevel.Info,
+        }),
+        FormulasModule.register({
+            isGlobal: true,
         }),
         EventEmitterModule.forRoot(),
         MixinModule.register({
@@ -86,6 +90,9 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
             isGlobal: true,
         }),
         PythModule.register({
+            isGlobal: true,
+        }),
+        SpotModule.register({
             isGlobal: true,
         }),
         SnapshotsModule.register({
