@@ -83,7 +83,8 @@ export class CetusObserverService {
                 WinstonLog.FetchClmmPoolError, {
                     liquidityPoolId,
                     error: error.message,
-                })
+                }
+            )
         }
     }
 

@@ -5,7 +5,11 @@ import {
     MinOperationalGasAmountNotFoundException,
     InsufficientMinGasBalanceAmountException
 } from "@exceptions"
-import { PrimaryMemoryStorageService, QuoteRatioStatus, TokenId } from "@modules/databases"
+import { 
+    PrimaryMemoryStorageService, 
+    QuoteRatioStatus, 
+    TokenId 
+} from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { Decimal } from "decimal.js"
 import { computeRaw, toScaledBN, toUnit } from "@utils"
@@ -13,7 +17,12 @@ import { ChainId, TokenType } from "@typedefs"
 import BN from "bn.js"
 import { QuoteRatioService } from "./quote-ratio.service"
 import { GasStatus } from "../types"
-import { SAFE_QUOTE_RATIO_BELOW, SAFE_QUOTE_RATIO_ABOVE, EXPECTED_QUOTE_RATIO_BELOW, EXPECTED_QUOTE_RATIO_ABOVE } from "./constants"
+import { 
+    SAFE_QUOTE_RATIO_BELOW, 
+    SAFE_QUOTE_RATIO_ABOVE, 
+    EXPECTED_QUOTE_RATIO_BELOW, 
+    EXPECTED_QUOTE_RATIO_ABOVE 
+} from "./constants"
 
 @Injectable()
 export class SwapMathService {

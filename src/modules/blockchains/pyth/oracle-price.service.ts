@@ -24,7 +24,10 @@ export class OraclePriceService {
     ) {}
 
     async getOraclePrice(
-        { tokenA, tokenB }
+        { 
+            tokenA, 
+            tokenB
+        }
         : GetOraclePriceParams
     ) {
         const keyA = createCacheKey(CacheKey.PythTokenPrice, tokenA)
@@ -32,19 +35,20 @@ export class OraclePriceService {
         const [
             priceACacheResult, 
             priceBCacheResult
-        ] = await this.asyncService.allMustDone([
-            this.cacheManager.get<string>(keyA),
-            this.cacheManager.get<string>(keyB),
-        ])
+        ] = await this.asyncService.allMustDone(
+            [
+                this.cacheManager.get<string>(keyA),
+                this.cacheManager.get<string>(keyB),
+            ])
         if (!priceACacheResult) {
-            throw new PythTokenPriceNotFoundException(tokenA, "Token A price not found")
-        }
-        if (!priceBCacheResult) {
-            throw new PythTokenPriceNotFoundException(tokenB, "Token B price not found")
+            throw new PythTokenPriceNotFoundException(tokenA) 
         }
         const priceA = new Decimal(
             this.superjson.parse<PythTokenPriceCacheResult>(priceACacheResult)?.price ?? 0
         )
+        if (!priceBCacheResult) {
+            throw new PythTokenPriceNotFoundException(tokenB)
+        }
         const priceB = new Decimal(
             this.superjson.parse<PythTokenPriceCacheResult>(priceBCacheResult)?.price ?? 0
         )

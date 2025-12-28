@@ -169,7 +169,7 @@ export class BalanceService implements IBalanceService {
             quoteTokenId: quoteToken.displayId,
             targetBalanceAmount,
             quoteBalanceAmount,
-            gasBalanceAmount,
+            gasBalanceAmount
         })
         if (!processSwaps) {
             // just snapshot the balances and return

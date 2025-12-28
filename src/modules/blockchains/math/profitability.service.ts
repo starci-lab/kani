@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import Decimal from "decimal.js"
 import { OraclePriceService } from "../pyth"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { ChainId, TokenType } from "@typedefs"
+import { BotSchema, PrimaryMemoryStorageService, TokenId } from "@modules/databases"
+import { TokenType } from "@typedefs"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import BN from "bn.js"
+import { SpotPriceService } from "../dexes"
+import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 
 @Injectable()
 export class ProfitabilityMathService {
@@ -14,6 +16,7 @@ export class ProfitabilityMathService {
         private readonly oraclePriceService: OraclePriceService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
+        private readonly spotPriceService: SpotPriceService,
     ) {}
 
     public async calculateProfitability(
@@ -22,7 +25,8 @@ export class ProfitabilityMathService {
             after,
             targetTokenId,
             quoteTokenId,
-            chainId,
+            bot,
+            state,
         }: CalculateProfitabilityParams
     ): Promise<CalculateProfitabilityResponse> {
         const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === targetTokenId)
@@ -34,7 +38,7 @@ export class ProfitabilityMathService {
             throw new TokenNotFoundException("Quote token not found")
         }
         const gasToken = this.primaryMemoryStorageService.tokens.find(token => {
-            return token.type === TokenType.Native && token.chainId === chainId
+            return token.type === TokenType.Native && token.chainId === bot.chainId
         })
         if (!gasToken) {
             throw new TokenNotFoundException("Gas token not found")
@@ -42,16 +46,49 @@ export class ProfitabilityMathService {
         const [
             quoteOraclePrice, 
             gasOraclePrice
-        ] = await this.asyncService.allMustDone([
-            this.oraclePriceService.getOraclePrice({
-                tokenA: quoteToken.displayId,
-                tokenB: targetToken.displayId,
-            }),
-            this.oraclePriceService.getOraclePrice({
-                tokenA: gasToken.displayId,
-                tokenB: targetToken.displayId,
-            }),
-        ])
+        ] = await this.asyncService.allMustDone(
+            [
+                this.asyncService.executeWithFallbacks({
+                    action: async () => {
+                        return await this.oraclePriceService.getOraclePrice({
+                            tokenA: quoteToken.displayId,
+                            tokenB: targetToken.displayId,
+                        })
+                    },
+                    fallbacks: [
+                        async () => {
+                            return await this.spotPriceService.getSpotPrice({
+                                liquidityPoolId: state.static.displayId,
+                            })
+                        },
+                        async () => {
+                            return new Decimal(1)
+                        },
+                    ],
+                    attempts: 1
+                }),
+                this.asyncService.executeWithFallbacks({
+                    action: async () => {
+                        return await this.oraclePriceService.getOraclePrice({
+                            tokenA: gasToken.displayId,
+                            tokenB: targetToken.displayId,
+                        })
+                    },
+                    fallbacks: [
+                        async () => {
+                            return await this.spotPriceService.getSpotPrice({
+                                liquidityPoolId: state.static.displayId,
+                            })
+                        },
+                        async () => {
+                            return new Decimal(1)
+                        },
+                    ],
+                    attempts: 1
+                }
+                )
+            ]
+        )
         // priceA/priceB
         const beforeTargetBalanceAmountInTarget = computeDenomination(
             before.targetTokenBalanceAmount, 
@@ -97,7 +134,8 @@ export interface CalculateProfitabilityParams {
     after: CalculateProfitability,
     targetTokenId: TokenId,
     quoteTokenId: TokenId,
-    chainId: ChainId,
+    bot: BotSchema,
+    state: LiquidityPoolState | DlmmLiquidityPoolState,
 }
 
 export interface CalculateProfitability {

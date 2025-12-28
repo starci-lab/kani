@@ -21,6 +21,12 @@ export class PythTokenPriceNotFoundException extends AbstractException {
     }
 }
 
+export class LiquidityPoolIdRequiredForSpotPriceException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Liquidity pool ID is required for spot price", "LIQUIDITY_POOL_ID_REQUIRED_FOR_SPOT_PRICE_EXCEPTION")
+    }
+}
+
 export class TokenListIsEmptyException extends AbstractException {
     constructor(message?: string) {
         super(message || "Token list is empty", "TOKEN_LIST_IS_EMPTY_EXCEPTION")
@@ -72,5 +78,11 @@ export class AmountBNotAboveExpectedException extends AbstractException {
 export class AmountBInBetweenExpectedException extends AbstractException {
     constructor(ratio: Decimal, message?: string) {
         super(message || "Amount B is in between expected", "AMOUNT_B_IN_BETWEEN_EXPECTED_EXCEPTION", { ratio: ratio.toString() })
+    }
+}
+
+export class PythAndSpotPriceNotFoundException extends AbstractException {
+    constructor(tokenA: TokenId, tokenB: TokenId, message?: string) {
+        super(message || "Pyth and spot price not found for the given tokens", "PYTH_AND_SPOT_PRICE_NOT_FOUND_EXCEPTION", { tokenA, tokenB })
     }
 }

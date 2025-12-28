@@ -147,6 +147,7 @@ export const envConfig = () => ({
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
+            spotPrice: parseInt(process.env.CACHE_SPOT_PRICE_TTL || ms("1m").toString(), 10), // 60s
         }
     }, 
     ejection: {

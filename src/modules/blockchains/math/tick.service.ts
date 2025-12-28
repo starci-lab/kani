@@ -5,12 +5,14 @@ import BN from "bn.js"
 import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { LiquidityPoolState } from "../interfaces"
-import { 
+import {
     SnapshotBalancesNotSetException, 
     TokenNotFoundException
 } from "@exceptions"
 import { OraclePriceService } from "../pyth"
 import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
+import { SpotPriceService } from "../dexes"
+import { AsyncService } from "@modules/mixin"
 
 export interface TickToSqrtPriceX64Params {
     tickIndex: Decimal
@@ -23,6 +25,8 @@ export class TickMathService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly oraclePriceService: OraclePriceService,
+        private readonly spotPriceService: SpotPriceService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     public tickToSqrtPriceX64(
@@ -35,13 +39,11 @@ export class TickMathService {
     }
     
     public async getTickBounds(
-        params: GetTickBoundsParams
-    ) {
-        const {
+        {
             state,
             bot
-        } = params
-    
+        } : GetTickBoundsParams
+    ) {
         const {
             snapshotTargetBalanceAmount,
             snapshotQuoteBalanceAmount,
@@ -74,14 +76,28 @@ export class TickMathService {
         const tokenBEntity = targetIsA ? quoteTokenEntity : targetTokenEntity
         const snapshotTokenAAmount = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const snapshotTokenBAmount = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
-        const oraclePrice = await this.oraclePriceService.getOraclePrice({
-            tokenA: tokenAEntity.displayId,
-            tokenB: tokenBEntity.displayId,
+        // get the price from the oracle or the spot price
+        const price = await this.asyncService.executeWithFallbacks({
+            action: async () => {
+                return await this.oraclePriceService.getOraclePrice({
+                    tokenA: tokenAEntity.displayId,
+                    tokenB: tokenBEntity.displayId,
+                })
+            },
+            fallbacks: [
+                async () => {
+                    return await this.spotPriceService.getSpotPrice({
+                        liquidityPoolId: state.static.displayId,
+                    })
+                },
+            ],
+            attempts: 1
         })
+        // compute the token amount in the other token
         const tokenAAmountInB = computeDenomination(
             new BN(snapshotTokenAAmount),
             tokenAEntity.decimals
-        ).mul(oraclePrice)
+        ).mul(price)
         const tokenBAmountInB = computeDenomination(
             new BN(snapshotTokenBAmount),
             tokenBEntity.decimals
@@ -129,7 +145,7 @@ export class TickMathService {
             const amountAOutInB = computeDenomination(
                 new BN(amountAOut),
                 tokenAEntity.decimals
-            ).mul(oraclePrice)
+            ).mul(price)
             const amountBOutInB = computeDenomination(
                 new BN(amountBOut),
                 tokenBEntity.decimals
@@ -178,9 +194,12 @@ export class TickMathService {
     }
 
     public tickIndexToPrice(
-        params: TickIndexToPriceParams
+        { 
+            tickIndex, 
+            decimalsA, 
+            decimalsB 
+        }: TickIndexToPriceParams
     ): TickIndexToPriceResponse {
-        const { tickIndex, decimalsA, decimalsB } = params
         const sqrtPriceX64 = TickMath.tickIndexToSqrtPriceX64(tickIndex)
         return this.sqrtPriceX64ToPrice({
             sqrtPriceX64,
@@ -188,6 +207,38 @@ export class TickMathService {
             decimalsB,
         })
     }
+
+    public activeIdToPrice(
+        { 
+            activeId, 
+            decimalsA, 
+            decimalsB, 
+            basisPointMax = 10000, 
+            binStep 
+        }: ActiveIdToPriceParams
+    ): ActiveIdToPriceResponse {
+        // ?: price = (1 + binStep / basisPointMax)^activeId * 10^(decimalsA - decimalsB)
+        const base = new Decimal(1).add(
+            new Decimal(binStep).div(basisPointMax)
+        )
+        const rawPrice = base.pow(activeId)
+        const price = rawPrice.mul(
+            new Decimal(10).pow(new Decimal(decimalsA).sub(decimalsB))
+        )
+        return { price }
+    }
+}
+
+export interface ActiveIdToPriceParams {
+    activeId: number
+    decimalsA: number
+    decimalsB: number
+    basisPointMax?: number
+    binStep: number
+}
+
+export interface ActiveIdToPriceResponse {
+    price: Decimal
 }
 
 export interface TickIndexToPriceParams {

@@ -99,12 +99,6 @@ export class OpenPositionOrchestratorService {
         if (mutex.isLocked()) {
             return
         }
-        /*
-         * Skip if the bot is not running
-         */
-        if (!bot.running) {
-            return
-        }
         /**
          * Skip job if:
          * - balance snapshot is missing

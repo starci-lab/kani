@@ -3,8 +3,6 @@ import { BotSchema } from "@modules/databases"
 import { envConfig } from "@modules/env"    
 import { Injectable, Scope, Inject } from "@nestjs/common"
 import { REQUEST } from "@nestjs/core"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
 import { createReadinessWatcherName, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { createEventName, EventName } from "@modules/event"
@@ -32,8 +30,6 @@ export class BalanceProcessorService  {
     constructor(
         @Inject(REQUEST)
         private readonly request: BalanceProcessorRequest,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
         private readonly balanceService: BalanceService,
         private readonly eventEmitter: EventEmitter2,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -59,7 +55,7 @@ export class BalanceProcessorService  {
         )
         // Periodic evaluation cycle
         const executeBalanceRebalancing = async () => {
-            if (!this.bot) {
+            if (!this.bot || !this.bot.running) {
                 return
             }
             if (this.bot.activePosition) {

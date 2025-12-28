@@ -77,7 +77,7 @@ export class ClosePositionProcessorService {
             async (
                 payload: LiquidityPoolsFetchedEvent
             ) => {
-                if (!this.bot || !this.bot.activePosition) {
+                if (!this.bot || !this.bot.running || !this.bot.activePosition) {
                     return
                 }
                 await this.closePositionOrchestratorService.enqueue({
@@ -91,7 +91,7 @@ export class ClosePositionProcessorService {
             async (
                 payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
-                if (!this.bot || !this.bot.activePosition) {
+                if (!this.bot || !this.bot.running || !this.bot.activePosition) {
                     return
                 }
                 await this.closePositionOrchestratorService.enqueue({

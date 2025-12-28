@@ -146,7 +146,13 @@ export class RpcExecutorService {
                         action: async () => {
                             // resolve the tuple of response and error
                             const [response, error] = await this.asyncService.resolveTuple(
-                                callback({ rpc, rpcSubscriptions, rpcUrl })
+                                callback(
+                                    { 
+                                        rpc, 
+                                        rpcSubscriptions,
+                                        rpcUrl
+                                    }
+                                )
                             )
                             // if the response is not null, return the response
                             if (response !== null) {

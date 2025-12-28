@@ -24,7 +24,11 @@ export enum CacheKey {
     PoolAnalytics = "poolAnalytics",
     SignInOtpCode = "signInOtpCode",
     SendOtpCode = "sendOtpCode",
+    SpotPrice = "spotPrice",
+}
 
+export interface SpotPriceCacheResult {
+    price: number
 }
 
 export interface PythTokenPriceCacheResult {

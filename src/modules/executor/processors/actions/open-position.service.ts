@@ -69,16 +69,18 @@ export class OpenPositionProcessorService  {
                 EventName.DistributedLiquidityPoolsFetched, {
                     botId: this.request.botId,
                 }),
-            async (payload: LiquidityPoolsFetchedEvent) => {
-                if (!this.bot) {
+            async (
+                payload: LiquidityPoolsFetchedEvent
+            ) => {
+                if (!this.bot || !this.bot.running) {
                     return
                 }
-                // await this.openPositionOrchestratorService.enqueue(
-                //     {
-                //         liquidityPoolId: payload.liquidityPoolId,
-                //         bot: this.bot,
-                //     }
-                // )
+                await this.openPositionOrchestratorService.enqueue(
+                    {
+                        liquidityPoolId: payload.liquidityPoolId,
+                        bot: this.bot,
+                    }
+                )
             }
         )
         this.eventEmitter.on(
@@ -88,7 +90,7 @@ export class OpenPositionProcessorService  {
                     botId: this.request.botId,
                 }),
             async (payload: DlmmLiquidityPoolsFetchedEvent) => {
-                if (!this.bot) {
+                if (!this.bot || !this.bot.running) {
                     return
                 }
                 // run the open position
