@@ -55,7 +55,6 @@ import { Connection } from "mongoose"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-
 @Injectable()
 export class OpenPositionOrchestratorService {
     constructor(

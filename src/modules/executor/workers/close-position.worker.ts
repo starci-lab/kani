@@ -213,7 +213,8 @@ export class ClosePositionWorker extends WorkerHost {
             after,
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
-            chainId: bot.chainId,
+            bot,
+            state,
         })
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
