@@ -8,7 +8,7 @@ import {
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenNotFoundException, TransactionNotFoundException } from "@exceptions"
+import { TokenNotFoundException, TransactionNotExecutedException, TransactionNotFoundException } from "@exceptions"
 import BN from "bn.js"
 import { SuiAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
@@ -20,6 +20,7 @@ import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
 import { TransactionDataBuilder } from "@mysten/sui/dist/cjs/transactions"
+import { AsyncService } from "@modules/mixin"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -31,6 +32,7 @@ export class SuiBalanceService implements IBalanceService {
         private readonly signerService: SignerService,
         @InjectWinston()
         private readonly logger: winstonLogger,
+        private readonly asyncService: AsyncService,
     ) {}
 
     async prepareSwapTransaction(
@@ -103,20 +105,27 @@ export class SuiBalanceService implements IBalanceService {
             tokenOut,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        if (!signatureWithBytes) {
-            throw new TransactionNotFoundException("Transaction not prepared")
-        }
-        await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                if (isRetry) {
+        if (isRetry) {
+            return await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Read,
+                callback: async ({ suiClient }) => {
                     const transaction = await suiClient.getTransactionBlock({
                         digest: txHash,
                     })
                     if (transaction) {
                         return
                     }
-                }
+                    throw new TransactionNotExecutedException("Transaction not executed")
+                },
+            })
+        }
+        if (!signatureWithBytes) {
+            throw new TransactionNotFoundException("Transaction not prepared")
+        }
+        await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
