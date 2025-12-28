@@ -3,7 +3,7 @@ import { ClmmPool } from "@flowx-finance/sdk"
 import { BotSchema, LiquidityPoolId, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
 import BN from "bn.js"
 import { DynamicDlmmLiquidityPoolInfo, DynamicLiquidityPoolInfo } from "../types"
-import { Transaction } from "@mysten/sui/transactions"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { FullySignedTransaction, TransactionWithinSizeLimit, TransactionWithBlockhashLifetime, TransactionMessageBytes, SignaturesMap } from "@solana/kit"
 
 export interface FetchedPool {
@@ -55,7 +55,7 @@ export interface PrepareClosePositionParams {
 
 export interface PrepareClosePositionResponse {
     txHash: string;
-    txb?: Transaction;
+    signatureWithBytes?: SignatureWithBytes;
     solanaTx?: SolanaTx;
 }
 

@@ -6,7 +6,7 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResponse,
 } from "../../interfaces"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import {
     PrimaryMemoryStorageService,
@@ -20,6 +20,7 @@ import {
     SnapshotBalancesBeforeOpenNotSetException,
     TokenNotFoundException,
     TransactionNotPreparedException,
+    TransactionNotExecutedException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -61,11 +62,25 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             bot,
             state: _state,
         })
-        const txHash = await closePositionTxb.getDigest()
-        return {
-            txHash,
-            txb: closePositionTxb,
-        }
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        const bytes = await closePositionTxb.build({
+                            client: suiClient,
+                        })
+                        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                        const signatureWithBytes = await signer.signTransaction(bytes)
+                        return {
+                            txHash,
+                            signatureWithBytes,
+                        }
+                    },
+                })
+            },
+        })
     }
 
     async execute(
@@ -133,7 +148,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             bot,
             state,
             isRetry,
-            txb,
+            signatureWithBytes,
             txHash,
         }: ExecuteClosePositionParams
     ): Promise<void> {
@@ -169,49 +184,49 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 "Either token A or token B is not in the pool",
             )
         }
+        if (isRetry) {
+            const [txBlock] = await this.asyncService.resolveTuple(
+                this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Read,
+                    callback: async ({ suiClient }) => {
+                        return suiClient.getTransactionBlock({
+                            digest: txHash,
+                            options: {
+                                showEvents: true,
+                            }
+                        })
+                    },
+                })
+            )
+            if (txBlock !== null) {
+                return
+            }
+            throw new TransactionNotExecutedException("Transaction not executed")
+        }
+        if (!signatureWithBytes) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        if (isRetry) {
-                            const [txBlock] = await this.asyncService.resolveTuple(
-                                suiClient.getTransactionBlock({
-                                    digest: txHash,
-                                    options: {
-                                        showEvents: true,
-                                    }
-                                })
-                            )
-                            if (txBlock !== null) {
-                                return
-                            }
-                        }
-                        if (!txb) {
-                            throw new TransactionNotPreparedException("Transaction not prepared")
-                        }
-                        const { digest } = await suiClient.signAndExecuteTransaction({
-                            transaction: txb,
-                            signer,
-                            options: {
-                                showEvents: true,
-                            },
-                        })
-                        await suiClient.waitForTransaction({
-                            digest,
-                        })
-                        this.logger.verbose(
-                            WinstonLog.ClosePositionSuccess, {
-                                botId: bot.id,
-                                txHash: txHash,
-                                liquidityPoolId: _state.static.displayId,
-                            }
-                        )
+                const { digest } = await suiClient.executeTransactionBlock({
+                    transactionBlock: signatureWithBytes.bytes,
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEvents: true,
                     },
                 })
+                await suiClient.waitForTransaction({
+                    digest,
+                })
+                this.logger.verbose(
+                    WinstonLog.ClosePositionSuccess, {
+                        botId: bot.id,
+                        txHash: digest,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
             },
         })
     }
 }
-

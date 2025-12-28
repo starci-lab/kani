@@ -4,14 +4,14 @@ import {
     DlmmLiquidityPoolState, 
     SolanaTx
 } from "./types"
-import { Transaction } from "@mysten/sui/transactions"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { PrepareClosePositionParams, PrepareClosePositionResponse } from "./types"
 
 export interface ExecuteClosePositionParams {
   bot: BotSchema;
   state: LiquidityPoolState | DlmmLiquidityPoolState;
   isRetry: boolean;
-  txb?: Transaction;
+  signatureWithBytes?: SignatureWithBytes;
   solanaTx?: SolanaTx;
   txHash: string;
 }

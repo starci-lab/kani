@@ -6,7 +6,7 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResponse,
 } from "../../interfaces"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import { 
     PrimaryMemoryStorageService
@@ -19,24 +19,26 @@ import {
     InvalidPoolTokensException, 
     TokenNotFoundException, 
     TransactionNotPreparedException,
+    TransactionNotExecutedException,
 } from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import Decimal from "decimal.js"
+import { AsyncService } from "@modules/mixin"
 
 @Injectable()
 export class CetusClosePositionActionService implements IClosePositionActionService {
     constructor(
-    private readonly signerService: SignerService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly closePositionTxbService: ClosePositionTxbService,
-    private readonly rpcExecutorService: RpcExecutorService,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
+        private readonly signerService: SignerService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly closePositionTxbService: ClosePositionTxbService,
+        private readonly asyncService: AsyncService,
+        private readonly rpcExecutorService: RpcExecutorService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
-
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
@@ -56,19 +58,32 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             bot,
             state: _state,
         })
-        const txHash = await closePositionTxb.getDigest()
-        return {
-            txHash,
-            txb: closePositionTxb,
-        }   
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                return await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        const bytes = await closePositionTxb.build({
+                            client: suiClient,
+                        })
+                        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                        const signatureWithBytes = await signer.signTransaction(bytes)
+                        return {
+                            txHash,
+                            signatureWithBytes,
+                        }
+                    },
+                })
+            },
+        })
     }
 
     async execute(
         params: ExecuteClosePositionParams
     ): Promise<void> {
         const { bot } = params
-        if (!bot.activePosition) 
-        {
+        if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
                 "Active position not found"
@@ -131,48 +146,53 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             bot,
             state,
             isRetry,
-            txb,
+            signatureWithBytes,
             txHash,
         }: ExecuteClosePositionParams
     ): Promise<void> {
         const _state = state as LiquidityPoolState
-        await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {
-                // sign the transaction
-                return await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        if (isRetry) {
-                            const transactionExisted = await suiClient.getTransactionBlock({
-                                digest: txHash,
-                            })
-                            if (transactionExisted) {
-                                return
-                            }
-                        }
-                        if (!txb) {
-                            throw new TransactionNotPreparedException("Transaction not prepared")
-                        }
-                        const { digest } = await suiClient.signAndExecuteTransaction({
-                            transaction: txb,
-                            signer,
+        if (isRetry) {
+            const [txBlock] = await this.asyncService.resolveTuple(
+                this.rpcExecutorService.withSuiClient({
+                    accessType: RpcAccessType.Read,
+                    callback: async ({ suiClient }) => {
+                        return suiClient.getTransactionBlock({
+                            digest: txHash,
                             options: {
                                 showEvents: true,
                             }
                         })
-                        await suiClient.waitForTransaction({
-                            digest,
-                        })
-                        this.logger.verbose(
-                            WinstonLog.ClosePositionSuccess, {
-                                botId: bot.id,
-                                txHash: txHash,
-                                liquidityPoolId: _state.static.displayId,
-                            }
-                        )
                     },
                 })
+            )
+            if (txBlock !== null) {
+                return
+            }
+            throw new TransactionNotExecutedException("Transaction not executed")
+        }
+        if (!signatureWithBytes) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
+        await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
+            callback: async ({ suiClient }) => {
+                const { digest } = await suiClient.executeTransactionBlock({
+                    transactionBlock: signatureWithBytes.bytes,
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEvents: true,
+                    }
+                })
+                await suiClient.waitForTransaction({
+                    digest,
+                })
+                this.logger.verbose(
+                    WinstonLog.ClosePositionSuccess, {
+                        botId: bot.id,
+                        txHash: digest,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
             },
         })
     }

@@ -25,7 +25,7 @@ import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Transaction } from "@mysten/sui/transactions"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { Decimal } from "decimal.js"
 import { AsyncService } from "@modules/mixin"
 /**
@@ -77,7 +77,7 @@ export class OpenPositionWorker extends WorkerHost {
         }
         const order = getJobStatusOrder(job?.status || JobStatus.Pending)
         let txHash: string
-        let txb: Transaction | undefined = undefined
+        let signatureWithBytes: SignatureWithBytes | undefined = undefined
         let solanaTx: SolanaTx | undefined = undefined
         let feeAmountA: BN
         let feeAmountB: BN
@@ -95,7 +95,7 @@ export class OpenPositionWorker extends WorkerHost {
             // prepare the transaction and get the result
             const {
                 txHash: preparedTxHash,
-                txb: preparedTxb,
+                signatureWithBytes: preparedSignatureWithBytes,
                 solanaTx: preparedSolanaTx,
                 feeAmountA: preparedFeeAmountA,
                 feeAmountB: preparedFeeAmountB,
@@ -144,7 +144,7 @@ export class OpenPositionWorker extends WorkerHost {
             metadata = preparedMetadata
             positionId = preparedPositionId
             solanaTx = preparedSolanaTx
-            txb = preparedTxb
+            signatureWithBytes = preparedSignatureWithBytes
         } else {
             if (!job?.txHash) {
                 throw new UnrecoverableError("Transaction hash not found")
@@ -174,7 +174,7 @@ export class OpenPositionWorker extends WorkerHost {
                     state,
                     isRetry,
                     txHash,
-                    txb,
+                    signatureWithBytes,
                     solanaTx,
                     feeAmountA,
                     feeAmountB,

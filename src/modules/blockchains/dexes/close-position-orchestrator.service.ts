@@ -11,7 +11,7 @@ import { FlowXClosePositionActionService } from "./flowx"
 import { CetusClosePositionActionService } from "./cetus"
 import { TurbosClosePositionActionService } from "./turbos"
 import { MomentumClosePositionActionService } from "./momentum"
-import { PrepareClosePositionParams, ExecuteClosePositionParams as ExecuteClosePositionParamsInterface } from "../interfaces"
+import { PrepareClosePositionParams, PrepareClosePositionResponse, ExecuteClosePositionParams as ExecuteClosePositionParamsInterface } from "../interfaces"
 import { createObjectId } from "@utils"
 import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
@@ -170,7 +170,7 @@ export class ClosePositionOrchestratorService {
             bot,
             state,
         }: PrepareClosePositionParams,
-    ) {
+    ): Promise<PrepareClosePositionResponse> {
         const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
         const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
         if (!dex) throw new DexNotFoundException("Dex not found")

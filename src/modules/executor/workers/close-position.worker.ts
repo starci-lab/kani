@@ -26,7 +26,7 @@ import { createEventName, EventName } from "@modules/event"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"   
-import { Transaction } from "@mysten/sui/transactions"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { AsyncService } from "@modules/mixin"
 import { SolanaTx } from "@modules/blockchains/interfaces"
 import {
@@ -98,13 +98,13 @@ export class ClosePositionWorker extends WorkerHost {
         }
         const order = getJobStatusOrder(job?.status || JobStatus.Pending)
         let txHash: string
-        let txb: Transaction | undefined = undefined
+        let signatureWithBytes: SignatureWithBytes | undefined = undefined
         let solanaTx: SolanaTx | undefined = undefined
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
             // prepare the transaction and get the result
             const { 
                 txHash: preparedTxHash,
-                txb: preparedTxb,
+                signatureWithBytes: preparedSignatureWithBytes,
                 solanaTx: preparedSolanaTx,
             } = await this.closePositionOrchestratorService.prepare({
                 state,
@@ -123,7 +123,7 @@ export class ClosePositionWorker extends WorkerHost {
                 }
             )
             txHash = preparedTxHash
-            txb = preparedTxb
+            signatureWithBytes = preparedSignatureWithBytes
             solanaTx = preparedSolanaTx
         } else {
             if (!job?.txHash) {
@@ -138,7 +138,7 @@ export class ClosePositionWorker extends WorkerHost {
                     state,
                     isRetry,
                     txHash,
-                    txb,
+                    signatureWithBytes,
                     solanaTx,
                 }))
             // if error found, return, cancel the job

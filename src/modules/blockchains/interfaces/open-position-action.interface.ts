@@ -3,13 +3,13 @@ import {
     BotSchema,
 } from "@modules/databases"
 import { Decimal } from "decimal.js"
-import { Transaction } from "@mysten/sui/transactions"
 import { SolanaTx } from "./types"
 import { DlmmLiquidityPoolState, LiquidityPoolState, PrepareOpenPositionParams } from "./types"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 
 export interface PrepareOpenPositionResponse {
   txHash: string;
-  txb?: Transaction;
+  signatureWithBytes?: SignatureWithBytes;
   solanaTx?: SolanaTx;
   feeAmountA: BN;
   feeAmountB: BN;
@@ -27,7 +27,7 @@ export interface ExecuteOpenPositionParams {
     bot: BotSchema;
     state: LiquidityPoolState | DlmmLiquidityPoolState;
     isRetry: boolean;
-    txb?: Transaction;
+    signatureWithBytes?: SignatureWithBytes
     solanaTx?: SolanaTx;
     txHash: string;
     feeAmountA: BN;

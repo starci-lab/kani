@@ -9,7 +9,7 @@ import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResponse,
 } from "../../interfaces"
-import { Transaction } from "@mysten/sui/transactions"
+import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
@@ -115,22 +115,31 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             state: _state,
             tickUpper,
         })
-        const txHash = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await txb.getDigest({ client: suiClient })
+                return await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        const bytes = await openPositionTxb.build({
+                            client: suiClient,
+                        })
+                        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                        const signatureWithBytes = await signer.signTransaction(bytes)
+                        return {
+                            txHash,
+                            signatureWithBytes,
+                            feeAmountA,
+                            feeAmountB,
+                            tickLower,
+                            tickUpper,
+                            amountA,
+                            amountB,
+                        }
+                    },
+                })
             },
         })
-        return {
-            txHash,
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-            tickLower,
-            tickUpper,
-            amountA,
-            amountB,
-        }
     }
 
     async execute({
@@ -138,7 +147,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         state,
         isRetry,
         txHash,
-        txb,
+        signatureWithBytes,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
         const _state = state as LiquidityPoolState
         if (isRetry) {
@@ -163,55 +172,33 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             }
             throw new TransactionNotExecutedException("Transaction not executed")
         }
+        if (!signatureWithBytes) {
+            throw new TransactionNotPreparedException("Transaction not prepared")
+        }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        if (isRetry) {
-                            const [txBlock] = await this.asyncService.resolveTuple(
-                                suiClient.getTransactionBlock({
-                                    digest: txHash,
-                                    options: {
-                                        showEvents: true,
-                                    }
-                                })
-                            )
-                            if (txBlock !== null) {
-                                const { positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
-                                return {
-                                    positionId,
-                                }
-                            }
-                            throw new TransactionNotExecutedException("Transaction not executed")
-                        }
-                        if (!txb) {
-                            throw new TransactionNotPreparedException("Transaction not prepared")
-                        }
-                        const { digest, events } = await suiClient.signAndExecuteTransaction({
-                            transaction: txb,
-                            signer,
-                            options: {
-                                showEvents: true,
-                            }
-                        })
-                        await suiClient.waitForTransaction({
-                            digest,
-                        })
-                        this.logger.info(
-                            WinstonLog.OpenPositionExecuted, {
-                                botId: bot.id,
-                                txHash: digest,
-                                liquidityPoolId: _state.static.displayId,
-                            }
-                        )
-                        const { positionId } = this.parseAddLiquidityEvent(events || [])
-                        return {
-                            positionId,
-                        }
-                    },
+                const { digest, events } = await suiClient.executeTransactionBlock({
+                    transactionBlock: signatureWithBytes.bytes,
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEvents: true,
+                    }
                 })
+                await suiClient.waitForTransaction({
+                    digest,
+                })
+                this.logger.verbose(
+                    WinstonLog.OpenPositionExecuted, {
+                        botId: bot.id,
+                        txHash: digest,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
+                const { positionId } = this.parseAddLiquidityEvent(events || [])
+                return {
+                    positionId,
+                }
             },
         })
     }
@@ -233,14 +220,14 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 }
 
 interface AddLiquidityEvent {
-    amount_x: string,
-    amount_y: string,
-    liquidity: string,
-    pool_id: string,
-    position_id: string,
-    reserve_x: string,
-    reserve_y: string,
-    sender: string,
+    amount_x: string
+    amount_y: string
+    liquidity: string
+    pool_id: string
+    position_id: string
+    reserve_x: string
+    reserve_y: string
+    sender: string
 }
 
 interface ParseAddLiquidityEventResponse {

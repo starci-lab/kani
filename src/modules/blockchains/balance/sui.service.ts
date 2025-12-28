@@ -19,6 +19,7 @@ import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
+import { TransactionDataBuilder } from "@mysten/sui/dist/cjs/transactions"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -74,10 +75,19 @@ export class SuiBalanceService implements IBalanceService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Read,
             callback: async ({ suiClient }) => {
-                const txHash = await txb.getDigest({ client: suiClient })
+                const bytes = await txb.build({
+                    client: suiClient,
+                })
+                const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                const signatureWithBytes = await this.signerService.withSuiSigner({
+                    bot,
+                    action: async (signer) => {
+                        return await signer.signTransaction(bytes)
+                    },
+                })
                 return {
                     txHash,
-                    txb,
+                    signatureWithBytes,
                 }
             },
         })
@@ -87,13 +97,13 @@ export class SuiBalanceService implements IBalanceService {
         {
             bot,
             txHash,
-            txb,
+            signatureWithBytes,
             isRetry,
             tokenIn,
             tokenOut,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        if (!txb) {
+        if (!signatureWithBytes) {
             throw new TransactionNotFoundException("Transaction not prepared")
         }
         await this.rpcExecutorService.withSuiClient({
@@ -107,27 +117,24 @@ export class SuiBalanceService implements IBalanceService {
                         return
                     }
                 }
-                await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        const { digest } = await suiClient.signAndExecuteTransaction({
-                            transaction: txb,
-                            signer,
-                        })
-                        await suiClient.waitForTransaction({
-                            digest,
-                        })
-                        this.logger.verbose(
-                            WinstonLog.SwapExecuted, {
-                                botId: bot.id,
-                                txHash,
-                                tokenIn,
-                                tokenOut,
-                            }
-                        )
-                    },
+                const { digest } = await suiClient.executeTransactionBlock({
+                    transactionBlock: signatureWithBytes.bytes,
+                    signature: signatureWithBytes.signature,
                 })
-            }
+                await suiClient.waitForTransaction(
+                    {
+                        digest,
+                    }
+                )
+                this.logger.verbose(
+                    WinstonLog.SwapExecuted, {
+                        botId: bot.id,
+                        txHash,
+                        tokenIn,
+                        tokenOut,
+                    }
+                )
+            },
         })
     }
 

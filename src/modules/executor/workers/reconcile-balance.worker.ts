@@ -20,7 +20,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { BalanceService, BalanceSnapshotService } from "@modules/blockchains"
 import { BN } from "turbos-clmm-sdk"
 import { SolanaTx } from "@modules/blockchains"
-import { Transaction } from "@mysten/sui/transactions"
+import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { envConfig } from "@modules/env"
 import { AsyncService } from "@modules/mixin"
 
@@ -101,7 +101,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         let tokenIn: TokenId | undefined = undefined
         let tokenOut: TokenId | undefined = undefined
         let solanaTx: SolanaTx | undefined = undefined
-        let txb: Transaction | undefined = undefined
+        let signatureWithBytes: SignatureWithBytes | undefined = undefined
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
             const plan = await this.balanceService.determineReconcileBalancePlan({
                 bot,
@@ -122,7 +122,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     throw new UnrecoverableError("Amount in or estimated swapped amount not found")
                 }
                 // prepare for the swap
-                const { txHash: preparedTxHash, solanaTx: preparedSolanaTx, txb: preparedTxb } =
+                const { txHash: preparedTxHash, solanaTx: preparedSolanaTx, signatureWithBytes: preparedSignatureWithBytes } =
                     await this.balanceService.prepareSwapTransaction({
                         bot,
                         tokenIn,
@@ -132,7 +132,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     })
                 txHash = preparedTxHash
                 solanaTx = preparedSolanaTx
-                txb = preparedTxb
+                signatureWithBytes = preparedSignatureWithBytes
             }
             // update the job with the swap transaction
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
@@ -179,7 +179,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                             tokenOut,
                             isRetry,
                             solanaTx,
-                            txb,
+                            signatureWithBytes,
                         }),
                 )
                 if (error) {
