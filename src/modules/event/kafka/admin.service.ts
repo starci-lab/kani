@@ -23,7 +23,7 @@ export class KafkaAdminService implements OnModuleInit {
          * - delete topics
          * - alter topic configurations
          *
-         * ⚠️ This is NOT used for producing or consuming messages.
+         * This is NOT used for producing or consuming messages.
          */
         @InjectKafkaAdmin()
         private readonly admin: Admin,
