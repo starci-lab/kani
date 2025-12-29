@@ -25,6 +25,7 @@ import {
     TransactionNotExecutedException,
     PositionInvalidTypeException,
     PositionNotFoundException,
+    TransactionValidationFailedException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -121,6 +122,13 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
+                        const devInspect = await suiClient.devInspectTransactionBlock({
+                            transactionBlock: openPositionTxb,
+                            sender: bot.accountAddress,
+                        })
+                        if (devInspect.effects.status.status !== "success") {
+                            throw new TransactionValidationFailedException("Transaction validation failed")
+                        }
                         const bytes = await openPositionTxb.build({
                             client: suiClient,
                         })

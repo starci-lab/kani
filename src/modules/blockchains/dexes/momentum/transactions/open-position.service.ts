@@ -18,9 +18,9 @@ import BN from "bn.js"
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { adjustSlippage } from "@utils"
-import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { TickMath } from "@mmt-finance/clmm-sdk"
 import { MountStorageService } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -41,6 +41,7 @@ export class OpenPositionTxbService {
         bot,
     }: CreateOpenPositionTxbParams): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
+        txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString(),
         )
@@ -154,10 +155,16 @@ export class OpenPositionTxbService {
                 txb.object(sourceCoinA.coinArg),
                 txb.object(sourceCoinB.coinArg),
                 txb.pure.u64(
-                    adjustSlippage(remainingAmountA, OPEN_POSITION_SLIPPAGE).toString(),
+                    adjustSlippage(
+                        remainingAmountA, 
+                        new Decimal(envConfig().slippage.openPosition)
+                    ).toString(),
                 ),
                 txb.pure.u64(
-                    adjustSlippage(remainingAmountB, OPEN_POSITION_SLIPPAGE).toString(),
+                    adjustSlippage(
+                        remainingAmountB, 
+                        new Decimal(envConfig().slippage.openPosition)
+                    ).toString(),
                 ),
                 txb.object(SUI_CLOCK_OBJECT_ID),
                 txb.object(versionObject),
@@ -174,7 +181,7 @@ export class OpenPositionTxbService {
 }
 
 export interface CreateOpenPositionTxbParams {
-  txb: Transaction;
+  txb?: Transaction;
   state: LiquidityPoolState;
   tickLower: Decimal;
   tickUpper: Decimal;

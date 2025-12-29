@@ -78,7 +78,7 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // check if the balance is sufficient
-                const { isSufficient } = await this.balanceService.isBalanceSufficient({
+                const isSufficient = await this.balanceService.isBalanceSufficient({
                     bot: this.bot,
                 })
                 if (!isSufficient) {
@@ -105,7 +105,7 @@ export class OpenPositionProcessorService  {
                     return
                 }
                 // if the balance is not sufficient, return
-                const { isSufficient } = await this.balanceService.isBalanceSufficient({
+                const isSufficient = await this.balanceService.isBalanceSufficient({
                     bot: this.bot,
                 })
                 if (!isSufficient) {

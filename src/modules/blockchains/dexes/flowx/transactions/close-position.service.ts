@@ -30,7 +30,11 @@ export class ClosePositionTxbService {
             state,
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResponse> {
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException("Active position not found")
+        }
         txb = txb ?? new Transaction()
+        txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString()
         )
@@ -39,9 +43,6 @@ export class ClosePositionTxbService {
         )
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
-        }
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
         }
         const {
             packageId,
@@ -140,7 +141,7 @@ export class ClosePositionTxbService {
             new Decimal(state.dynamic.tickCurrent).lt(new Decimal(activePosition.tickUpper || 0))
         ) {
             return ClmmSqrtPriceMath.getAmountXDelta(
-                new BN(state.dynamic.sqrtPriceX64),
+                state.dynamic.sqrtPriceX64,
                 ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickUpper || 0),
                 new BN(activePosition.liquidity || 0),
                 false
@@ -163,7 +164,7 @@ export class ClosePositionTxbService {
         } else if (new Decimal(state.dynamic.tickCurrent).lt(new Decimal(activePosition.tickUpper || 0))) {
             return ClmmSqrtPriceMath.getAmountYDelta(
                 ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickLower || 0),
-                new BN(state.dynamic.sqrtPriceX64),
+                state.dynamic.sqrtPriceX64,
                 new BN(activePosition.liquidity || 0),
                 false
             )
@@ -179,7 +180,7 @@ export class ClosePositionTxbService {
 }
 
 export interface CreateClosePositionTxbParams {
-    txb: Transaction
+    txb?: Transaction
     bot: BotSchema
     state: LiquidityPoolState
 }

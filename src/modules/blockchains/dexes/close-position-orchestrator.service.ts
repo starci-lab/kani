@@ -24,6 +24,8 @@ import { envConfig } from "@modules/env"
 import { ExitStrategyEngineOutputService } from "../exit-strategy-engine"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -37,6 +39,8 @@ export class ClosePositionOrchestratorService {
         private readonly cetusClosePositionActionService: CetusClosePositionActionService,
         private readonly turbosClosePositionActionService: TurbosClosePositionActionService,
         private readonly momentumClosePositionActionService: MomentumClosePositionActionService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
@@ -116,8 +120,9 @@ export class ClosePositionOrchestratorService {
             bot,
             state,
         })
+
         if (willExit) {
-            this.logger.verbose(
+            this.logger.debug(
                 WinstonLog.ClosePositionNotExitable, {
                     botId: bot.id,
                     liquidityPoolId,
@@ -152,7 +157,7 @@ export class ClosePositionOrchestratorService {
             v4(),
             {
                 jobId: jobRaw.toJSON().id,
-                state,
+                state: this.superjson.stringify(state),
                 bot,
             }
         )
@@ -171,57 +176,56 @@ export class ClosePositionOrchestratorService {
             state,
         }: PrepareClosePositionParams,
     ): Promise<PrepareClosePositionResponse> {
-        const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
+        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === state.static.dex.toString())
         if (!dex) throw new DexNotFoundException("Dex not found")
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
-            throw new DexNotImplementedException(`Dex ${_state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }
         switch (dex.displayId) {
         case DexId.FlowX: {
             return await this.flowXClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Cetus: {
             return await this.cetusClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Turbos: {
             return await this.turbosClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Momentum: {
             return await this.momentumClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Raydium: {
             return await this.raydiumClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Orca: {
             return await this.orcaClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Meteora: {
             return await this.meteoraClosePositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         default: {
-            throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported for prepare`)
+            throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for prepare`)
         }
         }
     }

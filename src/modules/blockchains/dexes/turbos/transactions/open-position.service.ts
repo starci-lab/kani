@@ -17,10 +17,10 @@ import {
     TargetOperationalGasAmountNotFoundException 
 } from "@exceptions"
 import { ChainId } from "@typedefs"
-import { OPEN_POSITION_SLIPPAGE } from "../../constants"
-import { adjustSlippage } from "@utils"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { MountStorageService } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
+import { adjustSlippage } from "@utils"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -44,6 +44,7 @@ export class OpenPositionTxbService {
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
+        txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString()
         )
@@ -167,16 +168,12 @@ export class OpenPositionTxbService {
                 txb.pure.u64(remainingAmountB.toString()),
                 // minimum amount A
                 txb.pure.u64(
-                    adjustSlippage(
-                        remainingAmountA, 
-                        OPEN_POSITION_SLIPPAGE
-                    ).toString()),
+                    adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition)).toString()
+                ),
                 // minimum amount B
                 txb.pure.u64(
-                    adjustSlippage(
-                        remainingAmountB, 
-                        OPEN_POSITION_SLIPPAGE
-                    ).toString()),
+                    adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition)).toString()
+                ),
                 // bot account address
                 txb.pure.address(bot.accountAddress),
                 // deadline
@@ -196,7 +193,7 @@ export class OpenPositionTxbService {
 }
 
 export interface CreateOpenPositionTxbParams {
-    txb: Transaction
+    txb?: Transaction
     state: LiquidityPoolState
     tickLower: Decimal
     tickUpper: Decimal

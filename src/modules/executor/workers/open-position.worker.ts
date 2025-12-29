@@ -11,6 +11,8 @@ import {
     OpenPositionPayload,
     OpenPositionOrchestratorService,
     SolanaTx,
+    LiquidityPoolState,
+    DlmmLiquidityPoolState,
 } from "@modules/blockchains"
 import {
     getJobStatusOrder,
@@ -28,6 +30,8 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { Decimal } from "decimal.js"
 import { AsyncService } from "@modules/mixin"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
 /**
  * Worker responsible for processing open position confirmations.
  *
@@ -50,6 +54,8 @@ export class OpenPositionWorker extends WorkerHost {
     private readonly logger: WinstonLogger,
     private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
     private readonly asyncService: AsyncService,
+    @InjectSuperJson()
+    private readonly superjson: SuperJSON,
     ) {
         super()
     }
@@ -62,7 +68,8 @@ export class OpenPositionWorker extends WorkerHost {
         data: { jobId, bot, state },
         attemptsMade,
     }: Job<OpenPositionPayload>) {
-    // check if the mutex is locked
+        const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
+        // check if the mutex is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
         let job: JobSchema | null = null
@@ -108,7 +115,7 @@ export class OpenPositionWorker extends WorkerHost {
                 metadata: preparedMetadata,
                 positionId: preparedPositionId,
             } = await this.openPositionOrchestratorService.prepare({
-                state,
+                state: _state,
                 bot,
             })
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
@@ -171,7 +178,7 @@ export class OpenPositionWorker extends WorkerHost {
             const [ response, error ] = await this.asyncService.resolveTuple(
                 this.openPositionOrchestratorService.execute({
                     bot,
-                    state,
+                    state: _state,
                     isRetry,
                     txHash,
                     signatureWithBytes,
@@ -206,7 +213,7 @@ export class OpenPositionWorker extends WorkerHost {
         // confirm the position
         const { liquidity: confirmedLiquidity } = await this.openPositionOrchestratorService.confirm({
             positionId,
-            state,
+            state: _state,
         })
         liquidity = confirmedLiquidity
         // fetch the bot snapshot balances
@@ -217,7 +224,7 @@ export class OpenPositionWorker extends WorkerHost {
         } = await this.balanceService.fetchBalances({
             bot,
         })
-        const targetIsA = state.static.tokenA.toString() === bot.targetToken.toString()
+        const targetIsA = _state.static.tokenA.toString() === bot.targetToken.toString()
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         // Start a MongoDB session for transactional updates
@@ -239,7 +246,7 @@ export class OpenPositionWorker extends WorkerHost {
                 tickLower: tickLower ? tickLower.toNumber() : undefined,
                 tickUpper: tickUpper ? tickUpper.toNumber() : undefined,
                 chainId: bot.chainId,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
                 positionId,
                 openTxHash: txHash,
                 session,
@@ -266,6 +273,7 @@ export class OpenPositionWorker extends WorkerHost {
   @OnWorkerEvent("failed")
     async onFailed(job: Job<OpenPositionPayload>, error: Error) {
         const { bot, jobId, state } = job.data
+        const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
@@ -273,7 +281,7 @@ export class OpenPositionWorker extends WorkerHost {
             this.logger.error(WinstonLog.OpenPositionFailed, {
                 botId: bot.id,
                 jobId,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
                 error: error.message,
             })
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
@@ -285,15 +293,17 @@ export class OpenPositionWorker extends WorkerHost {
         this.logger.warn(
             WinstonLog.OpenPositionRetrying, {
                 botId: bot.id,
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
                 jobId,
                 error: error.message,
+                stack: error.stack,
             })
     }
 
   @OnWorkerEvent("completed")
   async onCompleted(job: Job<OpenPositionPayload>) {
       const { bot, jobId, state } = job.data
+      const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
       const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
       this.eventEmitter.emit(
           createEventName(EventName.UpdateActiveBot, {
@@ -307,7 +317,7 @@ export class OpenPositionWorker extends WorkerHost {
       )
       this.logger.info(WinstonLog.OpenPositionSuccess, {
           botId: bot.id,
-          liquidityPoolId: state.static.displayId,
+          liquidityPoolId: _state.static.displayId,
           jobId,
       })
       await this.connection.model<JobSchema>(JobSchema.name).updateOne(

@@ -9,7 +9,7 @@ import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResponse,
 } from "../../interfaces"
-import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
+import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
@@ -26,6 +26,7 @@ import {
     TransactionNotExecutedException,
     PositionNotFoundException,
     PositionInvalidTypeException,
+    TransactionValidationFailedException,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { RpcExecutorService } from "../../clients"
@@ -38,6 +39,7 @@ import { toScaledBN } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
 import { MintNftEvent, TurbosClmmPosition, TurbosPositionNFT } from "./struct"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -99,7 +101,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResponse> {
         const _state = state as LiquidityPoolState
-        const txb = new Transaction()
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
@@ -131,6 +132,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,
             actual: new BN(actualAmountB),
+            upperBound: new Decimal(1).add(new Decimal(envConfig().bounds.sui.openPosition.upperBound)),
+            lowerBound: new Decimal(1).sub(new Decimal(envConfig().bounds.sui.openPosition.lowerBound)),
         })
         if (!isAcceptable) {
             throw new AmountBInBetweenExpectedException(
@@ -147,7 +150,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             feeAmountA,
             feeAmountB,
         } = await this.openPositionTxbService.createOpenPositionTxb({
-            txb,
             bot,
             liquidity: new BN(0),
             amountAMax: amountA,
@@ -162,6 +164,13 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
+                        const devInspect = await suiClient.devInspectTransactionBlock({
+                            transactionBlock: openPositionTxb,
+                            sender: bot.accountAddress,
+                        })
+                        if (devInspect.effects.status.status !== "success") {
+                            throw new TransactionValidationFailedException("Transaction validation failed")
+                        }
                         const bytes = await openPositionTxb.build({
                             client: suiClient,
                         })

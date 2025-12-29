@@ -73,11 +73,11 @@ export interface ApiKeys {
         openPosition: {
             solana: {
                 feeToAddress: string
-                bps: number
+                feeRate: number
             }
             sui: {
                 feeToAddress: string
-                bps: number
+                feeRate: number
             }
         }
         swapReferral: {

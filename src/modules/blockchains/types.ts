@@ -4,7 +4,6 @@ import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
 import BN from "bn.js"
 import { BotSchema, TokenId } from "@modules/databases"
 import { sendAndConfirmTransactionFactory, signTransaction } from "@solana/kit"
-import { DlmmLiquidityPoolState, LiquidityPoolState } from "./interfaces"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -47,13 +46,13 @@ export interface BasePayload {
 
 export interface OpenPositionPayload extends BasePayload {
     jobId: string
-    state: LiquidityPoolState | DlmmLiquidityPoolState
+    state: string
     bot: BotSchema
 }
 
 export interface ClosePositionPayload extends BasePayload {
     jobId: string
-    state: LiquidityPoolState | DlmmLiquidityPoolState
+    state: string
     bot: BotSchema
 }
 

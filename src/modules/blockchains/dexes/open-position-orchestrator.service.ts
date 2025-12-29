@@ -55,6 +55,8 @@ import { Connection } from "mongoose"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
 @Injectable()
 export class OpenPositionOrchestratorService {
     constructor(
@@ -77,6 +79,8 @@ export class OpenPositionOrchestratorService {
         private readonly mutexService: MutexService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -334,7 +338,7 @@ export class OpenPositionOrchestratorService {
             v4(),
             {
                 jobId: jobRaw.toJSON().id,
-                state,
+                state: this.superjson.stringify(state),
                 bot,
             }
         )
@@ -395,13 +399,13 @@ export class OpenPositionOrchestratorService {
         }
         case DexId.Turbos: {
             return await this.turbosOpenPositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }
         case DexId.Momentum: {
             return await this.momentumOpenPositionActionService.prepare({
-                state: _state,
+                state,
                 bot,
             })
         }

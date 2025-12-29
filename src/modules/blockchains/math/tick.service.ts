@@ -172,21 +172,25 @@ export class TickMathService {
         let bestTickLower: Decimal | null = null
         let bestTickUpper: Decimal | null = null
         let bestDiff: Decimal | null = null
-    
+        // we iterate over the tick multiplier
         for (let i = 0; i < tickMultiplier; i++) {
+            // we compute the R value
             const currentR = computeR(tickLowerEntry, tickUpperEntry)
+            // we compute the difference between the current R value and the target R value
             const diff = currentR.sub(R).abs()
-    
-            if (bestDiff === null || diff.lt(bestDiff)) {
-                bestDiff = diff
-                bestTickLower = tickLowerEntry
-                bestTickUpper = tickUpperEntry
+            // if the difference is greater than the best difference, we break
+            if (bestDiff !== null && diff.gt(bestDiff)) {
+                break
             }
-    
+            // we update the best difference, tick lower, and tick upper
+            bestDiff = diff
+            bestTickLower = tickLowerEntry
+            bestTickUpper = tickUpperEntry
+            // we update the tick lower and tick upper
             tickLowerEntry = tickLowerEntry.add(tickSpacing)
             tickUpperEntry = tickUpperEntry.add(tickSpacing)
         }
-    
+
         if (!bestTickLower || !bestTickUpper) {
             throw new Error("Failed to determine tick bounds")
         }

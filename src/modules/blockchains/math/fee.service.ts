@@ -1,4 +1,4 @@
-import { PrimaryMemoryStorageService } from "@modules/databases"
+
 import { ChainId } from "@typedefs"
 import { toScaledBN } from "@utils"
 import { Injectable } from "@nestjs/common"
@@ -9,7 +9,6 @@ import { MountStorageService } from "@modules/filesystem"
 @Injectable()
 export class FeeService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly mountStorageService: MountStorageService,
     ) { }
     
@@ -19,11 +18,11 @@ export class FeeService {
             chainId 
         }: SplitAmountParams
     ): SplitAmountResponse {
-        const feePercentage = this.mountStorageService.apiKeys.fees.openPosition[chainId].bps
-        if (!feePercentage) {
-            throw new Error("Fee percentage not found")
+        const feeRate = this.mountStorageService.apiKeys.fees.openPosition[chainId].feeRate
+        if (!feeRate) {
+            throw new Error("Fee rate not found")
         }
-        const feeAmount = toScaledBN(amount, new Decimal(feePercentage))
+        const feeAmount = toScaledBN(amount, new Decimal(feeRate))
         const remainingAmount = amount.sub(feeAmount)
         return {
             feeAmount,

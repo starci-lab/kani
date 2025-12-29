@@ -19,15 +19,23 @@ export const envConfig = () => ({
             swap: {
                 lowerBound: parseFloat(process.env.SOLANA_SWAP_LOWER_BOUND || "0.95"),
             },
+            openPosition: {
+                lowerBound: parseFloat(process.env.SOLANA_OPEN_POSITION_LOWER_BOUND || "0.95"),
+                upperBound: parseFloat(process.env.SOLANA_OPEN_POSITION_UPPER_BOUND || "1.05"),
+            }
         },
         sui: {
             swap: {
                 lowerBound: parseFloat(process.env.SUI_SWAP_LOWER_BOUND || "0.95"),
             },
+            openPosition: {
+                lowerBound: parseFloat(process.env.SUI_OPEN_POSITION_LOWER_BOUND || "0.95"),
+                upperBound: parseFloat(process.env.SUI_OPEN_POSITION_UPPER_BOUND || "1.05"),
+            }
         },
     },
     slippage: {
-        openPosition: parseFloat(process.env.SLIPPAGE_OPEN_POSITION || "0.05"),
+        openPosition: parseFloat(process.env.SLIPPAGE_OPEN_POSITION || "0.5"),
         closePosition: parseFloat(process.env.SLIPPAGE_CLOSE_POSITION || "0.9999"),
         swap: parseFloat(process.env.SLIPPAGE_SWAP || "0.9999"),
     },

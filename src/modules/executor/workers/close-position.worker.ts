@@ -12,6 +12,8 @@ import {
     ClosePositionOrchestratorService,
     ProfitabilityMathService,
     CalculateProfitability,
+    LiquidityPoolState,
+    DlmmLiquidityPoolState,
 } from "@modules/blockchains"
 import {
     getJobStatusOrder,
@@ -34,6 +36,8 @@ import {
     InvalidPoolTokensException,
     SnapshotBalancesBeforeOpenNotSetException,
 } from "@exceptions"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJSON from "superjson"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -64,6 +68,8 @@ export class ClosePositionWorker extends WorkerHost {
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly profitabilityMathService: ProfitabilityMathService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
     ) {
         super()
     }
@@ -79,6 +85,7 @@ export class ClosePositionWorker extends WorkerHost {
             attemptsMade,
         }: Job<ClosePositionPayload>
     ) {
+        const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
         // Validate active position exists
         if (!bot.activePosition) {
             throw new UnrecoverableError("Active position not found")
@@ -107,7 +114,7 @@ export class ClosePositionWorker extends WorkerHost {
                 signatureWithBytes: preparedSignatureWithBytes,
                 solanaTx: preparedSolanaTx,
             } = await this.closePositionOrchestratorService.prepare({
-                state,
+                state: _state,
                 bot,
             })
             await this.connection.model<JobSchema>(
@@ -135,7 +142,7 @@ export class ClosePositionWorker extends WorkerHost {
             const [, error] = await this.asyncService.resolveTuple(
                 this.closePositionOrchestratorService.execute({
                     bot,
-                    state,
+                    state: _state,
                     isRetry,
                     txHash,
                     signatureWithBytes,
@@ -158,17 +165,17 @@ export class ClosePositionWorker extends WorkerHost {
         }
         // Get tokens for profitability calculation
         const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString(),
+            (token) => token.id === _state.static.tokenA.toString(),
         )
         const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString(),
+            (token) => token.id === _state.static.tokenB.toString(),
         )
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
                 "Either token A or token B is not in the pool",
             )
         }
-        const targetIsA = bot.targetToken.toString() === state.static.tokenA.toString()
+        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const targetToken = targetIsA ? tokenA : tokenB
         const quoteToken = targetIsA ? tokenB : tokenA
         // Get snapshot balances before open
@@ -214,7 +221,7 @@ export class ClosePositionWorker extends WorkerHost {
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
             bot,
-            state,
+            state: _state,
         })
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
@@ -281,12 +288,14 @@ export class ClosePositionWorker extends WorkerHost {
                 botId: bot.id,
                 jobId,
                 error: error.message,
+                stack: error.stack,
             })
     }
 
     @OnWorkerEvent("completed")
     async onCompleted(job: Job<ClosePositionPayload>) {
-        const { bot, jobId } = job.data
+        const { bot, jobId, state } = job.data
+        const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
@@ -301,6 +310,7 @@ export class ClosePositionWorker extends WorkerHost {
         this.logger.info(WinstonLog.ClosePositionSuccess, {
             botId: bot.id,
             jobId,
+            liquidityPoolId: _state.static.displayId,
         })
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             { _id: jobId },

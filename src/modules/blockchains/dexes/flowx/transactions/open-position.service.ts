@@ -20,9 +20,9 @@ import BN from "bn.js"
 import { DayjsService } from "@modules/mixin"
 import { SelectCoinsService } from "../../../tx-builder"
 import { ChainId } from "@typedefs"
-import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { FeeService } from "../../../math"
 import { MountStorageService } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -46,6 +46,7 @@ export class OpenPositionTxbService {
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
+        txb.setSender(bot.accountAddress)
         const {
             packageId,
             positionRegistryObject,
@@ -169,8 +170,8 @@ export class OpenPositionTxbService {
                 position,
                 sourceCoinA.coinArg,
                 sourceCoinB.coinArg,
-                txb.pure.u64(adjustSlippage(remainingAmountA, OPEN_POSITION_SLIPPAGE).toString()),
-                txb.pure.u64(adjustSlippage(remainingAmountB, OPEN_POSITION_SLIPPAGE).toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition)).toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition)).toString()),
                 txb.pure.u64(this.dayjsService.now().add(5, "minute").utc().valueOf().toString()),
                 txb.object(versionObject),
                 txb.object(SUI_CLOCK_OBJECT_ID),
@@ -186,7 +187,7 @@ export class OpenPositionTxbService {
 }
 
 export interface CreateOpenPositionTxbParams { 
-    txb: Transaction 
+    txb?: Transaction 
     bot: BotSchema,
     state: LiquidityPoolState,
     tickLower: Decimal,

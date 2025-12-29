@@ -32,10 +32,11 @@ export class ClosePositionTxbService {
             bot,     
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResponse> {
-        txb = txb ?? new Transaction()
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
+        txb = txb ?? new Transaction()
+        txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString()
         )
@@ -183,7 +184,7 @@ export class ClosePositionTxbService {
 }
 
 export interface CreateClosePositionTxbParams {
-    txb: Transaction
+    txb?: Transaction
     bot: BotSchema
     state: LiquidityPoolState
 }

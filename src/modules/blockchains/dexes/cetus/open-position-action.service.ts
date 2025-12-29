@@ -11,7 +11,7 @@ import {
     ClmmPoolUtil,
     TickMath,
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
+import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
@@ -32,6 +32,7 @@ import {
     TransactionNotExecutedException,
     PositionNotFoundException,
     PositionInvalidTypeException,
+    TransactionValidationFailedException
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { ExecuteOpenPositionParams, ExecuteOpenPositionResponse } from "../../interfaces"
@@ -107,7 +108,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResponse> {
         const _state = state as LiquidityPoolState
-        const txb = new Transaction()
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
         }
@@ -128,24 +128,26 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         })
         let amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
         let amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
-        const slippage = new Decimal(envConfig().slippage.openPosition)
         const { coinAmountB: expectedAmountB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
             tickLower.toNumber(),
             tickUpper.toNumber(),
             amountA,
             true,
             false,
-            slippage.toNumber(),
+            0, // zero slippage
             TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
         )
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,
             actual: expectedAmountB,
+            // this indicates the slippage tolerance
+            lowerBound: new Decimal(1).sub(new Decimal(envConfig().bounds.sui.openPosition.lowerBound)),
+            upperBound: new Decimal(1).add(new Decimal(envConfig().bounds.sui.openPosition.upperBound)),
         })
         if (!isAcceptable) {
             throw new AmountBInBetweenExpectedException(
                 ratio, 
-                "Amount B is not in between expected"
+                `Amount B is not in between expected: ${ratio.toString()}`
             )
         }
         if (ratio.gt(new Decimal(1))) {
@@ -158,7 +160,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             feeAmountA,
             feeAmountB,
         } = await this.openPositionTxbService.createOpenPositionTxb({
-            txb,
             bot,
             amountAMax: amountA,
             amountBMax: amountB,
@@ -174,6 +175,14 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
+                        // dev inspect the transaction block
+                        const devInspect = await suiClient.devInspectTransactionBlock({
+                            transactionBlock: openPositionTxb,
+                            sender: bot.accountAddress,
+                        })
+                        if (devInspect.effects.status.status !== "success") {
+                            throw new TransactionValidationFailedException("Transaction validation failed")
+                        }
                         const bytes = await openPositionTxb.build({
                             client: suiClient,
                         })
@@ -230,7 +239,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
-            callback: async ({ suiClient }) => {   
+            callback: async ({ suiClient }) => {
                 const { digest, events } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,

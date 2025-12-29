@@ -12,7 +12,8 @@ import BN from "bn.js"
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { MountStorageService } from "@modules/filesystem"
-
+import { envConfig } from "@modules/env"
+import { adjustSlippage } from "@utils"
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
@@ -34,6 +35,7 @@ export class OpenPositionTxbService {
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
+        txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === state.static.tokenA.toString()
         )
@@ -120,8 +122,8 @@ export class OpenPositionTxbService {
                 txb.pure.u32(Number(asUintN(BigInt(tickUpper.toNumber())).toString())),
                 txb.object(sourceCoinA.coinArg),
                 txb.object(sourceCoinB.coinArg),
-                txb.pure.u64(remainingAmountA.toString()),
-                txb.pure.u64(remainingAmountB.toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition)).toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition)).toString()),
                 txb.pure.bool(true),
                 txb.object(SUI_CLOCK_OBJECT_ID)
             ],
@@ -135,7 +137,7 @@ export class OpenPositionTxbService {
 }
 
 export interface CreateOpenPositionTxbParams {
-    txb: Transaction
+    txb?: Transaction
     state: LiquidityPoolState
     tickLower: Decimal
     tickUpper: Decimal

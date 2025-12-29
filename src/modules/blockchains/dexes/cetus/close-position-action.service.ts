@@ -6,33 +6,27 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResponse,
 } from "../../interfaces"
-import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
+import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
-import { 
-    PrimaryMemoryStorageService
-} from "@modules/databases"
 import { 
     ClosePositionTxbService, 
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
-    InvalidPoolTokensException, 
-    TokenNotFoundException, 
     TransactionNotPreparedException,
     TransactionNotExecutedException,
+    TransactionValidationFailedException,
 } from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import Decimal from "decimal.js"
 import { AsyncService } from "@modules/mixin"
 
 @Injectable()
 export class CetusClosePositionActionService implements IClosePositionActionService {
     constructor(
         private readonly signerService: SignerService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly closePositionTxbService: ClosePositionTxbService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
@@ -44,7 +38,6 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResponse> {
         const _state = state as LiquidityPoolState
-        const txb = new Transaction()
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
@@ -54,7 +47,6 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         const {
             txb: closePositionTxb,
         } = await this.closePositionTxbService.createClosePositionTxb({
-            txb,
             bot,
             state: _state,
         })
@@ -64,6 +56,14 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
+                        // dev inspect the transaction block
+                        const devInspect = await suiClient.devInspectTransactionBlock({
+                            transactionBlock: closePositionTxb,
+                            sender: bot.accountAddress,
+                        })
+                        if (devInspect.effects.status.status !== "success") {
+                            throw new TransactionValidationFailedException("Transaction validation failed")
+                        }
                         const bytes = await closePositionTxb.build({
                             client: suiClient,
                         })
@@ -80,68 +80,6 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
     }
 
     async execute(
-        params: ExecuteClosePositionParams
-    ): Promise<void> {
-        const { bot } = params
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
-            )
-        }
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString()
-        )
-        if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString()
-        )
-        if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
-        }
-        // we have many close criteria
-        // 1. the position is out-of-range, we close immediately
-        // 2. our detection find a potential dump from CEX
-        // 3. the position is not profitable, we close it  
-        const shouldProceedAfterIsPositionOutOfRange = await this.assertIsPositionOutOfRange(params)
-        if (shouldProceedAfterIsPositionOutOfRange) {
-            return
-        }
-    }
-
-    private async assertIsPositionOutOfRange(
-        params: ExecuteClosePositionParams
-    ): Promise<boolean> {
-        const { state, bot } = params
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
-            )
-        }
-        const _state = state as LiquidityPoolState
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenB.toString())
-        if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
-        }
-        if (
-            new Decimal(_state.dynamic.tickCurrent).gte(bot.activePosition.tickLower || 0)
-            && new Decimal(_state.dynamic.tickCurrent).lte(bot.activePosition.tickUpper || 0)
-        ) {
-            // do nothing, since the position is still in the range
-            // return true to continue the assertion
-            return false
-        }
-        await this.proccessClosePositionTransaction(params)
-        return true
-    }
-
-    private async proccessClosePositionTransaction(
         {
             bot,
             state,
@@ -151,6 +89,12 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         }: ExecuteClosePositionParams
     ): Promise<void> {
         const _state = state as LiquidityPoolState
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException(
+                bot.id, 
+                "Active position not found"
+            )
+        }
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -178,16 +122,13 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             callback: async ({ suiClient }) => {
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
-                    signature: signatureWithBytes.signature,
-                    options: {
-                        showEvents: true,
-                    }
+                    signature: signatureWithBytes.signature
                 })
                 await suiClient.waitForTransaction({
                     digest,
                 })
                 this.logger.verbose(
-                    WinstonLog.ClosePositionSuccess, {
+                    WinstonLog.ClosePositionExecuted, {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,

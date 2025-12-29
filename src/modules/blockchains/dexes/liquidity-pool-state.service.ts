@@ -31,7 +31,7 @@ export class LiquidityPoolStateService {
         const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
             createCacheKey(
                 CacheKey.DynamicLiquidityPoolInfo, 
-                liquidityPoolId
+                liquidityPoolId 
             ))
         const dynamicLiquidityPoolInfo = this.superjson
             .parse<DynamicLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfoCacheResult as string)

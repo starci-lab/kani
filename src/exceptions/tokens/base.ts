@@ -86,3 +86,9 @@ export class PythAndSpotPriceNotFoundException extends AbstractException {
         super(message || "Pyth and spot price not found for the given tokens", "PYTH_AND_SPOT_PRICE_NOT_FOUND_EXCEPTION", { tokenA, tokenB })
     }
 }
+
+export class TransactionValidationFailedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Transaction validation failed", "TRANSACTION_VALIDATION_FAILED_EXCEPTION")
+    }
+}

@@ -10,7 +10,7 @@ import {
     BotSchema, 
 } from "@modules/databases"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { BalanceService, ClosePositionOrchestratorService } from "@modules/blockchains"
+import { ClosePositionOrchestratorService } from "@modules/blockchains"
 import { 
     createReadinessWatcherName, 
     ReadinessWatcherFactoryService 
@@ -41,7 +41,6 @@ export class ClosePositionProcessorService {
         private readonly eventEmitter: EventEmitter2,
         private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly balanceService: BalanceService,
     ) {}
 
     // Register event listeners for this processor instance.
@@ -82,13 +81,6 @@ export class ClosePositionProcessorService {
                 if (!this.bot || !this.bot.running || !this.bot.activePosition) {
                     return
                 }
-                // check if the balance is sufficient
-                const { isSufficient } = await this.balanceService.isBalanceSufficient({
-                    bot: this.bot,
-                })
-                if (!isSufficient) {
-                    return
-                }
                 // enqueue the close position
                 await this.closePositionOrchestratorService.enqueue({
                     liquidityPoolId: payload.liquidityPoolId,
@@ -103,13 +95,6 @@ export class ClosePositionProcessorService {
             ) => {
                 // if the bot is not running, or has no active position, return
                 if (!this.bot || !this.bot.running || !this.bot.activePosition) {
-                    return
-                }
-                // check if the balance is sufficient
-                const { isSufficient } = await this.balanceService.isBalanceSufficient({
-                    bot: this.bot,
-                })
-                if (!isSufficient) {
                     return
                 }
                 // enqueue the close position

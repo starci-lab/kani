@@ -29,6 +29,7 @@ import {
     TransactionNotExecutedException,
     PositionNotFoundException,
     PositionInvalidTypeException,
+    TransactionValidationFailedException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -131,9 +132,17 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 return await this.signerService.withSuiSigner({
                     bot,
                     action: async (signer) => {
+                        // dev inspect the transaction block
+                        const devInspect = await suiClient.devInspectTransactionBlock({
+                            transactionBlock: openPositionTxb,
+                            sender: bot.accountAddress,
+                        })
+                        if (devInspect.effects.status.status !== "success") {
+                            throw new TransactionValidationFailedException("Transaction validation failed")
+                        }
                         const bytes = await openPositionTxb.build({
                             client: suiClient,
-                        })
+                        }) 
                         const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                         const signatureWithBytes = await signer.signTransaction(bytes)
                         return {

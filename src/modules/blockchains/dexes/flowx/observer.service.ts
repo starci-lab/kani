@@ -1,5 +1,4 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
@@ -8,7 +7,7 @@ import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import BN from "bn.js"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { CacheKey, createCacheKey, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Logger as winstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -90,7 +89,7 @@ export class FlowXObserverService {
         liquidityPoolId: LiquidityPoolId,
         state: Pool
     ) {
-        const parsed: DynamicLiquidityPoolInfo = {
+        const parsed: DynamicLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickIndex,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),

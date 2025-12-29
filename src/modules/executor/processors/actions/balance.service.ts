@@ -59,11 +59,6 @@ export class BalanceProcessorService  {
             if (!this.bot || !this.bot.running || this.bot.activePosition) {
                 return
             }
-            // check if the balance is sufficient
-            const { isSufficient } = await this.balanceService.isBalanceSufficient({
-                bot: this.bot,
-            })
-            if (!isSufficient) return
             // enqueue the balance rebalancing
             await this.balanceService.enqueue(
                 {
