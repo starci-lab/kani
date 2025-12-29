@@ -288,7 +288,6 @@ export class ClosePositionWorker extends WorkerHost {
                 botId: bot.id,
                 jobId,
                 error: error.message,
-                stack: error.stack,
             })
     }
 

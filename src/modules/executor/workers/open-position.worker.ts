@@ -296,7 +296,6 @@ export class OpenPositionWorker extends WorkerHost {
                 liquidityPoolId: _state.static.displayId,
                 jobId,
                 error: error.message,
-                stack: error.stack,
             })
     }
 

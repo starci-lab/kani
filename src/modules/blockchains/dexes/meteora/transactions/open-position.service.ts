@@ -23,12 +23,12 @@ import { SYSVAR_RENT_ADDRESS } from "@solana/sysvars"
 import { EventAuthorityService } from "./event-authority.service"
 import { createNoopSigner, KeyPairSigner } from "@solana/signers"
 import { MeteoraSdkService } from "./sdk.service"
-import { OPEN_POSITION_SLIPPAGE } from "../../constants"
 import { FeeService } from "../../../math"
 import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
 import { getTransferInstruction } from "@solana-program/token"
 import { TokenType } from "@typedefs"
 import { MountStorageService } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -264,7 +264,7 @@ export class OpenPositionInstructionService {
             ),  
         }
         instructions.push(initializePositionInstruction)
-        const slippagePercentage = OPEN_POSITION_SLIPPAGE
+        const slippagePercentage = new Decimal(envConfig().slippage.openPosition)
         const depositWithRebalanceEndpointInstructions 
         = await this.meteoraSdkService.depositWithRebalanceEndpoint({
             bot,
