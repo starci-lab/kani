@@ -38,7 +38,7 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-observer",
-            level: WinstonLevel.Debug,
+            level: WinstonLevel.Info,
         }),
         FormulasModule.register({
             isGlobal: true,

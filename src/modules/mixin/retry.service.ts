@@ -1,7 +1,12 @@
-import { WsConnectionAbortedException, WsRetryLimitReachedException } from "@exceptions"
+import { 
+    WsConnectionAbortedException, 
+    WsConnectionTimeoutException, 
+    WsRetryLimitReachedException 
+} from "@exceptions"
 import { Injectable } from "@nestjs/common"
 import { sleep } from "@utils"
 import pRetry from "p-retry"
+import { envConfig } from "@modules/env"
 
 export interface RetryParams<T> {
   signal?: AbortSignal;
@@ -13,7 +18,6 @@ export interface RetryParams<T> {
 
 @Injectable()
 export class RetryService {
-
     async retry<T>({
         action,
         signal,
@@ -32,7 +36,7 @@ export class RetryService {
             })
     }
 
-    private async retryWsInternal<T>(params: WsRetryParams<T>): Promise<never> {
+    private async retryWsInternal<T>(params: WsRetryParams<T>): Promise<never> { 
         const {
             closeFnName = "close",
             createConnection,
@@ -70,8 +74,30 @@ export class RetryService {
             const connect = async () => {
                 if (aborted) return
                 try {
-                    connection = await createConnection()
-                    await onOpen(connection)
+                    let timeout: NodeJS.Timeout | null = null
+                    await Promise.race(
+                        [
+                            new Promise<never>((_, reject) =>
+                                timeout = setTimeout(
+                                    () =>
+                                        reject(
+                                            new WsConnectionTimeoutException("WS connection timed out")
+                                        ),
+                                    envConfig().timeConfig.wsTimeout
+                                )
+                            ),
+                            (async () => {
+                                const connection = await createConnection()
+                                await onOpen(
+                                    connection, () => {
+                                        if (timeout) {
+                                            clearTimeout(timeout)
+                                            timeout = null
+                                        }
+                                    })
+                            })(),
+                        ]
+                    )
                 } catch (err) {
                     await scheduleReconnect(err)
                 }
@@ -143,7 +169,7 @@ export interface WsRetryOptions {
 export interface WsRetryParams<T> {
     closeFnName?: string
     createConnection: () => Promise<T> | T
-    onOpen: (connection: T) => Promise<void>
+    onOpen: (connection: T, markMessageReceived?: () => void) => Promise<void>
     onReconnect?: (error?: Error) => Promise<void>
     onFatal?: () => Promise<void>
     options: WsRetryOptions

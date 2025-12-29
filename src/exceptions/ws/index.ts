@@ -39,3 +39,10 @@ export class WsConnectionErrorException extends AbstractException {
         super(message || "WS connection error", "WS_CONNECTION_ERROR_EXCEPTION")
     }
 }
+
+/** Thrown when WebSocket connection times out */
+export class WsConnectionTimeoutException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "WS connection timed out", "WS_CONNECTION_TIMEOUT_EXCEPTION")
+    }
+}

@@ -50,7 +50,7 @@ export class GateOrderBookService implements OnApplicationBootstrap {
             // create a new connection
             createConnection: () => new WebSocket(GATE_WS_URL),
             // on open event
-            onOpen: async (ws) => {
+            onOpen: async (ws, markMessageReceived) => {
                 const promise = new Promise<void>((_, reject) => {
                     // open event
                     ws.on("open", () => {
@@ -66,6 +66,7 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                     })
                     // message event
                     ws.on("message", async (data: WebSocket.RawData) => {
+                        markMessageReceived?.()
                         try {
                             const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
                             const token = this.primaryMemoryStorageService.tokens

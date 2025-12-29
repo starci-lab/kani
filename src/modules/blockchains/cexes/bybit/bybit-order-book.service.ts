@@ -51,7 +51,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
             // create a new connection
             createConnection: () => new WebSocket(BYBIT_WS_URL),
             // on open event
-            onOpen: async (ws) => {
+            onOpen: async (ws, markMessageReceived) => {
                 const promise = new Promise<void>((_, reject) => {
                     // open event
                     ws.on("open", () => {
@@ -68,6 +68,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                     })
                     // message event
                     ws.on("message", async (data: WebSocket.RawData) => {
+                        markMessageReceived?.()
                         try {
                             const parsed = JSON.parse(data.toString()) as BybitOrderBookUpdate | BybitOrderBookWsSubscribeResponse
                             if ("success" in parsed && !parsed.success) {
