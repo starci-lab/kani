@@ -96,4 +96,17 @@ export enum WinstonLog {
     ClosePositionExecuted = "Close.Position.Executed",
     ClosePositionNotExitable = "Close.Position.Not.Exitable",
     UserBalanceAmountInUsd = "User.Balance.Amount.In.USD",
+    KafkaTopicsCreated = "Kafka.Topics.Created",
+    KafkaTopicsDeleted = "Kafka.Topics.Deleted",
+    // Kafka Producer
+    KafkaProducerReady = "Kafka.Producer.Ready",
+    KafkaProducerDisconnected = "Kafka.Producer.Disconnected",
+    // Kafka Consumer
+    KafkaConsumerReady = "Kafka.Consumer.Ready",
+    KafkaConsumerDisconnected = "Kafka.Consumer.Disconnected",
+    KafkaConsumerSubscribed = "Kafka.Consumer.Subscribed",
+    KafkaConsumerRunning = "Kafka.Consumer.Running",
+    KafkaConsumerPaused = "Kafka.Consumer.Paused",
+    KafkaConsumerResumed = "Kafka.Consumer.Resumed",
+    KafkaConsumerSeek = "Kafka.Consumer.Seek",
 }

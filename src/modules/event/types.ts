@@ -1,4 +1,5 @@
 import { OnOptions } from "eventemitter2"
+import { KafkaOptions } from "./kafka"
 
 export enum EventType {
     Internal = "internal",
@@ -13,4 +14,9 @@ export type OnEventOptions = OnOptions & {
 export interface EventPayloadType<T> {
     data: T
     instanceId: string
+}
+
+export interface EventOptions {
+    isGlobal?: boolean
+    kafka?: KafkaOptions
 }

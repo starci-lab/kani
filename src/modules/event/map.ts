@@ -9,6 +9,8 @@ export interface EventMetadata {
         segmentBytes?: number
         cleanupPolicy?: "delete" | "compact" | "compact,delete"
         retentionMs?: number
+        maxMessageBytes?: number
+        fileDeleteDelayMs?: number
     }
 }
 export const eventMetadataMap: Record<EventName, EventMetadata> = {
@@ -25,12 +27,13 @@ export const eventMetadataMap: Record<EventName, EventMetadata> = {
     [EventName.CoinMarketCapPricesFetched]: {},
     [EventName.CoinGeckoPricesFetched]: {},
     [EventName.PoolsUpdated]: {},
-    [EventName.LiquidityPoolsFetched]: {},
+    [EventName.LiquidityPoolsFetched]: {
+        kafka: {}
+    },
     [EventName.DlmmLiquidityPoolsFetched]: {
         kafka: {}
     },
     [EventName.LiquidityPoolsUpdated]: {
-        kafka: {}
     },
     [EventName.WsCexLastPricesUpdated]: {
         kafka: {}

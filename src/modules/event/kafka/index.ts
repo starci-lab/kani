@@ -1,1 +1,7 @@
 export * from "./kafka.module"
+export * from "./types"
+export * from "./producer.service"
+export * from "./consumer.service"
+export * from "./admin.service"
+export * from "./kafka.decorators"
+export * from "./constants"

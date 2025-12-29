@@ -13,6 +13,7 @@ export class EventModule extends ConfigurableModuleClass {
         imports.push(
             KafkaModule.register({
                 isGlobal: options.isGlobal,
+                ...(options?.kafka || {}),
             })
         )
         const providers: Array<Provider> = [

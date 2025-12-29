@@ -250,12 +250,25 @@ export const envConfig = () => ({
         ).filter((url) => url !== ""),
     },
     kafka: {
+        maxInFlightRequests: parseInt(process.env.KAFKA_MAX_IN_FLIGHT_REQUESTS || "5", 10), // 5 requests
+        metadataStabilizationDelayMs: parseInt(process.env.KAFKA_METADATA_STABILIZATION_DELAY_MS || ms("1s").toString(), 10), // 1 second
+        kafkaTopicPollIntervalMs: parseInt(process.env.KAFKA_TOPIC_POLL_INTERVAL_MS || ms("500ms").toString(), 10), // 500 milliseconds
+        kafkaTopicPollTimeoutMs: parseInt(process.env.KAFKA_TOPIC_POLL_TIMEOUT_MS || ms("10s").toString(), 10), // 10 seconds
+        resetTopics: Boolean(process.env.KAFKA_RESET_TOPICS) || false,
+        heartbeatInterval: parseInt(process.env.KAFKA_HEARTBEAT_INTERVAL || ms("3s").toString(), 10), // 3 seconds
+        retry: {
+            retries: parseInt(process.env.KAFKA_RETRY_RETRIES || "10", 10), // 10 retries
+            restartOnFailure: Boolean(process.env.KAFKA_RETRY_RESTART_ON_FAILURE) || true,
+            factor: parseFloat(process.env.KAFKA_RETRY_FACTOR || "2.0"), // 2x exponential backoff
+        },
         numPartitions: parseInt(process.env.KAFKA_NUM_PARTITIONS || "3", 10),
         replicationFactor: parseInt(process.env.KAFKA_REPLICATION_FACTOR || "1", 10),
         retentionMs: parseInt(process.env.KAFKA_RETENTION_MS || ms("1s").toString(), 10), // 1 second
         cleanupPolicy: process.env.KAFKA_CLEANUP_POLICY || "delete",
         segmentMs: parseInt(process.env.KAFKA_SEGMENT_MS || "1000", 10), // 1 second
-        segmentBytes: parseInt(process.env.KAFKA_SEGMENT_BYTES || bytes("1MB"), 10), // 1 MB
+        segmentBytes: parseInt(process.env.KAFKA_SEGMENT_BYTES || bytes("1KB"), 10), // 1 MB
+        maxMessageBytes: parseInt(process.env.KAFKA_MAX_MESSAGE_BYTES || bytes("1KB"), 10), // 1 MB
+        fileDeleteDelayMs: parseInt(process.env.KAFKA_FILE_DELETE_DELAY_MS || ms("1s").toString(), 10), // 1 second
         host: process.env.KAFKA_BROKER_HOST || "localhost",
         port: parseInt(process.env.KAFKA_BROKER_PORT || "9092", 10),
         sasl: {

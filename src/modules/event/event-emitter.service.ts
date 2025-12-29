@@ -2,9 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { EventName } from "./events"
 import { InjectSuperJson, InstanceIdService } from "@modules/mixin"
-import { InjectKafkaProducer } from "./kafka/kafka.decorators"
-import { CompressionTypes, Producer } from "kafkajs"
+import { CompressionTypes } from "kafkajs"
 import SuperJSON from "superjson"
+import { KafkaProducerService } from "./kafka/"
+import { eventMetadataMap } from "./map"
 
 export interface EmitOptions {
     withoutKafka?: boolean
@@ -14,8 +15,7 @@ export interface EmitOptions {
 @Injectable()
 export class EventEmitterService {
     constructor(
-        @InjectKafkaProducer()
-        private readonly kafkaProducer: Producer,
+        private readonly kafkaProducerService: KafkaProducerService,
         private readonly eventEmitter: EventEmitter2,
         private readonly instanceIdService: InstanceIdService,
         @InjectSuperJson()
@@ -31,7 +31,12 @@ export class EventEmitterService {
         }
         // emit via kafka, ensure other followers to receive the message
         if (!options || !options.withoutKafka) {
-            return await this.kafkaProducer.send({
+            // if the event does not have kafka metadata, return
+            if (!eventMetadataMap[event].kafka) {
+                return
+            }
+            // send the message to the kafka topic
+            return await this.kafkaProducerService.producer.send({
                 topic: event,
                 // compress the message to reduce the size of the message
                 compression: CompressionTypes.GZIP,

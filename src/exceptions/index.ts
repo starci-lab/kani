@@ -27,6 +27,7 @@
  * - transactions: Transaction errors
  * - users: User-related errors
  * - ws: WebSocket errors
+ * - kafka: Kafka errors
  */
 
 export * from "./abstract"
@@ -52,3 +53,4 @@ export * from "./tokens"
 export * from "./transactions"
 export * from "./users"
 export * from "./ws"
+export * from "./kafka"

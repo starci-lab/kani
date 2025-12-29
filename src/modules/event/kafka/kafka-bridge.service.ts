@@ -1,35 +1,48 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from "@nestjs/common"
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { Consumer, EachMessagePayload } from "kafkajs"
-import { EventName } from "../events"
-import { InjectKafkaConsumer } from "./kafka.decorators"
-import { InjectSuperJson, InstanceIdService } from "@modules/mixin"
+import { EachMessagePayload } from "kafkajs"
+import { 
+    InjectSuperJson, 
+    InstanceIdService, 
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
 import { EventPayloadType } from "../types"
 import SuperJSON from "superjson"
+import { KafkaConsumerService } from "./consumer.service"
+import { eventMetadataMap } from "../map"
 
 @Injectable()
-export class KafkaBridgeService implements OnModuleInit, OnApplicationShutdown {
+export class KafkaBridgeService implements OnModuleInit {
     private readonly logger = new Logger(KafkaBridgeService.name)
     constructor(
-        @InjectKafkaConsumer()
-        private readonly consumer: Consumer,
+        private readonly kafkaConsumerService: KafkaConsumerService,
         private readonly eventEmitter: EventEmitter2,
         private readonly instanceIdService: InstanceIdService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
+        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     async onModuleInit() {
+        // wait for the consumer to be ready
+        await this.readinessWatcherFactoryService.waitUntilReady(KafkaConsumerService.name)
+        // bridge all kafka events
         await this.bridgeAllKafkaEvents()
-    }
+    }   
 
     async bridgeAllKafkaEvents(): Promise<void> {
-        const topics = Object.values(EventName)
-        await this.consumer.subscribe({
+        // get all events with kafka metadata and get the topics
+        const topics = Object.entries(eventMetadataMap).filter(
+            ([, metadata]) => metadata.kafka
+        ).map(([eventName]) => eventName)
+        if (!topics.length) {
+            return
+        }
+        await this.kafkaConsumerService.consumer.subscribe({
             topics,
             fromBeginning: false,
         })    
-        await this.consumer.run({
+        await this.kafkaConsumerService.consumer.run({
             eachMessage: async (payload: EachMessagePayload) => {
                 const { topic, message } = payload
                 const value = message.value?.toString() || "{}"
@@ -42,10 +55,6 @@ export class KafkaBridgeService implements OnModuleInit, OnApplicationShutdown {
             },
         })
         this.logger.debug(`Listening to ${topics.length} topics`)
-    }
-
-    async onApplicationShutdown(): Promise<void> {
-        await this.consumer.disconnect()
     }
 }
 

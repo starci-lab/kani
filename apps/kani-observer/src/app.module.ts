@@ -38,7 +38,7 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-observer",
-            level: WinstonLevel.Verbose,
+            level: WinstonLevel.Debug,
         }),
         FormulasModule.register({
             isGlobal: true,
@@ -66,6 +66,9 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
         }),
         EventModule.register({
             isGlobal: true,
+            kafka: {
+                createTopics: true,
+            },
         }),
         TxBuilderModule.register({
             isGlobal: true,

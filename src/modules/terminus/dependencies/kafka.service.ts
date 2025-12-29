@@ -7,6 +7,7 @@ import {
 } from "@nestjs/terminus"
 import { MicroserviceOptions, Transport } from "@nestjs/microservices"
 import { DependencyName } from "./config"
+import { InstanceIdService } from "@modules/mixin"
 
 @Injectable()
 export class KafkaService {
@@ -14,6 +15,7 @@ export class KafkaService {
         // Used by @nestjs/terminus to perform health checks
         // for microservices (Kafka in this case)
         private readonly microserviceHealthIndicator: MicroserviceHealthIndicator,
+        private readonly instanceIdService: InstanceIdService,
     ) {}
 
     private buildKafkaOptions(): MicroserviceHealthIndicatorOptions<MicroserviceOptions> {
@@ -22,7 +24,7 @@ export class KafkaService {
             transport: Transport.KAFKA,
             options: {
                 client: {
-                    clientId: cfg.clientId,
+                    clientId: this.instanceIdService.getId(),
                     brokers: [
                         `${cfg.host}:${cfg.port}`,
                     ],
