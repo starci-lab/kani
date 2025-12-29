@@ -24,7 +24,6 @@ export enum EventName {
     WsPythLastPricesUpdated = "wsPythLastPricesUpdated",
     DataSeeded = "dataSeeded",
     InitializerLoaded = "initializerLoaded",
-    PythSuiPricesUpdated = "pythSuiPricesUpdated",
     InternalLiquidityPoolsFetched = "internalLiquidityPoolsFetched",
     InternalDlmmLiquidityPoolsFetched = "internalDlmmLiquidityPoolsFetched",
     DistributedDlmmLiquidityPoolsFetched = "distributedDlmmLiquidityPoolsFetched",

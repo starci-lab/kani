@@ -1,3 +1,3 @@
 export interface KafkaOptions {
-    clientId?: string
+    createTopics?: boolean
 }

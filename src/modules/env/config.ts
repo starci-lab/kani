@@ -1,7 +1,7 @@
-import { v4 } from "uuid"
 import { join } from "path"
 import ms from "ms"
 import Decimal from "decimal.js"
+import bytes from "bytes"
 
 export enum K8SRecreateStrategy {
     Never = "never",
@@ -250,7 +250,12 @@ export const envConfig = () => ({
         ).filter((url) => url !== ""),
     },
     kafka: {
-        clientId: process.env.KAFKA_CLIENT_ID || v4(),
+        numPartitions: parseInt(process.env.KAFKA_NUM_PARTITIONS || "3", 10),
+        replicationFactor: parseInt(process.env.KAFKA_REPLICATION_FACTOR || "1", 10),
+        retentionMs: parseInt(process.env.KAFKA_RETENTION_MS || ms("1s").toString(), 10), // 1 second
+        cleanupPolicy: process.env.KAFKA_CLEANUP_POLICY || "delete",
+        segmentMs: parseInt(process.env.KAFKA_SEGMENT_MS || "1000", 10), // 1 second
+        segmentBytes: parseInt(process.env.KAFKA_SEGMENT_BYTES || bytes("1MB"), 10), // 1 MB
         host: process.env.KAFKA_BROKER_HOST || "localhost",
         port: parseInt(process.env.KAFKA_BROKER_PORT || "9092", 10),
         sasl: {

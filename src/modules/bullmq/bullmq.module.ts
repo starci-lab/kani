@@ -21,7 +21,7 @@ export class BullModule extends ConfigurableModuleClass {
             prefix: bullData[queueName].prefix,
             defaultJobOptions: {
                 removeOnComplete: true,
-                removeOnFail: false,
+                removeOnFail: true,
                 attempts: envConfig().bullmq.attempts,
                 backoff: {
                     type: "exponential",

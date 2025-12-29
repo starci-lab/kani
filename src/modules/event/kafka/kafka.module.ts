@@ -7,6 +7,7 @@ import { createKafkaProvider } from "./kafka.providers"
 import {
     createKafkaProducerProvider,
     createKafkaConsumerProvider,
+    createKafkaAdminProvider,
 } from "./kafka.providers"
 import { KafkaBridgeService } from "./kafka-bridge.service"
 
@@ -17,10 +18,12 @@ export class KafkaModule extends ConfigurableModuleClass {
         const kafkaProvider = createKafkaProvider()
         const producerProvider = createKafkaProducerProvider()
         const consumerProvider = createKafkaConsumerProvider()
+        const adminProvider = createKafkaAdminProvider()
         const providers: Array<Provider> = [
             kafkaProvider,
             producerProvider,
             consumerProvider,
+            adminProvider,
             KafkaBridgeService
         ]
         return {
