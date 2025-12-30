@@ -288,7 +288,11 @@ export class DeploymentManagerService  {
                                             name: "rpcs",
                                             readOnly: true
                                         },
-
+                                        {
+                                            mountPath: envConfig().mountPath.gcp.googleDriveUdSa.replace(/\/data$/, ""),
+                                            name: "google-drive-ud-sa",
+                                            readOnly: true
+                                        },
                                     ],
                                 },
                             ],
@@ -334,6 +338,12 @@ export class DeploymentManagerService  {
                                     name: "rpcs",
                                     secret: {
                                         secretName: "rpcs",
+                                    },
+                                },
+                                {
+                                    name: "google-drive-ud-sa",
+                                    configMap: {
+                                        name: "google-drive-ud-sa",
                                     },
                                 },
                             ],
