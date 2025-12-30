@@ -106,5 +106,7 @@ export class BackupCommand extends CommandRunner {
         await fs.rm(archivePath, { force: true })
         // log the backup completed
         this.logger.info(WinstonLog.BackupCompleted, { archiveName })
+        // exit the app
+        process.exit(0)
     }
 }

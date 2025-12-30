@@ -4,10 +4,16 @@ import {
     ConfigurableModuleClass,
 } from "./commands.module-definition"
 import { GoogleapisModule } from "./googleapis"
+import { SeedModule } from "./seed"
 
 @Module({
     imports: [
         GoogleapisModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        SeedModule.register(
             {
                 isGlobal: true,
             }

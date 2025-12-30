@@ -1,22 +1,27 @@
 
 import { Command, CommandRunner } from "nest-commander"
-import { BackupCommand, RestoreCommand } from "./subs"
-import { Logger } from "@nestjs/common"
+
+import { InjectWinston, WinstonLog } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
+import { SeedersService } from "@modules/databases"
 
 @Command({
-    name: "googleapis",
-    aliases: [ "sim" ],
-    description: "manage googleapis actions",
-    subCommands: [ BackupCommand, RestoreCommand ]
+    name: "seed",
+    description: "seed the database",
 })
-export class GoogleapisCommand extends CommandRunner {
-    private readonly logger = new Logger(GoogleapisCommand.name)
+export class SeedCommand extends CommandRunner {
     constructor(
+        private readonly seedersService: SeedersService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {
         super()
     }
 
     async run(): Promise<void> {
-        this.logger.error("Please specify a subcommand, e.g. backup or restore")
+        await this.seedersService.seed()
+        this.logger.info(WinstonLog.SeedCompleted)
+        // exit the app
+        process.exit(0)
     }
 }

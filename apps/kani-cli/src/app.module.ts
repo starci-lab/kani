@@ -34,7 +34,9 @@ import { CryptoModule } from "@modules/crypto"
         PrimaryMongoDbModule.register({
             isGlobal: true,
             memoryStorage: false,
-            withSeeders: false,
+            withSeeders: {
+                manualSeed: true,
+            },
         }),
         CommandsModule.register({
             isGlobal: true,

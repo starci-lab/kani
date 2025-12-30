@@ -72,10 +72,12 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
             || options.withSeeders
         ) {
             extraModules.push(
-                SeedersModule.register({
-                    isGlobal: options.isGlobal,
-                    manualSeed: !(typeof options.withSeeders === "object" ? options.withSeeders.manualSeed : true),
-                }),
+                SeedersModule.register(
+                    {
+                        isGlobal: options.isGlobal,
+                        manualSeed: !(typeof options.withSeeders === "object" ? options.withSeeders.manualSeed : true),
+                    }
+                ),
             )
         }
         // If memoryStorage is a boolean, use it as the manualLoad value

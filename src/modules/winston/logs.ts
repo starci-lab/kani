@@ -125,4 +125,5 @@ export enum WinstonLog {
     RestoreCompleted = "Restore.Completed",
     SevenZExtractionCompleted = "Seven.Z.Extraction.Completed",
     MongoDBRestoreCompleted = "MongoDB.Restore.Completed",
+    SeedCompleted = "Seed.Completed",
 }

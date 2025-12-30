@@ -90,6 +90,8 @@ export class RestoreCommand extends CommandRunner {
         await fs.rm(archivePath, { force: true })
   
         this.logger.info(WinstonLog.RestoreCompleted, { archiveName, fileId: this.fileId })
+        // exit the app
+        process.exit(0)
     }
 }
   
