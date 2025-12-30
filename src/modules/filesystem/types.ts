@@ -66,6 +66,11 @@ export interface RpcAccessConfigs {
 
 // API keys for external services
 export interface ApiKeys {
+    googleapis: {
+        drive: {
+            folderId: string
+        }
+    }
     jupiter: string
     sentryDsn: string
     cryptoKeyName: string

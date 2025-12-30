@@ -199,8 +199,12 @@ export const envConfig = () => ({
         },
     },
     mountPath: {
+        googleapis: {
+            googleDrive: process.env.GOOGLE_DRIVE_MOUNT_PATH || join(process.cwd(), ".mount", "googleapis", "google-drive"),
+        },
         gcp: {
             cryptoKeyEdSa: process.env.GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "crypto-key-ed-sa.json"),
+            googleDriveUdSa: process.env.GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "google-drive-ud-sa.json"),
         },
         keys: {
             aes: process.env.AES_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "aes.key"),

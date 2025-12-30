@@ -109,4 +109,17 @@ export enum WinstonLog {
     KafkaConsumerPaused = "Kafka.Consumer.Paused",
     KafkaConsumerResumed = "Kafka.Consumer.Resumed",
     KafkaConsumerSeek = "Kafka.Consumer.Seek",
+    GoogleDriveFolderCreated = "Google.Drive.Folder.Created",
+    GoogleDriveFileUploaded = "Google.Drive.File.Uploaded",
+    GoogleDriveFolderIdNotFound = "Google.Drive.Folder.Id.NotFound",
+    GoogleDriveFileDownloaded = "Google.Drive.File.Downloaded",
+    GoogleDriveFileDownloadError = "Google.Drive.File.Download.Error",
+    BackupCompleted = "Backup.Completed",
+    DatabaseRestoreCompleted = "Database.Restore.Completed",
+    DatabaseRestoreStarted = "Database.Restore.Started",
+    DatabaseRestoreError = "Database.Restore.Error",
+    MongoDumpCompleted = "Mongo.Dump.Completed",
+    MongoDumpStarted = "Mongo.Dump.Started",
+    SevenZCompressionStarted = "Seven.Z.Compression.Started",
+    SevenZCompressionCompleted = "Seven.Z.Compression.Completed"
 }

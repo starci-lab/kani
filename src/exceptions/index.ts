@@ -28,6 +28,7 @@
  * - users: User-related errors
  * - ws: WebSocket errors
  * - kafka: Kafka errors
+ * - googleapis: Google APIs errors
  */
 
 export * from "./abstract"
@@ -54,3 +55,4 @@ export * from "./transactions"
 export * from "./users"
 export * from "./ws"
 export * from "./kafka"
+export * from "./googleapis"

@@ -3,13 +3,15 @@ import { Module } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
 } from "./commands.module-definition"
-import { SimulateModule } from "./simulate"
+import { GoogleapisModule } from "./googleapis"
 
 @Module({
     imports: [
-        SimulateModule.register({
-            isGlobal: true,
-        }),
+        GoogleapisModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
     ],
 })
 export class CommandsModule extends ConfigurableModuleClass {}

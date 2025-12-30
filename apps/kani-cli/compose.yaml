@@ -1,0 +1,12 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/kani-cli/Dockerfile
+    env_file:
+      - ../../.env.docker
+    volumes:
+      - ../../.mount:/usr/src/app/.mount
+
+# docker build -t kanibot/kani-cli:latest -f apps/kani-cli/Dockerfile . && docker push kanibot/kani-cli:latest
+# docker compose -f apps/kani-cli/compose.yaml up --build -d

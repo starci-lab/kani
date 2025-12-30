@@ -10,85 +10,15 @@
   "monorepo": true,
   "root": "apps/app",
   "projects": {
-    "app": {
-      "type": "application",
-      "root": "apps/app",
-      "entryFile": "main",
-      "sourceRoot": "apps/app/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/app/tsconfig.app.json"
-      }
-    },
-    "blockchain-observer": {
-      "type": "application",
-      "root": "apps/blockchain-observer",
-      "entryFile": "main",
-      "sourceRoot": "apps/blockchain-observer/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/blockchain-observer/tsconfig.app.json"
-      }
-    },
-    "bot-coordinator": {
-      "type": "application",
-      "root": "apps/bot-coordinator",
-      "entryFile": "main",
-      "sourceRoot": "apps/bot-coordinator/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/bot-coordinator/tsconfig.app.json"
-      }
-    },
-    "bot-executor": {
-      "type": "application",
-      "root": "apps/bot-executor",
-      "entryFile": "main",
-      "sourceRoot": "apps/bot-executor/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/bot-executor/tsconfig.app.json"
-      }
-    },
-    "bot-interface": {
-      "type": "application",
-      "root": "apps/bot-interface",
-      "entryFile": "main",
-      "sourceRoot": "apps/bot-interface/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/bot-interface/tsconfig.app.json"
-      }
-    },
-    "cli": {
-      "type": "application",
-      "root": "apps/cli",
-      "entryFile": "main",
-      "sourceRoot": "apps/cli/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/cli/tsconfig.app.json"
-      }
-    },
-    "core": {
-      "type": "application",
-      "root": "apps/core",
-      "entryFile": "main",
-      "sourceRoot": "apps/core/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/core/tsconfig.app.json"
-      }
-    },
-    "data-fetcher": {
-      "type": "application",
-      "root": "apps/data-fetcher",
-      "entryFile": "main",
-      "sourceRoot": "apps/data-fetcher/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/data-fetcher/tsconfig.app.json"
-      }
-    },
     "kani-cli": {
       "type": "application",
       "root": "apps/kani-cli",
       "entryFile": "main",
       "sourceRoot": "apps/kani-cli/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/kani-cli/tsconfig.app.json"
+        "tsConfigPath": "apps/kani-cli/tsconfig.app.json",
+        "webpack": true,
+        "webpackConfigPath": "apps/kani-cli/webpack.config.cjs"
       }
     },
     "kani-coordinator": {
