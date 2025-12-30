@@ -121,5 +121,8 @@ export enum WinstonLog {
     MongoDumpCompleted = "Mongo.Dump.Completed",
     MongoDumpStarted = "Mongo.Dump.Started",
     SevenZCompressionStarted = "Seven.Z.Compression.Started",
-    SevenZCompressionCompleted = "Seven.Z.Compression.Completed"
+    SevenZCompressionCompleted = "Seven.Z.Compression.Completed",
+    RestoreCompleted = "Restore.Completed",
+    SevenZExtractionCompleted = "Seven.Z.Extraction.Completed",
+    MongoDBRestoreCompleted = "MongoDB.Restore.Completed",
 }

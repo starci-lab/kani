@@ -1,96 +1,95 @@
-
-import { CommandRunner, Option, SubCommand } from "nest-commander"
+import { CommandRunner, SubCommand, Option } from "nest-commander"
 import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
 import { ExecaService } from "@modules/execa"
 import path from "path"
-import { GoogleDriveService } from "@modules/googleapis"
-import fsPromises from "fs/promises"
-import { envConfig   } from "@modules/env"
-import { v4 as uuidv4 } from "uuid" 
+import fs from "fs/promises"
+import { envConfig } from "@modules/env"
+import { DayjsService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { Logger } from "@nestjs/common"
+import { MountStorageService } from "@modules/filesystem"
+import { GoogleDriveService } from "@modules/googleapis"
 
-interface RestoreCommandOptions {
-    id?: string
-}
-
-@SubCommand({ name: "restore", description: "Restore the database" })
+@SubCommand({
+    name: "restore",
+    description: "Restore MongoDB from Google Drive backup",
+})
 export class RestoreCommand extends CommandRunner {
-    private readonly logger = new Logger(RestoreCommand.name)
+    private fileId!: string
+  
     constructor(
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        private readonly execaService: ExecaService,
-        private readonly googleDriveService: GoogleDriveService,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger
+      @InjectPrimaryMongoose()
+      private readonly connection: Connection,
+      private readonly execaService: ExecaService,
+      private readonly dayjsService: DayjsService,
+      private readonly mountStorageService: MountStorageService,
+      private readonly googleDriveService: GoogleDriveService,
+      @InjectWinston()
+      private readonly logger: WinstonLogger,
     ) {
         super()
     }
-
-    async run(_: Array<string>, options?: RestoreCommandOptions): Promise<void> {
-        if (!options?.id) {
-            this.logger.error("ID (--id) is required to restore the database.")
-            return
-        }
-        const dbName = this.connection.name
-        const host = this.connection.host
-        const port = this.connection.port
-        // create the uri
-        const uri = `"mongodb://${envConfig().databases.mongoose.primary.username}:${envConfig().databases.mongoose.primary.password}@${host}:${port}/?authSource=admin&readPreference=primary"`
-        const restoreDir = envConfig().mountPath.googleapis.googleDrive
-        // create the restore dir if it doesn't exist
-        await fsPromises.mkdir(restoreDir, { recursive: true })
-        const restoreFolder = path.join(restoreDir, `cifarm-restore-${uuidv4()}`)
-        // create the restore folder if it doesn't exist
-        await fsPromises.mkdir(restoreFolder, { recursive: true })
-        // create the zip file path
-        const zipFilePath = path.join(restoreFolder, "data.zip")
-        await this.googleDriveService.downloadFile(options.id, zipFilePath)
-        // run command to 7z the file
-        await this.execaService.exec("7z", ["x", zipFilePath, `-o${restoreFolder}`])
-        // get the folder name
-        const foldersNames = await fsPromises.readdir(restoreFolder)
-        const folderName = foldersNames.at(0)
-        if (!folderName) {
-            this.winstonLogger.error(
-                WinstonLog.DatabaseRestoreError, {
-                    error: "No folder name found in the restore directory.",
-                    restoreFolder: restoreFolder
-                })
-            return
-        }
-        this.winstonLogger.log(
-            WinstonLog.DatabaseRestoreStarted, {
-                folderName: folderName,
-                restoreFolder: restoreFolder
-            })
-        // run command to restore the database
-        await this.execaService.exec("mongorestore", [`--uri=${uri}`, 
-            `--dir=${restoreFolder}/${folderName}`,
+  
+    @Option({
+        flags: "-f, --fileId <fileId>",
+        description: "Google Drive file ID (.7z backup)",
+        required: true,
+    })
+    parseFileId(fileId: string): string {
+        return fileId
+    }
+  
+    async run(): Promise<void> {
+        const { databases, mountPath } = envConfig()
+  
+        const mongoUri =
+        `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}` +
+        `@${this.connection.host}:${this.connection.port}/${this.connection.name}?authSource=admin`
+  
+        const restoreAt = this.dayjsService.now().format("YYYY-MM-DD-HH-mm-ss")
+  
+        const restoreRoot = mountPath.googleapis.googleDrive
+        const archiveName = `restore-${restoreAt}.7z`
+        const archivePath = path.join(restoreRoot, archiveName)
+        const extractDir = path.join(restoreRoot, `restore-${restoreAt}`)
+  
+        const aesPassword = this.mountStorageService.aesKey
+  
+        // ================================
+        // Download from Google Drive
+        // ================================
+        await this.googleDriveService.downloadFile(this.fileId, archivePath)
+        this.logger.info(WinstonLog.GoogleDriveFileDownloaded, { fileId: this.fileId, archiveName })
+        // ================================
+        // Extract + decrypt
+        // ================================
+        await this.execaService.exec("7z", [
+            "x",
+            archivePath,
+            `-o${extractDir}`,
+            `-p${aesPassword}`,
+            "-y",
+        ])
+        this.logger.info(WinstonLog.SevenZExtractionCompleted, { archiveName })
+        // ================================
+        // MongoDB restore
+        // ================================
+        await this.execaService.exec("mongorestore", [
+            `--uri=${mongoUri}`,
+            extractDir,
             "--gzip",
             "--drop",
             "--quiet",
-            `--db="${dbName}"`
         ])
-        // delete everything in the restore folder
-        await fsPromises.rm(restoreFolder, { recursive: true })
-        // log the folder name
-        this.winstonLogger.log(
-            WinstonLog.DatabaseRestoreCompleted, {
-                folderName: folderName,
-                restoreFolder: restoreFolder
-            })
-    }
-
-    @Option({
-        flags: "--id",
-        description: "The id of the folder to restore from",
-        defaultValue: "1pBjakD2Zc57a_tosDqKsegHgokKQCPlT"
-    })
-    parseId(id: string): string {
-        return id
+        this.logger.info(WinstonLog.MongoDBRestoreCompleted, { dbName: this.connection.name, fileId: this.fileId })
+        // ================================
+        // Cleanup
+        // ================================
+        await fs.rm(extractDir, { recursive: true, force: true })
+        await fs.rm(archivePath, { force: true })
+  
+        this.logger.info(WinstonLog.RestoreCompleted, { archiveName, fileId: this.fileId })
     }
 }
+  

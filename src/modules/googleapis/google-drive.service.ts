@@ -43,7 +43,12 @@ export class GoogleDriveService implements OnModuleInit {
             supportsAllDrives: true,
             fields: "id",
         })
-        this.logger.verbose(WinstonLog.GoogleDriveFolderCreated, { folderId: folderResponse.data.id })
+        this.logger.verbose(
+            WinstonLog.GoogleDriveFolderCreated, 
+            { 
+                folderId: folderResponse.data.id 
+            }
+        )
         const folderId = folderResponse.data.id
         if (!folderId) {
             throw new GoogleDriveFolderIdNotFoundException(this.mountStorageService.apiKeys.googleapis.drive.folderId)
@@ -118,11 +123,21 @@ export class GoogleDriveService implements OnModuleInit {
             (response.data as Readable)
                 .pipe(dest)
                 .on("finish", () => {
-                    this.logger.verbose(WinstonLog.GoogleDriveFileDownloaded, { outputPath })
+                    this.logger.verbose(
+                        WinstonLog.GoogleDriveFileDownloaded, 
+                        { 
+                            outputPath 
+                        }
+                    )
                     resolve()
                 })
                 .on("error", (error) => {
-                    this.logger.error(WinstonLog.GoogleDriveFileDownloadError, { error: error.message })
+                    this.logger.error(
+                        WinstonLog.GoogleDriveFileDownloadError, 
+                        { 
+                            error: error.message 
+                        }
+                    )
                     fs.unlink(outputPath, () => {}) // Clean up partial download
                     reject(error)
                 })
