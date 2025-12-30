@@ -57,7 +57,7 @@ jobs:
         env:
           DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-
+ 
       # Trigger Jenkins rollout
       - name: Call Jenkins API to rollout the image
         run: |
