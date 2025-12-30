@@ -3,6 +3,10 @@ services:
     build:
       context: ../..
       dockerfile: apps/kani-interface/Dockerfile
+    env_file:
+      - ../../.env.docker
+    volumes:
+      - ../../.mount:/usr/src/app/.mount
 
 # docker build -t kanibot/kani-interface:latest -f apps/kani-interface/Dockerfile . && docker push kanibot/kani-interface:latest
-
+# docker compose -f apps/kani-interface/compose.yaml up --build -d

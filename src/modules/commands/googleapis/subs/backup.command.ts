@@ -34,10 +34,9 @@ export class BackupCommand extends CommandRunner {
         const port = this.connection.port
         const dbName = this.connection.name
 
-        const mongoUri = `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}` +
-      `@${host}:${port}/${dbName}?authSource=admin`
+        const mongoUri = `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}@${host}:${port}/${dbName}?authSource=admin`
 
-        const backupedAt = this.dayjsService.now().format("YYYY-MM-DD-HH-mm-ss")
+        const backupedAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
 
         const dumpDirName = `kani-mongo-dump-${backupedAt}`
         const archiveName = `kani-${backupedAt}.7z`
@@ -50,26 +49,31 @@ export class BackupCommand extends CommandRunner {
         // ================================
         // MongoDB dump
         // ================================
-        await this.execaService.exec("mongodump", [
-            `--uri=${mongoUri}`,
-            `--out=${dumpDirPath}`,
-            "--gzip",
-            "--quiet",
-        ])
+        await this.execaService.exec(
+            "mongodump", 
+            [
+                `--uri=${mongoUri}`,
+                `--out=${dumpDirPath}`,
+                "--gzip",
+                "--quiet",
+            ]
+        )
         this.logger.info(WinstonLog.MongoDumpCompleted, { dumpDirName })
         // ================================
         // 7z compress + encrypt
         // ================================
-        await this.execaService.exec("7z", [
-            "a",
-            archivePath,
-            dumpDirPath,
-            "-mx=9",
-            "-mmt=on",
-            "-mhe=on",
-            `-p${aesPassword}`,
-        ])
-
+        await this.execaService.exec(
+            "7z",
+            [
+                "a",
+                archivePath,
+                dumpDirPath,
+                "-mx=9",
+                "-mmt=on",
+                "-mhe=on",
+                `-p${aesPassword}`,
+            ]
+        )
         this.logger.info(WinstonLog.SevenZCompressionCompleted, { archiveName })
 
         // ================================

@@ -5,7 +5,7 @@ import { MixinModule } from "@modules/mixin"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { HttpModule } from "@modules/interfaces/http"
 import { PassportModule } from "@modules/passport"
-import { KeypairsModule, MathModule, PythModule } from "@modules/blockchains"
+import { FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { GcpModule } from "@modules/gcp"
 import { CodeModule } from "@modules/code"
@@ -38,11 +38,18 @@ import { APP_FILTER } from "@nestjs/core"
             password: envConfig().redis.adapter.password,
             useCluster: envConfig().redis.adapter.useCluster,
         }),
+        FormulasModule.register({
+            isGlobal: true,
+        }),
+        SpotModule.register({
+            isGlobal: true,
+        }),
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-interface",
             level: WinstonLevel.Info,
         }),
+
         SentryModule.register({
             isGlobal: true,
         }),

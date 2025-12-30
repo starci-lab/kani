@@ -3,6 +3,10 @@ services:
     build:
       context: ../..
       dockerfile: apps/kani-coordinator/Dockerfile
+    env_file:
+      - ../../.env.docker
+    volumes:
+      - ../../.mount:/usr/src/app/.mount
 
 # docker build -t kanibot/kani-coordinator:latest -f apps/kani-coordinator/Dockerfile . && docker push kanibot/kani-coordinator:latest
-
+# docker compose -f apps/kani-coordinator/compose.yaml up --build -d

@@ -3,6 +3,10 @@ services:
     build:
       context: ../..
       dockerfile: apps/kani-executor/Dockerfile
+    env_file:
+      - ../../.env.docker
+    volumes:
+      - ../../.mount:/usr/src/app/.mount
 
 # docker build -t kanibot/kani-executor:latest -f apps/kani-executor/Dockerfile . && docker push kanibot/kani-executor:latest
-
+# docker compose -f apps/kani-executor/compose.yaml up --build -d

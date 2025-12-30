@@ -43,12 +43,10 @@ export class RestoreCommand extends CommandRunner {
     async run(): Promise<void> {
         const { databases, mountPath } = envConfig()
   
-        const mongoUri =
-        `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}` +
-        `@${this.connection.host}:${this.connection.port}/${this.connection.name}?authSource=admin`
-  
-        const restoreAt = this.dayjsService.now().format("YYYY-MM-DD-HH-mm-ss")
-  
+        const mongoUri = `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}@${this.connection.host}:${this.connection.port}/${this.connection.name}?authSource=admin`
+
+        const restoreAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
+
         const restoreRoot = mountPath.googleapis.googleDrive
         const archiveName = `restore-${restoreAt}.7z`
         const archivePath = path.join(restoreRoot, archiveName)

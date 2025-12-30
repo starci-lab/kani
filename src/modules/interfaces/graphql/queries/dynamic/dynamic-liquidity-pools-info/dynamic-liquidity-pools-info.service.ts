@@ -20,6 +20,7 @@ import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
 import { TickMathService } from "@modules/blockchains"
 import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
 import Decimal from "decimal.js"
+import { ClmmTickFormulaService } from "@modules/blockchains"
 
 /**
  * Service that provides dynamic reference data
@@ -30,6 +31,7 @@ export class DynamicLiquidityPoolsInfoService {
     constructor(
         private readonly tickMathService: TickMathService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly clmmTickFormulaService: ClmmTickFormulaService,
         @InjectRedisCache()
         private readonly cacheManager: Cache,
         @InjectSuperJson()
@@ -89,11 +91,11 @@ export class DynamicLiquidityPoolsInfoService {
                 const dynamicLiquidityPoolInfoData = this.superjson.parse<DynamicLiquidityPoolInfoCacheResult>(serializedDynamicLiquidityPoolInfo)
                 info.tickCurrent = dynamicLiquidityPoolInfoData.tickCurrent
                 info.liquidity = dynamicLiquidityPoolInfoData.liquidity.toString()
-                info.price = this.tickMathService.sqrtPriceX64ToPrice({
+                info.price = this.clmmTickFormulaService.sqrtPriceX64ToPrice({
                     sqrtPriceX64: dynamicLiquidityPoolInfoData.sqrtPriceX64,
                     decimalsA: tokenAEntity.decimals,
                     decimalsB: tokenBEntity.decimals,
-                }).price.toNumber()
+                }).toNumber()
             }
             if (serializedDynamicDlmmLiquidityPoolInfo) {
                 const dynamicDlmmLiquidityPoolInfoData = this.superjson.parse<DynamicDlmmLiquidityPoolInfoCacheResult>(serializedDynamicDlmmLiquidityPoolInfo)
