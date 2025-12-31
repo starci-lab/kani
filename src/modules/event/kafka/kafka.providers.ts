@@ -12,13 +12,14 @@ export const createKafkaProvider = (): Provider => ({
         return new Kafka({
             brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
             clientId: instanceIdService.getId(),
-            logLevel: logLevel.ERROR,
+            logLevel: logLevel.NOTHING,
             sasl: envConfig().kafka.sasl.enabled ? {
                 mechanism: "scram-sha-256",
                 username: envConfig().kafka.sasl.username,
                 password: envConfig().kafka.sasl.password,
             } : undefined,
-        })
+        }
+        )
     }
 })
 

@@ -342,8 +342,8 @@ export class DeploymentManagerService  {
                                 },
                                 {
                                     name: "google-drive-ud-sa",
-                                    configMap: {
-                                        name: "google-drive-ud-sa",
+                                    secret: {
+                                        secretName: "google-drive-ud-sa",
                                     },
                                 },
                             ],

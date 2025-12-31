@@ -80,7 +80,6 @@ export class BackupCommand extends CommandRunner {
         // Cleanup plaintext dump
         // ================================
         await fs.rm(dumpDirPath, { recursive: true, force: true })
-
         // ================================
         // Upload to Google Drive
         // ================================
