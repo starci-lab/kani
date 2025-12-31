@@ -8,9 +8,9 @@ import {
     KeyPairSigner,
 } from "@solana/kit"
 import { ethers } from "ethers"
-import { EncryptionService } from "@modules/crypto"
 import bs58 from "bs58"
 import { GcpKmsService } from "@modules/gcp"
+import { EncryptionService } from "@modules/crypto"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
   bot: BotSchema;
@@ -101,11 +101,21 @@ export class SignerService {
         })
     }
 
-    public async encryptPrivateKey(privateKey: string): Promise<string> {
-        return this.gcpKmsService.encrypt(privateKey)
+    public async encryptPrivateKey(
+        privateKey: string
+    ): Promise<string> {
+        // Encrypt private key with AES-256-CBC
+        const encryptedPrivateKey = await this.encryptionService.encrypt(privateKey)
+        // Encrypt encrypted private key with GCP KMS
+        return await this.gcpKmsService.encrypt(encryptedPrivateKey)
     }
 
-    private async decryptPrivateKey(privateKey: string): Promise<string> {
-        return await this.gcpKmsService.decrypt(privateKey)
+    private async decryptPrivateKey(
+        privateKey: string
+    ): Promise<string> {
+        // Decrypt private key with AES-256-CBC
+        const decryptedPrivateKey = await this.gcpKmsService.decrypt(privateKey)
+        // Decrypt encrypted private key with GCP KMS
+        return await this.encryptionService.decrypt(decryptedPrivateKey)
     }
 }

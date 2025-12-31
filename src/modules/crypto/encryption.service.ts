@@ -18,7 +18,7 @@ export class EncryptionService {
      * - Salt comes from environment configuration
      * - PBKDF2 strengthens the key against brute-force attacks
      */
-    private getAesKey(): string {
+    private getAesKey(): Buffer {
         return this.mountStorageService.aesKey
     }
 

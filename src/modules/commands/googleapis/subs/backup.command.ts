@@ -43,7 +43,7 @@ export class BackupCommand extends CommandRunner {
             const archiveName = `kani-${backupedAt}.7z`
 
             const backupRoot = mountPath.googleapis.googleDrive
-            console.log(backupRoot)
+
             const dumpDirPath = path.join(backupRoot, dumpDirName)
             const archivePath = path.join(backupRoot, archiveName)
             // the aes password is the same as the one used to encrypt the database

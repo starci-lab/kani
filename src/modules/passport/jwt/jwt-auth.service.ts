@@ -33,7 +33,7 @@ export class JwtAuthService {
         private readonly mountStorageService: MountStorageService
     ) { }
 
-    public getJwtSecretKey(): string {
+    public getJwtSecretKey(): Buffer {
         return this.mountStorageService.jwtSecretKey
     }
 

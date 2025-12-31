@@ -12,14 +12,13 @@ export const getJwtSecretKey = (jwtSecret?: string) => {
             "utf8"
         )
     }
-    const keyBuffer = crypto.pbkdf2Sync(
+    return crypto.pbkdf2Sync(
         jwtSecret,                 // base key
         envConfig().salt.jwt,   // salt
         100_000,                // number of hash rounds
         32,                     // length of key (bytes)
         "sha256"                // hash function
     )
-    return keyBuffer.toString("hex")
 }
 /**
  * Pure function to get the aes key
@@ -32,14 +31,13 @@ export const getAesKey = (aes?: string) => {
             "utf8"
         )
     }
-    const keyBuffer = crypto.pbkdf2Sync(
+    return crypto.pbkdf2Sync(
         aes,                 // base key
         envConfig().salt.aesCbc,   // salt
         100_000,                // number of hash rounds
         32,                     // length of key (bytes)
         "sha256"                // hash function
     )
-    return keyBuffer.toString("hex")
 }
 
 /**

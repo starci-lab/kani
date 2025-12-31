@@ -5,8 +5,8 @@ import { ReadinessWatcherFactoryService } from "@modules/mixin"
 
 @Injectable()
 export class MountStorageService implements OnModuleInit {
-    public aesKey: string
-    public jwtSecretKey: string
+    public aesKey: Buffer
+    public jwtSecretKey: Buffer
     public smtpConfig: SmtpConfig
     public rpcAccessConfigs: RpcAccessConfigs
     public apiKeys: ApiKeys

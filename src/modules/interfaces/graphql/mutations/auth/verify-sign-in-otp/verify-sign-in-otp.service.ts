@@ -61,7 +61,7 @@ export class VerifySignInOtpService {
         )?.toJSON()
         if (!user) {
             const totpSecret = this.totpService.generateSecret()
-            const encryptedTotpSecret = this.encryptionService.encrypt(totpSecret.base32)
+            const encryptedTotpSecret = await this.encryptionService.encrypt(totpSecret.base32)
             // we try to find an executor with less than envConfig.executorMaxCapacity users
             const executor = await this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)

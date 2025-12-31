@@ -24,11 +24,11 @@ export class MountFilesystemService {
         return getSmtpConfig()
     }
 
-    jwtSecretKey(): string {
+    jwtSecretKey(): Buffer {
         return getJwtSecretKey()
     }
 
-    aesKey(): string {
+    aesKey(): Buffer {
         return getAesKey()
     }
 
