@@ -21,6 +21,7 @@ import { KafkaBridgeService } from "./kafka-bridge.service"
 import { KafkaAdminService } from "./admin.service"
 import { KafkaProducerService } from "./producer.service"
 import { KafkaConsumerService } from "./consumer.service"
+import { KafkaMode } from "./types"
 
 @Module({})
 export class KafkaModule extends ConfigurableModuleClass {
@@ -37,12 +38,16 @@ export class KafkaModule extends ConfigurableModuleClass {
             // Admin (must be first - creates topics)
             adminProvider,
             KafkaAdminService,
-            KafkaProducerService,
-            KafkaConsumerService,
-            // Bridge (uses consumer)
-            KafkaBridgeService,
         ]
-        
+        // Producer
+        if (!options?.modes || options.modes.includes(KafkaMode.Producer)) {
+            providers.push(KafkaProducerService)
+        }
+        // Consumer
+        if (!options?.modes || options.modes.includes(KafkaMode.Consumer)) {
+            providers.push(KafkaConsumerService)
+            providers.push(KafkaBridgeService)
+        }
         return {
             ...dynamicModule,
             providers: [...(dynamicModule.providers || []), ...providers],
