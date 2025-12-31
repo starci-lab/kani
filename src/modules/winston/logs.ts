@@ -115,6 +115,7 @@ export enum WinstonLog {
     GoogleDriveFileDownloaded = "Google.Drive.File.Downloaded",
     GoogleDriveFileDownloadError = "Google.Drive.File.Download.Error",
     BackupCompleted = "Backup.Completed",
+    BackupFailed = "Backup.Failed",
     DatabaseRestoreCompleted = "Database.Restore.Completed",
     DatabaseRestoreStarted = "Database.Restore.Started",
     DatabaseRestoreError = "Database.Restore.Error",
@@ -126,4 +127,6 @@ export enum WinstonLog {
     SevenZExtractionCompleted = "Seven.Z.Extraction.Completed",
     MongoDBRestoreCompleted = "MongoDB.Restore.Completed",
     SeedCompleted = "Seed.Completed",
+    RestoreFailed = "Restore.Failed",
+    SeedFailed = "Seed.Failed",
 }

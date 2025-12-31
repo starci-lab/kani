@@ -19,9 +19,14 @@ export class SeedCommand extends CommandRunner {
     }
 
     async run(): Promise<void> {
-        await this.seedersService.seed()
-        this.logger.info(WinstonLog.SeedCompleted)
-        // exit the app
-        process.exit(0)
+        try {
+            await this.seedersService.seed()
+            this.logger.info(WinstonLog.SeedCompleted)
+            // exit the app
+            process.exit(0)
+        } catch (error) {
+            this.logger.error(WinstonLog.SeedFailed, { error: error.message })
+            process.exit(1)
+        }
     }
 }

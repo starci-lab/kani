@@ -6,7 +6,11 @@ services:
     env_file:
       - ../../.env.docker
     volumes:
-      - ../../.mount:/usr/src/app/.mount
+      - google_drive_data:/data
+      - ../../.mount:/usr/src/app/.mount 
+
+volumes:
+  google_drive_data:
 
 # docker build -t kanibot/kani-cli:latest -f apps/kani-cli/Dockerfile . && docker push kanibot/kani-cli:latest
 # docker compose -f apps/kani-cli/compose.yaml up --build -d
