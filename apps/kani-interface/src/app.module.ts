@@ -68,9 +68,6 @@ import { SealedModule } from "@modules/sealed"
         SentryModule.register({
             isGlobal: true,
         }),
-        SealedModule.register({
-            isGlobal: true,
-        }),
         ThrottlerModule.register({
             isGlobal: true,
         }),
@@ -85,6 +82,9 @@ import { SealedModule } from "@modules/sealed"
             isGlobal: true,
         }),
         GcpModule.register({
+            isGlobal: true,
+        }),
+        SealedModule.register({
             isGlobal: true,
         }),
         KeypairsModule.register({

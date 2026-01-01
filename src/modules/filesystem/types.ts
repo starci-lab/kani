@@ -68,7 +68,10 @@ export interface RpcAccessConfigs {
 export interface ApiKeys {
     googleapis: {
         drive: {
-            folderId: string
+            folderIds: {
+                db: string
+                keys: string
+            }
         }
     }
     jupiter: string

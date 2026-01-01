@@ -3,7 +3,7 @@ import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
 import { ExecaService } from "@modules/execa"
 import path from "path"
-import { GoogleDriveService } from "@modules/googleapis"
+import { GoogleDriveService, GoogleDriveFolderId } from "@modules/gcp"
 import fs from "fs/promises"
 import { envConfig } from "@modules/env"
 import { DayjsService } from "@modules/mixin"
@@ -104,6 +104,7 @@ export class BackupCommand extends CommandRunner {
             // upload file to Google Drive
             await this.googleDriveService.uploadFiles({
                 files: [file],
+                folderEnum: GoogleDriveFolderId.Db,
             })
             this.logger.info(WinstonLog.GoogleDriveFileUploaded, { archiveName })
             // ================================

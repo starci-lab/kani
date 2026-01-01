@@ -18,6 +18,10 @@ import {
 import { KeypairsService } from "@modules/blockchains"
 import { chainIdToPlatformId } from "@typedefs"
 import { Decimal } from "decimal.js"
+import { GoogleDriveFolderId, GoogleDriveService } from "@modules/gcp"
+import { InjectSuperJson } from "@modules/mixin"
+import SuperJson from "superjson"
+import { Readable } from "stream"
 
 @Injectable()
 export class CreateBotService {
@@ -26,6 +30,9 @@ export class CreateBotService {
         private readonly connection: Connection,
         private readonly keypairsService: KeypairsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly googleDriveService: GoogleDriveService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJson,
     ) { }
 
     async createBot(
@@ -39,7 +46,6 @@ export class CreateBotService {
             isExitToUsdc,
         }: CreateBotRequest,
     ): Promise<CreateBotResponseData> {
-
         const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.displayId.toString() === targetTokenId.toString())
         if (!targetTokenInstance) {
             throw new TokenNotFoundException("Target token not found with display id: " + targetTokenId)
@@ -89,30 +95,62 @@ export class CreateBotService {
             .liquidityPools
             .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId))
         // create bot
-        const [
-            botRaw
-        ] = await this.connection
-            .model<BotSchema>(BotSchema.name)
-            .create(
-                [
-                    {
-                        user: userLike.id,
-                        name,
-                        chainId,
-                        targetToken: targetTokenInstance.id,
-                        quoteToken: quoteTokenInstance.id,
-                        liquidityPools: liquidityPools.map((liquidityPool) => liquidityPool.id),
-                        accountAddress: generatedKeypair.accountAddress,
-                        encryptedPrivateKeyPayload: generatedKeypair.encryptedPrivateKeyPayload,
-                        isExitToUsdc,
-                    }
-                ]
-            )
-        const bot = botRaw.toJSON()
-        return {
-            id: bot.id,
-            accountAddress: generatedKeypair.accountAddress,
-        }
+        const session = await this.connection.startSession()
+        return await session.withTransaction(
+            async () => {
+                // create the bot
+                const [
+                    botRaw
+                ] = await this.connection
+                    .model<BotSchema>(BotSchema.name)
+                    .create(
+                        [
+                            {
+                                user: userLike.id,
+                                name,
+                                chainId,
+                                targetToken: targetTokenInstance.id,
+                                quoteToken: quoteTokenInstance.id,
+                                liquidityPools: liquidityPools.map((liquidityPool) => liquidityPool.id),
+                                accountAddress: generatedKeypair.accountAddress,
+                                encryptedPrivateKeyPayload: generatedKeypair.encryptedPrivateKeyPayload,
+                                isExitToUsdc,
+                            }
+                        ],
+                        { session }
+                    )
+                // upload the bot private key to google drive
+                const content = Buffer.from(
+                    this
+                        .superJson
+                        .stringify(generatedKeypair.encryptedPrivateKeyPayload),
+                    "utf8"
+                )
+                const fileName = `${botRaw.id}.json`
+                await this.googleDriveService.uploadFiles({
+                    files: [
+                        {
+                            buffer: content,
+                            originalname: fileName,
+                            mimetype: "text/plain",
+                            fieldname: "",
+                            encoding: "utf8",
+                            size: content.length,
+                            stream: Readable.from(content),
+                            filename: fileName,
+                            path: "",
+                            destination: "",
+                        }
+                    ],
+                    folderEnum: GoogleDriveFolderId.Keys,
+                })
+                // return the bot
+                const bot = botRaw.toJSON()
+                return {
+                    id: bot.id,
+                    accountAddress: generatedKeypair.accountAddress,
+                }
+            })
     }
 }
 

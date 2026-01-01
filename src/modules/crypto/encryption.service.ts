@@ -13,23 +13,6 @@ export class EncryptionService {
         private readonly mountStorageService: MountStorageService,
     ) {}
 
-    /**
-     * Retrieve and validate the AES-256 key.
-     * The key MUST be a cryptographically secure 32-byte Buffer.
-     */
-    private getAesKey(): Buffer {
-        const key = this.mountStorageService.aesKey
-
-        if (!Buffer.isBuffer(key)) {
-            throw new Error("AES key must be provided as a Buffer")
-        }
-
-        if (key.length !== 32) {
-            throw new Error("AES-256 key must be exactly 32 bytes")
-        }
-
-        return key
-    }
 
     /**
      * Encrypt plaintext using AES-256-GCM.
@@ -40,13 +23,11 @@ export class EncryptionService {
      *   iv:authTag:ciphertext
      */
     encrypt(plainText: string, key?: Buffer<ArrayBufferLike>): EncryptedPayload {
-        key = key || this.getAesKey()
+        key = key || this.mountStorageService.aesKey
         // Generate a random IV
         const iv = crypto.randomBytes(this.ivLength)
-
         // Create AES-GCM cipher
         const cipher = crypto.createCipheriv("aes-256-gcm", key, iv)
-
         // Encrypt data
         const encrypted = Buffer.concat(
             [
@@ -54,10 +35,8 @@ export class EncryptionService {
                 cipher.final(),
             ]
         )
-
         // Authentication tag (integrity + authenticity)
         const authTag = cipher.getAuthTag()
-
         // Return IV, auth tag, and ciphertext
         return {
             iv: iv.toString("base64"),
@@ -73,8 +52,11 @@ export class EncryptionService {
      * - Automatically verifies integrity via auth tag
      * - Throws if data was tampered with
      */
-    decrypt({ iv, authTag, ciphertext }: EncryptedPayload, key?: Buffer<ArrayBufferLike>): string {
-        key = key || this.getAesKey()
+    decrypt(
+        { iv, authTag, ciphertext }: EncryptedPayload, 
+        key?: Buffer<ArrayBufferLike>
+    ): string {
+        key = key || this.mountStorageService.aesKey
         const ivBuffer = Buffer.from(iv, "base64")
         const authTagBuffer = Buffer.from(authTag, "base64")
         const encryptedBuffer = Buffer.from(ciphertext, "base64")

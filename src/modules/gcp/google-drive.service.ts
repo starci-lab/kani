@@ -1,91 +1,62 @@
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import { Auth, drive_v3 } from "googleapis"
+import { Injectable } from "@nestjs/common"
+import { drive_v3 } from "googleapis/build/src/apis/drive"
+import { GoogleAuth } from "google-auth-library"
+import { GoogleDriveFolderId } from "./types"
+import { MountStorageService } from "@modules/filesystem"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
+import { envConfig } from "@modules/env"
+import { GoogleDriveFolderIdNotFoundException } from "@exceptions"
+import path from "path"
 import { Readable } from "stream"
 import fs from "fs"
-import { MountStorageService } from "@modules/filesystem"
-import { GoogleDriveFolderIdNotFoundException } from "@exceptions"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import path from "path"
-import { envConfig } from "@modules/env"
+import { WinstonLog } from "@modules/winston"
+
+export interface UploadFilesParams {
+    files: Array<Express.Multer.File>
+    folderEnum: GoogleDriveFolderId
+}
 
 @Injectable()
-export class GoogleDriveService implements OnModuleInit {
-    public auth: Auth.GoogleAuth
+export class GoogleDriveService {
+    public auth: GoogleAuth
     public drive: drive_v3.Drive
     constructor(
         private readonly mountStorageService: MountStorageService,
         @InjectWinston()
         private readonly logger: WinstonLogger
-    ) {}
-
-    onModuleInit() {
-        this.auth = new Auth.GoogleAuth({
+    ) {
+        this.auth = new GoogleAuth({
             keyFile: envConfig().mountPath.gcp.googleDriveUdSa,
             scopes: ["https://www.googleapis.com/auth/drive"],
         })
         this.drive = new drive_v3.Drive({ auth: this.auth })
     }
 
-    public async uploadFolder(
-        {
-            folderName,
-            files
-        }: UploadFolderParams
-    ): Promise<string> {
-        // 1. Create a new folder on Google Drive
-        const folderResponse = await this.drive.files.create({
-            requestBody: {
-                name: folderName,
-                mimeType: "application/vnd.google-apps.folder",
-                parents: [this.mountStorageService.apiKeys.googleapis.drive.folderId],
-            },
-            supportsAllDrives: true,
-            fields: "id",
-        })
-        this.logger.verbose(
-            WinstonLog.GoogleDriveFolderCreated, 
-            { 
-                folderId: folderResponse.data.id 
-            }
-        )
-        const folderId = folderResponse.data.id
-        if (!folderId) {
-            throw new GoogleDriveFolderIdNotFoundException(this.mountStorageService.apiKeys.googleapis.drive.folderId)
+    private folderEnumToId(folderEnum: GoogleDriveFolderId): string {
+        switch (folderEnum) {
+        case GoogleDriveFolderId.Db:
+            return this.mountStorageService.apiKeys.googleapis.drive.folderIds.db
+        case GoogleDriveFolderId.Keys:
+            return this.mountStorageService.apiKeys.googleapis.drive.folderIds.keys
         }
-        // 2. Upload each file to the new folder
-        for (const file of files) {
-            const media = {
-                mimeType: file.mimetype,
-                body: Readable.from(file.buffer),
-            }
-            const fileResponse = await this.drive.files.create({
-                requestBody: {
-                    name: file.originalname,
-                    mimeType: file.mimetype,
-                    parents: [folderId],
-                },
-                supportsAllDrives: true,
-                media: media,
-                fields: "id",
-            })
-            this.logger.verbose(WinstonLog.GoogleDriveFileUploaded, { fileId: fileResponse.data.id })
-        }
-      
-        // 3. Return the folder URL
-        return `https://drive.google.com/drive/folders/${folderId}`
     }
 
     public async uploadFiles(
         {
-            files
+            files,
+            folderEnum
         }: UploadFilesParams
     ): Promise<void> {
+        const folderId = this.folderEnumToId(folderEnum)
+        if (!folderId) {
+            throw new GoogleDriveFolderIdNotFoundException("Unknown folder enum", folderEnum)
+        }
         for (const file of files) {
             const response = await this.drive.files.create({
                 requestBody: {
                     name: file.originalname ?? path.basename(file.path),
-                    parents: [this.mountStorageService.apiKeys.googleapis.drive.folderId],
+                    parents: [folderId],
                 },
                 media: {
                     mimeType: file.mimetype ?? "application/octet-stream",
@@ -98,7 +69,7 @@ export class GoogleDriveService implements OnModuleInit {
                 WinstonLog.GoogleDriveFileUploaded, 
                 {
                     fileId: response.data.id,
-                    folderId: this.mountStorageService.apiKeys.googleapis.drive.folderId,
+                    folderId,
                     filePath: file.path,
                 }
             )
@@ -145,11 +116,4 @@ export class GoogleDriveService implements OnModuleInit {
     }
 }
 
-export interface UploadFolderParams {
-    folderName: string
-    files: Array<Express.Multer.File>
-}
 
-export interface UploadFilesParams {
-    files: Array<Express.Multer.File>
-}

@@ -3,7 +3,6 @@ import { CommandsModule } from "@modules/commands"
 import { EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { PrimaryMongoDbModule } from "@modules/databases"
-import { GoogleapisModule } from "@modules/googleapis"
 import { ExecaModule } from "@modules/execa"
 import { FilesystemModule } from "@modules/filesystem"
 import { MixinModule } from "@modules/mixin"
@@ -26,9 +25,6 @@ import { CryptoModule } from "@modules/crypto"
             isGlobal: true,
         }),
         ExecaModule.register({
-            isGlobal: true,
-        }),
-        GoogleapisModule.register({
             isGlobal: true,
         }),
         PrimaryMongoDbModule.register({

@@ -25,6 +25,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { DependencyName, TerminusModule } from "@modules/terminus"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
+import { SealedModule } from "@modules/sealed"
 
 @Module({
     imports: [
@@ -35,6 +36,7 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
         SentryModule.register({
             isGlobal: true,
         }),
+
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-observer",
@@ -51,9 +53,6 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
             isGlobal: true,
         }),
         MathModule.register({
-            isGlobal: true,
-        }),
-        GcpModule.register({
             isGlobal: true,
         }),
         PrimaryMongoDbModule.register({
@@ -77,6 +76,9 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
             isGlobal: true,
         }),
         GcpModule.register({
+            isGlobal: true,
+        }),
+        SealedModule.register({
             isGlobal: true,
         }),
         AxiosModule.register({

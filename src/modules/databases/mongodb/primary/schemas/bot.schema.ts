@@ -41,7 +41,7 @@ export class BotSchema extends AbstractSchema {
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
-    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+    @Prop({ type: MongooseSchema.Types.Mixed })
         encryptedPrivateKeyPayload: EncryptedPayload
         
     /**

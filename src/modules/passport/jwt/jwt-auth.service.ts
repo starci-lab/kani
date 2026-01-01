@@ -63,7 +63,7 @@ export class JwtAuthService {
             // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
             encryptedTotpSecretPayload,
         }, {
-            secret: this.getJwtSecretKey(),
+            secret: this.mountStorageService.jwtSecretKey,
             expiresIn: envConfig().jwt.accessToken.expiration
         })
         let refreshToken: string | undefined
@@ -79,7 +79,7 @@ export class JwtAuthService {
                     encryptedTotpSecretPayload,
                 },
                 {
-                    secret: this.getJwtSecretKey(),
+                    secret: this.mountStorageService.jwtSecretKey,
                     expiresIn: envConfig().jwt.refreshToken.expiration
                 }
             )
@@ -128,7 +128,7 @@ export class JwtAuthService {
     public async verifyAccessToken(token: string): Promise<JwtAccessTokenPayload | null> {
         try {
             return await this.jwtService.verifyAsync<JwtAccessTokenPayload>(token, {
-                secret: this.getJwtSecretKey(),
+                secret: this.mountStorageService.jwtSecretKey,
             })
         } catch {
             return null
@@ -141,7 +141,7 @@ export class JwtAuthService {
     ): Promise<JwtRefreshTokenPayload | null> {
         try {
             const decoded = await this.jwtService.verifyAsync<JwtRefreshTokenPayload>(token, {
-                secret: this.getJwtSecretKey(),
+                secret: this.mountStorageService.jwtSecretKey,
             })
             return {
                 sessionId: decoded.sessionId,
