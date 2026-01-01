@@ -104,3 +104,8 @@ export interface ApiKeys {
         }
     }
 }
+
+export interface Keys {
+    encryptedAesKey: string
+    jwtSecret: string
+}

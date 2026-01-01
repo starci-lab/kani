@@ -23,7 +23,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { IoRedisModule } from "@modules/native"
 import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
 import { APP_FILTER } from "@nestjs/core"
-import { SealedModule } from "@modules/sealed"
+import { DerivedModule } from "@modules/derived"
 
 @Module({
     imports: [
@@ -84,7 +84,7 @@ import { SealedModule } from "@modules/sealed"
         GcpModule.register({
             isGlobal: true,
         }),
-        SealedModule.register({
+        DerivedModule.register({
             isGlobal: true,
         }),
         KeypairsModule.register({

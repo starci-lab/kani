@@ -7,13 +7,13 @@ import {
 import { GqlExecutionContext } from "@nestjs/graphql"
 import { TotpService } from "./totp.service"
 import { UserJwtLike } from "@modules/passport"
-import { SealedAesService } from "@modules/sealed"
+import { DerivedAesKeyService } from "@modules/derived"
 
 @Injectable()
 export class GraphQLTOTPGuard implements CanActivate {
     constructor(
         private readonly totpService: TotpService,
-        private readonly sealedAesService: SealedAesService,
+        private readonly derivedAesKeyService: DerivedAesKeyService,
     ) {}
 
     async canActivate(
@@ -27,7 +27,7 @@ export class GraphQLTOTPGuard implements CanActivate {
         if (!user.encryptedTotpSecretPayload) {
             throw new UnauthorizedException("Encrypted TOTP secret is required in JWT payload")
         }
-        const decryptedTotpSecret = this.sealedAesService.decrypt(user.encryptedTotpSecretPayload)
+        const decryptedTotpSecret = this.derivedAesKeyService.decrypt(user.encryptedTotpSecretPayload)
         const verified = this.totpService.verifyTotp(totpCode, decryptedTotpSecret)
         if (!verified) {
             throw new UnauthorizedException("Invalid TOTP code")

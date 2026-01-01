@@ -14,14 +14,14 @@ import {
     BotAlreadyBackupedPrivateKeyException
 } from "@exceptions"
 import { UserJwtLike } from "@modules/passport"
-import { SealedAesService } from "@modules/sealed"
+import { DerivedAesKeyService } from "@modules/derived"
 
 @Injectable()
 export class BackupBotPrivateKeyService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly sealedAesService: SealedAesService,
+        private readonly derivedAesKeyService: DerivedAesKeyService,
     ) { }
 
     async backupBotPrivateKey(
@@ -39,7 +39,7 @@ export class BackupBotPrivateKeyService {
         if (bot.user.toString() !== userLike.id) {
             throw new BotNotOwnedByUserException("User is not the owner of the bot")
         }
-        const privateKey = await this.sealedAesService.decrypt(bot.encryptedPrivateKeyPayload)
+        const privateKey = this.derivedAesKeyService.decrypt(bot.encryptedPrivateKeyPayload)
         // update the bot backup private key
         await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             { _id: botId },

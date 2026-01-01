@@ -1,5 +1,4 @@
 import { verify, TokenExpiredError } from "jsonwebtoken"
-import { envConfig } from "@modules/env"
 import { TypedSocket } from "../types"
 import { JwtAccessTokenPayload } from "@modules/passport"
 import { 
@@ -8,7 +7,6 @@ import {
     SocketIoAccessTokenExpiredException
 } from "@exceptions"
 import { getJwtSecretKey } from "@modules/filesystem"
-import crypto from "crypto"
 
 export const socketIoAuthMiddleware = (
     socket: TypedSocket, 

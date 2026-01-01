@@ -5,12 +5,12 @@ import base58 from "bs58"
 import { GeneratedKeypair } from "./types"
 import { EncryptedPayload, PlatformId } from "@typedefs"
 import { Keypair as SolanaKeypair } from "@solana/web3.js"
-import { SealedAesService } from "@modules/sealed"
+import { DerivedAesKeyService } from "@modules/derived"
 
 @Injectable()
 export class KeypairsService {
     constructor(
-        private readonly sealedAesService: SealedAesService,
+        private readonly derivedAesKeyService: DerivedAesKeyService,
     ) { }
 
     public async generateKeypair(
@@ -20,7 +20,7 @@ export class KeypairsService {
         case PlatformId.Evm:
         {
             const evmWallet = Wallet.createRandom()
-            const encryptedPrivateKeyPayload = await this.sealedAesService.encrypt(evmWallet.privateKey)
+            const encryptedPrivateKeyPayload = this.derivedAesKeyService.encrypt(evmWallet.privateKey)
             return { 
                 accountAddress: evmWallet.address, 
                 encryptedPrivateKeyPayload 
@@ -29,7 +29,7 @@ export class KeypairsService {
         case PlatformId.Sui:
         {
             const suiWallet = Ed25519Keypair.generate()
-            const encryptedPrivateKeyPayload = await this.sealedAesService.encrypt(suiWallet.getSecretKey())
+            const encryptedPrivateKeyPayload = this.derivedAesKeyService.encrypt(suiWallet.getSecretKey())
             return { 
                 accountAddress: suiWallet.getPublicKey().toSuiAddress(), 
                 encryptedPrivateKeyPayload 
@@ -38,7 +38,7 @@ export class KeypairsService {
         case PlatformId.Solana:
         {
             const solanaWallet = SolanaKeypair.generate()
-            const encryptedPrivateKeyPayload = await this.sealedAesService.encrypt(base58.encode(solanaWallet.secretKey))
+            const encryptedPrivateKeyPayload = this.derivedAesKeyService.encrypt(base58.encode(solanaWallet.secretKey))
             return { 
                 accountAddress: solanaWallet.publicKey.toString(), 
                 encryptedPrivateKeyPayload 
@@ -53,11 +53,11 @@ export class KeypairsService {
     ): Promise<string> {
         switch (platformId) {
         case PlatformId.Evm:
-            return await this.sealedAesService.decrypt(encryptedPrivateKeyPayload)
+            return this.derivedAesKeyService.decrypt(encryptedPrivateKeyPayload)
         case PlatformId.Sui:
-            return await this.sealedAesService.decrypt(encryptedPrivateKeyPayload)
+            return this.derivedAesKeyService.decrypt(encryptedPrivateKeyPayload)
         case PlatformId.Solana:
-            return await this.sealedAesService.decrypt(encryptedPrivateKeyPayload)
+            return this.derivedAesKeyService.decrypt(encryptedPrivateKeyPayload)
         }
     }
 }

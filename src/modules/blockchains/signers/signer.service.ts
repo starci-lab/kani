@@ -9,7 +9,7 @@ import {
 } from "@solana/kit"
 import { ethers } from "ethers"
 import bs58 from "bs58"
-import { SealedAesService } from "@modules/sealed"
+import { DerivedAesKeyService } from "@modules/derived"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
   bot: BotSchema;
@@ -21,7 +21,7 @@ export interface WithSignerParams<TSigner, TResponse = void> {
 @Injectable()
 export class SignerService {
     constructor(
-        private readonly sealedAesService: SealedAesService,
+        private readonly derivedAesKeyService: DerivedAesKeyService,
     ) {}
 
     private async withSigner<TSigner, TResponse = void>({
@@ -34,17 +34,17 @@ export class SignerService {
         try {
             switch (platformId) {
             case PlatformId.Solana:
-                privateKey = await this.sealedAesService.decrypt(
+                privateKey = this.derivedAesKeyService.decrypt(
                     bot.encryptedPrivateKeyPayload,
                 )
                 break
             case PlatformId.Sui:
-                privateKey = await this.sealedAesService.decrypt(
+                privateKey = this.derivedAesKeyService.decrypt(
                     bot.encryptedPrivateKeyPayload,
                 )
                 break
             case PlatformId.Evm:
-                privateKey = await this.sealedAesService.decrypt(
+                privateKey = this.derivedAesKeyService.decrypt(
                     bot.encryptedPrivateKeyPayload,
                 )
                 break

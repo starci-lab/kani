@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import crypto from "crypto"
-import { MountStorageService } from "@modules/filesystem"
 import { EncryptedPayload } from "@typedefs"
 
 @Injectable()
@@ -8,10 +7,7 @@ export class EncryptionService {
     // Recommended IV length for AES-GCM (12 bytes)
     private readonly ivLength = 12
 
-    constructor(
-        // Service used to securely retrieve the raw 256-bit AES key
-        private readonly mountStorageService: MountStorageService,
-    ) {}
+    constructor() {}
 
 
     /**
@@ -22,8 +18,7 @@ export class EncryptionService {
      * - Output format (Base64 encoded):
      *   iv:authTag:ciphertext
      */
-    encrypt(plainText: string, key?: Buffer<ArrayBufferLike>): EncryptedPayload {
-        key = key || this.mountStorageService.aesKey
+    encrypt(plainText: string, key: Buffer<ArrayBufferLike>): EncryptedPayload {
         // Generate a random IV
         const iv = crypto.randomBytes(this.ivLength)
         // Create AES-GCM cipher
@@ -54,9 +49,8 @@ export class EncryptionService {
      */
     decrypt(
         { iv, authTag, ciphertext }: EncryptedPayload, 
-        key?: Buffer<ArrayBufferLike>
+        key: Buffer<ArrayBufferLike>
     ): string {
-        key = key || this.mountStorageService.aesKey
         const ivBuffer = Buffer.from(iv, "base64")
         const authTagBuffer = Buffer.from(authTag, "base64")
         const encryptedBuffer = Buffer.from(ciphertext, "base64")

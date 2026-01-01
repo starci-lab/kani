@@ -1,45 +1,7 @@
 import { envConfig } from "@modules/env"
-import crypto from "crypto"
 import { readFileSync } from "fs"
-import { ApiKeys, RpcAccessConfigs, SmtpConfig } from "./types"
-
-// pure function to get the jwt secret key
-// in case there is component that not depends on nestjs DI
-export const getJwtSecretKey = (jwtSecret?: string) => {
-    if (!jwtSecret) {
-        jwtSecret = readFileSync(
-            envConfig().mountPath.keys.jwtSecret,
-            "utf8"
-        )
-    }
-    return crypto.pbkdf2Sync(
-        jwtSecret,                 // base key
-        envConfig().salt.jwt,   // salt
-        100_000,                // number of hash rounds
-        32,                     // length of key (bytes)
-        "sha256"                // hash function
-    )
-}
-/**
- * Pure function to get the aes key
- * in case there is component that not depends on nestjs DI
- */
-export const getAesKey = (aes?: string) => {
-    if (!aes) {
-        aes = readFileSync(
-            envConfig().mountPath.keys.aes,
-            "utf8"
-        )
-    }
-    return crypto.pbkdf2Sync(
-        aes,                 // base key
-        envConfig().salt.aesCbc,   // salt
-        100_000,                // number of hash rounds
-        32,                     // length of key (bytes)
-        "sha256"                // hash function
-    )
-}
-
+import { ApiKeys, Keys, RpcAccessConfigs, SmtpConfig } from "./types"
+import crypto from "crypto"
 /**
  * Pure function to get the smtp config
  * in case there is component that not depends on nestjs DI
@@ -111,4 +73,44 @@ export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) =
         )
     }
     return cloudKmsCryptoOperatorSa
+}
+
+/**
+ * Pure function to get the keys
+ * in case there is component that not depends on nestjs DI
+ */
+export const getKeys = (keys?: Keys) => {
+    if (!keys) {
+        keys = JSON.parse(
+            readFileSync(envConfig().mountPath.config.keys, "utf8")) as Keys
+    }
+    return keys
+}
+
+/**
+ * Pure function to get the jwt secret key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getJwtSecretKey = (jwtSecretKey?: Buffer) => {
+    if (!jwtSecretKey) {
+        jwtSecretKey = crypto.pbkdf2Sync(
+            getKeys().jwtSecret,
+            envConfig().salt.jwt,
+            100_000,
+            32,
+            "sha256"
+        )
+    }
+    return jwtSecretKey
+}
+
+/**
+ * Pure function to get the encrypted aes key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getEncryptedAesKey = (encryptedAesKey?: Buffer) => {
+    if (!encryptedAesKey) {
+        encryptedAesKey = Buffer.from(getKeys().encryptedAesKey, "base64")
+    }
+    return encryptedAesKey
 }

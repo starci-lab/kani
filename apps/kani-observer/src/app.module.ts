@@ -25,7 +25,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { DependencyName, TerminusModule } from "@modules/terminus"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
-import { SealedModule } from "@modules/sealed"
+import { DerivedModule } from "@modules/derived"
 
 @Module({
     imports: [
@@ -78,7 +78,7 @@ import { SealedModule } from "@modules/sealed"
         GcpModule.register({
             isGlobal: true,
         }),
-        SealedModule.register({
+        DerivedModule.register({
             isGlobal: true,
         }),
         AxiosModule.register({

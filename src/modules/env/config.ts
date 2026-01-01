@@ -212,11 +212,8 @@ export const envConfig = () => ({
             googleDriveUdSa: process.env.GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "google-drive-ud-sa.json"),
             cloudKmsCryptoOperatorSa: process.env.GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "cloud-kms-crypto-operator-sa.json"),
         },
-        keys: {
-            aes: process.env.AES_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "aes.key"),
-            jwtSecret: process.env.JWT_SECRET_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "jwt-secret.key"),
-        },
         config: {
+            keys: process.env.KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "keys.json"),
             smtp: process.env.SMTP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "smtp.json"),
             rpcs: process.env.RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
             apiKeys: process.env.API_KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "api-keys.json"),

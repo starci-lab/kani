@@ -36,7 +36,7 @@ import { TerminusModule, DependencyName } from "@modules/terminus"
 import { FilesystemModule } from "@modules/filesystem"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
-import { SealedModule } from "@modules/sealed"
+import { DerivedModule } from "@modules/derived"
 
 @Module({
     imports: [
@@ -82,7 +82,7 @@ import { SealedModule } from "@modules/sealed"
         ClientsModule.register({
             isGlobal: true,
         }),
-        SealedModule.register({
+        DerivedModule.register({
             isGlobal: true,
         }),
         SignersModule.register({

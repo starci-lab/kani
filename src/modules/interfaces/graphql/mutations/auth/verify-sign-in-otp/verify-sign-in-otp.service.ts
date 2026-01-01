@@ -22,7 +22,7 @@ import { CookieService } from "@modules/cookie"
 import { Response } from "express"
 import { TotpService } from "@modules/totp"
 import { envConfig } from "@modules/env"
-import { SealedAesService } from "@modules/sealed"
+import { DerivedAesKeyService } from "@modules/derived"
 import { CodeGeneratorService } from "@modules/code"
 
 @Injectable()
@@ -35,7 +35,7 @@ export class VerifySignInOtpService {
         private readonly jwtAuthService: JwtAuthService,
         private readonly cookieService: CookieService,
         private readonly totpService: TotpService,
-        private readonly sealedAesService: SealedAesService,
+        private readonly derivedAesKeyService: DerivedAesKeyService,
         private readonly codeGeneratorService: CodeGeneratorService
     ) {}
 
@@ -81,8 +81,7 @@ export class VerifySignInOtpService {
         )?.toJSON()
         if (!user) {
             const totpSecret = this.totpService.generateSecret()
-            console.log("totpSecret", totpSecret.base32)
-            const encryptedTotpSecretPayload = this.sealedAesService.encrypt(totpSecret.base32)
+            const encryptedTotpSecretPayload = this.derivedAesKeyService.encrypt(totpSecret.base32)
             // we try to find an executor with less than envConfig.executorMaxCapacity users
             const executor = await this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)
