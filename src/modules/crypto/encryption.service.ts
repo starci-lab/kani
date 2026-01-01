@@ -51,21 +51,26 @@ export class EncryptionService {
         { iv, authTag, ciphertext }: EncryptedPayload, 
         key: Buffer<ArrayBufferLike>
     ): string {
-        const ivBuffer = Buffer.from(iv, "base64")
-        const authTagBuffer = Buffer.from(authTag, "base64")
-        const encryptedBuffer = Buffer.from(ciphertext, "base64")
+        try {
+            const ivBuffer = Buffer.from(iv, "base64")
+            const authTagBuffer = Buffer.from(authTag, "base64")
+            const encryptedBuffer = Buffer.from(ciphertext, "base64")
 
-        if (ivBuffer.length !== this.ivLength) {
-            throw new Error("Invalid IV length")
+            if (ivBuffer.length !== this.ivLength) {
+                throw new Error("Invalid IV length")
+            }
+            // Create AES-GCM decipher
+            const decipher = crypto.createDecipheriv("aes-256-gcm", key, ivBuffer)
+            decipher.setAuthTag(authTagBuffer)
+            // Decrypt and verify integrity
+            const decryptedBuffer = Buffer.concat([
+                decipher.update(encryptedBuffer),
+                decipher.final(), // throws if auth tag is invalid
+            ])
+            return decryptedBuffer.toString("utf8")
+        } catch (error) {
+            console.error("Error decrypting data", error)
+            throw new Error("Failed to decrypt data")
         }
-        // Create AES-GCM decipher
-        const decipher = crypto.createDecipheriv("aes-256-gcm", key, ivBuffer)
-        decipher.setAuthTag(authTagBuffer)
-        // Decrypt and verify integrity
-        const decryptedBuffer = Buffer.concat([
-            decipher.update(encryptedBuffer),
-            decipher.final(), // throws if auth tag is invalid
-        ])
-        return decryptedBuffer.toString("utf8")
     }
 }
