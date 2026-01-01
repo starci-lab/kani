@@ -13,14 +13,9 @@ export class GcpKmsService {
     ) {}
 
     async encrypt(
-        plaintext: string | Uint8Array
+        plaintext: string
     ): Promise<Buffer<ArrayBufferLike>> {
-        const rawData =
-      typeof plaintext === "string"
-          ? Buffer.from(plaintext, "utf8")
-          : plaintext
-
-        
+        const rawData = Buffer.from(plaintext, "utf8")
         const [result] = await this.kmsClient.encrypt({
             name: this.mountStorageService.apiKeys.cryptoKeyName,
             plaintext: rawData,

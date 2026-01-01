@@ -11,7 +11,6 @@ import { AppService } from "./app.service"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { ClientsModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
-import { GoogleapisModule } from "@modules/googleapis"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -40,9 +39,6 @@ import { GoogleapisModule } from "@modules/googleapis"
             isGlobal: true,
         }),
         ClientsModule.register({
-            isGlobal: true,
-        }),
-        GoogleapisModule.register({
             isGlobal: true,
         }),
         P2CBalancerModule.register({

@@ -66,6 +66,10 @@ export interface RpcAccessConfigs {
 
 // API keys for external services
 export interface ApiKeys {
+    gcp: {
+        projectId: string
+        location: string
+    }
     googleapis: {
         drive: {
             folderIds: {

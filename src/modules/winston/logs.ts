@@ -129,4 +129,12 @@ export enum WinstonLog {
     SeedCompleted = "Seed.Completed",
     RestoreFailed = "Restore.Failed",
     SeedFailed = "Seed.Failed",
+    KeyGeneratedSuccess = "Key.Generated.Success",
+    KeyGenerationFailed = "Key.Generation.Failed",
+    KeyEncryptedSuccess = "Key.Encrypted.Success",
+    KeyDecryptedSuccess = "Key.Decrypted.Success",
+    KeyEncryptionFailed = "Key.Encryption.Failed",
+    KeyDecryptionCheckFailed = "Key.Decryption.Check.Failed",
+    KeyDecryptionCheckSuccess = "Key.Decryption.Check.Success",
+    KeyWrittenSuccess = "Key.Written.Success",
 }

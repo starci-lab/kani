@@ -11,6 +11,7 @@ import {
 } from "./verify-sign-in-otp.dto"
 import { JwtAuthService } from "@modules/passport"
 import {
+    FailedToGenerateReferralCodeException,
     SignInOtpMismatchException,
     SignInOtpNotFoundException,
 } from "@exceptions"
@@ -20,8 +21,9 @@ import { CacheKey } from "@modules/cache"
 import { CookieService } from "@modules/cookie"
 import { Response } from "express"
 import { TotpService } from "@modules/totp"
-import { EncryptionService } from "@modules/crypto"
 import { envConfig } from "@modules/env"
+import { SealedAesService } from "@modules/sealed"
+import { CodeGeneratorService } from "@modules/code"
 
 @Injectable()
 export class VerifySignInOtpService {
@@ -33,7 +35,8 @@ export class VerifySignInOtpService {
         private readonly jwtAuthService: JwtAuthService,
         private readonly cookieService: CookieService,
         private readonly totpService: TotpService,
-        private readonly encryptionService: EncryptionService,
+        private readonly sealedAesService: SealedAesService,
+        private readonly codeGeneratorService: CodeGeneratorService
     ) {}
 
     async verifySignInOtp(
@@ -53,6 +56,23 @@ export class VerifySignInOtpService {
         if (cachedOtp.otp !== otp) {
             throw new SignInOtpMismatchException("Sign in OTP mismatch")
         }
+        let referralCode: string | null = null
+        let bump = 0
+        while (!referralCode) {
+            const code = this.codeGeneratorService.generateCode("KANI")
+            const exists = await this.connection
+                .model<UserSchema>(UserSchema.name)
+                .exists({ referralCode: code })
+
+            if (!exists) {
+                referralCode = code
+            } else {
+                bump++
+                if (bump > 10) {
+                    throw new FailedToGenerateReferralCodeException("Failed to generate referral code after 10 attempts")
+                }
+            }
+        }
         // authenticate the user
         let user = (
             await this.connection
@@ -61,7 +81,8 @@ export class VerifySignInOtpService {
         )?.toJSON()
         if (!user) {
             const totpSecret = this.totpService.generateSecret()
-            const encryptedTotpSecret = await this.encryptionService.encrypt(totpSecret.base32)
+            console.log("totpSecret", totpSecret.base32)
+            const encryptedTotpSecretPayload = this.sealedAesService.encrypt(totpSecret.base32)
             // we try to find an executor with less than envConfig.executorMaxCapacity users
             const executor = await this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)
@@ -78,7 +99,8 @@ export class VerifySignInOtpService {
                             {
                                 email,
                                 mfaEnabled: false,
-                                encryptedTotpSecret,
+                                encryptedTotpSecretPayload,
+                                referralCode
                             }, 
                             { session }
                         ])

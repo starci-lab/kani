@@ -5,7 +5,7 @@ import {
 } from "./commands.module-definition"
 import { GoogleapisModule } from "./googleapis"
 import { SeedModule } from "./seed"
-
+import { LocalModule } from "./local"
 @Module({
     imports: [
         GoogleapisModule.register(
@@ -14,6 +14,11 @@ import { SeedModule } from "./seed"
             }
         ),
         SeedModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        LocalModule.register(
             {
                 isGlobal: true,
             }

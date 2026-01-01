@@ -200,6 +200,9 @@ export const envConfig = () => ({
             expiration: (process.env.JWT_REFRESH_TOKEN_EXPIRATION || "7d") as ms.StringValue,
         },
     },
+    genPath: {
+        keys: process.env.GEN_PATH_KEYS || join(process.cwd(), ".gen", "keys"),
+    },
     mountPath: {
         googleapis: {
             googleDrive: process.env.GOOGLE_DRIVE_MOUNT_PATH || join(process.cwd(), ".mount", "googleapis", "google-drive"),
@@ -207,6 +210,7 @@ export const envConfig = () => ({
         gcp: {
             cryptoKeyEdSa: process.env.GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "crypto-key-ed-sa.json"),
             googleDriveUdSa: process.env.GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "google-drive-ud-sa.json"),
+            cloudKmsCryptoOperatorSa: process.env.GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "cloud-kms-crypto-operator-sa.json"),
         },
         keys: {
             aes: process.env.AES_MOUNT_PATH || join(process.cwd(), ".mount", "keys", "aes.key"),

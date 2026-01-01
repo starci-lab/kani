@@ -3,6 +3,8 @@ import { EncryptionService } from "@modules/crypto"
 import { EncryptedPayload } from "@typedefs"
 import { GcpKmsService } from "@modules/gcp"
 import { MountStorageService } from "@modules/filesystem"
+import { envConfig } from "@modules/env"
+import crypto from "crypto"
 
 @Injectable()
 export class SealedAesService implements OnModuleInit {
@@ -14,7 +16,18 @@ export class SealedAesService implements OnModuleInit {
     ) {}
 
     async onModuleInit() {
-        this.sealedKey = await this.gcpKmsService.encrypt(this.mountStorageService.aesKey)
+        // get base key from gcp kms
+        const baseKey = await this.gcpKmsService.encrypt(this.mountStorageService.aesKey)
+        console.log("baseKey", Buffer.from(baseKey).toString("hex"))
+        // hash base key with salt
+        this.sealedKey = crypto.pbkdf2Sync(
+            baseKey,
+            envConfig().salt.aesCbc,
+            100_000,
+            32,
+            "sha256"
+        )
+        console.log("sealedKey", Buffer.from(this.sealedKey).toString("hex"))
     }
 
     encrypt(data: string): EncryptedPayload {

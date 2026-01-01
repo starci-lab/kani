@@ -132,7 +132,7 @@ export class CreateBotService {
                         {
                             buffer: content,
                             originalname: fileName,
-                            mimetype: "text/plain",
+                            mimetype: "application/octet-stream",
                             fieldname: "",
                             encoding: "utf8",
                             size: content.length,

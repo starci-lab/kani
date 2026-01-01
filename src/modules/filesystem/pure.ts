@@ -98,3 +98,17 @@ export const getApiKeys = (apiKeys?: ApiKeys) => {
     }
     return apiKeys
 }
+
+/**
+ * Pure function to get the kms admin sa
+ * in case there is component that not depends on nestjs DI
+ */
+export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) => {
+    if (!cloudKmsCryptoOperatorSa) {
+        cloudKmsCryptoOperatorSa = readFileSync(
+            envConfig().mountPath.gcp.cloudKmsCryptoOperatorSa,
+            "utf8"
+        )
+    }
+    return cloudKmsCryptoOperatorSa
+}

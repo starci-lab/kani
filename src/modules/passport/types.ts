@@ -13,7 +13,7 @@ export interface UserGoogleLike {
 export interface UserJwtLike {
     id: string
     mfaEnabled: boolean
-    encryptedTotpSecret?: EncryptedPayload
+    encryptedTotpSecretPayload?: EncryptedPayload
 }
 
 export interface AuthCredentials {

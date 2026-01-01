@@ -5,6 +5,7 @@ import {
     getApiKeys, 
     getCryptoKeyEdSa, 
     getJwtSecretKey, 
+    getCloudKmsCryptoOperatorSa, 
     getRpcAccessConfigs, 
     getSmtpConfig 
 } from "./pure"
@@ -34,6 +35,10 @@ export class MountFilesystemService {
 
     cryptoKeyEdSa(): string {
         return getCryptoKeyEdSa()
+    }
+
+    cloudKmsCryptoOperatorSa(): string {
+        return getCloudKmsCryptoOperatorSa()
     }
 
     rpcAccessConfigs(): RpcAccessConfigs {

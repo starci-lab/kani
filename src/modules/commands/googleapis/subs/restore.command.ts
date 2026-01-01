@@ -9,7 +9,7 @@ import { DayjsService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { MountStorageService } from "@modules/filesystem"
-import { GoogleDriveService } from "@modules/googleapis"
+import { GoogleDriveService } from "@modules/gcp"
 
 @SubCommand({
     name: "restore",

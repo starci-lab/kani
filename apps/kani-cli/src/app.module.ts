@@ -7,6 +7,7 @@ import { ExecaModule } from "@modules/execa"
 import { FilesystemModule } from "@modules/filesystem"
 import { MixinModule } from "@modules/mixin"
 import { CryptoModule } from "@modules/crypto"
+import { GcpModule } from "@modules/gcp"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -25,6 +26,9 @@ import { CryptoModule } from "@modules/crypto"
             isGlobal: true,
         }),
         ExecaModule.register({
+            isGlobal: true,
+        }),
+        GcpModule.register({
             isGlobal: true,
         }),
         PrimaryMongoDbModule.register({

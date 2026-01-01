@@ -46,3 +46,10 @@ export class UserMfaAlreadyEnabledException extends AbstractException {
         super(message || "User MFA already enabled", "USER_MFA_ALREADY_ENABLED_EXCEPTION")
     }
 }
+
+/** Thrown when failed to generate referral code */
+export class FailedToGenerateReferralCodeException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Failed to generate referral code", "FAILED_TO_GENERATE_REFERRAL_CODE_EXCEPTION")
+    }
+}

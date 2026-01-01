@@ -11,7 +11,7 @@ export const createGcpKmsClientProvider = (): Provider => ({
     ): Promise<KeyManagementServiceClient> => {
         return new KeyManagementServiceClient({
             credentials: JSON.parse(
-                await mountFilesystemService.cryptoKeyEdSa(),
+                mountFilesystemService.cryptoKeyEdSa(),
             ),
         })
     },

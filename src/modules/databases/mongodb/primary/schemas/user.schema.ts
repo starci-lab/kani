@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
 import { Field, ObjectType } from "@nestjs/graphql"
-import { GraphQLTypeOauthProviderName, OauthProviderName } from "../enums"
 import { EncryptedPayload } from "@typedefs"
 import { Schema as MongooseSchema } from "mongoose"
 
@@ -13,24 +12,6 @@ import { Schema as MongooseSchema } from "mongoose"
     description: "User entity represents a registered user in the system, including their OAuth info and multi-chain wallets.",
 })
 export class UserSchema extends AbstractSchema {
-    /** @deprecated Use privyUserId instead */
-    @Field(() => String, {
-        deprecationReason: "Use privyUserId instead",
-        description: "Unique ID from the OAuth provider (e.g., Google user ID).",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
-        oauthProviderId?: string
-
-    /** @deprecated Use privyProvider instead */
-    @Field(() => GraphQLTypeOauthProviderName, {
-        deprecationReason: "Use privyProvider instead",
-        description: "The OAuth provider that the user used to sign in (e.g., GOOGLE).",
-        nullable: true,
-    })
-    @Prop({ type: String, enum: OauthProviderName, required: false })
-        oauthProvider?: OauthProviderName
-
     @Field(() => String, {
         description: "User's email address.",
         nullable: true,
@@ -62,9 +43,6 @@ export class UserSchema extends AbstractSchema {
     })
     @Prop({ type: String, required: false })
         referralCode?: string
-    
-    @Prop({ type: Boolean, default: false })
-        totpVerified?: boolean
     
     @Field(() => String, {
         description: "A temporary token used to complete TOTP verification during the first login step.",
