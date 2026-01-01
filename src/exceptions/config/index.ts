@@ -21,6 +21,13 @@ export class BalanceConfigNotFoundException extends AbstractException {
     }
 }
 
+/** Thrown when account limits configuration is not found */
+export class AccountLimitsConfigNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Account limits config not found", "ACCOUNT_LIMITS_CONFIG_NOT_FOUND_EXCEPTION")
+    }
+}
+
 /** Thrown when fee configuration is not found */
 export class FeeConfigNotFoundException extends AbstractException {
     constructor(message?: string) {

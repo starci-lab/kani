@@ -124,7 +124,7 @@ export class VerifySignInOtpService {
         } = await this.jwtAuthService.generate({
             id: user.id,
             mfaEnabled: user.mfaEnabled,
-            encryptedTotpSecret: user.encryptedTotpSecret,
+            encryptedTotpSecretPayload: user.encryptedTotpSecretPayload,
         })
         if (refreshToken) {
             this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)

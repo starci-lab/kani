@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
-import { Field, ID, ObjectType } from "@nestjs/graphql"
-import { ChainId, GraphQLTypeChainId } from "@typedefs"
+import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
+import { ChainId, EncryptedPayload, GraphQLTypeChainId } from "@typedefs"
 import { Schema as MongooseSchema, Types } from "mongoose"
 import { UserSchema } from "./user.schema"
 import { TokenSchema } from "./token.schema"
@@ -41,13 +41,9 @@ export class BotSchema extends AbstractSchema {
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
-    @Field(() => String, {
-        description: "The encrypted private key of the wallet",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
-        encryptedPrivateKey: string
-
+    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+        encryptedPrivateKeyPayload: EncryptedPayload
+        
     /**
      * The blockchain network where this bot is operating (e.g., SUI, SOLANA).
      * This determines which on-chain protocol and RPC endpoints are used.
@@ -168,13 +164,6 @@ export class BotSchema extends AbstractSchema {
         lastBalancesSnapshotAt?: Date
 
     @Field(() => String, {
-        description: "The privy user id of the bot",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
-        privyUserId?: string
-
-    @Field(() => String, {
         description: "The privy wallet id of the bot",
         nullable: true,
     })
@@ -208,6 +197,18 @@ export class BotSchema extends AbstractSchema {
         nullable: true,
     })
         activePosition?: PositionSchema
+
+    @Field(() => Float, {
+        description: "The return on investment of the bot in the last 24 hours",
+        nullable: true,
+    })
+        roi24h?: number
+
+    @Field(() => Float, {
+        description: "The profit or loss of the bot in the last 24 hours",
+        nullable: true,
+    })
+        pnl24h?: number
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

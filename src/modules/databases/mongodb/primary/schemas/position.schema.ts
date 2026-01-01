@@ -148,6 +148,14 @@ export class PositionSchema extends AbstractSchema {
     // whether the position is simulated
     @Prop({ type: Boolean, default: false })
         isSimulated?: boolean
+
+    @Field(() => Float, { description: "The value of the position at the time of opening", nullable: true })
+    @Prop({ type: Number, required: false })
+        positionValueAtOpen?: number
+
+    @Field(() => Float, { description: "The value of the position at the time of closing", nullable: true })
+    @Prop({ type: Number, required: false })
+        positionValueAtClose?: number
 }
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
 // index the position by bot, isActive and positionClosedAt

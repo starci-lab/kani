@@ -4,10 +4,10 @@ import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { AsyncService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
-import { BalanceConfig, ConfigRecord, ConfigSchema } from "../schemas"
+import { AccountLimitsConfig, BalanceConfig, ConfigRecord, ConfigSchema } from "../schemas"
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
-import { BalanceConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
+import { AccountLimitsConfigNotFoundException, BalanceConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
 import { envConfig } from "@modules/env"
 
 @Injectable()
@@ -17,6 +17,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
     public dexes: Array<DexSchema> = []
     public gasConfig: GasConfig
     public balanceConfig: BalanceConfig
+    public accountLimits: AccountLimitsConfig
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -88,6 +89,22 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                             throw new BalanceConfigNotFoundException("Balance config not found")
                         }
                         this.balanceConfig = balanceConfig.value
+                    },
+                    delay: envConfig().timeConfig.retry.delay,
+                    maxRetries: envConfig().timeConfig.retry.maxRetries,
+                    factor: envConfig().timeConfig.retry.factor,
+                })
+            })(),
+            (async () => {
+                await this.retryService.retry({
+                    action: async () => {
+                        const accountLimits = await this.connection
+                            .model<ConfigSchema>(ConfigSchema.name)
+                            .findById<ConfigRecord<AccountLimitsConfig>>(createObjectId(ConfigId.AccountLimits))
+                        if (!accountLimits) {
+                            throw new AccountLimitsConfigNotFoundException("Account limits config not found")
+                        }
+                        this.accountLimits = accountLimits.value
                     },
                     delay: envConfig().timeConfig.retry.delay,
                     maxRetries: envConfig().timeConfig.retry.maxRetries,

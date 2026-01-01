@@ -9,8 +9,7 @@ import {
 } from "@solana/kit"
 import { ethers } from "ethers"
 import bs58 from "bs58"
-import { GcpKmsService } from "@modules/gcp"
-import { EncryptionService } from "@modules/crypto"
+import { SealedAesService } from "@modules/sealed"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
   bot: BotSchema;
@@ -22,8 +21,7 @@ export interface WithSignerParams<TSigner, TResponse = void> {
 @Injectable()
 export class SignerService {
     constructor(
-    private readonly encryptionService: EncryptionService,
-    private readonly gcpKmsService: GcpKmsService,
+        private readonly sealedAesService: SealedAesService,
     ) {}
 
     private async withSigner<TSigner, TResponse = void>({
@@ -36,18 +34,18 @@ export class SignerService {
         try {
             switch (platformId) {
             case PlatformId.Solana:
-                privateKey = await this.decryptPrivateKey(
-                    bot.encryptedPrivateKey ?? "",
+                privateKey = await this.sealedAesService.decrypt(
+                    bot.encryptedPrivateKeyPayload,
                 )
                 break
             case PlatformId.Sui:
-                privateKey = await this.decryptPrivateKey(
-                    bot.encryptedPrivateKey ?? "",
+                privateKey = await this.sealedAesService.decrypt(
+                    bot.encryptedPrivateKeyPayload,
                 )
                 break
             case PlatformId.Evm:
-                privateKey = await this.decryptPrivateKey(
-                    bot.encryptedPrivateKey ?? "",
+                privateKey = await this.sealedAesService.decrypt(
+                    bot.encryptedPrivateKeyPayload,
                 )
                 break
             }
@@ -97,25 +95,7 @@ export class SignerService {
         return this.withSigner<ethers.Wallet, TResponse>({
             ...params,
             platformId: PlatformId.Evm,
-            factory: async (pk) => new ethers.Wallet(Buffer.from(pk).toString("hex")),
+            factory: async (encryptedPrivateKeyPayload) => new ethers.Wallet(Buffer.from(encryptedPrivateKeyPayload).toString("hex")),
         })
-    }
-
-    public async encryptPrivateKey(
-        privateKey: string
-    ): Promise<string> {
-        // Encrypt private key with AES-256-CBC
-        const encryptedPrivateKey = await this.encryptionService.encrypt(privateKey)
-        // Encrypt encrypted private key with GCP KMS
-        return await this.gcpKmsService.encrypt(encryptedPrivateKey)
-    }
-
-    private async decryptPrivateKey(
-        privateKey: string
-    ): Promise<string> {
-        // Decrypt private key with AES-256-CBC
-        const decryptedPrivateKey = await this.gcpKmsService.decrypt(privateKey)
-        // Decrypt encrypted private key with GCP KMS
-        return await this.encryptionService.decrypt(decryptedPrivateKey)
     }
 }

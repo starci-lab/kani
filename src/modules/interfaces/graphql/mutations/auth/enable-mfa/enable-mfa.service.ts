@@ -32,7 +32,7 @@ export class EnableMFAService {
         if (!user) {
             throw new UserNotFoundException()
         }
-        if (!user.encryptedTotpSecret) {
+        if (!user.encryptedTotpSecretPayload) {
             throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
         // if the user not verified, set the totpVerified to true
@@ -57,7 +57,7 @@ export class EnableMFAService {
                 } = await this.jwtAuthService.generate({
                     id: user.id,
                     mfaEnabled: user.mfaEnabled,
-                    encryptedTotpSecret: user.encryptedTotpSecret,
+                    encryptedTotpSecretPayload: user.encryptedTotpSecretPayload,
                 })
                 // set the refresh token in the cookie
                 if (refreshToken) {

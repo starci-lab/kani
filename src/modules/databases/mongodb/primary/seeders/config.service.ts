@@ -54,5 +54,12 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 },
             },
         },
-    }
+    },
+    {
+        _id: createObjectId(ConfigId.AccountLimits),
+        displayId: ConfigId.AccountLimits,
+        value: {
+            maxBotsPerAccount: 10,
+        },
+    },
 ]

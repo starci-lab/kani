@@ -83,7 +83,7 @@ export class CreateBotService {
         }
         // create embedded wallet for the bot
         const platformId = chainIdToPlatformId(chainId)
-        const wallet = await this.keypairsService.generateKeypair(platformId)
+        const generatedKeypair = await this.keypairsService.generateKeypair(platformId)
         // retrieve the liquidity pools from the cache
         const liquidityPools = this.primaryMemoryStorageService
             .liquidityPools
@@ -102,8 +102,8 @@ export class CreateBotService {
                         targetToken: targetTokenInstance.id,
                         quoteToken: quoteTokenInstance.id,
                         liquidityPools: liquidityPools.map((liquidityPool) => liquidityPool.id),
-                        accountAddress: wallet.accountAddress,
-                        encryptedPrivateKey: wallet.encryptedPrivateKey,
+                        accountAddress: generatedKeypair.accountAddress,
+                        encryptedPrivateKeyPayload: generatedKeypair.encryptedPrivateKeyPayload,
                         isExitToUsdc,
                     }
                 ]
@@ -111,7 +111,7 @@ export class CreateBotService {
         const bot = botRaw.toJSON()
         return {
             id: bot.id,
-            accountAddress: wallet.accountAddress,
+            accountAddress: generatedKeypair.accountAddress,
         }
     }
 }

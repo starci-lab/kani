@@ -14,7 +14,7 @@ export class GcpKmsService {
 
     async encrypt(
         plaintext: string | Uint8Array
-    ): Promise<string> {
+    ): Promise<Buffer<ArrayBufferLike>> {
         const rawData =
       typeof plaintext === "string"
           ? Buffer.from(plaintext, "utf8")
@@ -28,15 +28,15 @@ export class GcpKmsService {
         if (!result.ciphertext) {
             throw new KmsNotFoundException("KMS encryption failed: ciphertext is empty")
         }
-        return Buffer.from(result.ciphertext).toString("base64")
+        return Buffer.from(result.ciphertext)
     }
 
     async decrypt(
-        ciphertext: string
+        ciphertext: Buffer<ArrayBufferLike>
     ): Promise<string> {
         const [result] = await this.kmsClient.decrypt({
             name: this.mountStorageService.apiKeys.cryptoKeyName,
-            ciphertext: Buffer.from(ciphertext, "base64"),
+            ciphertext,
         })
         if (!result.plaintext) {
             throw new KmsNotFoundException("KMS decryption failed: plaintext is empty")

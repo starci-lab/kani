@@ -2,6 +2,8 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { GraphQLTypeOauthProviderName, OauthProviderName } from "../enums"
+import { EncryptedPayload } from "@typedefs"
+import { Schema as MongooseSchema } from "mongoose"
 
 @Schema({
     timestamps: true,
@@ -51,12 +53,8 @@ export class UserSchema extends AbstractSchema {
     @Prop({ type: String, required: false })
         picture?: string
 
-    @Field(() => String, {
-        description: "Encrypted TOTP secret for 2FA if user has enabled two-factor authentication.",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
-        encryptedTotpSecret?: string
+    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+        encryptedTotpSecretPayload?: EncryptedPayload
 
     @Field(() => String, {
         description: "Unique referral code assigned to the user for referral tracking.",

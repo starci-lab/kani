@@ -30,7 +30,7 @@ export class RefreshService {
             throw new UserNotFoundException("User not found")
         }
         // if not found, try in database
-        if (!user.encryptedTotpSecret) {
+        if (!user.encryptedTotpSecretPayload) {
             throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
         const sessionExists = await this.connection
@@ -42,6 +42,7 @@ export class RefreshService {
         return this.jwtAuthService.generate({
             id: user.id,
             mfaEnabled: user.mfaEnabled,
+            encryptedTotpSecretPayload: user.encryptedTotpSecretPayload,
         })
     }
 }

@@ -11,12 +11,13 @@ import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 import { Cache } from "cache-manager"
 import { MountStorageService } from "@modules/filesystem"
+import { EncryptedPayload } from "@typedefs"
 
 export interface GenerateParams {
     id: string
     mfaEnabled: boolean
     session?: ClientSession
-    encryptedTotpSecret?: string
+    encryptedTotpSecretPayload?: EncryptedPayload
 }
 
 @Injectable()
@@ -43,7 +44,7 @@ export class JwtAuthService {
             id,
             mfaEnabled,
             session,
-            encryptedTotpSecret,
+            encryptedTotpSecretPayload,
         }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
@@ -60,7 +61,7 @@ export class JwtAuthService {
             // whether the user has verified their TOTP
             mfaEnabled, 
             // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
-            encryptedTotpSecret,
+            encryptedTotpSecretPayload,
         }, {
             secret: this.getJwtSecretKey(),
             expiresIn: envConfig().jwt.accessToken.expiration
@@ -75,7 +76,7 @@ export class JwtAuthService {
                     // we need sessionId to identify the session
                     sessionId,
                     // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
-                    encryptedTotpSecret,
+                    encryptedTotpSecretPayload,
                 },
                 {
                     secret: this.getJwtSecretKey(),

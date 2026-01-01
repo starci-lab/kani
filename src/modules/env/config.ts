@@ -151,6 +151,8 @@ export const envConfig = () => ({
         memoryTtl: parseInt(process.env.CACHE_MEMORY_TTL || "3600000", 10), // 3600s
         redisTtl: parseInt(process.env.CACHE_REDIS_TTL || "3600000", 10), // 3600s
         ttl: {
+            sealedJwtSecretKey: parseInt(process.env.CACHE_SEALED_JWT_SECRET_KEY_TTL || ms("5m").toString(), 10), // 5 mins
+            sealedAesKey: parseInt(process.env.CACHE_SEALED_AES_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s

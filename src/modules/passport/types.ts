@@ -1,3 +1,5 @@
+import { EncryptedPayload } from "@typedefs"
+
 export interface UserGoogleLike {
     email: string
     username: string
@@ -11,7 +13,7 @@ export interface UserGoogleLike {
 export interface UserJwtLike {
     id: string
     mfaEnabled: boolean
-    encryptedTotpSecret?: string
+    encryptedTotpSecret?: EncryptedPayload
 }
 
 export interface AuthCredentials {

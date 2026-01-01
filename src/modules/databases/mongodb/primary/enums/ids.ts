@@ -212,6 +212,7 @@ registerEnumType(GraphQLTypeCexId, {
 export enum ConfigId {
     Gas = "gas",
     Balance = "balance",
+    AccountLimits = "accountLimits",
 }
 
 export enum StateId {

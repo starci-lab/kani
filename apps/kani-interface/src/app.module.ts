@@ -23,6 +23,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { IoRedisModule } from "@modules/native"
 import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
 import { APP_FILTER } from "@nestjs/core"
+import { SealedModule } from "@modules/sealed"
 
 @Module({
     imports: [
@@ -49,7 +50,6 @@ import { APP_FILTER } from "@nestjs/core"
             appName: "kani-interface",
             level: WinstonLevel.Info,
         }),
-
         SentryModule.register({
             isGlobal: true,
         }),
@@ -66,6 +66,9 @@ import { APP_FILTER } from "@nestjs/core"
             isGlobal: true,
         }),
         SentryModule.register({
+            isGlobal: true,
+        }),
+        SealedModule.register({
             isGlobal: true,
         }),
         ThrottlerModule.register({

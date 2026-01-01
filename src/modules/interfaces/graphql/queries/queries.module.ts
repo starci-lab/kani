@@ -8,11 +8,11 @@ import { ActivityModule } from "./activity"
 
 @Module({
     imports: [
-        UsersModule.register({}),
-        BotsModule.register({}),
-        StaticModule.register({}),
-        DynamicGraphQLModule.register({}),
-        ActivityModule.register({}),
+        UsersModule.register({ isGlobal: true }),
+        BotsModule.register({ isGlobal: true }),
+        StaticModule.register({ isGlobal: true }),
+        DynamicGraphQLModule.register({ isGlobal: true }),
+        ActivityModule.register({ isGlobal: true }),
     ],
 })
 export class QueriesModule extends ConfigurableModuleClass {}

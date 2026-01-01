@@ -1,63 +1,95 @@
 import { Injectable } from "@nestjs/common"
 import crypto from "crypto"
 import { MountStorageService } from "@modules/filesystem"
+import { EncryptedPayload } from "@typedefs"
 
 @Injectable()
 export class EncryptionService {
-    // AES block size for CBC mode (16 bytes = 128 bits)
-    private readonly ivLength = 16
+    // Recommended IV length for AES-GCM (12 bytes)
+    private readonly ivLength = 12
 
     constructor(
-        // Service used to securely retrieve the base AES key
+        // Service used to securely retrieve the raw 256-bit AES key
         private readonly mountStorageService: MountStorageService,
     ) {}
 
     /**
-     * Derive a 256-bit AES-CBC key using PBKDF2.
-     * - Base key is retrieved from the filesystem
-     * - Salt comes from environment configuration
-     * - PBKDF2 strengthens the key against brute-force attacks
+     * Retrieve and validate the AES-256 key.
+     * The key MUST be a cryptographically secure 32-byte Buffer.
      */
     private getAesKey(): Buffer {
-        return this.mountStorageService.aesKey
+        const key = this.mountStorageService.aesKey
+
+        if (!Buffer.isBuffer(key)) {
+            throw new Error("AES key must be provided as a Buffer")
+        }
+
+        if (key.length !== 32) {
+            throw new Error("AES-256 key must be exactly 32 bytes")
+        }
+
+        return key
     }
 
     /**
-     * Encrypt plaintext using AES-256-CBC.
-     * - Generates a random IV for each encryption
-     * - Returns IV and ciphertext encoded in Base64
-     * - Output format: iv:ciphertext
+     * Encrypt plaintext using AES-256-GCM.
+     *
+     * - Generates a random IV per encryption
+     * - Provides authenticated encryption (confidentiality + integrity)
+     * - Output format (Base64 encoded):
+     *   iv:authTag:ciphertext
      */
-    async encrypt(plainText: string): Promise<string> {
-        const key = this.getAesKey()
-        // Generate a random Initialization Vector (IV)
+    encrypt(plainText: string, key?: Buffer<ArrayBufferLike>): EncryptedPayload {
+        key = key || this.getAesKey()
+        // Generate a random IV
         const iv = crypto.randomBytes(this.ivLength)
-        // Create AES-CBC cipher
-        const cipher = crypto.createCipheriv("aes-256-cbc", key, iv)
-        // Encrypt plaintext
-        let encrypted = cipher.update(plainText, "utf8", "base64")
-        encrypted += cipher.final("base64")
-        // Prepend IV so it can be used during decryption
-        return iv.toString("base64") + ":" + encrypted
+
+        // Create AES-GCM cipher
+        const cipher = crypto.createCipheriv("aes-256-gcm", key, iv)
+
+        // Encrypt data
+        const encrypted = Buffer.concat(
+            [
+                cipher.update(plainText, "utf8"),
+                cipher.final(),
+            ]
+        )
+
+        // Authentication tag (integrity + authenticity)
+        const authTag = cipher.getAuthTag()
+
+        // Return IV, auth tag, and ciphertext
+        return {
+            iv: iv.toString("base64"),
+            authTag: authTag.toString("base64"),
+            ciphertext: encrypted.toString("base64"),
+        }
     }
 
     /**
-     * Decrypt AES-256-CBC encrypted data.
-     * - Expects input format: iv:ciphertext
-     * - Uses the same derived key and extracted IV
+     * Decrypt AES-256-GCM encrypted data.
+     *
+     * - Expects input format: iv:authTag:ciphertext
+     * - Automatically verifies integrity via auth tag
+     * - Throws if data was tampered with
      */
-    async decrypt(cipherText: string): Promise<string> {
-        const key = this.getAesKey()
-        // Split IV and encrypted payload
-        const [ivBase64, encrypted] = cipherText.split(":")
-        // Decode IV from Base64
-        const iv = Buffer.from(ivBase64, "base64")
-        // Create AES-CBC decipher
-        const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv)
-        // Decrypt ciphertext
-        let decrypted = decipher.update(encrypted, "base64", "utf8")
-        decrypted += decipher.final("utf8")
-        // Return decrypted plaintext
-        return decrypted
+    decrypt({ iv, authTag, ciphertext }: EncryptedPayload, key?: Buffer<ArrayBufferLike>): string {
+        key = key || this.getAesKey()
+        const ivBuffer = Buffer.from(iv, "base64")
+        const authTagBuffer = Buffer.from(authTag, "base64")
+        const encryptedBuffer = Buffer.from(ciphertext, "base64")
+
+        if (ivBuffer.length !== this.ivLength) {
+            throw new Error("Invalid IV length")
+        }
+        // Create AES-GCM decipher
+        const decipher = crypto.createDecipheriv("aes-256-gcm", key, ivBuffer)
+        decipher.setAuthTag(authTagBuffer)
+        // Decrypt and verify integrity
+        const decryptedBuffer = Buffer.concat([
+            decipher.update(encryptedBuffer),
+            decipher.final(), // throws if auth tag is invalid
+        ])
+        return decryptedBuffer.toString("utf8")
     }
 }

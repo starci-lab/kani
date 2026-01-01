@@ -5,15 +5,15 @@ import { UserMfaAlreadyEnabledException, UserNotFoundException, UserTotpSecretNo
 import { UserJwtLike } from "@modules/passport"
 import { TotpSecretResponseData } from "./totp-secret.dto"
 import { TotpService } from "@modules/totp"
-import { EncryptionService } from "@modules/crypto"
+import { SealedAesService } from "@modules/sealed"
 
 @Injectable()
 export class TotpSecretService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly encryptionService: EncryptionService,
-        private readonly totpService: TotpService
+        private readonly totpService: TotpService,
+        private readonly sealedAesService: SealedAesService,
     ) {}
 
     async totpSecret(
@@ -26,10 +26,10 @@ export class TotpSecretService {
         if (user.mfaEnabled) {
             throw new UserMfaAlreadyEnabledException("User MFA already enabled")
         }
-        if (!user.encryptedTotpSecret) {
+        if (!user.encryptedTotpSecretPayload) {
             throw new UserTotpSecretNotFoundException("User totp secret not found")
         }
-        const decryptedTotpSecret = await this.encryptionService.decrypt(user.encryptedTotpSecret)
+        const decryptedTotpSecret = await this.sealedAesService.decrypt(user.encryptedTotpSecretPayload)
         return {
             totpSecret: decryptedTotpSecret,
             totpSecretUrl: this.totpService.generateTotpSecretUrl(decryptedTotpSecret),

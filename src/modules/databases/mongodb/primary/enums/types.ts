@@ -79,7 +79,7 @@ export const GraphQLTypeBotType = createEnumType(BotType)
 registerEnumType(GraphQLTypeBotType, {
     name: "BotType",
     description: `
-      Defines where a bot’s private keys are stored, determining its security and access model.
+      Defines where a bot's private keys are stored, determining its security and access model.
       
       Use this enum when specifying how the bot should handle private-key storage.
     `.trim(),

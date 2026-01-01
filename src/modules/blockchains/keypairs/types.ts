@@ -1,4 +1,6 @@
+import { EncryptedPayload } from "@typedefs"
+
 export interface GeneratedKeypair {
     accountAddress: string
-    encryptedPrivateKey: string
+    encryptedPrivateKeyPayload: EncryptedPayload
 }

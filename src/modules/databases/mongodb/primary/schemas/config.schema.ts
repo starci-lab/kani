@@ -42,3 +42,11 @@ export interface BalanceConfig {
 export interface ConfigRecord<T> {
     value: T
 }
+
+export interface ProfitConfig {
+    accountLimits: Partial<Record<ChainId, AccountLimitsConfig>>
+}
+
+export interface AccountLimitsConfig {
+    maxBotsPerAccount: number
+}

@@ -2,6 +2,8 @@ import { ChainId } from "@typedefs"
 import BN from "bn.js"
 
 export enum CacheKey {
+    SealedAesKey = "sealedAesKey",
+    SealedJwtSecretKey = "sealedJwtSecretKey",
     EjectRpcs = "ejectRpcs",
     History = "history",
     HistoryNeedRevalidated = "historyNeedRevalidated",
