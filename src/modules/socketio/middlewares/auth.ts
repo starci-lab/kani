@@ -6,7 +6,7 @@ import {
     SocketIoAccessTokenInvalidException,
     SocketIoAccessTokenExpiredException
 } from "@exceptions"
-import { getJwtSecretKey } from "@modules/filesystem"
+import { DerivedJwtSecretService } from "@modules/derived"
 
 export const socketIoAuthMiddleware = (
     socket: TypedSocket, 
@@ -17,8 +17,9 @@ export const socketIoAuthMiddleware = (
         if (!token) {
             return next(new SocketIoAccessTokenMissingException())
         }
-        // we should use the mount filesystem service to get the jwt secret key
-        const jwtSecret = getJwtSecretKey()
+        // get the derived jwt secret service from the app
+        const derivedJwtSecretService = globalThis.__APP__.get(DerivedJwtSecretService, { strict: false })
+        const jwtSecret = derivedJwtSecretService.key
         const payload = verify(
             token, 
             jwtSecret

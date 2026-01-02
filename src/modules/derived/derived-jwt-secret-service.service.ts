@@ -7,7 +7,7 @@ import crypto from "crypto"
 import { envConfig } from "@modules/env"
 
 @Injectable()
-export class DerivedAesKeyService implements OnModuleInit {
+export class DerivedJwtSecretService implements OnModuleInit {
     public key: Buffer<ArrayBufferLike>
     constructor(
         private readonly encryptionService: EncryptionService,
@@ -18,12 +18,12 @@ export class DerivedAesKeyService implements OnModuleInit {
     async onModuleInit() {
         // get base key from gcp kms
         const key = await this.gcpKmsService.decrypt(
-            this.mountStorageService.encryptedAesKey
+            this.mountStorageService.encryptedJwtSecret
         )
         // hash base key with salt
         this.key = crypto.pbkdf2Sync(
             key,
-            envConfig().salt.aesCbc,
+            envConfig().salt.jwt,
             100_000,
             32,
             "sha256"

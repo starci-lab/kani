@@ -10,8 +10,8 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { MsService } from "@modules/mixin"
 import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
 import { Cache } from "cache-manager"
-import { MountStorageService } from "@modules/filesystem"
 import { EncryptedPayload } from "@typedefs"
+import { DerivedJwtSecretService } from "@modules/derived"
 
 export interface GenerateParams {
     id: string
@@ -31,11 +31,11 @@ export class JwtAuthService {
         private readonly connection: Connection,
         private readonly msService: MsService,
         private readonly asyncService: AsyncService,
-        private readonly mountStorageService: MountStorageService
+        private readonly derivedJwtSecretService: DerivedJwtSecretService
     ) { }
 
     public getJwtSecretKey(): Buffer {
-        return this.mountStorageService.jwtSecretKey
+        return this.derivedJwtSecretService.key
     }
 
     // generate access token and refresh token for authentication
@@ -63,7 +63,7 @@ export class JwtAuthService {
             // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
             encryptedTotpSecretPayload,
         }, {
-            secret: this.mountStorageService.jwtSecretKey,
+            secret: this.derivedJwtSecretService.key,
             expiresIn: envConfig().jwt.accessToken.expiration
         })
         let refreshToken: string | undefined
@@ -79,7 +79,7 @@ export class JwtAuthService {
                     encryptedTotpSecretPayload,
                 },
                 {
-                    secret: this.mountStorageService.jwtSecretKey,
+                    secret: this.derivedJwtSecretService.key,
                     expiresIn: envConfig().jwt.refreshToken.expiration
                 }
             )
@@ -128,7 +128,7 @@ export class JwtAuthService {
     public async verifyAccessToken(token: string): Promise<JwtAccessTokenPayload | null> {
         try {
             return await this.jwtService.verifyAsync<JwtAccessTokenPayload>(token, {
-                secret: this.mountStorageService.jwtSecretKey,
+                secret: this.derivedJwtSecretService.key,
             })
         } catch {
             return null
@@ -141,7 +141,7 @@ export class JwtAuthService {
     ): Promise<JwtRefreshTokenPayload | null> {
         try {
             const decoded = await this.jwtService.verifyAsync<JwtRefreshTokenPayload>(token, {
-                secret: this.mountStorageService.jwtSecretKey,
+                secret: this.derivedJwtSecretService.key,
             })
             return {
                 sessionId: decoded.sessionId,

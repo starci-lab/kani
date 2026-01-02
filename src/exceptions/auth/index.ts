@@ -32,3 +32,17 @@ export class UserHasNotCompletedMFAAuthenticationException extends AbstractExcep
         super(message || "User has not completed MFA authentication", "USER_HAS_NOT_COMPLETED_MFA_AUTHENTICATION_EXCEPTION")
     }
 }
+
+/** Thrown when no authentication token is provided */
+export class NoAuthenticationTokenException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "No authentication token provided", "NO_AUTHENTICATION_TOKEN_EXCEPTION")
+    }
+}
+
+/** Thrown when invalid authentication token is provided */
+export class InvalidAuthenticationTokenException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Invalid authentication token", "INVALID_AUTHENTICATION_TOKEN_EXCEPTION")
+    }
+}

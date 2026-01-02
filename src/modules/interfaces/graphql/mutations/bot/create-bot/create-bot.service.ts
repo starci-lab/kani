@@ -126,7 +126,7 @@ export class CreateBotService {
                         .stringify(generatedKeypair.encryptedPrivateKeyPayload),
                     "utf8"
                 )
-                const fileName = `${botRaw.id}.json`
+                const fileName = `${botRaw.accountAddress}.json`
                 await this.googleDriveService.uploadFiles({
                     files: [
                         {

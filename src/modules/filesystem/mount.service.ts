@@ -6,7 +6,7 @@ import {
     getCloudKmsCryptoOperatorSa, 
     getRpcAccessConfigs, 
     getSmtpConfig, 
-    getJwtSecretKey,
+    getEncryptedJwtSecret,
     getEncryptedAesKey
 } from "./pure"
 /**
@@ -25,8 +25,8 @@ export class MountFilesystemService {
         return getSmtpConfig()
     }
 
-    jwtSecretKey(): Buffer {
-        return getJwtSecretKey()
+    encryptedJwtSecret(): Buffer {
+        return getEncryptedJwtSecret()
     }
 
     encryptedAesKey(): Buffer {

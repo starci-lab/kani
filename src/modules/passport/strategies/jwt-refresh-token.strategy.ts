@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { PassportStrategy } from "@nestjs/passport"
-import { Strategy } from "passport-jwt"
+import { Strategy } from "passport-custom"
 import { UserJwtLike } from "../types"
 import { Request } from "express"
-import { getJwtSecretKey } from "@modules/filesystem"
+import { PassportStrategy } from "@nestjs/passport"
+import { ExtractJwt } from "passport-jwt"
+import { InvalidAuthenticationTokenException, NoAuthenticationTokenException } from "@exceptions"
+import { JwtAuthService } from "../jwt"
 
 export const JWT_REFRESH_TOKEN_STRATEGY = "jwt-refresh-token"
 
@@ -13,15 +15,18 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
     JWT_REFRESH_TOKEN_STRATEGY
 ) {
     constructor(
+        private readonly jwtAuthService: JwtAuthService,
     ) {
-        super({
-            jwtFromRequest: (req: Request) => {
-                // get refreshToken from HTTP-only cookie
-                return req?.cookies?.refresh_token || null
-            },
-            ignoreExpiration: false,
-            secretOrKey: getJwtSecretKey(),
-        })
+        super()
+    }
+
+    async authenticate(req: Request) {
+        const extractor = ExtractJwt.fromHeader("refresh_token")
+        const token = extractor(req)
+        if (!token) return this.fail(new NoAuthenticationTokenException("No authentication token provided"), 401)
+        const payload = await this.jwtAuthService.verifyRefreshToken(token)
+        if (!payload) return this.fail(new InvalidAuthenticationTokenException("Invalid authentication token"), 401)
+        return this.success(payload)
     }
 
     validate(payload: UserJwtLike) {

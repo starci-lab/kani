@@ -6,7 +6,7 @@ import { ReadinessWatcherFactoryService } from "@modules/mixin"
 @Injectable()
 export class MountStorageService implements OnModuleInit {
     public encryptedAesKey: Buffer<ArrayBufferLike>
-    public jwtSecretKey: Buffer
+    public encryptedJwtSecret: Buffer
     public smtpConfig: SmtpConfig
     public rpcAccessConfigs: RpcAccessConfigs
     public apiKeys: ApiKeys
@@ -17,7 +17,7 @@ export class MountStorageService implements OnModuleInit {
 
     onModuleInit() {
         this.readinessWatcherFactoryService.createWatcher(MountStorageService.name)
-        this.jwtSecretKey = this.mountFilesystemService.jwtSecretKey()
+        this.encryptedJwtSecret = this.mountFilesystemService.encryptedJwtSecret()
         this.smtpConfig = this.mountFilesystemService.smtpConfig()
         this.rpcAccessConfigs = this.mountFilesystemService.rpcAccessConfigs()
         this.apiKeys = this.mountFilesystemService.apiKeys()

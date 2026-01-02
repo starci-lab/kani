@@ -2,23 +2,12 @@ import { TokenId } from "@modules/databases"
 import { Address } from "@solana/kit"
 import { ChainId } from "@typedefs"
 
-export interface AppSecrets {
-    smtp: SmtpConfig
-    keys: SecurityKeys
-}
-
 export interface SmtpConfig {
     host: string
     port: number
     user: string
     key: string
     from: string
-}
-
-export interface SecurityKeys {
-    aes: string
-    "jwt-secret": string
-    gcp: GcpConfig
 }
 
 export interface GcpConfig {
@@ -107,5 +96,5 @@ export interface ApiKeys {
 
 export interface Keys {
     encryptedAesKey: string
-    jwtSecret: string
+    encryptedJwtSecret: string
 }

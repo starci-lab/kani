@@ -1,7 +1,6 @@
 import { envConfig } from "@modules/env"
 import { readFileSync } from "fs"
 import { ApiKeys, Keys, RpcAccessConfigs, SmtpConfig } from "./types"
-import crypto from "crypto"
 /**
  * Pure function to get the smtp config
  * in case there is component that not depends on nestjs DI
@@ -91,17 +90,11 @@ export const getKeys = (keys?: Keys) => {
  * Pure function to get the jwt secret key
  * in case there is component that not depends on nestjs DI
  */
-export const getJwtSecretKey = (jwtSecretKey?: Buffer) => {
-    if (!jwtSecretKey) {
-        jwtSecretKey = crypto.pbkdf2Sync(
-            getKeys().jwtSecret,
-            envConfig().salt.jwt,
-            100_000,
-            32,
-            "sha256"
-        )
+export const getEncryptedJwtSecret = (encryptedJwtSecret?: Buffer) => {
+    if (!encryptedJwtSecret) {
+        encryptedJwtSecret = Buffer.from(getKeys().encryptedJwtSecret, "base64")
     }
-    return jwtSecretKey
+    return encryptedJwtSecret
 }
 
 /**
