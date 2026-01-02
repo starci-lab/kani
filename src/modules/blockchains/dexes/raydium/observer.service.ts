@@ -39,7 +39,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-        private readonly events: EventEmitterService,
+        private readonly eventEmitterService: EventEmitterService,
     ) { }
 
     // ============================================
@@ -93,7 +93,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                     envConfig().cache.ttl.poolState,
                 ),
                 // event
-                this.events.emit(
+                this.eventEmitterService.emit(
                     EventName.LiquidityPoolsFetched,
                     { liquidityPoolId, ...parsed },
                     { withoutLocal: true },

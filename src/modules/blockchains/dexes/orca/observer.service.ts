@@ -33,7 +33,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-        private readonly events: EventEmitterService,
+        private readonly eventEmitterService: EventEmitterService,
     ) {}
 
     // ============================================
@@ -87,7 +87,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 envConfig().cache.ttl.poolState,
             ),
             // event emit
-            this.events.emit(
+            this.eventEmitterService.emit(
                 EventName.LiquidityPoolsFetched,
                 { liquidityPoolId, ...parsed },
                 { withoutLocal: true },

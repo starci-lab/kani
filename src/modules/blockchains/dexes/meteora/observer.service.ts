@@ -37,7 +37,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
     private readonly rpcExecutorService: RpcExecutorService,
     private readonly memoryStorageService: PrimaryMemoryStorageService,
     private readonly asyncService: AsyncService,
-    private readonly events: EventEmitterService,
+    private readonly eventEmitterService: EventEmitterService,
     ) {}
 
   // fetch the pool every 10s to ensure if no event from websocket
@@ -87,14 +87,14 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
           rewards: state.reward_infos,
       }
       await this.asyncService.allIgnoreError([
-          // cache
+      // cache
           this.cacheManager.set(
               createCacheKey(CacheKey.DynamicDlmmLiquidityPoolInfo, liquidityPoolId),
               this.superjson.stringify(dynamicDlmmLiquidityPoolInfo),
               envConfig().cache.ttl.poolState,
           ),
           // event
-          this.events.emit(
+          this.eventEmitterService.emit(
               EventName.DlmmLiquidityPoolsFetched,
               { liquidityPoolId, ...dynamicDlmmLiquidityPoolInfo },
               { withoutLocal: true },
@@ -136,11 +136,10 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
           const state = LbPair.struct.read(Buffer.from(accountInfo.data), 8)
           return await this.handlePoolStateUpdate(liquidityPoolId, state)
       } catch (error) {
-          this.winstonLogger.error(
-              WinstonLog.FetchDlmmPoolError, {
-                  liquidityPoolId,
-                  error: error.message,
-              })
+          this.winstonLogger.error(WinstonLog.FetchDlmmPoolError, {
+              liquidityPoolId,
+              error: error.message,
+          })
       }
   }
 
@@ -160,37 +159,35 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                   accessType: RpcAccessType.Read,
                   requiredWs: true,
                   callback: async ({ rpcSubscriptions }) => {
-                      await this.asyncService.suppressErrorAfterTimeout(
-                          async () => {
-                              const controller = new AbortController()
-                              const accountNotifications = await rpcSubscriptions
-                                  .accountNotifications(address(liquidityPool.poolAddress), {
-                                      commitment: "confirmed",
-                                      encoding: "base64",
-                                  })
-                                  .subscribe({
-                                      abortSignal: controller.signal,
-                                  })
-                              for await (const accountNotification of accountNotifications) {
-                                  const state = LbPair.struct.read(
-                                      Buffer.from(
-                                          accountNotification.value?.data.toString(),
-                                          "base64",
-                                      ),
-                                      8,
-                                  )
-                                  await this.handlePoolStateUpdate(liquidityPoolId, state)
-                              }
-                          }, envConfig().timeConfig.wsTimeout)
+                      await this.asyncService.suppressErrorAfterTimeout(async () => {
+                          const controller = new AbortController()
+                          const accountNotifications = await rpcSubscriptions
+                              .accountNotifications(address(liquidityPool.poolAddress), {
+                                  commitment: "confirmed",
+                                  encoding: "base64",
+                              })
+                              .subscribe({
+                                  abortSignal: controller.signal,
+                              })
+                          for await (const accountNotification of accountNotifications) {
+                              const state = LbPair.struct.read(
+                                  Buffer.from(
+                                      accountNotification.value?.data.toString(),
+                                      "base64",
+                                  ),
+                                  8,
+                              )
+                              await this.handlePoolStateUpdate(liquidityPoolId, state)
+                          }
+                      }, envConfig().timeConfig.wsTimeout)
                   },
               })
           }
       } catch (error) {
-          this.winstonLogger.error(
-              WinstonLog.ObserveDlmmPoolError, {
-                  liquidityPoolId,
-                  error: error.message,
-              })
+          this.winstonLogger.error(WinstonLog.ObserveDlmmPoolError, {
+              liquidityPoolId,
+              error: error.message,
+          })
       }
   }
 }

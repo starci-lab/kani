@@ -23,6 +23,7 @@ export class ClosePositionSnapshotService {
             snapshotTargetBalanceAmountAfterClose,
             snapshotQuoteBalanceAmountAfterClose,
             snapshotGasBalanceAmountAfterClose,
+            positionValueAtClose,
         }: UpdateClosePositionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
@@ -39,6 +40,7 @@ export class ClosePositionSnapshotService {
                 snapshotTargetBalanceAmountAfterClose: snapshotTargetBalanceAmountAfterClose.toString(),
                 snapshotQuoteBalanceAmountAfterClose: snapshotQuoteBalanceAmountAfterClose.toString(),
                 snapshotGasBalanceAmountAfterClose: snapshotGasBalanceAmountAfterClose.toString(),
+                positionValueAtClose: positionValueAtClose?.toString(),
             },
         }, 
         {
@@ -57,4 +59,5 @@ export interface UpdateClosePositionRecordParams {
     snapshotTargetBalanceAmountAfterClose: BN
     snapshotQuoteBalanceAmountAfterClose: BN
     snapshotGasBalanceAmountAfterClose: BN
+    positionValueAtClose: Decimal
 }   

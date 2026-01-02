@@ -257,7 +257,7 @@ export const envConfig = () => ({
         ).filter((url) => url !== ""),
     },
     kafka: {
-        maxInFlightRequests: parseInt(process.env.KAFKA_MAX_IN_FLIGHT_REQUESTS || "5", 10), // 5 requests
+        maxInFlightRequests: parseInt(process.env.KAFKA_MAX_IN_FLIGHT_REQUESTS || "20", 10), // 20 requests
         metadataStabilizationDelayMs: parseInt(process.env.KAFKA_METADATA_STABILIZATION_DELAY_MS || ms("1s").toString(), 10), // 1 second
         kafkaTopicPollIntervalMs: parseInt(process.env.KAFKA_TOPIC_POLL_INTERVAL_MS || ms("500ms").toString(), 10), // 500 milliseconds
         kafkaTopicPollTimeoutMs: parseInt(process.env.KAFKA_TOPIC_POLL_TIMEOUT_MS || ms("10s").toString(), 10), // 10 seconds
@@ -268,7 +268,7 @@ export const envConfig = () => ({
             restartOnFailure: Boolean(process.env.KAFKA_RETRY_RESTART_ON_FAILURE) || true,
             factor: parseFloat(process.env.KAFKA_RETRY_FACTOR || "2.0"), // 2x exponential backoff
         },
-        numPartitions: parseInt(process.env.KAFKA_NUM_PARTITIONS || "3", 10),
+        numPartitions: parseInt(process.env.KAFKA_NUM_PARTITIONS || "1", 10),
         replicationFactor: parseInt(process.env.KAFKA_REPLICATION_FACTOR || "1", 10),
         retentionMs: parseInt(process.env.KAFKA_RETENTION_MS || ms("1s").toString(), 10), // 1 second
         cleanupPolicy: process.env.KAFKA_CLEANUP_POLICY || "delete",
@@ -298,7 +298,7 @@ export const envConfig = () => ({
         },
     },
     botExecutor: {
-        executorId: process.env.BOT_EXECUTOR_ID || "694900f2e951fd6ca285945c",
+        executorId: process.env.BOT_EXECUTOR_ID || "6956717486b425cf9938c665",
     },
     ports: {
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,

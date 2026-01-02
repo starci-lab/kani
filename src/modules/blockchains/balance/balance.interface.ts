@@ -109,3 +109,11 @@ export interface ExecuteSwapTransactionParams {
 export interface EnqueueBalanceRebalancingParams {
     bot: BotSchema
 }
+
+export interface GetBalanceAmountInUsdParams {
+    bot: BotSchema
+}
+
+export interface GetBalanceAmountInUsdResponse {
+    balanceAmountInUsd: Decimal
+}

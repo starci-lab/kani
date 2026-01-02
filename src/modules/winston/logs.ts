@@ -98,11 +98,13 @@ export enum WinstonLog {
     UserBalanceAmountInUsd = "User.Balance.Amount.In.USD",
     KafkaTopicsCreated = "Kafka.Topics.Created",
     KafkaTopicsDeleted = "Kafka.Topics.Deleted",
+    KafkaConsumerTopicListened = "Kafka.Consumer.Topic.Listened",
     // Kafka Producer
     KafkaProducerReady = "Kafka.Producer.Ready",
     KafkaProducerDisconnected = "Kafka.Producer.Disconnected",
     // Kafka Consumer
     KafkaConsumerReady = "Kafka.Consumer.Ready",
+    KafkaConsumerTopicsSubscribed = "Kafka.Consumer.Topics.Subscribed",
     KafkaConsumerDisconnected = "Kafka.Consumer.Disconnected",
     KafkaConsumerSubscribed = "Kafka.Consumer.Subscribed",
     KafkaConsumerRunning = "Kafka.Consumer.Running",

@@ -456,14 +456,12 @@ export class BalanceService implements IBalanceService {
             const totalBalanceAmountInUsd = totalTargetBalanceAmountInUsd
                 .add(totalQuoteBalanceAmountInUsd)
                 .add(totalGasBalanceAmountInUsd)
-            this.logger.debug(
-                WinstonLog.UserBalanceAmountInUsd,
-                {
-                    botId: bot.id,
-                    totalBalanceAmountInUsd: totalBalanceAmountInUsd.toNumber(),
-                }
+            if (totalBalanceAmountInUsd.lt(new Decimal(
+                this.primaryMemoryStorageService.balanceConfig.balanceRequired?.
+                    [bot.chainId]?.minRequiredAmountInUsd ?? 0
             )
-            if (totalBalanceAmountInUsd.lt(new Decimal(this.primaryMemoryStorageService.balanceConfig.balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd ?? 0))) {
+            )
+            ) {
                 return false
             }
             return true

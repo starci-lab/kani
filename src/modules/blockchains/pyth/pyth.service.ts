@@ -40,7 +40,7 @@ export class PythService implements OnApplicationBootstrap {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly events: EventEmitterService,
+        private readonly eventEmitterService: EventEmitterService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
         @InjectWinston()
@@ -66,15 +66,16 @@ export class PythService implements OnApplicationBootstrap {
         // we split the feed ids into chunks of 5
         const chunks = chunkArray(feedIds, 5)
         const prices = await this.asyncService.allIgnoreError(
-            chunks.map(async (chunk) => {
-                const prices = await this.retryService.retry({
-                    action: () => this.hermesClient.getLatestPriceUpdates(chunk),
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    delay: envConfig().timeConfig.retry.delay,
-                    factor: envConfig().timeConfig.retry.factor,
-                })
-                return prices.parsed
-            }))
+            chunks.map(
+                async (chunk) => {
+                    const prices = await this.retryService.retry({
+                        action: () => this.hermesClient.getLatestPriceUpdates(chunk),
+                        maxRetries: envConfig().timeConfig.retry.maxRetries,
+                        delay: envConfig().timeConfig.retry.delay,
+                        factor: envConfig().timeConfig.retry.factor,
+                    })
+                    return prices.parsed
+                }))
         const priceData = prices.flat().map(data => {
             const price = computeDenomination(
                 new BN(data?.ema_price?.price ?? 0), 
@@ -121,7 +122,7 @@ export class PythService implements OnApplicationBootstrap {
             ),
             // emit the event
             ...tokenList.map(
-                data => this.events.emit(
+                data => this.eventEmitterService.emit(
                     EventName.WsPythLastPricesUpdated, {
                         tokenId: data.tokenId,
                         price: data.price,
@@ -210,7 +211,7 @@ export class PythService implements OnApplicationBootstrap {
                                             // emit the event
                                             promises.push(
                                                 (async () => {
-                                                    await this.events.emit(
+                                                    await this.eventEmitterService.emit(
                                                         EventName.WsPythLastPricesUpdated,
                                                         {
                                                             tokenId: token.displayId,

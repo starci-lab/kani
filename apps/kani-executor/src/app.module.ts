@@ -5,7 +5,7 @@ import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { envConfig, EnvModule } from "@modules/env"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { ScheduleModule } from "@nestjs/schedule"
-import { EventModule } from "@modules/event"
+import { EventModule, EventName } from "@modules/event"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { 
     ClientsModule, 
@@ -37,6 +37,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { DerivedModule } from "@modules/derived"
+import { KafkaMode } from "@modules/event"
 
 @Module({
     imports: [
@@ -121,6 +122,16 @@ import { DerivedModule } from "@modules/derived"
             isGlobal: true,
         }),
         EventModule.register({
+            kafka: {
+                modes: [KafkaMode.Consumer],
+                kafkaTopics: [
+                    EventName.LiquidityPoolsFetched,
+                    EventName.DlmmLiquidityPoolsFetched,
+                    EventName.WsCexLastPricesUpdated,
+                    EventName.WsCexOrderBookUpdated,
+                    EventName.WsPythLastPricesUpdated,
+                ],
+            },
             isGlobal: true,
         }),
         SnapshotsModule.register({

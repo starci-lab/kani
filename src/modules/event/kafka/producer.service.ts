@@ -31,7 +31,7 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
         this.producer = this.kafka.producer(
             { 
                 allowAutoTopicCreation: false,
-                idempotent: true,
+                idempotent: false,
                 maxInFlightRequests: envConfig().kafka.maxInFlightRequests,
                 retry: { 
                     retries: envConfig().kafka.retry.retries,

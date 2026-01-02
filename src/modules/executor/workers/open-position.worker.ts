@@ -97,8 +97,21 @@ export class OpenPositionWorker extends WorkerHost {
         let metadata: unknown | undefined = undefined
         let positionId: string | undefined = undefined
         let liquidity: BN | undefined = undefined
-       
+        let targetBalanceAmountBeforeOpen: BN | undefined = undefined
+        let quoteBalanceAmountBeforeOpen: BN | undefined = undefined
+        let gasBalanceAmountBeforeOpen: BN | undefined = undefined
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
+            // fetch the bot snapshot balances
+            const {
+                gasBalanceAmount,
+                targetBalanceAmount,
+                quoteBalanceAmount,
+            } = await this.balanceService.fetchBalances({
+                bot,
+            })
+            targetBalanceAmountBeforeOpen = new BN(targetBalanceAmount)
+            quoteBalanceAmountBeforeOpen = new BN(quoteBalanceAmount)
+            gasBalanceAmountBeforeOpen = new BN(gasBalanceAmount)
             // prepare the transaction and get the result
             const {
                 txHash: preparedTxHash,
@@ -216,14 +229,6 @@ export class OpenPositionWorker extends WorkerHost {
             state: _state,
         })
         liquidity = confirmedLiquidity
-        // fetch the bot snapshot balances
-        const {
-            gasBalanceAmount,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-        } = await this.balanceService.fetchBalances({
-            bot,
-        })
         const targetIsA = _state.static.tokenA.toString() === bot.targetToken.toString()
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
@@ -237,9 +242,9 @@ export class OpenPositionWorker extends WorkerHost {
                 session,
             })
             await this.openPositionSnapshotService.addOpenPositionRecord({
-                snapshotTargetBalanceAmountBeforeOpen: new BN(targetBalanceAmount),
-                snapshotQuoteBalanceAmountBeforeOpen: new BN(quoteBalanceAmount),
-                snapshotGasBalanceAmountBeforeOpen: new BN(gasBalanceAmount),
+                snapshotTargetBalanceAmountBeforeOpen: targetBalanceAmountBeforeOpen ?? new BN(0),
+                snapshotQuoteBalanceAmountBeforeOpen: quoteBalanceAmountBeforeOpen ?? new BN(0),
+                snapshotGasBalanceAmountBeforeOpen: gasBalanceAmountBeforeOpen ?? new BN(0),
                 liquidity: new BN(liquidity || 0),
                 bot,
                 targetIsA,
@@ -256,15 +261,16 @@ export class OpenPositionWorker extends WorkerHost {
                 minBinId: minBinId ? minBinId.toNumber() : undefined,
                 amountA: amountA ? new BN(amountA) : undefined,
                 amountB: amountB ? new BN(amountB) : undefined,
-                metadata
+                metadata,
+                positionValueAtOpen: new Decimal(0),
             }
             )
             // Update bot snapshot balances after the position is opened
             await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
                 bot,
-                targetBalanceAmount,
-                quoteBalanceAmount,
-                gasBalanceAmount,
+                targetBalanceAmount: targetBalanceAmountBeforeOpen ?? new BN(0),
+                quoteBalanceAmount: quoteBalanceAmountBeforeOpen ?? new BN(0),
+                gasBalanceAmount: gasBalanceAmountBeforeOpen ?? new BN(0),
                 session,
             })
         })

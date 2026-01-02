@@ -1,8 +1,6 @@
 import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import { Connection, Types } from "mongoose"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
 import { Cron, CronExpression } from "@nestjs/schedule"
 import { UsersLoaderService } from "./users-loader.service"
 import { ReadinessWatcherFactoryService } from "@modules/mixin"
@@ -17,8 +15,6 @@ export class BotsLoaderService implements OnModuleInit {
         private readonly usersLoaderService: UsersLoaderService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly eventEmitter2: EventEmitter2,
     ) {}

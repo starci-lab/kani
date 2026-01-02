@@ -29,7 +29,7 @@ export class MomentumObserverService {
         private readonly superjson: SuperJSON,
         @InjectWinston()
         private readonly winstonLogger: winstonLogger,
-        private readonly events: EventEmitterService,
+        private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
     ) {}
 
@@ -103,7 +103,7 @@ export class MomentumObserverService {
                     this.superjson.stringify(parsed),
                 ),
                 // event
-                this.events.emit(
+                this.eventEmitterService.emit(
                     EventName.LiquidityPoolsFetched,
                     { liquidityPoolId, ...parsed },
                     { withoutLocal: true },

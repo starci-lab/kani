@@ -5,7 +5,7 @@ import { PythPriceService } from "./price.service"
 @Injectable()
 export class PythOraclePriceService {
     constructor(
-        private readonly priceService: PythPriceService,
+        private readonly pythPriceService: PythPriceService,
     ) {}
 
     async getPythOraclePrice(
@@ -15,8 +15,8 @@ export class PythOraclePriceService {
         }
         : GetPythOraclePriceParams
     ) {
-        const priceA = await this.priceService.getPrice({ tokenId: tokenA })
-        const priceB = await this.priceService.getPrice({ tokenId: tokenB })
+        const priceA = await this.pythPriceService.getPrice({ tokenId: tokenA })
+        const priceB = await this.pythPriceService.getPrice({ tokenId: tokenB })
         return priceA.div(priceB)
     }
 }

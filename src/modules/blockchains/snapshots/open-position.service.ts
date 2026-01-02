@@ -10,6 +10,7 @@ import { createObjectId } from "@utils"
 import { ChainId } from "@typedefs"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
+import { Decimal } from "decimal.js"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -41,6 +42,7 @@ export class OpenPositionSnapshotService {
             session,
             feeAmountTarget,
             feeAmountQuote,
+            positionValueAtOpen,
         }: AddOpenPositionRecordParams
     ) {
         await this.connection.model<PositionSchema>(
@@ -67,6 +69,7 @@ export class OpenPositionSnapshotService {
             metadata,
             feeAmountTarget: feeAmountTarget.toString(),
             feeAmountQuote: feeAmountQuote.toString(),
+            positionValueAtOpen: positionValueAtOpen?.toString(),
         }], {
             session,
         })
@@ -96,4 +99,5 @@ export interface AddOpenPositionRecordParams {
     feeAmountTarget: BN
     feeAmountQuote: BN
     session?: ClientSession
+    positionValueAtOpen: Decimal
 }

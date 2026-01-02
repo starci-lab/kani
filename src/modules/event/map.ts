@@ -2,6 +2,8 @@ import { EventName } from "./events"
 
 export interface EventMetadata {
     kafka?: {
+        // whether the event is required in the observer
+        requiredInObserver?: boolean
         numPartitions?: number
         replicationFactor?: number
         topicConfig?: Record<string, string>
@@ -11,13 +13,16 @@ export interface EventMetadata {
         retentionMs?: number
         maxMessageBytes?: number
         fileDeleteDelayMs?: number
-    }
+    },
+
 }
 export const eventMetadataMap: Record<EventName, EventMetadata> = {
     [EventName.ExecutorCreated]: {},
     [EventName.ExecutorLoaded]: {},
     [EventName.ReinitializeBalancers]: {
-        kafka: {}
+        kafka: {
+            requiredInObserver: false
+        }
     },
     [EventName.ExecutorDeleted]: {},
     [EventName.UserCreated]: {},
@@ -28,21 +33,31 @@ export const eventMetadataMap: Record<EventName, EventMetadata> = {
     [EventName.CoinGeckoPricesFetched]: {},
     [EventName.PoolsUpdated]: {},
     [EventName.LiquidityPoolsFetched]: {
-        kafka: {}
+        kafka: {
+            requiredInObserver: true
+        }
     },
     [EventName.DlmmLiquidityPoolsFetched]: {
-        kafka: {}
+        kafka: {
+            requiredInObserver: true
+        }
     },
     [EventName.LiquidityPoolsUpdated]: {
     },
     [EventName.WsCexLastPricesUpdated]: {
-        kafka: {}
+        kafka: {
+            requiredInObserver: true
+        }
     },
     [EventName.WsCexOrderBookUpdated]: {
-        kafka: {}
+        kafka: {
+            requiredInObserver: true
+        }
     },
     [EventName.WsPythLastPricesUpdated]: {
-        kafka: {}
+        kafka: {
+            requiredInObserver: true
+        }
     },
     [EventName.DataSeeded]: {},
     [EventName.InitializerLoaded]: {},

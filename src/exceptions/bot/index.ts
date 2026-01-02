@@ -116,3 +116,17 @@ export class NoMoreTransactionsFoundException extends AbstractException {
         super(message || "No more transactions found", "NO_MORE_TRANSACTIONS_FOUND_EXCEPTION")
     }
 }
+
+/** Thrown when bot is already running */
+export class BotAlreadyRunningException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bot already running", "BOT_ALREADY_RUNNING_EXCEPTION")
+    }
+}
+
+/** Thrown when bot is already stopped */
+export class BotAlreadyStoppedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bot already stopped", "BOT_ALREADY_STOPPED_EXCEPTION")
+    }
+}
