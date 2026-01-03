@@ -143,6 +143,8 @@ export class PythPriceDiagnosticService implements OnModuleInit {
                     tokenIds: tokens.map(token => token.displayId),
                     ageMs,
                 })
+                // we do not throw an error here, because we want to continue the application
+                // price is too old not critical
             }
 
             return false
