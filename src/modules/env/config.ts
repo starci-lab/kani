@@ -225,7 +225,7 @@ export const envConfig = () => ({
             apiKeys: process.env.API_KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "api-keys.json"),
         },
     },
-    poller: {
+    pollers: {
         interval: parseInt(process.env.POLLER_INTERVAL || "10000", 10), // 10s
         failedJobs: {
             maxRetries: parseInt(process.env.POLLER_FAILED_JOBS_MAX_RETRIES || "10", 10), // 10 retries for each job

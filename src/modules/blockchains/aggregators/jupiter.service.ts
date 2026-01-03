@@ -1,12 +1,12 @@
 import { createJupiterApiClient, QuoteResponse as JupiterQuoteResponse, SwapApi } from "@jup-ag/api"
 import { Injectable, Logger } from "@nestjs/common"
 import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
+import { PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import BN from "bn.js"
 import { RetryService } from "@modules/mixin"
 import { ChainId } from "@typedefs"
-import { Address, address } from "@solana/kit"
+import { address } from "@solana/kit"
 import { MountStorageService } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
 
@@ -18,12 +18,12 @@ export class JupiterService implements IAggregatorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         // Generic retry helper to re-run any async action with backoff
-        private readonly retryService: RetryService,
+        private readonly retryService: RetryService,    
         private readonly mountStorageService: MountStorageService,
     ) { }
 
-    private jupiterReferralTokenAccounts(): Partial<Record<TokenId, Address>> {
-        return this.mountStorageService.apiKeys.fees.swapReferral.solana.referralTokenAccounts
+    private jupiterReferralTokenAccountAddress(): string {
+        return this.mountStorageService.apiKeys.fees.swapReferral.solana.referralTokenAccountAddress
     }
 
     private createJupiterClient(): SwapApi {
@@ -96,32 +96,37 @@ export class JupiterService implements IAggregatorService {
     async swap(
         {
             payload,
-            tokenOut,
             accountAddress,
         }: 
     SwapRequest): 
     Promise<SwapResponse> 
     {
-        const referralTokenAccount = this.jupiterReferralTokenAccounts()[tokenOut]?.toString()
-        return await this.retryService.retry({
-            action: async () => {
-                const client = this.createJupiterClient()
-                const { 
-                    swapTransaction
-                } = await client.swapPost({
-                    swapRequest: {
-                        quoteResponse: payload as JupiterQuoteResponse,
-                        userPublicKey: accountAddress,
-                        dynamicComputeUnitLimit: true,
-                        dynamicSlippage: true,
-                        feeAccount: referralTokenAccount,   
-                    } 
-                })
-                return {
-                    payload: swapTransaction,
-                }
-            },
-        })
+        try {
+            const referralTokenAccount = this.jupiterReferralTokenAccountAddress()
+            return await this.retryService.retry({
+                action: async () => {
+                    const client = this.createJupiterClient()
+                    const { 
+                        swapTransaction
+                    } = await client.swapPost({
+                        swapRequest: {
+                            quoteResponse: payload as JupiterQuoteResponse,
+                            userPublicKey: accountAddress,
+                            dynamicComputeUnitLimit: true,
+                            dynamicSlippage: true,
+                            feeAccount: referralTokenAccount,   
+                        } 
+                    })
+                    return {
+                        payload: swapTransaction,
+                    }
+                },
+            })
+        } catch (error) {
+            console.log(error)
+            this.logger.debug(error)
+            throw error
+        }
     }
 
     supportedChains(): Array<ChainId> {

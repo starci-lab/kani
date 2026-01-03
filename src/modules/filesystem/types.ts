@@ -1,5 +1,3 @@
-import { TokenId } from "@modules/databases"
-import { Address } from "@solana/kit"
 import { ChainId } from "@typedefs"
 
 export interface SmtpConfig {
@@ -83,7 +81,7 @@ export interface ApiKeys {
         }
         swapReferral: {
             solana: {
-                referralTokenAccounts: Record<TokenId, Address>
+                referralTokenAccountAddress: string
                 bps: number
             }
             sui: {

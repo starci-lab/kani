@@ -1,5 +1,5 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { Connection } from "mongoose"
+import { Connection, Types } from "mongoose"
 import { Interval } from "@nestjs/schedule"
 import { 
     JobStatus, 
@@ -18,6 +18,7 @@ import { v4 } from "uuid"
 import { BotNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { FailedJobsPollerResult } from "./types"
 
 
 @Injectable()
@@ -37,28 +38,72 @@ export class ReconcileBalanceFailedJobsPollerService implements OnApplicationBoo
         this.proccessFailedJobs()
     }
 
-    @Interval(envConfig().poller.interval)
+    @Interval(envConfig().pollers.interval)
     async proccessFailedJobs() {
-        const failedJobs = await this.connection.model<JobSchema>(JobSchema.name)
-            .find(
-                {
+        const lookbackDate = this.dayjsService
+            .now()
+            .subtract(
+                envConfig().pollers.failedJobs.lookbackDuration,
+                "millisecond",
+            )
+            .toDate()
+
+        const maxRetries = envConfig().pollers.failedJobs.maxRetries
+        const results = await this.connection.model<JobSchema>(JobSchema.name).aggregate<FailedJobsPollerResult>([
+            {
+                $match: {
                     type: JobType.ReconcileBalance,
                     status: JobStatus.Failed,
-                    executor: envConfig().botExecutor.executorId,
-                    createdAt: {
-                        $gte: this.dayjsService.now().subtract(
-                            envConfig().poller.failedJobs.lookbackDuration, 
-                            "millisecond"
-                        ).toDate(),
-                    },
+                    executor: new Types.ObjectId(envConfig().botExecutor.executorId),
+                    createdAt: { $gte: lookbackDate },
                     $or: [
                         { retryCount: { $exists: false } },
-                        { retryCount: { $lt: envConfig().poller.failedJobs.maxRetries } },
+                        { retryCount: { $lt: maxRetries } },
                     ],
-                }
-            )
-            .exec()
-        await this.asyncService.allIgnoreError(failedJobs.map(job => this.addToQueue(job)))
+                },
+            },
+            // newest first
+            { $sort: { createdAt: -1 } },
+            // group by bot
+            {
+                $group: {
+                    _id: "$bot",
+                    latestJob: { $first: "$$ROOT" },
+                    allJobIds: { $push: "$_id" },
+                },
+            },
+            {
+                $addFields: {
+                    "latestJob.id": { $toString: "$latestJob._id" },
+                },
+            },
+            // separate latest vs old jobs
+            {
+                $project: {
+                    latestJob: 1,
+                    deleteIds: {
+                        $slice: ["$allJobIds", 1, { $size: "$allJobIds" }],
+                    },
+                },
+            },
+        ])
+        console.log(results)
+
+        if (results.length === 0) {
+            return
+        }
+
+
+        // delete older jobs
+        const deleteIds = results.flatMap(result => result.deleteIds)
+        if (deleteIds.length > 0) {
+            await this.connection.model<JobSchema>(JobSchema.name).deleteMany({ _id: { $in: deleteIds } })
+        }
+
+        // // enqueue only latest jobs
+        await this.asyncService.allIgnoreError(
+            results.map(result => this.addToQueue(result.latestJob)),
+        )
     }
 
     private async addToQueue(job: JobSchema) {
@@ -79,6 +124,7 @@ export class ReconcileBalanceFailedJobsPollerService implements OnApplicationBoo
                 botId: bot.id,
                 executorId: envConfig().botExecutor.executorId,
                 jobId: job.id,
-            })
+            }
+        )
     }
 }   

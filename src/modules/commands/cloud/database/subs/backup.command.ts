@@ -43,11 +43,11 @@ export class BackupCommand extends CommandRunner {
 
             const username = databases.mongoose.primary.username
             const password = databases.mongoose.primary.password
-            const host = this.connection.host
-            const port = this.connection.port
-            const dbName = this.connection.name
+            const dbName = databases.mongoose.primary.dbName
+            const host = databases.mongoose.primary.host
+            const port = databases.mongoose.primary.port
 
-            const mongoUri = `mongodb://${username}:${password}@${host}:${port}/${dbName}?authSource=admin`
+            const mongoUri = `mongodb://${username}:${password}@${host}:${port}/?authSource=admin&readPreference=primary`
 
             const backupedAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
 
@@ -65,10 +65,10 @@ export class BackupCommand extends CommandRunner {
             // ================================
             const mongodumpArgs: Array<string> = [
                 `--uri=${mongoUri}`,
-                "--readPreference=primary",
                 `--out=${dumpDirPath}`,
+                `--db=${dbName}`,
                 "--gzip",
-                "--verbose",
+                "--quiet",
             ]
             await this.execaService.exec(
                 "mongodump", 

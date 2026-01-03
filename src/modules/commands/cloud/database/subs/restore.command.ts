@@ -56,8 +56,8 @@ export class RestoreCommand extends CommandRunner {
             
             const username = databases.mongoose.primary.username
             const password = databases.mongoose.primary.password
-            const host = this.connection.host
-            const port = this.connection.port
+            const host = databases.mongoose.primary.host
+            const port = databases.mongoose.primary.port
             const dbName = databases.mongoose.primary.dbName
             const mongoUri = `mongodb://${username}:${password}@${host}:${port}/?authSource=admin&readPreference=primary`
             const restoreAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
@@ -104,7 +104,7 @@ export class RestoreCommand extends CommandRunner {
                 `--nsInclude=${dbName}.*`,
                 "--gzip",
                 "--drop",
-                "--verbose"
+                "--quiet"
             ]
             await this.execaService.exec(
                 "mongorestore", mongorestoreArgs

@@ -1,5 +1,5 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./poller.module-definition"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./pollers.module-definition"
 import { UsersLoaderService } from "./users-loader.service"
 import { BotsLoaderService } from "./bots-loader.service"
 
