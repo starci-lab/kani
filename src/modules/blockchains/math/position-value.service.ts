@@ -28,11 +28,11 @@ export class PositionValueMathService {
             state,
         }: CalculatePositionValueParams
     ): Promise<CalculatePositionValueResponse> {
-        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === bot.targetToken.toString())
+        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException("Target token not found")
         }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === bot.quoteToken.toString())
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
         }

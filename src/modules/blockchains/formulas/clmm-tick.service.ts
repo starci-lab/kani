@@ -23,6 +23,16 @@ export class ClmmTickFormulaService {
         return TickMath.sqrtPriceX64ToPrice(sqrtPriceX64, decimalsA, decimalsB)
     }
     
+
+    public tickToPrice(
+        {
+            tickIndex,
+            decimalsA,
+            decimalsB,
+        }: TickToPriceParams
+    ): Decimal {
+        return TickMath.tickIndexToPrice(tickIndex.toNumber(), decimalsA, decimalsB)
+    }
 }
 
 export interface TickToSqrtPriceX64Params {
@@ -36,5 +46,15 @@ export interface SqrtPriceX64ToPriceParams {
 }
 
 export interface SqrtPriceX64ToPriceResponse {
+    price: Decimal
+}
+
+export interface TickToPriceParams {
+    tickIndex: Decimal
+    decimalsA: number
+    decimalsB: number
+}
+
+export interface TickToPriceResponse {
     price: Decimal
 }

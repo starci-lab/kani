@@ -72,8 +72,10 @@ export class OpenPositionWorker extends WorkerHost {
         data: { jobId, bot, state },
         attemptsMade,
     }: Job<OpenPositionPayload>) {
-        const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
-        // check if the mutex is locked
+        const _state = this.superjson.parse<
+      LiquidityPoolState | DlmmLiquidityPoolState
+    >(state)
+    // check if the mutex is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
         let job: JobSchema | null = null
@@ -139,7 +141,7 @@ export class OpenPositionWorker extends WorkerHost {
                             maxBinId: preparedMaxBinId?.toString(),
                             metadata: preparedMetadata,
                             positionId: preparedPositionId,
-                        }
+                        },
                     },
                 },
             )
@@ -176,10 +178,10 @@ export class OpenPositionWorker extends WorkerHost {
             maxBinId = data?.maxBinId ? new Decimal(data.maxBinId) : undefined
             metadata = data?.metadata
         }
-        
+
         if (order < getJobStatusOrder(JobStatus.Executed)) {
             // execute the transaction
-            const [ response, error ] = await this.asyncService.resolveTuple(
+            const [response, error] = await this.asyncService.resolveTuple(
                 this.openPositionOrchestratorService.execute({
                     bot,
                     state: _state,
@@ -190,21 +192,23 @@ export class OpenPositionWorker extends WorkerHost {
                     feeAmountA,
                     feeAmountB,
                     positionId,
-                })
+                }),
             )
             if (error) {
-                throw new UnrecoverableError("Failed to execute open position transaction")
+                throw new UnrecoverableError(
+                    "Failed to execute open position transaction",
+                )
             }
             const { positionId: executedPositionId } = response
             positionId = executedPositionId
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
-                { 
+                {
                     $set: {
                         status: JobStatus.Executed,
                         "data.positionId": executedPositionId,
                     },
-                }
+                },
             )
         } else {
             if (!job?.data) {
@@ -223,47 +227,52 @@ export class OpenPositionWorker extends WorkerHost {
             bot,
         })
         // calculate the position value
-        const { 
-            positionValue: positionValueAtOpen
-        } = await this.positionValueMathService.calculatePositionValue(
-            {
-                before: {
-                    targetBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
-                    quoteBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
-                    gasBalanceAmount: new BN(bot.snapshotGasBalanceAmount || 0),
-                },
-                after: {
-                    targetBalanceAmount: targetBalanceAmountAfterOpen ?? new BN(0),
-                    quoteBalanceAmount: quoteBalanceAmountAfterOpen ?? new BN(0),
-                    gasBalanceAmount: gasBalanceAmountAfterOpen ?? new BN(0),
-                },
-                bot,
-                isOpen: true,
-                state: _state,
-            }
-        )
+        const { positionValue: positionValueAtOpen } =
+      await this.positionValueMathService.calculatePositionValue({
+          before: {
+              targetBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
+              quoteBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
+              gasBalanceAmount: new BN(bot.snapshotGasBalanceAmount || 0),
+          },
+          after: {
+              targetBalanceAmount: targetBalanceAmountAfterOpen ?? new BN(0),
+              quoteBalanceAmount: quoteBalanceAmountAfterOpen ?? new BN(0),
+              gasBalanceAmount: gasBalanceAmountAfterOpen ?? new BN(0),
+          },
+          bot,
+          isOpen: true,
+          state: _state,
+      })
         // confirm the position
-        const { liquidity: confirmedLiquidity } = await this.openPositionOrchestratorService.confirm({
-            positionId,
-            state: _state,
-        })
+        const { liquidity: confirmedLiquidity } =
+      await this.openPositionOrchestratorService.confirm({
+          positionId,
+          state: _state,
+      })
         liquidity = confirmedLiquidity
-        const targetIsA = _state.static.tokenA.toString() === bot.targetToken.toString()
+        const targetIsA =
+      _state.static.tokenA.toString() === bot.targetToken.toString()
         const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
         const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
-        // Record open position transaction snapshot
+            // Record open position transaction snapshot
             await this.transactionSnapshotService.addOpenPositionTransactionRecord({
                 bot,
                 txHash,
                 session,
             })
             await this.openPositionSnapshotService.addOpenPositionRecord({
-                snapshotTargetBalanceAmountBeforeOpen: new BN(bot.snapshotTargetBalanceAmount || 0),
-                snapshotQuoteBalanceAmountBeforeOpen: new BN(bot.snapshotQuoteBalanceAmount || 0),
-                snapshotGasBalanceAmountBeforeOpen: new BN(bot.snapshotGasBalanceAmount || 0),
+                snapshotTargetBalanceAmountBeforeOpen: new BN(
+                    bot.snapshotTargetBalanceAmount || 0,
+                ),
+                snapshotQuoteBalanceAmountBeforeOpen: new BN(
+                    bot.snapshotQuoteBalanceAmount || 0,
+                ),
+                snapshotGasBalanceAmountBeforeOpen: new BN(
+                    bot.snapshotGasBalanceAmount || 0,
+                ),
                 liquidity: new BN(liquidity || 0),
                 bot,
                 targetIsA,
@@ -282,69 +291,66 @@ export class OpenPositionWorker extends WorkerHost {
                 amountB: amountB ? new BN(amountB) : undefined,
                 metadata,
                 positionValueAtOpen,
-            }
-            )
+            })
             // Update bot snapshot balances after the position is opened
-            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                {
-                    bot,
-                    targetBalanceAmount: targetBalanceAmountAfterOpen ?? new BN(0),
-                    quoteBalanceAmount: quoteBalanceAmountAfterOpen ?? new BN(0),
-                    gasBalanceAmount: gasBalanceAmountAfterOpen ?? new BN(0),
-                    session,
-                }
-            )
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                bot,
+                targetBalanceAmount: targetBalanceAmountAfterOpen ?? new BN(0),
+                quoteBalanceAmount: quoteBalanceAmountAfterOpen ?? new BN(0),
+                gasBalanceAmount: gasBalanceAmountAfterOpen ?? new BN(0),
+                session,
+            })
         })
     }
 
   @OnWorkerEvent("failed")
     async onFailed(job: Job<OpenPositionPayload>, error: Error) {
         const { bot, jobId, state } = job.data
-        const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
+        const _state = this.superjson.parse<
+      LiquidityPoolState | DlmmLiquidityPoolState
+    >(state)
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         if (isPermanentFailure) {
-            this.logger.error(
-                WinstonLog.OpenPositionFailed, {
-                    botId: bot.id,
-                    executorId: envConfig().botExecutor.executorId,
-                    jobId,
-                    liquidityPoolId: _state.static.displayId,
-                    error: error.message,
-                    stack: error.stack,
-                }
-            )
+            this.logger.error(WinstonLog.OpenPositionFailed, {
+                botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
+                jobId,
+                liquidityPoolId: _state.static.displayId,
+                error: error.message,
+                stack: error.stack,
+            })
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
-                { 
-                    $set: { 
+                {
+                    $set: {
                         status: JobStatus.Failed,
                         processedAt: this.dayjsService.now().toDate(),
                     },
-                    $inc: { 
-                        retryCount: 1 
+                    $inc: {
+                        retryCount: 1,
                     },
-                }
+                },
             )
             mutex.release()
         }
-        this.logger.warn(
-            WinstonLog.OpenPositionRetrying, {
-                botId: bot.id,
-                executorId: envConfig().botExecutor.executorId,
-                liquidityPoolId: _state.static.displayId,
-                jobId,
-                error: error.message,
-                stack: error.stack,
-            }
-        )
+        this.logger.warn(WinstonLog.OpenPositionRetrying, {
+            botId: bot.id,
+            executorId: envConfig().botExecutor.executorId,
+            liquidityPoolId: _state.static.displayId,
+            jobId,
+            error: error.message,
+            stack: error.stack,
+        })
     }
 
   @OnWorkerEvent("completed")
   async onCompleted(job: Job<OpenPositionPayload>) {
       const { bot, jobId, state } = job.data
-      const _state = this.superjson.parse<LiquidityPoolState | DlmmLiquidityPoolState>(state)
+      const _state = this.superjson.parse<
+      LiquidityPoolState | DlmmLiquidityPoolState
+    >(state)
       const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
       this.eventEmitter.emit(
           createEventName(EventName.UpdateActiveBot, {
@@ -363,12 +369,12 @@ export class OpenPositionWorker extends WorkerHost {
       })
       await this.connection.model<JobSchema>(JobSchema.name).updateOne(
           { _id: jobId },
-          { 
-              $set: { 
-                  status: JobStatus.Completed, 
-                  processedAt: this.dayjsService.now().toDate() 
+          {
+              $set: {
+                  status: JobStatus.Completed,
+                  processedAt: this.dayjsService.now().toDate(),
               },
-          }
+          },
       )
       mutex.release()
   }
