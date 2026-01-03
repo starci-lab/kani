@@ -22,7 +22,6 @@ export interface DiagnosePythPriceParams {
  * This service runs during application bootstrap and verifies that:
  *  - All configured Pyth feeds are reachable
  *  - All associated token prices are present
- *  - All prices are fresh (not older than the configured max age)
  *
  * If any feed remains unhealthy after the configured number of retries,
  * the application will terminate immediately to prevent running
