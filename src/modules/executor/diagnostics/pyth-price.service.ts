@@ -14,107 +14,140 @@ export interface DiagnosePythPriceParams {
  * Service responsible for diagnosing Pyth price feeds.
  * The application will terminate if any feed is unhealthy after retries.
  */
+/**
+ * PythPriceDiagnosticService
+ *
+ * Acts as a startup safety gate for all Pyth price feeds.
+ *
+ * This service runs during application bootstrap and verifies that:
+ *  - All configured Pyth feeds are reachable
+ *  - All associated token prices are present
+ *  - All prices are fresh (not older than the configured max age)
+ *
+ * If any feed remains unhealthy after the configured number of retries,
+ * the application will terminate immediately to prevent running
+ * with invalid or stale price data.
+ */
 @Injectable()
 export class PythPriceDiagnosticService implements OnModuleInit {
-    private pythIds: Array<string> = []
+    private pythIds: string[] = []
 
     constructor(
-        private readonly pythUtilsService: PythUtilsService,
-        private readonly pythPriceService: PythPriceService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly dayjsService: DayjsService,
-        private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+    private readonly pythUtilsService: PythUtilsService,
+    private readonly pythPriceService: PythPriceService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly asyncService: AsyncService,
+    @InjectWinston()
+    private readonly logger: WinstonLogger,
+    private readonly dayjsService: DayjsService,
+    private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
 
     /**
-   * Called once the module has been initialized.
-   * Performs a startup health check on all Pyth feeds.
+   * Application bootstrap hook.
+   *
+   * Performs a full diagnostic check for every configured Pyth feed
+   * before the service is marked as READY.
+   *
+   * Readiness will only be set once all feeds have passed diagnostics.
    */
     async onModuleInit(): Promise<void> {
-        this.readinessWatcherFactoryService.createWatcher(PythPriceDiagnosticService.name)
+        this.readinessWatcherFactoryService.createWatcher(
+            PythPriceDiagnosticService.name,
+        )
+
         this.pythIds = this.pythUtilsService.getPythIds()
+
         await this.asyncService.allMustDone(
             this.pythIds.map(pythId => this.retryDiagnose(pythId)),
         )
-        this.logger.info(
-            WinstonLog.PythPriceDiagnosticSuccess, {
-                pythIds: this.pythIds.length,
-            }
+
+        this.logger.info(WinstonLog.PythPriceDiagnosticSuccess, {
+            pythIds: this.pythIds.length,
+        })
+
+        this.readinessWatcherFactoryService.setReady(
+            PythPriceDiagnosticService.name,
         )
-        this.readinessWatcherFactoryService.setReady(PythPriceDiagnosticService.name)
     }
+
     /**
-   * Retries the diagnosis of a Pyth feed multiple times.
+   * Retries the diagnostic check for a single Pyth feed.
+   *
+   * The check is retried up to `maxRetries` times with a fixed delay
+   * between attempts. This allows transient issues (network warm-up,
+   * cache population, RPC delays) to recover.
+   *
+   * If the feed is still unhealthy after all retries, the process
+   * is terminated immediately (fail-fast).
    */
-    private async retryDiagnose(
-        pythId: string,
-    ): Promise<boolean> {
-        // get the max retries and delay from the environment configuration
-        const maxRetries = envConfig().diagnostics.pythPrice.maxRetries
-        const delayMs = envConfig().diagnostics.pythPrice.delayMs
-        // retry the diagnosis of the Pyth feed multiple times
+    private async retryDiagnose(pythId: string): Promise<boolean> {
+        const { maxRetries, delayMs } = envConfig().diagnostics.pythPrice
+
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             const healthy = await this.diagnose({ pythId })
+
             if (healthy) {
                 return true
             }
-            this.logger.warn(
-                WinstonLog.PythPriceDiagnosticWarning,
-                {
-                    pythId,
-                    attempt,
-                    maxRetries,
-                },
-            )
-            if (attempt < maxRetries) {
+
+            this.logger.warn(WinstonLog.PythPriceDiagnosticWarning, {
+                pythId,
+                attempt,
+                maxRetries,
+            })
+
+            if (attempt < maxRetries - 1) {
                 await sleep(delayMs)
             }
         }
-        // if the feed is unhealthy after all retries, exit the application
+
+        // The application must not run with broken or stale oracle data.
         process.exit(1)
     }
 
     /**
-   * Fetches prices for all tokens associated with a Pyth feed
-   * and verifies that none of them are too old.
+   * Diagnoses a single Pyth feed by validating all associated token prices.
+   *
+   * A feed is considered UNHEALTHY if:
+   *  - Any token price is missing (null / undefined)
+   *  - Any price snapshot is older than the configured max age
+   *
+   * The feed is only considered healthy if ALL token prices pass validation.
    */
     async diagnose({ pythId }: DiagnosePythPriceParams): Promise<boolean> {
-        // get the tokens associated with the Pyth feed
         const tokens = this.primaryMemoryStorageService.tokens.filter(
             token => token.pythFeedId === pythId,
         )
-        // get the prices for the tokens
+
         const promises: Array<Promise<GetPriceResponse>> = tokens.map(token =>
             this.pythPriceService.getPrice({ tokenId: token.displayId }),
         )
-        // wait for all the prices to be fetched
+
         const responses = await this.asyncService.allIgnoreError(promises)
-        // check if any of the prices are too old
+
         const now = this.dayjsService.now()
         const maxAgeMs = envConfig().diagnostics.pythPrice.maxAgeMs
-        // check if any of the prices are too old
+
         const hasInvalidResponse = responses.some(response => {
-            // case 1: null / undefined
+            // Missing price data is considered a hard failure
             if (!response) {
                 return true
             }
-            // case 2: snapshot is too old
+
+            // Price snapshot must be recent enough to be considered valid
             const ageMs = now.diff(response.snapshotAt, "millisecond")
+
             if (ageMs > maxAgeMs) {
-                this.logger.warn(
-                    WinstonLog.PythPriceTooOld,
-                    {
-                        tokenIds: tokens.map(token => token.displayId),
-                        ageMs
-                    },
-                )
+                this.logger.warn(WinstonLog.PythPriceTooOld, {
+                    tokenIds: tokens.map(token => token.displayId),
+                    ageMs,
+                })
             }
+
             return false
         })
-        // return true if no invalid responses
+
         return !hasInvalidResponse
     }
 }
