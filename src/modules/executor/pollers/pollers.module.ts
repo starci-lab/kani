@@ -4,7 +4,6 @@ import { OpenPositionFailedJobsPollerService } from "./open-position-failed-jobs
 import { ClosePositionFailedJobsPollerService } from "./close-position-failed-jobs.service"
 import { ReconcileBalanceFailedJobsPollerService } from "./reconcile-balance-failed-jobs.service"
 
-
 @Module({})
 export class PollersModule extends ConfigurableModuleClass {
     static register(

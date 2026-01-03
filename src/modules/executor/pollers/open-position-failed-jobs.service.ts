@@ -1,5 +1,5 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { Connection } from "mongoose"
+import { Connection, Types } from "mongoose"
 import { Interval } from "@nestjs/schedule"
 import { 
     JobStatus, 
@@ -64,7 +64,7 @@ export class OpenPositionFailedJobsPollerService implements OnApplicationBootstr
                 $match: {
                     type: JobType.OpenPosition,
                     status: JobStatus.Failed,
-                    executor: envConfig().botExecutor.executorId,
+                    executor: new Types.ObjectId(envConfig().botExecutor.executorId),
                     createdAt: { $gte: lookbackDate },
                     $or: [
                         { retryCount: { $exists: false } },
@@ -141,10 +141,12 @@ export class OpenPositionFailedJobsPollerService implements OnApplicationBootstr
             }
         )
         // log success
-        this.logger.info(WinstonLog.OpenPositionFailedJobsRecreated, {
-            botId: bot.id,
-            executorId: envConfig().botExecutor.executorId,
-            jobId: job.id,
-        })
+        this.logger.info(
+            WinstonLog.OpenPositionFailedJobsRecreated, {
+                botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
+                jobId: job.id,
+            }
+        )
     }
 }   

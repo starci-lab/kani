@@ -87,8 +87,7 @@ export class ReconcileBalanceFailedJobsPollerService implements OnApplicationBoo
                 },
             },
         ])
-        console.log(results)
-
+        
         if (results.length === 0) {
             return
         }
@@ -100,7 +99,7 @@ export class ReconcileBalanceFailedJobsPollerService implements OnApplicationBoo
             await this.connection.model<JobSchema>(JobSchema.name).deleteMany({ _id: { $in: deleteIds } })
         }
 
-        // // enqueue only latest jobs
+        // enqueue only latest jobs
         await this.asyncService.allIgnoreError(
             results.map(result => this.addToQueue(result.latestJob)),
         )
