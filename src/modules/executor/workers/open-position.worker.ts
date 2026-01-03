@@ -13,6 +13,7 @@ import {
     SolanaTx,
     LiquidityPoolState,
     DlmmLiquidityPoolState,
+    PositionValueMathService,
 } from "@modules/blockchains"
 import {
     getJobStatusOrder,
@@ -20,6 +21,7 @@ import {
     JobSchema,
     JobStatus,
     OpenPositionJobData,
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import BN from "bn.js"
@@ -54,6 +56,8 @@ export class OpenPositionWorker extends WorkerHost {
     private readonly logger: WinstonLogger,
     private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
     private readonly asyncService: AsyncService,
+    private readonly positionValueMathService: PositionValueMathService,
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     ) {
@@ -84,6 +88,7 @@ export class OpenPositionWorker extends WorkerHost {
         }
         const order = getJobStatusOrder(job?.status || JobStatus.Pending)
         let txHash: string
+        // transaction data
         let signatureWithBytes: SignatureWithBytes | undefined = undefined
         let solanaTx: SolanaTx | undefined = undefined
         let feeAmountA: BN
@@ -97,21 +102,7 @@ export class OpenPositionWorker extends WorkerHost {
         let metadata: unknown | undefined = undefined
         let positionId: string | undefined = undefined
         let liquidity: BN | undefined = undefined
-        let targetBalanceAmountBeforeOpen: BN | undefined = undefined
-        let quoteBalanceAmountBeforeOpen: BN | undefined = undefined
-        let gasBalanceAmountBeforeOpen: BN | undefined = undefined
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
-            // fetch the bot snapshot balances
-            const {
-                gasBalanceAmount,
-                targetBalanceAmount,
-                quoteBalanceAmount,
-            } = await this.balanceService.fetchBalances({
-                bot,
-            })
-            targetBalanceAmountBeforeOpen = new BN(targetBalanceAmount)
-            quoteBalanceAmountBeforeOpen = new BN(quoteBalanceAmount)
-            gasBalanceAmountBeforeOpen = new BN(gasBalanceAmount)
             // prepare the transaction and get the result
             const {
                 txHash: preparedTxHash,
@@ -222,7 +213,35 @@ export class OpenPositionWorker extends WorkerHost {
             const data = job.data as OpenPositionJobData
             positionId = data.positionId
         }
-
+        // confirm the position
+        // fetch the balances after the position is opened
+        const {
+            targetBalanceAmount: targetBalanceAmountAfterOpen,
+            quoteBalanceAmount: quoteBalanceAmountAfterOpen,
+            gasBalanceAmount: gasBalanceAmountAfterOpen,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        // calculate the position value
+        const { 
+            positionValue: positionValueAtOpen
+        } = await this.positionValueMathService.calculatePositionValue(
+            {
+                before: {
+                    targetBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
+                    quoteBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
+                    gasBalanceAmount: new BN(bot.snapshotGasBalanceAmount || 0),
+                },
+                after: {
+                    targetBalanceAmount: targetBalanceAmountAfterOpen ?? new BN(0),
+                    quoteBalanceAmount: quoteBalanceAmountAfterOpen ?? new BN(0),
+                    gasBalanceAmount: gasBalanceAmountAfterOpen ?? new BN(0),
+                },
+                bot,
+                isOpen: true,
+                state: _state,
+            }
+        )
         // confirm the position
         const { liquidity: confirmedLiquidity } = await this.openPositionOrchestratorService.confirm({
             positionId,
@@ -242,9 +261,9 @@ export class OpenPositionWorker extends WorkerHost {
                 session,
             })
             await this.openPositionSnapshotService.addOpenPositionRecord({
-                snapshotTargetBalanceAmountBeforeOpen: targetBalanceAmountBeforeOpen ?? new BN(0),
-                snapshotQuoteBalanceAmountBeforeOpen: quoteBalanceAmountBeforeOpen ?? new BN(0),
-                snapshotGasBalanceAmountBeforeOpen: gasBalanceAmountBeforeOpen ?? new BN(0),
+                snapshotTargetBalanceAmountBeforeOpen: new BN(bot.snapshotTargetBalanceAmount || 0),
+                snapshotQuoteBalanceAmountBeforeOpen: new BN(bot.snapshotQuoteBalanceAmount || 0),
+                snapshotGasBalanceAmountBeforeOpen: new BN(bot.snapshotGasBalanceAmount || 0),
                 liquidity: new BN(liquidity || 0),
                 bot,
                 targetIsA,
@@ -262,17 +281,19 @@ export class OpenPositionWorker extends WorkerHost {
                 amountA: amountA ? new BN(amountA) : undefined,
                 amountB: amountB ? new BN(amountB) : undefined,
                 metadata,
-                positionValueAtOpen: new Decimal(0),
+                positionValueAtOpen,
             }
             )
             // Update bot snapshot balances after the position is opened
-            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                bot,
-                targetBalanceAmount: targetBalanceAmountBeforeOpen ?? new BN(0),
-                quoteBalanceAmount: quoteBalanceAmountBeforeOpen ?? new BN(0),
-                gasBalanceAmount: gasBalanceAmountBeforeOpen ?? new BN(0),
-                session,
-            })
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                {
+                    bot,
+                    targetBalanceAmount: targetBalanceAmountAfterOpen ?? new BN(0),
+                    quoteBalanceAmount: quoteBalanceAmountAfterOpen ?? new BN(0),
+                    gasBalanceAmount: gasBalanceAmountAfterOpen ?? new BN(0),
+                    session,
+                }
+            )
         })
     }
 
@@ -302,7 +323,8 @@ export class OpenPositionWorker extends WorkerHost {
                 liquidityPoolId: _state.static.displayId,
                 jobId,
                 error: error.message,
-            })
+            }
+        )
     }
 
   @OnWorkerEvent("completed")

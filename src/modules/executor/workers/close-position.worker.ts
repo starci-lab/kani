@@ -10,8 +10,6 @@ import {
     TransactionSnapshotService,
     ClosePositionPayload,
     ClosePositionOrchestratorService,
-    ProfitabilityMathService,
-    CalculateProfitability,
     LiquidityPoolState,
     DlmmLiquidityPoolState,
 } from "@modules/blockchains"
@@ -30,7 +28,7 @@ import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"   
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { AsyncService } from "@modules/mixin"
-import { SolanaTx } from "@modules/blockchains/interfaces"
+import { SolanaTx, PositionValueMathService } from "@modules/blockchains"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
@@ -38,6 +36,7 @@ import {
 } from "@exceptions"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
+import Decimal from "decimal.js"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -67,7 +66,7 @@ export class ClosePositionWorker extends WorkerHost {
         private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
         private readonly asyncService: AsyncService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly profitabilityMathService: ProfitabilityMathService,
+        private readonly positionValueMathService: PositionValueMathService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
     ) {
@@ -175,9 +174,6 @@ export class ClosePositionWorker extends WorkerHost {
                 "Either token A or token B is not in the pool",
             )
         }
-        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        const targetToken = targetIsA ? tokenA : tokenB
-        const quoteToken = targetIsA ? tokenB : tokenA
         // Get snapshot balances before open
         const {
             snapshotTargetBalanceAmountBeforeOpen,
@@ -204,25 +200,28 @@ export class ClosePositionWorker extends WorkerHost {
         const targetBalanceAmountBN = new BN(afterTargetBalanceAmount)
         const quoteBalanceAmountBN = new BN(afterQuoteBalanceAmount)
         const gasBalanceAmountBN = new BN(afterGasBalanceAmount)
-        // Calculate profitability
-        const before: CalculateProfitability = {
-            targetTokenBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-            quoteTokenBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-            gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
-        }
-        const after: CalculateProfitability = {
-            targetTokenBalanceAmount: targetBalanceAmountBN,
-            quoteTokenBalanceAmount: quoteBalanceAmountBN,
-            gasBalanceAmount: gasBalanceAmountBN,
-        }
-        const { roi, pnl } = await this.profitabilityMathService.calculateProfitability({
-            before,
-            after,
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            bot,
-            state: _state,
-        })
+        // Calculate position value at close
+        const { 
+            positionValue: positionValueAtClose 
+        } = await this.positionValueMathService.calculatePositionValue(
+            {
+                before: {
+                    targetBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
+                    quoteBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
+                    gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
+                },
+                after: {
+                    targetBalanceAmount: targetBalanceAmountBN,
+                    quoteBalanceAmount: quoteBalanceAmountBN,
+                    gasBalanceAmount: gasBalanceAmountBN,
+                },
+                bot,
+                isOpen: false,
+                state: _state,
+            }
+        )
+        const roi = positionValueAtClose.div(bot.activePosition.positionValueAtOpen || new Decimal(0)).sub(1)
+        const pnl = positionValueAtClose.sub(bot.activePosition.positionValueAtOpen || new Decimal(0))
         // Start a MongoDB session for transactional updates
         const session = await this.connection.startSession()
         await session.withTransaction(async () => {
@@ -249,8 +248,6 @@ export class ClosePositionWorker extends WorkerHost {
             // Update close position record with profitability
             await this.closePositionSnapshotService.updateClosePositionRecord({
                 bot,
-                pnl,
-                roi,
                 positionId: bot.activePosition.id,
                 closeTxHash: txHash,
                 session,
@@ -261,6 +258,9 @@ export class ClosePositionWorker extends WorkerHost {
                     quoteBalanceAmountBN || 0,
                 ),
                 snapshotGasBalanceAmountAfterClose: new BN(gasBalanceAmountBN || 0),
+                positionValueAtClose: positionValueAtClose,
+                roi,
+                pnl,
             })
         })
     }

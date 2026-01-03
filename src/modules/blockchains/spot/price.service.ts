@@ -66,11 +66,11 @@ export class SpotPriceService {
             tokenA.decimals,
             tokenB.decimals,
         )
-        // cache in 1 minute
+
         await this.cacheManager.set(
             createCacheKey(CacheKey.SpotPrice, _state.static.displayId), 
             this.superjson.stringify({ price }), 
-            envConfig().cache.ttl.spotPrice
+            envConfig().cache.ttl.spotPrice,
         )
         return price
     }

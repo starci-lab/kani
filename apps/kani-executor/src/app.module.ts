@@ -23,7 +23,7 @@ import { MutexModule } from "@modules/lock"
 import { 
     TxBuilderModule, 
     ExitStrategyEngineModule, 
-    BalancesModule, 
+    BalanceModule, 
     SnapshotsModule 
 } from "@modules/blockchains"
 import { GcpModule } from "@modules/gcp"
@@ -98,7 +98,7 @@ import { KafkaMode } from "@modules/event"
         GcpModule.register({
             isGlobal: true,
         }),
-        BalancesModule.register({
+        BalanceModule.register({
             isGlobal: true,
         }),
         CryptoModule.register({

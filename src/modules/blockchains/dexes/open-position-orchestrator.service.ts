@@ -22,15 +22,15 @@ import { RaydiumOpenPositionActionService } from "./raydium"
 import { OrcaOpenPositionActionService } from "./orca"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraOpenPositionActionService } from "./meteora"
-import { 
+import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResponse,
-    DlmmLiquidityPoolState, 
-    ExecuteOpenPositionParams, 
-    ExecuteOpenPositionResponse, 
-    LiquidityPoolState, 
-    PrepareOpenPositionParams, 
-    PrepareOpenPositionResponse 
+    DlmmLiquidityPoolState,
+    ExecuteOpenPositionParams,
+    ExecuteOpenPositionResponse,
+    LiquidityPoolState,
+    PrepareOpenPositionParams,
+    PrepareOpenPositionResponse
 } from "../interfaces"
 import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
@@ -57,6 +57,22 @@ import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
+import { BalanceEligibilityService } from "../balance"
+
+/**
+ * OpenPositionOrchestratorService
+ *
+ * High-level orchestration layer for opening a position.
+ *
+ * Responsibilities:
+ * - Evaluate whether an open-position action SHOULD happen
+ * - Apply safety guards (balance, snapshot, quote ratio, idempotency)
+ * - Handle concurrency via mutex
+ * - Validate liquidity pool and DEX support
+ * - Create job and enqueue async execution
+ *
+ * This service does NOT perform on-chain execution.
+ */
 @Injectable()
 export class OpenPositionOrchestratorService {
     constructor(
@@ -83,29 +99,47 @@ export class OpenPositionOrchestratorService {
         private readonly superjson: SuperJSON,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly balanceEligibilityService: BalanceEligibilityService,
     ) { }
 
+    /**
+     * Enqueue an open-position job if and only if all preconditions are satisfied.
+     *
+     * Fail-closed design:
+     * Any unmet condition results in a silent return.
+     */
     async enqueue(
         {
             liquidityPoolId,
             bot,
         }: EnqueueOpenPositionParams,
     ) {
-
         /**
-         * Retrieve mutex to prevent concurrent actions on the same bot
+         * Mutex guard:
+         * Prevent concurrent actions on the same bot.
          */
         const mutex = this.mutexService.mutex(
             getMutexKey(MutexKey.Action, bot.id),
         )
-        // if the mutex is locked, skip the execution
         if (mutex.isLocked()) {
             return
         }
+
         /**
-         * Skip job if:
-         * - balance snapshot is missing
-         * - or snapshot is outdated (older than configured interval)
+         * Balance eligibility check:
+         * Ensure bot has sufficient total balance (USD-based).
+         */
+        const isSufficient = await this.balanceEligibilityService.isSufficient({
+            bot: bot,
+        })
+        if (!isSufficient) {
+            return
+        }
+
+        /**
+         * Snapshot validity check:
+         * - All snapshot balances must exist
+         * - Snapshot must be recent enough
          */
         if (
             !bot.snapshotTargetBalanceAmount ||
@@ -119,11 +153,11 @@ export class OpenPositionOrchestratorService {
                 ),
             )
         ) {
-            // Balance snapshot is not valid or not up to date
             return
         }
+
         /**
-         * Retrieve target token from in-memory storage
+         * Resolve target token metadata.
          */
         const targetToken =
             this.primaryMemoryStorageService.tokens.find(
@@ -134,7 +168,7 @@ export class OpenPositionOrchestratorService {
         }
 
         /**
-         * Retrieve quote token from in-memory storage
+         * Resolve quote token metadata.
          */
         const quoteToken =
             this.primaryMemoryStorageService.tokens.find(
@@ -145,18 +179,19 @@ export class OpenPositionOrchestratorService {
         }
 
         /**
-         * Ensure the liquidity pool belongs to this bot
+         * Ownership check:
+         * Ensure the liquidity pool is associated with this bot.
          */
         if (
             !bot.liquidityPools
                 .map(liquidityPool => liquidityPool.toString())
                 .includes(createObjectId(liquidityPoolId).toString())
         ) {
-            // Liquidity pool is not associated with the bot
             return
         }
+
         /**
-         * Convert snapshot balances to BN for precise arithmetic
+         * Convert snapshot balances to BN for precise arithmetic.
          */
         const snapshotTargetBalanceAmountBN = new BN(
             bot.snapshotTargetBalanceAmount,
@@ -164,8 +199,10 @@ export class OpenPositionOrchestratorService {
         const snapshotQuoteBalanceAmountBN = new BN(
             bot.snapshotQuoteBalanceAmount,
         )
+
         /**
-         * Compute quote ratio to determine if opening a position is favorable
+         * Quote ratio computation:
+         * Determines whether market conditions are favorable.
          */
         const { quoteRatio } =
             await this.quoteRatioService.computeQuoteRatio(
@@ -176,21 +213,21 @@ export class OpenPositionOrchestratorService {
                     quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
                 }
             )
+
         /**
-         * Skip opening position if quote ratio is not in a good state
+         * Abort if quote ratio is not in a Good state.
          */
         if (
             this.quoteRatioService.checkQuoteRatioStatus(
-                {
-                    quoteRatio,
-                }
+                { quoteRatio }
             ) !== QuoteRatioStatus.Good
         ) {
             return
         }
+
         /**
-         * Prevent duplicate open position transactions
-         * (idempotency guard using cache)
+         * Idempotency guard:
+         * Prevent duplicate open-position transactions per bot.
          */
         if (
             await this.cacheManager.get(
@@ -202,8 +239,9 @@ export class OpenPositionOrchestratorService {
         ) {
             return
         }
+
         /**
-         * Retrieve liquidity pool definition from memory
+         * Retrieve liquidity pool definition from memory.
          */
         const liquidityPool =
             this.primaryMemoryStorageService.liquidityPools.find(
@@ -216,9 +254,10 @@ export class OpenPositionOrchestratorService {
                 `Liquidity pool ${liquidityPoolId} not found`,
             )
         }
+
         /**
-         * Fetch latest liquidity pool state
-         * (DLMM and non-DLMM pools have different state handlers)
+         * Fetch latest liquidity pool state.
+         * DLMM and non-DLMM pools use different state resolvers.
          */
         let state: LiquidityPoolState | DlmmLiquidityPoolState
         if (liquidityPool.type === LiquidityPoolType.Dlmm) {
@@ -232,8 +271,9 @@ export class OpenPositionOrchestratorService {
                     liquidityPoolId,
                 )
         }
+
         /**
-         * Validate that the pool's DEX exists
+         * DEX existence validation.
          */
         const dex =
             this.primaryMemoryStorageService.dexes.find(
@@ -242,8 +282,9 @@ export class OpenPositionOrchestratorService {
         if (!dex) {
             throw new DexNotFoundException("Dex not found")
         }
+
         /**
-         * Ensure the DEX is supported by current bot configuration
+         * DEX support validation.
          */
         if (
             !this.options.dexes?.find(
@@ -254,9 +295,9 @@ export class OpenPositionOrchestratorService {
                 `Dex ${state.static.dex.toString()} not supported`,
             )
         }
+
         /**
-         * Recompute quote ratio using snapshot balances
-         * (used later for balance normalization)
+         * Recompute quote ratio for balance normalization.
          */
         const quoteRatioResponse =
             await this.quoteRatioService.computeQuoteRatio({
@@ -269,38 +310,32 @@ export class OpenPositionOrchestratorService {
                     bot.snapshotQuoteBalanceAmount || 0,
                 ),
             })
-        /**
-         * Normalize balances into target token denomination
-         */
-        const targetBalanceAmount = new BN(
-            bot.snapshotTargetBalanceAmount || 0,
-        )
-        const quoteBalanceAmount = new BN(
-            bot.snapshotQuoteBalanceAmount || 0,
-        )
 
+        /**
+         * Normalize balances into target-token units.
+         */
         const targetBalanceAmountInTarget =
             computeDenomination(
-                targetBalanceAmount,
+                new BN(bot.snapshotTargetBalanceAmount || 0),
                 targetToken.decimals,
             )
 
         const quoteBalanceAmountInTarget =
             computeDenomination(
-                quoteBalanceAmount,
+                new BN(bot.snapshotQuoteBalanceAmount || 0),
                 quoteToken.decimals,
             ).div(quoteRatioResponse.oraclePrice)
 
         /**
-         * Total balance expressed in target token units
+         * Total effective balance expressed in target token.
          */
         const totalBalanceAmountInTarget =
             targetBalanceAmountInTarget.add(
                 quoteBalanceAmountInTarget,
             )
+
         /**
-         * Safety check:
-         * Ensure total balance meets minimum requirement to open a position
+         * Minimum balance safety check.
          */
         if (
             totalBalanceAmountInTarget.lt(
@@ -309,19 +344,23 @@ export class OpenPositionOrchestratorService {
                 ),
             )
         ) {
-            // Insufficient balance to open a position
             return
         }
-        // acquire the mutex
+
+        /**
+         * Acquire mutex before creating job.
+         */
         const releaser = await mutex.acquire()
-        // set a timeout to release the mutex after the cooldown period
         setTimeout(
             async () => {
                 releaser()
             },
             envConfig().timeConfig.interval.mutex
         )
-        // create the job
+
+        /**
+         * Persist job record.
+         */
         const [jobRaw] = await this.connection.model<JobSchema>(
             JobSchema.name
         ).create(
@@ -333,7 +372,10 @@ export class OpenPositionOrchestratorService {
                     status: JobStatus.Pending,
                 }
             ])
-        // add the open position job to the queue
+
+        /**
+         * Enqueue open-position job for async processing.
+         */
         await this.openPositionQueue.add(
             v4(),
             {
@@ -342,7 +384,10 @@ export class OpenPositionOrchestratorService {
                 bot,
             }
         )
-        // log the event
+
+        /**
+         * Structured logging for observability.
+         */
         this.logger.verbose(
             WinstonLog.OpenPositionEnqueued,
             {
@@ -352,6 +397,10 @@ export class OpenPositionOrchestratorService {
         )
     }
 
+    /**
+     * Prepare open-position transaction.
+     * Delegates preparation logic to DEX-specific service.
+     */
     async prepare(
         {
             state,
@@ -359,135 +408,119 @@ export class OpenPositionOrchestratorService {
         }: PrepareOpenPositionParams,
     ): Promise<PrepareOpenPositionResponse> {
         const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
-        // retrieve the dex
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
+
+        const dex =
+            this.primaryMemoryStorageService.dexes.find(
+                dex => dex.id === _state.static.dex.toString(),
+            )
         if (!dex) throw new DexNotFoundException("Dex not found")
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
-            throw new DexNotImplementedException(`Dex ${_state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException(
+                `Dex ${_state.static.dex.toString()} not supported`,
+            )
         }
-        // run the open position action
+
         switch (dex.displayId) {
-        case DexId.Raydium: {
-            return await this.raydiumOpenPositionActionService.prepare({
-                state: _state,
-                bot,
-            })
-        }
-        case DexId.Orca: {
-            return await this.orcaOpenPositionActionService.prepare({
-                state: _state,
-                bot,
-            })
-        }
-        case DexId.Meteora: {
-            return await this.meteoraOpenPositionActionService.prepare({
-                state: _state,
-                bot,
-            })
-        }
-        case DexId.FlowX: {
-            return await this.flowxOpenPositionActionService.prepare({
-                state,
-                bot,
-            })
-        }
-        case DexId.Cetus: {
-            return await this.cetusOpenPositionActionService.prepare({
-                state,
-                bot,
-            })
-        }
-        case DexId.Turbos: {
-            return await this.turbosOpenPositionActionService.prepare({
-                state,
-                bot,
-            })
-        }
-        case DexId.Momentum: {
-            return await this.momentumOpenPositionActionService.prepare({
-                state,
-                bot,
-            })
-        }
-        default: {
-            throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported`)
-        }
+        case DexId.Raydium:
+            return this.raydiumOpenPositionActionService.prepare({ state: _state, bot })
+        case DexId.Orca:
+            return this.orcaOpenPositionActionService.prepare({ state: _state, bot })
+        case DexId.Meteora:
+            return this.meteoraOpenPositionActionService.prepare({ state: _state, bot })
+        case DexId.FlowX:
+            return this.flowxOpenPositionActionService.prepare({ state, bot })
+        case DexId.Cetus:
+            return this.cetusOpenPositionActionService.prepare({ state, bot })
+        case DexId.Turbos:
+            return this.turbosOpenPositionActionService.prepare({ state, bot })
+        case DexId.Momentum:
+            return this.momentumOpenPositionActionService.prepare({ state, bot })
+        default:
+            throw new DexNotImplementedException(
+                `DEX ${_state.static.dex.toString()} not supported`,
+            )
         }
     }
 
+    /**
+     * Execute on-chain open-position transaction.
+     */
     async execute(
         params: ExecuteOpenPositionParams,
     ): Promise<ExecuteOpenPositionResponse> {
-        const { state } = params
-        const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
+        const _state = params.state as LiquidityPoolState | DlmmLiquidityPoolState
+
+        const dex =
+            this.primaryMemoryStorageService.dexes.find(
+                dex => dex.id === _state.static.dex.toString(),
+            )
         if (!dex) throw new DexNotFoundException("Dex not found")
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
-            throw new DexNotImplementedException(`Dex ${_state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException(
+                `Dex ${_state.static.dex.toString()} not supported`,
+            )
         }
+
         switch (dex.displayId) {
-        case DexId.FlowX: {
-            return await this.flowxOpenPositionActionService.execute(params)
-        }
-        case DexId.Cetus: {
-            return await this.cetusOpenPositionActionService.execute(params)
-        }
-        case DexId.Turbos: {
-            return await this.turbosOpenPositionActionService.execute(params)
-        }
-        case DexId.Momentum: {
-            return await this.momentumOpenPositionActionService.execute(params)
-        }
-        case DexId.Raydium: {
-            return await this.raydiumOpenPositionActionService.execute(params)
-        }
-        case DexId.Orca: {
-            return await this.orcaOpenPositionActionService.execute(params)
-        }
-        case DexId.Meteora: {
-            return await this.meteoraOpenPositionActionService.execute(params)
-        }
-        default: {
-            throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported for execute`)
-        }
+        case DexId.FlowX:
+            return this.flowxOpenPositionActionService.execute(params)
+        case DexId.Cetus:
+            return this.cetusOpenPositionActionService.execute(params)
+        case DexId.Turbos:
+            return this.turbosOpenPositionActionService.execute(params)
+        case DexId.Momentum:
+            return this.momentumOpenPositionActionService.execute(params)
+        case DexId.Raydium:
+            return this.raydiumOpenPositionActionService.execute(params)
+        case DexId.Orca:
+            return this.orcaOpenPositionActionService.execute(params)
+        case DexId.Meteora:
+            return this.meteoraOpenPositionActionService.execute(params)
+        default:
+            throw new DexNotImplementedException(
+                `DEX ${_state.static.dex.toString()} not supported for execute`,
+            )
         }
     }
 
+    /**
+     * Confirm open-position transaction result.
+     */
     async confirm(
         params: ConfirmOpenPositionParams,
     ): Promise<ConfirmOpenPositionResponse> {
-        const { state } = params
-        const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
+        const _state = params.state as LiquidityPoolState | DlmmLiquidityPoolState
+
+        const dex =
+            this.primaryMemoryStorageService.dexes.find(
+                dex => dex.id === _state.static.dex.toString(),
+            )
         if (!dex) throw new DexNotFoundException("Dex not found")
         if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
-            throw new DexNotImplementedException(`Dex ${_state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException(
+                `Dex ${_state.static.dex.toString()} not supported`,
+            )
         }
+
         switch (dex.displayId) {
-        case DexId.FlowX: {
-            return await this.flowxOpenPositionActionService.confirm(params)
-        }
-        case DexId.Cetus: {
-            return await this.cetusOpenPositionActionService.confirm(params)
-        }
-        case DexId.Turbos: {
-            return await this.turbosOpenPositionActionService.confirm(params)
-        }
-        case DexId.Momentum: {
-            return await this.momentumOpenPositionActionService.confirm(params)
-        }
-        case DexId.Raydium: {
-            return await this.raydiumOpenPositionActionService.confirm(params)
-        }
-        case DexId.Orca: {
-            return await this.orcaOpenPositionActionService.confirm(params)
-        }
-        case DexId.Meteora: {
-            return await this.meteoraOpenPositionActionService.confirm(params)
-        }
-        default: {
-            throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported for confirm`)
-        }
+        case DexId.FlowX:
+            return this.flowxOpenPositionActionService.confirm(params)
+        case DexId.Cetus:
+            return this.cetusOpenPositionActionService.confirm(params)
+        case DexId.Turbos:
+            return this.turbosOpenPositionActionService.confirm(params)
+        case DexId.Momentum:
+            return this.momentumOpenPositionActionService.confirm(params)
+        case DexId.Raydium:
+            return this.raydiumOpenPositionActionService.confirm(params)
+        case DexId.Orca:
+            return this.orcaOpenPositionActionService.confirm(params)
+        case DexId.Meteora:
+            return this.meteoraOpenPositionActionService.confirm(params)
+        default:
+            throw new DexNotImplementedException(
+                `DEX ${_state.static.dex.toString()} not supported for confirm`,
+            )
         }
     }
 }

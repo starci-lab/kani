@@ -6,8 +6,8 @@ import { PoolMathService } from "./pool.service"
 import { EnsureMathService } from "./ensure.service"
 import { FeeService } from "./fee.service"
 import { SwapMathService } from "./swap.service"
-import { ProfitabilityMathService } from "./profitability.service"
 import { QuoteRatioService } from "./quote-ratio.service"
+import { PositionValueMathService } from "./position-value.service"
 @Module({
     providers: [
         TickMathService,
@@ -16,8 +16,8 @@ import { QuoteRatioService } from "./quote-ratio.service"
         EnsureMathService,
         FeeService,
         SwapMathService,
-        ProfitabilityMathService,
         QuoteRatioService,
+        PositionValueMathService,
     ],
     exports: [
         TickMathService,
@@ -26,8 +26,8 @@ import { QuoteRatioService } from "./quote-ratio.service"
         EnsureMathService,
         FeeService,
         SwapMathService,
-        ProfitabilityMathService,
         QuoteRatioService,
+        PositionValueMathService,
     ],
 })
 export class MathModule extends ConfigurableModuleClass {}

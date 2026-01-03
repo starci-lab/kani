@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
-import { GetPriceResponse, PythPriceService, PythUtilsService } from "@modules/blockchains"
+import { GetPriceResponse, PythPriceService, PythUtilsService, BalanceEligibilityService } from "@modules/blockchains"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { AsyncService, DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -8,47 +8,49 @@ import { sleep } from "@utils"
 import { envConfig } from "@modules/env"
 
 export interface DiagnosePythPriceParams {
-  pythId: string;
+  pythId: string
 }
-/**
- * Service responsible for diagnosing Pyth price feeds.
- * The application will terminate if any feed is unhealthy after retries.
- */
+
 /**
  * PythPriceDiagnosticService
  *
- * Acts as a startup safety gate for all Pyth price feeds.
+ * Acts as a startup availability gate for Pyth price feeds.
  *
  * This service runs during application bootstrap and verifies that:
- *  - All configured Pyth feeds are reachable
- *  - All associated token prices are present
+ *  - Pyth feeds are reachable
+ *  - Associated token prices can be fetched (existence check)
  *
- * If any feed remains unhealthy after the configured number of retries,
- * the application will terminate immediately to prevent running
- * with invalid or stale price data.
+ * Price freshness is observed and logged but does NOT currently
+ * affect the diagnostic outcome.
+ *
+ * If any feed fails to return price data after the configured retries,
+ * the application will terminate immediately to avoid running without
+ * required oracle inputs.
  */
 @Injectable()
 export class PythPriceDiagnosticService implements OnModuleInit {
-    private pythIds: string[] = []
+    private pythIds: Array<string> = []
 
     constructor(
     private readonly pythUtilsService: PythUtilsService,
     private readonly pythPriceService: PythPriceService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly asyncService: AsyncService,
+    private readonly dayjsService: DayjsService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
-    private readonly dayjsService: DayjsService,
     private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
+    private readonly balanceEligibilityService: BalanceEligibilityService,
     ) {}
 
     /**
    * Application bootstrap hook.
    *
-   * Performs a full diagnostic check for every configured Pyth feed
-   * before the service is marked as READY.
+   * Performs an availability check for all configured Pyth feeds
+   * before marking the service as READY.
    *
-   * Readiness will only be set once all feeds have passed diagnostics.
+   * Readiness is only set once all feeds are confirmed to be reachable
+   * and able to return price data.
    */
     async onModuleInit(): Promise<void> {
         this.readinessWatcherFactoryService.createWatcher(
@@ -71,14 +73,14 @@ export class PythPriceDiagnosticService implements OnModuleInit {
     }
 
     /**
-   * Retries the diagnostic check for a single Pyth feed.
+   * Retries the availability check for a single Pyth feed.
    *
    * The check is retried up to `maxRetries` times with a fixed delay
-   * between attempts. This allows transient issues (network warm-up,
-   * cache population, RPC delays) to recover.
+   * between attempts to tolerate transient startup issues
+   * (RPC warm-up, cache population, temporary network errors).
    *
-   * If the feed is still unhealthy after all retries, the process
-   * is terminated immediately (fail-fast).
+   * If the feed remains unavailable after all retries,
+   * the process is terminated (fail-fast).
    */
     private async retryDiagnose(pythId: string): Promise<boolean> {
         const { maxRetries, delayMs } = envConfig().diagnostics.pythPrice
@@ -101,18 +103,19 @@ export class PythPriceDiagnosticService implements OnModuleInit {
             }
         }
 
-        // The application must not run with broken or stale oracle data.
+        // The application must not run without required oracle data.
         process.exit(1)
     }
 
     /**
-   * Diagnoses a single Pyth feed by validating all associated token prices.
+   * Diagnoses a single Pyth feed by checking the availability
+   * of all associated token prices.
    *
-   * A feed is considered UNHEALTHY if:
-   *  - Any token price is missing (null / undefined)
-   *  - Any price snapshot is older than the configured max age
+   * A feed is considered UNAVAILABLE if:
+   *  - Any token price cannot be fetched (null / undefined)
    *
-   * The feed is only considered healthy if ALL token prices pass validation.
+   * Price freshness is logged for observability but does not
+   * currently influence the diagnostic result.
    */
     async diagnose({ pythId }: DiagnosePythPriceParams): Promise<boolean> {
         const tokens = this.primaryMemoryStorageService.tokens.filter(
@@ -125,25 +128,18 @@ export class PythPriceDiagnosticService implements OnModuleInit {
 
         const responses = await this.asyncService.allIgnoreError(promises)
 
-        const now = this.dayjsService.now()
-        const maxAgeMs = envConfig().diagnostics.pythPrice.maxAgeMs
-
         const hasInvalidResponse = responses.some(response => {
-            // Missing price data is considered a hard failure
+            // Missing price data is considered a hard availability failure
             if (!response) {
                 return true
             }
 
-            // Price snapshot must be recent enough to be considered valid
-            const ageMs = now.diff(response.snapshotAt, "millisecond")
-
-            if (ageMs > maxAgeMs) {
-                this.logger.warn(WinstonLog.PythPriceTooOld, {
+            // Price staleness is observed but not enforced
+            if (this.balanceEligibilityService.isStalePrice(response)) {
+                this.logger.warn(WinstonLog.PythPriceDiagnosticWarning, {
                     tokenIds: tokens.map(token => token.displayId),
-                    ageMs,
+                    ageMs: this.dayjsService.now().diff(response.snapshotAt, "millisecond"),
                 })
-                // we do not throw an error here, because we want to continue the application
-                // price is too old not critical
             }
 
             return false

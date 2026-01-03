@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import Decimal from "decimal.js"
 import { PythOraclePriceService } from "../pyth"
-import { BotSchema, PrimaryMemoryStorageService, TokenId } from "@modules/databases"
+import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenType } from "@typedefs"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
@@ -11,7 +11,7 @@ import { SpotPriceService } from "../spot"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 
 @Injectable()
-export class ProfitabilityMathService {
+export class PositionValueMathService {
     constructor(
         private readonly pythOraclePriceService: PythOraclePriceService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -19,21 +19,20 @@ export class ProfitabilityMathService {
         private readonly spotPriceService: SpotPriceService,
     ) {}
 
-    public async calculateProfitability(
+    public async calculatePositionValue(
         {
             before,
             after,
-            targetTokenId,
-            quoteTokenId,
             bot,
+            isOpen,
             state,
-        }: CalculateProfitabilityParams
-    ): Promise<CalculateProfitabilityResponse> {
-        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === targetTokenId)
+        }: CalculatePositionValueParams
+    ): Promise<CalculatePositionValueResponse> {
+        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException("Target token not found")
         }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === quoteTokenId)
+        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.displayId === bot.quoteToken.toString())
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
         }
@@ -91,11 +90,11 @@ export class ProfitabilityMathService {
         )
         // priceA/priceB
         const beforeTargetBalanceAmountInTarget = computeDenomination(
-            before.targetTokenBalanceAmount, 
+            before.targetBalanceAmount, 
             targetToken.decimals
         )
         const beforeQuoteBalanceAmountInTarget = computeDenomination(
-            before.quoteTokenBalanceAmount, 
+            before.quoteBalanceAmount, 
             quoteToken.decimals
         ).mul(quoteOraclePrice)
         const beforeGasBalanceAmountInTarget = computeDenomination(
@@ -106,11 +105,11 @@ export class ProfitabilityMathService {
             beforeQuoteBalanceAmountInTarget
         ).add(beforeGasBalanceAmountInTarget)
         const afterTargetBalanceAmountInTarget = computeDenomination(
-            after.targetTokenBalanceAmount, 
+            after.targetBalanceAmount, 
             targetToken.decimals
         )
         const afterQuoteBalanceAmountInTarget = computeDenomination(
-            after.quoteTokenBalanceAmount, 
+            after.quoteBalanceAmount, 
             quoteToken.decimals
         ).mul(quoteOraclePrice)
         const afterGasBalanceAmountInTarget = computeDenomination(
@@ -119,32 +118,29 @@ export class ProfitabilityMathService {
         ).mul(gasOraclePrice)
         const afterTotalBalanceAmountInTarget = afterTargetBalanceAmountInTarget.add(
             afterQuoteBalanceAmountInTarget
-        ).add(afterGasBalanceAmountInTarget)          
-        const pnl = afterTotalBalanceAmountInTarget.sub(beforeTotalBalanceAmountInTarget)
-        const roi = pnl.div(beforeTotalBalanceAmountInTarget)
+        ).add(afterGasBalanceAmountInTarget)      
+        const diffInTarget = afterTotalBalanceAmountInTarget.sub(beforeTotalBalanceAmountInTarget)
+        const positionValue = isOpen ? diffInTarget.neg() : diffInTarget
         return {
-            roi,
-            pnl,
+            positionValue,
         }
     }
 }
 
-export interface CalculateProfitabilityParams {
-    before: CalculateProfitability,
-    after: CalculateProfitability,
-    targetTokenId: TokenId,
-    quoteTokenId: TokenId,
+export interface CalculatePositionValueParams {
+    before: CalculatePositionValue,
+    after: CalculatePositionValue,
     bot: BotSchema,
+    isOpen: boolean,
     state: LiquidityPoolState | DlmmLiquidityPoolState,
 }
 
-export interface CalculateProfitability {
-    targetTokenBalanceAmount: BN
-    quoteTokenBalanceAmount: BN
+export interface CalculatePositionValue {
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
     gasBalanceAmount: BN
 }
 
-export interface CalculateProfitabilityResponse {
-    roi: Decimal
-    pnl: Decimal
+export interface CalculatePositionValueResponse {
+    positionValue: Decimal
 }

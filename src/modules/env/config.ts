@@ -149,18 +149,21 @@ export const envConfig = () => ({
     },
     cache: {
         ttl: {
+            spotPrice: parseInt(process.env.CACHE_SPOT_PRICE_TTL || ms("1m").toString(), 10), // 1 minute
             sealedJwtSecretKey: parseInt(process.env.CACHE_SEALED_JWT_SECRET_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             sealedAesKey: parseInt(process.env.CACHE_SEALED_AES_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
+        },
+        stale: {
+            priceMaxAgeMs: parseInt(process.env.CACHE_STALE_PRICE_MAX_AGE_MS || ms("10s").toString(), 10), // 10s
         }
     }, 
     diagnostics: {
         pythPrice: {
             maxRetries: parseInt(process.env.DIAGNOSTICS_PYTH_PRICE_MAX_RETRIES || "10", 10),
             delayMs: parseInt(process.env.DIAGNOSTICS_PYTH_PRICE_DELAY_MS || "1000", 10),
-            maxAgeMs: parseInt(process.env.DIAGNOSTICS_MAX_AGE_MS || ms("10s").toString(), 10),
         },
     },
     ejection: {

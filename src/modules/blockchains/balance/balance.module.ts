@@ -6,8 +6,8 @@ import { BalanceService } from "./balance.service"
 import { SwapMathService } from "../math/swap.service"
 import { GasStatusService } from "./gas-status.service"
 import { QuoteRatioService } from "../math/quote-ratio.service"
-import { ProfitabilityMathService } from "../math/profitability.service"
 import { SuiBalanceService } from "./sui.service"
+import { BalanceEligibilityService } from "./eligibility.service"
 
 @Module({
     providers: [
@@ -17,15 +17,15 @@ import { SuiBalanceService } from "./sui.service"
         SwapMathService,
         GasStatusService,
         QuoteRatioService,
-        ProfitabilityMathService,
+        BalanceEligibilityService,
     ],
     exports: [
         BalanceService,
         SwapMathService,
         QuoteRatioService,
-        ProfitabilityMathService,
         GasStatusService,
         SolanaBalanceService,
+        BalanceEligibilityService,
     ],
 })
-export class BalancesModule extends ConfigurableModuleClass {}
+export class BalanceModule extends ConfigurableModuleClass {}
