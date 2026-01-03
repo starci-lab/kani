@@ -13,6 +13,7 @@ import { ResumeToken } from "mongodb"
 import { EventEmitter2 } from "@nestjs/event-emitter"
 import { EventName } from "@modules/event"
 import Decimal from "decimal.js"
+import { PythPriceDiagnosticService } from "../diagnostics"
 
 @Injectable()
 export class UsersLoaderService implements OnModuleInit {
@@ -38,6 +39,7 @@ export class UsersLoaderService implements OnModuleInit {
 
     // load users from database
     async load(): Promise<void> {
+        await this.readinessWatcherFactoryService.waitUntilReady(PythPriceDiagnosticService.name)
         const executorId = envConfig().botExecutor.executorId
         // get the executor
         const executor = await this.connection

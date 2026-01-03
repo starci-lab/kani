@@ -1,5 +1,6 @@
 import { ChainId } from "@typedefs"
 import BN from "bn.js"
+import { Dayjs } from "dayjs"
 
 export enum CacheKey {
     SealedAesKey = "sealedAesKey",
@@ -35,6 +36,7 @@ export interface SpotPriceCacheResult {
 
 export interface PythTokenPriceCacheResult {
     price: number
+    snapshotAt: Dayjs
 }
 
 export interface DynamicLiquidityPoolInfoCacheResult {

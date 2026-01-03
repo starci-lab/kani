@@ -1,4 +1,7 @@
 export enum WinstonLog {
+    PythPriceDiagnosticSuccess = "Pyth.Price.Diagnostic.Success",
+    PythPriceDiagnosticWarning = "Pyth.Price.Diagnostic.Warning",
+    PythPriceTooOld = "Pyth.Price.Too.Old",
     PythPricesFetched = "Pyth.Prices.Fetched",
     P2CBalancersInitialized = "P2C.Balancers.Initialized",
     FetchClmmPoolError = "Fetch.Clmm.Pool.Error",

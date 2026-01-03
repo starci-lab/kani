@@ -15,8 +15,8 @@ export class PythOraclePriceService {
         }
         : GetPythOraclePriceParams
     ) {
-        const priceA = await this.pythPriceService.getPrice({ tokenId: tokenA })
-        const priceB = await this.pythPriceService.getPrice({ tokenId: tokenB })
+        const { price: priceA } = await this.pythPriceService.getPrice({ tokenId: tokenA })
+        const { price: priceB } = await this.pythPriceService.getPrice({ tokenId: tokenB })
         return priceA.div(priceB)
     }
 }

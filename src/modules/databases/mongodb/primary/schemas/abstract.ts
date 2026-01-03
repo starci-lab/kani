@@ -5,7 +5,7 @@ import { Document } from "mongoose"
 @ObjectType({
     isAbstract: true,
     description: "The abstract schema for all objects"
-})
+}) 
 export abstract class AbstractSchema extends Document {
     // field to use graphql
     @Field(() => ID, {

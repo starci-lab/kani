@@ -11,6 +11,7 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"
 import { TokenId } from "@modules/databases"
+import { Dayjs } from "dayjs"
 
 @Injectable()
 export class PythPriceService {
@@ -26,19 +27,28 @@ export class PythPriceService {
             tokenId
         }
         : GetPriceParams
-    ) {
+    ): Promise<GetPriceResponse> {
         const key = createCacheKey(CacheKey.PythTokenPrice, tokenId)
         const priceCacheResult = await this.cacheManager.get<string>(key)
         if (!priceCacheResult) {
             throw new PythTokenPriceNotFoundException(tokenId) 
         }
-        const price = new Decimal(
-            this.superjson.parse<PythTokenPriceCacheResult>(priceCacheResult)?.price ?? 0
-        )
-        return price
+        const cacheResult = this.superjson.parse<PythTokenPriceCacheResult>(priceCacheResult)
+        if (!cacheResult) {
+            throw new PythTokenPriceNotFoundException(tokenId)
+        }
+        return {
+            price: new Decimal(cacheResult.price),
+            snapshotAt: cacheResult.snapshotAt,
+        }
     }
 }
 
 export interface GetPriceParams {
     tokenId: TokenId
+}
+
+export interface GetPriceResponse {
+    price: Decimal
+    snapshotAt: Dayjs
 }

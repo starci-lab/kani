@@ -3,6 +3,7 @@ import SuperJSON from "superjson"
 import BN from "bn.js"
 import { PublicKey } from "@solana/web3.js"
 import Decimal from "decimal.js"
+import dayjs, { Dayjs} from "dayjs"
 export const SUPERJSON = "SUPERJSON"
 
 export const InjectSuperJson = () => Inject(SUPERJSON)
@@ -45,6 +46,16 @@ export const createSuperJsonServiceProvider = (): Provider<SuperJSON> => ({
                 deserialize: (v) => new Decimal(v),
             },
             "decimal.js" // identifier
+        )
+        superjson.registerCustom<Dayjs, string>(
+            {
+                isApplicable: (v): v is Dayjs => {
+                    return dayjs.isDayjs(v)
+                },
+                serialize: (v) => v.toISOString(),
+                deserialize: (v) => dayjs(v),
+            },
+            "dayjs" // identifier
         )
         return superjson
     },

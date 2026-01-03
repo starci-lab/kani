@@ -1,4 +1,5 @@
 export * from "./pyth.module"
-export * from "./pyth.service"
+export * from "./pyth-subscriptions.service"
 export * from "./oracle-price.service"
 export * from "./price.service"
+export * from "./pyth-utils.service"

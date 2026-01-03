@@ -4,6 +4,7 @@ import { LoadersModule } from "./loaders"
 import { SubscriptionsModule } from "./subscriptions"
 import { ProcessorsModule } from "./processors"
 import { WorkersModule } from "./workers"
+import { DiagnosticsModule } from "./diagnostics"
 
 @Module({})
 export class ExecutorModule extends ConfigurableModuleClass {
@@ -14,6 +15,9 @@ export class ExecutorModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = []
         return {
             imports: [
+                DiagnosticsModule.register({
+                    isGlobal: true,
+                }),
                 LoadersModule.register({
                     isGlobal: true,
                 }),

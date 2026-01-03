@@ -1,9 +1,10 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./pyth.module-definition"
 import { createHermesClientProvider } from "./pyth.providers"
-import { PythService } from "./pyth.service"
+import { PythSubscriptionsService } from "./pyth-subscriptions.service"
 import { PythOraclePriceService } from "./oracle-price.service"
 import { PythPriceService } from "./price.service"
+import { PythUtilsService } from "./pyth-utils.service"
 
 @Module({})
 export class PythModule extends ConfigurableModuleClass {
@@ -12,11 +13,12 @@ export class PythModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             PythOraclePriceService,
             PythPriceService,
+            PythUtilsService,
         ]
         const utilities: Array<Provider> = []
         if (!options.utilitiesOnly) {
             utilities.push(createHermesClientProvider())
-            utilities.push(PythService)
+            utilities.push(PythSubscriptionsService)
         }
         return {
             ...dynamicModule,

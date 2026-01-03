@@ -17,7 +17,8 @@ import {
 import {
     AsyncService, 
     InjectSuperJson,  
-    RetryService 
+    RetryService,
+    DayjsService,
 } from "@modules/mixin"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
@@ -25,6 +26,7 @@ import { chunkArray } from "@utils"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { PythUtilsService } from "./pyth-utils.service"
 
 interface PythTokenPrice {
     tokenId: TokenId
@@ -32,7 +34,7 @@ interface PythTokenPrice {
 }
 
 @Injectable()
-export class PythService implements OnApplicationBootstrap {
+export class PythSubscriptionsService implements OnApplicationBootstrap {
     constructor(
         @InjectHermesClient() private readonly hermesClient: HermesClient,
         @InjectRedisCache()
@@ -43,11 +45,14 @@ export class PythService implements OnApplicationBootstrap {
         private readonly eventEmitterService: EventEmitterService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
+        private readonly pythUtilsService: PythUtilsService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
+        // fetch the prices and subscribe to the price updates
         this.fetchPrices().then(() => {
             // then we subscribe to the price updates
             this.subscribe()
@@ -62,7 +67,7 @@ export class PythService implements OnApplicationBootstrap {
         if (!tokens.length) {
             throw new TokenListIsEmptyException("No Pyth tokens found for mainnet")
         }
-        const feedIds = [...new Set(tokens.map(token => token.pythFeedId!))]
+        const feedIds = this.pythUtilsService.getPythIds()
         // we split the feed ids into chunks of 5
         const chunks = chunkArray(feedIds, 5)
         const prices = await this.asyncService.allIgnoreError(
@@ -85,7 +90,7 @@ export class PythService implements OnApplicationBootstrap {
                 feedId: data?.id ?? "",
                 price: price.toNumber(),
             }
-        })
+        }) 
         this.logger.info(
             WinstonLog.PythPricesFetched,
             {
@@ -115,10 +120,12 @@ export class PythService implements OnApplicationBootstrap {
                             ),
                             value: this.superjson.stringify({
                                 price: data.price,
+                                snapshotAt: this.dayjsService.now(),
                             }),
-                            ttl: envConfig().cache.ttl.pythTokenPrice,
+                            ttl: 0, // 0 means no expiration
                         }
-                    }),
+                    }
+                ),
             ),
             // emit the event
             ...tokenList.map(
@@ -203,11 +210,12 @@ export class PythService implements OnApplicationBootstrap {
                                                         ),
                                                         this.superjson.stringify({
                                                             price: price.toNumber(),
+                                                            snapshotAt: this.dayjsService.now(),
                                                         }),
-                                                        envConfig().cache.ttl.pythTokenPrice
+                                                        0, // 0 means no expiration
                                                     )}
                                                 )()
-                                            )
+                                            ) 
                                             // emit the event
                                             promises.push(
                                                 (async () => {

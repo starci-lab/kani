@@ -148,18 +148,21 @@ export const envConfig = () => ({
         },
     },
     cache: {
-        memoryTtl: parseInt(process.env.CACHE_MEMORY_TTL || "3600000", 10), // 3600s
-        redisTtl: parseInt(process.env.CACHE_REDIS_TTL || "3600000", 10), // 3600s
         ttl: {
             sealedJwtSecretKey: parseInt(process.env.CACHE_SEALED_JWT_SECRET_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             sealedAesKey: parseInt(process.env.CACHE_SEALED_AES_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
-            pythTokenPrice: parseInt(process.env.CACHE_PYTH_TOKEN_PRICE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
-            spotPrice: parseInt(process.env.CACHE_SPOT_PRICE_TTL || ms("1m").toString(), 10), // 60s
         }
     }, 
+    diagnostics: {
+        pythPrice: {
+            maxRetries: parseInt(process.env.DIAGNOSTICS_PYTH_PRICE_MAX_RETRIES || "10", 10),
+            delayMs: parseInt(process.env.DIAGNOSTICS_PYTH_PRICE_DELAY_MS || "1000", 10),
+            maxAgeMs: parseInt(process.env.DIAGNOSTICS_MAX_AGE_MS || ms("10s").toString(), 10),
+        },
+    },
     ejection: {
         rpcTtl: parseInt(process.env.EJECTION_RPC_TTL || ms("1d").toString(), 10), // 1 day
     },
