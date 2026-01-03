@@ -117,7 +117,9 @@ export class PythPriceDiagnosticService implements OnModuleInit {
    * Price freshness is logged for observability but does not
    * currently influence the diagnostic result.
    */
-    async diagnose({ pythId }: DiagnosePythPriceParams): Promise<boolean> {
+    async diagnose(
+        { pythId }: DiagnosePythPriceParams
+    ): Promise<boolean> {
         const tokens = this.primaryMemoryStorageService.tokens.filter(
             token => token.pythFeedId === pythId,
         )
@@ -125,25 +127,25 @@ export class PythPriceDiagnosticService implements OnModuleInit {
         const promises: Array<Promise<GetPriceResponse>> = tokens.map(token =>
             this.pythPriceService.getPrice({ tokenId: token.displayId }),
         )
-
+        // fetch prices in parallel
         const responses = await this.asyncService.allIgnoreError(promises)
-
-        const hasInvalidResponse = responses.some(response => {
+        // check if any price is stale
+        const hasInvalidResponse = responses.some(
+            response => {
             // Missing price data is considered a hard availability failure
-            if (!response) {
-                return true
-            }
+                if (!response) {
+                    return true
+                }
 
-            // Price staleness is observed but not enforced
-            if (this.balanceEligibilityService.isStalePrice(response)) {
-                this.logger.warn(WinstonLog.PythPriceDiagnosticWarning, {
-                    tokenIds: tokens.map(token => token.displayId),
-                    ageMs: this.dayjsService.now().diff(response.snapshotAt, "millisecond"),
-                })
-            }
-
-            return false
-        })
+                // Price staleness is observed but not enforced
+                if (this.balanceEligibilityService.isStalePrice(response)) {
+                    this.logger.warn(WinstonLog.PythPriceDiagnosticWarning, {
+                        tokenIds: tokens.map(token => token.displayId),
+                        ageMs: this.dayjsService.now().diff(response.snapshotAt, "millisecond"),
+                    })
+                }
+                return false
+            })
 
         return !hasInvalidResponse
     }
