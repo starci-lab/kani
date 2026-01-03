@@ -143,7 +143,7 @@ export class BalanceEligibilityService {
                 quoteBalanceAmountDecimal.mul(quotePrice.price)
             const totalGasBalanceAmountInUsd =
                 gasBalanceAmountDecimal.mul(gasPrice.price)
-
+                
             const totalBalanceAmountInUsd =
                 totalTargetBalanceAmountInUsd
                     .add(totalQuoteBalanceAmountInUsd)

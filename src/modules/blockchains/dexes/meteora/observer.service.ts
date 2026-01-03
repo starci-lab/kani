@@ -117,7 +117,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
               (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
           )
           if (!liquidityPool)
-              throw new LiquidityPoolNotFoundException(liquidityPoolId)
+              throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
 
           const accountInfo = await this.rpcExecutorService.withSolanaRpc({
               accessType: RpcAccessType.Read,
@@ -132,7 +132,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
               },
           })
           if (!accountInfo || !accountInfo.exists)
-              throw new LiquidityPoolNotFoundException(liquidityPoolId)
+              throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
           const state = LbPair.struct.read(Buffer.from(accountInfo.data), 8)
           return await this.handlePoolStateUpdate(liquidityPoolId, state)
       } catch (error) {
@@ -152,7 +152,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
               (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
           )
           if (!liquidityPool)
-              throw new LiquidityPoolNotFoundException(liquidityPoolId)
+              throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
           // infinite loop to observe the pool
           while (true) {
               await this.rpcExecutorService.withSolanaRpc({

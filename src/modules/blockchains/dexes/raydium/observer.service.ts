@@ -122,14 +122,14 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             const liquidityPool = this.memoryStorageService.liquidityPools.find(
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Read,
                 callback: async ({ rpc }) => {
                     const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
                         commitment: "confirmed",
                     })
-                    if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+                    if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
                     const [state] = PoolState.struct.deserialize(Buffer.from(accountInfo.data), 8)
                     return await this.handlePoolStateUpdate(liquidityPoolId, state)
                 },
@@ -153,7 +153,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             const liquidityPool = this.memoryStorageService.liquidityPools.find(
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Read,
                 requiredWs: true,

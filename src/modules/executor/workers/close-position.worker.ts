@@ -27,7 +27,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"   
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import { SolanaTx, PositionValueMathService } from "@modules/blockchains"
 import {
     ActivePositionNotFoundException,
@@ -37,6 +37,7 @@ import {
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"
+import { envConfig } from "@modules/env"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -69,6 +70,7 @@ export class ClosePositionWorker extends WorkerHost {
         private readonly positionValueMathService: PositionValueMathService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {
         super()
     }
@@ -274,18 +276,28 @@ export class ClosePositionWorker extends WorkerHost {
         if (isPermanentFailure) {
             this.logger.error(WinstonLog.ClosePositionFailed, {
                 botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
                 jobId,
                 error: error.message,
             })
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
-                { $set: { status: JobStatus.Failed } }
+                { 
+                    $set: { 
+                        status: JobStatus.Failed,
+                        processedAt: this.dayjsService.now().toDate() 
+                    },
+                    $inc: {
+                        retryCount: 1,
+                    },
+                }
             )
             mutex.release()
         }
         this.logger.warn(
             WinstonLog.ClosePositionRetrying, {
                 botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
                 jobId,
                 error: error.message,
             })
@@ -302,18 +314,25 @@ export class ClosePositionWorker extends WorkerHost {
             }),
         )
         this.eventEmitter.emit(
-            createEventName(EventName.PositionClosed, {
-                botId: bot.id,
-            }),
+            createEventName(
+                EventName.PositionClosed, {
+                    botId: bot.id,
+                }),
         )
-        this.logger.info(WinstonLog.ClosePositionSuccess, {
-            botId: bot.id,
-            jobId,
-            liquidityPoolId: _state.static.displayId,
-        })
+        this.logger.info(
+            WinstonLog.ClosePositionSuccess, {
+                botId: bot.id,
+                jobId,
+                liquidityPoolId: _state.static.displayId,
+            })
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             { _id: jobId },
-            { $set: { status: JobStatus.Completed } }
+            {
+                $set: { 
+                    status: JobStatus.Completed, 
+                    processedAt: this.dayjsService.now().toDate() 
+                } 
+            }
         )
         mutex.release()
     }

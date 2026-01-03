@@ -105,9 +105,10 @@ export class BalanceService implements IBalanceService {
         ).create(
             [
                 {
-                    botId: bot.id,
+                    bot: bot.id,
                     type: JobType.ReconcileBalance,
                     status: JobStatus.Pending,
+                    executor: envConfig().botExecutor.executorId,
                 }
             ])
         await this.reconcileBalanceQueue.add(

@@ -5,6 +5,7 @@ import { SubscriptionsModule } from "./subscriptions"
 import { ProcessorsModule } from "./processors"
 import { WorkersModule } from "./workers"
 import { DiagnosticsModule } from "./diagnostics"
+import { PollerModule } from "./poller"
 
 @Module({})
 export class ExecutorModule extends ConfigurableModuleClass {
@@ -24,6 +25,9 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 SubscriptionsModule.register({
                     isGlobal: true,
                 }), 
+                PollerModule.register({
+                    isGlobal: true,
+                }),
                 ProcessorsModule.register({
                     isGlobal: true,
                 }),

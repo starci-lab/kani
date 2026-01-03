@@ -27,7 +27,7 @@ export class LiquidityPoolStateService {
         const staticLiquidityPool = this.memoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
-        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
         const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
             createCacheKey(
                 CacheKey.DynamicLiquidityPoolInfo, 
@@ -53,7 +53,7 @@ export class LiquidityPoolStateService {
         const staticLiquidityPool = this.memoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
-        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
         const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
             createCacheKey(
                 CacheKey.DynamicDlmmLiquidityPoolInfo,

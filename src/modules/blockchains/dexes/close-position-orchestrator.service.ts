@@ -88,7 +88,7 @@ export class ClosePositionOrchestratorService {
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(liquidityPoolId, `Liquidity pool ${liquidityPoolId} not found`)
+            throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
         }
         /**
          * Fetch latest liquidity pool state
@@ -148,7 +148,8 @@ export class ClosePositionOrchestratorService {
             [
                 {
                     liquidityPool: liquidityPool.id,
-                    botId: bot.id,
+                    bot: bot.id,
+                    executor: envConfig().botExecutor.executorId,
                     type: JobType.ClosePosition,
                     status: JobStatus.Pending,
                 }

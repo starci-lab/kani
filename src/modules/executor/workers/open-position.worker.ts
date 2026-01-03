@@ -21,7 +21,6 @@ import {
     JobSchema,
     JobStatus,
     OpenPositionJobData,
-    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import BN from "bn.js"
@@ -31,9 +30,10 @@ import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { Decimal } from "decimal.js"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
+import { envConfig } from "@modules/env"
 /**
  * Worker responsible for processing open position confirmations.
  *
@@ -57,9 +57,9 @@ export class OpenPositionWorker extends WorkerHost {
     private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
     private readonly asyncService: AsyncService,
     private readonly positionValueMathService: PositionValueMathService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
+    private readonly dayjsService: DayjsService,
     ) {
         super()
     }
@@ -305,24 +305,38 @@ export class OpenPositionWorker extends WorkerHost {
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         if (isPermanentFailure) {
-            this.logger.error(WinstonLog.OpenPositionFailed, {
-                botId: bot.id,
-                jobId,
-                liquidityPoolId: _state.static.displayId,
-                error: error.message,
-            })
+            this.logger.error(
+                WinstonLog.OpenPositionFailed, {
+                    botId: bot.id,
+                    executorId: envConfig().botExecutor.executorId,
+                    jobId,
+                    liquidityPoolId: _state.static.displayId,
+                    error: error.message,
+                    stack: error.stack,
+                }
+            )
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
-                { $set: { status: JobStatus.Failed } }
+                { 
+                    $set: { 
+                        status: JobStatus.Failed,
+                        processedAt: this.dayjsService.now().toDate(),
+                    },
+                    $inc: { 
+                        retryCount: 1 
+                    },
+                }
             )
             mutex.release()
         }
         this.logger.warn(
             WinstonLog.OpenPositionRetrying, {
                 botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
                 liquidityPoolId: _state.static.displayId,
                 jobId,
                 error: error.message,
+                stack: error.stack,
             }
         )
     }
@@ -349,7 +363,12 @@ export class OpenPositionWorker extends WorkerHost {
       })
       await this.connection.model<JobSchema>(JobSchema.name).updateOne(
           { _id: jobId },
-          { $set: { status: JobStatus.Completed } }
+          { 
+              $set: { 
+                  status: JobStatus.Completed, 
+                  processedAt: this.dayjsService.now().toDate() 
+              },
+          }
       )
       mutex.release()
   }

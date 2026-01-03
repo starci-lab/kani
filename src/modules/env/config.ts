@@ -225,6 +225,15 @@ export const envConfig = () => ({
             apiKeys: process.env.API_KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "api-keys.json"),
         },
     },
+    poller: {
+        interval: parseInt(process.env.POLLER_INTERVAL || "10000", 10), // 10s
+        failedJobs: {
+            maxRetries: parseInt(process.env.POLLER_FAILED_JOBS_MAX_RETRIES || "10", 10), // 10 retries for each job
+            lookbackDuration: parseFloat(
+                process.env.POLLER_FAILED_JOBS_LOOKBACK_DURATION ?? ms("6h").toString(),
+            ),
+        },
+    },
     timeConfig: {
         retry: {
             maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call

@@ -8,8 +8,8 @@ import { LiquidityPoolId } from "@modules/databases"
 
 /** Thrown when liquidity pool cannot be found */
 export class LiquidityPoolNotFoundException extends AbstractException {
-    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
-        super(message || `Liquidity pool ${liquidityPoolId} not found`, "LIQUIDITY_POOL_NOT_FOUND_EXCEPTION", { liquidityPoolId })
+    constructor(message?: string) {
+        super(message || "Liquidity pool not found", "LIQUIDITY_POOL_NOT_FOUND_EXCEPTION")
     }
 }
 

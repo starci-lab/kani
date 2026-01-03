@@ -22,7 +22,7 @@ import { BN } from "turbos-clmm-sdk"
 import { SolanaTx } from "@modules/blockchains"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { envConfig } from "@modules/env"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 
 @Worker(
     bullData[
@@ -43,6 +43,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
     ) {
         super()
     }
@@ -228,18 +229,28 @@ export class ReconcileBalanceWorker extends WorkerHost {
         if (isPermanentFailure) {
             this.logger.error(WinstonLog.ReconcileBalanceFailed, {
                 botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
                 jobId,
                 error: error.message,
             })
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
-                { $set: { status: JobStatus.Failed } }
+                { 
+                    $set: { 
+                        status: JobStatus.Failed,
+                        processedAt: this.dayjsService.now().toDate(),
+                    },
+                    $inc: {
+                        retryCount: 1,
+                    },
+                }
             )
             mutex.release()
         }
         this.logger.warn(
             WinstonLog.ReconcileBalanceRetrying, {
                 botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
                 jobId,
                 error: error.message,
                 stack: error.stack,
@@ -262,7 +273,11 @@ export class ReconcileBalanceWorker extends WorkerHost {
         })
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             { _id: jobId },
-            { $set: { status: JobStatus.Completed } }
+            { $set: { 
+                status: JobStatus.Completed,
+                processedAt: this.dayjsService.now().toDate() 
+            } 
+            }
         )
         mutex.release()
     }

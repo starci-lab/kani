@@ -81,8 +81,8 @@ export class ProfitService {
             )
         // compute the profit
         return positions.map(({ _id, latest, prev }) => {
-            const roi24h = new Decimal(latest.positionValueAtClose).div(prev.positionValueAtClose).sub(1).toNumber()
-            const pnl24h = new Decimal(latest.positionValueAtClose).sub(prev.positionValueAtClose).toNumber()
+            const roi24h = new Decimal(latest?.positionValueAtClose ?? 1).div(prev?.positionValueAtClose ?? 1).sub(1).toNumber()
+            const pnl24h = new Decimal(latest?.positionValueAtClose ?? 1).sub(prev?.positionValueAtClose ?? 1).toNumber()
             return {
                 id: _id.toString(),
                 roi24h,

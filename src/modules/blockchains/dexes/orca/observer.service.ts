@@ -115,7 +115,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
                 (pool) => pool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Read,
                 callback: async ({ rpc }) => {
@@ -124,7 +124,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                     })
                 },
             })
-            if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         } catch (error) {
@@ -145,7 +145,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
                 (pool) => pool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             // infinite loop to ensure the connection is alive
             while (true) {
                 await this.rpcExecutorService.withSolanaRpc({

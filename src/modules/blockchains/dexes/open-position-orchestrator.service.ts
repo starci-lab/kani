@@ -250,7 +250,6 @@ export class OpenPositionOrchestratorService {
             )
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException(
-                liquidityPoolId,
                 `Liquidity pool ${liquidityPoolId} not found`,
             )
         }
@@ -367,12 +366,13 @@ export class OpenPositionOrchestratorService {
             [
                 {
                     liquidityPool: liquidityPool.id,
-                    botId: bot.id,
+                    bot: bot.id,
+                    executor: envConfig().botExecutor.executorId,
                     type: JobType.OpenPosition,
                     status: JobStatus.Pending,
                 }
-            ])
-
+            ]
+        )
         /**
          * Enqueue open-position job for async processing.
          */

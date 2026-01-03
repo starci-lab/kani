@@ -35,7 +35,7 @@ export class Bots2Service {
                 user: userLike.id
             }
             )
-        // get the sort order
+            // get the sort order
         const sortOrder = filters.timestampAscending ? 1 : -1
         // sort the bots by createdAt
         query.sort({ createdAt: sortOrder })

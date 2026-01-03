@@ -59,7 +59,7 @@ export class CetusObserverService {
             const liquidityPool = this.memoryStorageService.liquidityPools.find(
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
 
             const objectInfo = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Read,
@@ -72,7 +72,7 @@ export class CetusObserverService {
                     })
                 },
             })
-            if (!objectInfo) throw new LiquidityPoolNotFoundException(liquidityPoolId)
+            if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             if (objectInfo.data?.content?.dataType !== "moveObject")
                 throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
             const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
