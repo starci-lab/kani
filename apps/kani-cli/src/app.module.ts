@@ -8,6 +8,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { MixinModule } from "@modules/mixin"
 import { CryptoModule } from "@modules/crypto"
 import { GcpModule } from "@modules/gcp"
+import { DerivedModule } from "@modules/derived"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -22,7 +23,13 @@ import { GcpModule } from "@modules/gcp"
         FilesystemModule.register({
             isGlobal: true,
         }),
+        GcpModule.register({
+            isGlobal: true,
+        }),
         CryptoModule.register({
+            isGlobal: true,
+        }),
+        DerivedModule.register({
             isGlobal: true,
         }),
         ExecaModule.register({

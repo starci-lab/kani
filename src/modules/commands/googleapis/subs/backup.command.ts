@@ -9,8 +9,9 @@ import { envConfig } from "@modules/env"
 import { DayjsService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { MountStorageService } from "@modules/filesystem"
 import { Readable } from "stream"
+import { DerivedAesKeyService } from "@modules/derived"
+import { Option } from "nest-commander"
 
 @SubCommand({ name: "backup", description: "Backup MongoDB and upload to Google Drive" })
 export class BackupCommand extends CommandRunner {
@@ -20,14 +21,23 @@ export class BackupCommand extends CommandRunner {
     private readonly execaService: ExecaService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly dayjsService: DayjsService,
-    private readonly mountStorageService: MountStorageService,
+    private readonly derivedAesKeyService: DerivedAesKeyService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {
         super()
     }
 
-    async run(): Promise<void> {
+    @Option({
+        flags: "--without-password",
+        description: "Disable AES encryption for the backup archive",
+    })
+    parseWithoutPassword(): boolean {
+        return true
+    }
+
+    async run(_: Array<string>, options: BackupCommandOptions): Promise<void> {
+        const { withoutPassword } = options
         try {
             const { databases, mountPath } = envConfig()
 
@@ -47,7 +57,7 @@ export class BackupCommand extends CommandRunner {
             const dumpDirPath = path.join(backupRoot, dumpDirName)
             const archivePath = path.join(backupRoot, archiveName)
             // the aes password is the same as the one used to encrypt the database
-            const aesPassword = this.mountStorageService.aesKey
+            const aesPassword = this.derivedAesKeyService.key
             // ================================
             // MongoDB dump
             // ================================
@@ -74,7 +84,7 @@ export class BackupCommand extends CommandRunner {
                     "-mx=9",
                     "-mmt=on",
                     "-mhe=on",
-                    `-p${aesPassword}`,
+                    withoutPassword ? "" : `-p${aesPassword}`,
                 ]
             )
             this.logger.info(WinstonLog.SevenZCompressionCompleted, { archiveName })
@@ -120,4 +130,8 @@ export class BackupCommand extends CommandRunner {
             process.exit(1)
         }
     }
+}
+
+interface BackupCommandOptions {
+    withoutPassword?: boolean
 }
