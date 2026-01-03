@@ -4,13 +4,12 @@ import { BackupCommand, RestoreCommand } from "./subs"
 import { Logger } from "@nestjs/common"
 
 @Command({
-    name: "googleapis",
-    aliases: [ "sim" ],
-    description: "manage googleapis actions",
+    name: "db",
+    description: "manage db actions",
     subCommands: [ BackupCommand, RestoreCommand ]
 })
-export class GoogleapisCommand extends CommandRunner {
-    private readonly logger = new Logger(GoogleapisCommand.name)
+export class DatabaseCommand extends CommandRunner {
+    private readonly logger = new Logger(DatabaseCommand.name)
     constructor(
     ) {
         super()

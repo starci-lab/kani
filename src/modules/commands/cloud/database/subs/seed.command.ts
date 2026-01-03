@@ -1,11 +1,10 @@
-
-import { Command, CommandRunner } from "nest-commander"
+import { CommandRunner, SubCommand } from "nest-commander"
 
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { SeedersService } from "@modules/databases"
 
-@Command({
+@SubCommand({
     name: "seed",
     description: "seed the database",
 })

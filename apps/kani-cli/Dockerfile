@@ -79,7 +79,7 @@ RUN echo "#!/usr/bin/env node" | cat - main.js > temp && mv temp main.js \
     && npm install  -g .
 
 # Run the application as a non-root user.
-USER node
+# USER node
 
 # Run the application
 CMD ["sleep", "infinity"]

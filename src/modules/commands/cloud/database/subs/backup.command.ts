@@ -29,7 +29,7 @@ export class BackupCommand extends CommandRunner {
     }
 
     @Option({
-        flags: "--without-password",
+        flags: "-w, --without-password",
         description: "Disable AES encryption for the backup archive",
     })
     parseWithoutPassword(): boolean {
@@ -41,11 +41,13 @@ export class BackupCommand extends CommandRunner {
         try {
             const { databases, mountPath } = envConfig()
 
+            const username = databases.mongoose.primary.username
+            const password = databases.mongoose.primary.password
             const host = this.connection.host
             const port = this.connection.port
             const dbName = this.connection.name
 
-            const mongoUri = `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}@${host}:${port}/${dbName}?authSource=admin`
+            const mongoUri = `mongodb://${username}:${password}@${host}:${port}/${dbName}?authSource=admin`
 
             const backupedAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
 
@@ -61,34 +63,38 @@ export class BackupCommand extends CommandRunner {
             // ================================
             // MongoDB dump
             // ================================
+            const mongodumpArgs: Array<string> = [
+                `--uri=${mongoUri}`,
+                "--readPreference=primary",
+                `--out=${dumpDirPath}`,
+                "--gzip",
+                "--verbose",
+            ]
             await this.execaService.exec(
                 "mongodump", 
-                [
-                    `--uri=${mongoUri}`,
-                    "--readPreference=primary",
-                    `--out=${dumpDirPath}`,
-                    "--gzip",
-                    "--quiet"
-                ]
+                mongodumpArgs
             )
             this.logger.info(WinstonLog.MongoDumpCompleted, { dumpDirName })
             // ================================
             // 7z compress + encrypt
             // ================================
+            const sevenZArgs: Array<string> = [
+                "a",
+                archivePath,
+                dumpDirPath,
+                "-mx=9",
+                "-mmt=on",
+                "-mhe=on",
+            ]
+            if (!withoutPassword) {
+                sevenZArgs.push(`-p${aesPassword}`)
+            }
+            sevenZArgs.push("-y")
             await this.execaService.exec(
                 "7z",
-                [
-                    "a",
-                    archivePath,
-                    dumpDirPath,
-                    "-mx=9",
-                    "-mmt=on",
-                    "-mhe=on",
-                    withoutPassword ? "" : `-p${aesPassword}`,
-                ]
+                sevenZArgs
             )
             this.logger.info(WinstonLog.SevenZCompressionCompleted, { archiveName })
-
             // ================================
             // Cleanup plaintext dump
             // ================================

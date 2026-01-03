@@ -3,17 +3,11 @@ import { Module } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
 } from "./commands.module-definition"
-import { GoogleapisModule } from "./googleapis"
-import { SeedModule } from "./seed"
+import { DatabaseModule } from "./cloud/database"
 import { LocalModule } from "./local"
 @Module({
     imports: [
-        GoogleapisModule.register(
-            {
-                isGlobal: true,
-            }
-        ),
-        SeedModule.register(
+        DatabaseModule.register(
             {
                 isGlobal: true,
             }

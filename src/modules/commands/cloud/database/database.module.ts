@@ -2,14 +2,14 @@
 import { Module } from "@nestjs/common"
 import {
     ConfigurableModuleClass,
-} from "./googleapis.module-definition"
+} from "./database.module-definition"
 import { BackupCommand, RestoreCommand } from "./subs"
-import { GoogleapisCommand } from "./googleapis.command"
+import { DatabaseCommand } from "./database.command"
 @Module({
     providers: [
-        GoogleapisCommand,
+        DatabaseCommand,
         BackupCommand,
         RestoreCommand,
     ],
 })
-export class GoogleapisModule extends ConfigurableModuleClass {}
+export class DatabaseModule extends ConfigurableModuleClass {}

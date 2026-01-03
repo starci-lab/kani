@@ -86,6 +86,8 @@ export class GoogleDriveService {
             fileId: id,
             alt: "media"
         }, { responseType: "stream" })
+        // Create the directory if it doesn't exist
+        await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
         // Create a write stream to save the file
         const dest = fs.createWriteStream(outputPath)
         // Return a promise that resolves when download completes

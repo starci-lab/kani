@@ -3,28 +3,26 @@ import { InjectPrimaryMongoose } from "@modules/databases"
 import { Connection } from "mongoose"
 import { ExecaService } from "@modules/execa"
 import path from "path"
-import fs from "fs/promises"
 import { envConfig } from "@modules/env"
 import { DayjsService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { MountStorageService } from "@modules/filesystem"
 import { GoogleDriveService } from "@modules/gcp"
+import { DerivedAesKeyService } from "@modules/derived"
+import fs from "fs/promises"
 
 @SubCommand({
     name: "restore",
-    description: "Restore MongoDB from Google Drive backup",
+    description: "Restore the database from Google Drive backup",
 })
-export class RestoreCommand extends CommandRunner {
-    private fileId!: string
-  
+export class RestoreCommand extends CommandRunner {   
     constructor(
       @InjectPrimaryMongoose()
       private readonly connection: Connection,
       private readonly execaService: ExecaService,
       private readonly dayjsService: DayjsService,
-      private readonly mountStorageService: MountStorageService,
       private readonly googleDriveService: GoogleDriveService,
+      private readonly derivedAesKeyService: DerivedAesKeyService,
       @InjectWinston()
       private readonly logger: WinstonLogger,
     ) {
@@ -39,56 +37,86 @@ export class RestoreCommand extends CommandRunner {
     parseFileId(fileId: string): string {
         return fileId
     }
+
+    @Option({
+        flags: "-w, --without-password",
+        description: "Disable AES encryption for the backup archive",
+    })
+    parseWithoutPassword(): boolean {
+        return true
+    }
   
-    async run(): Promise<void> {
+    async run(
+        _: Array<string>, 
+        options: RestoreCommandOptions
+    ): Promise<void> {
+        const { fileId, withoutPassword } = options
         try {
             const { databases, mountPath } = envConfig()
-  
-            const mongoUri = `mongodb://${databases.mongoose.primary.username}:${databases.mongoose.primary.password}@${this.connection.host}:${this.connection.port}/${this.connection.name}?authSource=admin`
-
+            
+            const username = databases.mongoose.primary.username
+            const password = databases.mongoose.primary.password
+            const host = this.connection.host
+            const port = this.connection.port
+            const dbName = databases.mongoose.primary.dbName
+            const mongoUri = `mongodb://${username}:${password}@${host}:${port}/?authSource=admin&readPreference=primary`
             const restoreAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
 
             const restoreRoot = mountPath.googleapis.googleDrive
             const archiveName = `restore-${restoreAt}.7z`
             const archivePath = path.join(restoreRoot, archiveName)
+            // delete the archive if it exists
+            if (await fs.stat(archivePath).then(() => true).catch(() => false)) {
+                await fs.rm(archivePath, { force: true })
+            }
             const extractDir = path.join(restoreRoot, `restore-${restoreAt}`)
-  
-            const aesPassword = this.mountStorageService.aesKey
+            const aesPassword = this.derivedAesKeyService.key
   
             // ================================
             // Download from Google Drive
             // ================================
-            await this.googleDriveService.downloadFile(this.fileId, archivePath)
-            this.logger.info(WinstonLog.GoogleDriveFileDownloaded, { fileId: this.fileId, archiveName })
+            await this.googleDriveService.downloadFile(fileId, archivePath)
+            this.logger.info(WinstonLog.GoogleDriveFileDownloaded, { fileId, archiveName })
             // ================================
             // Extract + decrypt
             // ================================
-            await this.execaService.exec("7z", [
+            const sevenZArgs: Array<string> = [
                 "x",
                 archivePath,
                 `-o${extractDir}`,
-                `-p${aesPassword}`,
-                "-y",
-            ])
+            ]
+            if (!withoutPassword) {
+                sevenZArgs.push(`-p${aesPassword}`)
+            }
+            sevenZArgs.push("-y")
+            await this.execaService.exec(
+                "7z", sevenZArgs
+            )
             this.logger.info(WinstonLog.SevenZExtractionCompleted, { archiveName })
             // ================================
             // MongoDB restore
             // ================================
-            await this.execaService.exec("mongorestore", [
+            const [dumpRootDir] = await fs.readdir(extractDir)
+            const dumpRootPath = path.join(extractDir, dumpRootDir)
+            const mongorestoreArgs: Array<string> = [
                 `--uri=${mongoUri}`,
-                extractDir,
+                `--dir=${dumpRootPath}`,
+                `--nsInclude=${dbName}.*`,
                 "--gzip",
                 "--drop",
-                "--quiet",
-            ])
-            this.logger.info(WinstonLog.MongoDBRestoreCompleted, { dbName: this.connection.name, fileId: this.fileId })
+                "--verbose"
+            ]
+            await this.execaService.exec(
+                "mongorestore", mongorestoreArgs
+            )
+            this.logger.info(WinstonLog.MongoDBRestoreCompleted, { dbName: this.connection.name, fileId })
             // ================================
             // Cleanup
             // ================================
             await fs.rm(extractDir, { recursive: true, force: true })
             await fs.rm(archivePath, { force: true })
   
-            this.logger.info(WinstonLog.RestoreCompleted, { archiveName, fileId: this.fileId })
+            this.logger.info(WinstonLog.RestoreCompleted, { archiveName, fileId })
             // exit the app
             process.exit(0)
         } catch (error) {
@@ -98,3 +126,8 @@ export class RestoreCommand extends CommandRunner {
     }
 }
   
+
+interface RestoreCommandOptions {
+    fileId: string
+    withoutPassword: boolean
+}
