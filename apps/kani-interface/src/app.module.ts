@@ -2,10 +2,10 @@ import { Module } from "@nestjs/common"
 import { envConfig, EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
-import { PrimaryMongoDbModule } from "@modules/databases"
+import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { HttpModule } from "@modules/interfaces/http"
 import { PassportModule } from "@modules/passport"
-import { FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
+import { DexesModule, FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { GcpModule } from "@modules/gcp"
 import { CodeModule } from "@modules/code"
@@ -41,6 +41,25 @@ import { DerivedModule } from "@modules/derived"
         }),
         FormulasModule.register({
             isGlobal: true,
+        }),
+        DexesModule.register({
+            isGlobal: true,
+            dexIds: [
+                DexId.Orca,
+                DexId.Raydium,
+                DexId.Meteora,
+                DexId.FlowX,
+                DexId.Cetus,
+                DexId.Turbos,
+                DexId.Momentum,
+                DexId.Saros,
+            ],
+            enabled: {
+                observe: false,
+                action: false,
+                fees: true,
+                analytics: false,
+            },
         }),
         SpotModule.register({
             isGlobal: true,

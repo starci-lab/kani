@@ -43,6 +43,8 @@ export class LiquidityPoolStateService {
                 liquidity: dynamicLiquidityPoolInfo.liquidity,
                 sqrtPriceX64: dynamicLiquidityPoolInfo.sqrtPriceX64,
                 rewards: dynamicLiquidityPoolInfo.rewards,
+                feeGrowthGlobalA: dynamicLiquidityPoolInfo.feeGrowthGlobalA,
+                feeGrowthGlobalB: dynamicLiquidityPoolInfo.feeGrowthGlobalB,
             },
         }
     }

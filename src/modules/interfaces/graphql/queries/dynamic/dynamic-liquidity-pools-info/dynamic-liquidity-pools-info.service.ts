@@ -17,7 +17,6 @@ import { Cache } from "cache-manager"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
-import { TickMathService } from "@modules/blockchains"
 import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
 import Decimal from "decimal.js"
 import { ClmmTickFormulaService } from "@modules/blockchains"
@@ -29,7 +28,6 @@ import { ClmmTickFormulaService } from "@modules/blockchains"
 @Injectable()
 export class DynamicLiquidityPoolsInfoService {
     constructor(
-        private readonly tickMathService: TickMathService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly clmmTickFormulaService: ClmmTickFormulaService,
         @InjectRedisCache()
@@ -48,7 +46,7 @@ export class DynamicLiquidityPoolsInfoService {
             )
             if (!liquidityPool) {
                 // if user pass invalid liquidity pool id, throw an error
-                throw new LiquidityPoolNotFoundException(liquidityPoolId, "Liquidity pool not found")
+                throw new LiquidityPoolNotFoundException(`Liquidity pool not found for id: ${liquidityPoolId}`)
             }
             const tokenAEntity = this.memoryStorageService.tokens.find(
                 token => token.id === liquidityPool.tokenA.toString()

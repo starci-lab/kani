@@ -3,6 +3,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orca.module-definition"
 import { OrcaObserverService } from "./observer.service"
 import { OrcaOpenPositionActionService } from "./open-position-action.service"
 import { OrcaClosePositionActionService } from "./close-position-action.service"
+import { OrcaFeesService } from "./fees.service"
 import { 
     TickArrayService, 
     OpenPositionInstructionService, 
@@ -42,6 +43,12 @@ export class OrcaModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(OrcaAnalyticsService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(OrcaFeesService)
         }
         return {
             ...dynamicModule,

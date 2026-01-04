@@ -44,6 +44,8 @@ export interface DynamicLiquidityPoolInfoCacheResult {
     liquidity: BN
     sqrtPriceX64: BN
     rewards: Array<unknown>
+    feeGrowthGlobalA: BN
+    feeGrowthGlobalB: BN
 }
 
 export interface DynamicDlmmLiquidityPoolInfoCacheResult {

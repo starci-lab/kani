@@ -10,6 +10,7 @@ import { OrcaModule } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { OpenPositionOrchestratorService } from "./open-position-orchestrator.service"
 import { ClosePositionOrchestratorService } from "./close-position-orchestrator.service"
+import { FeesOrchestratorService } from "./fees-orchestrator.service"
 import { MeteoraModule } from "./meteora"
 
 @Module({})
@@ -20,78 +21,94 @@ export class DexesModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const dexModules: Array<DynamicModule> = []
         if (
-            !options.dexes 
-            || options.dexes.find((dex) => dex.dexId === DexId.Cetus)
+            !options.dexIds 
+            || options.dexIds?.includes(DexId.Cetus)
         ) {
             dexModules.push(CetusModule.register({
                 isGlobal: options.isGlobal,
-                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Cetus)?.enabled,
+                enabled: options.enabled,
             }))
         }
         if (
-            !options.dexes
-            || options.dexes.find((dex) => dex.dexId === DexId.Turbos)
+            !options.dexIds
+            || options.dexIds?.includes(DexId.Turbos)
         ) {
             dexModules.push(
                 TurbosModule.register({
                     isGlobal: options.isGlobal,
-                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Turbos)?.enabled,
+                    enabled: options.enabled,
                 }))
         }
         if (
-            !options.dexes
-            || options.dexes.find((dex) => dex.dexId === DexId.Momentum)
+            !options.dexIds
+            || options.dexIds?.includes(DexId.Momentum)
         ) {
             dexModules.push(
                 MomentumModule.register({
                     isGlobal: options.isGlobal,
-                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Momentum)?.enabled,
+                    enabled: options.enabled,
                 }))
         }
         if (
-            !options.dexes
-            || options.dexes.find((dex) => dex.dexId === DexId.FlowX)
+            !options.dexIds
+            || options.dexIds?.includes(DexId.FlowX)
         ) {
             dexModules.push(
                 FlowXModule.register({
                     isGlobal: options.isGlobal,
-                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.FlowX)?.enabled,
+                    enabled: options.enabled,
                 }))
         }
         if (
-            !options.dexes
-            || options.dexes.find((dex) => dex.dexId === DexId.Raydium)
+            !options.dexIds
+            || options.dexIds?.includes(DexId.Raydium)
         ) {
             dexModules.push(
                 RaydiumModule.register({
                     isGlobal: options.isGlobal,
-                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Raydium)?.enabled,
+                    enabled: options.enabled,
                 }))
         }
         if (
-            !options.dexes
-            || options.dexes.find((dex) => dex.dexId === DexId.Orca)
+            !options.dexIds
+            || options.dexIds?.includes(DexId.Orca)
         ) {
             dexModules.push(OrcaModule.register({
                 isGlobal: options.isGlobal,
-                enabled: options.dexes?.find((dex) => dex.dexId === DexId.Orca)?.enabled,
+                enabled: options.enabled,
             }))
         }
         if (
-            !options.dexes
-            || options.dexes.find((dex) => dex.dexId === DexId.Meteora)
+            !options.dexIds
+            || options.dexIds?.includes(DexId.Meteora)
         ) {
             dexModules.push(
                 MeteoraModule.register({
                     isGlobal: options.isGlobal,
-                    enabled: options.dexes?.find((dex) => dex.dexId === DexId.Meteora)?.enabled,
+                    enabled: options.enabled,
                 }))
         }
-        const utilities: Array<Provider> = []
-        if (options.withUtilities) {
-            utilities.push(LiquidityPoolStateService)
-            utilities.push(OpenPositionOrchestratorService)
-            utilities.push(ClosePositionOrchestratorService)
+        const providers: Array<Provider> = [
+            LiquidityPoolStateService,
+        ]
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.observe ?? true))
+        ) {
+            providers.push(LiquidityPoolStateService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
+        ) {
+            providers.push(OpenPositionOrchestratorService)
+            providers.push(ClosePositionOrchestratorService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(FeesOrchestratorService)
         }
 
         return {
@@ -101,11 +118,11 @@ export class DexesModule extends ConfigurableModuleClass {
             ],
             providers: [
                 ...dynamicModule.providers || [],
-                ...utilities,
+                ...providers,
             ],
             exports: [
                 ...dexModules,
-                ...utilities,
+                ...providers,
             ]
         }
     } 

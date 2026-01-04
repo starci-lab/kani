@@ -1,6 +1,7 @@
 import BN from "bn.js"
 import {
     BotSchema,
+    LiquidityPoolId,
 } from "@modules/databases"
 import { Decimal } from "decimal.js"
 import { SolanaTx } from "./types"
@@ -84,4 +85,15 @@ export interface ConfirmOpenPositionParams {
 
 export interface ConfirmOpenPositionResponse {
   liquidity?: BN;
+}
+
+export interface FeesParams {
+  bot: BotSchema
+  liquidityPoolId: LiquidityPoolId
+  state: LiquidityPoolState | DlmmLiquidityPoolState;
+}
+
+export interface FeesResponse {
+  tokenA: Decimal;
+  tokenB: Decimal;
 }

@@ -94,6 +94,8 @@ export class TurbosObserverService {
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),
             rewards: state.rewardInfos,
+            feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
+            feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
         } 
         await this.asyncService.allIgnoreError(
             [
