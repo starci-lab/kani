@@ -85,8 +85,8 @@ export class OpenPositionWorker extends WorkerHost {
                 const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-                // * Step 1: Lấy job từ DB (khi retry)
-                // ! Before each step: throw nếu timeout bị reach (abort)
+                // * Step 1: Get job from DB (when retry)
+                // ! Before each step: throw if timeout is reached (abort)
                 throwIfAborted()
                 // check if the mutex is locked
                 const isRetry = attemptsMade > 0
@@ -118,7 +118,7 @@ export class OpenPositionWorker extends WorkerHost {
                 let positionId: string | undefined = undefined
                 let liquidity: BN | undefined = undefined
                 // * Step 2: Prepare
-                // ! Before each step: throw nếu timeout bị reach (abort)
+                // ! Before each step: throw if timeout is reached (abort)
                 throwIfAborted()
                 if (order < getJobStatusOrder(JobStatus.Prepared)) {
                     // prepare the transaction and get the result
@@ -195,7 +195,7 @@ export class OpenPositionWorker extends WorkerHost {
                     metadata = data?.metadata
                 }
                 // * Step 3: Execute
-                // ! Before each step: throw nếu timeout bị reach (abort)
+                // ! Before each step: throw if timeout is reached (abort)
                 throwIfAborted()
                 if (order < getJobStatusOrder(JobStatus.Executed)) {
                     // execute the transaction
@@ -238,7 +238,7 @@ export class OpenPositionWorker extends WorkerHost {
                 // * Step 4: Confirm
                 // confirm the position
                 // fetch the balances after the position is opened
-                // ! Before each step: throw if timeout bị reach (abort)
+                // ! Before each step: throw if timeout is reached (abort)
                 throwIfAborted()
                 const {
                     targetBalanceAmount: targetBalanceAmountAfterOpen,
@@ -264,8 +264,6 @@ export class OpenPositionWorker extends WorkerHost {
                 isOpen: true,
                 state: _state,
             })
-                // confirm the position
-                throwIfAborted()
                 const { liquidity: confirmedLiquidity } =
             await this.openPositionOrchestratorService.confirm({
                 positionId,

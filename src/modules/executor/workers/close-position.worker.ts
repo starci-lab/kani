@@ -1,4 +1,4 @@
-import { InjectQueue, OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
+import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
 import { MutexKey, getMutexKey, MutexService } from "@modules/lock"
 import { Job, UnrecoverableError } from "bullmq"
@@ -12,7 +12,6 @@ import {
     ClosePositionOrchestratorService,
     LiquidityPoolState,
     DlmmLiquidityPoolState,
-    ReconcileBalancePayload,
 } from "@modules/blockchains"
 import {
     getJobStatusOrder,
@@ -39,8 +38,6 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
-import { Queue } from "bullmq"
-import { v4 } from "uuid"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -81,8 +78,6 @@ export class ClosePositionWorker extends WorkerHost {
     private readonly superjson: SuperJSON,
     private readonly dayjsService: DayjsService,
     private readonly timeoutService: TimeoutService,
-    @InjectQueue(BullQueueName.ReconcileBalance)
-    private readonly reconcileBalanceQueue: Queue<ReconcileBalancePayload>,
     ) {
         super()
     }
@@ -215,9 +210,6 @@ export class ClosePositionWorker extends WorkerHost {
                         "Snapshot balances before open not set",
                     )
                 }
-                // Fetch current balances after close
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
                 const {
                     targetBalanceAmount: targetBalanceAmountAfterClose,
                     quoteBalanceAmount: quoteBalanceAmountAfterClose,
@@ -249,8 +241,6 @@ export class ClosePositionWorker extends WorkerHost {
                     bot.activePosition.positionValueAtOpen || new Decimal(0),
                 )
                 // Start a MongoDB session for transactional updates
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
                 const session = await this.connection.startSession()
                 await session.withTransaction(async () => {
                     if (!bot.activePosition) {
@@ -287,23 +277,13 @@ export class ClosePositionWorker extends WorkerHost {
                         pnl,
                     })
                 })
-                // add a reconcile balance job after the position is closed
-                await this.reconcileBalanceQueue.add(
-                    v4(), {
-                        bot,
-                        jobId,
-                        targetBalanceAmount: targetBalanceAmountAfterClose,
-                        quoteBalanceAmount: quoteBalanceAmountAfterClose,
-                        gasBalanceAmount: gasBalanceAmountAfterClose,
-                    }
-                )
-                // log the reconcile balance job is enqueued
-                this.logger.verbose(
-                    WinstonLog.ReconcileBalanceEnqueued,
-                    {
-                        botId: bot.id,
-                    }
-                )
+                // * Step 5: Enqueue the reconcile balance job
+                // ! Before each step: throw if timeout is reached (abort)
+                throwIfAborted()
+                // enqueue the reconcile balance job
+                await this.balanceService.enqueue({
+                    bot,
+                })
             }, 
             envConfig().bullmq.timeout
         )
