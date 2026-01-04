@@ -139,10 +139,12 @@ export class PythPriceDiagnosticService implements OnModuleInit {
 
                 // Price staleness is observed but not enforced
                 if (this.balanceEligibilityService.isStalePrice(response)) {
-                    this.logger.warn(WinstonLog.PythPriceDiagnosticWarning, {
-                        tokenIds: tokens.map(token => token.displayId),
-                        ageMs: this.dayjsService.now().diff(response.snapshotAt, "millisecond"),
-                    })
+                    this.logger.warn(
+                        WinstonLog.PythPriceDiagnosticWarning, {
+                            tokenIds: tokens.map(token => token.displayId),
+                            ageMs: this.dayjsService.now().diff(response.snapshotAt, "millisecond"),
+                        }
+                    )
                 }
                 return false
             })

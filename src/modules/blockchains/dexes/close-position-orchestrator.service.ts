@@ -120,7 +120,6 @@ export class ClosePositionOrchestratorService {
             bot,
             state,
         })
-
         if (!willExit) {
             this.logger.debug(
                 WinstonLog.ClosePositionNotExitable, {

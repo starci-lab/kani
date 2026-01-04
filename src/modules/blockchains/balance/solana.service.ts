@@ -155,7 +155,7 @@ export class SolanaBalanceService implements IBalanceService {
         this.ensureMathService.ensureActualNotAboveExpected({
             expected: estimatedSwappedAmount,
             actual: batchQuoteResponse.response.amountOut,
-            lowerBound: new Decimal(envConfig().bounds.solana.swap.lowerBound),
+            lowerBound: new Decimal(envConfig().slippage.swap),
         })
         // we fetch the serialized transaction from the aggregator
         const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({

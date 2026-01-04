@@ -27,6 +27,7 @@ export class BullModule extends ConfigurableModuleClass {
                     type: "exponential",
                     delay: envConfig().bullmq.delay,
                 },
+                
             }
         })
         return {

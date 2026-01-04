@@ -22,7 +22,7 @@ import { BN } from "turbos-clmm-sdk"
 import { SolanaTx } from "@modules/blockchains"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { envConfig } from "@modules/env"
-import { AsyncService, DayjsService } from "@modules/mixin"
+import { AsyncService, DayjsService, TimeoutService } from "@modules/mixin"
 
 @Worker(
     bullData[
@@ -44,6 +44,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
+        private readonly timeoutService: TimeoutService,
     ) {
         super()
     }
@@ -58,72 +59,85 @@ export class ReconcileBalanceWorker extends WorkerHost {
         },
         attemptsMade,
     }: Job<ReconcileBalancePayload>) {
-        // check if the mutex is locked
-        const isRetry = attemptsMade > 0
-        let job: JobSchema | null = null
-        if (isRetry) {
-            job = await this.connection
-                .model<JobSchema>(JobSchema.name)
-                .findById(jobId)
-            if (!job) {
-                throw new UnrecoverableError("Job not found")
-            }
-        }
-        const order = getJobStatusOrder(job?.status || JobStatus.Pending)
-        // retrieve the balances
-        let targetBalanceAmount: BN | undefined = providedTargetBalanceAmount
-        let quoteBalanceAmount: BN | undefined = providedQuoteBalanceAmount
-        let gasBalanceAmount: BN | undefined = providedGasBalanceAmount
-        // if the snapshot balances are provided, use them
-        if (
-            !targetBalanceAmount ||
+        await this.timeoutService.withTimeout(
+            async (throwIfAborted) => {
+                // * Step 1: Get job from DB (when retry)
+                // ! Before each step: throw if timeout is reached (abort)
+                throwIfAborted()
+                // check if the mutex is locked
+                const isRetry = attemptsMade > 0
+                let job: JobSchema | null = null
+                if (isRetry) {
+                    job = await this.connection
+                        .model<JobSchema>(JobSchema.name)
+                        .findById(jobId)
+                    if (!job) {
+                        throw new UnrecoverableError("Job not found")
+                    }
+                }
+                const order = getJobStatusOrder(job?.status || JobStatus.Pending)
+
+                // * Step 2: Retrieve balances (use provided snapshot balances or fetch)
+                // ! Before each step: throw if timeout is reached (abort)
+                throwIfAborted()
+                // retrieve the balances
+                let targetBalanceAmount: BN | undefined = providedTargetBalanceAmount
+                let quoteBalanceAmount: BN | undefined = providedQuoteBalanceAmount
+                let gasBalanceAmount: BN | undefined = providedGasBalanceAmount
+                // if the snapshot balances are provided, use them
+                if (
+                    !targetBalanceAmount ||
             !quoteBalanceAmount ||
             !gasBalanceAmount
-        ) {
-            const {
-                targetBalanceAmount: fetchedTargetBalanceAmount,
-                quoteBalanceAmount: fetchedQuoteBalanceAmount,
-                gasBalanceAmount: fetchedGasBalanceAmount,
-            } = await this.balanceService.fetchBalances({
-                bot,
-            })
-            targetBalanceAmount = fetchedTargetBalanceAmount
-            quoteBalanceAmount = fetchedQuoteBalanceAmount
-            gasBalanceAmount = fetchedGasBalanceAmount
-        }
-        if (!targetBalanceAmount || !quoteBalanceAmount || !gasBalanceAmount) {
-            throw new UnrecoverableError(
-                "Target balance amount, quote balance amount, or gas balance amount not found",
-            )
-        }
-        // initialize the transaction hash
-        let txHash = ""
-        let needsSwap = false
-        let tokenIn: TokenId | undefined = undefined
-        let tokenOut: TokenId | undefined = undefined
-        let solanaTx: SolanaTx | undefined = undefined
-        let signatureWithBytes: SignatureWithBytes | undefined = undefined
-        if (order < getJobStatusOrder(JobStatus.Prepared)) {
-            const plan = await this.balanceService.determineReconcileBalancePlan({
-                bot,
-            })
-            // if the plan needs swap, prepare for the swap
-            if (plan.needsSwap) {
-                needsSwap = true
-                // determine the reconcile balance plan
-                if (!plan.tokenIn || !plan.tokenOut) {
-                    throw new UnrecoverableError("Token in or token out not found during swap preparation")
-                }
-                tokenIn = plan.tokenIn.displayId
-                tokenOut = plan.tokenOut.displayId
-                if (
-                    !plan.amountIn ||
-                    !plan.estimatedSwappedAmount
                 ) {
-                    throw new UnrecoverableError("Amount in or estimated swapped amount not found")
+                    const {
+                        targetBalanceAmount: fetchedTargetBalanceAmount,
+                        quoteBalanceAmount: fetchedQuoteBalanceAmount,
+                        gasBalanceAmount: fetchedGasBalanceAmount,
+                    } = await this.balanceService.fetchBalances({
+                        bot,
+                    })
+                    targetBalanceAmount = fetchedTargetBalanceAmount
+                    quoteBalanceAmount = fetchedQuoteBalanceAmount
+                    gasBalanceAmount = fetchedGasBalanceAmount
                 }
-                // prepare for the swap
-                const { txHash: preparedTxHash, solanaTx: preparedSolanaTx, signatureWithBytes: preparedSignatureWithBytes } =
+                if (!targetBalanceAmount || !quoteBalanceAmount || !gasBalanceAmount) {
+                    throw new UnrecoverableError(
+                        "Target balance amount, quote balance amount, or gas balance amount not found",
+                    )
+                }
+                // initialize the transaction hash
+                let txHash = ""
+                let needsSwap = false
+                let tokenIn: TokenId | undefined = undefined
+                let tokenOut: TokenId | undefined = undefined
+                let solanaTx: SolanaTx | undefined = undefined
+                let signatureWithBytes: SignatureWithBytes | undefined = undefined
+
+                // * Step 3: Prepare (determine plan + prepare swap tx if needed)
+                // ! Before each step: throw if timeout is reached (abort)
+                throwIfAborted()
+                if (order < getJobStatusOrder(JobStatus.Prepared)) {
+                    const plan = await this.balanceService.determineReconcileBalancePlan({
+                        bot,
+                    })
+                    // if the plan needs swap, prepare for the swap
+                    if (plan.needsSwap) {
+                        needsSwap = true
+                        // determine the reconcile balance plan
+                        if (!plan.tokenIn || !plan.tokenOut) {
+                            throw new UnrecoverableError("Token in or token out not found during swap preparation")
+                        }
+                        tokenIn = plan.tokenIn.displayId
+                        tokenOut = plan.tokenOut.displayId
+                        if (
+                            !plan.amountIn ||
+                    !plan.estimatedSwappedAmount
+                        ) {
+                            throw new UnrecoverableError("Amount in or estimated swapped amount not found")
+                        }
+                        // prepare for the swap
+                        const { txHash: preparedTxHash, solanaTx: preparedSolanaTx, signatureWithBytes: preparedSignatureWithBytes } =
                     await this.balanceService.prepareSwapTransaction({
                         bot,
                         tokenIn,
@@ -131,93 +145,104 @@ export class ReconcileBalanceWorker extends WorkerHost {
                         amountIn: plan.amountIn,
                         estimatedSwappedAmount: plan.estimatedSwappedAmount,
                     })
-                txHash = preparedTxHash
-                solanaTx = preparedSolanaTx
-                signatureWithBytes = preparedSignatureWithBytes
-            }
-            // update the job with the swap transaction
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: jobId,
-                },
-                {
-                    $set: {
-                        txHash,
-                        status: JobStatus.Prepared,
-                        data: {
-                            tokenIn,
-                            tokenOut,
-                            needsSwap
-                        },
-                    },
-                },
-            )
-        } else {
-            if (!job?.txHash) {
-                throw new UnrecoverableError("Transaction hash not found")
-            }
-            if (!job.data) {
-                throw new UnrecoverableError("Job data not found")
-            }
-            txHash = job.txHash
-            const data = job.data as ReconcileBalanceJobData
-            tokenIn = data.tokenIn
-            tokenOut = data.tokenOut
-            needsSwap = data.needsSwap
-        }
-        // we send the transaction to the network
-        if (order < getJobStatusOrder(JobStatus.Executed)) {
-            if (needsSwap) {
-                if (!tokenIn || !tokenOut) {
-                    throw new UnrecoverableError("Token in or token out not found during swap execution")
-                }
-                const [, error] = await this.asyncService.resolveTuple(
-                    this.balanceService.executeSwapTransaction(
+                        txHash = preparedTxHash
+                        solanaTx = preparedSolanaTx
+                        signatureWithBytes = preparedSignatureWithBytes
+                    }
+                    // update the job with the swap transaction
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                         {
-                            bot,
-                            txHash,
-                            tokenIn,
-                            tokenOut,
-                            isRetry,
-                            solanaTx,
-                            signatureWithBytes,
-                        }),
-                )
-                if (error) {
-                    throw new UnrecoverableError("Failed to execute swap transaction")
-                }
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                    {
-                        _id: jobId,
-                    },
-                    {
-                        $set: {
-                            status: JobStatus.Executed,
+                            _id: jobId,
                         },
-                    },
-                )
-            }
-        }
-        // thus, we just fetch the balances again and turn the job to completed
-        if (needsSwap) {
-            const {
-                targetBalanceAmount: fetchedTargetBalanceAmount,
-                quoteBalanceAmount: fetchedQuoteBalanceAmount,
-                gasBalanceAmount: fetchedGasBalanceAmount,
-            } = await this.balanceService.fetchBalances({
-                bot,
-            })
-            targetBalanceAmount = fetchedTargetBalanceAmount
-            quoteBalanceAmount = fetchedQuoteBalanceAmount
-            gasBalanceAmount = fetchedGasBalanceAmount
-        }
-        // we update the snapshot balances
-        await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-            bot,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        })
+                        {
+                            $set: {
+                                txHash,
+                                status: JobStatus.Prepared,
+                                data: {
+                                    tokenIn,
+                                    tokenOut,
+                                    needsSwap
+                                },
+                            },
+                        },
+                    )
+                } else {
+                    if (!job?.txHash) {
+                        throw new UnrecoverableError("Transaction hash not found")
+                    }
+                    if (!job.data) {
+                        throw new UnrecoverableError("Job data not found")
+                    }
+                    txHash = job.txHash
+                    const data = job.data as ReconcileBalanceJobData
+                    tokenIn = data.tokenIn
+                    tokenOut = data.tokenOut
+                    needsSwap = data.needsSwap
+                }
+
+                // * Step 4: Execute (send swap tx if needed)
+                // ! Before each step: throw if timeout is reached (abort)
+                throwIfAborted()
+                // we send the transaction to the network
+                if (order < getJobStatusOrder(JobStatus.Executed)) {
+                    if (needsSwap) {
+                        if (!tokenIn || !tokenOut) {
+                            throw new UnrecoverableError("Token in or token out not found during swap execution")
+                        }
+                        const [, error] = await this.asyncService.resolveTuple(
+                            this.balanceService.executeSwapTransaction(
+                                {
+                                    bot,
+                                    txHash,
+                                    tokenIn,
+                                    tokenOut,
+                                    isRetry,
+                                    solanaTx,
+                                    signatureWithBytes,
+                                }),
+                        )
+                        if (error) {
+                            throw new UnrecoverableError("Failed to execute swap transaction")
+                        }
+                        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                            {
+                                _id: jobId,
+                            },
+                            {
+                                $set: {
+                                    status: JobStatus.Executed,
+                                },
+                            },
+                        )
+                    }
+                }
+
+                // * Step 5: Confirm (refetch balances if swapped + update snapshots)
+                // ! Before each step: throw if timeout is reached (abort)
+                throwIfAborted()
+                // thus, we just fetch the balances again and turn the job to completed
+                if (needsSwap) {
+                    const {
+                        targetBalanceAmount: fetchedTargetBalanceAmount,
+                        quoteBalanceAmount: fetchedQuoteBalanceAmount,
+                        gasBalanceAmount: fetchedGasBalanceAmount,
+                    } = await this.balanceService.fetchBalances({
+                        bot,
+                    })
+                    targetBalanceAmount = fetchedTargetBalanceAmount
+                    quoteBalanceAmount = fetchedQuoteBalanceAmount
+                    gasBalanceAmount = fetchedGasBalanceAmount
+                }
+                // we update the snapshot balances
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount,
+                    quoteBalanceAmount,
+                    gasBalanceAmount,
+                })
+            }, 
+            envConfig().bullmq.timeout
+        )
     }
 
     @OnWorkerEvent("failed")
@@ -271,14 +296,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
             botId: bot.id,
             jobId,
         })
-        await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-            { _id: jobId },
-            { $set: { 
-                status: JobStatus.Completed,
-                processedAt: this.dayjsService.now().toDate() 
-            } 
-            }
-        )
+        // delete the job schema
+        await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
         mutex.release()
     }
 }
