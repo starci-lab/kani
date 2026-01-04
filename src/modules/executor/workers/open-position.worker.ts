@@ -82,12 +82,12 @@ export class OpenPositionWorker extends WorkerHost {
     }: Job<OpenPositionPayload>) {
         await this.timeoutService.withTimeout(
             async (throwIfAborted) => {
-                const _state = this.superjson.parse<
-            LiquidityPoolState | DlmmLiquidityPoolState
-        >(state)
                 // * Step 1: Get job from DB (when retry)
                 // ! Before each step: throw if timeout is reached (abort)
                 throwIfAborted()
+                const _state = this.superjson.parse<
+            LiquidityPoolState | DlmmLiquidityPoolState
+        >(state)
                 // check if the mutex is locked
                 const isRetry = attemptsMade > 0
                 // if isRetry, we get the job
