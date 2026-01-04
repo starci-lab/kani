@@ -116,7 +116,6 @@ export class ClosePositionWorker extends WorkerHost {
                 let txHash: string
                 let signatureWithBytes: SignatureWithBytes | undefined = undefined
                 let solanaTx: SolanaTx | undefined = undefined
-
                 // * Step 2: Prepare
                 // ! Before each step: throw if timeout is reached (abort)
                 throwIfAborted()

@@ -50,7 +50,9 @@ export class FeesOrchestratorService {
             liquidityPoolId,
         }: OrchestrateFeesParams,
     ): Promise<FeesResponse> {
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(liquidityPool => liquidityPool.displayId === liquidityPoolId)
+        const liquidityPool = this.primaryMemoryStorageService
+            .liquidityPools
+            .find(liquidityPool => liquidityPool.displayId === liquidityPoolId)
         if (!liquidityPool) throw new LiquidityPoolNotFoundException("Liquidity pool not found")
         let state: LiquidityPoolState | DlmmLiquidityPoolState
         if (liquidityPool.type === LiquidityPoolType.Dlmm) {
@@ -58,7 +60,6 @@ export class FeesOrchestratorService {
         } else {
             state = await this.liquidityPoolStateService.getState(liquidityPoolId)
         }
-
         const dex =
             this.primaryMemoryStorageService.dexes.find(
                 dex => dex.id === state.static.dex.toString(),
@@ -70,7 +71,6 @@ export class FeesOrchestratorService {
             )
         }
         if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
-
         switch (dex.displayId) {
         case DexId.FlowX:
             throw new DexNotImplementedException("FlowX fees not implemented")
@@ -89,7 +89,7 @@ export class FeesOrchestratorService {
         default:
             throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for execute`)
         }
-    }
+    }   
 }
 
 export interface OrchestrateFeesParams {

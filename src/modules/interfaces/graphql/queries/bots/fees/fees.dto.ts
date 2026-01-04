@@ -11,7 +11,7 @@ export class FeesRequest {
     @Field(() => ID, {
         description: "Unique identifier of the bot whose fees are being queried.",
     })
-        botId: string
+        id: string
 }
 
 @ObjectType({
@@ -27,6 +27,10 @@ export class FeesResponseData {
         description: "Accrued fee amount for tokenB.",
     })
         tokenB: number
+    @Field(() => Date, {
+        description: "The date and time the fees were last cached.",
+    })
+        lastFetchedAt: Date
 }
 
 @ObjectType({

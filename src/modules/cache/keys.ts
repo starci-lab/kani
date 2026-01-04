@@ -28,6 +28,7 @@ export enum CacheKey {
     SignInOtpCode = "signInOtpCode",
     SendOtpCode = "sendOtpCode",
     SpotPrice = "spotPrice",
+    FeesResponse = "feesResponse",
 }
 
 export interface SpotPriceCacheResult {

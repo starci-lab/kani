@@ -68,6 +68,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^11.1.8",
     "@orca-so/sdk": "^1.2.26",
+    "@orca-so/whirlpools-client": "^6.0.0",
     "@orca-so/whirlpools-core": "^3.0.0",
     "@privy-io/node": "^0.6.2",
     "@privy-io/server-auth": "^1.32.5",

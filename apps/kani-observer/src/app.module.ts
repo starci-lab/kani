@@ -115,63 +115,21 @@ import { DerivedModule } from "@modules/derived"
         }),
         DexesModule.register({
             isGlobal: true,
-            dexes: [
-                {
-                    dexId: DexId.Raydium,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                        analytics: true,
-                    },
-                },
-                {
-                    dexId: DexId.Orca,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                        analytics: true,
-                    },
-                },
-                {
-                    dexId: DexId.Meteora,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                        analytics: true,
-                    },
-                },
-                {
-                    dexId: DexId.FlowX,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                    },
-                },
-                {
-                    dexId: DexId.Cetus,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                        analytics: true,
-                    },
-                },
-                {
-                    dexId: DexId.Momentum,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                        analytics: true,
-                    },
-                },
-                {
-                    dexId: DexId.Turbos,
-                    enabled: {
-                        observe: true,
-                        action: false,
-                        analytics: true,
-                    },
-                },
+            dexIds: [
+                DexId.Raydium,
+                DexId.Orca,
+                DexId.Meteora,
+                DexId.FlowX,
+                DexId.Cetus,
+                DexId.Turbos,
+                DexId.Momentum,
             ],
+            enabled: {
+                observe: true,
+                action: false,
+                fees: false,
+                analytics: true,
+            },
         }),
         CexesModule.register({
             isGlobal: true,

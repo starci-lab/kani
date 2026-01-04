@@ -26,13 +26,13 @@ export class FeesResolver {
     @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
     @Query(() => FeesResponse, {
         description:
-            "Returns the fees associated with the current user.",
+            "Returns the fees associated with a bot.",
     })
     async fees(
         @GraphQLUser() user: UserJwtLike,   
         @Args("request", {
             description:
-                "Input parameters required to identify which fees should be fetched.",
+                "Input parameters required to identify which bot's fees should be fetched.",
         })
             request: FeesRequest,
     ): Promise<FeesResponseData> {
