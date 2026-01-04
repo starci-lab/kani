@@ -132,8 +132,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,
             actual: new BN(actualAmountB),
-            upperBound: new Decimal(1).add(new Decimal(envConfig().bounds.sui.openPosition.upperBound)),
-            lowerBound: new Decimal(1).sub(new Decimal(envConfig().bounds.sui.openPosition.lowerBound)),
+            upperBound: new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds)),
+            lowerBound: new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds)),
         })
         if (!isAcceptable) {
             throw new AmountBInBetweenExpectedException(

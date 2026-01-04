@@ -70,7 +70,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResponse> {
         const _state = state as LiquidityPoolState
-        const slippage = new Decimal(envConfig().slippage.openPosition)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,
@@ -113,10 +112,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 amountA,
                 amountB,
             )
-        const liquidity = adjustSlippage(
-            liquidityRaw,
-            slippage,
-        )
+        // no slippage for orca
+        const liquidity = adjustSlippage(liquidityRaw, new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment))
         const {
             mintKeyPair,
             ataAddress,
@@ -128,8 +125,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             bot,
             state: _state,
             liquidity,
-            amountAMax: amountA,
-            amountBMax: amountB,
+            amountA,
+            amountB,
             tickLower,
             tickUpper,
         })

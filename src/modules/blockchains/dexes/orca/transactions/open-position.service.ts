@@ -65,8 +65,8 @@ export class OpenPositionInstructionService {
         tickLower,
         tickUpper,
         liquidity,
-        amountAMax,
-        amountBMax,
+        amountA,
+        amountB,
     }: CreateOpenPositionInstructionsParams): Promise<CreateOpenPositionInstructionsResponse> {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
@@ -83,12 +83,15 @@ export class OpenPositionInstructionService {
         const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.solana.feeToAddress
         const { feeAmount: feeAmountA, remainingAmount: remainingAmountA } =
       this.feeService.splitAmount({
-          amount: amountAMax,
+          amount: amountA,
           chainId: bot.chainId,
       })
-        const { feeAmount: feeAmountB, remainingAmount: remainingAmountB } =
+        const { 
+            feeAmount: feeAmountB, 
+            remainingAmount: remainingAmountB 
+        } =
       this.feeService.splitAmount({
-          amount: amountBMax,
+          amount: amountB,
           chainId: bot.chainId,
       })
         if (tokenA.type === TokenType.Native) {
@@ -291,8 +294,8 @@ export class OpenPositionInstructionService {
         instructions.push(openPositionInstruction)
         const [increaseLiquidityArgs] = IncreaseLiquidityArgs.serialize({
             liquidityAmount: liquidity.toString(),
-            tokenMaxA: amountAMax.toString(),
-            tokenMaxB: amountBMax.toString(),
+            tokenMaxA: amountA.toString(),
+            tokenMaxB: amountB.toString(),
         })
         const increaseLiquidityInstruction: Instruction = {
             programAddress: address(programAddress),
@@ -354,8 +357,8 @@ export class OpenPositionInstructionService {
             ataAddress,
             personalPosition: positionPda,
             instructions,
-            feeAmountA: amountAMax,
-            feeAmountB: amountBMax,
+            feeAmountA,
+            feeAmountB,
         }
     }
 }
@@ -366,8 +369,8 @@ export interface CreateOpenPositionInstructionsParams {
   tickLower: Decimal;
   tickUpper: Decimal;
   liquidity: BN;
-  amountAMax: BN;
-  amountBMax: BN;
+  amountA: BN;
+  amountB: BN;
 }
 
 export interface CreateOpenPositionInstructionsResponse {

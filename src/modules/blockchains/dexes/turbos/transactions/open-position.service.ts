@@ -19,8 +19,6 @@ import {
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { MountStorageService } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { adjustSlippage } from "@utils"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -168,11 +166,11 @@ export class OpenPositionTxbService {
                 txb.pure.u64(remainingAmountB.toString()),
                 // minimum amount A
                 txb.pure.u64(
-                    adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition)).toString()
+                    remainingAmountA.toString()
                 ),
                 // minimum amount B
                 txb.pure.u64(
-                    adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition)).toString()
+                    remainingAmountB.toString()
                 ),
                 // bot account address
                 txb.pure.address(bot.accountAddress),
