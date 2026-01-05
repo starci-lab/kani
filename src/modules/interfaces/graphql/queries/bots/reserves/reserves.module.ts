@@ -1,13 +1,13 @@
 import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./fees.module-definition"
-import { FeesService } from "./reserves.service"
-import { FeesResolver } from "./fees.resolver"
+import { ConfigurableModuleClass } from "./reserves.module-definition"
+import { ReservesService } from "./reserves.service"
+import { ReservesResolver } from "./reserves.resolver"
 
 @Module({
     providers: [
-        FeesService,
-        FeesResolver,
+        ReservesService,
+        ReservesResolver,
     ],
 })
-export class FeesModule extends ConfigurableModuleClass {}
+export class ReservesModule extends ConfigurableModuleClass {}
 
