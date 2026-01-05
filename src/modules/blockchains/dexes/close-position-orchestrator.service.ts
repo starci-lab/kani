@@ -11,7 +11,11 @@ import { FlowXClosePositionActionService } from "./flowx"
 import { CetusClosePositionActionService } from "./cetus"
 import { TurbosClosePositionActionService } from "./turbos"
 import { MomentumClosePositionActionService } from "./momentum"
-import { PrepareClosePositionParams, PrepareClosePositionResponse, ExecuteClosePositionParams as ExecuteClosePositionParamsInterface } from "../interfaces"
+import { 
+    PrepareClosePositionParams, 
+    PrepareClosePositionResponse, 
+    ExecuteClosePositionParams as ExecuteClosePositionParamsInterface 
+} from "../interfaces"
 import { createObjectId } from "@utils"
 import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
@@ -111,7 +115,7 @@ export class ClosePositionOrchestratorService {
          * Ensure the DEX is supported by current bot configuration
          */
         if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException(`Dex ${dex.displayId} not supported`)
         }
         /**
          * Check if the position can be closed

@@ -40,7 +40,8 @@ export class FeesService {
 
     async fees(
         {
-            id
+            botId,
+            activePositionId,
         }: FeesRequest,
         userLike: UserJwtLike,
     ): Promise<FeesResponseData> {
@@ -50,19 +51,20 @@ export class FeesService {
             createCacheKey(
                 CacheKey.FeesResponse, 
                 {
-                    botId: id,
+                    botId,
+                    activePositionId,
                     userId: userLike.id,
                 }
             )
         )
         // if the fees are cached, return them
-        if (cachedResult) {
-            return this.superjson.parse<FeesResponseData>(cachedResult)
-        }
+        // if (cachedResult) {
+        //     return this.superjson.parse<FeesResponseData>(cachedResult)
+        // }
         // check if the bot exists
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
-            .findById(id)
+            .findById(botId)
         if (!bot) {
             throw new BotNotFoundException("Bot not found")
         }
@@ -74,10 +76,10 @@ export class FeesService {
         const activePosition = await this.connection
             .model<PositionSchema>(PositionSchema.name)
             .findOne({
-                bot: id,
+                bot: botId,
                 isActive: true,
             })
-        if (!activePosition) {
+        if (!activePosition || activePosition.id.toString() !== activePositionId) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
         // set the active position on the bot
@@ -101,7 +103,8 @@ export class FeesService {
             createCacheKey(
                 CacheKey.FeesResponse, 
                 {
-                    botId: id,
+                    botId,
+                    activePositionId,
                     userId: userLike.id,
                 }
             ),

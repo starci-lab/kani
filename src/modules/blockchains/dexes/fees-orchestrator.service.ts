@@ -18,9 +18,9 @@ import {
     FeesResponse,
     LiquidityPoolState,
 } from "../interfaces"
-
-import { OrcaFeesService } from "./orca/fees.service"
+import { OrcaFeesService } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
+import { MeteoraFeesService } from "./meteora"
 
 /**
  * FeesOrchestratorService
@@ -38,6 +38,7 @@ export class FeesOrchestratorService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly orcaFeesService: OrcaFeesService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
+        private readonly meteoraFeesService: MeteoraFeesService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -85,7 +86,7 @@ export class FeesOrchestratorService {
         case DexId.Orca:
             return this.orcaFeesService.fees({ bot, liquidityPoolId, state })
         case DexId.Meteora:
-            throw new DexNotImplementedException("Meteora fees not implemented")
+            return this.meteoraFeesService.fees({ bot, liquidityPoolId, state })
         default:
             throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for execute`)
         }

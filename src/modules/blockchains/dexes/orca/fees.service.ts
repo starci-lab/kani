@@ -1,124 +1,182 @@
-import { FeesParams, FeesResponse } from "../../interfaces"
+import { FeesParams, FeesResponse, IFeesService } from "../../interfaces"
 import { Injectable } from "@nestjs/common"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
-import { address, fetchEncodedAccount } from "@solana/kit"
-import { 
-    ActivePositionLiquidityNotSetException, 
-    ActivePositionNotFoundException, 
-    InvalidPoolTokensException, 
+import {
+    address,
+    fetchEncodedAccounts,
+} from "@solana/kit"
+import {
+    ActivePositionLiquidityNotSetException,
+    ActivePositionNotFoundException,
+    InvalidPoolTokensException,
     PositionNotFoundException,
-    TickArrayNotFoundException
+    TickArrayNotFoundException,
 } from "@exceptions"
 import { Position } from "./beets"
 import { decodeTickArray } from "@orca-so/whirlpools-client"
 import BN from "bn.js"
 import { LiquidityPoolState } from "../../interfaces"
 import { Q64 } from "@flowx-finance/sdk"
-import { OrcaLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    OrcaLiquidityPoolMetadata,
+    PrimaryMemoryStorageService,
+} from "@modules/databases"
 import { computeDenomination } from "@utils"
 import { TickArrayService } from "./transactions"
 import { Decimal } from "decimal.js"
 
 @Injectable()
-export class OrcaFeesService {
+export class OrcaFeesService implements IFeesService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly rpcExecutorService: RpcExecutorService,
-        private readonly tickArrayService: TickArrayService,
-    ) { }
+    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+    private readonly rpcExecutorService: RpcExecutorService,
+    private readonly tickArrayService: TickArrayService,
+    ) {}
 
-    async fees(
-        {
-            bot,
-            state,
-        }: FeesParams
-    ): Promise<FeesResponse> {
+    async fees({ bot, state }: FeesParams): Promise<FeesResponse> {
         const _state = state as LiquidityPoolState
-        // get the fees for the position
-        if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
-        const positionId = bot.activePosition.positionId
-        const accountInfo = await this.rpcExecutorService.withSolanaRpc(
-            {
-                accessType: RpcAccessType.Read,
-                callback: async ({ rpc }) => {
-                    const accountInfo = await fetchEncodedAccount(rpc, address(positionId))
-                    if (!accountInfo || !accountInfo.exists) {
-                        throw new PositionNotFoundException("Position not found")
-                    }
-                    return accountInfo
-                }
-            }
-        )
-        const tokenA = this.primaryMemoryStorageService.tokens.find(token => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find(token => token.id === _state.static.tokenB.toString())
-        if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException("Active position not found")
         }
-        const [positionState] = Position.struct.deserialize(Buffer.from(accountInfo.data), 8)
-        const tickUpper = bot.activePosition.tickUpper ?? 0
+
+        const positionId = bot.activePosition.positionId
         const tickLower = bot.activePosition.tickLower ?? 0
-        const { programAddress } = state.static.metadata as OrcaLiquidityPoolMetadata
-        const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
-            tickIndex: tickUpper,
-            tickSpacing: state.static.tickSpacing,
-            bot,
-            pdaOnly: true,
-            programAddress: address(programAddress),
-        })
-        const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
-            tickIndex: tickLower,
-            tickSpacing: state.static.tickSpacing,
-            bot,
-            pdaOnly: true,
-            programAddress: address(programAddress),
-        })
-        // fetch the onchain account info for the tick arrays
-        const tickArrayUpper = await this.rpcExecutorService.withSolanaRpc({
+        const tickUpper = bot.activePosition.tickUpper ?? 0
+
+        const { programAddress } =
+      state.static.metadata as OrcaLiquidityPoolMetadata
+
+        // ----------------------------
+        // PDA derivation
+        // ----------------------------
+        const { pda: tickArrayLowerPda } =
+      await this.tickArrayService.getPda({
+          poolStateAddress: address(state.static.poolAddress),
+          tickIndex: tickLower,
+          tickSpacing: state.static.tickSpacing,
+          bot,
+          pdaOnly: true,
+          programAddress: address(programAddress),
+      })
+
+        const { pda: tickArrayUpperPda } =
+      await this.tickArrayService.getPda({
+          poolStateAddress: address(state.static.poolAddress),
+          tickIndex: tickUpper,
+          tickSpacing: state.static.tickSpacing,
+          bot,
+          pdaOnly: true,
+          programAddress: address(programAddress),
+      })
+
+        // ----------------------------
+        // BATCH FETCH: position + 2 tick arrays
+        // ----------------------------
+        const [
+            positionAccount,
+            tickArrayLowerAccount,
+            tickArrayUpperAccount,
+        ] = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
-                const accountInfo = await fetchEncodedAccount(rpc, tickArrayUpperPda)
-                if (!accountInfo || !accountInfo.exists) {
-                    throw new TickArrayNotFoundException(tickUpper, "Tick array not found")
-                }
-                return decodeTickArray(accountInfo)
+                return fetchEncodedAccounts(rpc, [
+                    address(positionId),
+                    tickArrayLowerPda,
+                    tickArrayUpperPda,
+                ])
             },
         })
-        const tickArrayLower = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
-            callback: async ({ rpc }) => {
-                const accountInfo = await fetchEncodedAccount(rpc, tickArrayLowerPda)
-                if (!accountInfo || !accountInfo.exists) {
-                    throw new TickArrayNotFoundException(tickLower, "Tick array not found")
-                }
-                return decodeTickArray(accountInfo)
-            },
-        })
+
+        // ----------------------------
+        // Validate accounts
+        // ----------------------------
+        if (!positionAccount || !positionAccount.exists) {
+            throw new PositionNotFoundException("Position not found")
+        }
+
+        if (!tickArrayLowerAccount || !tickArrayLowerAccount.exists) {
+            throw new TickArrayNotFoundException(
+                tickLower,
+                "Lower tick array not found",
+            )
+        }
+
+        if (!tickArrayUpperAccount || !tickArrayUpperAccount.exists) {
+            throw new TickArrayNotFoundException(
+                tickUpper,
+                "Upper tick array not found",
+            )
+        }
+
+        // ----------------------------
+        // Decode accounts
+        // ----------------------------
+        const [positionState] = Position.struct.deserialize(
+            Buffer.from(positionAccount.data),
+            8,
+        )
+
+        const tickArrayLower = decodeTickArray(tickArrayLowerAccount)
+        const tickArrayUpper = decodeTickArray(tickArrayUpperAccount)
+
+        // ----------------------------
+        // Token validation
+        // ----------------------------
+        const tokenA = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === _state.static.tokenA.toString(),
+        )
+        const tokenB = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === _state.static.tokenB.toString(),
+        )
+
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException(
+                "Either token A or token B is not in the pool",
+            )
+        }
+
+        // ----------------------------
+        // Tick index resolution
+        // ----------------------------
         const lowerStart = tickArrayLower.data.startTickIndex
         const upperStart = tickArrayUpper.data.startTickIndex
 
-        const tickLowerIndex = new Decimal(tickLower).sub(new Decimal(lowerStart)).div(new Decimal(state.static.tickSpacing))
-        const tickUpperIndex = new Decimal(tickUpper).sub(new Decimal(upperStart)).div(new Decimal(state.static.tickSpacing))
+        const tickLowerIndex = new Decimal(tickLower)
+            .sub(lowerStart)
+            .div(state.static.tickSpacing)
+
+        const tickUpperIndex = new Decimal(tickUpper)
+            .sub(upperStart)
+            .div(state.static.tickSpacing)
 
         if (
             tickLowerIndex.lessThan(0) ||
-  tickLowerIndex.greaterThanOrEqualTo(tickArrayLower.data.ticks.length)
+      tickLowerIndex.greaterThanOrEqualTo(
+          tickArrayLower.data.ticks.length,
+      )
         ) {
             throw new Error("Lower tick index out of range")
         }
 
         if (
             tickUpperIndex.lessThan(0) ||
-  tickUpperIndex.greaterThanOrEqualTo(tickArrayUpper.data.ticks.length)
+      tickUpperIndex.greaterThanOrEqualTo(
+          tickArrayUpper.data.ticks.length,
+      )
         ) {
             throw new Error("Upper tick index out of range")
         }
 
-        const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
-        const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
-        // calculate the fee growth inside
+        const tickLowerData =
+      tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
+        const tickUpperData =
+      tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
+
+        // ----------------------------
+        // Fee growth inside
+        // ----------------------------
         const feeGrowthInsideA = this.computeFeeGrowthInside(
             _state.dynamic.feeGrowthGlobalA,
             new BN(tickLowerData.feeGrowthOutsideA.toString()),
@@ -127,7 +185,7 @@ export class OrcaFeesService {
             tickLower,
             tickUpper,
         )
-          
+
         const feeGrowthInsideB = this.computeFeeGrowthInside(
             _state.dynamic.feeGrowthGlobalB,
             new BN(tickLowerData.feeGrowthOutsideB.toString()),
@@ -136,18 +194,37 @@ export class OrcaFeesService {
             tickLower,
             tickUpper,
         )
-        // get the fee growth checkpoint for the position
-        const feeGrowthCheckpointA = new BN(positionState.feeGrowthCheckpointA.toString())
-        const feeGrowthCheckpointB = new BN(positionState.feeGrowthCheckpointB.toString())
-        // get the liquidity for the position
+
+        // ----------------------------
+        // Position checkpoint
+        // ----------------------------
+        const feeGrowthCheckpointA = new BN(
+            positionState.feeGrowthCheckpointA.toString(),
+        )
+        const feeGrowthCheckpointB = new BN(
+            positionState.feeGrowthCheckpointB.toString(),
+        )
+
         if (!bot.activePosition.liquidity) {
-            throw new ActivePositionLiquidityNotSetException(bot.id, "Active position liquidity not set")
+            throw new ActivePositionLiquidityNotSetException(
+                bot.id,
+                "Active position liquidity not set",
+            )
         }
-        // calculate the fees earned
+
         const liquidity = new BN(bot.activePosition.liquidity)
-        const feeEarnedA = liquidity.mul(feeGrowthInsideA.sub(feeGrowthCheckpointA)).div(Q64)
-        const feeEarnedB = liquidity.mul(feeGrowthInsideB.sub(feeGrowthCheckpointB)).div(Q64)
-        // return the fees
+
+        // ----------------------------
+        // Fee calculation
+        // ----------------------------
+        const feeEarnedA = liquidity
+            .mul(feeGrowthInsideA.sub(feeGrowthCheckpointA))
+            .div(Q64)
+
+        const feeEarnedB = liquidity
+            .mul(feeGrowthInsideB.sub(feeGrowthCheckpointB))
+            .div(Q64)
+
         return {
             tokenA: computeDenomination(feeEarnedA, tokenA.decimals),
             tokenB: computeDenomination(feeEarnedB, tokenB.decimals),
@@ -165,11 +242,11 @@ export class OrcaFeesService {
         if (currentTick < tickLower) {
             return feeGrowthOutsideLower.sub(feeGrowthOutsideUpper)
         }
-      
+
         if (currentTick >= tickUpper) {
             return feeGrowthOutsideUpper.sub(feeGrowthOutsideLower)
         }
-      
+
         return feeGrowthGlobal
             .sub(feeGrowthOutsideLower)
             .sub(feeGrowthOutsideUpper)
