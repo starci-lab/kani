@@ -296,7 +296,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
         iconUrl: "https://r2.kanibot.xyz/tokens/ray.png",
         projectUrl: "https://raydium.io/",
-        type: TokenType.Native,
+        type: TokenType.Regular,
         selectable: false,
     },
 ]

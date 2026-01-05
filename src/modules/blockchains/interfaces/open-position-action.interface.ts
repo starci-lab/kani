@@ -97,3 +97,9 @@ export interface FeesResponse {
   tokenA: Decimal;
   tokenB: Decimal;
 }
+
+export interface IFeesService {
+  fees(
+    params: FeesParams,
+  ): Promise<FeesResponse>;
+}

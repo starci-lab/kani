@@ -10,7 +10,7 @@ export const PythWebSocketGateway = () => WebSocketGateway(
         // we allow both websocket and polling
         transports: ["websocket", "polling"],
         // we allow cors
-        cors: createCorsOptions(),
+        // cors: createCorsOptions(),
         perMessageDeflate: true,
     })
 

@@ -105,7 +105,7 @@ export class PythGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         }
         this.server.emit(
             SocketIoEvent.PythPricesUpdated, 
-            this.superjson.serialize(event)
+            this.superjson.stringify(event)
         )
     }
 }

@@ -8,6 +8,7 @@ import { OnEvent } from "@nestjs/event-emitter"
 import { Namespace } from "socket.io"
 import { WebSocketServer } from "@nestjs/websockets"
 import { SocketIoEvent } from "@modules/socketio/constants"
+import { Cron, CronExpression } from "@nestjs/schedule"
 
 @CoreWebSocketGateway()
 export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -25,6 +26,7 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
     // handle the client connected
     handleConnection(client: TypedSocket) {
+        console.log("client connected", client.data.userId)
         // log the client connected to loki
         this.winstonLogger.debug(
             WinstonLog.SocketIoClientConnected, {
@@ -55,5 +57,14 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             SocketIoEvent.LiquidityPoolsFetched, 
             payload
         )
+    }
+    
+    // handle the ping
+    @Cron(CronExpression.EVERY_5_SECONDS) // every 5 seconds
+    handlePing() {
+        this.server.emit(
+            "ping",
+            "pong"
+        )   
     }
 }

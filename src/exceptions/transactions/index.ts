@@ -81,3 +81,10 @@ export class PositionInvalidTypeException extends AbstractException {
         super(message || "Position is not a move object", "POSITION_INVALID_TYPE_EXCEPTION")
     }
 }
+
+/** Thrown when bin array is not found */
+export class BinArrayNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bin array not found", "BIN_ARRAY_NOT_FOUND_EXCEPTION")
+    }
+}

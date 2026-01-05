@@ -11,7 +11,11 @@ export class FeesRequest {
     @Field(() => ID, {
         description: "Unique identifier of the bot whose fees are being queried.",
     })
-        id: string
+        botId: string
+    @Field(() => ID, {
+        description: "Unique identifier of the active position whose fees are being queried.",
+    })
+        activePositionId: string
 }
 
 @ObjectType({
@@ -41,7 +45,8 @@ export class FeesResponse
     implements IAbstractGraphQLResponse<FeesResponseData> {
 
     @Field(() => FeesResponseData, {
+        nullable: true,
         description: "Fee data returned for the requested bot.",
     })
-        data: FeesResponseData
+        data?: FeesResponseData
 }
