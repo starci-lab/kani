@@ -15,835 +15,835 @@
     "bins": [
       {
         "amountX": "00",
-        "amountY": "014414c76d",
+        "amountY": "01a7861807",
         "price": "221c127910c5a4ff",
-        "liquiditySupply": "0143a015454f9139a821a03edd",
+        "liquiditySupply": "01a6ed96fc2ff002d709547ac6",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02eec11ad8f7d955ce",
-        "feeAmountYPerTokenStored": "64b2857bb84ae1b5",
+        "feeAmountXPerTokenStored": "02efb2915fa6118a35",
+        "feeAmountYPerTokenStored": "64d2b1ba11f0899b",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "014afda7a3",
+        "amountY": "01b013a542",
         "price": "221f90a31912ba77",
-        "liquiditySupply": "014a9a69b27ed2b932aedadcb1",
+        "liquiditySupply": "01af92181647cb1c685bff1275",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02fca3e49251951583",
-        "feeAmountYPerTokenStored": "66bd0540c830a83b",
+        "feeAmountXPerTokenStored": "02ffc6497677608e2a",
+        "feeAmountYPerTokenStored": "6727f99ae6e32881",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0171b02a7f",
+        "amountY": "01cf5e7501",
         "price": "22230f28b15a1bd2",
-        "liquiditySupply": "0171599223b5bb7eb06f3dc791",
+        "liquiditySupply": "01cef1a3c69c6fc21e4090c210",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0312ef4626c139f35b",
-        "feeAmountYPerTokenStored": "69edee026b282dde",
+        "feeAmountXPerTokenStored": "0317869a718fddc9cf",
+        "feeAmountYPerTokenStored": "6a84b429bbc352f2",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "019c8d621c",
+        "amountY": "01cf11da8b",
         "price": "22268e09e2fc0a03",
-        "liquiditySupply": "019c22641f378b64db209429f2",
+        "liquiditySupply": "01ce955db324087aa44c2089e8",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02fd10649cfcd3d575",
-        "feeAmountYPerTokenStored": "67b207f4404fb318",
+        "feeAmountXPerTokenStored": "0302528ca4eefd20db",
+        "feeAmountYPerTokenStored": "686028818dc95452",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "019ba4a4d4",
+        "amountY": "01ce4dbe3b",
         "price": "222a0d46b759bbc8",
-        "liquiditySupply": "019b75cdf9088f7a66a1111382",
+        "liquiditySupply": "01ce184a7e2543393abb2c1c70",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02df48634184b70de9",
-        "feeAmountYPerTokenStored": "647bbacb1621e5f2",
+        "feeAmountXPerTokenStored": "02e5f33a96ea28fd20",
+        "feeAmountYPerTokenStored": "6557e0c877751fff",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "019f098adc",
+        "amountY": "01d24ccd73",
         "price": "222d8cdf37d55dc1",
-        "liquiditySupply": "019eb7b86c0f6d77b10c04fe27",
+        "liquiditySupply": "01d1f01f8b9cbe5fc41de457fc",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02ef73a5ed109c0cac",
-        "feeAmountYPerTokenStored": "65b7e8dfdfa13f60",
+        "feeAmountXPerTokenStored": "02f3e272404a85f511",
+        "feeAmountYPerTokenStored": "664a0b69dad29957",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01a489efb9",
+        "amountY": "01d72a32fb",
         "price": "22310cd36dd21287",
-        "liquiditySupply": "01a429095919fa26023d01a92b",
+        "liquiditySupply": "01d6bd8c4079b83e5eca1018b3",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02f2f7c1026f86bc39",
-        "feeAmountYPerTokenStored": "658ff084938b8c82",
+        "feeAmountXPerTokenStored": "02f8207f47346f2953",
+        "feeAmountYPerTokenStored": "663c05e6e657836a",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01a5a7e280",
+        "amountY": "01d816e317",
         "price": "22348d2362b3f2cb",
-        "liquiditySupply": "01a5564878b901c8196885b666",
+        "liquiditySupply": "01d7bb2321574a607d222bce63",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "030451c96b27ae6dc6",
-        "feeAmountYPerTokenStored": "67e109f0fbfd6d0a",
+        "feeAmountXPerTokenStored": "030bbf795932d7b41c",
+        "feeAmountYPerTokenStored": "68ddd162ee14436f",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01a6a26ec4",
+        "amountY": "01d8538946",
         "price": "22380dcf1fe00d69",
-        "liquiditySupply": "01a63db275d1200a9a049ac38b",
+        "liquiditySupply": "01d7e203e5e7943c419b8fb4dd",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0301b87755ab31d2ea",
-        "feeAmountYPerTokenStored": "672aa9ad4d860db5",
+        "feeAmountXPerTokenStored": "030a6481ec38d7108e",
+        "feeAmountYPerTokenStored": "6852bf24c0d385f7",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01a7c9b4de",
+        "amountY": "01f40fec77",
         "price": "223b8ed6aebc6787",
-        "liquiditySupply": "01a76ccbd5a9ced4e18fc4bfdf",
+        "liquiditySupply": "01f3a0cc29845fb7b7586773c4",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "030f6a4e19bcb2c151",
-        "feeAmountYPerTokenStored": "69308df869338fbb",
+        "feeAmountXPerTokenStored": "031a3c80a57a3ef816",
+        "feeAmountYPerTokenStored": "6aa11aae16166bf3",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01b2a88af3",
+        "amountY": "01fd0b6be2",
         "price": "223f103a18affcaa",
-        "liquiditySupply": "01b2382e046a1022d45f7b2966",
+        "liquiditySupply": "01fc85f229a2c276d7926596b4",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "031400196776793bd7",
-        "feeAmountYPerTokenStored": "687829b6235780f6",
+        "feeAmountXPerTokenStored": "031d9d948469f64c90",
+        "feeAmountYPerTokenStored": "69c3509918923d6b",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01b3b243e5",
+        "amountY": "01fd1a28e8",
         "price": "224291f96722bed0",
-        "liquiditySupply": "01b376066e36e6b1be1b5b7129",
+        "liquiditySupply": "01fcd2171888237d95d236455b",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0321bcdecee0bc1103",
-        "feeAmountYPerTokenStored": "6a7b553db961a6f9",
+        "feeAmountXPerTokenStored": "03284e0fe4b7d60c44",
+        "feeAmountYPerTokenStored": "6b5eef7568654f60",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01b4bcc3c4",
+        "amountY": "02151d2af8",
         "price": "22461414a37d968b",
-        "liquiditySupply": "01b44f780355ab3aa57079cdaa",
+        "liquiditySupply": "021497b217af79147fcdad4fb1",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "032b9aaa3bdbbbed08",
-        "feeAmountYPerTokenStored": "6b72888c6856592b",
+        "feeAmountXPerTokenStored": "032fa4a515f089305b",
+        "feeAmountYPerTokenStored": "6bf95fb65a373dfc",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01d21affa7",
+        "amountY": "0214597e21",
         "price": "2249968bd72a6319",
-        "liquiditySupply": "01d1ddd976a6bb5a2d91ff75ba",
+        "liquiditySupply": "021413a6f69dcf2603325b4cd3",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "030d8561e3a96bad05",
-        "feeAmountYPerTokenStored": "675933f9798d73ab",
+        "feeAmountXPerTokenStored": "030f18ed9941cb6069",
+        "feeAmountYPerTokenStored": "678e1560808daf30",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01d4bfbc5d",
+        "amountY": "0212bc9020",
         "price": "224d195f0b93fa7c",
-        "liquiditySupply": "01d49de5f2b13d07ef14769083",
+        "liquiditySupply": "0212963f70b4b1b0c226c1b94a",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02e6ac5706b56cb9eb",
-        "feeAmountYPerTokenStored": "6264424791d774ed",
+        "feeAmountXPerTokenStored": "02ea9501939a869f6d",
+        "feeAmountYPerTokenStored": "62ebb24eaeb95de0",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01d7dc8866",
+        "amountY": "02109ffdba",
         "price": "22509c8e4a262996",
-        "liquiditySupply": "01d739cf0c71b94072f65c11f4",
+        "liquiditySupply": "020fe9b0ea37e5abff110a33e1",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02ebafdab7d02f461c",
-        "feeAmountYPerTokenStored": "6320427689fce872",
+        "feeAmountXPerTokenStored": "02f08268779f566b0f",
+        "feeAmountYPerTokenStored": "63c7be68dddb0538",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "01db3487ab",
+        "amountY": "020ec06ec0",
         "price": "225420199c4db441",
-        "liquiditySupply": "01daf9cba6a962a82d2f9d7665",
+        "liquiditySupply": "020e7f537f6b5d7cd813335696",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02f4f2b81ec55e7288",
-        "feeAmountYPerTokenStored": "640fdde001f9f120",
+        "feeAmountXPerTokenStored": "02f9b8edb7f9ecbe5b",
+        "feeAmountYPerTokenStored": "64b7c9e47b64f73f",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "022e4ed540",
+        "amountY": "025bdcd20c",
         "price": "2257a4010b785567",
-        "liquiditySupply": "022e127b5221a0ddf9372c070a",
+        "liquiditySupply": "025b9b8b2c5d2d3457d50c99c8",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02f5c6dc4cd4ad1e10",
-        "feeAmountYPerTokenStored": "648e5c46fd7e9e0e",
+        "feeAmountXPerTokenStored": "02fdedff5b70deb78c",
+        "feeAmountYPerTokenStored": "65aa44d2c2ff8909",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "023162d00c",
+        "amountY": "025a52966c",
         "price": "225b2844a114bf1d",
-        "liquiditySupply": "0230d0aa11682339b01917ce8c",
+        "liquiditySupply": "0259b5b2224f45832ffb3ef0a9",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02f5eb0d700bc90a09",
-        "feeAmountYPerTokenStored": "646861aba2cf409e",
+        "feeAmountXPerTokenStored": "02fcca50cb24daba79",
+        "feeAmountYPerTokenStored": "6542e085f6a90206",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "023810bf59",
+        "amountY": "025bec48a0",
         "price": "225eace466929abc",
-        "liquiditySupply": "0237a23be423d16aeda270bbdb",
+        "liquiditySupply": "025b76409abbce5fa475a1636a",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02d4030ffcd7a13cac",
-        "feeAmountYPerTokenStored": "6032f212bcd53222",
+        "feeAmountXPerTokenStored": "02db1987a971816d32",
+        "feeAmountYPerTokenStored": "61189f68de9ec527",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0232941eec",
+        "amountY": "0259322363",
         "price": "226231e0656288fb",
-        "liquiditySupply": "023216f6ec2fd465867c8d5ed3",
+        "liquiditySupply": "0258ac63d800c1199d17951a63",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02c95a360950503b09",
-        "feeAmountYPerTokenStored": "5e565c73b6181b2d",
+        "feeAmountXPerTokenStored": "02cc3775f1408c3c46",
+        "feeAmountYPerTokenStored": "5ea72e24c0202552",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "026d83cd31",
+        "amountY": "025344d4ae",
         "price": "2265b738a6f62205",
-        "liquiditySupply": "026cd8c91bdabba55851bfacee",
+        "liquiditySupply": "0252a10930016652fa6a2dd0df",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02cdc6615a0ddf52d2",
-        "feeAmountYPerTokenStored": "5f03ab88a7c04c29",
+        "feeAmountXPerTokenStored": "02d2be342760370693",
+        "feeAmountYPerTokenStored": "5fa2f3fbdc9d5a4c",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0277e847c1",
+        "amountY": "024f47ad77",
         "price": "22693ced34bff597",
-        "liquiditySupply": "0276c399e6ec4f0869a3c64846",
+        "liquiditySupply": "024e35cf32178a5dc1b47e5379",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02b852813cef2893c1",
-        "feeAmountYPerTokenStored": "5cbb87816ac6e188",
+        "feeAmountXPerTokenStored": "02bf848c07f87cdaac",
+        "feeAmountYPerTokenStored": "5dac449632969369",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "027b2653d5",
+        "amountY": "024d142ab5",
         "price": "226cc2fe18338b18",
-        "liquiditySupply": "027ad65d6f554405b7911fd1d3",
+        "liquiditySupply": "024cc9d8443a84ed44abdd861f",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02c424a04310c074f3",
-        "feeAmountYPerTokenStored": "5f4cddbbaab5510b",
+        "feeAmountXPerTokenStored": "02cc0a0bae0edcbb69",
+        "feeAmountYPerTokenStored": "605a9f0c7d55f8f6",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "027d3ac169",
+        "amountY": "025215d69b",
         "price": "2270496b5ac561ad",
-        "liquiditySupply": "027cdc011869204671daf9221c",
+        "liquiditySupply": "0251bc757c98dad7bce0f7d3d6",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02c6f176ddeec93b5c",
-        "feeAmountYPerTokenStored": "6063332d6816c3ea",
+        "feeAmountXPerTokenStored": "02cd5bc5a99915b188",
+        "feeAmountYPerTokenStored": "613d734b07ebea3d",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "02882cca71",
+        "amountY": "024fa12b63",
         "price": "2273d03505eaf05c",
-        "liquiditySupply": "0287c2b7b7ef0efec5c2cff136",
+        "liquiditySupply": "024f402ed2208117e432e020d0",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02d2fd2e9ee7b20ec4",
-        "feeAmountYPerTokenStored": "61e00aa349bc059f",
+        "feeAmountXPerTokenStored": "02d7da42ed38f519eb",
+        "feeAmountYPerTokenStored": "628ddadef87799a0",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "02861938ff",
+        "amountY": "024f4c44d5",
         "price": "2277575b231aa61d",
-        "liquiditySupply": "02859171c67108450799994139",
+        "liquiditySupply": "024eca0e47f3b56f09d3cb96f5",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02d596db35ff2794ed",
-        "feeAmountYPerTokenStored": "618b31392e78dd2f",
+        "feeAmountXPerTokenStored": "02daf354fa87818358",
+        "feeAmountYPerTokenStored": "624b9a483541114d",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0288add14c",
+        "amountY": "024d1f6dbb",
         "price": "227adeddbbcbe9f8",
-        "liquiditySupply": "028843fd2ae090e002659a1f36",
+        "liquiditySupply": "024cbf50c8c540a644a804f077",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02d3e6f3c50a3db13b",
-        "feeAmountYPerTokenStored": "6132dfca1aea5462",
+        "feeAmountXPerTokenStored": "02d93c8309d61ff1e9",
+        "feeAmountYPerTokenStored": "61fdf3a787f5506c",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0270689fce",
+        "amountY": "0249391005",
         "price": "227e66bcd9771b1d",
-        "liquiditySupply": "026fe564366f43bb73b730287e",
+        "liquiditySupply": "0248b967d1fcbe470b098a2586",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02e90168c7cc006272",
-        "feeAmountYPerTokenStored": "63fce130f60b52da",
+        "feeAmountXPerTokenStored": "02ef956769619431c4",
+        "feeAmountYPerTokenStored": "64fe088ded998be7",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "026e1de349",
+        "amountY": "0242279e97",
         "price": "2281eef8859590fc",
-        "liquiditySupply": "026d777ab19b768209543f6adc",
+        "liquiditySupply": "02418cd411f66aa79e010cca38",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02ec27f4c600d4840f",
-        "feeAmountYPerTokenStored": "645ffc911c5aa7ed",
+        "feeAmountXPerTokenStored": "02f603915a438c6ead",
+        "feeAmountYPerTokenStored": "65ad68a0cb747539",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "02731cd407",
+        "amountY": "026077822f",
         "price": "22857790c9a19b63",
-        "liquiditySupply": "0272083f98be56d88f3efd0924",
+        "liquiditySupply": "025f6b263de86a4d83d8c9629e",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02e144c70b5001f850",
-        "feeAmountYPerTokenStored": "61f0758fb9b754a0",
+        "feeAmountXPerTokenStored": "02e9c705becef8c1e7",
+        "feeAmountYPerTokenStored": "631291c55db823f4",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "027c24fb5f",
+        "amountY": "026387dce0",
         "price": "22890085af168291",
-        "liquiditySupply": "027becf19d5ae3d4bdf757e29e",
+        "liquiditySupply": "026351d59b6cc6ece58a27b380",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02f927587825e04f17",
-        "feeAmountYPerTokenStored": "64e0a384c853f521",
+        "feeAmountXPerTokenStored": "03000e20d64fa6ae06",
+        "feeAmountYPerTokenStored": "65ce4c58c4475b15",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "028703056a",
+        "amountY": "0265892e64",
         "price": "228c89d73f708754",
-        "liquiditySupply": "02869a7ac3a93d1b68acd5b35d",
+        "liquiditySupply": "026525f97e98ebe29e9ca860d3",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02eeb4c4df7654f351",
-        "feeAmountYPerTokenStored": "63d930112189191c",
+        "feeAmountXPerTokenStored": "02f6331db12bdcc26b",
+        "feeAmountYPerTokenStored": "64db662aba6c3400",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "028a3d790a",
+        "amountY": "02652d316c",
         "price": "22901385842ce322",
-        "liquiditySupply": "0289e23378dac90385e9638c0e",
+        "liquiditySupply": "0264d70ba1677407ec174eccf4",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02f1996a74875b88ef",
-        "feeAmountYPerTokenStored": "646fc4e040307ab7",
+        "feeAmountXPerTokenStored": "02fcb87170a0941291",
+        "feeAmountYPerTokenStored": "65f4fe49fee0745b",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0291558579",
+        "amountY": "02685376b2",
         "price": "22939d9086c9c831",
-        "liquiditySupply": "029118d151fffde116f56d3ebb",
+        "liquiditySupply": "02681a77220254e263d59f3525",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02de4198f11083fd89",
-        "feeAmountYPerTokenStored": "6235f37ec0fb7f64",
+        "feeAmountXPerTokenStored": "02e9b52abe01fe0c35",
+        "feeAmountYPerTokenStored": "63c9b52998711f18",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "028e47abcf",
+        "amountY": "0267da6893",
         "price": "229727f850c66190",
-        "liquiditySupply": "028e045224cd852af4dc2d3114",
+        "liquiditySupply": "02679a935bc0020fd931eb8966",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02c5d6334b6712d072",
-        "feeAmountYPerTokenStored": "5f87c516b5d00526",
+        "feeAmountXPerTokenStored": "02d08b5e292e320a50",
+        "feeAmountYPerTokenStored": "61019db16d591302",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "02904a26dd",
+        "amountY": "0264ec446d",
         "price": "229ab2bceba2d345",
-        "liquiditySupply": "028faba2d5249ea3b682cead95",
+        "liquiditySupply": "026457fab31e94f049fff47273",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02b089d235f7d27ed9",
-        "feeAmountYPerTokenStored": "5c68f53f81f2d4e6",
+        "feeAmountXPerTokenStored": "02b89e5b67f68ed429",
+        "feeAmountYPerTokenStored": "5d80ae3ab80a4d53",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "0293ee756c",
+        "amountY": "025659ce05",
         "price": "229e3dde60e03a5e",
-        "liquiditySupply": "02932e60d55a9f3864189fc152",
+        "liquiditySupply": "0255aba4f11d3138792278d55c",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02a7a134f498c35676",
-        "feeAmountYPerTokenStored": "5befaff078631156",
+        "feeAmountXPerTokenStored": "02af33d103de899528",
+        "feeAmountYPerTokenStored": "5cf840079be7b2ae",
         "padding0": "00",
         "padding1": "00"
       },
       {
         "amountX": "00",
-        "amountY": "028f70d6b5",
+        "amountY": "024f74b592",
         "price": "22a1c95cba00ad14",
-        "liquiditySupply": "028eadc2a318186a23cb3bc711",
+        "liquiditySupply": "024ec49b5790c632756ade3f4b",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02a8c3b90a7839a7e1",
-        "feeAmountYPerTokenStored": "5b60db635cba1405",
+        "feeAmountXPerTokenStored": "02b07c8bacf516acf5",
+        "feeAmountYPerTokenStored": "5c7385aa76c8d06c",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "00",
-        "amountY": "028e6f356f",
+        "amountX": "0853ebd6",
+        "amountY": "024c0f6b4b",
         "price": "22a5553800873adf",
-        "liquiditySupply": "028e27a4c1cbc9cca837b2b6e8",
+        "liquiditySupply": "024ced65211c907470e63035ef",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02aa7fcc3607677f1f",
-        "feeAmountYPerTokenStored": "5ad9e89fca42c8ad",
+        "feeAmountXPerTokenStored": "02b6654de24ae63e43",
+        "feeAmountYPerTokenStored": "5c7c89749c6c5522",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "00",
-        "amountY": "028fe3be97",
+        "amountX": "10ef514e78",
+        "amountY": "00",
         "price": "22a8e1703df7ec8f",
-        "liquiditySupply": "028f93d2695ec24c49fe8a78d1",
+        "liquiditySupply": "024aaceddae4b56f388d1bdda1",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02a93a585584259af2",
-        "feeAmountYPerTokenStored": "5b7af1496b4ff060",
+        "feeAmountXPerTokenStored": "02b6bcd137a326c34f",
+        "feeAmountYPerTokenStored": "5d3dff96e2c8675e",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "00",
-        "amountY": "0257230680",
+        "amountX": "10d461cf78",
+        "amountY": "00",
         "price": "22ac6e057bd7c469",
-        "liquiditySupply": "0256a3dde4dde40be95ac07c39",
+        "liquiditySupply": "02470ef83f05fc4fe5a902aa82",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02af42a47dd686938c",
-        "feeAmountYPerTokenStored": "5cca7699ff654abf",
+        "feeAmountXPerTokenStored": "02bad146c6131ce1cd",
+        "feeAmountYPerTokenStored": "5e4b10b17f778f81",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "00",
-        "amountY": "02592535d0",
+        "amountX": "10c142d501",
+        "amountY": "00",
         "price": "22affaf7c3acbe3e",
-        "liquiditySupply": "0258e68f22636560d409472f40",
+        "liquiditySupply": "0244f294daf91dfa256fbcf3de",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02b7c5c0ee69d03a0d",
-        "feeAmountYPerTokenStored": "5e7def22e7594e4a",
+        "feeAmountXPerTokenStored": "02c1a7f41987a42cf6",
+        "feeAmountYPerTokenStored": "5fcb4c5cc269a238",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "00",
-        "amountY": "025ab31e69",
+        "amountX": "102d5f3fd5",
+        "amountY": "00",
         "price": "22b388471efdcf86",
-        "liquiditySupply": "025a34c274f250062c73ebe5c9",
+        "liquiditySupply": "0230e91345adbb5fcb9be3ee11",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02d0d25de8553b795f",
-        "feeAmountYPerTokenStored": "61f8907329580562",
+        "feeAmountXPerTokenStored": "02da571430fa964ba1",
+        "feeAmountYPerTokenStored": "6327ff5aeffbeab7",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "02b461ac",
-        "amountY": "025d4da08c",
+        "amountX": "1019143979",
+        "amountY": "00",
         "price": "22b715f39752e777",
-        "liquiditySupply": "025d60d2080d03456a038c07ec",
+        "liquiditySupply": "022e9221e1a9204a527c516827",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "02ec161dc9d0c251ed",
-        "feeAmountYPerTokenStored": "661488fcb0de8890",
+        "feeAmountXPerTokenStored": "02f992ca359629e8ee",
+        "feeAmountYPerTokenStored": "67d10a7d34e05aa4",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "117f1ac0ee",
+        "amountX": "0fe17f97a0",
         "amountY": "00",
         "price": "22baa3fd3634ef23",
-        "liquiditySupply": "025f6a4a9de952745f716e3c43",
+        "liquiditySupply": "022752e96e045380f94c29d57b",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0304a35981e5232ac7",
-        "feeAmountYPerTokenStored": "69bb53b9cc1f00dc",
+        "feeAmountXPerTokenStored": "0315fab038d811081b",
+        "feeAmountYPerTokenStored": "6c0f0107dc135654",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "119e819fa1",
+        "amountX": "0fedead172",
         "amountY": "00",
         "price": "22be3264052dc98c",
-        "liquiditySupply": "0263c3d5c20b622a38455e982a",
+        "liquiditySupply": "0229178a18772cb5118d478e52",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "032f9a28aaf8973734",
-        "feeAmountYPerTokenStored": "6fc92aa4669620b8",
+        "feeAmountXPerTokenStored": "033e78cd3f257993e1",
+        "feeAmountYPerTokenStored": "71ce6b889180460d",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "117e996d22",
+        "amountX": "0fde9f4fc0",
         "amountY": "00",
         "price": "22c1c1280dc853c4",
-        "liquiditySupply": "025ef6c13c369721f968e3c2e7",
+        "liquiditySupply": "022695e197f4ffb45689cbc3c4",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0360b46165238f8d15",
-        "feeAmountYPerTokenStored": "76a638bb29bd801e",
+        "feeAmountXPerTokenStored": "0368ace5372d40bdc1",
+        "feeAmountYPerTokenStored": "77b988d8c07c61c2",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "11fd75ed1a",
+        "amountX": "13d790e3f1",
         "amountY": "00",
         "price": "22c5504959906501",
-        "liquiditySupply": "02713f2dcf2cb5640eeca83489",
+        "liquiditySupply": "02b19b01f6a99ab5f3f7d49d1e",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0362e8c54793a47231",
-        "feeAmountYPerTokenStored": "76c74130ce7ac512",
+        "feeAmountXPerTokenStored": "0368210f6c9082bc04",
+        "feeAmountYPerTokenStored": "77768fac4e00eba5",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "119c84e30f",
+        "amountX": "149b906675",
         "amountY": "00",
         "price": "22c8dfc7f212ceb9",
-        "liquiditySupply": "026432ba39d88ddfc2c1ccea2b",
+        "liquiditySupply": "02cc5a557ab2ce50ad6bed2054",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "038253ca4e272e9116",
-        "feeAmountYPerTokenStored": "7a994b08c85380d6",
+        "feeAmountXPerTokenStored": "038573ec181c0eab62",
+        "feeAmountYPerTokenStored": "7b026b772a8316b1",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "116f8d41b0",
+        "amountX": "1487fbafe0",
         "amountY": "00",
         "price": "22cc6fa3e0dd5cbb",
-        "liquiditySupply": "025e43beb5a6d417d12c800ef4",
+        "liquiditySupply": "02c9e58dea114753692ab0d0eb",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "03ae1d08e970573ee0",
-        "feeAmountYPerTokenStored": "7e04732086486782",
+        "feeAmountXPerTokenStored": "03b15faf330d3b2bbf",
+        "feeAmountYPerTokenStored": "7e7508a64e1d2331",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "1009f4033c",
+        "amountX": "11ce546d6f",
         "amountY": "00",
         "price": "22cfffdd2f7ed54b",
-        "liquiditySupply": "022e0ae53f6e8bc38b92b908dc",
+        "liquiditySupply": "026b867c786aa658732163871f",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "03a073527ec81b3fd5",
-        "feeAmountYPerTokenStored": "7c5a770d1389cbe7",
+        "feeAmountXPerTokenStored": "03a4f004caa50f841f",
+        "feeAmountYPerTokenStored": "7cf76303f72443fb",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0fc5779aac",
+        "amountX": "11a345f035",
         "amountY": "00",
         "price": "22d39073e786f938",
-        "liquiditySupply": "0224dacedd162fabb2052a6e6d",
+        "liquiditySupply": "0265cecc626f6755e48df17cbd",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "039ae56d6d09375b60",
-        "feeAmountYPerTokenStored": "7c88f3bee07b7765",
+        "feeAmountXPerTokenStored": "039e9d968f782da3c3",
+        "feeAmountYPerTokenStored": "7d0cd1de534e1158",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0ebdd5fa24",
+        "amountX": "0d59cabd21",
         "amountY": "00",
         "price": "22d72168128683f8",
-        "liquiditySupply": "0201466cf08481aebaa3a22f54",
+        "liquiditySupply": "01d0d98dfbe1edc1b0a8f5e7eb",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "03a3dda2ab82c14493",
-        "feeAmountYPerTokenStored": "7d8a6578a0cd3946",
+        "feeAmountXPerTokenStored": "03a9385d88005b6791",
+        "feeAmountYPerTokenStored": "7e4100e01031166d",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0ea9e1f1b6",
+        "amountX": "0d208cff6a",
         "amountY": "00",
         "price": "22dab2b9ba0f2bc0",
-        "liquiditySupply": "01fee86acc381cfe00d54aff4b",
+        "liquiditySupply": "01c95ffcb9098f310f1d858a56",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "039de887776108f2d2",
-        "feeAmountYPerTokenStored": "7de5d2d24f6c436d",
+        "feeAmountXPerTokenStored": "03a2f6243aeb78677d",
+        "feeAmountYPerTokenStored": "7e9af35df9f17e30",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0e9413a250",
+        "amountX": "0d32afe4c3",
         "amountY": "00",
         "price": "22de4468e7b3a1a2",
-        "liquiditySupply": "01fbf3e0fe02299493a46baf37",
+        "liquiditySupply": "01cbd72f5d6eec981c04b15ccc",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "03825ea515c617eaa3",
-        "feeAmountYPerTokenStored": "79c0f439b232e443",
+        "feeAmountXPerTokenStored": "038788508cb5cb5966",
+        "feeAmountYPerTokenStored": "7a7d57ef9dd115c6",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0e77000057",
+        "amountX": "0c1d253583",
         "amountY": "00",
         "price": "22e1d675a507919f",
-        "liquiditySupply": "01f7acdf3c936af1da140d69ec",
+        "liquiditySupply": "01a5cfda5ec14049ea0aa9eb05",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "039c43453339833bbd",
-        "feeAmountYPerTokenStored": "7cbf09084848a09a",
+        "feeAmountXPerTokenStored": "03a079f95072cfda20",
+        "feeAmountYPerTokenStored": "7d6131f74392cd01",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0d90081640",
+        "amountX": "0b4500d226",
         "amountY": "00",
         "price": "22e568dffb9fa2c8",
-        "liquiditySupply": "01d90c3a1a6a19bd0652611f7c",
+        "liquiditySupply": "01891164899ba47322e540ff7a",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "039655bb2329b5ad80",
-        "feeAmountYPerTokenStored": "7c38f25792cf9eae",
+        "feeAmountXPerTokenStored": "039a033ea721c45ad7",
+        "feeAmountYPerTokenStored": "7cc40d281efcc965",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0d87b8be32",
+        "amountX": "0b571d3666",
         "amountY": "00",
         "price": "22e8fba7f5117753",
-        "liquiditySupply": "01d81fcf8f3f70c0d10ca2828b",
+        "liquiditySupply": "018bb5d998ffbd5ad979ad1ca1",
         "functionBytes": [
           "00",
           "00"
         ],
-        "feeAmountXPerTokenStored": "0384074069d738632d",
-        "feeAmountYPerTokenStored": "7a2d86df7e03befd",
+        "feeAmountXPerTokenStored": "038570d8081115efa6",
+        "feeAmountYPerTokenStored": "7a5ed4fd6f29d055",
         "padding0": "00",
         "padding1": "00"
       },
       {
-        "amountX": "0d8d7eb529",
+        "amountX": "0b311cac23",
         "amountY": "00",
         "price": "22ec8ecd9af3acba",
-        "liquiditySupply": "01d8d6e4b1294a2122d4e81203",
+        "liquiditySupply": "018678a1af1ea32ae446bcab61",
         "functionBytes": [
           "00",
           "00"
@@ -854,10 +854,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0d807be7aa",
+        "amountX": "0afe8269c5",
         "amountY": "00",
         "price": "22f02250f6dddbcc",
-        "liquiditySupply": "01d78c8bb044ff91ce8672bed4",
+        "liquiditySupply": "017ff7cc715b2c5b050dab302a",
         "functionBytes": [
           "00",
           "00"
@@ -868,10 +868,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0cda43481a",
+        "amountX": "0a70ed6a20",
         "amountY": "00",
         "price": "22f3b632126898d0",
-        "liquiditySupply": "01c0a66b7d6471dd958bb5045a",
+        "liquiditySupply": "016c78dd42b1222f4a55323764",
         "functionBytes": [
           "00",
           "00"
@@ -882,10 +882,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0cc9557568",
+        "amountX": "0a752e7ec8",
         "amountY": "00",
         "price": "22f74a70f72d7399",
-        "liquiditySupply": "01beab097e7d13634f676045e0",
+        "liquiditySupply": "016d51b681ded014fdd3673d0d",
         "functionBytes": [
           "00",
           "00"
@@ -896,10 +896,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0bf3ebf433",
+        "amountX": "09b715b7d8",
         "amountY": "00",
         "price": "22fadf0daec6f7a4",
-        "liquiditySupply": "01a1e20b1208ec7a268314bec3",
+        "liquiditySupply": "0153a71237a16c0bf3020166e7",
         "functionBytes": [
           "00",
           "00"
@@ -910,10 +910,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0bddd89f25",
+        "amountX": "09b994582a",
         "amountY": "00",
         "price": "22fe740842d0ac2b",
-        "liquiditySupply": "019f2b5cfc243b9d6003659cc6",
+        "liquiditySupply": "01543d794387d2d93fa53ce4bd",
         "functionBytes": [
           "00",
           "00"
@@ -924,10 +924,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0bd91dacb5",
+        "amountX": "09cdf44a56",
         "amountY": "00",
         "price": "23020960bce71447",
-        "liquiditySupply": "019e830366d8f290be9fdcead6",
+        "liquiditySupply": "015703f3b998625d90badaefb7",
         "functionBytes": [
           "00",
           "00"
@@ -938,10 +938,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0bd375c65e",
+        "amountX": "09d42ca922",
         "amountY": "00",
         "price": "23059f1726a7af03",
-        "liquiditySupply": "019dd23e0847e13e690f4c990c",
+        "liquiditySupply": "0157ef1b56b391678e65147240",
         "functionBytes": [
           "00",
           "00"
@@ -952,10 +952,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0b85d7655f",
+        "amountX": "09c1c6ac64",
         "amountY": "00",
         "price": "2309352b89b0f77a",
-        "liquiditySupply": "0193898e9ff2969aa71031b8c8",
+        "liquiditySupply": "0155b1e7e7a361f65afc581c22",
         "functionBytes": [
           "00",
           "00"
@@ -966,10 +966,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0b6f1a47ca",
+        "amountX": "09c31417ec",
         "amountY": "00",
         "price": "230ccb9defa264f1",
-        "liquiditySupply": "019071a196cc7130aa1362a4de",
+        "liquiditySupply": "0155e3465eee8f6668294e1089",
         "functionBytes": [
           "00",
           "00"
@@ -980,10 +980,10 @@
         "padding1": "00"
       },
       {
-        "amountX": "0b59e705ec",
+        "amountX": "09c3d68d29",
         "amountY": "00",
         "price": "2310626e621c6aeb",
-        "liquiditySupply": "018ddd3fe3bcf7074380be53c6",
+        "liquiditySupply": "01564480c309fe07a6b2d41d22",
         "functionBytes": [
           "00",
           "00"

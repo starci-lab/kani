@@ -18,6 +18,7 @@ import SuperJSON from "superjson"
 import { 
     ActivePositionNotFoundException, 
     BotNotFoundException, 
+    BotNotOwnedByUserException, 
     LiquidityPoolNotFoundException 
 } from "@exceptions"
 import { LiquidityPoolStateService } from "@modules/blockchains"
@@ -41,24 +42,28 @@ export class ReservesService {
     async reserves(
         {
             botId,
+            activePositionId,
         }: ReservesRequest,
         userLike: UserJwtLike,
     ): Promise<ReservesResponseData> {
-        const bot = await this.connection.model<BotSchema>(BotSchema.name).findOne({
-            user: userLike.id,
-            _id: botId,
-        })
+        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(botId)
         if (!bot) {
-            throw new BotNotFoundException(botId)
+            throw new BotNotFoundException(`Bot not found with id: ${botId}`)
         }
-        const activePosition = await this.connection.model<PositionSchema>(PositionSchema.name)
-            .findOne({
-                bot: bot.id,
-                isActive: true,
-            })
-        if (!activePosition) {
+        // check if the bot is owned by the user
+        if (bot.user.toString() !== userLike.id) {
+            throw new BotNotOwnedByUserException(`Bot not owned by user with id: ${userLike.id}`)
+        }
+        // check if the active position exists and is owned by the bot
+        const activePosition = await this.connection.model<PositionSchema>(PositionSchema.name).findById(activePositionId)
+        if (
+            !activePosition 
+            || activePosition.bot.toString() !== botId
+            || !activePosition.isActive
+        ) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
+        bot.activePosition = activePosition
         // retrieve the liquidity pool
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.id === activePosition.liquidityPool.toString(),

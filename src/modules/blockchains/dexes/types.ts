@@ -13,6 +13,16 @@ export interface DexesOptions {
     }
 }
 
+export interface DexOptions {
+    enabled?: {
+        observe?: boolean
+        action?: boolean
+        analytics?: boolean
+        fees?: boolean
+        reserves?: boolean
+    }
+}
+
 export interface ActionResponse {
     // tx hash returned if the tx is excuted
     txHash?: string

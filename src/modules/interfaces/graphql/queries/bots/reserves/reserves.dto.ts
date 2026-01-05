@@ -12,6 +12,10 @@ export class ReservesRequest {
         description: "The unique identifier of the bot whose reserves are being queried.",
     })
         botId: string
+    @Field(() => ID, {
+        description: "The unique identifier of the active position whose reserves are being queried.",
+    })
+        activePositionId: string
 }
 
 @ObjectType({
