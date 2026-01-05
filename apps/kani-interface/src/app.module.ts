@@ -84,6 +84,7 @@ import { EventModule, KafkaMode } from "@modules/event"
                 action: false,
                 fees: true,
                 analytics: false,
+                reserves: true,
             },
         }),
         SpotModule.register({

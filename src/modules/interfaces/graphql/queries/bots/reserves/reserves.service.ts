@@ -4,7 +4,6 @@ import {
     BotSchema,
     PositionSchema,
     PrimaryMemoryStorageService,
-    LiquidityPoolType
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import {
@@ -19,10 +18,10 @@ import SuperJSON from "superjson"
 import { 
     ActivePositionNotFoundException, 
     BotNotFoundException, 
-    InvalidPoolTokensException, 
     LiquidityPoolNotFoundException 
 } from "@exceptions"
-import { LiquidityPoolState, LiquidityPoolStateService } from "@modules/blockchains"
+import { LiquidityPoolStateService } from "@modules/blockchains"
+import { ReservesOrchestratorService } from "@modules/blockchains/dexes"
 
 @Injectable()
 export class ReservesService {
@@ -36,6 +35,7 @@ export class ReservesService {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
+        private readonly reservesOrchestratorService: ReservesOrchestratorService,
     ) { }
 
     async reserves(
@@ -66,49 +66,13 @@ export class ReservesService {
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException("Liquidity pool not found")
         }
-        if (liquidityPool.type === LiquidityPoolType.Clmm) {
-            const state = await this.liquidityPoolStateService.getState(liquidityPool.displayId)
-            return {
-                tokenA: 0,
-                tokenB: 0,
-            }
-        } else {
-            return {
-                tokenA: 0,
-                tokenB: 0,
-            }
-        }
-    }
-
-    private async getClmmReserves(
-        { state }: GetClmmReservesParams,
-    ): Promise<ReservesResponseData> {
-        const { dynamic } = state
-        const { tickCurrent } = dynamic
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === state.static.tokenB.toString(),
-        )
-        if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
-        }
-    }
-
-    private async getDlmmReserves(
-        {
-            botId,
-            activePositionId,
-        }: ReservesRequest,
-    ): Promise<ReservesResponseData> {
+        const reserves = await this.reservesOrchestratorService.reserves({
+            bot,
+            liquidityPoolId: liquidityPool.displayId,
+        })
         return {
-            tokenA: 0,
-            tokenB: 0,
+            tokenA: reserves.tokenA.toNumber(),
+            tokenB: reserves.tokenB.toNumber(),
         }
     }
-}
-
-export interface GetClmmReservesParams {
-    state: LiquidityPoolState,
 }
