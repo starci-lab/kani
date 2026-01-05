@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "WebSearch"
+    ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "code-documentation@claude-code-workflows": true,
+    "backend-development@claude-code-workflows": true
+  }
+}

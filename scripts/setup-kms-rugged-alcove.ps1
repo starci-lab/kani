@@ -1,31 +1,31 @@
 # ======================================================
-# GCP Service Account + KMS Encrypt/Decrypt (FULL)
+# GCP KMS Setup for Kani (rugged-alcove-477616-p5)
 # Windows PowerShell
 # ======================================================
 
 $ErrorActionPreference = "Stop"
 
 # --------------------------
-# Configuration
+# Configuration (matches api-keys.json)
 # --------------------------
 
 $PROJECT_ID = "rugged-alcove-477616-p5"
 
 # Service Account
-$SA_NAME  = "crypto-key-dev-ed-sa"
+$SA_NAME  = "crypto-key-ed-sa"
 $SA_EMAIL = "$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 
-# KMS
-$LOCATION  = "asia-southeast1"
-$KEYRING   = "kani-crypto-dev-keyring"
-$CRYPTOKEY = "kani-crypto-dev-key"
+# KMS (must match api-keys.json)
+$LOCATION  = "global"
+$KEYRING   = "kani-key-ring"
+$CRYPTOKEY = "kani-crypto-key"
 
 # Output key file
-$OUTPUT_DIR = ".\secrets"
+$OUTPUT_DIR = ".\.mount\gcp"
 $KEY_FILE   = "$OUTPUT_DIR\crypto-key-ed-sa.json"
 
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host "GCP Service Account + KMS Encrypt/Decrypt" -ForegroundColor Cyan
+Write-Host "GCP KMS Setup for Kani" -ForegroundColor Cyan
 Write-Host "Project ID      : $PROJECT_ID"
 Write-Host "Service Account : $SA_EMAIL"
 Write-Host "Location        : $LOCATION"
@@ -38,33 +38,26 @@ Write-Host ""
 # 0. Ensure output directory exists
 # --------------------------
 if (!(Test-Path $OUTPUT_DIR)) {
-    New-Item -ItemType Directory -Path $OUTPUT_DIR | Out-Null
+    New-Item -ItemType Directory -Path $OUTPUT_DIR -Force | Out-Null
 }
 
 # --------------------------
-# 1. Create Service Account (if not exists)
+# 1. Check Service Account exists
 # --------------------------
 Write-Host ">>> Checking Service Account..." -ForegroundColor Yellow
 
 $SA_EXISTS = $false
 $serviceAccounts = gcloud iam service-accounts list `
     --project=$PROJECT_ID `
-    --format="value(email)"
+    --format="value(email)" 2>$null
 
 if ($serviceAccounts -contains $SA_EMAIL) {
     $SA_EXISTS = $true
-}
-
-if ($SA_EXISTS) {
-    Write-Host "Service Account already exists. Using existing SA." -ForegroundColor Green
+    Write-Host "✓ Service Account exists: $SA_EMAIL" -ForegroundColor Green
 } else {
-    Write-Host "Creating Service Account..." -ForegroundColor Yellow
-
-    gcloud iam service-accounts create $SA_NAME `
-        --display-name="Crypto Key Encryptor Decryptor SA" `
-        --project=$PROJECT_ID
-
-    Write-Host "Service Account created." -ForegroundColor Green
+    Write-Host "✗ Service Account not found: $SA_EMAIL" -ForegroundColor Red
+    Write-Host "  Please create the service account first or check the project ID" -ForegroundColor Red
+    exit 1
 }
 
 Write-Host ""
@@ -78,7 +71,7 @@ $KEYRING_EXISTS = $false
 $keyrings = gcloud kms keyrings list `
     --location=$LOCATION `
     --project=$PROJECT_ID `
-    --format="value(name)"
+    --format="value(name)" 2>$null
 
 foreach ($kr in $keyrings) {
     if ($kr -match "/keyRings/$KEYRING$") {
@@ -88,7 +81,7 @@ foreach ($kr in $keyrings) {
 }
 
 if ($KEYRING_EXISTS) {
-    Write-Host "KeyRing '$KEYRING' already exists." -ForegroundColor Green
+    Write-Host "✓ KeyRing '$KEYRING' already exists." -ForegroundColor Green
 } else {
     Write-Host "Creating KeyRing '$KEYRING'..." -ForegroundColor Yellow
 
@@ -96,7 +89,7 @@ if ($KEYRING_EXISTS) {
         --location=$LOCATION `
         --project=$PROJECT_ID
 
-    Write-Host "KeyRing created." -ForegroundColor Green
+    Write-Host "✓ KeyRing created." -ForegroundColor Green
 }
 
 Write-Host ""
@@ -111,7 +104,7 @@ $keys = gcloud kms keys list `
     --keyring=$KEYRING `
     --location=$LOCATION `
     --project=$PROJECT_ID `
-    --format="value(name)"
+    --format="value(name)" 2>$null
 
 foreach ($k in $keys) {
     if ($k -match "/cryptoKeys/$CRYPTOKEY$") {
@@ -121,7 +114,7 @@ foreach ($k in $keys) {
 }
 
 if ($CRYPTOKEY_EXISTS) {
-    Write-Host "CryptoKey '$CRYPTOKEY' already exists." -ForegroundColor Green
+    Write-Host "✓ CryptoKey '$CRYPTOKEY' already exists." -ForegroundColor Green
 } else {
     Write-Host "Creating CryptoKey '$CRYPTOKEY'..." -ForegroundColor Yellow
 
@@ -129,9 +122,10 @@ if ($CRYPTOKEY_EXISTS) {
         --location=$LOCATION `
         --keyring=$KEYRING `
         --purpose=encryption `
+        --rotation-period=90d `
         --project=$PROJECT_ID
 
-    Write-Host "CryptoKey created." -ForegroundColor Green
+    Write-Host "✓ CryptoKey created." -ForegroundColor Green
 }
 
 Write-Host ""
@@ -148,26 +142,25 @@ gcloud kms keys add-iam-policy-binding $CRYPTOKEY `
     --role="roles/cloudkms.cryptoKeyEncrypterDecrypter" `
     --project=$PROJECT_ID
 
-Write-Host "IAM role granted." -ForegroundColor Green
+Write-Host "✓ IAM role granted to $SA_EMAIL" -ForegroundColor Green
 Write-Host ""
 
 # --------------------------
-# 5. Export Service Account key
+# 5. Verify setup
 # --------------------------
-Write-Host ">>> Exporting Service Account key..." -ForegroundColor Yellow
+Write-Host ">>> Verifying KMS setup..." -ForegroundColor Yellow
 
-if (Test-Path $KEY_FILE) {
-    Write-Host "WARNING: Key file already exists and will be overwritten!" -ForegroundColor Red
-}
-
-gcloud iam service-accounts keys create $KEY_FILE `
-    --iam-account=$SA_EMAIL `
-    --project=$PROJECT_ID
-
+$keyPath = "projects/$PROJECT_ID/locations/$LOCATION/keyRings/$KEYRING/cryptoKeys/$CRYPTOKEY"
+Write-Host "Key path:" -ForegroundColor Cyan
+Write-Host "  $keyPath" -ForegroundColor White
 Write-Host ""
 
 Write-Host "==============================================" -ForegroundColor Green
-Write-Host "DONE!"
-Write-Host "Service Account key exported to:"
-Write-Host "  $KEY_FILE"
+Write-Host "✓ KMS setup complete!" -ForegroundColor Green
 Write-Host "==============================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "Next steps:" -ForegroundColor Yellow
+Write-Host "1. Ensure crypto-key-ed-sa.json exists in .mount/gcp/" -ForegroundColor White
+Write-Host "2. Ensure api-keys.json has the correct cryptoKeyName" -ForegroundColor White
+Write-Host "3. Run: npm run cli" -ForegroundColor White
+Write-Host ""
