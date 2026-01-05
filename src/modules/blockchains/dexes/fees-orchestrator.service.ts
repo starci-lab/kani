@@ -21,6 +21,7 @@ import {
 import { OrcaFeesService } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { MeteoraFeesService } from "./meteora"
+import { RaydiumFeesService } from "./raydium"
 
 /**
  * FeesOrchestratorService
@@ -39,6 +40,7 @@ export class FeesOrchestratorService {
         private readonly orcaFeesService: OrcaFeesService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly meteoraFeesService: MeteoraFeesService,
+        private readonly raydiumFeesService: RaydiumFeesService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -81,12 +83,33 @@ export class FeesOrchestratorService {
             throw new DexNotImplementedException("Turbos fees not implemented")
         case DexId.Momentum:
             throw new DexNotImplementedException("Momentum fees not implemented")
-        case DexId.Raydium:
-            throw new DexNotImplementedException("Raydium fees not implemented")
-        case DexId.Orca:
-            return this.orcaFeesService.fees({ bot, liquidityPoolId, state })
-        case DexId.Meteora:
-            return this.meteoraFeesService.fees({ bot, liquidityPoolId, state })
+        case DexId.Raydium: {
+            return await this.raydiumFeesService.fees(
+                { 
+                    bot, 
+                    liquidityPoolId, 
+                    state 
+                }
+            )
+        }
+        case DexId.Orca: {
+            return await this.orcaFeesService.fees(
+                { 
+                    bot, 
+                    liquidityPoolId, 
+                    state 
+                }
+            )
+        }
+        case DexId.Meteora: {
+            return await this.meteoraFeesService.fees(
+                { 
+                    bot, 
+                    liquidityPoolId, 
+                    state 
+                }
+            )
+        }
         default:
             throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for execute`)
         }

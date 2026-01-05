@@ -83,6 +83,8 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             rewards: state.rewardInfos.filter(
                 rewardInfo => rewardInfo.tokenMint.toString() !== "11111111111111111111111111111111"
             ),
+            feeGrowthGlobalA: new BN(state.feeGrowthGlobal0X64.toString()),
+            feeGrowthGlobalB: new BN(state.feeGrowthGlobal1X64.toString()),
         }
         await this.asyncService.allIgnoreError(
             [

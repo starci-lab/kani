@@ -13,25 +13,21 @@ import {
     PositionNotFoundException,
     TickArrayNotFoundException,
 } from "@exceptions"
-import { Position } from "./beets"
-import { decodeTickArray } from "@orca-so/whirlpools-client"
+import { TickArrayLayout } from "@raydium-io/raydium-sdk-v2"
 import BN from "bn.js"
 import { LiquidityPoolState } from "../../interfaces"
-import { Q64 } from "@utils"
 import {
     OrcaLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import { computeDenomination } from "@utils"
-import { TickArrayService } from "./transactions"
+import { computeDenomination, Q64 } from "@utils"
 import { Decimal } from "decimal.js"
 
 @Injectable()
-export class OrcaFeesService implements IFeesService {
+export class CetusFeesService implements IFeesService {
     constructor(
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly rpcExecutorService: RpcExecutorService,
-    private readonly tickArrayService: TickArrayService,
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResponse> {
@@ -45,8 +41,7 @@ export class OrcaFeesService implements IFeesService {
         const tickLower = bot.activePosition.tickLower ?? 0
         const tickUpper = bot.activePosition.tickUpper ?? 0
 
-        const { programAddress } =
-      state.static.metadata as OrcaLiquidityPoolMetadata
+        const { programAddress } = state.static.metadata as OrcaLiquidityPoolMetadata
 
         // ----------------------------
         // PDA derivation
@@ -56,8 +51,6 @@ export class OrcaFeesService implements IFeesService {
           poolStateAddress: address(state.static.poolAddress),
           tickIndex: tickLower,
           tickSpacing: state.static.tickSpacing,
-          bot,
-          pdaOnly: true,
           programAddress: address(programAddress),
       })
 
@@ -66,8 +59,6 @@ export class OrcaFeesService implements IFeesService {
           poolStateAddress: address(state.static.poolAddress),
           tickIndex: tickUpper,
           tickSpacing: state.static.tickSpacing,
-          bot,
-          pdaOnly: true,
           programAddress: address(programAddress),
       })
 
@@ -81,11 +72,13 @@ export class OrcaFeesService implements IFeesService {
         ] = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
-                return fetchEncodedAccounts(rpc, [
-                    address(positionId),
-                    tickArrayLowerPda,
-                    tickArrayUpperPda,
-                ])
+                return fetchEncodedAccounts(
+                    rpc, [
+                        address(positionId),
+                        tickArrayLowerPda,
+                        tickArrayUpperPda,
+                    ]
+                )
             },
         })
 
@@ -113,13 +106,13 @@ export class OrcaFeesService implements IFeesService {
         // ----------------------------
         // Decode accounts
         // ----------------------------
-        const [positionState] = Position.struct.deserialize(
+        const [positionState] = PersonalPositionState.struct.deserialize(
             Buffer.from(positionAccount.data),
             8,
         )
 
-        const tickArrayLower = decodeTickArray(tickArrayLowerAccount)
-        const tickArrayUpper = decodeTickArray(tickArrayUpperAccount)
+        const tickArrayLower = TickArrayLayout.decode(Buffer.from(tickArrayLowerAccount.data))
+        const tickArrayUpper = TickArrayLayout.decode(Buffer.from(tickArrayUpperAccount.data))
 
         // ----------------------------
         // Token validation
@@ -140,8 +133,8 @@ export class OrcaFeesService implements IFeesService {
         // ----------------------------
         // Tick index resolution
         // ----------------------------
-        const lowerStart = tickArrayLower.data.startTickIndex
-        const upperStart = tickArrayUpper.data.startTickIndex
+        const lowerStart = tickArrayLower.startTickIndex
+        const upperStart = tickArrayUpper.startTickIndex
 
         const tickLowerIndex = new Decimal(tickLower)
             .sub(lowerStart)
@@ -154,7 +147,7 @@ export class OrcaFeesService implements IFeesService {
         if (
             tickLowerIndex.lessThan(0) ||
       tickLowerIndex.greaterThanOrEqualTo(
-          tickArrayLower.data.ticks.length,
+          tickArrayLower.ticks.length,
       )
         ) {
             throw new Error("Lower tick index out of range")
@@ -163,24 +156,24 @@ export class OrcaFeesService implements IFeesService {
         if (
             tickUpperIndex.lessThan(0) ||
       tickUpperIndex.greaterThanOrEqualTo(
-          tickArrayUpper.data.ticks.length,
+          tickArrayUpper.ticks.length,
       )
         ) {
             throw new Error("Upper tick index out of range")
         }
 
         const tickLowerData =
-      tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
+      tickArrayLower.ticks[tickLowerIndex.toNumber()]
         const tickUpperData =
-      tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
+      tickArrayUpper.ticks[tickUpperIndex.toNumber()]
 
         // ----------------------------
         // Fee growth inside
         // ----------------------------
         const feeGrowthInsideA = this.computeFeeGrowthInside(
             _state.dynamic.feeGrowthGlobalA,
-            new BN(tickLowerData.feeGrowthOutsideA.toString()),
-            new BN(tickUpperData.feeGrowthOutsideA.toString()),
+            new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
+            new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
             _state.dynamic.tickCurrent,
             tickLower,
             tickUpper,
@@ -188,8 +181,8 @@ export class OrcaFeesService implements IFeesService {
 
         const feeGrowthInsideB = this.computeFeeGrowthInside(
             _state.dynamic.feeGrowthGlobalB,
-            new BN(tickLowerData.feeGrowthOutsideB.toString()),
-            new BN(tickUpperData.feeGrowthOutsideB.toString()),
+            new BN(tickLowerData.feeGrowthOutsideX64B.toString()),
+            new BN(tickUpperData.feeGrowthOutsideX64B.toString()),
             _state.dynamic.tickCurrent,
             tickLower,
             tickUpper,
@@ -198,11 +191,11 @@ export class OrcaFeesService implements IFeesService {
         // ----------------------------
         // Position checkpoint
         // ----------------------------
-        const feeGrowthCheckpointA = new BN(
-            positionState.feeGrowthCheckpointA.toString(),
+        const feeGrowthInsideALastX64 = new BN(
+            positionState.feeGrowthInside0LastX64.toString(),
         )
-        const feeGrowthCheckpointB = new BN(
-            positionState.feeGrowthCheckpointB.toString(),
+        const feeGrowthInsideBLastX64 = new BN(
+            positionState.feeGrowthInside1LastX64.toString(),
         )
 
         if (!bot.activePosition.liquidity) {
@@ -218,11 +211,11 @@ export class OrcaFeesService implements IFeesService {
         // Fee calculation
         // ----------------------------
         const feeEarnedA = liquidity
-            .mul(feeGrowthInsideA.sub(feeGrowthCheckpointA))
+            .mul(feeGrowthInsideA.sub(feeGrowthInsideALastX64))
             .div(Q64)
 
         const feeEarnedB = liquidity
-            .mul(feeGrowthInsideB.sub(feeGrowthCheckpointB))
+            .mul(feeGrowthInsideB.sub(feeGrowthInsideBLastX64))
             .div(Q64)
 
         return {
