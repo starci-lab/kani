@@ -30,7 +30,7 @@ import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { Decimal } from "decimal.js"
-import { AsyncService, DayjsService, TimeoutService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { envConfig } from "@modules/env"
@@ -66,7 +66,6 @@ export class OpenPositionWorker extends WorkerHost {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
-        private readonly timeoutService: TimeoutService,
     ) {
         super()
     }
@@ -80,175 +79,165 @@ export class OpenPositionWorker extends WorkerHost {
         { jobId, bot, state },
         attemptsMade,
     }: Job<OpenPositionPayload>) {
-        await this.timeoutService.withTimeout(
-            async (throwIfAborted) => {
-                // * Step 1: Get job from DB (when retry)
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                const _state = this.superjson.parse<
+        // * Step 1: Get job from DB (when retry)
+        const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-                // check if the mutex is locked
-                const isRetry = attemptsMade > 0
-                // if isRetry, we get the job
-                let job: JobSchema | null = null
-                if (isRetry) {
-                    job = await this.connection
-                        .model<JobSchema>(JobSchema.name)
-                        .findById(jobId)
-                    if (!job) {
-                        // job not found, cancel the job
-                        throw new UnrecoverableError("Job not found")
-                    }
-                }
-                const order = getJobStatusOrder(job?.status || JobStatus.Pending)
-                let txHash: string
-                // transaction data
-                let signatureWithBytes: SignatureWithBytes | undefined = undefined
-                let solanaTx: SolanaTx | undefined = undefined
-                let feeAmountA: BN
-                let feeAmountB: BN
-                let tickLower: Decimal | undefined = undefined
-                let tickUpper: Decimal | undefined = undefined
-                let amountA: BN | undefined = undefined
-                let amountB: BN | undefined = undefined
-                let minBinId: Decimal | undefined = undefined
-                let maxBinId: Decimal | undefined = undefined
-                let metadata: unknown | undefined = undefined
-                let positionId: string | undefined = undefined
-                let liquidity: BN | undefined = undefined
-                // * Step 2: Prepare
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                if (order < getJobStatusOrder(JobStatus.Prepared)) {
-                    // prepare the transaction and get the result
-                    const {
+        // check if the mutex is locked
+        const isRetry = attemptsMade > 0
+        // if isRetry, we get the job
+        let job: JobSchema | null = null
+        if (isRetry) {
+            job = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .findById(jobId)
+            if (!job) {
+                // job not found, cancel the job
+                throw new UnrecoverableError("Job not found")
+            }
+        }
+        const order = getJobStatusOrder(job?.status || JobStatus.Pending)
+        let txHash: string
+        // transaction data
+        let signatureWithBytes: SignatureWithBytes | undefined = undefined
+        let solanaTx: SolanaTx | undefined = undefined
+        let feeAmountA: BN
+        let feeAmountB: BN
+        let tickLower: Decimal | undefined = undefined
+        let tickUpper: Decimal | undefined = undefined
+        let amountA: BN | undefined = undefined
+        let amountB: BN | undefined = undefined
+        let minBinId: Decimal | undefined = undefined
+        let maxBinId: Decimal | undefined = undefined
+        let metadata: unknown | undefined = undefined
+        let positionId: string | undefined = undefined
+        let liquidity: BN | undefined = undefined
+        // * Step 2: Prepare
+        if (order < getJobStatusOrder(JobStatus.Prepared)) {
+            // prepare the transaction and get the result
+            const {
+                txHash: preparedTxHash,
+                signatureWithBytes: preparedSignatureWithBytes,
+                solanaTx: preparedSolanaTx,
+                feeAmountA: preparedFeeAmountA,
+                feeAmountB: preparedFeeAmountB,
+                tickLower: preparedTickLower,
+                tickUpper: preparedTickUpper,
+                amountA: preparedAmountA,
+                amountB: preparedAmountB,
+                minBinId: preparedMinBinId,
+                maxBinId: preparedMaxBinId,
+                metadata: preparedMetadata,
+                positionId: preparedPositionId,
+            } = await this.openPositionOrchestratorService.prepare({
+                state: _state,
+                bot,
+            })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                { _id: jobId },
+                {
+                    $set: {
+                        status: JobStatus.Prepared,
                         txHash: preparedTxHash,
-                        signatureWithBytes: preparedSignatureWithBytes,
-                        solanaTx: preparedSolanaTx,
-                        feeAmountA: preparedFeeAmountA,
-                        feeAmountB: preparedFeeAmountB,
-                        tickLower: preparedTickLower,
-                        tickUpper: preparedTickUpper,
-                        amountA: preparedAmountA,
-                        amountB: preparedAmountB,
-                        minBinId: preparedMinBinId,
-                        maxBinId: preparedMaxBinId,
-                        metadata: preparedMetadata,
-                        positionId: preparedPositionId,
-                    } = await this.openPositionOrchestratorService.prepare({
-                        state: _state,
-                        bot,
-                    })
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        { _id: jobId },
-                        {
-                            $set: {
-                                status: JobStatus.Prepared,
-                                txHash: preparedTxHash,
-                                data: {
-                                    feeAmountA: preparedFeeAmountA.toString(),
-                                    feeAmountB: preparedFeeAmountB.toString(),
-                                    tickLower: preparedTickLower?.toString(),
-                                    tickUpper: preparedTickUpper?.toString(),
-                                    amountA: preparedAmountA?.toString(),
-                                    amountB: preparedAmountB?.toString(),
-                                    minBinId: preparedMinBinId?.toString(),
-                                    maxBinId: preparedMaxBinId?.toString(),
-                                    metadata: preparedMetadata,
-                                    positionId: preparedPositionId,
-                                },
-                            },
+                        data: {
+                            feeAmountA: preparedFeeAmountA.toString(),
+                            feeAmountB: preparedFeeAmountB.toString(),
+                            tickLower: preparedTickLower?.toString(),
+                            tickUpper: preparedTickUpper?.toString(),
+                            amountA: preparedAmountA?.toString(),
+                            amountB: preparedAmountB?.toString(),
+                            minBinId: preparedMinBinId?.toString(),
+                            maxBinId: preparedMaxBinId?.toString(),
+                            metadata: preparedMetadata,
+                            positionId: preparedPositionId,
                         },
-                    )
-                    txHash = preparedTxHash
-                    feeAmountA = preparedFeeAmountA
-                    feeAmountB = preparedFeeAmountB
-                    tickLower = preparedTickLower
-                    tickUpper = preparedTickUpper
-                    amountA = preparedAmountA ? new BN(preparedAmountA) : undefined
-                    amountB = preparedAmountB ? new BN(preparedAmountB) : undefined
-                    minBinId = preparedMinBinId ? new Decimal(preparedMinBinId) : undefined
-                    maxBinId = preparedMaxBinId ? new Decimal(preparedMaxBinId) : undefined
-                    metadata = preparedMetadata
-                    positionId = preparedPositionId
-                    solanaTx = preparedSolanaTx
-                    signatureWithBytes = preparedSignatureWithBytes
-                } else {
-                    if (!job?.txHash) {
-                        throw new UnrecoverableError("Transaction hash not found")
-                    }
-                    if (!job.data) {
-                        throw new UnrecoverableError("Job data not found")
-                    }
-                    const data = job.data as OpenPositionJobData
-                    txHash = job.txHash
-                    positionId = data.positionId
-                    feeAmountA = new BN(data.feeAmountA)
-                    feeAmountB = new BN(data.feeAmountB)
-                    tickLower = data?.tickLower ? new Decimal(data.tickLower) : undefined
-                    tickUpper = data?.tickUpper ? new Decimal(data.tickUpper) : undefined
-                    amountA = data?.amountA ? new BN(data.amountA) : undefined
-                    amountB = data?.amountB ? new BN(data.amountB) : undefined
-                    minBinId = data?.minBinId ? new Decimal(data.minBinId) : undefined
-                    maxBinId = data?.maxBinId ? new Decimal(data.maxBinId) : undefined
-                    metadata = data?.metadata
-                }
-                // * Step 3: Execute
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                if (order < getJobStatusOrder(JobStatus.Executed)) {
-                    // execute the transaction
-                    const [response, error] = await this.asyncService.resolveTuple(
-                        this.openPositionOrchestratorService.execute({
-                            bot,
-                            state: _state,
-                            isRetry,
-                            txHash,
-                            signatureWithBytes,
-                            solanaTx,
-                            feeAmountA,
-                            feeAmountB,
-                            positionId,
-                        }),
-                    )
-                    if (error) {
-                        throw new UnrecoverableError(
-                            "Failed to execute open position transaction",
-                        )
-                    }
-                    const { positionId: executedPositionId } = response
-                    positionId = executedPositionId
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        { _id: jobId },
-                        {
-                            $set: {
-                                status: JobStatus.Executed,
-                                "data.positionId": executedPositionId,
-                            },
-                        },
-                    )
-                } else {
-                    if (!job?.data) {
-                        throw new UnrecoverableError("Job data not found")
-                    }
-                    const data = job.data as OpenPositionJobData
-                    positionId = data.positionId
-                }
-                // * Step 4: Confirm
-                // confirm the position
-                // fetch the balances after the position is opened
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                const {
-                    targetBalanceAmount: targetBalanceAmountAfterOpen,
-                    quoteBalanceAmount: quoteBalanceAmountAfterOpen,
-                    gasBalanceAmount: gasBalanceAmountAfterOpen,
-                } = await this.balanceService.fetchBalances({
+                    },
+                },
+            )
+            txHash = preparedTxHash
+            feeAmountA = preparedFeeAmountA
+            feeAmountB = preparedFeeAmountB
+            tickLower = preparedTickLower
+            tickUpper = preparedTickUpper
+            amountA = preparedAmountA ? new BN(preparedAmountA) : undefined
+            amountB = preparedAmountB ? new BN(preparedAmountB) : undefined
+            minBinId = preparedMinBinId ? new Decimal(preparedMinBinId) : undefined
+            maxBinId = preparedMaxBinId ? new Decimal(preparedMaxBinId) : undefined
+            metadata = preparedMetadata
+            positionId = preparedPositionId
+            solanaTx = preparedSolanaTx
+            signatureWithBytes = preparedSignatureWithBytes
+        } else {
+            if (!job?.txHash) {
+                throw new UnrecoverableError("Transaction hash not found")
+            }
+            if (!job.data) {
+                throw new UnrecoverableError("Job data not found")
+            }
+            const data = job.data as OpenPositionJobData
+            txHash = job.txHash
+            positionId = data.positionId
+            feeAmountA = new BN(data.feeAmountA)
+            feeAmountB = new BN(data.feeAmountB)
+            tickLower = data?.tickLower ? new Decimal(data.tickLower) : undefined
+            tickUpper = data?.tickUpper ? new Decimal(data.tickUpper) : undefined
+            amountA = data?.amountA ? new BN(data.amountA) : undefined
+            amountB = data?.amountB ? new BN(data.amountB) : undefined
+            minBinId = data?.minBinId ? new Decimal(data.minBinId) : undefined
+            maxBinId = data?.maxBinId ? new Decimal(data.maxBinId) : undefined
+            metadata = data?.metadata
+        }
+        // * Step 3: Execute
+        if (order < getJobStatusOrder(JobStatus.Executed)) {
+            // execute the transaction
+            const [response, error] = await this.asyncService.resolveTuple(
+                this.openPositionOrchestratorService.execute({
                     bot,
-                })
-                // calculate the position value
-                const { positionValue: positionValueAtOpen } =
+                    state: _state,
+                    isRetry,
+                    txHash,
+                    signatureWithBytes,
+                    solanaTx,
+                    feeAmountA,
+                    feeAmountB,
+                    positionId,
+                }),
+            )
+            if (error) {
+                throw new UnrecoverableError(
+                    "Failed to execute open position transaction",
+                )
+            }
+            const { positionId: executedPositionId } = response
+            positionId = executedPositionId
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                { _id: jobId },
+                {
+                    $set: {
+                        status: JobStatus.Executed,
+                        "data.positionId": executedPositionId,
+                    },
+                },
+            )
+        } else {
+            if (!job?.data) {
+                throw new UnrecoverableError("Job data not found")
+            }
+            const data = job.data as OpenPositionJobData
+            positionId = data.positionId
+        }
+        // * Step 4: Confirm
+        // confirm the position
+        // fetch the balances after the position is opened
+        const {
+            targetBalanceAmount: targetBalanceAmountAfterOpen,
+            quoteBalanceAmount: quoteBalanceAmountAfterOpen,
+            gasBalanceAmount: gasBalanceAmountAfterOpen,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        // calculate the position value
+        const { positionValue: positionValueAtOpen } =
             await this.positionValueMathService.calculatePositionValue({
                 before: {
                     targetBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
@@ -264,66 +253,63 @@ export class OpenPositionWorker extends WorkerHost {
                 isOpen: true,
                 state: _state,
             })
-                const { liquidity: confirmedLiquidity } =
+        const { liquidity: confirmedLiquidity } =
             await this.openPositionOrchestratorService.confirm({
                 positionId,
                 state: _state,
             })
-                liquidity = confirmedLiquidity
-                const targetIsA =
+        liquidity = confirmedLiquidity
+        const targetIsA =
             _state.static.tokenA.toString() === bot.targetToken.toString()
-                const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
-                const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
-                // Start a MongoDB session for transactional updates
-                const session = await this.connection.startSession()
-                await session.withTransaction(async () => {
-                    // Record open position transaction snapshot
-                    await this.transactionSnapshotService.addOpenPositionTransactionRecord({
-                        bot,
-                        txHash,
-                        session,
-                    })
-                    await this.openPositionSnapshotService.addOpenPositionRecord({
-                        snapshotTargetBalanceAmountBeforeOpen: new BN(
-                            bot.snapshotTargetBalanceAmount || 0,
-                        ),
-                        snapshotQuoteBalanceAmountBeforeOpen: new BN(
-                            bot.snapshotQuoteBalanceAmount || 0,
-                        ),
-                        snapshotGasBalanceAmountBeforeOpen: new BN(
-                            bot.snapshotGasBalanceAmount || 0,
-                        ),
-                        liquidity: new BN(liquidity || 0),
-                        bot,
-                        targetIsA,
-                        tickLower: tickLower ? tickLower.toNumber() : undefined,
-                        tickUpper: tickUpper ? tickUpper.toNumber() : undefined,
-                        chainId: bot.chainId,
-                        liquidityPoolId: _state.static.displayId,
-                        positionId,
-                        openTxHash: txHash,
-                        session,
-                        feeAmountTarget: new BN(feeAmountTarget),
-                        feeAmountQuote: new BN(feeAmountQuote),
-                        maxBinId: maxBinId ? maxBinId.toNumber() : undefined,
-                        minBinId: minBinId ? minBinId.toNumber() : undefined,
-                        amountA: amountA ? new BN(amountA) : undefined,
-                        amountB: amountB ? new BN(amountB) : undefined,
-                        metadata,
-                        positionValueAtOpen,
-                    })
-                    // Update bot snapshot balances after the position is opened
-                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                        bot,
-                        targetBalanceAmount: targetBalanceAmountAfterOpen,
-                        quoteBalanceAmount: quoteBalanceAmountAfterOpen,
-                        gasBalanceAmount: gasBalanceAmountAfterOpen,
-                        session,
-                    })
-                })
-            }, 
-            envConfig().bullmq.timeout
-        )
+        const feeAmountTarget = targetIsA ? feeAmountA : feeAmountB
+        const feeAmountQuote = targetIsA ? feeAmountB : feeAmountA
+        // Start a MongoDB session for transactional updates
+        const session = await this.connection.startSession()
+        await session.withTransaction(async () => {
+            // Record open position transaction snapshot
+            await this.transactionSnapshotService.addOpenPositionTransactionRecord({
+                bot,
+                txHash,
+                session,
+            })
+            await this.openPositionSnapshotService.addOpenPositionRecord({
+                snapshotTargetBalanceAmountBeforeOpen: new BN(
+                    bot.snapshotTargetBalanceAmount || 0,
+                ),
+                snapshotQuoteBalanceAmountBeforeOpen: new BN(
+                    bot.snapshotQuoteBalanceAmount || 0,
+                ),
+                snapshotGasBalanceAmountBeforeOpen: new BN(
+                    bot.snapshotGasBalanceAmount || 0,
+                ),
+                liquidity: new BN(liquidity || 0),
+                bot,
+                targetIsA,
+                tickLower: tickLower ? tickLower.toNumber() : undefined,
+                tickUpper: tickUpper ? tickUpper.toNumber() : undefined,
+                chainId: bot.chainId,
+                liquidityPoolId: _state.static.displayId,
+                positionId,
+                openTxHash: txHash,
+                session,
+                feeAmountTarget: new BN(feeAmountTarget),
+                feeAmountQuote: new BN(feeAmountQuote),
+                maxBinId: maxBinId ? maxBinId.toNumber() : undefined,
+                minBinId: minBinId ? minBinId.toNumber() : undefined,
+                amountA: amountA ? new BN(amountA) : undefined,
+                amountB: amountB ? new BN(amountB) : undefined,
+                metadata,
+                positionValueAtOpen,
+            })
+            // Update bot snapshot balances after the position is opened
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                bot,
+                targetBalanceAmount: targetBalanceAmountAfterOpen,
+                quoteBalanceAmount: quoteBalanceAmountAfterOpen,
+                gasBalanceAmount: gasBalanceAmountAfterOpen,
+                session,
+            })
+        })
     }
 
     @OnWorkerEvent("failed")

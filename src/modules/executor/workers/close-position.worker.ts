@@ -27,7 +27,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter"
 import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
-import { AsyncService, DayjsService, TimeoutService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import { SolanaTx, PositionValueMathService } from "@modules/blockchains"
 import {
     ActivePositionNotFoundException,
@@ -77,7 +77,6 @@ export class ClosePositionWorker extends WorkerHost {
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     private readonly dayjsService: DayjsService,
-    private readonly timeoutService: TimeoutService,
     ) {
         super()
     }
@@ -86,138 +85,128 @@ export class ClosePositionWorker extends WorkerHost {
         data: { jobId, bot, state },
         attemptsMade,
     }: Job<ClosePositionPayload>) {
-        await this.timeoutService.withTimeout(
-            async (throwIfAborted) => {
-                // * Step 1: Get job from DB (when retry)             
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                const _state = this.superjson.parse<
-      LiquidityPoolState | DlmmLiquidityPoolState
-    >(state)
-    // Validate active position exists
-                if (!bot.activePosition) {
-                    throw new UnrecoverableError("Active position not found")
-                }
+        // * Step 1: Get job from DB (when retry)
+        const _state = this.superjson.parse<
+            LiquidityPoolState | DlmmLiquidityPoolState
+        >(state)
+        // Validate active position exists
+        if (!bot.activePosition) {
+            throw new UnrecoverableError("Active position not found")
+        }
 
-                // check if the mutex is locked
-                const isRetry = attemptsMade > 0
-                // if isRetry, we get the job
-                let job: JobSchema | null = null
-                if (isRetry) {
-                    job = await this.connection
-                        .model<JobSchema>(JobSchema.name)
-                        .findById(jobId)
-                    if (!job) {
-                        // job not found, cancel the job
-                        throw new UnrecoverableError("Job not found")
-                    }
-                }
-                const order = getJobStatusOrder(job?.status || JobStatus.Pending)
-                let txHash: string
-                let signatureWithBytes: SignatureWithBytes | undefined = undefined
-                let solanaTx: SolanaTx | undefined = undefined
-                // * Step 2: Prepare
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                if (order < getJobStatusOrder(JobStatus.Prepared)) {
-                    // prepare the transaction and get the result
-                    const {
-                        txHash: preparedTxHash,
-                        signatureWithBytes: preparedSignatureWithBytes,
+        // check if the mutex is locked
+        const isRetry = attemptsMade > 0
+        // if isRetry, we get the job
+        let job: JobSchema | null = null
+        if (isRetry) {
+            job = await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .findById(jobId)
+            if (!job) {
+                // job not found, cancel the job
+                throw new UnrecoverableError("Job not found")
+            }
+        }
+        const order = getJobStatusOrder(job?.status || JobStatus.Pending)
+        let txHash: string
+        let signatureWithBytes: SignatureWithBytes | undefined = undefined
+        let solanaTx: SolanaTx | undefined = undefined
+        // * Step 2: Prepare
+        if (order < getJobStatusOrder(JobStatus.Prepared)) {
+            // prepare the transaction and get the result
+            const {
+                txHash: preparedTxHash,
+                signatureWithBytes: preparedSignatureWithBytes,
+                solanaTx: preparedSolanaTx,
+            } = await this.closePositionOrchestratorService.prepare({
+                state: _state,
+                bot,
+            })
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                { _id: jobId },
+                {
+                    status: JobStatus.Prepared,
+                    txHash: preparedTxHash,
+                    metadata: {
                         solanaTx: preparedSolanaTx,
-                    } = await this.closePositionOrchestratorService.prepare({
-                        state: _state,
-                        bot,
-                    })
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        { _id: jobId },
-                        {
-                            status: JobStatus.Prepared,
-                            txHash: preparedTxHash,
-                            metadata: {
-                                solanaTx: preparedSolanaTx,
-                            },
-                        },
-                    )
-                    txHash = preparedTxHash
-                    signatureWithBytes = preparedSignatureWithBytes
-                    solanaTx = preparedSolanaTx
-                } else {
-                    if (!job?.txHash) {
-                        throw new UnrecoverableError("Transaction hash not found")
-                    }
-                    txHash = job.txHash
-                }
+                    },
+                },
+            )
+            txHash = preparedTxHash
+            signatureWithBytes = preparedSignatureWithBytes
+            solanaTx = preparedSolanaTx
+        } else {
+            if (!job?.txHash) {
+                throw new UnrecoverableError("Transaction hash not found")
+            }
+            txHash = job.txHash
+        }
 
-                // * Step 3: Execute
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                if (order < getJobStatusOrder(JobStatus.Executed)) {
-                    const [, error] = await this.asyncService.resolveTuple(
-                        this.closePositionOrchestratorService.execute({
-                            bot,
-                            state: _state,
-                            isRetry,
-                            txHash,
-                            signatureWithBytes,
-                            solanaTx,
-                        }),
-                    )
-                    // if error found, return, cancel the job
-                    if (error) {
-                        throw new UnrecoverableError(
-                            "Failed to execute close position transaction",
-                        )
-                    }
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        { _id: jobId },
-                        {
-                            $set: {
-                                status: JobStatus.Executed,
-                            },
-                        },
-                    )
-                }
+        // * Step 3: Execute
+        if (order < getJobStatusOrder(JobStatus.Executed)) {
+            const [, error] = await this.asyncService.resolveTuple(
+                this.closePositionOrchestratorService.execute({
+                    bot,
+                    state: _state,
+                    isRetry,
+                    txHash,
+                    signatureWithBytes,
+                    solanaTx,
+                }),
+            )
+            // if error found, return, cancel the job
+            if (error) {
+                throw new UnrecoverableError(
+                    "Failed to execute close position transaction",
+                )
+            }
+            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                { _id: jobId },
+                {
+                    $set: {
+                        status: JobStatus.Executed,
+                    },
+                },
+            )
+        }
 
-                // * Step 4: Confirm (balances + profitability + snapshots)
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                // Get tokens for profitability calculation
-                const tokenA = this.primaryMemoryStorageService.tokens.find(
-                    (token) => token.id === _state.static.tokenA.toString(),
-                )
-                const tokenB = this.primaryMemoryStorageService.tokens.find(
-                    (token) => token.id === _state.static.tokenB.toString(),
-                )
-                if (!tokenA || !tokenB) {
-                    throw new InvalidPoolTokensException(
-                        "Either token A or token B is not in the pool",
-                    )
-                }
-                // Get snapshot balances before open
-                const {
-                    snapshotTargetBalanceAmountBeforeOpen,
-                    snapshotQuoteBalanceAmountBeforeOpen,
-                    snapshotGasBalanceAmountBeforeOpen,
-                } = bot.activePosition
-                if (
-                    !snapshotTargetBalanceAmountBeforeOpen ||
+        // * Step 4: Confirm (balances + profitability + snapshots)
+        // Get tokens for profitability calculation
+        const tokenA = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === _state.static.tokenA.toString(),
+        )
+        const tokenB = this.primaryMemoryStorageService.tokens.find(
+            (token) => token.id === _state.static.tokenB.toString(),
+        )
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException(
+                "Either token A or token B is not in the pool",
+            )
+        }
+        // Get snapshot balances before open
+        const {
+            snapshotTargetBalanceAmountBeforeOpen,
+            snapshotQuoteBalanceAmountBeforeOpen,
+            snapshotGasBalanceAmountBeforeOpen,
+        } = bot.activePosition
+        if (
+            !snapshotTargetBalanceAmountBeforeOpen ||
       !snapshotQuoteBalanceAmountBeforeOpen ||
       !snapshotGasBalanceAmountBeforeOpen
-                ) {
-                    throw new SnapshotBalancesBeforeOpenNotSetException(
-                        "Snapshot balances before open not set",
-                    )
-                }
-                const {
-                    targetBalanceAmount: targetBalanceAmountAfterClose,
-                    quoteBalanceAmount: quoteBalanceAmountAfterClose,
-                    gasBalanceAmount: gasBalanceAmountAfterClose,
-                } = await this.balanceService.fetchBalances({
-                    bot,
-                })
-                // Calculate position value at close
-                const { positionValue: positionValueAtClose } =
+        ) {
+            throw new SnapshotBalancesBeforeOpenNotSetException(
+                "Snapshot balances before open not set",
+            )
+        }
+        const {
+            targetBalanceAmount: targetBalanceAmountAfterClose,
+            quoteBalanceAmount: quoteBalanceAmountAfterClose,
+            gasBalanceAmount: gasBalanceAmountAfterClose,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        // Calculate position value at close
+        const { positionValue: positionValueAtClose } =
       await this.positionValueMathService.calculatePositionValue({
           before: {
               targetBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
@@ -233,59 +222,54 @@ export class ClosePositionWorker extends WorkerHost {
           isOpen: false,
           state: _state,
       })
-                const roi = positionValueAtClose
-                    .div(bot.activePosition.positionValueAtOpen || new Decimal(0))
-                    .sub(1)
-                const pnl = positionValueAtClose.sub(
-                    bot.activePosition.positionValueAtOpen || new Decimal(0),
-                )
-                // Start a MongoDB session for transactional updates
-                const session = await this.connection.startSession()
-                await session.withTransaction(async () => {
-                    if (!bot.activePosition) {
-                        throw new ActivePositionNotFoundException(
-                            bot.id,
-                            "Active position not found",
-                        )
-                    }
-                    // Record close position transaction snapshot
-                    await this.transactionSnapshotService.addClosePositionTransactionRecord({
-                        bot,
-                        txHash,
-                        session,
-                    })
-                    // Update bot snapshot balances after the position is closed
-                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
-                        bot,
-                        targetBalanceAmount: targetBalanceAmountAfterClose,
-                        quoteBalanceAmount: quoteBalanceAmountAfterClose,
-                        gasBalanceAmount: gasBalanceAmountAfterClose,
-                        session,
-                    })
-                    // Update close position record with profitability
-                    await this.closePositionSnapshotService.updateClosePositionRecord({
-                        bot,
-                        positionId: bot.activePosition.id,
-                        closeTxHash: txHash,
-                        session,
-                        snapshotTargetBalanceAmountAfterClose: targetBalanceAmountAfterClose,
-                        snapshotQuoteBalanceAmountAfterClose: quoteBalanceAmountAfterClose,
-                        snapshotGasBalanceAmountAfterClose: gasBalanceAmountAfterClose,
-                        positionValueAtClose: positionValueAtClose,
-                        roi,
-                        pnl,
-                    })
-                })
-                // * Step 5: Enqueue the reconcile balance job
-                // ! Before each step: throw if timeout is reached (abort)
-                throwIfAborted()
-                // enqueue the reconcile balance job
-                await this.balanceService.enqueue({
-                    bot,
-                })
-            }, 
-            envConfig().bullmq.timeout
+        const roi = positionValueAtClose
+            .div(bot.activePosition.positionValueAtOpen || new Decimal(0))
+            .sub(1)
+        const pnl = positionValueAtClose.sub(
+            bot.activePosition.positionValueAtOpen || new Decimal(0),
         )
+        // Start a MongoDB session for transactional updates
+        const session = await this.connection.startSession()
+        await session.withTransaction(async () => {
+            if (!bot.activePosition) {
+                throw new ActivePositionNotFoundException(
+                    bot.id,
+                    "Active position not found",
+                )
+            }
+            // Record close position transaction snapshot
+            await this.transactionSnapshotService.addClosePositionTransactionRecord({
+                bot,
+                txHash,
+                session,
+            })
+            // Update bot snapshot balances after the position is closed
+            await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                bot,
+                targetBalanceAmount: targetBalanceAmountAfterClose,
+                quoteBalanceAmount: quoteBalanceAmountAfterClose,
+                gasBalanceAmount: gasBalanceAmountAfterClose,
+                session,
+            })
+            // Update close position record with profitability
+            await this.closePositionSnapshotService.updateClosePositionRecord({
+                bot,
+                positionId: bot.activePosition.id,
+                closeTxHash: txHash,
+                session,
+                snapshotTargetBalanceAmountAfterClose: targetBalanceAmountAfterClose,
+                snapshotQuoteBalanceAmountAfterClose: quoteBalanceAmountAfterClose,
+                snapshotGasBalanceAmountAfterClose: gasBalanceAmountAfterClose,
+                positionValueAtClose: positionValueAtClose,
+                roi,
+                pnl,
+            })
+        })
+        // * Step 5: Enqueue the reconcile balance job
+        // enqueue the reconcile balance job
+        await this.balanceService.enqueue({
+            bot,
+        })
     }
 
   @OnWorkerEvent("failed")
