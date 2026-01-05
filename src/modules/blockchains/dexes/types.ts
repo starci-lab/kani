@@ -9,6 +9,7 @@ export interface DexesOptions {
         action?: boolean
         analytics?: boolean
         fees?: boolean
+        reserves?: boolean
     }
 }
 
@@ -16,13 +17,4 @@ export interface ActionResponse {
     // tx hash returned if the tx is excuted
     txHash?: string
     coinOut?: CoinArgument
-}
-
-export interface DexOptions {
-    enabled?: boolean | {
-        observe?: boolean
-        action?: boolean
-        analytics?: boolean
-        fees?: boolean
-    }
 }

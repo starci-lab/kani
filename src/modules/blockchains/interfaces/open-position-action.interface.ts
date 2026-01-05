@@ -103,3 +103,20 @@ export interface IFeesService {
     params: FeesParams,
   ): Promise<FeesResponse>;
 }
+
+export interface ReservesParams {
+  liquidityPoolId: LiquidityPoolId;
+  state: LiquidityPoolState | DlmmLiquidityPoolState;
+  bot: BotSchema;
+}
+
+export interface ReservesResponse {
+  tokenA: Decimal;
+  tokenB: Decimal;
+}
+
+export interface IReservesService {
+  reserves(
+    params: ReservesParams,
+  ): Promise<ReservesResponse>;
+}
