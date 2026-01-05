@@ -3,7 +3,7 @@ import { ConfigurableModuleClass } from "./bots.module-definition"
 import { BotModule } from "./bot"
 import { BotsModule as BotsCursorModule } from "./bots"
 import { Bots2Module } from "./bots2"
-
+import { FeesModule } from "./fees"
 
 @Module({
     imports: [
@@ -14,6 +14,9 @@ import { Bots2Module } from "./bots2"
             isGlobal: true,
         }),
         Bots2Module.register({
+            isGlobal: true,
+        }),
+        FeesModule.register({
             isGlobal: true,
         }),
     ]

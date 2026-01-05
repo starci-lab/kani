@@ -61,6 +61,13 @@ export class ActivePositionNotFoundException extends AbstractException {
     }
 }
 
+/** Thrown when active position liquidity is not set */
+export class ActivePositionLiquidityNotSetException extends AbstractException {
+    constructor(botId: string, message?: string) {
+        super(message || "Active position liquidity not set", "ACTIVE_POSITION_LIQUIDITY_NOT_SET_EXCEPTION", { botId })
+    }
+}
+
 /** Thrown when owner position cannot be found in pool */
 export class OwnerPositionNotFoundException extends AbstractException {
     constructor(botId: string, poolAddress: string, programId: string, message?: string) {

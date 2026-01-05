@@ -28,6 +28,7 @@ export enum CacheKey {
     SignInOtpCode = "signInOtpCode",
     SendOtpCode = "sendOtpCode",
     SpotPrice = "spotPrice",
+    FeesResponse = "feesResponse",
 }
 
 export interface SpotPriceCacheResult {
@@ -44,6 +45,8 @@ export interface DynamicLiquidityPoolInfoCacheResult {
     liquidity: BN
     sqrtPriceX64: BN
     rewards: Array<unknown>
+    feeGrowthGlobalA: BN
+    feeGrowthGlobalB: BN
 }
 
 export interface DynamicDlmmLiquidityPoolInfoCacheResult {

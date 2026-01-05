@@ -13,8 +13,7 @@ export class CetusModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            OpenPositionTxbService,
-            ClosePositionTxbService,
+            
         ]
         if (
             typeof options.enabled === "boolean" 
@@ -27,8 +26,12 @@ export class CetusModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(CetusOpenPositionActionService)
-            providers.push(CetusClosePositionActionService)
+            providers.push(
+                OpenPositionTxbService, 
+                ClosePositionTxbService, 
+                CetusOpenPositionActionService, 
+                CetusClosePositionActionService
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

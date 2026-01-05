@@ -285,16 +285,12 @@ export class OpenPositionOrchestratorService {
         /**
          * DEX support validation.
          */
-        if (
-            !this.options.dexes?.find(
-                dex => dex.dexId === dex.dexId,
-            )
-        ) {
-            throw new DexNotImplementedException(
-                `Dex ${state.static.dex.toString()} not supported`,
-            )
+        const enabledDex = this.primaryMemoryStorageService.dexes.find(
+            dex => dex.id === state.static.dex.toString(),
+        )
+        if (!enabledDex) {
+            throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
         }
-
         /**
          * Recompute quote ratio for balance normalization.
          */
@@ -414,11 +410,6 @@ export class OpenPositionOrchestratorService {
                 dex => dex.id === _state.static.dex.toString(),
             )
         if (!dex) throw new DexNotFoundException("Dex not found")
-        if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
-            throw new DexNotImplementedException(
-                `Dex ${_state.static.dex.toString()} not supported`,
-            )
-        }
 
         switch (dex.displayId) {
         case DexId.Raydium:
@@ -455,7 +446,7 @@ export class OpenPositionOrchestratorService {
                 dex => dex.id === _state.static.dex.toString(),
             )
         if (!dex) throw new DexNotFoundException("Dex not found")
-        if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
+        if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
                 `Dex ${_state.static.dex.toString()} not supported`,
             )
@@ -496,7 +487,7 @@ export class OpenPositionOrchestratorService {
                 dex => dex.id === _state.static.dex.toString(),
             )
         if (!dex) throw new DexNotFoundException("Dex not found")
-        if (!this.options.dexes?.find(dex => dex.dexId === dex.dexId)) {
+        if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
                 `Dex ${_state.static.dex.toString()} not supported`,
             )

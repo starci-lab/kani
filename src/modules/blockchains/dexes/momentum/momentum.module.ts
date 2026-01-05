@@ -11,10 +11,7 @@ export class MomentumModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            OpenPositionTxbService,
-            ClosePositionTxbService,
-        ]
+        const providers: Array<Provider> = []
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -26,8 +23,12 @@ export class MomentumModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(MomentumOpenPositionActionService)
-            providers.push(MomentumClosePositionActionService)
+            providers.push(
+                OpenPositionTxbService, 
+                ClosePositionTxbService, 
+                MomentumOpenPositionActionService, 
+                MomentumClosePositionActionService
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

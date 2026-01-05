@@ -119,8 +119,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax: snapshotTargetBalanceAmountBN,
-            amountBMax: snapshotQuoteBalanceAmountBN,
+            amountA: snapshotTargetBalanceAmountBN,
+            amountB: snapshotQuoteBalanceAmountBN,
             liquidity: new BN(0),
             tickLower,
             state: _state,

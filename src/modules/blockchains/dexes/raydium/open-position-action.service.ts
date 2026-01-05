@@ -70,7 +70,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResponse> {
         const _state = state as LiquidityPoolState
-        const slippage = new Decimal(envConfig().slippage.openPosition)
+        const slippage = new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,

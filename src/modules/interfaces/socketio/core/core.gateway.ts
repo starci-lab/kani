@@ -1,8 +1,7 @@
 import { OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from "@nestjs/websockets"
 import { CoreWebSocketGateway, socketIoAuthMiddleware } from "@modules/socketio"
-import { Logger } from "@nestjs/common"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import { TypedSocket } from "@modules/socketio"
 import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { OnEvent } from "@nestjs/event-emitter"
@@ -12,17 +11,15 @@ import { SocketIoEvent } from "@modules/socketio/constants"
 
 @CoreWebSocketGateway()
 export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-    private readonly logger = new Logger(CoreGateway.name)
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonLogger: WinstonLogger,
     ) {}
 
     @WebSocketServer()
     private readonly server: Namespace
 
     afterInit() {
-        this.logger.debug("Core gateway initialized")
         this.server.use(socketIoAuthMiddleware) // use the auth middleware for the namespace
     }
 

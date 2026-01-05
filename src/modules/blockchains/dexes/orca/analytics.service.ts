@@ -84,9 +84,13 @@ implements OnModuleInit, OnApplicationBootstrap
                         fee24H: new Decimal(fees).toString(),
                         volume24H: new Decimal(volume).toString(),
                         tvl: new Decimal(tvlUsdc).toString(),
-                        apr24H: new Decimal(yieldOverTvl).toString(),
+                        apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
                     }
-                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                    await this.cacheManager.set(
+                        poolAnalyticsCacheKey, 
+                        this.superjson.stringify(poolAnalyticsCacheResult), 
+                        envConfig().cache.ttl.poolAnalytics
+                    )
                 })(),
             )
         }

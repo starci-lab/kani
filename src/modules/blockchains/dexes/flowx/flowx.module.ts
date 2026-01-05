@@ -12,10 +12,7 @@ export class FlowXModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            OpenPositionTxbService,
-            ClosePositionTxbService,
-        ]
+        const providers: Array<Provider> = []
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -27,8 +24,12 @@ export class FlowXModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(FlowXOpenPositionActionService)
-            providers.push(FlowXClosePositionActionService)
+            providers.push(
+                OpenPositionTxbService, 
+                ClosePositionTxbService, 
+                FlowXOpenPositionActionService, 
+                FlowXClosePositionActionService
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

@@ -20,6 +20,7 @@ import { envConfig } from "@modules/env"
 import { Interval } from "@nestjs/schedule"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
+import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap {
@@ -70,10 +71,13 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         liquidityPoolId: LiquidityPoolId,
         state: ReturnType<typeof Whirlpool.struct["read"]>
     ) {
-        const parsed = {
+        const parsed: DynamicLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickCurrentIndex,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),
+            rewards: state.rewardInfos,
+            feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
+            feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
         }
 
         await this.asyncService.allIgnoreError([

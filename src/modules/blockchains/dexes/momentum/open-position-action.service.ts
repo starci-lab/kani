@@ -109,8 +109,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountAMax: amountA,
-            amountBMax: amountB,
+            amountA,
+            amountB,
             liquidity: new BN(0),
             tickLower,
             state: _state,

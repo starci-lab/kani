@@ -2,10 +2,10 @@ import { Module } from "@nestjs/common"
 import { envConfig, EnvModule } from "@modules/env"
 import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { MixinModule } from "@modules/mixin"
-import { PrimaryMongoDbModule } from "@modules/databases"
+import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { HttpModule } from "@modules/interfaces/http"
 import { PassportModule } from "@modules/passport"
-import { FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
+import { DexesModule, FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { GcpModule } from "@modules/gcp"
 import { CodeModule } from "@modules/code"
@@ -24,6 +24,10 @@ import { IoRedisModule } from "@modules/native"
 import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
 import { APP_FILTER } from "@nestjs/core"
 import { DerivedModule } from "@modules/derived"
+import { ClientsModule, TxBuilderModule } from "@modules/blockchains"
+import { P2CBalancerModule } from "@modules/p2c-balancer"
+import { EventEmitterModule } from "@nestjs/event-emitter"
+import { EventModule, KafkaMode } from "@modules/event"
 
 @Module({
     imports: [
@@ -41,6 +45,46 @@ import { DerivedModule } from "@modules/derived"
         }),
         FormulasModule.register({
             isGlobal: true,
+        }),
+        EventEmitterModule.forRoot(),
+        EventModule.register({
+            isGlobal: true,
+            kafka: {
+                modes: [
+                    KafkaMode.Producer, 
+                    KafkaMode.Consumer
+                ],
+                createTopics: true,
+                kafkaTopics: []
+            },
+        }),
+        TxBuilderModule.register({
+            isGlobal: true,
+        }),
+        P2CBalancerModule.register({
+            isGlobal: true,
+        }),
+        ClientsModule.register({
+            isGlobal: true,
+        }),
+        DexesModule.register({
+            isGlobal: true,
+            dexIds: [
+                DexId.Orca,
+                DexId.Raydium,
+                DexId.Meteora,
+                DexId.FlowX,
+                DexId.Cetus,
+                DexId.Turbos,
+                DexId.Momentum,
+                DexId.Saros,
+            ],
+            enabled: {
+                observe: false,
+                action: false,
+                fees: true,
+                analytics: false,
+            },
         }),
         SpotModule.register({
             isGlobal: true,

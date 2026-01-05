@@ -141,8 +141,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             expected: amountB,
             actual: expectedAmountB,
             // this indicates the slippage tolerance
-            lowerBound: new Decimal(1).sub(new Decimal(envConfig().bounds.sui.openPosition.lowerBound)),
-            upperBound: new Decimal(1).add(new Decimal(envConfig().bounds.sui.openPosition.upperBound)),
+            lowerBound: new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds)),
+            upperBound: new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds)),
         })
         if (!isAcceptable) {
             throw new AmountBInBetweenExpectedException(

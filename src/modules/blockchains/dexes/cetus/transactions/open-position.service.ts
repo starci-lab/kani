@@ -12,8 +12,7 @@ import BN from "bn.js"
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { MountStorageService } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { adjustSlippage } from "@utils"
+
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
@@ -122,8 +121,8 @@ export class OpenPositionTxbService {
                 txb.pure.u32(Number(asUintN(BigInt(tickUpper.toNumber())).toString())),
                 txb.object(sourceCoinA.coinArg),
                 txb.object(sourceCoinB.coinArg),
-                txb.pure.u64(adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition)).toString()),
-                txb.pure.u64(adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition)).toString()),
+                txb.pure.u64(remainingAmountA.toString()),
+                txb.pure.u64(remainingAmountB.toString()),
                 txb.pure.bool(true),
                 txb.object(SUI_CLOCK_OBJECT_ID)
             ],

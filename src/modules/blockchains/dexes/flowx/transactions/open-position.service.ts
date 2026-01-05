@@ -41,8 +41,8 @@ export class OpenPositionTxbService {
             state,
             tickLower,
             tickUpper,
-            amountAMax,
-            amountBMax,
+            amountA,
+            amountB,
         }: CreateOpenPositionTxbParams
     ): Promise<CreateOpenPositionTxbResponse> {
         txb = txb ?? new Transaction()
@@ -80,14 +80,14 @@ export class OpenPositionTxbService {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,
         } = this.feeService.splitAmount({
-            amount: amountAMax,
+            amount: amountA,
             chainId: bot.chainId,
         })
         const {
             feeAmount: feeAmountB,
             remainingAmount: remainingAmountB,
         } = this.feeService.splitAmount({
-            amount: amountBMax,
+            amount: amountB,
             chainId: bot.chainId,
         })
         // we check balances of tokenA and tokenB
@@ -98,7 +98,7 @@ export class OpenPositionTxbService {
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenA.tokenAddress,
-                requiredAmount: amountAMax,
+                requiredAmount: amountA,
                 suiGasAmount: new BN(targetOperationalAmount),
             })
         const { 
@@ -108,7 +108,7 @@ export class OpenPositionTxbService {
                 txb,
                 owner: bot.accountAddress,
                 coinType: tokenB.tokenAddress,
-                requiredAmount: amountBMax,
+                requiredAmount: amountB,
                 suiGasAmount: new BN(targetOperationalAmount),
             })
         const { spendCoin: feeCoinA } = this.selectCoinsService.splitCoin({
@@ -170,8 +170,8 @@ export class OpenPositionTxbService {
                 position,
                 sourceCoinA.coinArg,
                 sourceCoinB.coinArg,
-                txb.pure.u64(adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition)).toString()),
-                txb.pure.u64(adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition)).toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition.amountBounds)).toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition.amountBounds)).toString()),
                 txb.pure.u64(this.dayjsService.now().add(5, "minute").utc().valueOf().toString()),
                 txb.object(versionObject),
                 txb.object(SUI_CLOCK_OBJECT_ID),
@@ -193,8 +193,8 @@ export interface CreateOpenPositionTxbParams {
     tickLower: Decimal,
     tickUpper: Decimal,
     liquidity: BN,
-    amountAMax: BN,
-    amountBMax: BN,
+    amountA: BN,
+    amountB: BN,
 }
 
 export interface CreateOpenPositionTxbResponse {

@@ -3,8 +3,13 @@ import { DexId } from "@modules/databases"
 import { CoinArgument } from "../types"
 
 export interface DexesOptions {
-    dexes?: Array<DexOptions & { dexId: DexId }>
-    withUtilities?: boolean
+    dexIds?: Array<DexId>
+    enabled?: {
+        observe?: boolean
+        action?: boolean
+        analytics?: boolean
+        fees?: boolean
+    }
 }
 
 export interface ActionResponse {
@@ -18,5 +23,6 @@ export interface DexOptions {
         observe?: boolean
         action?: boolean
         analytics?: boolean
+        fees?: boolean
     }
 }

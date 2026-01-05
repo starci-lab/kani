@@ -13,8 +13,7 @@ export class TurbosModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            OpenPositionTxbService,
-            ClosePositionTxbService,
+           
         ]
         if (
             typeof options.enabled === "boolean" 
@@ -27,8 +26,12 @@ export class TurbosModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(TurbosOpenPositionActionService)
-            providers.push(TurbosClosePositionActionService)
+            providers.push(
+                OpenPositionTxbService,
+                ClosePositionTxbService,
+                TurbosOpenPositionActionService,
+                TurbosClosePositionActionService    
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

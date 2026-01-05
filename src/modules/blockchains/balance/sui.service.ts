@@ -56,7 +56,7 @@ export class SuiBalanceService implements IBalanceService {
         this.ensureMathService.ensureActualNotAboveExpected({
             expected: estimatedSwappedAmount,
             actual: response.amountOut,
-            lowerBound: new Decimal(envConfig().bounds.sui.swap.lowerBound),
+            lowerBound: new Decimal(envConfig().slippage.swap),
         })
         const { outputCoin, txb } = await this.suiAggregatorSelectorService.selectorSwap({
             base: {

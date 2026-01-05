@@ -17,12 +17,7 @@ export class RaydiumModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            TickArrayService,
-            PersonalPositionService,
-            ClosePositionInstructionService,
-            OpenPositionInstructionService,
-        ]
+        const providers: Array<Provider> = []
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -34,8 +29,14 @@ export class RaydiumModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(RaydiumOpenPositionActionService)
-            providers.push(RaydiumClosePositionActionService)
+            providers.push(
+                TickArrayService,
+                PersonalPositionService,
+                ClosePositionInstructionService,
+                OpenPositionInstructionService,
+                RaydiumOpenPositionActionService,
+                RaydiumClosePositionActionService
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

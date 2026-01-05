@@ -14,28 +14,15 @@ export const envConfig = () => ({
     port: {
         core: Number(process.env.CORE_PORT) || 3010,
     },
-    bounds: {
-        solana: {
-            swap: {
-                lowerBound: parseFloat(process.env.SOLANA_SWAP_LOWER_BOUND || "0.95"),
-            },
-            openPosition: {
-                lowerBound: parseFloat(process.env.SOLANA_OPEN_POSITION_LOWER_BOUND || "0.95"),
-                upperBound: parseFloat(process.env.SOLANA_OPEN_POSITION_UPPER_BOUND || "1.05"),
-            }
-        },
-        sui: {
-            swap: {
-                lowerBound: parseFloat(process.env.SUI_SWAP_LOWER_BOUND || "0.95"),
-            },
-            openPosition: {
-                lowerBound: parseFloat(process.env.SUI_OPEN_POSITION_LOWER_BOUND || "0.95"),
-                upperBound: parseFloat(process.env.SUI_OPEN_POSITION_UPPER_BOUND || "1.05"),
-            }
-        },
-    },
     slippage: {
-        openPosition: parseFloat(process.env.SLIPPAGE_OPEN_POSITION || "0.5"),
+        openPosition: {
+            liquidtyAdjustment: parseFloat(
+                process.env.SLIPPAGE_OPEN_POSITION_LIQUIDTY_ADJUSTMENT || "0.005"
+            ),
+            amountBounds: parseFloat(
+                process.env.SLIPPAGE_OPEN_POSITION_AMOUNT_BOUNDS || "0.05"
+            ),
+        },
         closePosition: parseFloat(process.env.SLIPPAGE_CLOSE_POSITION || "0.9999"),
         swap: parseFloat(process.env.SLIPPAGE_SWAP || "0.9999"),
     },
@@ -155,6 +142,9 @@ export const envConfig = () => ({
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
+            responses: {
+                fees: parseInt(process.env.CACHE_RESPONSES_FEES_TTL || ms("5m").toString(), 10), // 5 minutes
+            }
         },
         stale: {
             priceMaxAgeMs: parseInt(process.env.CACHE_STALE_PRICE_MAX_AGE_MS || ms("10s").toString(), 10), // 10s
@@ -265,6 +255,7 @@ export const envConfig = () => ({
         lockDuration: parseInt(process.env.BULLMQ_LOCK_DURATION || "10000", 10),
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
         failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
+        timeout: parseInt(process.env.BULLMQ_TIMEOUT || ms("30s").toString(), 10),
     },
     cors: {
         origins: Array.from({ length: 10 }, (_, i) =>
