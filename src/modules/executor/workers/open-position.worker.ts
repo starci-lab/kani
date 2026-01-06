@@ -86,7 +86,10 @@ export class OpenPositionWorker extends WorkerHost {
             getLeaseKey(LeaseKey.Action, bot.id),
         )
         // ensure the lease is owned by the current job
-        lease.ensureOwnership(leaseId)
+        const ensured = lease.ensureOwnership(leaseId)
+        if (!ensured) {
+            throw new UnrecoverableError("Lease not owned by the current job")
+        }
         // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
@@ -338,8 +341,6 @@ export class OpenPositionWorker extends WorkerHost {
         const lease = this.leaseService.lease(
             getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // ensure the lease is owned by the current job
-        lease.ensureOwnership(leaseId)
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -406,8 +407,6 @@ export class OpenPositionWorker extends WorkerHost {
         const lease = this.leaseService.lease(
             getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // ensure the lease is owned by the current job
-        lease.ensureOwnership(leaseId)
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
                 botId: bot.id,
