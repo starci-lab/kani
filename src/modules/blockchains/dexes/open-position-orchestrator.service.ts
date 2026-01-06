@@ -49,7 +49,7 @@ import { Queue } from "bullmq"
 import { OpenPositionPayload } from "../types"
 import { envConfig } from "@modules/env"
 import { v4 } from "uuid"
-import { getSemaKey, SemaKey, SemaService } from "@modules/lock"
+import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
 import { Connection } from "mongoose"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
@@ -91,7 +91,7 @@ export class OpenPositionOrchestratorService {
         private readonly cacheManager: Cache,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
         private readonly openPositionQueue: Queue<OpenPositionPayload>,
-        private readonly semaService: SemaService,
+        private readonly atomicLockService: AtomicLockService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -114,13 +114,13 @@ export class OpenPositionOrchestratorService {
         }: EnqueueOpenPositionParams,
     ) {
         /**
-         * Sema guard:
+         * Atomic lock guard:
          * Prevent concurrent actions on the same bot.
          */
-        const sema = this.semaService.sema(
-            getSemaKey(SemaKey.Action, bot.id),
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
         )
-        if (!sema.tryAcquire()) {
+        if (atomicLock.isLocked()) {
             return
         }
 
@@ -342,43 +342,62 @@ export class OpenPositionOrchestratorService {
         }
 
         /**
-         * Persist job record.
+         * Lock the atomic lock.
          */
-        const [jobRaw] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    liquidityPool: liquidityPool.id,
-                    bot: bot.id,
-                    executor: envConfig().botExecutor.executorId,
-                    type: JobType.OpenPosition,
-                    status: JobStatus.Pending,
+        atomicLock.lock()
+        
+        const session = await this.connection.startSession()
+        try {
+            await session.withTransaction(async () => {
+            /**
+            * Persist job record.
+            */
+                const [jobRaw] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            liquidityPool: liquidityPool.id,
+                            bot: bot.id,
+                            executor: envConfig().botExecutor.executorId,
+                            type: JobType.OpenPosition,
+                            status: JobStatus.Pending,
+                        }
+                    ]
+                )
+                /**
+            * Enqueue open-position job for async processing.
+            */
+                await this.openPositionQueue.add(
+                    v4(),
+                    {
+                        jobId: jobRaw.toJSON().id,
+                        state: this.superjson.stringify(state),
+                        bot,
+                    }
+                )
+                /**
+            * Structured logging for observability.
+            */
+                this.logger.verbose(
+                    WinstonLog.OpenPositionEnqueued,
+                    {
+                        botId: bot.id,
+                        liquidityPoolId,
+                    }
+                )
+            })
+        } catch (error) {
+            // unlock the atomic lock if the job is not enqueued
+            atomicLock.unlock()
+            // log the error
+            this.logger.error(
+                WinstonLog.OpenPositionEnqueueFailed, {
+                    botId: bot.id,
+                    error: error.message,
                 }
-            ]
-        )
-        /**
-         * Enqueue open-position job for async processing.
-         */
-        await this.openPositionQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                state: this.superjson.stringify(state),
-                bot,
-            }
-        )
-
-        /**
-         * Structured logging for observability.
-         */
-        this.logger.verbose(
-            WinstonLog.OpenPositionEnqueued,
-            {
-                botId: bot.id,
-                liquidityPoolId,
-            }
-        )
+            )
+        }
     }
 
     /**

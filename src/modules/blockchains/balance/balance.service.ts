@@ -45,7 +45,7 @@ import { ReconcileBalancePayload } from "../types"
 import { InjectQueue } from "@nestjs/bullmq"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
+import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
 
 
 @Injectable()
@@ -56,7 +56,7 @@ export class BalanceService implements IBalanceService {
     private readonly suiBalanceService: SuiBalanceService,
     private readonly gasStatusService: GasStatusService,
     private readonly swapMathService: SwapMathService,
-    private readonly semaService: SemaService,
+    private readonly atomicLockService: AtomicLockService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
@@ -73,11 +73,11 @@ export class BalanceService implements IBalanceService {
         /**
          * Retrieve sema to prevent concurrent actions on the same bot
          */
-        const sema = this.semaService.sema(
-            getSemaKey(SemaKey.Action, bot.id),
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
         )
         // if the sema is locked, skip the execution
-        if (!sema.tryAcquire()) {
+        if (atomicLock.isLocked()) {
             // there is a job already running for this bot
             return
         }
@@ -87,33 +87,59 @@ export class BalanceService implements IBalanceService {
         if (bot.activePosition) {
             return
         }
+        // lock the atomic lock
+        atomicLock.lock()
         /**
          * Add reconcile balance job to the queue
          */
-        const [ jobRaw ] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    bot: bot.id,
-                    type: JobType.ReconcileBalance,
-                    status: JobStatus.Pending,
-                    executor: envConfig().botExecutor.executorId,
+        const session = await this.connection.startSession()
+        try {
+            await session.withTransaction(async () => {
+                /**
+                 * Persist job record.
+                 */
+                const [ jobRaw ] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            bot: bot.id,
+                            type: JobType.ReconcileBalance,
+                            status: JobStatus.Pending,
+                            executor: envConfig().botExecutor.executorId,
+                        }
+                    ])
+                /**
+                * Add reconcile balance job to the queue
+                */
+                await this.reconcileBalanceQueue.add(
+                    v4(),
+                    {
+                        jobId: jobRaw.toJSON().id,
+                        bot,
+                    }
+                )
+                /**
+                * Structured logging for observability.
+                */
+                this.logger.verbose(
+                    WinstonLog.ReconcileBalanceEnqueued,
+                    {
+                        botId: bot.id,
+                    }
+                )
+            })
+        } catch (error) {
+            // unlock the atomic lock if the job is not enqueued
+            atomicLock.unlock()
+            // log the error
+            this.logger.error(
+                WinstonLog.ReconcileBalanceEnqueueFailed, {
+                    botId: bot.id,
+                    error: error.message,
                 }
-            ])
-        await this.reconcileBalanceQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                bot,
-            }
-        )
-        this.logger.verbose(
-            WinstonLog.ReconcileBalanceEnqueued,
-            {
-                botId: bot.id,
-            }
-        )
+            )
+        }
     }   
 
     async determineReconcileBalancePlan({

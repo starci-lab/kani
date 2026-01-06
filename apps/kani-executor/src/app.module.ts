@@ -19,7 +19,7 @@ import {
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
-import { SemaModule } from "@modules/lock"
+import { AtomicLockModule } from "@modules/lock"
 import { 
     TxBuilderModule, 
     ExitStrategyEngineModule, 
@@ -115,7 +115,7 @@ import { KafkaMode } from "@modules/event"
         SpinnerModule.register({
             isGlobal: true,
         }),
-        SemaModule.register({
+        AtomicLockModule.register({
             isGlobal: true,
         }),
         TxBuilderModule.register({

@@ -37,7 +37,7 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
-import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
+import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -56,6 +56,8 @@ import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
     {
         concurrency: envConfig().bullmq.concurrency,
         lockDuration: envConfig().bullmq.lockDuration,
+        stalledInterval: envConfig().bullmq.stalledInterval,
+        maxStalledCount: envConfig().bullmq.maxStalledCount,
     }
 )
 export class ClosePositionWorker extends WorkerHost {
@@ -73,7 +75,7 @@ export class ClosePositionWorker extends WorkerHost {
     private readonly asyncService: AsyncService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly positionValueMathService: PositionValueMathService,
-    private readonly semaService: SemaService,
+    private readonly atomicLockService: AtomicLockService,
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     private readonly dayjsService: DayjsService,
@@ -86,10 +88,11 @@ export class ClosePositionWorker extends WorkerHost {
         attemptsMade,
     }: Job<ClosePositionPayload>) {
         // * Step 1: Acquire sema if not locked
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
-        if (!sema.tryAcquire()) {
-            return
-        }
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
@@ -289,7 +292,11 @@ export class ClosePositionWorker extends WorkerHost {
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -307,7 +314,7 @@ export class ClosePositionWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .deleteOne({ _id: jobId })
-            sema.release()
+            atomicLock.unlock()
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(WinstonLog.ClosePositionFailed, {
@@ -332,7 +339,7 @@ export class ClosePositionWorker extends WorkerHost {
                 },
             )
             // release the sema
-            sema.release()
+            atomicLock.unlock()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(WinstonLog.ClosePositionRetrying, {
@@ -351,7 +358,13 @@ export class ClosePositionWorker extends WorkerHost {
       const _state = this.superjson.parse<
       LiquidityPoolState | DlmmLiquidityPoolState
     >(state)
-      const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+      // acquire the atomic lock
+      const atomicLock = this.atomicLockService.atomicLock(
+          getAtomicLockKey(AtomicLockKey.Action, bot.id),
+      )
+      // lock immediately
+      atomicLock.lock()
+      // emit the event
       this.eventEmitter.emit(
           createEventName(EventName.UpdateActiveBot, {
               botId: bot.id,
@@ -372,6 +385,6 @@ export class ClosePositionWorker extends WorkerHost {
           .model<JobSchema>(JobSchema.name)
           .deleteOne({ _id: jobId })
       
-      sema.release()
+      atomicLock.unlock()
   }
 }

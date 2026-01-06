@@ -1,5 +1,5 @@
 import { ReconcileBalancePayload } from "@modules/blockchains"
-import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
+import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
 import { Job, UnrecoverableError } from "bullmq"
 import { Connection } from "mongoose"
 import {
@@ -30,6 +30,8 @@ import { AsyncService, DayjsService } from "@modules/mixin"
     {
         concurrency: envConfig().bullmq.concurrency,
         lockDuration: envConfig().bullmq.lockDuration,
+        stalledInterval: envConfig().bullmq.stalledInterval,
+        maxStalledCount: envConfig().bullmq.maxStalledCount,
     }
 )
 export class ReconcileBalanceWorker extends WorkerHost {
@@ -43,7 +45,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
-        private readonly semaService: SemaService,
+        private readonly atomicLockService: AtomicLockService,
     ) {
         super()
     }
@@ -58,13 +60,13 @@ export class ReconcileBalanceWorker extends WorkerHost {
         },
         attemptsMade,
     }: Job<ReconcileBalancePayload>) {
-        // * Step 1: Acquire sema if not locked
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
-        if (!sema.tryAcquire()) {
-            return
-        }
+        // * Step 1: Acquire atomic lock if not locked
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         // * Step 2: Get job from DB (when retry)
-        // check if the sema is locked
         const isRetry = attemptsMade > 0
         let job: JobSchema | null = null
         if (isRetry) {
@@ -244,7 +246,11 @@ export class ReconcileBalanceWorker extends WorkerHost {
     @OnWorkerEvent("failed")
     async onFailed(job: Job<ReconcileBalancePayload>, error: Error) {
         const { bot, jobId } = job.data
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -261,7 +267,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .deleteOne({ _id: jobId })
-            sema.release()
+            atomicLock.unlock()
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(WinstonLog.ReconcileBalanceFailed, {
@@ -285,7 +291,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 },
             )
             // release the sema
-            sema.release()
+            atomicLock.unlock()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(WinstonLog.ReconcileBalanceRetrying, {
@@ -300,7 +306,11 @@ export class ReconcileBalanceWorker extends WorkerHost {
     @OnWorkerEvent("completed")
     async onCompleted(job: Job<ReconcileBalancePayload>) {
         const { bot, jobId } = job.data
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
                 botId: bot.id,
@@ -312,6 +322,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
         })
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        sema.release()
+        atomicLock.unlock()
     }
 }

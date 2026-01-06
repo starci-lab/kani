@@ -148,4 +148,7 @@ export enum WinstonLog {
     OpenPositionExecuting = "Open.Position.Executing",
     ClosePositionExecuting = "Close.Position.Executing",
     ReconcileBalanceExecuting = "Reconcile.Balance.Executing",
+    ReconcileBalanceEnqueueFailed = "Reconcile.Balance.Enqueue.Failed",
+    OpenPositionEnqueueFailed = "Open.Position.Enqueue.Failed",
+    ClosePositionEnqueueFailed = "Close.Position.Enqueue.Failed",
 }

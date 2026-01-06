@@ -29,7 +29,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
+import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -49,7 +49,7 @@ export class ClosePositionOrchestratorService {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
-        private readonly semaService: SemaService,
+        private readonly atomicLockService: AtomicLockService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
@@ -64,14 +64,13 @@ export class ClosePositionOrchestratorService {
         }: EnqueueClosePositionParams,
     ) {
         /**
-         * Sema guard:
+         * Atomic lock guard:
          * Prevent concurrent actions on the same bot.
          */
-        const sema = this.semaService.sema(
-            getSemaKey(SemaKey.Action, bot.id),
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
         )
-        if (!sema.tryAcquire()) {
-            // there is a job already running for this bot
+        if (atomicLock.isLocked()) {
             return
         }
         /**
@@ -135,36 +134,60 @@ export class ClosePositionOrchestratorService {
             )
             return
         }
-        /**
-         * Add close position job to the queue
-         */
-        const [ jobRaw ] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    liquidityPool: liquidityPool.id,
-                    bot: bot.id,
-                    executor: envConfig().botExecutor.executorId,
-                    type: JobType.ClosePosition,
-                    status: JobStatus.Pending,
+        // lock the atomic lock
+        atomicLock.lock()
+        const session = await this.connection.startSession()
+        try {
+            await session.withTransaction(async () => {
+            /**
+             * Persist job record.
+             */
+                const [ jobRaw ] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            liquidityPool: liquidityPool.id,
+                            bot: bot.id,
+                            executor: envConfig().botExecutor.executorId,
+                            type: JobType.ClosePosition,
+                            status: JobStatus.Pending,
+                        }
+                    ]
+                )
+                /**
+            * Add close position job to the queue
+            */
+                await this.closePositionQueue.add(
+                    v4(),
+                    {
+                        jobId: jobRaw.toJSON().id,
+                        state: this.superjson.stringify(state),
+                        bot,
+                    }
+                )
+                /**
+            * Structured logging for observability.
+            */
+                this.logger.verbose(
+                    WinstonLog.ClosePositionEnqueued, {
+                        botId: bot.id,
+                        jobId: jobRaw.toJSON().id,
+                        liquidityPoolId,
+                    }
+                )
+            })
+        } catch (error) {
+            // unlock the atomic lock if the job is not enqueued
+            atomicLock.unlock()
+            // log the error
+            this.logger.error(
+                WinstonLog.ClosePositionEnqueueFailed, {
+                    botId: bot.id,
+                    error: error.message,
                 }
-            ])
-        await this.closePositionQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                state: this.superjson.stringify(state),
-                bot,
-            }
-        )
-        this.logger.verbose(
-            WinstonLog.ClosePositionEnqueued, {
-                botId: bot.id,
-                jobId: jobRaw.toJSON().id,
-                liquidityPoolId,
-            }
-        )
+            )
+        }
     }
 
     async prepare(

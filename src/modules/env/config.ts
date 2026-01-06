@@ -257,6 +257,8 @@ export const envConfig = () => ({
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
         failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
         timeout: parseInt(process.env.BULLMQ_TIMEOUT || ms("30s").toString(), 10),
+        stalledInterval: parseInt(process.env.BULLMQ_STALLED_INTERVAL || ms("30s").toString(), 10),
+        maxStalledCount: parseInt(process.env.BULLMQ_MAX_STALLED_COUNT || "3", 10),
     },
     cors: {
         origins: Array.from({ length: 10 }, (_, i) =>

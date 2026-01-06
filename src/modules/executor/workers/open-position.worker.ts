@@ -33,7 +33,7 @@ import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { envConfig } from "@modules/env"
-import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
+import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
 /**
  * Worker responsible for processing open position confirmations.
  *
@@ -46,11 +46,13 @@ import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
     {
         concurrency: envConfig().bullmq.concurrency,
         lockDuration: envConfig().bullmq.lockDuration,
+        stalledInterval: envConfig().bullmq.stalledInterval,
+        maxStalledCount: envConfig().bullmq.maxStalledCount,
     }
 )
 export class OpenPositionWorker extends WorkerHost {
     constructor(
-        private readonly semaService: SemaService,
+        private readonly atomicLockService: AtomicLockService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
@@ -80,10 +82,11 @@ export class OpenPositionWorker extends WorkerHost {
         attemptsMade,
     }: Job<OpenPositionPayload>) {
         // * Step 1: Acquire sema if not locked
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
-        if (!sema.tryAcquire()) {
-            return
-        }
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
@@ -332,7 +335,11 @@ export class OpenPositionWorker extends WorkerHost {
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -349,7 +356,7 @@ export class OpenPositionWorker extends WorkerHost {
                 })
             // delete the job schema
             await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-            sema.release()
+            atomicLock.unlock()
         // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(
@@ -375,7 +382,7 @@ export class OpenPositionWorker extends WorkerHost {
                 },
             )
             // release the sema
-            sema.release()
+            atomicLock.unlock()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(
@@ -396,7 +403,11 @@ export class OpenPositionWorker extends WorkerHost {
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        const atomicLock = this.atomicLockService.atomicLock(
+            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        )
+        // lock the atomic lock
+        atomicLock.lock()
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
                 botId: bot.id,
@@ -414,6 +425,6 @@ export class OpenPositionWorker extends WorkerHost {
         })
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        sema.release()
+        atomicLock.unlock()
     }
 }
