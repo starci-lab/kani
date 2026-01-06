@@ -1,5 +1,5 @@
+import { envConfig } from "@modules/env"
 import { Injectable } from "@nestjs/common"
-import ms from "ms"
 
 /**
  * LeaseService manages in-memory, lease-based locks scoped by string keys.
@@ -36,7 +36,7 @@ export class LeaseService {
      */
     lease(key: string): LeaseLock {
         if (!this.leaseLocks.has(key)) {
-            this.leaseLocks.set(key, new LeaseLock(ms("5m")))
+            this.leaseLocks.set(key, new LeaseLock(envConfig().timeConfig.lease))
         }
         return this.leaseLocks.get(key)!
     }
@@ -87,10 +87,8 @@ export class LeaseLock {
     tryLock(token: string): boolean {
         // Re-entrant for the same token (idempotent)
         if (this.token === token) return true
-
         // Lock is held by someone else
         if (this.token !== null) return false
-
         // Acquire lock and start lease timer
         this.token = token
         this.resetTimer()
@@ -101,7 +99,8 @@ export class LeaseLock {
      * Release the lock if the caller owns it.
      *
      */
-    unlock(): void {
+    unlock(token: string): void {
+        if (this.token !== token) return
         this.clear()
     }
 

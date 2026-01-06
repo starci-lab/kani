@@ -182,7 +182,7 @@ export class ClosePositionOrchestratorService {
             })
         } catch (error) {
             // unlock the lease if the job is not enqueued
-            lease.unlock()
+            lease.unlock(leaseId)
             // log the error
             this.logger.error(
                 WinstonLog.ClosePositionEnqueueFailed, {

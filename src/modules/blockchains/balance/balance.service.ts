@@ -135,7 +135,7 @@ export class BalanceService implements IBalanceService {
             )
         } catch (error) {
             // unlock the lease if the job is not enqueued
-            lease.unlock()
+            lease.unlock(leaseId)
             // log the error
             this.logger.error(
                 WinstonLog.ReconcileBalanceEnqueueFailed, {

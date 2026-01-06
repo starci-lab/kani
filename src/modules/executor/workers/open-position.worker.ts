@@ -356,7 +356,7 @@ export class OpenPositionWorker extends WorkerHost {
                 })
             // delete the job schema
             await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-            lease.unlock()
+            lease.unlock(leaseId)
         // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(
@@ -382,7 +382,7 @@ export class OpenPositionWorker extends WorkerHost {
                 },
             )
             // release the sema
-            lease.unlock()
+            lease.unlock(leaseId)
         } else {
             // warn the user that the job is retrying
             this.logger.warn(
@@ -425,6 +425,6 @@ export class OpenPositionWorker extends WorkerHost {
         })
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        lease.unlock()
+        lease.unlock(leaseId)
     }
 }
