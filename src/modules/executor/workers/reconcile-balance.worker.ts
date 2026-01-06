@@ -1,5 +1,5 @@
 import { ReconcileBalancePayload } from "@modules/blockchains"
-import { MutexService, getMutexKey, MutexKey } from "@modules/lock"
+import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
 import { Job, UnrecoverableError } from "bullmq"
 import { Connection } from "mongoose"
 import {
@@ -34,7 +34,6 @@ import { AsyncService, DayjsService } from "@modules/mixin"
 )
 export class ReconcileBalanceWorker extends WorkerHost {
     constructor(
-        private readonly mutexService: MutexService,
         private readonly eventEmitter: EventEmitter2,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -44,6 +43,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
+        private readonly semaService: SemaService,
     ) {
         super()
     }
@@ -58,8 +58,13 @@ export class ReconcileBalanceWorker extends WorkerHost {
         },
         attemptsMade,
     }: Job<ReconcileBalancePayload>) {
-        // * Step 1: Get job from DB (when retry)
-        // check if the mutex is locked
+        // * Step 1: Acquire sema if not locked
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        if (!sema.tryAcquire()) {
+            return
+        }
+        // * Step 2: Get job from DB (when retry)
+        // check if the sema is locked
         const isRetry = attemptsMade > 0
         let job: JobSchema | null = null
         if (isRetry) {
@@ -72,7 +77,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         }
         const order = getJobStatusOrder(job?.status || JobStatus.Pending)
 
-        // * Step 2: Retrieve balances (use provided snapshot balances or fetch)
+        // * Step 3: Retrieve balances (use provided snapshot balances or fetch)
         // retrieve the balances
         let targetBalanceAmount: BN | undefined = providedTargetBalanceAmount
         let quoteBalanceAmount: BN | undefined = providedQuoteBalanceAmount
@@ -107,7 +112,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         let solanaTx: SolanaTx | undefined = undefined
         let signatureWithBytes: SignatureWithBytes | undefined = undefined
 
-        // * Step 3: Prepare (determine plan + prepare swap tx if needed)
+        // * Step 4: Prepare (determine plan + prepare swap tx if needed)
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
             const plan = await this.balanceService.determineReconcileBalancePlan({
                 bot,
@@ -171,7 +176,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             needsSwap = data.needsSwap
         }
 
-        // * Step 4: Execute (send swap tx if needed)
+        // * Step 5: Execute (send swap tx if needed)
         // we send the transaction to the network
         if (order < getJobStatusOrder(JobStatus.Executed)) {
             if (needsSwap) {
@@ -194,7 +199,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
                             isRetry,
                             solanaTx,
                             signatureWithBytes,
-                        }),
+                        }
+                    ),
                 )
                 if (error) {
                     throw new UnrecoverableError("Failed to execute swap transaction")
@@ -212,7 +218,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             }
         }
 
-        // * Step 5: Confirm (refetch balances if swapped + update snapshots)
+        // * Step 6: Confirm (refetch balances if swapped + update snapshots)
         // thus, we just fetch the balances again and turn the job to completed
         if (needsSwap) {
             const {
@@ -238,7 +244,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
     @OnWorkerEvent("failed")
     async onFailed(job: Job<ReconcileBalancePayload>, error: Error) {
         const { bot, jobId } = job.data
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -255,7 +261,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .deleteOne({ _id: jobId })
-            mutex.release()
+            sema.release()
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(WinstonLog.ReconcileBalanceFailed, {
@@ -278,8 +284,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     },
                 },
             )
-            // release the mutex
-            mutex.release()
+            // release the sema
+            sema.release()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(WinstonLog.ReconcileBalanceRetrying, {
@@ -294,7 +300,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
     @OnWorkerEvent("completed")
     async onCompleted(job: Job<ReconcileBalancePayload>) {
         const { bot, jobId } = job.data
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
                 botId: bot.id,
@@ -306,6 +312,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
         })
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        mutex.release()
+        sema.release()
     }
 }

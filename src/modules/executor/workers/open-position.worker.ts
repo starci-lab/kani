@@ -1,6 +1,5 @@
 import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
-import { MutexKey, getMutexKey, MutexService } from "@modules/lock"
 import { Job, UnrecoverableError } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
@@ -34,6 +33,7 @@ import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { envConfig } from "@modules/env"
+import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
 /**
  * Worker responsible for processing open position confirmations.
  *
@@ -50,7 +50,7 @@ import { envConfig } from "@modules/env"
 )
 export class OpenPositionWorker extends WorkerHost {
     constructor(
-        private readonly mutexService: MutexService,
+        private readonly semaService: SemaService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
@@ -72,18 +72,23 @@ export class OpenPositionWorker extends WorkerHost {
     /**
    * Event handler triggered when a job becomes active.
    * Handles updating snapshot balances, recording open position transactions,
-   * emitting events, and releasing distributed locks.
+   * emitting events, and releasing distributed semas.
    */
     async process({
         data: 
         { jobId, bot, state },
         attemptsMade,
     }: Job<OpenPositionPayload>) {
-        // * Step 1: Get job from DB (when retry)
+        // * Step 1: Acquire sema if not locked
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        if (!sema.tryAcquire()) {
+            return
+        }
+        // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        // check if the mutex is locked
+        // check if the sema is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
         let job: JobSchema | null = null
@@ -112,7 +117,7 @@ export class OpenPositionWorker extends WorkerHost {
         let metadata: unknown | undefined = undefined
         let positionId: string | undefined = undefined
         let liquidity: BN | undefined = undefined
-        // * Step 2: Prepare
+        // * Step 3: Prepare
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
             // prepare the transaction and get the result
             const {
@@ -187,7 +192,7 @@ export class OpenPositionWorker extends WorkerHost {
             maxBinId = data?.maxBinId ? new Decimal(data.maxBinId) : undefined
             metadata = data?.metadata
         }
-        // * Step 3: Execute
+        // * Step 4: Execute
         if (order < getJobStatusOrder(JobStatus.Executed)) {
             // execute the transaction
             this.logger.verbose(
@@ -235,7 +240,7 @@ export class OpenPositionWorker extends WorkerHost {
             const data = job.data as OpenPositionJobData
             positionId = data.positionId
         }
-        // * Step 4: Confirm
+        // * Step 5: Confirm
         // confirm the position
         // fetch the balances after the position is opened
         const {
@@ -327,7 +332,7 @@ export class OpenPositionWorker extends WorkerHost {
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -344,7 +349,7 @@ export class OpenPositionWorker extends WorkerHost {
                 })
             // delete the job schema
             await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-            mutex.release()
+            sema.release()
         // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(
@@ -369,8 +374,8 @@ export class OpenPositionWorker extends WorkerHost {
                     },
                 },
             )
-            // release the mutex
-            mutex.release()
+            // release the sema
+            sema.release()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(
@@ -391,7 +396,7 @@ export class OpenPositionWorker extends WorkerHost {
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
                 botId: bot.id,
@@ -409,6 +414,6 @@ export class OpenPositionWorker extends WorkerHost {
         })
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        mutex.release()
+        sema.release()
     }
 }

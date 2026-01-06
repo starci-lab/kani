@@ -22,7 +22,6 @@ import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { ClosePositionPayload } from "../types"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Connection } from "mongoose"
 import { envConfig } from "@modules/env"
 import { ExitStrategyEngineOutputService } from "../exit-strategy-engine"
@@ -30,6 +29,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
+import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -49,7 +49,7 @@ export class ClosePositionOrchestratorService {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
-        private readonly mutexService: MutexService,
+        private readonly semaService: SemaService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
@@ -64,13 +64,14 @@ export class ClosePositionOrchestratorService {
         }: EnqueueClosePositionParams,
     ) {
         /**
-         * Retrieve mutex to prevent concurrent actions on the same bot
+         * Sema guard:
+         * Prevent concurrent actions on the same bot.
          */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
+        const sema = this.semaService.sema(
+            getSemaKey(SemaKey.Action, bot.id),
         )
-        // if the mutex is locked, skip the execution
-        if (mutex.isLocked()) {
+        if (!sema.tryAcquire()) {
+            // there is a job already running for this bot
             return
         }
         /**
@@ -134,14 +135,6 @@ export class ClosePositionOrchestratorService {
             )
             return
         }
-        /* 
-         * Lock the mutex to prevent concurrent actions on the same bot
-         */
-        const releaser = await mutex.acquire()
-        setTimeout(
-            releaser, 
-            envConfig().timeConfig.interval.mutex
-        )
         /**
          * Add close position job to the queue
          */

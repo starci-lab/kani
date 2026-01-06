@@ -49,8 +49,7 @@ import { Queue } from "bullmq"
 import { OpenPositionPayload } from "../types"
 import { envConfig } from "@modules/env"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey } from "@modules/lock"
-import { MutexService } from "@modules/lock"
+import { getSemaKey, SemaKey, SemaService } from "@modules/lock"
 import { Connection } from "mongoose"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
@@ -67,7 +66,7 @@ import { BalanceEligibilityService } from "../balance"
  * Responsibilities:
  * - Evaluate whether an open-position action SHOULD happen
  * - Apply safety guards (balance, snapshot, quote ratio, idempotency)
- * - Handle concurrency via mutex
+ * - Handle concurrency via sema
  * - Validate liquidity pool and DEX support
  * - Create job and enqueue async execution
  *
@@ -92,7 +91,7 @@ export class OpenPositionOrchestratorService {
         private readonly cacheManager: Cache,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
         private readonly openPositionQueue: Queue<OpenPositionPayload>,
-        private readonly mutexService: MutexService,
+        private readonly semaService: SemaService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -115,13 +114,13 @@ export class OpenPositionOrchestratorService {
         }: EnqueueOpenPositionParams,
     ) {
         /**
-         * Mutex guard:
+         * Sema guard:
          * Prevent concurrent actions on the same bot.
          */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
+        const sema = this.semaService.sema(
+            getSemaKey(SemaKey.Action, bot.id),
         )
-        if (mutex.isLocked()) {
+        if (!sema.tryAcquire()) {
             return
         }
 
@@ -341,17 +340,6 @@ export class OpenPositionOrchestratorService {
         ) {
             return
         }
-
-        /**
-         * Acquire mutex before creating job.
-         */
-        const releaser = await mutex.acquire()
-        setTimeout(
-            async () => {
-                releaser()
-            },
-            envConfig().timeConfig.interval.mutex
-        )
 
         /**
          * Persist job record.

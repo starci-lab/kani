@@ -37,7 +37,6 @@ import { SwapMathService } from "../math"
 import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { envConfig } from "@modules/env"
 import { Connection } from "mongoose"
 import { Queue } from "bullmq"
@@ -46,8 +45,8 @@ import { ReconcileBalancePayload } from "../types"
 import { InjectQueue } from "@nestjs/bullmq"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { AsyncService } from "@modules/mixin"
-import { PythPriceService } from "../pyth"
+import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
+
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -57,13 +56,11 @@ export class BalanceService implements IBalanceService {
     private readonly suiBalanceService: SuiBalanceService,
     private readonly gasStatusService: GasStatusService,
     private readonly swapMathService: SwapMathService,
-    private readonly mutexService: MutexService,
-    private readonly pythPriceService: PythPriceService,
+    private readonly semaService: SemaService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
     private readonly reconcileBalanceQueue: Queue<ReconcileBalancePayload>,
-    private readonly asyncService: AsyncService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -74,13 +71,14 @@ export class BalanceService implements IBalanceService {
         }: EnqueueBalanceRebalancingParams,
     ) {
         /**
-         * Retrieve mutex to prevent concurrent actions on the same bot
+         * Retrieve sema to prevent concurrent actions on the same bot
          */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
+        const sema = this.semaService.sema(
+            getSemaKey(SemaKey.Action, bot.id),
         )
-        // if the mutex is locked, skip the execution
-        if (mutex.isLocked()) {
+        // if the sema is locked, skip the execution
+        if (!sema.tryAcquire()) {
+            // there is a job already running for this bot
             return
         }
         /**
@@ -89,14 +87,6 @@ export class BalanceService implements IBalanceService {
         if (bot.activePosition) {
             return
         }
-        /* 
-         * Lock the mutex to prevent concurrent actions on the same bot
-         */
-        const releaser = await mutex.acquire()
-        setTimeout(
-            () => releaser(), 
-            envConfig().timeConfig.interval.mutex
-        )
         /**
          * Add reconcile balance job to the queue
          */

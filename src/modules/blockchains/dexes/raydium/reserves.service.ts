@@ -27,7 +27,7 @@ export class RaydiumReservesService implements IReservesService {
             bot,
         }: ReservesParams): Promise<ReservesResponse> {
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.id === liquidityPoolId.toString(),
+            liquidityPool => liquidityPool.displayId === liquidityPoolId.toString(),
         )
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException("Liquidity pool not found")

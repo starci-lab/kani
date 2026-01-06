@@ -1,6 +1,5 @@
 import { OnWorkerEvent, Processor as Worker, WorkerHost } from "@nestjs/bullmq"
 import { BullQueueName } from "@modules/bullmq/types"
-import { MutexKey, getMutexKey, MutexService } from "@modules/lock"
 import { Job, UnrecoverableError } from "bullmq"
 import { bullData } from "@modules/bullmq"
 import {
@@ -38,6 +37,7 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
+import { SemaKey, SemaService, getSemaKey } from "@modules/lock"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -60,7 +60,6 @@ import { envConfig } from "@modules/env"
 )
 export class ClosePositionWorker extends WorkerHost {
     constructor(
-    private readonly mutexService: MutexService,
     private readonly balanceService: BalanceService,
     private readonly balanceSnapshotService: BalanceSnapshotService,
     private readonly transactionSnapshotService: TransactionSnapshotService,
@@ -74,6 +73,7 @@ export class ClosePositionWorker extends WorkerHost {
     private readonly asyncService: AsyncService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly positionValueMathService: PositionValueMathService,
+    private readonly semaService: SemaService,
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     private readonly dayjsService: DayjsService,
@@ -85,7 +85,12 @@ export class ClosePositionWorker extends WorkerHost {
         data: { jobId, bot, state },
         attemptsMade,
     }: Job<ClosePositionPayload>) {
-        // * Step 1: Get job from DB (when retry)
+        // * Step 1: Acquire sema if not locked
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
+        if (!sema.tryAcquire()) {
+            return
+        }
+        // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
@@ -93,8 +98,7 @@ export class ClosePositionWorker extends WorkerHost {
         if (!bot.activePosition) {
             throw new UnrecoverableError("Active position not found")
         }
-
-        // check if the mutex is locked
+        // check if the sema is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
         let job: JobSchema | null = null
@@ -111,7 +115,7 @@ export class ClosePositionWorker extends WorkerHost {
         let txHash: string
         let signatureWithBytes: SignatureWithBytes | undefined = undefined
         let solanaTx: SolanaTx | undefined = undefined
-        // * Step 2: Prepare
+        // * Step 3: Prepare
         if (order < getJobStatusOrder(JobStatus.Prepared)) {
             // prepare the transaction and get the result
             const {
@@ -142,7 +146,7 @@ export class ClosePositionWorker extends WorkerHost {
             txHash = job.txHash
         }
 
-        // * Step 3: Execute
+        // * Step 4: Execute
         if (order < getJobStatusOrder(JobStatus.Executed)) {
             this.logger.verbose(
                 WinstonLog.ClosePositionExecuting, {
@@ -177,7 +181,7 @@ export class ClosePositionWorker extends WorkerHost {
             )
         }
 
-        // * Step 4: Confirm (balances + profitability + snapshots)
+        // * Step 5: Confirm (balances + profitability + snapshots)
         // Get tokens for profitability calculation
         const tokenA = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === _state.static.tokenA.toString(),
@@ -272,7 +276,7 @@ export class ClosePositionWorker extends WorkerHost {
                 pnl,
             })
         })
-        // * Step 5: Enqueue the reconcile balance job
+        // * Step 6: Enqueue the reconcile balance job
         // enqueue the reconcile balance job
         await this.balanceService.enqueue({
             bot,
@@ -285,7 +289,7 @@ export class ClosePositionWorker extends WorkerHost {
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+        const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -303,7 +307,7 @@ export class ClosePositionWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .deleteOne({ _id: jobId })
-            mutex.release()
+            sema.release()
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(WinstonLog.ClosePositionFailed, {
@@ -327,8 +331,8 @@ export class ClosePositionWorker extends WorkerHost {
                     },
                 },
             )
-            // release the mutex
-            mutex.release()
+            // release the sema
+            sema.release()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(WinstonLog.ClosePositionRetrying, {
@@ -347,7 +351,7 @@ export class ClosePositionWorker extends WorkerHost {
       const _state = this.superjson.parse<
       LiquidityPoolState | DlmmLiquidityPoolState
     >(state)
-      const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
+      const sema = this.semaService.sema(getSemaKey(SemaKey.Action, bot.id))
       this.eventEmitter.emit(
           createEventName(EventName.UpdateActiveBot, {
               botId: bot.id,
@@ -368,6 +372,6 @@ export class ClosePositionWorker extends WorkerHost {
           .model<JobSchema>(JobSchema.name)
           .deleteOne({ _id: jobId })
       
-      mutex.release()
+      sema.release()
   }
 }
