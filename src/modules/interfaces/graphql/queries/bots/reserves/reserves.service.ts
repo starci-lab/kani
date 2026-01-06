@@ -78,6 +78,7 @@ export class ReservesService {
         return {
             tokenA: reserves.tokenA.toNumber(),
             tokenB: reserves.tokenB.toNumber(),
+            lastSnapshotAt: reserves.snapshotAt.toDate(),
         }
     }
 }

@@ -225,6 +225,7 @@ export class RaydiumFeesService implements IFeesService {
         return {
             tokenA: computeDenomination(feeEarnedA, tokenA.decimals),
             tokenB: computeDenomination(feeEarnedB, tokenB.decimals),
+            snapshotAt: state.dynamic.snapshotAt,
         }
     }
 

@@ -41,6 +41,7 @@ export interface PythTokenPriceCacheResult {
 }
 
 export interface DynamicLiquidityPoolInfoCacheResult {
+    snapshotAt: Dayjs
     tickCurrent: number
     liquidity: BN
     sqrtPriceX64: BN
@@ -50,6 +51,7 @@ export interface DynamicLiquidityPoolInfoCacheResult {
 }
 
 export interface DynamicDlmmLiquidityPoolInfoCacheResult {
+    snapshotAt: Dayjs
     activeId: number
     rewards: Array<unknown>
 }

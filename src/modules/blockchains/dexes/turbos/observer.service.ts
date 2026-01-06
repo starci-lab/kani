@@ -4,7 +4,7 @@ import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { AsyncService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
 import BN from "bn.js"
@@ -31,6 +31,7 @@ export class TurbosObserverService {
         private readonly winstonLogger: winstonLogger,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -96,6 +97,7 @@ export class TurbosObserverService {
             rewards: state.rewardInfos,
             feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
+            snapshotAt: this.dayjsService.now(),
         } 
         await this.asyncService.allIgnoreError(
             [

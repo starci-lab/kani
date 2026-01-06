@@ -58,9 +58,9 @@ export class FeesService {
             )
         )
         // if the fees are cached, return them
-        if (cachedResult) {
-            return this.superjson.parse<FeesResponseData>(cachedResult)
-        }
+        // if (cachedResult) {
+        //     return this.superjson.parse<FeesResponseData>(cachedResult)
+        // }
         // check if the bot exists
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
@@ -98,6 +98,7 @@ export class FeesService {
             tokenA: fees.tokenA.toNumber(),
             tokenB: fees.tokenB.toNumber(),
             lastFetchedAt: lastFetchedAt.toDate(),
+            lastSnapshotAt: fees.snapshotAt.toDate(),
         }
         await this.cacheManager.set(
             createCacheKey(

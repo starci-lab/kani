@@ -66,6 +66,7 @@ export class RaydiumReservesService implements IReservesService {
         return {
             tokenA: computeDenomination(amountA, tokenA.decimals),
             tokenB: computeDenomination(amountB, tokenB.decimals),
+            snapshotAt: state.dynamic.snapshotAt,
         }
     }
 }

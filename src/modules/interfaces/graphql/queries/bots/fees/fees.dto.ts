@@ -32,9 +32,13 @@ export class FeesResponseData {
     })
         tokenB: number
     @Field(() => Date, {
-        description: "The date and time the fees were last cached.",
+        description: "The date and time the fees were last fetched.",
     })
         lastFetchedAt: Date
+    @Field(() => Date, {
+        description: "The date and time the fees were last snapshot.",
+    })
+        lastSnapshotAt: Date
 }
 
 @ObjectType({

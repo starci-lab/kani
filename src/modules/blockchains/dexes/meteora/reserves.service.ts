@@ -147,6 +147,7 @@ export class MeteoraReservesService implements IReservesService {
         return {
             tokenA: computeDenomination(reserveARaw, decimalsA),
             tokenB: computeDenomination(reserveBRaw, decimalsB),
+            snapshotAt: state.dynamic.snapshotAt,
         }
     }
 }

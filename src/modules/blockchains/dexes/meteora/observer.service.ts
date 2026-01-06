@@ -8,7 +8,7 @@ import {
     PrimaryMemoryStorageService,
     DexId,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
@@ -38,6 +38,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
     private readonly memoryStorageService: PrimaryMemoryStorageService,
     private readonly asyncService: AsyncService,
     private readonly eventEmitterService: EventEmitterService,
+    private readonly dayjsService: DayjsService,
     ) {}
 
   // fetch the pool every 10s to ensure if no event from websocket
@@ -85,6 +86,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
       {
           activeId: state.active_id,
           rewards: state.reward_infos,
+          snapshotAt: this.dayjsService.now(),
       }
       await this.asyncService.allIgnoreError([
       // cache

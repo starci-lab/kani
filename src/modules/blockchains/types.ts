@@ -4,6 +4,7 @@ import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
 import BN from "bn.js"
 import { BotSchema, TokenId } from "@modules/databases"
 import { sendAndConfirmTransactionFactory, signTransaction } from "@solana/kit"
+import { Dayjs } from "dayjs"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -26,11 +27,13 @@ export interface DynamicLiquidityPoolInfo {
     rewards: Array<unknown>
     feeGrowthGlobalA: BN
     feeGrowthGlobalB: BN
+    snapshotAt: Dayjs
 }
 
 export interface DynamicDlmmLiquidityPoolInfo {
     activeId: number
     rewards: Array<unknown>
+    snapshotAt: Dayjs
 }
 
 export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]

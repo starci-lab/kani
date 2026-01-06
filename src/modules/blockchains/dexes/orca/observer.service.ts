@@ -21,6 +21,7 @@ import { Interval } from "@nestjs/schedule"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
+import { DayjsService } from "@modules/mixin"
 
 @Injectable()
 export class OrcaObserverService implements OnApplicationBootstrap {
@@ -35,6 +36,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     // ============================================
@@ -78,8 +80,8 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             rewards: state.rewardInfos,
             feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
+            snapshotAt: this.dayjsService.now(),
         }
-
         await this.asyncService.allIgnoreError([
             // cache
             this.cacheManager.set(

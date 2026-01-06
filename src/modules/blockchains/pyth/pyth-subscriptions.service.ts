@@ -122,7 +122,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                 price: data.price,
                                 snapshotAt: this.dayjsService.now(),
                             }),
-                            ttl: 0, // 0 means no expiration
+                            ttl: envConfig().cache.ttl.pythPrice,
                         }
                     }
                 ),
@@ -212,7 +212,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                                             price: price.toNumber(),
                                                             snapshotAt: this.dayjsService.now(),
                                                         }),
-                                                        0, // 0 means no expiration
+                                                        envConfig().cache.ttl.pythPrice,
                                                     )}
                                                 )()
                                             ) 

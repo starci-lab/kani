@@ -7,6 +7,7 @@ import { Decimal } from "decimal.js"
 import { SolanaTx } from "./types"
 import { DlmmLiquidityPoolState, LiquidityPoolState, PrepareOpenPositionParams } from "./types"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
+import { Dayjs } from "dayjs"
 
 export interface PrepareOpenPositionResponse {
   txHash: string;
@@ -96,6 +97,7 @@ export interface FeesParams {
 export interface FeesResponse {
   tokenA: Decimal;
   tokenB: Decimal;
+  snapshotAt: Dayjs;
 }
 
 export interface IFeesService {
@@ -113,6 +115,7 @@ export interface ReservesParams {
 export interface ReservesResponse {
   tokenA: Decimal;
   tokenB: Decimal;
+  snapshotAt: Dayjs;
 }
 
 export interface IReservesService {

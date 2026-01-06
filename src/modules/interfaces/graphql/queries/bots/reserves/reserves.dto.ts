@@ -33,6 +33,10 @@ export class ReservesResponseData {
     })
         tokenB: number
 
+    @Field(() => Date, {
+        description: "The date and time the reserves were last snapshot.",
+    })
+        lastSnapshotAt: Date
 }
 
 @ObjectType({
