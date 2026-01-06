@@ -190,6 +190,15 @@ export class OpenPositionWorker extends WorkerHost {
         // * Step 3: Execute
         if (order < getJobStatusOrder(JobStatus.Executed)) {
             // execute the transaction
+            this.logger.verbose(
+                WinstonLog.OpenPositionExecuting, 
+                {
+                    botId: bot.id,
+                    liquidityPoolId: _state.static.displayId,
+                    jobId,
+                    txHash,
+                }
+            )
             const [response, error] = await this.asyncService.resolveTuple(
                 this.openPositionOrchestratorService.execute({
                     bot,
@@ -321,15 +330,33 @@ export class OpenPositionWorker extends WorkerHost {
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
-        if (isPermanentFailure) {
-            this.logger.error(WinstonLog.OpenPositionFailed, {
-                botId: bot.id,
-                executorId: envConfig().botExecutor.executorId,
-                jobId,
-                liquidityPoolId: _state.static.displayId,
-                error: error.message,
-                stack: error.stack,
-            })
+        const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
+        // if the error is unrecoverable, delete the job schema
+        if (isUnrecoverable) {
+            this.logger.error(
+                WinstonLog.OpenPositionFailed, {
+                    botId: bot.id,
+                    executorId: envConfig().botExecutor.executorId,
+                    jobId,
+                    liquidityPoolId: _state.static.displayId,
+                    error: error.message,
+                    jobDeleted: true,
+                })
+            // delete the job schema
+            await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
+            mutex.release()
+        // if the error is permanent failure, increment the retry count
+        } else if (isPermanentFailure) {
+            this.logger.error(
+                WinstonLog.OpenPositionFailed, {
+                    botId: bot.id,
+                    executorId: envConfig().botExecutor.executorId,
+                    jobId,
+                    liquidityPoolId: _state.static.displayId,
+                    error: error.message,
+                    jobDeleted: false,
+                })
+            // increment the retry count
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
                 {
@@ -342,16 +369,20 @@ export class OpenPositionWorker extends WorkerHost {
                     },
                 },
             )
+            // release the mutex
             mutex.release()
+        } else {
+            // warn the user that the job is retrying
+            this.logger.warn(
+                WinstonLog.OpenPositionRetrying, {
+                    botId: bot.id,
+                    executorId: envConfig().botExecutor.executorId,
+                    liquidityPoolId: _state.static.displayId,
+                    jobId,
+                    error: error.message,
+                }
+            )      
         }
-        this.logger.warn(WinstonLog.OpenPositionRetrying, {
-            botId: bot.id,
-            executorId: envConfig().botExecutor.executorId,
-            liquidityPoolId: _state.static.displayId,
-            jobId,
-            error: error.message,
-            stack: error.stack,
-        })
     }
 
     @OnWorkerEvent("completed")

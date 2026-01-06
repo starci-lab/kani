@@ -178,6 +178,12 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 if (!tokenIn || !tokenOut) {
                     throw new UnrecoverableError("Token in or token out not found during swap execution")
                 }
+                this.logger.verbose(
+                    WinstonLog.ReconcileBalanceExecuting, {
+                        botId: bot.id,
+                        jobId,
+                        txHash,
+                    })
                 const [, error] = await this.asyncService.resolveTuple(
                     this.balanceService.executeSwapTransaction(
                         {
@@ -235,36 +241,54 @@ export class ReconcileBalanceWorker extends WorkerHost {
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
-        if (isPermanentFailure) {
+        const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
+        // if the error is unrecoverable, delete the job schema
+        if (isUnrecoverable) {
             this.logger.error(WinstonLog.ReconcileBalanceFailed, {
                 botId: bot.id,
                 executorId: envConfig().botExecutor.executorId,
                 jobId,
                 error: error.message,
+                jobDeleted: true,
             })
+            // delete the job schema
+            await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .deleteOne({ _id: jobId })
+            mutex.release()
+            // if the error is permanent failure, increment the retry count
+        } else if (isPermanentFailure) {
+            this.logger.error(WinstonLog.ReconcileBalanceFailed, {
+                botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
+                jobId,
+                error: error.message,
+                jobDeleted: false,
+            })
+            // increment the retry count
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
-                { 
-                    $set: { 
+                {
+                    $set: {
                         status: JobStatus.Failed,
                         processedAt: this.dayjsService.now().toDate(),
                     },
                     $inc: {
                         retryCount: 1,
                     },
-                }
+                },
             )
+            // release the mutex
             mutex.release()
-        }
-        this.logger.warn(
-            WinstonLog.ReconcileBalanceRetrying, {
+        } else {
+            // warn the user that the job is retrying
+            this.logger.warn(WinstonLog.ReconcileBalanceRetrying, {
                 botId: bot.id,
                 executorId: envConfig().botExecutor.executorId,
                 jobId,
                 error: error.message,
-                stack: error.stack,
-            }
-        )
+            })
+        }
     }
 
     @OnWorkerEvent("completed")

@@ -144,5 +144,8 @@ export enum WinstonLog {
     KeyWrittenSuccess = "Key.Written.Success",
     OpenPositionFailedJobsRecreated = "Open.Position.Failed.Jobs.Recreated",
     ClosePositionFailedJobsRecreated = "Close.Position.Failed.Jobs.Recreated",
-    ReconcileBalanceFailedJobsRecreated = "Reconcile.Balance.Failed.Jobs.Recreated"
+    ReconcileBalanceFailedJobsRecreated = "Reconcile.Balance.Failed.Jobs.Recreated",
+    OpenPositionExecuting = "Open.Position.Executing",
+    ClosePositionExecuting = "Close.Position.Executing",
+    ReconcileBalanceExecuting = "Reconcile.Balance.Executing",
 }

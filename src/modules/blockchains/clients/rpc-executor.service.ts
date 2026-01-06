@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { AsyncService, RetryService } from "@modules/mixin"
 import { 
     createSolanaRpc, 
@@ -21,6 +21,8 @@ import { ChainId } from "@typedefs"
 import { RpcAccessType } from "@modules/filesystem"
 import { AbortError } from "p-retry"
 import { envConfig } from "@modules/env"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
 
 // Retryable RPC error indicating a temporary failure that blocks progress
 // (e.g. request timeout, transient cluster issues, blockhash expiration,
@@ -47,11 +49,12 @@ const RETRYABLE_JSON_RPC_CODES = new Set<number>([
 
 @Injectable()
 export class RpcExecutorService {
-    private readonly logger = new Logger(RpcExecutorService.name)
     constructor(
         private readonly p2cBalancerService: P2CBalancerService,
         private readonly retryService: RetryService,
         private readonly asyncService: AsyncService,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
     ) {}
 
     private getSolanaRpcErrorType(error: SolanaError): RpcErrorType {

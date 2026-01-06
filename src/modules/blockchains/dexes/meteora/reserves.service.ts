@@ -115,6 +115,7 @@ export class MeteoraReservesService implements IReservesService {
             const { price } = this.dlmmBinFormulaService.activeIdToPriceRaw({
                 activeId: currentBinId.toNumber(),
                 binStep: binStep.toNumber(),
+                basisPointMax: _state.static.basisPointMax,
             })
             if (currentBinId.lessThan(activeBinId)) {
                 reserveBRaw = reserveBRaw.add(liquidityShare)

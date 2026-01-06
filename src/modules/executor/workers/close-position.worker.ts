@@ -144,6 +144,13 @@ export class ClosePositionWorker extends WorkerHost {
 
         // * Step 3: Execute
         if (order < getJobStatusOrder(JobStatus.Executed)) {
+            this.logger.verbose(
+                WinstonLog.ClosePositionExecuting, {
+                    botId: bot.id,
+                    jobId,
+                    txHash,
+                }
+            )
             const [, error] = await this.asyncService.resolveTuple(
                 this.closePositionOrchestratorService.execute({
                     bot,
@@ -274,17 +281,40 @@ export class ClosePositionWorker extends WorkerHost {
 
   @OnWorkerEvent("failed")
     async onFailed(job: Job<ClosePositionPayload>, error: Error) {
-        const { bot, jobId } = job.data
+        const { bot, jobId, state } = job.data
+        const _state = this.superjson.parse<
+            LiquidityPoolState | DlmmLiquidityPoolState
+        >(state)
         const mutex = this.mutexService.mutex(getMutexKey(MutexKey.Action, bot.id))
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
-        if (isPermanentFailure) {
+        const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
+        // if the error is unrecoverable, delete the job schema
+        if (isUnrecoverable) {
             this.logger.error(WinstonLog.ClosePositionFailed, {
                 botId: bot.id,
                 executorId: envConfig().botExecutor.executorId,
                 jobId,
+                liquidityPoolId: _state.static.displayId,
                 error: error.message,
+                jobDeleted: true,
             })
+            // delete the job schema
+            await this.connection
+                .model<JobSchema>(JobSchema.name)
+                .deleteOne({ _id: jobId })
+            mutex.release()
+            // if the error is permanent failure, increment the retry count
+        } else if (isPermanentFailure) {
+            this.logger.error(WinstonLog.ClosePositionFailed, {
+                botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
+                jobId,
+                liquidityPoolId: _state.static.displayId,
+                error: error.message,
+                jobDeleted: false,
+            })
+            // increment the retry count
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 { _id: jobId },
                 {
@@ -297,14 +327,18 @@ export class ClosePositionWorker extends WorkerHost {
                     },
                 },
             )
+            // release the mutex
             mutex.release()
+        } else {
+            // warn the user that the job is retrying
+            this.logger.warn(WinstonLog.ClosePositionRetrying, {
+                botId: bot.id,
+                executorId: envConfig().botExecutor.executorId,
+                liquidityPoolId: _state.static.displayId,
+                jobId,
+                error: error.message,
+            })
         }
-        this.logger.warn(WinstonLog.ClosePositionRetrying, {
-            botId: bot.id,
-            executorId: envConfig().botExecutor.executorId,
-            jobId,
-            error: error.message,
-        })
     }
 
   @OnWorkerEvent("completed")
