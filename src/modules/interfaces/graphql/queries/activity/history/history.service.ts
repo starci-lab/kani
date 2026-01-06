@@ -150,7 +150,7 @@ export class HistoryService {
      * This produces a step-wise (hold-last-value) chart.
      *
      * Complexity:
-     * - O(n * m)
+     * - O(n * log(m))
      *   n = number of chart buckets
      *   m = number of history snapshots
      */
@@ -246,6 +246,7 @@ export class HistoryService {
                 isActive: false,
             })
             .limit(HISTORY_SERIE_COUNT)
+            .sort({ positionClosedAt: 1 })
         const series: Array<HistorySerieSchema> = []
 
         for (const position of positions) {
@@ -285,6 +286,7 @@ export class HistoryService {
                 positionClosedAt: { $gt: lastSeriesUpdatedAt },
             })
             .limit(HISTORY_SERIE_COUNT)
+            .sort({ positionClosedAt: 1 })  
 
         const seriesAppended: Array<HistorySerieSchema> = []
 
