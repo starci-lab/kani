@@ -49,7 +49,7 @@ import { Queue } from "bullmq"
 import { OpenPositionPayload } from "../types"
 import { envConfig } from "@modules/env"
 import { v4 } from "uuid"
-import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 import { Connection } from "mongoose"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
@@ -91,7 +91,7 @@ export class OpenPositionOrchestratorService {
         private readonly cacheManager: Cache,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
         private readonly openPositionQueue: Queue<OpenPositionPayload>,
-        private readonly atomicLockService: AtomicLockService,
+        private readonly leaseService: LeaseService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -117,10 +117,10 @@ export class OpenPositionOrchestratorService {
          * Atomic lock guard:
          * Prevent concurrent actions on the same bot.
          */
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        if (atomicLock.isLocked()) {
+        if (lease.isLocked()) {
             return
         }
 
@@ -342,16 +342,16 @@ export class OpenPositionOrchestratorService {
         }
 
         /**
-         * Lock the atomic lock.
+         * Try to lock the lease.
          */
-        atomicLock.lock()
-        
+        const leaseId = v4()
+        lease.tryLock(leaseId)
         const session = await this.connection.startSession()
         try {
             await session.withTransaction(async () => {
-            /**
-            * Persist job record.
-            */
+                /**
+                * Persist job record.
+                */
                 const [jobRaw] = await this.connection.model<JobSchema>(
                     JobSchema.name
                 ).create(
@@ -362,23 +362,25 @@ export class OpenPositionOrchestratorService {
                             executor: envConfig().botExecutor.executorId,
                             type: JobType.OpenPosition,
                             status: JobStatus.Pending,
+                            leaseId,
                         }
                     ]
                 )
                 /**
-            * Enqueue open-position job for async processing.
-            */
+                * Enqueue open-position job for async processing.
+                */
                 await this.openPositionQueue.add(
                     v4(),
                     {
                         jobId: jobRaw.toJSON().id,
                         state: this.superjson.stringify(state),
                         bot,
+                        leaseId,
                     }
                 )
                 /**
-            * Structured logging for observability.
-            */
+                * Structured logging for observability.
+                */
                 this.logger.verbose(
                     WinstonLog.OpenPositionEnqueued,
                     {
@@ -386,10 +388,11 @@ export class OpenPositionOrchestratorService {
                         liquidityPoolId,
                     }
                 )
-            })
+            }
+            )
         } catch (error) {
-            // unlock the atomic lock if the job is not enqueued
-            atomicLock.unlock()
+            // unlock the lease if the job is not enqueued
+            lease.unlock()
             // log the error
             this.logger.error(
                 WinstonLog.OpenPositionEnqueueFailed, {

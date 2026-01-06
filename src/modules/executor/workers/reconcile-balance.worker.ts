@@ -1,5 +1,5 @@
 import { ReconcileBalancePayload } from "@modules/blockchains"
-import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 import { Job, UnrecoverableError } from "bullmq"
 import { Connection } from "mongoose"
 import {
@@ -45,13 +45,14 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly asyncService: AsyncService,
         private readonly dayjsService: DayjsService,
-        private readonly atomicLockService: AtomicLockService,
+        private readonly leaseService: LeaseService,
     ) {
         super()
     }
 
     async process({
         data: {
+            leaseId,
             bot,
             jobId,
             targetBalanceAmount: providedTargetBalanceAmount,
@@ -61,11 +62,11 @@ export class ReconcileBalanceWorker extends WorkerHost {
         attemptsMade,
     }: Job<ReconcileBalancePayload>) {
         // * Step 1: Acquire atomic lock if not locked
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
         // lock the atomic lock
-        atomicLock.lock()
+        lease.tryLock(leaseId)
         // * Step 2: Get job from DB (when retry)
         const isRetry = attemptsMade > 0
         let job: JobSchema | null = null
@@ -245,12 +246,12 @@ export class ReconcileBalanceWorker extends WorkerHost {
 
     @OnWorkerEvent("failed")
     async onFailed(job: Job<ReconcileBalancePayload>, error: Error) {
-        const { bot, jobId } = job.data
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const { bot, jobId, leaseId } = job.data
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        atomicLock.lock()
+        // lock the lease
+        lease.tryLock(leaseId)
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -267,7 +268,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .deleteOne({ _id: jobId })
-            atomicLock.unlock()
+            lease.unlock()
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(WinstonLog.ReconcileBalanceFailed, {
@@ -291,7 +292,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 },
             )
             // release the sema
-            atomicLock.unlock()
+            lease.unlock()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(WinstonLog.ReconcileBalanceRetrying, {
@@ -305,23 +306,27 @@ export class ReconcileBalanceWorker extends WorkerHost {
 
     @OnWorkerEvent("completed")
     async onCompleted(job: Job<ReconcileBalancePayload>) {
-        const { bot, jobId } = job.data
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const { bot, jobId, leaseId } = job.data
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        atomicLock.lock()
+        // lock the lease
+        lease.tryLock(leaseId)
         this.eventEmitter.emit(
-            createEventName(EventName.UpdateActiveBot, {
-                botId: bot.id,
-            }),
+            createEventName(
+                EventName.UpdateActiveBot, {
+                    botId: bot.id,
+                }
+            ),
         )
-        this.logger.info(WinstonLog.ReconcileBalanceSuccess, {
-            botId: bot.id,
-            jobId,
-        })
+        this.logger.info(
+            WinstonLog.ReconcileBalanceSuccess, {
+                botId: bot.id,
+                jobId,
+            }
+        )
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        atomicLock.unlock()
+        lease.unlock()
     }
 }

@@ -51,18 +51,21 @@ export interface BasePayload {
 
 export interface OpenPositionPayload extends BasePayload {
     jobId: string
+    leaseId: string
     state: string
     bot: BotSchema
 }
 
 export interface ClosePositionPayload extends BasePayload {
     jobId: string
+    leaseId: string
     state: string
     bot: BotSchema
 }
 
 export interface ReconcileBalancePayload extends BasePayload {
     jobId: string
+    leaseId: string
     bot: BotSchema
     targetBalanceAmount?: BN
     quoteBalanceAmount?: BN

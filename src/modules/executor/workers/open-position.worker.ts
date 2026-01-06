@@ -33,7 +33,7 @@ import { AsyncService, DayjsService } from "@modules/mixin"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { envConfig } from "@modules/env"
-import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 /**
  * Worker responsible for processing open position confirmations.
  *
@@ -52,7 +52,7 @@ import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/loc
 )
 export class OpenPositionWorker extends WorkerHost {
     constructor(
-        private readonly atomicLockService: AtomicLockService,
+        private readonly leaseService: LeaseService,
         private readonly balanceService: BalanceService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
@@ -78,20 +78,20 @@ export class OpenPositionWorker extends WorkerHost {
    */
     async process({
         data: 
-        { jobId, bot, state },
+        { jobId, bot, state, leaseId },
         attemptsMade,
     }: Job<OpenPositionPayload>) {
-        // * Step 1: Acquire sema if not locked
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        // * Step 1: Acquire lease if not locked
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        atomicLock.lock()
+        // lock the lease
+        lease.tryLock(leaseId)
         // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        // check if the sema is locked
+        // check if the lease is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
         let job: JobSchema | null = null
@@ -331,15 +331,15 @@ export class OpenPositionWorker extends WorkerHost {
 
     @OnWorkerEvent("failed")
     async onFailed(job: Job<OpenPositionPayload>, error: Error) {
-        const { bot, jobId, state } = job.data
+        const { bot, jobId, state, leaseId } = job.data
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        atomicLock.lock()
+        // lock the lease
+        lease.tryLock(leaseId)
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -356,7 +356,7 @@ export class OpenPositionWorker extends WorkerHost {
                 })
             // delete the job schema
             await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-            atomicLock.unlock()
+            lease.unlock()
         // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(
@@ -382,7 +382,7 @@ export class OpenPositionWorker extends WorkerHost {
                 },
             )
             // release the sema
-            atomicLock.unlock()
+            lease.unlock()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(
@@ -399,15 +399,15 @@ export class OpenPositionWorker extends WorkerHost {
 
     @OnWorkerEvent("completed")
     async onCompleted(job: Job<OpenPositionPayload>) {
-        const { bot, jobId, state } = job.data
+        const { bot, jobId, state, leaseId } = job.data
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
         // lock the atomic lock
-        atomicLock.lock()
+        lease.tryLock(leaseId)
         this.eventEmitter.emit(
             createEventName(EventName.UpdateActiveBot, {
                 botId: bot.id,
@@ -425,6 +425,6 @@ export class OpenPositionWorker extends WorkerHost {
         })
         // delete the job schema
         await this.connection.model<JobSchema>(JobSchema.name).deleteOne({ _id: jobId })
-        atomicLock.unlock()
+        lease.unlock()
     }
 }

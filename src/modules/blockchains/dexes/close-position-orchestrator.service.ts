@@ -29,7 +29,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -49,7 +49,7 @@ export class ClosePositionOrchestratorService {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
-        private readonly atomicLockService: AtomicLockService,
+        private readonly leaseService: LeaseService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
@@ -67,10 +67,10 @@ export class ClosePositionOrchestratorService {
          * Atomic lock guard:
          * Prevent concurrent actions on the same bot.
          */
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        if (atomicLock.isLocked()) {
+        if (lease.isLocked()) {
             return
         }
         /**
@@ -134,8 +134,9 @@ export class ClosePositionOrchestratorService {
             )
             return
         }
-        // lock the atomic lock
-        atomicLock.lock()
+        // try to lock the lease
+        const leaseId = v4()
+        lease.tryLock(leaseId)
         const session = await this.connection.startSession()
         try {
             await session.withTransaction(async () => {
@@ -152,6 +153,7 @@ export class ClosePositionOrchestratorService {
                             executor: envConfig().botExecutor.executorId,
                             type: JobType.ClosePosition,
                             status: JobStatus.Pending,
+                            leaseId,
                         }
                     ]
                 )
@@ -164,6 +166,7 @@ export class ClosePositionOrchestratorService {
                         jobId: jobRaw.toJSON().id,
                         state: this.superjson.stringify(state),
                         bot,
+                        leaseId,
                     }
                 )
                 /**
@@ -178,8 +181,8 @@ export class ClosePositionOrchestratorService {
                 )
             })
         } catch (error) {
-            // unlock the atomic lock if the job is not enqueued
-            atomicLock.unlock()
+            // unlock the lease if the job is not enqueued
+            lease.unlock()
             // log the error
             this.logger.error(
                 WinstonLog.ClosePositionEnqueueFailed, {

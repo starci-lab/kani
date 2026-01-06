@@ -37,7 +37,7 @@ import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
-import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/lock"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 
 /**
  * Worker responsible for processing close position transactions.
@@ -52,7 +52,7 @@ import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/loc
  * allowing better fault tolerance, retry mechanisms, and system scalability.
  */
 @Worker(
-    bullData[BullQueueName.ClosePosition].name, 
+    bullData[BullQueueName.ClosePosition].name,
     {
         concurrency: envConfig().bullmq.concurrency,
         lockDuration: envConfig().bullmq.lockDuration,
@@ -62,37 +62,37 @@ import { AtomicLockKey, AtomicLockService, getAtomicLockKey } from "@modules/loc
 )
 export class ClosePositionWorker extends WorkerHost {
     constructor(
-    private readonly balanceService: BalanceService,
-    private readonly balanceSnapshotService: BalanceSnapshotService,
-    private readonly transactionSnapshotService: TransactionSnapshotService,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    private readonly closePositionSnapshotService: ClosePositionSnapshotService,
-    private readonly eventEmitter: EventEmitter2,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
-    private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
-    private readonly asyncService: AsyncService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly positionValueMathService: PositionValueMathService,
-    private readonly atomicLockService: AtomicLockService,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
-    private readonly dayjsService: DayjsService,
+        private readonly balanceService: BalanceService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly transactionSnapshotService: TransactionSnapshotService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly closePositionSnapshotService: ClosePositionSnapshotService,
+        private readonly eventEmitter: EventEmitter2,
+        @InjectWinston()
+        private readonly logger: WinstonLogger,
+        private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
+        private readonly asyncService: AsyncService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly positionValueMathService: PositionValueMathService,
+        private readonly leaseService: LeaseService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {
         super()
     }
 
     async process({
-        data: { jobId, bot, state },
+        data: { jobId, bot, state, leaseId },
         attemptsMade,
     }: Job<ClosePositionPayload>) {
-        // * Step 1: Acquire sema if not locked
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        // * Step 1: Acquire lease if not locked
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        atomicLock.lock()
+        // lock the lease
+        lease.tryLock(leaseId)
         // * Step 2: Get job from DB (when retry)
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
@@ -101,7 +101,7 @@ export class ClosePositionWorker extends WorkerHost {
         if (!bot.activePosition) {
             throw new UnrecoverableError("Active position not found")
         }
-        // check if the sema is locked
+        // check if the lease is locked
         const isRetry = attemptsMade > 0
         // if isRetry, we get the job
         let job: JobSchema | null = null
@@ -205,8 +205,8 @@ export class ClosePositionWorker extends WorkerHost {
         } = bot.activePosition
         if (
             !snapshotTargetBalanceAmountBeforeOpen ||
-      !snapshotQuoteBalanceAmountBeforeOpen ||
-      !snapshotGasBalanceAmountBeforeOpen
+            !snapshotQuoteBalanceAmountBeforeOpen ||
+            !snapshotGasBalanceAmountBeforeOpen
         ) {
             throw new SnapshotBalancesBeforeOpenNotSetException(
                 "Snapshot balances before open not set",
@@ -221,21 +221,21 @@ export class ClosePositionWorker extends WorkerHost {
         })
         // Calculate position value at close
         const { positionValue: positionValueAtClose } =
-      await this.positionValueMathService.calculatePositionValue({
-          before: {
-              targetBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-              quoteBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-              gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
-          },
-          after: {
-              targetBalanceAmount: targetBalanceAmountAfterClose,
-              quoteBalanceAmount: quoteBalanceAmountAfterClose,
-              gasBalanceAmount: gasBalanceAmountAfterClose,
-          },
-          bot,
-          isOpen: false,
-          state: _state,
-      })
+            await this.positionValueMathService.calculatePositionValue({
+                before: {
+                    targetBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
+                    quoteBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
+                    gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
+                },
+                after: {
+                    targetBalanceAmount: targetBalanceAmountAfterClose,
+                    quoteBalanceAmount: quoteBalanceAmountAfterClose,
+                    gasBalanceAmount: gasBalanceAmountAfterClose,
+                },
+                bot,
+                isOpen: false,
+                state: _state,
+            })
         const roi = positionValueAtClose
             .div(bot.activePosition.positionValueAtOpen || new Decimal(0))
             .sub(1)
@@ -286,17 +286,17 @@ export class ClosePositionWorker extends WorkerHost {
         })
     }
 
-  @OnWorkerEvent("failed")
+    @OnWorkerEvent("failed")
     async onFailed(job: Job<ClosePositionPayload>, error: Error) {
-        const { bot, jobId, state } = job.data
+        const { bot, jobId, state, leaseId } = job.data
         const _state = this.superjson.parse<
             LiquidityPoolState | DlmmLiquidityPoolState
         >(state)
-        const atomicLock = this.atomicLockService.atomicLock(
-            getAtomicLockKey(AtomicLockKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        atomicLock.lock()
+        // lock the lease
+        lease.tryLock(leaseId)
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -314,7 +314,7 @@ export class ClosePositionWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .deleteOne({ _id: jobId })
-            atomicLock.unlock()
+            lease.unlock()
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.logger.error(WinstonLog.ClosePositionFailed, {
@@ -339,7 +339,7 @@ export class ClosePositionWorker extends WorkerHost {
                 },
             )
             // release the sema
-            atomicLock.unlock()
+            lease.unlock()
         } else {
             // warn the user that the job is retrying
             this.logger.warn(WinstonLog.ClosePositionRetrying, {
@@ -352,39 +352,39 @@ export class ClosePositionWorker extends WorkerHost {
         }
     }
 
-  @OnWorkerEvent("completed")
-  async onCompleted(job: Job<ClosePositionPayload>) {
-      const { bot, jobId, state } = job.data
-      const _state = this.superjson.parse<
-      LiquidityPoolState | DlmmLiquidityPoolState
-    >(state)
-      // acquire the atomic lock
-      const atomicLock = this.atomicLockService.atomicLock(
-          getAtomicLockKey(AtomicLockKey.Action, bot.id),
-      )
-      // lock immediately
-      atomicLock.lock()
-      // emit the event
-      this.eventEmitter.emit(
-          createEventName(EventName.UpdateActiveBot, {
-              botId: bot.id,
-          }),
-      )
-      this.eventEmitter.emit(
-          createEventName(EventName.PositionClosed, {
-              botId: bot.id,
-          }),
-      )
-      this.logger.info(WinstonLog.ClosePositionSuccess, {
-          botId: bot.id,
-          jobId,
-          liquidityPoolId: _state.static.displayId,
-      })
-      // delete the job schema
-      await this.connection
-          .model<JobSchema>(JobSchema.name)
-          .deleteOne({ _id: jobId })
-      
-      atomicLock.unlock()
-  }
+    @OnWorkerEvent("completed")
+    async onCompleted(job: Job<ClosePositionPayload>) {
+        const { bot, jobId, state, leaseId } = job.data
+        const _state = this.superjson.parse<
+            LiquidityPoolState | DlmmLiquidityPoolState
+        >(state)
+        // acquire the lease
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
+        )
+        // lock immediately
+        lease.tryLock(leaseId)
+        // emit the event
+        this.eventEmitter.emit(
+            createEventName(EventName.UpdateActiveBot, {
+                botId: bot.id,
+            }),
+        )
+        this.eventEmitter.emit(
+            createEventName(EventName.PositionClosed, {
+                botId: bot.id,
+            }),
+        )
+        this.logger.info(WinstonLog.ClosePositionSuccess, {
+            botId: bot.id,
+            jobId,
+            liquidityPoolId: _state.static.displayId,
+        })
+        // delete the job schema
+        await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .deleteOne({ _id: jobId })
+
+        lease.unlock()
+    }
 }

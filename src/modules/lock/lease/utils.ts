@@ -1,10 +1,10 @@
 import { createHash } from "crypto"
 
-export enum AtomicLockKey {
+export enum LeaseKey {
     Action = "action",
 }
-export const getAtomicLockKey = (
-    key: AtomicLockKey, 
+export const getLeaseKey = (
+    key: LeaseKey, 
     ...args: Array<unknown>
 ): string => {
     const hash = createHash("sha256")
