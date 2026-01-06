@@ -81,11 +81,10 @@ export class OpenPositionWorker extends WorkerHost {
         { jobId, bot, state, leaseId },
         attemptsMade,
     }: Job<OpenPositionPayload>) {
-        // * Step 1: Acquire lease if not locked
+        // * Step 1: Ensure the lease is owned by the current job
         const lease = this.leaseService.lease(
             getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // ensure the lease is owned by the current job
         const ensured = lease.ensureOwnership(leaseId)
         if (!ensured) {
             throw new UnrecoverableError("Lease not owned by the current job")
