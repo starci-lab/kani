@@ -2,168 +2,202 @@ import { Injectable } from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     BotSchema,
+    HistorySchema,
     PositionSchema,
+    HistorySerieSchema,
+    HISTORY_SERIE_COUNT,
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import {
     HistoryChartSerie,
     HistoryRequest,
+    HistoryRequestFilters,
     HistoryResponseData,
 } from "./history.dto"
 import { UserJwtLike } from "@modules/passport"
-import { DayjsService } from "@modules/mixin"
+import { DayjsService, MsService } from "@modules/mixin"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
-    TokenNotFoundException,
-    TooManyIntervalsException,
 } from "@exceptions"
-import { MsService } from "@modules/mixin"
-import Decimal from "decimal.js"
-import { BN } from "bn.js"
-import { PrimaryMemoryStorageService } from "@modules/databases"
-import { computeDenomination } from "@utils"
-import { chartIntervalToMsString } from "../../../abstracts"
-import { envConfig } from "@modules/env"
-import { TokenType } from "@typedefs"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
+import { ChartInterval, chartIntervalToMsString } from "../../../abstracts"
 
+/**
+ * HistoryService
+ *
+ * Responsible for maintaining and serving historical equity snapshots
+ * for a trading bot.
+ *
+ * Responsibilities:
+ * - Persist a capped, append-only history of CLOSED position snapshots
+ * - Incrementally update history from source-of-truth positions
+ * - Rebuild history deterministically when missing or corrupted
+ * - Generate step-wise chart data over arbitrary time intervals
+ *
+ * Design principles:
+ * - History is derived data and can always be reconstructed
+ * - Storage is capped (HISTORY_SERIE_COUNT) to bound memory and query cost
+ * - Chart values represent the last known position value at any timestamp
+ */
 @Injectable()
 export class HistoryService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly dayjsService: DayjsService,
         private readonly msService: MsService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {}
 
-    // Use cached history and append latest closed position if needed
-    private async historyWithCache(
-        bot: BotSchema,
-        response: HistoryResponseData,
+    /**
+     * Retrieve historical chart data for a bot.
+     *
+     * Flow:
+     * 1. Validate bot existence and ownership
+     * 2. Load existing history (if any)
+     * 3. Rebuild or incrementally append new history snapshots
+     * 4. Persist appended series with automatic trimming
+     * 5. Produce chart-ready time series based on requested filters
+     *
+     * Notes:
+     * - History is updated lazily on read
+     * - Database writes are idempotent and safe to re-run
+     * - Returned data is computed from in-memory merged series
+     */
+    public async history(
+        { botId, filters }: HistoryRequest,
+        userLike: UserJwtLike,
     ): Promise<HistoryResponseData> {
+        // Load bot and check ownership
+        const bot = await this.connection
+            .model<BotSchema>(BotSchema.name)
+            .findById(botId)
 
-        // Get latest closed position
-        const lastPosition = await this.connection
-            .model<PositionSchema>(PositionSchema.name)
-            .findOne({
-                bot: bot._id,
-                isActive: false,
-            })
-            .sort({ positionClosedAt: -1 })
+        if (!bot) throw new BotNotFoundException("Bot not found")
+        if (bot.user.toString() !== userLike.id) {
+            throw new BotNotOwnedByUserException("Bot not owned by user")
+        }
+        // Retrieve existing history (if any)
+        const history = await this.connection
+            .model<HistorySchema>(HistorySchema.name)
+            .findOne({ bot: botId })
+        /**
+         * Resolve the full in-memory history series.
+         *
+         * - If no history exists, rebuild entirely from closed positions
+         * - Otherwise, append only newly closed positions
+         *
+         * `fullSeries` always represents the latest known history state,
+         * regardless of whether data was rebuilt or appended.
+         */
+        let fullSeries: Array<HistorySerieSchema> = []
+        let seriesAppended: Array<HistorySerieSchema> = []
 
-        if (!lastPosition) {
-            return response
+        if (!history) {
+            const { seriesAppended: _seriesAppended } = await this.rebuildHistorySeries(bot)
+            seriesAppended = _seriesAppended
+            fullSeries = _seriesAppended
+        } else {
+            const { seriesAppended: _seriesAppended } = await this.appendHistorySeries(bot, history)
+            seriesAppended = _seriesAppended
+            fullSeries = [...history.series, ..._seriesAppended]
         }
 
-        // Skip if already appended
-        const lastSerie = response.series.at(-1)
-        if (
-            lastSerie &&
-            this.dayjsService
-                .from(lastSerie.timestamp)
-                .isSame(
-                    lastPosition.positionClosedAt, 
-                    "millisecond"
-                )
-        ) {
-            return response
-        }
-
-        // Resolve tokens
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === bot.targetToken.toString(),
-        )
-        if (!targetToken) throw new TokenNotFoundException("Target token not found")
-
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === bot.quoteToken.toString(),
-        )
-        if (!quoteToken) throw new TokenNotFoundException("Quote token not found")
-
-        const gasToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.type === TokenType.Native && token.chainId === bot.chainId,
-        )
-        if (!gasToken) throw new TokenNotFoundException("Gas token not found")
-
-        // Append new series point
-        response.series.push({
-            timestamp: this.dayjsService
-                .from(lastPosition.positionClosedAt)
-                .toDate(),
-            value: {
-                targetValue: computeDenomination(
-                    new BN(lastPosition.snapshotTargetBalanceAmountAfterClose ?? "0"),
-                    targetToken.decimals,
-                ).toNumber(),
-                quoteValue: computeDenomination(
-                    new BN(lastPosition.snapshotQuoteBalanceAmountAfterClose ?? "0"),
-                    quoteToken.decimals,
-                ).toNumber(),
-                gasValue: computeDenomination(
-                    new BN(lastPosition.snapshotGasBalanceAmountAfterClose ?? "0"),
-                    gasToken.decimals,
-                ).toNumber(),
-            },
-        })
-
-        response.count = response.series.length
-        return response
+        /**
+         * Persist appended history series.
+         *
+         * - Appends only new snapshots
+         * - Automatically discards oldest entries via $slice
+         * - Updates metadata for incremental appends
+         *
+         * Upsert guarantees history creation if it did not previously exist.
+         */
+        await this.connection
+            .model<HistorySchema>(HistorySchema.name)
+            .updateOne(
+                { bot: botId },
+                {
+                    $setOnInsert: {
+                        bot: botId
+                    },
+                    $push: {
+                        series: {
+                            $each: seriesAppended,
+                            $slice: -HISTORY_SERIE_COUNT,
+                        },
+                    },
+                    $inc: {
+                        seriesCount: seriesAppended.length,
+                    },
+                    $set: {
+                        lastSeriesUpdatedAt: this.dayjsService.now().toDate(),
+                    },
+                },
+                { upsert: true },
+            )
+        // Produce chart-ready response
+        return this.getHistoryResponseData(fullSeries, filters)
     }
 
-    private async historyWithoutCache(
-        request: HistoryRequest,
-        bot: BotSchema,
+    /**
+     * Generate chart-ready history data from stored history snapshots.
+     *
+     * For each chart time bucket:
+     * - Select the most recent history snapshot whose `positionClosedAt`
+     *   is less than or equal to the bucket timestamp
+     * - Use its `positionValueAtClose` as the chart value
+     * - Default to 0 if no snapshot exists yet
+     *
+     * This produces a step-wise (hold-last-value) chart.
+     *
+     * Complexity:
+     * - O(n * m)
+     *   n = number of chart buckets
+     *   m = number of history snapshots
+     */
+    private async getHistoryResponseData(
+        fullSeries: Array<HistorySerieSchema>,
+        filters: HistoryRequestFilters,
     ): Promise<HistoryResponseData> {
+        const {
+            interval = ChartInterval.OneHour,
+            from,
+            to,
+            timeZone = "UTC",
+        } = filters
 
-        // Extract request params
-        const { filters, botId } = request
-        const { interval, from, to } = filters
-        let { timeZone } = filters
-
-        // Default timezone
-        if (!timeZone) {
-            timeZone = "UTC"
-        }
-
-        // Convert interval to ms
+        const series: HistoryChartSerie[] = []
         const intervalMs = this.msService.fromString(
             chartIntervalToMsString(interval),
         )
 
-        // Resolve date range
         const fromDate = from
             ? this.dayjsService.from(from).tz(timeZone)
-            : this.dayjsService.now().tz(timeZone).subtract(1, "month")
+            : this.dayjsService.now().tz(timeZone).subtract(1, "week")
 
         const toDate = to
             ? this.dayjsService.from(to).tz(timeZone)
             : this.dayjsService.now().tz(timeZone)
 
-        // Align to bucket boundaries
+        /**
+         * Align range boundaries to interval buckets.
+         */
         const fromBucketDate = this.dayjsService.getNearestBucketUTC(
             fromDate.toDate(),
             intervalMs,
             timeZone,
         )
-
         const toBucketDate = this.dayjsService.getNearestBucketUTC(
             toDate.toDate(),
             intervalMs,
             timeZone,
         )
 
-        // Build timestamps
-        const timestamps: number[] = []
-
+        /**
+         * Build aligned chart timestamps.
+         *
+         * Final `toDate` is explicitly included to ensure completeness.
+         */
+        const timestamps: Array<number> = []
         for (
             let date = fromBucketDate;
             date.isSameOrBefore(toBucketDate);
@@ -171,203 +205,133 @@ export class HistoryService {
         ) {
             timestamps.push(date.valueOf())
         }
-
-        const isEndTimestampMissing = timestamps.at(-1) !== toDate.valueOf()
-        if (isEndTimestampMissing) {
-            timestamps.push(toDate.valueOf())
+        timestamps.push(toDate.valueOf())
+        for (const timestamp of timestamps) {
+            /**
+             * Find the latest history snapshot closed at or before this timestamp.
+             */
+            const maxPositionBeforeTimestamp = this.findLatestSerie(fullSeries, timestamp)
+            series.push({
+                timestamp: new Date(timestamp),
+                value: maxPositionBeforeTimestamp
+                    ? maxPositionBeforeTimestamp.positionValueAtClose
+                    : 0,
+            })
         }
 
-        // Prevent too many points
-        if (new Decimal(timestamps.length).gt(envConfig().intervalLimits.history)) {
-            throw new TooManyIntervalsException(
-                `Too many intervals, max is ${envConfig().intervalLimits.history}`,
-            )
+        return {
+            series,
+            count: series.length,
         }
+    }
 
-        // Fetch positions
+    /**
+     * Fully rebuild history series from source-of-truth positions.
+     *
+     * - Uses only CLOSED positions (isActive = false)
+     * - Fetches most recent positions ordered by close time
+     * - Produces a capped, chronological history series
+     *
+     * Heavy operation:
+     * Intended for initial bootstrap, backfill, or recovery.
+     * Deterministic and safe to re-run.
+     */
+    private async rebuildHistorySeries(
+        bot: BotSchema,
+    ): Promise<HistorySeriesResponse> {
         const positions = await this.connection
             .model<PositionSchema>(PositionSchema.name)
             .find({
-                bot: botId,
+                bot: bot.id,
                 isActive: false,
-                positionClosedAt: {
-                    $gte: fromBucketDate.utc().toDate(),
-                    $lte: toDate.utc().toDate(),
-                },
             })
-            .sort({ positionClosedAt: 1 })
+            .limit(HISTORY_SERIE_COUNT)
+        const series: Array<HistorySerieSchema> = []
 
-        // Resolve tokens
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === bot.targetToken.toString(),
-        )
-        if (!targetToken) throw new TokenNotFoundException("Target token not found")
+        for (const position of positions) {
+            const { positionClosedAt, positionValueAtClose } = position
+            if (!positionClosedAt || !positionValueAtClose) continue
 
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === bot.quoteToken.toString(),
-        )
-        if (!quoteToken) throw new TokenNotFoundException("Quote token not found")
-
-        const gasToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.type === TokenType.Native && token.chainId === bot.chainId,
-        )
-        if (!gasToken) throw new TokenNotFoundException("Gas token not found")
-
-        // Build series
-        const firstPosition = positions.at(0)
-        let positionIndex = 0
-        const series: Array<HistoryChartSerie> = []
-
-        for (let i = 0; i < timestamps.length - 1; i++) {
-            const timestamp = timestamps[i + 1]
-
-            // Before first position → zero balances
-            if (
-                new Decimal(
-                    this.dayjsService.from(firstPosition?.positionClosedAt).valueOf(),
-                ).gt(timestamp)
-            ) {
-                series.push({
-                    timestamp: new Date(timestamp),
-                    value: { targetValue: 0, quoteValue: 0, gasValue: 0 },
-                })
-                continue
-            }
-
-            // Scan positions linearly
-            for (let j = positionIndex; j < positions.length; j++) {
-                const position = positions[j]
-                const next = positions[j + 1]
-
-                if (j === positions.length - 1) {
-                    series.push({
-                        timestamp: new Date(timestamp),
-                        value: {
-                            targetValue: computeDenomination(
-                                new BN(position?.snapshotTargetBalanceAmountAfterClose ?? "0"),
-                                targetToken.decimals,
-                            ).toNumber(),
-                            quoteValue: computeDenomination(
-                                new BN(position?.snapshotQuoteBalanceAmountAfterClose ?? "0"),
-                                quoteToken.decimals,
-                            ).toNumber(),
-                            gasValue: computeDenomination(
-                                new BN(position?.snapshotGasBalanceAmountAfterClose ?? "0"),
-                                gasToken.decimals,
-                            ).toNumber(),
-                        },
-                    })
-                    break
-                }
-
-                if (
-                    position?.positionClosedAt &&
-                    next?.positionClosedAt &&
-                    this.dayjsService.from(next.positionClosedAt).valueOf() < timestamp
-                ) {
-                    positionIndex = j + 1
-                    continue
-                }
-
-                if (
-                    position?.positionClosedAt &&
-                    this.dayjsService.from(position.positionClosedAt).valueOf() <= timestamp &&
-                    next?.positionClosedAt &&
-                    this.dayjsService.from(next.positionClosedAt).valueOf() > timestamp
-                ) {
-                    series.push({
-                        timestamp: new Date(timestamp),
-                        value: {
-                            targetValue: computeDenomination(
-                                new BN(position?.snapshotTargetBalanceAmountAfterClose ?? "0"),
-                                targetToken.decimals,
-                            ).toNumber(),
-                            quoteValue: computeDenomination(
-                                new BN(position?.snapshotQuoteBalanceAmountAfterClose ?? "0"),
-                                quoteToken.decimals,
-                            ).toNumber(),
-                            gasValue: computeDenomination(
-                                new BN(position?.snapshotGasBalanceAmountAfterClose ?? "0"),
-                                gasToken.decimals,
-                            ).toNumber(),
-                        },
-                    })
-                    break
-                }
-            }
+            series.push({
+                positionClosedAt,
+                positionValueAtClose,
+            })
         }
 
-        // Save cache
-        const responseData: HistoryResponseData = {
-            count: series.length,
-            series,
+        return {
+            seriesAppended: series,
+            discardCount: 0,
         }
-
-        const cacheResult: HistoryCacheResult = {
-            data: responseData,
-            isEndTimestampMissing,
-        }
-
-        await this.cacheManager.set(
-            createCacheKey(CacheKey.History, request),
-            this.superjson.stringify(cacheResult),
-            envConfig().cache.ttl.api,
-        )
-
-        return responseData
     }
 
-    public async history(
-        request: HistoryRequest,
-        userLike: UserJwtLike,
-    ): Promise<HistoryResponseData> {
+    /**
+     * Incrementally append new history snapshots.
+     *
+     * - Fetches CLOSED positions newer than lastSeriesUpdatedAt
+     * - Produces only delta history points
+     * - Does not mutate existing history
+     */
+    private async appendHistorySeries(
+        bot: BotSchema,
+        history: HistorySchema,
+    ): Promise<HistorySeriesResponse> {
+        const { lastSeriesUpdatedAt, seriesCount } = history
 
-        // Load bot and check ownership
-        const bot = await this.connection
-            .model<BotSchema>(BotSchema.name)
-            .findById(request.botId)
+        const positions = await this.connection
+            .model<PositionSchema>(PositionSchema.name)
+            .find({
+                bot: bot.id,
+                isActive: false,
+                positionClosedAt: { $gt: lastSeriesUpdatedAt },
+            })
+            .limit(HISTORY_SERIE_COUNT)
 
-        if (!bot) throw new BotNotFoundException("Bot not found")
-        if (bot.user.toString() !== userLike.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+        const seriesAppended: Array<HistorySerieSchema> = []
+
+        for (const position of positions) {
+            const { positionClosedAt, positionValueAtClose } = position
+            if (!positionClosedAt || !positionValueAtClose) continue
+
+            seriesAppended.push({
+                positionClosedAt,
+                positionValueAtClose,
+            })
         }
 
-        const cacheKey = createCacheKey(CacheKey.History, request)
-        const cached = await this.cacheManager.get<string>(cacheKey)
+        const overflow =
+            seriesCount + seriesAppended.length - HISTORY_SERIE_COUNT
 
-        if (cached) {
-            const { data, isEndTimestampMissing } =
-                this.superjson.parse<HistoryCacheResult>(cached)
+        return {
+            seriesAppended,
+            discardCount: Math.max(overflow, 0),
+        }
+    }
 
-            const lastSerie = isEndTimestampMissing
-                ? data.series.at(-2)
-                : data.series.at(-1)
+    private findLatestSerie(
+        series: Array<HistorySerieSchema>,
+        timestamp: number,
+    ): HistorySerieSchema | null {
+        let left = 0
+        let right = series.length - 1
+        let result: HistorySerieSchema | null = null
 
-            if (lastSerie) {
-                const intervalMs = this.msService.fromString(
-                    chartIntervalToMsString(request.filters.interval),
-                )
-
-                const isCacheStale = this.dayjsService
-                    .from(lastSerie.timestamp)
-                    .isSameOrBefore(
-                        this.dayjsService.now().subtract(intervalMs, "millisecond"),
-                    )
-
-                if (!isCacheStale) {
-                    if (isEndTimestampMissing) {
-                        data.series.pop()
-                    }
-                    return this.historyWithCache(bot, data)
-                }
+        while (left <= right) {
+            const mid = Math.floor((left + right) / 2)
+            const midTime = new Date(series[mid].positionClosedAt).getTime()
+    
+            if (midTime <= timestamp) {
+                result = series[mid]
+                left = mid + 1
+            } else {
+                right = mid - 1
             }
         }
 
-        return this.historyWithoutCache(request, bot)
+        return result
     }
 }
 
-export interface HistoryCacheResult {
-    data: HistoryResponseData
-    isEndTimestampMissing: boolean
+export interface HistorySeriesResponse {
+    seriesAppended: Array<HistorySerieSchema>
+    discardCount: number
 }

@@ -20,6 +20,7 @@ import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
 import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
 import Decimal from "decimal.js"
 import { ClmmTickFormulaService } from "@modules/blockchains"
+import { AsyncService } from "@modules/mixin"
 
 /**
  * Service that provides dynamic reference data
@@ -34,80 +35,90 @@ export class DynamicLiquidityPoolsInfoService {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
+        private readonly asyncService: AsyncService,
     ) {}
 
     async dynamicLiquidityPoolsInfo(
-        request: DynamicLiquidityPoolsInfoRequest
+        { liquidityPoolIds}: DynamicLiquidityPoolsInfoRequest
     ): Promise<Array<DynamicLiquidityPoolInfo>> {
+        const promises: Array<Promise<void>> = []
         const dynamicLiquidityPoolInfos: Array<DynamicLiquidityPoolInfo> = []
-        for (const liquidityPoolId of request.liquidityPoolIds) {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                pool => pool.displayId === liquidityPoolId
+        for (const liquidityPoolId of liquidityPoolIds) {
+            promises.push(
+                (async () => {
+                    const liquidityPool = this.memoryStorageService.liquidityPools.find(
+                        pool => pool.displayId === liquidityPoolId
+                    )
+                    if (!liquidityPool) {
+                        // if user pass invalid liquidity pool id, throw an error
+                        throw new LiquidityPoolNotFoundException(`Liquidity pool not found for id: ${liquidityPoolId}`)
+                    }
+                    const tokenAEntity = this.memoryStorageService.tokens.find(
+                        token => token.id === liquidityPool.tokenA.toString()
+                    )
+                    const tokenBEntity = this.memoryStorageService.tokens.find(
+                        token => token.id === liquidityPool.tokenB.toString()
+                    )
+                    if (!tokenAEntity || !tokenBEntity) {
+                        throw new InvalidPoolTokensException("Invalid pool tokens")
+                    }
+                    const info: DynamicLiquidityPoolInfo = {
+                        id: liquidityPool.id,
+                    }
+                    const dynamicLiquidityPoolInfoCacheKey = createCacheKey(
+                        CacheKey.DynamicLiquidityPoolInfo,
+                        liquidityPoolId,
+                    )
+                    const dynamicDlmmLiquidityPoolInfoCacheKey = createCacheKey(
+                        CacheKey.DynamicDlmmLiquidityPoolInfo,
+                        liquidityPoolId,
+                    )
+                    const poolAnalyticsCacheKey = createCacheKey(
+                        CacheKey.PoolAnalytics,
+                        liquidityPoolId,
+                    )
+                    // retrieve the pool dynamic & analytics data
+                    const [
+                        serializedDynamicLiquidityPoolInfo, 
+                        serializedDynamicDlmmLiquidityPoolInfo, 
+                        serializedPoolAnalytics
+                    ] = await this.cacheManager.mget<string>(
+                        [
+                            dynamicLiquidityPoolInfoCacheKey, 
+                            dynamicDlmmLiquidityPoolInfoCacheKey, 
+                            poolAnalyticsCacheKey
+                        ]
+                    )
+                    if (serializedDynamicLiquidityPoolInfo) {
+                        const dynamicLiquidityPoolInfoData = this.superjson.parse<DynamicLiquidityPoolInfoCacheResult>(
+                            serializedDynamicLiquidityPoolInfo
+                        )
+                        info.tickCurrent = dynamicLiquidityPoolInfoData.tickCurrent
+                        info.liquidity = dynamicLiquidityPoolInfoData.liquidity.toString()
+                        info.price = this.clmmTickFormulaService.sqrtPriceX64ToPrice({
+                            sqrtPriceX64: dynamicLiquidityPoolInfoData.sqrtPriceX64,
+                            decimalsA: tokenAEntity.decimals,
+                            decimalsB: tokenBEntity.decimals,
+                        }).toNumber()
+                    }
+                    if (serializedDynamicDlmmLiquidityPoolInfo) {
+                        const dynamicDlmmLiquidityPoolInfoData = this.superjson.parse<DynamicDlmmLiquidityPoolInfoCacheResult>(
+                            serializedDynamicDlmmLiquidityPoolInfo
+                        )
+                        info.activeId = dynamicDlmmLiquidityPoolInfoData.activeId
+                    }
+                    if (serializedPoolAnalytics) {
+                        const poolAnalyticsData = this.superjson.parse<PoolAnalyticsCacheResult>(serializedPoolAnalytics)
+                        info.fees24H = new Decimal(poolAnalyticsData.fee24H).toNumber()
+                        info.volume24H = new Decimal(poolAnalyticsData.volume24H).toNumber()
+                        info.apr24H = new Decimal(poolAnalyticsData.apr24H).toNumber()
+                        info.tvl = poolAnalyticsData.tvl
+                    }
+                    dynamicLiquidityPoolInfos.push(info)
+                })()
             )
-            if (!liquidityPool) {
-                // if user pass invalid liquidity pool id, throw an error
-                throw new LiquidityPoolNotFoundException(`Liquidity pool not found for id: ${liquidityPoolId}`)
-            }
-            const tokenAEntity = this.memoryStorageService.tokens.find(
-                token => token.id === liquidityPool.tokenA.toString()
-            )
-           
-            const tokenBEntity = this.memoryStorageService.tokens.find(
-                token => token.id === liquidityPool.tokenB.toString()
-            )
-            if (!tokenAEntity || !tokenBEntity) {
-                throw new InvalidPoolTokensException("Invalid pool tokens")
-            }
-            const info: DynamicLiquidityPoolInfo = {
-                id: liquidityPool.id,
-            }
-            const dynamicLiquidityPoolInfoCacheKey = createCacheKey(
-                CacheKey.DynamicLiquidityPoolInfo,
-                liquidityPoolId,
-            )
-            const dynamicDlmmLiquidityPoolInfoCacheKey = createCacheKey(
-                CacheKey.DynamicDlmmLiquidityPoolInfo,
-                liquidityPoolId,
-            )
-            const poolAnalyticsCacheKey = createCacheKey(
-                CacheKey.PoolAnalytics,
-                liquidityPoolId,
-            )
-            // retrieve the pool dynamic & analytics data
-            const [
-                serializedDynamicLiquidityPoolInfo, 
-                serializedDynamicDlmmLiquidityPoolInfo, 
-                serializedPoolAnalytics
-            ] = await this.cacheManager.mget<string>(
-                [
-                    dynamicLiquidityPoolInfoCacheKey, 
-                    dynamicDlmmLiquidityPoolInfoCacheKey, 
-                    poolAnalyticsCacheKey
-                ]
-            )
-            if (serializedDynamicLiquidityPoolInfo) {
-                const dynamicLiquidityPoolInfoData = this.superjson.parse<DynamicLiquidityPoolInfoCacheResult>(serializedDynamicLiquidityPoolInfo)
-                info.tickCurrent = dynamicLiquidityPoolInfoData.tickCurrent
-                info.liquidity = dynamicLiquidityPoolInfoData.liquidity.toString()
-                info.price = this.clmmTickFormulaService.sqrtPriceX64ToPrice({
-                    sqrtPriceX64: dynamicLiquidityPoolInfoData.sqrtPriceX64,
-                    decimalsA: tokenAEntity.decimals,
-                    decimalsB: tokenBEntity.decimals,
-                }).toNumber()
-            }
-            if (serializedDynamicDlmmLiquidityPoolInfo) {
-                const dynamicDlmmLiquidityPoolInfoData = this.superjson.parse<DynamicDlmmLiquidityPoolInfoCacheResult>(serializedDynamicDlmmLiquidityPoolInfo)
-                info.activeId = dynamicDlmmLiquidityPoolInfoData.activeId
-            }
-            if (serializedPoolAnalytics) {
-                const poolAnalyticsData = this.superjson.parse<PoolAnalyticsCacheResult>(serializedPoolAnalytics)
-                info.fees24H = new Decimal(poolAnalyticsData.fee24H).toNumber()
-                info.volume24H = new Decimal(poolAnalyticsData.volume24H).toNumber()
-                info.apr24H = new Decimal(poolAnalyticsData.apr24H).toNumber()
-                info.tvl = poolAnalyticsData.tvl
-            }
-            dynamicLiquidityPoolInfos.push(info)
         }
+        await this.asyncService.allIgnoreError(promises)
         return dynamicLiquidityPoolInfos
     }
 }

@@ -31,7 +31,6 @@ import { Logger as WinstonLogger } from "winston"
 export class SolanaRpcRetryableError extends Error {}
 export class SuiRpcRetryableError extends Error {}
 
-
 export enum RpcErrorType {
     Ignorable = "ignorable",
     Retryable = "retryable",
@@ -148,7 +147,10 @@ export class RpcExecutorService {
                     return await this.retryService.retry({
                         action: async () => {
                             // resolve the tuple of response and error
-                            const [response, error] = await this.asyncService.resolveTuple(
+                            const [
+                                response, 
+                                error
+                            ] = await this.asyncService.resolveTuple(
                                 callback(
                                     { 
                                         rpc, 
@@ -163,6 +165,7 @@ export class RpcExecutorService {
                             }
                             // if the error is a solana error, throw the error
                             if (isSolanaError(error)) {
+                                console.log("error", error)
                                 const errorType = this.getSolanaRpcErrorType(error)
                                 if (errorType === RpcErrorType.Fatal) {
                                     throw new AbortError(error)
@@ -234,7 +237,6 @@ export class RpcExecutorService {
                     transport: RpcTransport.Http,
                     accessType: accessType,
                 })
-                this.logger.debug(`RPC URL: ${rpcUrl}`)
                 // create the sui client
                 const suiClient = new SuiClient({
                     url: rpcUrl,
