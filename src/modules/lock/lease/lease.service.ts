@@ -1,5 +1,6 @@
 import { envConfig } from "@modules/env"
 import { Injectable } from "@nestjs/common"
+import { UnrecoverableError } from "bullmq"
 
 /**
  * LeaseService manages in-memory, lease-based locks scoped by string keys.
@@ -94,6 +95,13 @@ export class LeaseLock {
         this.resetTimer()
         return true
     }
+    /**
+     * Get the current token that owns the lock.
+     * @returns The token that owns the lock, or null if the lock is free.
+     */
+    getToken(): string | null {
+        return this.token
+    }
 
     /**
      * Release the lock if the caller owns it.
@@ -117,6 +125,23 @@ export class LeaseLock {
     private resetTimer() {
         if (this.timer) clearTimeout(this.timer)
         this.timer = setTimeout(() => this.clear(), this.ttl)
+    }
+    /**
+     * Ensure the lock is held by the given token.
+     * If the lock is not held by the given token, throw an error.
+     * If the lock is not held, acquire the lock.
+     * @param token - The token to ensure the lock is held by.
+     */
+    ensureOwnership(
+        token: string
+    ): void {
+        if (!this.isLocked()) {
+            this.tryLock(token)
+            return
+        }
+        if (this.getToken() !== token) {
+            throw new UnrecoverableError("Lease already locked by another job")
+        }
     }
 
     /**

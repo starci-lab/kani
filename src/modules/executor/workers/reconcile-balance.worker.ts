@@ -65,8 +65,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
         const lease = this.leaseService.lease(
             getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the atomic lock
-        lease.tryLock(leaseId)
+        // ensure the lease is owned by the current job
+        lease.ensureOwnership(leaseId)
         // * Step 2: Get job from DB (when retry)
         const isRetry = attemptsMade > 0
         let job: JobSchema | null = null
@@ -250,8 +250,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
         const lease = this.leaseService.lease(
             getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the lease
-        lease.tryLock(leaseId)
+        // ensure the lease is owned by the current job
+        lease.ensureOwnership(leaseId)
         const maxAttempts = job.opts.attempts ?? 1
         const isPermanentFailure = job.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError || error?.name === "UnrecoverableError"
@@ -310,8 +310,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
         const lease = this.leaseService.lease(
             getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // lock the lease
-        lease.tryLock(leaseId)
+        // ensure the lease is owned by the current job
+        lease.ensureOwnership(leaseId)
         this.eventEmitter.emit(
             createEventName(
                 EventName.UpdateActiveBot, {

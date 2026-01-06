@@ -138,6 +138,7 @@ export class ClosePositionFailedJobsPollerService implements OnApplicationBootst
                 jobId: job.id,
                 bot,
                 state: this.superjson.stringify(state),
+                leaseId: v4(),
             }
         )
         // log success
