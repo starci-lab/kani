@@ -15,7 +15,7 @@ export class SendSignInOtpMailService {
     }: SendSignInOtpMailParams) {
         await this.mailerService.sendMail({
             to: email,
-            from: this.mountStorageService.smtpConfig.from,
+            from: this.mountStorageService.appConfig.smtp.from,
             subject: `${otp} is your sign in OTP for Kani`,
             template: "sign-in-otp",
             context: {

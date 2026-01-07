@@ -5,6 +5,9 @@ import { GcpKmsService } from "@modules/gcp"
 import { MountStorageService } from "@modules/filesystem"
 import crypto from "crypto"
 import { envConfig } from "@modules/env"
+import { InjectWinston } from "@modules/winston"
+import { Logger as WinstonLogger } from "winston"
+import { WinstonLog } from "@modules/winston"
 
 @Injectable()
 export class DerivedJwtSecretService implements OnModuleInit {
@@ -13,6 +16,8 @@ export class DerivedJwtSecretService implements OnModuleInit {
         private readonly encryptionService: EncryptionService,
         private readonly gcpKmsService: GcpKmsService,
         private readonly mountStorageService: MountStorageService,
+        @InjectWinston() 
+        private readonly logger: WinstonLogger,
     ) {}
 
     async onModuleInit() {
@@ -29,7 +34,12 @@ export class DerivedJwtSecretService implements OnModuleInit {
                 32,
                 "sha256"
             ) 
-        } catch {
+
+        } catch (error) {
+            this.logger.error(
+                WinstonLog.ErrorDecryptingJwtSecretKey, 
+                error
+            )
             this.key = crypto.randomBytes(32)
         }
     }

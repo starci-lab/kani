@@ -15,7 +15,7 @@ export class Send2FactorOtpMailService {
     }: Send2FactorOtpMailParams) {
         await this.mailerService.sendMail({
             to: email,  
-            from: this.mountStorageService.smtpConfig.from,
+            from: this.mountStorageService.appConfig.smtp.from,
             subject: `${otp} is your 2-factor authentication OTP for Kani`,
             template: "2-factor-otp",
             context: {

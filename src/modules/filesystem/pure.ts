@@ -2,12 +2,13 @@ import { envConfig } from "@modules/env"
 import { readFileSync } from "fs"
 import { AppConfig, RpcAccessConfigs } from "./types"
 
-
 /**
  * Pure function to get the crypto key ed sa
  * in case there is component that not depends on nestjs DI
  */
-export const getCryptoKeyEdSa = (cryptoKeyEdSa?: string) => {
+export const getCryptoKeyEdSa = (
+    cryptoKeyEdSa?: string
+) => {
     if (!cryptoKeyEdSa) {
         cryptoKeyEdSa = readFileSync(
             envConfig().mountPath.terraform.cryptoKeyEdSa,
@@ -21,7 +22,9 @@ export const getCryptoKeyEdSa = (cryptoKeyEdSa?: string) => {
  * Pure function to get the rpc config
  * in case there is component that not depends on nestjs DI
  */
-export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
+export const getRpcAccessConfigs = (
+    rpcAccessConfigs?: RpcAccessConfigs
+) => {
     if (!rpcAccessConfigs) {
         rpcAccessConfigs = JSON.parse(
             readFileSync(
@@ -36,7 +39,9 @@ export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
  * Pure function to get the app config
  * in case there is component that not depends on nestjs DI
  */
-export const getAppConfig = (appConfig?: AppConfig) => {
+export const getAppConfig = (
+    appConfig?: AppConfig
+) => {
     if (!appConfig) {
         appConfig = JSON.parse(
             readFileSync(
@@ -51,10 +56,18 @@ export const getAppConfig = (appConfig?: AppConfig) => {
  * Pure function to get the encrypted aes key
  * in case there is component that not depends on nestjs DI
  */
-export const getEncryptedAesKey = (encryptedAesKey?: Buffer) => {
+export const getEncryptedAesKey = (
+    encryptedAesKey?: Buffer
+) => {
+    const encryptedAesKeyBuffer = readFileSync(
+        envConfig().mountPath.terraform.encryptedAesKey,
+        "utf8"
+    )
     if (!encryptedAesKey) {
         encryptedAesKey = Buffer.from(
-            readFileSync(envConfig().mountPath.terraform.encryptedAesKey, "utf8")) as Buffer
+            encryptedAesKeyBuffer,
+            "base64"
+        )
     }
     return encryptedAesKey
 }   
@@ -63,10 +76,18 @@ export const getEncryptedAesKey = (encryptedAesKey?: Buffer) => {
  * Pure function to get the encrypted jwt secret key
  * in case there is component that not depends on nestjs DI
  */
-export const getEncryptedJwtSecretKey = (encryptedJwtSecretKey?: Buffer) => {
+export const getEncryptedJwtSecretKey = (
+    encryptedJwtSecretKey?: Buffer
+) => {
+    const encryptedJwtSecretKeyBuffer = readFileSync(
+        envConfig().mountPath.terraform.encryptedJwtSecretKey,
+        "utf8"
+    )
     if (!encryptedJwtSecretKey) {
         encryptedJwtSecretKey = Buffer.from(
-            readFileSync(envConfig().mountPath.terraform.encryptedJwtSecretKey, "utf8")) as Buffer
+            encryptedJwtSecretKeyBuffer, 
+            "base64"
+        )
     }
     return encryptedJwtSecretKey
 }
@@ -75,7 +96,9 @@ export const getEncryptedJwtSecretKey = (encryptedJwtSecretKey?: Buffer) => {
  * Pure function to get the crypto key ed sa
  * in case there is component that not depends on nestjs DI
  */
-export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) => {
+export const getCloudKmsCryptoOperatorSa = (
+    cloudKmsCryptoOperatorSa?: string
+) => {
     if (!cloudKmsCryptoOperatorSa) {
         cloudKmsCryptoOperatorSa = readFileSync(
             envConfig().mountPath.terraform.cloudKmsCryptoOperatorSa,
@@ -89,7 +112,9 @@ export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) =
  * Pure function to get the google drive ud sa
  * in case there is component that not depends on nestjs DI
  */
-export const getGoogleDriveUdSa = (googleDriveUdSa?: string) => {
+export const getGoogleDriveUdSa = (
+    googleDriveUdSa?: string
+) => {
     if (!googleDriveUdSa) {
         googleDriveUdSa = readFileSync(
             envConfig().mountPath.terraform.googleDriveUdSa,

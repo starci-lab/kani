@@ -1,4 +1,6 @@
 export enum WinstonLog {
+    ErrorDecryptingJwtSecretKey = "Error.Decrypting.JWT.Secret.Key",
+    ErrorDecryptingAesKey = "Error.Decrypting.AES.Key",
     PythPriceDiagnosticSuccess = "Pyth.Price.Diagnostic.Success",
     PythPriceDiagnosticWarning = "Pyth.Price.Diagnostic.Warning",
     PythPriceTooOld = "Pyth.Price.Too.Old",
