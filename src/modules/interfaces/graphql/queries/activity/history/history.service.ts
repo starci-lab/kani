@@ -172,11 +172,11 @@ export class HistoryService {
                 lastSerie = fullSeries[serieIndex]
                 serieIndex++
             }
-
             series.push({
                 timestamp: new Date(timestamp),
                 value: lastSerie ? lastSerie.positionValueAtClose : 0,
-            })
+            }
+            )
         }
 
         return {
