@@ -308,21 +308,21 @@ export class DeploymentManagerService  {
                             volumes: [
                                 // terraform
                                 {
-                                    name: "cloud-kms-crypto-operator-sa",
+                                    name: "gcp-cloud-kms-crypto-operator-sa",
                                     secret: {
-                                        secretName: "cloud-kms-crypto-operator-sa",
+                                        secretName: "gcp-cloud-kms-crypto-operator-sa",
                                     },
                                 },
                                 {
-                                    name: "crypto-key-ed-sa",
+                                    name: "gcp-crypto-key-ed-sa",
                                     secret: {
-                                        secretName: "crypto-key-ed-sa",
+                                        secretName: "gcp-crypto-key-ed-sa",
                                     },
                                 },
                                 {
-                                    name: "google-drive-ud-sa",
+                                    name: "gcp-google-drive-ud-sa",
                                     secret: {
-                                        secretName: "google-drive-ud-sa",
+                                        secretName: "gcp-google-drive-ud-sa",
                                     },
                                 },
                                 {
