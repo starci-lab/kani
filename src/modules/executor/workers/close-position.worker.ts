@@ -185,7 +185,6 @@ export class ClosePositionWorker extends WorkerHost {
                 },
             )
         }
-
         // * Step 5: Confirm (balances + profitability + snapshots)
         // Get tokens for profitability calculation
         const tokenA = this.primaryMemoryStorageService.tokens.find(
@@ -225,9 +224,9 @@ export class ClosePositionWorker extends WorkerHost {
         const { positionValue: positionValueAtClose } =
             await this.positionValueMathService.calculatePositionValue({
                 before: {
-                    targetBalanceAmount: new BN(snapshotTargetBalanceAmountBeforeOpen),
-                    quoteBalanceAmount: new BN(snapshotQuoteBalanceAmountBeforeOpen),
-                    gasBalanceAmount: new BN(snapshotGasBalanceAmountBeforeOpen),
+                    targetBalanceAmount: new BN(bot.snapshotTargetBalanceAmount || 0),
+                    quoteBalanceAmount: new BN(bot.snapshotQuoteBalanceAmount || 0),
+                    gasBalanceAmount: new BN(bot.snapshotGasBalanceAmount || 0),
                 },
                 after: {
                     targetBalanceAmount: targetBalanceAmountAfterClose,

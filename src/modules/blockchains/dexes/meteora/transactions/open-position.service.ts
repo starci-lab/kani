@@ -87,7 +87,7 @@ export class OpenPositionInstructionService {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
         // transfer the fees to the fee address
-        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.solana.feeToAddress
+        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
         const instructions: Array<Instruction> = []
         // if A or B is sol, we must transfer the fees to the fee address
         if (tokenA.type === TokenType.Native) {

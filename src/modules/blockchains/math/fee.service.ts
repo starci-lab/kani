@@ -18,7 +18,7 @@ export class FeeService {
             chainId 
         }: SplitAmountParams
     ): SplitAmountResponse {
-        const feeRate = this.mountStorageService.apiKeys.fees.openPosition[chainId].feeRate
+        const feeRate = this.mountStorageService.appConfig.fees.openPosition[chainId].feeRate
         if (!feeRate) {
             throw new Error("Fee rate not found")
         }

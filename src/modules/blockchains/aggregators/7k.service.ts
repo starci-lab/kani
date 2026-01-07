@@ -108,8 +108,8 @@ export class SevenKAggregatorService implements IAggregatorService {
                             accountAddress,
                             slippage: envConfig().slippage.swap,
                             commission: {
-                                partner: this.mountStorageService.apiKeys.fees.swapReferral.sui.feeToAddress,
-                                commissionBps: this.mountStorageService.apiKeys.fees.swapReferral.sui.bps,
+                                partner: this.mountStorageService.appConfig.fees.swapReferral.sui.feeToAddress,
+                                commissionBps: this.mountStorageService.appConfig.fees.swapReferral.sui.bps,
                             }, 
                             extendTx: {
                                 tx: txb,

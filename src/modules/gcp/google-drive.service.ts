@@ -5,7 +5,6 @@ import { GoogleDriveFolderId } from "./types"
 import { MountStorageService } from "@modules/filesystem"
 import { InjectWinston } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { envConfig } from "@modules/env"
 import { GoogleDriveFolderIdNotFoundException } from "@exceptions"
 import path from "path"
 import { Readable } from "stream"
@@ -27,7 +26,7 @@ export class GoogleDriveService {
         private readonly logger: WinstonLogger
     ) {
         this.auth = new GoogleAuth({
-            keyFile: envConfig().mountPath.gcp.googleDriveUdSa,
+            keyFile: this.mountStorageService.googleDriveUdSa,
             scopes: ["https://www.googleapis.com/auth/drive"],
         })
         this.drive = new drive_v3.Drive({ auth: this.auth })
@@ -36,9 +35,9 @@ export class GoogleDriveService {
     private folderEnumToId(folderEnum: GoogleDriveFolderId): string {
         switch (folderEnum) {
         case GoogleDriveFolderId.Db:
-            return this.mountStorageService.apiKeys.googleapis.drive.folderIds.db
+            return this.mountStorageService.appConfig.googleapis.drive.folderIds.db
         case GoogleDriveFolderId.Keys:
-            return this.mountStorageService.apiKeys.googleapis.drive.folderIds.keys
+            return this.mountStorageService.appConfig.googleapis.drive.folderIds.keys
         }
     }
 

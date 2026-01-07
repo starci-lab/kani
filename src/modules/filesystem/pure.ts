@@ -1,20 +1,7 @@
 import { envConfig } from "@modules/env"
 import { readFileSync } from "fs"
-import { ApiKeys, Keys, RpcAccessConfigs, SmtpConfig } from "./types"
-/**
- * Pure function to get the smtp config
- * in case there is component that not depends on nestjs DI
- */
-export const getSmtpConfig = (smtpConfig?: SmtpConfig) => {
-    if (!smtpConfig) {
-        const smtpConfigPlainText = readFileSync(
-            envConfig().mountPath.config.smtp,
-            "utf8"
-        )
-        return JSON.parse(smtpConfigPlainText) as SmtpConfig
-    }
-    return smtpConfig
-}
+import { AppConfig, RpcAccessConfigs } from "./types"
+
 
 /**
  * Pure function to get the crypto key ed sa
@@ -23,7 +10,7 @@ export const getSmtpConfig = (smtpConfig?: SmtpConfig) => {
 export const getCryptoKeyEdSa = (cryptoKeyEdSa?: string) => {
     if (!cryptoKeyEdSa) {
         cryptoKeyEdSa = readFileSync(
-            envConfig().mountPath.gcp.cryptoKeyEdSa,
+            envConfig().mountPath.terraform.cryptoKeyEdSa,
             "utf8"
         )
     }
@@ -46,56 +33,19 @@ export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
 }   
 
 /**
- * Pure function to get the api keys
+ * Pure function to get the app config
  * in case there is component that not depends on nestjs DI
  */
-export const getApiKeys = (apiKeys?: ApiKeys) => {
-    if (!apiKeys) {
-        apiKeys = JSON.parse(
+export const getAppConfig = (appConfig?: AppConfig) => {
+    if (!appConfig) {
+        appConfig = JSON.parse(
             readFileSync(
-                envConfig().mountPath.config.apiKeys,
+                envConfig().mountPath.config.app,
                 "utf8"
-            )) as ApiKeys
+            )) as AppConfig
     }
-    return apiKeys
-}
-
-/**
- * Pure function to get the kms admin sa
- * in case there is component that not depends on nestjs DI
- */
-export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) => {
-    if (!cloudKmsCryptoOperatorSa) {
-        cloudKmsCryptoOperatorSa = readFileSync(
-            envConfig().mountPath.gcp.cloudKmsCryptoOperatorSa,
-            "utf8"
-        )
-    }
-    return cloudKmsCryptoOperatorSa
-}
-
-/**
- * Pure function to get the keys
- * in case there is component that not depends on nestjs DI
- */
-export const getKeys = (keys?: Keys) => {
-    if (!keys) {
-        keys = JSON.parse(
-            readFileSync(envConfig().mountPath.config.keys, "utf8")) as Keys
-    }
-    return keys
-}
-
-/**
- * Pure function to get the jwt secret key
- * in case there is component that not depends on nestjs DI
- */
-export const getEncryptedJwtSecret = (encryptedJwtSecret?: Buffer) => {
-    if (!encryptedJwtSecret) {
-        encryptedJwtSecret = Buffer.from(getKeys().encryptedJwtSecret, "base64")
-    }
-    return encryptedJwtSecret
-}
+    return appConfig
+}   
 
 /**
  * Pure function to get the encrypted aes key
@@ -103,7 +53,48 @@ export const getEncryptedJwtSecret = (encryptedJwtSecret?: Buffer) => {
  */
 export const getEncryptedAesKey = (encryptedAesKey?: Buffer) => {
     if (!encryptedAesKey) {
-        encryptedAesKey = Buffer.from(getKeys().encryptedAesKey, "base64")
+        encryptedAesKey = Buffer.from(
+            readFileSync(envConfig().mountPath.terraform.encryptedAesKey, "utf8")) as Buffer
     }
     return encryptedAesKey
+}   
+
+/**
+ * Pure function to get the encrypted jwt secret key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getEncryptedJwtSecretKey = (encryptedJwtSecretKey?: Buffer) => {
+    if (!encryptedJwtSecretKey) {
+        encryptedJwtSecretKey = Buffer.from(
+            readFileSync(envConfig().mountPath.terraform.encryptedJwtSecretKey, "utf8")) as Buffer
+    }
+    return encryptedJwtSecretKey
+}
+
+/**
+ * Pure function to get the crypto key ed sa
+ * in case there is component that not depends on nestjs DI
+ */
+export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) => {
+    if (!cloudKmsCryptoOperatorSa) {
+        cloudKmsCryptoOperatorSa = readFileSync(
+            envConfig().mountPath.terraform.cloudKmsCryptoOperatorSa,
+            "utf8"
+        )
+    }
+    return cloudKmsCryptoOperatorSa
+}
+
+/**
+ * Pure function to get the google drive ud sa
+ * in case there is component that not depends on nestjs DI
+ */
+export const getGoogleDriveUdSa = (googleDriveUdSa?: string) => {
+    if (!googleDriveUdSa) {
+        googleDriveUdSa = readFileSync(
+            envConfig().mountPath.terraform.googleDriveUdSa,
+            "utf8"
+        )
+    }
+    return googleDriveUdSa
 }

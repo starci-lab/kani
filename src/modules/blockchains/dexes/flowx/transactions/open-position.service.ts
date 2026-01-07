@@ -72,7 +72,7 @@ export class OpenPositionTxbService {
                 "Target operational gas amount not found"
             )
         }
-        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.sui.feeToAddress
+        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }

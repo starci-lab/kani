@@ -23,12 +23,12 @@ export class JupiterService implements IAggregatorService {
     ) { }
 
     private jupiterReferralTokenAccountAddress(): string {
-        return this.mountStorageService.apiKeys.fees.swapReferral.solana.referralTokenAccountAddress
+        return this.mountStorageService.appConfig.fees.swapReferral.solana.referralTokenAccountAddress || ""
     }
 
     private createJupiterClient(): SwapApi {
         return createJupiterApiClient({
-            apiKey: this.mountStorageService.apiKeys.jupiter,
+            apiKey: this.mountStorageService.appConfig.jupiter,
         })
     }
 
@@ -75,7 +75,7 @@ export class JupiterService implements IAggregatorService {
                         inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         amount: amountIn.toNumber(),
-                        platformFeeBps: this.mountStorageService.apiKeys.fees.swapReferral.solana.bps,
+                        platformFeeBps: this.mountStorageService.appConfig.fees.swapReferral.solana.bps,
                     })
                     return {
                         amountOut: new BN(quote.outAmount),

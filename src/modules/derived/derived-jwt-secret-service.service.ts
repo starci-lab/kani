@@ -18,8 +18,9 @@ export class DerivedJwtSecretService implements OnModuleInit {
     async onModuleInit() {
         // get base key from gcp kms
         const key = await this.gcpKmsService.decrypt(
-            this.mountStorageService.encryptedJwtSecret
+            this.mountStorageService.encryptedJwtSecretKey
         )
+        console.log("key", key)
         // hash base key with salt
         this.key = crypto.pbkdf2Sync(
             key,

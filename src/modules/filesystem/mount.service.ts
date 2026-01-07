@@ -1,13 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { ApiKeys, RpcAccessConfigs, SmtpConfig } from "./types"
+import { AppConfig, RpcAccessConfigs } from "./types"
 import {  
-    getApiKeys, 
     getCryptoKeyEdSa,  
-    getCloudKmsCryptoOperatorSa, 
     getRpcAccessConfigs, 
-    getSmtpConfig, 
-    getEncryptedJwtSecret,
-    getEncryptedAesKey
+    getEncryptedJwtSecretKey,
+    getEncryptedAesKey,
+    getAppConfig,
+    getCloudKmsCryptoOperatorSa,
+    getGoogleDriveUdSa
 } from "./pure"
 /**
  * Service responsible for reading secrets mounted into the container filesystem.
@@ -21,12 +21,12 @@ import {
  */
 @Injectable()
 export class MountFilesystemService {
-    smtpConfig(): SmtpConfig {
-        return getSmtpConfig()
+    appConfig(): AppConfig {
+        return getAppConfig()
     }
 
-    encryptedJwtSecret(): Buffer {
-        return getEncryptedJwtSecret()
+    encryptedJwtSecretKey(): Buffer {
+        return getEncryptedJwtSecretKey()
     }
 
     encryptedAesKey(): Buffer {
@@ -41,11 +41,11 @@ export class MountFilesystemService {
         return getCloudKmsCryptoOperatorSa()
     }
 
-    rpcAccessConfigs(): RpcAccessConfigs {
-        return getRpcAccessConfigs()
+    googleDriveUdSa(): string {
+        return getGoogleDriveUdSa()
     }
 
-    apiKeys(): ApiKeys {
-        return getApiKeys()
+    rpcAccessConfigs(): RpcAccessConfigs {
+        return getRpcAccessConfigs()
     }
 }

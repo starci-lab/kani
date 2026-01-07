@@ -70,7 +70,7 @@ export class OpenPositionInstructionService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Invalid pool tokens")
         }
-        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.solana.feeToAddress
+        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,

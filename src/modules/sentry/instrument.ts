@@ -1,11 +1,11 @@
 import Sentry from "@sentry/nestjs"
 import dotenv from "dotenv"
-import { getApiKeys } from "@modules/filesystem"
+import { getAppConfig } from "@modules/filesystem"
 // config dotenv
 dotenv.config()
 // init sentry
 Sentry.init({
-    dsn: getApiKeys().sentryDsn,
+    dsn: getAppConfig().sentryDsn,
     environment: process.env.NODE_ENV,
     tracesSampleRate: 1.0,
     sendDefaultPii: true,
