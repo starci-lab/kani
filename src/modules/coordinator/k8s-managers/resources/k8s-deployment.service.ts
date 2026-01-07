@@ -260,18 +260,18 @@ export class DeploymentManagerService  {
                                     volumeMounts: [
                                         // terraform
                                         {
-                                            mountPath: envConfig().mountPath.terraform.cloudKmsCryptoOperatorSa.replace(/\/data$/, ""),
-                                            name: "cloud-kms-crypto-operator-sa",
+                                            mountPath: envConfig().mountPath.terraform.gcpCloudKmsCryptoOperatorSa.replace(/\/data$/, ""),
+                                            name: "gcp-cloud-kms-crypto-operator-sa",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.terraform.cryptoKeyEdSa.replace(/\/data$/, ""),
-                                            name: "crypto-key-ed-sa",
+                                            mountPath: envConfig().mountPath.terraform.gcpCryptoKeyEdSa.replace(/\/data$/, ""),
+                                            name: "gcp-crypto-key-ed-sa",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.terraform.googleDriveUdSa.replace(/\/data$/, ""),
-                                            name: "google-drive-ud-sa",
+                                            mountPath: envConfig().mountPath.terraform.gcpGoogleDriveUdSa.replace(/\/data$/, ""),
+                                            name: "gcp-google-drive-ud-sa",
                                             readOnly: true
                                         },
                                         {
