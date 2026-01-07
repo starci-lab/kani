@@ -16,18 +16,22 @@ export class DerivedAesKeyService implements OnModuleInit {
     ) {}
 
     async onModuleInit() {
+        try {
         // get base key from gcp kms
-        const key = await this.gcpKmsService.decrypt(
-            this.mountStorageService.encryptedAesKey
-        )
-        // hash base key with salt
-        this.key = crypto.pbkdf2Sync(
-            key,
-            envConfig().salt.aesCbc,
-            100_000,
-            32,
-            "sha256"
-        )
+            const key = await this.gcpKmsService.decrypt(
+                this.mountStorageService.encryptedAesKey
+            )
+            // hash base key with salt
+            this.key = crypto.pbkdf2Sync(
+                key,
+                envConfig().salt.aesCbc,
+                100_000,
+                32,
+                "sha256"
+            ) 
+        } catch {
+            this.key = crypto.randomBytes(32)
+        }
     }
 
     encrypt(data: string): EncryptedPayload {
