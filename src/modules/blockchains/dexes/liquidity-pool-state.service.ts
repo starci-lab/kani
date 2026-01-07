@@ -38,14 +38,7 @@ export class LiquidityPoolStateService {
         if (!dynamicLiquidityPoolInfo) throw new DynamicLiquidityPoolInfoNotFoundException(liquidityPoolId)
         return {
             static: staticLiquidityPool,
-            dynamic: {
-                tickCurrent: dynamicLiquidityPoolInfo.tickCurrent,
-                liquidity: dynamicLiquidityPoolInfo.liquidity,
-                sqrtPriceX64: dynamicLiquidityPoolInfo.sqrtPriceX64,
-                rewards: dynamicLiquidityPoolInfo.rewards,
-                feeGrowthGlobalA: dynamicLiquidityPoolInfo.feeGrowthGlobalA,
-                feeGrowthGlobalB: dynamicLiquidityPoolInfo.feeGrowthGlobalB,
-            },
+            dynamic: dynamicLiquidityPoolInfo,
         }
     }
 

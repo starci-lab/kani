@@ -24,6 +24,10 @@ import { IoRedisModule } from "@modules/native"
 import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
 import { APP_FILTER } from "@nestjs/core"
 import { DerivedModule } from "@modules/derived"
+import { ClientsModule, TxBuilderModule } from "@modules/blockchains"
+import { P2CBalancerModule } from "@modules/p2c-balancer"
+import { EventEmitterModule } from "@nestjs/event-emitter"
+import { EventModule, KafkaMode } from "@modules/event"
 
 @Module({
     imports: [
@@ -40,6 +44,27 @@ import { DerivedModule } from "@modules/derived"
             useCluster: envConfig().redis.adapter.useCluster,
         }),
         FormulasModule.register({
+            isGlobal: true,
+        }),
+        EventEmitterModule.forRoot(),
+        EventModule.register({
+            isGlobal: true,
+            kafka: {
+                modes: [
+                    KafkaMode.Producer, 
+                    KafkaMode.Consumer
+                ],
+                createTopics: true,
+                kafkaTopics: []
+            },
+        }),
+        TxBuilderModule.register({
+            isGlobal: true,
+        }),
+        P2CBalancerModule.register({
+            isGlobal: true,
+        }),
+        ClientsModule.register({
             isGlobal: true,
         }),
         DexesModule.register({
@@ -59,6 +84,7 @@ import { DerivedModule } from "@modules/derived"
                 action: false,
                 fees: true,
                 analytics: false,
+                reserves: true,
             },
         }),
         SpotModule.register({

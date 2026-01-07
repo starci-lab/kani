@@ -18,6 +18,11 @@ import {
     LiquidityPoolNotFoundException 
 } from "@exceptions"
 import { FeesOrchestratorService } from "@modules/blockchains"
+import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { Cache } from "cache-manager"
+import { InjectSuperJson, DayjsService } from "@modules/mixin"
+import SuperJSON from "superjson"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class FeesService {
@@ -26,14 +31,36 @@ export class FeesService {
         private readonly connection: Connection,
         private readonly feesOrchestratorService: FeesOrchestratorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly dayjsService: DayjsService,
+        @InjectRedisCache()
+        private readonly cacheManager: Cache,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
     ) { }
 
     async fees(
         {
-            botId
+            botId,
+            activePositionId,
         }: FeesRequest,
         userLike: UserJwtLike,
     ): Promise<FeesResponseData> {
+        // check if the fees are cached
+        const cachedResult = await this.cacheManager.get<string>
+        (
+            createCacheKey(
+                CacheKey.FeesResponse, 
+                {
+                    botId,
+                    activePositionId,
+                    userId: userLike.id,
+                }
+            )
+        )
+        // if the fees are cached, return them
+        // if (cachedResult) {
+        //     return this.superjson.parse<FeesResponseData>(cachedResult)
+        // }
         // check if the bot exists
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
@@ -52,9 +79,12 @@ export class FeesService {
                 bot: botId,
                 isActive: true,
             })
-        if (!activePosition) {
+        if (!activePosition || activePosition.id.toString() !== activePositionId) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
+        // set the active position on the bot
+        bot.activePosition = activePosition
+        // get the liquidity pool
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.id === activePosition.liquidityPool.toString())
         if (!liquidityPool) {
@@ -62,10 +92,26 @@ export class FeesService {
         }
         // get the fees for the bot
         const fees = await this.feesOrchestratorService.fees({ bot, liquidityPoolId: liquidityPool.displayId })
-        return {
+        // cache the fees
+        const lastFetchedAt = this.dayjsService.now()
+        const response: FeesResponseData = {
             tokenA: fees.tokenA.toNumber(),
             tokenB: fees.tokenB.toNumber(),
+            lastFetchedAt: lastFetchedAt.toDate(),
+            lastSnapshotAt: fees.snapshotAt.toDate(),
         }
+        await this.cacheManager.set(
+            createCacheKey(
+                CacheKey.FeesResponse, 
+                {
+                    botId,
+                    activePositionId,
+                    userId: userLike.id,
+                }
+            ),
+            this.superjson.stringify(response),
+            envConfig().cache.ttl.responses.fees,
+        )
+        return response
     }
 }
-

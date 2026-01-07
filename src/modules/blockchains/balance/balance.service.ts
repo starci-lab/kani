@@ -37,7 +37,6 @@ import { SwapMathService } from "../math"
 import { computeDenomination } from "@utils"
 import Decimal from "decimal.js"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { envConfig } from "@modules/env"
 import { Connection } from "mongoose"
 import { Queue } from "bullmq"
@@ -46,8 +45,8 @@ import { ReconcileBalancePayload } from "../types"
 import { InjectQueue } from "@nestjs/bullmq"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { AsyncService } from "@modules/mixin"
-import { PythPriceService } from "../pyth"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
+
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -57,13 +56,11 @@ export class BalanceService implements IBalanceService {
     private readonly suiBalanceService: SuiBalanceService,
     private readonly gasStatusService: GasStatusService,
     private readonly swapMathService: SwapMathService,
-    private readonly mutexService: MutexService,
-    private readonly pythPriceService: PythPriceService,
+    private readonly leaseService: LeaseService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
     private readonly reconcileBalanceQueue: Queue<ReconcileBalancePayload>,
-    private readonly asyncService: AsyncService,
     @InjectWinston()
     private readonly logger: WinstonLogger,
     ) {}
@@ -74,13 +71,14 @@ export class BalanceService implements IBalanceService {
         }: EnqueueBalanceRebalancingParams,
     ) {
         /**
-         * Retrieve mutex to prevent concurrent actions on the same bot
+         * Retrieve sema to prevent concurrent actions on the same bot
          */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // if the mutex is locked, skip the execution
-        if (mutex.isLocked()) {
+        // if the sema is locked, skip the execution
+        if (lease.isLocked()) {
+            // there is a job already running for this bot
             return
         }
         /**
@@ -89,41 +87,63 @@ export class BalanceService implements IBalanceService {
         if (bot.activePosition) {
             return
         }
-        /* 
-         * Lock the mutex to prevent concurrent actions on the same bot
-         */
-        const releaser = await mutex.acquire()
-        setTimeout(
-            () => releaser(), 
-            envConfig().timeConfig.interval.mutex
-        )
+        // try to lock the lease
+        const leaseId = v4()
+        lease.tryLock(leaseId)
         /**
          * Add reconcile balance job to the queue
          */
-        const [ jobRaw ] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    bot: bot.id,
-                    type: JobType.ReconcileBalance,
-                    status: JobStatus.Pending,
-                    executor: envConfig().botExecutor.executorId,
+        const session = await this.connection.startSession()
+        try {
+            await session.withTransaction(async () => {
+                /**
+                 * Persist job record.
+                 */
+                const [ jobRaw ] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            bot: bot.id,
+                            type: JobType.ReconcileBalance,
+                            status: JobStatus.Pending,
+                            executor: envConfig().botExecutor.executorId,
+                            leaseId,
+                        }
+                    ])
+                /**
+                * Add reconcile balance job to the queue
+                */
+                await this.reconcileBalanceQueue.add(
+                    v4(),
+                    {
+                        jobId: jobRaw.toJSON().id,
+                        leaseId,
+                        bot,
+                    }
+                )
+                /**
+                * Structured logging for observability.
+                */
+                this.logger.verbose(
+                    WinstonLog.ReconcileBalanceEnqueued,
+                    {
+                        botId: bot.id,
+                    }
+                )
+            }
+            )
+        } catch (error) {
+            // unlock the lease if the job is not enqueued
+            lease.unlock(leaseId)
+            // log the error
+            this.logger.error(
+                WinstonLog.ReconcileBalanceEnqueueFailed, {
+                    botId: bot.id,
+                    error: error.message,
                 }
-            ])
-        await this.reconcileBalanceQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                bot,
-            }
-        )
-        this.logger.verbose(
-            WinstonLog.ReconcileBalanceEnqueued,
-            {
-                botId: bot.id,
-            }
-        )
+            )
+        }
     }   
 
     async determineReconcileBalancePlan({

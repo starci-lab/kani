@@ -78,7 +78,7 @@ export class PositionSchema extends AbstractSchema {
     @Prop({ type: Number, required: false })
         maxBinId?: number
 
-    @Field(() => String, { description: "Reference to the bot that created this position" })
+    @Field(() => ID, { description: "Reference to the bot that created this position" })
     @Prop({ type: MongooseSchema.Types.ObjectId, ref: BotSchema.name })
         bot: BotSchema | MongooseSchema.Types.ObjectId
 

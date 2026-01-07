@@ -4,6 +4,7 @@ import { BotModule } from "./bot"
 import { BotsModule as BotsCursorModule } from "./bots"
 import { Bots2Module } from "./bots2"
 import { FeesModule } from "./fees"
+import { ReservesModule } from "./reserves"
 
 @Module({
     imports: [
@@ -17,6 +18,9 @@ import { FeesModule } from "./fees"
             isGlobal: true,
         }),
         FeesModule.register({
+            isGlobal: true,
+        }),
+        ReservesModule.register({
             isGlobal: true,
         }),
     ]

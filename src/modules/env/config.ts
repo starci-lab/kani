@@ -140,8 +140,12 @@ export const envConfig = () => ({
             sealedJwtSecretKey: parseInt(process.env.CACHE_SEALED_JWT_SECRET_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             sealedAesKey: parseInt(process.env.CACHE_SEALED_AES_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
-            poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
+            poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
+            pythPrice: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
+            responses: {
+                fees: parseInt(process.env.CACHE_RESPONSES_FEES_TTL || ms("5m").toString(), 10), // 5 minutes
+            }
         },
         stale: {
             priceMaxAgeMs: parseInt(process.env.CACHE_STALE_PRICE_MAX_AGE_MS || ms("10s").toString(), 10), // 10s
@@ -222,6 +226,7 @@ export const envConfig = () => ({
         },
     },
     timeConfig: {
+        lease: parseInt(process.env.TIME_CONFIG_LEASE || ms("5m").toString(), 10), // 5 minutes
         retry: {
             maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call
             delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || "1000", 10), // 1s delay between retries
@@ -253,6 +258,8 @@ export const envConfig = () => ({
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
         failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
         timeout: parseInt(process.env.BULLMQ_TIMEOUT || ms("30s").toString(), 10),
+        stalledInterval: parseInt(process.env.BULLMQ_STALLED_INTERVAL || ms("30s").toString(), 10),
+        maxStalledCount: parseInt(process.env.BULLMQ_MAX_STALLED_COUNT || "1", 10),
     },
     cors: {
         origins: Array.from({ length: 10 }, (_, i) =>

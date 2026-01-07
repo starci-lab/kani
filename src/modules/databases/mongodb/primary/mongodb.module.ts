@@ -42,6 +42,10 @@ import {
     AssignedUserSchema,
     JobSchema,
     JobSchemaClass,
+    HistorySchema,
+    HistorySchemaClass,
+    HistorySerieSchema,
+    HistorySerieSchemaClass,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {
@@ -212,6 +216,14 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: JobSchema.name,
                         useFactory: () => JobSchemaClass,
+                    },
+                    {
+                        name: HistorySchema.name,
+                        useFactory: () => HistorySchemaClass,
+                    },
+                    {
+                        name: HistorySerieSchema.name,
+                        useFactory: () => HistorySerieSchemaClass,
                     },
                 ], CONNECTION_NAME),
             ],

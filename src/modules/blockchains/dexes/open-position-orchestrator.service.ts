@@ -49,8 +49,7 @@ import { Queue } from "bullmq"
 import { OpenPositionPayload } from "../types"
 import { envConfig } from "@modules/env"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey } from "@modules/lock"
-import { MutexService } from "@modules/lock"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 import { Connection } from "mongoose"
 import { WinstonLog } from "@modules/winston"
 import { InjectWinston } from "@modules/winston"
@@ -67,7 +66,7 @@ import { BalanceEligibilityService } from "../balance"
  * Responsibilities:
  * - Evaluate whether an open-position action SHOULD happen
  * - Apply safety guards (balance, snapshot, quote ratio, idempotency)
- * - Handle concurrency via mutex
+ * - Handle concurrency via sema
  * - Validate liquidity pool and DEX support
  * - Create job and enqueue async execution
  *
@@ -92,7 +91,7 @@ export class OpenPositionOrchestratorService {
         private readonly cacheManager: Cache,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
         private readonly openPositionQueue: Queue<OpenPositionPayload>,
-        private readonly mutexService: MutexService,
+        private readonly leaseService: LeaseService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
@@ -115,13 +114,13 @@ export class OpenPositionOrchestratorService {
         }: EnqueueOpenPositionParams,
     ) {
         /**
-         * Mutex guard:
+         * Atomic lock guard:
          * Prevent concurrent actions on the same bot.
          */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        if (mutex.isLocked()) {
+        if (lease.isLocked()) {
             return
         }
 
@@ -343,54 +342,65 @@ export class OpenPositionOrchestratorService {
         }
 
         /**
-         * Acquire mutex before creating job.
+         * Try to lock the lease.
          */
-        const releaser = await mutex.acquire()
-        setTimeout(
-            async () => {
-                releaser()
-            },
-            envConfig().timeConfig.interval.mutex
-        )
-
-        /**
-         * Persist job record.
-         */
-        const [jobRaw] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    liquidityPool: liquidityPool.id,
-                    bot: bot.id,
-                    executor: envConfig().botExecutor.executorId,
-                    type: JobType.OpenPosition,
-                    status: JobStatus.Pending,
+        const leaseId = v4()
+        lease.tryLock(leaseId)
+        const session = await this.connection.startSession()
+        try {
+            await session.withTransaction(async () => {
+                /**
+                * Persist job record.
+                */
+                const [jobRaw] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            liquidityPool: liquidityPool.id,
+                            bot: bot.id,
+                            executor: envConfig().botExecutor.executorId,
+                            type: JobType.OpenPosition,
+                            status: JobStatus.Pending,
+                            leaseId,
+                        }
+                    ]
+                )
+                /**
+                * Enqueue open-position job for async processing.
+                */
+                await this.openPositionQueue.add(
+                    v4(),
+                    {
+                        jobId: jobRaw.toJSON().id,
+                        state: this.superjson.stringify(state),
+                        bot,
+                        leaseId,
+                    }
+                )
+                /**
+                * Structured logging for observability.
+                */
+                this.logger.verbose(
+                    WinstonLog.OpenPositionEnqueued,
+                    {
+                        botId: bot.id,
+                        liquidityPoolId,
+                    }
+                )
+            }
+            )
+        } catch (error) {
+            // unlock the lease if the job is not enqueued
+            lease.unlock(leaseId)
+            // log the error
+            this.logger.error(
+                WinstonLog.OpenPositionEnqueueFailed, {
+                    botId: bot.id,
+                    error: error.message,
                 }
-            ]
-        )
-        /**
-         * Enqueue open-position job for async processing.
-         */
-        await this.openPositionQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                state: this.superjson.stringify(state),
-                bot,
-            }
-        )
-
-        /**
-         * Structured logging for observability.
-         */
-        this.logger.verbose(
-            WinstonLog.OpenPositionEnqueued,
-            {
-                botId: bot.id,
-                liquidityPoolId,
-            }
-        )
+            )
+        }
     }
 
     /**

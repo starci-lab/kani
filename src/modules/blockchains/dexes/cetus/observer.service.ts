@@ -13,7 +13,7 @@ import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Logger as winstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { InjectSuperJson } from "@modules/mixin"
+import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
@@ -31,6 +31,7 @@ export class CetusObserverService {
         private readonly winstonLogger: winstonLogger,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -97,6 +98,9 @@ export class CetusObserverService {
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.currentSqrtPrice),
             rewards: state.rewarderManager.rewarders,
+            feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
+            feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
+            snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError(
             [

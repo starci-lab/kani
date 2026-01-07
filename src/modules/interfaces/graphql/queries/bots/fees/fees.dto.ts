@@ -12,6 +12,10 @@ export class FeesRequest {
         description: "Unique identifier of the bot whose fees are being queried.",
     })
         botId: string
+    @Field(() => ID, {
+        description: "Unique identifier of the active position whose fees are being queried.",
+    })
+        activePositionId: string
 }
 
 @ObjectType({
@@ -27,6 +31,14 @@ export class FeesResponseData {
         description: "Accrued fee amount for tokenB.",
     })
         tokenB: number
+    @Field(() => Date, {
+        description: "The date and time the fees were last fetched.",
+    })
+        lastFetchedAt: Date
+    @Field(() => Date, {
+        description: "The date and time the fees were last snapshot.",
+    })
+        lastSnapshotAt: Date
 }
 
 @ObjectType({
@@ -37,7 +49,8 @@ export class FeesResponse
     implements IAbstractGraphQLResponse<FeesResponseData> {
 
     @Field(() => FeesResponseData, {
+        nullable: true,
         description: "Fee data returned for the requested bot.",
     })
-        data: FeesResponseData
+        data?: FeesResponseData
 }

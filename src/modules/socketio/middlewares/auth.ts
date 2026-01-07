@@ -11,7 +11,7 @@ import { DerivedJwtSecretService } from "@modules/derived"
 export const socketIoAuthMiddleware = (
     socket: TypedSocket, 
     next: (err?: Error) => void
-) => async () => {
+) => {
     try {
         const token = socket.handshake.auth?.token || socket.handshake.query?.token
         if (!token) {
@@ -26,7 +26,6 @@ export const socketIoAuthMiddleware = (
         ) as JwtAccessTokenPayload
         socket.data.userId = payload.id
         return next()
-
     } catch (err) {
         if (err instanceof TokenExpiredError) {
             return next(new SocketIoAccessTokenExpiredException())

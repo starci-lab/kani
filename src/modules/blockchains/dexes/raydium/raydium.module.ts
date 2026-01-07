@@ -10,6 +10,8 @@ import {
     OpenPositionInstructionService
 } from "./transactions"
 import { RaydiumAnalyticsService } from "./analytics.service"
+import { RaydiumFeesService } from "./fees.service"
+import { RaydiumReservesService } from "./reserves.service"
 
 @Injectable()
 export class RaydiumModule extends ConfigurableModuleClass {
@@ -17,12 +19,7 @@ export class RaydiumModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            TickArrayService,
-            PersonalPositionService,
-            ClosePositionInstructionService,
-            OpenPositionInstructionService,
-        ]
+        const providers: Array<Provider> = []
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -34,14 +31,38 @@ export class RaydiumModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(RaydiumOpenPositionActionService)
-            providers.push(RaydiumClosePositionActionService)
+            providers.push(
+                TickArrayService,
+                PersonalPositionService,
+                ClosePositionInstructionService,
+                OpenPositionInstructionService,
+                RaydiumOpenPositionActionService,
+                RaydiumClosePositionActionService
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(RaydiumAnalyticsService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(
+                TickArrayService, 
+                PersonalPositionService, 
+                RaydiumFeesService
+            )
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(
+                RaydiumReservesService
+            )
         }
         return {
             ...dynamicModule,

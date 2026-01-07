@@ -34,7 +34,7 @@ import {
     assertIsTransactionWithinSizeLimit,
     assertIsSendableTransaction,
     address,
-    fetchEncodedAccount,
+    fetchEncodedAccount
 } from "@solana/kit"
 import BN from "bn.js"
 import { 

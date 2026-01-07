@@ -1,33 +1,32 @@
 import { OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from "@nestjs/websockets"
 import { CoreWebSocketGateway, socketIoAuthMiddleware } from "@modules/socketio"
-import { Logger } from "@nestjs/common"
 import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import { TypedSocket } from "@modules/socketio"
 import { EventName, LiquidityPoolsFetchedEvent } from "@modules/event"
 import { OnEvent } from "@nestjs/event-emitter"
 import { Namespace } from "socket.io"
 import { WebSocketServer } from "@nestjs/websockets"
 import { SocketIoEvent } from "@modules/socketio/constants"
+import { Cron, CronExpression } from "@nestjs/schedule"
 
 @CoreWebSocketGateway()
 export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-    private readonly logger = new Logger(CoreGateway.name)
     constructor(
         @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonLogger: WinstonLogger,
     ) {}
 
     @WebSocketServer()
     private readonly server: Namespace
 
     afterInit() {
-        this.logger.debug("Core gateway initialized")
         this.server.use(socketIoAuthMiddleware) // use the auth middleware for the namespace
     }
 
     // handle the client connected
     handleConnection(client: TypedSocket) {
+        console.log("client connected", client.data.userId)
         // log the client connected to loki
         this.winstonLogger.debug(
             WinstonLog.SocketIoClientConnected, {
@@ -58,5 +57,14 @@ export class CoreGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             SocketIoEvent.LiquidityPoolsFetched, 
             payload
         )
+    }
+    
+    // handle the ping
+    @Cron(CronExpression.EVERY_5_SECONDS) // every 5 seconds
+    handlePing() {
+        this.server.emit(
+            "ping",
+            "pong"
+        )   
     }
 }

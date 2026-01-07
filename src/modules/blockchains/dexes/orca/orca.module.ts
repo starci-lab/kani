@@ -11,6 +11,7 @@ import {
     PositionService 
 } from "./transactions"
 import { OrcaAnalyticsService } from "./analytics.service"
+import { OrcaReservesService } from "./reserves.service"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -18,12 +19,7 @@ export class OrcaModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            TickArrayService,
-            PositionService,
-            OpenPositionInstructionService,
-            ClosePositionInstructionService,
-        ]
+        const providers: Array<Provider> = []
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -35,8 +31,14 @@ export class OrcaModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
         ) {
-            providers.push(OrcaOpenPositionActionService)
-            providers.push(OrcaClosePositionActionService)
+            providers.push(
+                TickArrayService,
+                PositionService,
+                OpenPositionInstructionService,
+                ClosePositionInstructionService,
+                OrcaOpenPositionActionService,
+                OrcaClosePositionActionService
+            )
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled
@@ -48,7 +50,13 @@ export class OrcaModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
         ) {
-            providers.push(OrcaFeesService)
+            providers.push(TickArrayService, OrcaFeesService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(OrcaReservesService)
         }
         return {
             ...dynamicModule,

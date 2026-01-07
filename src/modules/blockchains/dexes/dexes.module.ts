@@ -11,6 +11,7 @@ import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
 import { OpenPositionOrchestratorService } from "./open-position-orchestrator.service"
 import { ClosePositionOrchestratorService } from "./close-position-orchestrator.service"
 import { FeesOrchestratorService } from "./fees-orchestrator.service"
+import { ReservesOrchestratorService } from "./reserves-orchestrator.service"
 import { MeteoraModule } from "./meteora"
 
 @Module({})
@@ -110,7 +111,12 @@ export class DexesModule extends ConfigurableModuleClass {
         ) {
             providers.push(FeesOrchestratorService)
         }
-
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(ReservesOrchestratorService)
+        }
         return {
             ...dynamicModule,
             imports: [

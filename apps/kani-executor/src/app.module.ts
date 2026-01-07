@@ -19,7 +19,7 @@ import {
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
-import { MutexModule } from "@modules/lock"
+import { LeaseModule } from "@modules/lock"
 import { 
     TxBuilderModule, 
     ExitStrategyEngineModule, 
@@ -115,7 +115,7 @@ import { KafkaMode } from "@modules/event"
         SpinnerModule.register({
             isGlobal: true,
         }),
-        MutexModule.register({
+        LeaseModule.register({
             isGlobal: true,
         }),
         TxBuilderModule.register({
@@ -142,58 +142,21 @@ import { KafkaMode } from "@modules/event"
         }),
         DexesModule.register({
             isGlobal: true,
-            withUtilities: true,
-            dexes: [
-                {
-                    dexId: DexId.Raydium,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
-                {
-                    dexId: DexId.Orca,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
-                {
-                    dexId: DexId.Meteora,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
-                {
-                    dexId: DexId.FlowX,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
-                {
-                    dexId: DexId.Cetus,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
-                {
-                    dexId: DexId.Turbos,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
-                {
-                    dexId: DexId.Momentum,
-                    enabled: {
-                        observe: false,
-                        action: true,
-                    },
-                },
+            dexIds: [
+                DexId.Raydium,
+                DexId.Orca,
+                DexId.Meteora,
+                DexId.FlowX,
+                DexId.Cetus,
+                DexId.Turbos,
+                DexId.Momentum,
             ],
+            enabled: {
+                observe: false,
+                action: true,
+                fees: false,
+                analytics: false,
+            },
         }),
         ExecutorModule.register({
             isGlobal: true,
