@@ -7,9 +7,9 @@ import { ReadinessWatcherFactoryService } from "@modules/mixin"
 export class MountStorageService implements OnModuleInit {
     public encryptedJwtSecretKey: Buffer<ArrayBufferLike>
     public encryptedAesKey: Buffer<ArrayBufferLike>
-    public cryptoKeyEdSa: string
-    public cloudKmsCryptoOperatorSa: string
-    public googleDriveUdSa: string
+    public gcpCryptoKeyEdSa: string
+    public gcpCloudKmsCryptoOperatorSa: string
+    public gcpGoogleDriveUdSa: string
     public appConfig: AppConfig
     public rpcAccessConfigs: RpcAccessConfigs
     constructor(
@@ -26,11 +26,11 @@ export class MountStorageService implements OnModuleInit {
         // get encrypted aes key from mount filesystem service
         this.encryptedAesKey = this.mountFilesystemService.encryptedAesKey()
         // get crypto key ed sa from mount filesystem service
-        this.cryptoKeyEdSa = this.mountFilesystemService.cryptoKeyEdSa()
+        this.gcpCryptoKeyEdSa = this.mountFilesystemService.gcpCryptoKeyEdSa()
         // get cloud kms crypto operator sa from mount filesystem service
-        this.cloudKmsCryptoOperatorSa = this.mountFilesystemService.cloudKmsCryptoOperatorSa()
+        this.gcpCloudKmsCryptoOperatorSa = this.mountFilesystemService.gcpCloudKmsCryptoOperatorSa()
         // get google drive ud sa from mount filesystem service
-        this.googleDriveUdSa = this.mountFilesystemService.googleDriveUdSa()
+        this.gcpGoogleDriveUdSa = this.mountFilesystemService.gcpGoogleDriveUdSa()
         // get rpc access configs from mount filesystem service
         this.rpcAccessConfigs = this.mountFilesystemService.rpcAccessConfigs()
         // set readiness watcher to true

@@ -6,12 +6,12 @@ import { AppConfig, RpcAccessConfigs } from "./types"
  * Pure function to get the crypto key ed sa
  * in case there is component that not depends on nestjs DI
  */
-export const getCryptoKeyEdSa = (
+export const getGcpCryptoKeyEdSa = (
     cryptoKeyEdSa?: string
 ) => {
     if (!cryptoKeyEdSa) {
         cryptoKeyEdSa = readFileSync(
-            envConfig().mountPath.terraform.cryptoKeyEdSa,
+            envConfig().mountPath.terraform.gcpCryptoKeyEdSa,
             "utf8"
         )
     }
@@ -96,12 +96,12 @@ export const getEncryptedJwtSecretKey = (
  * Pure function to get the crypto key ed sa
  * in case there is component that not depends on nestjs DI
  */
-export const getCloudKmsCryptoOperatorSa = (
+export const getGcpCloudKmsCryptoOperatorSa = (
     cloudKmsCryptoOperatorSa?: string
 ) => {
     if (!cloudKmsCryptoOperatorSa) {
         cloudKmsCryptoOperatorSa = readFileSync(
-            envConfig().mountPath.terraform.cloudKmsCryptoOperatorSa,
+            envConfig().mountPath.terraform.gcpCloudKmsCryptoOperatorSa,
             "utf8"
         )
     }
@@ -112,12 +112,12 @@ export const getCloudKmsCryptoOperatorSa = (
  * Pure function to get the google drive ud sa
  * in case there is component that not depends on nestjs DI
  */
-export const getGoogleDriveUdSa = (
+export const getGcpGoogleDriveUdSa = (
     googleDriveUdSa?: string
 ) => {
     if (!googleDriveUdSa) {
         googleDriveUdSa = readFileSync(
-            envConfig().mountPath.terraform.googleDriveUdSa,
+            envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
             "utf8"
         )
     }

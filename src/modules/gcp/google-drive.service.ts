@@ -26,7 +26,7 @@ export class GoogleDriveService {
         private readonly logger: WinstonLogger
     ) {
         this.auth = new GoogleAuth({
-            keyFile: this.mountStorageService.googleDriveUdSa,
+            keyFile: this.mountStorageService.gcpGoogleDriveUdSa,
             scopes: ["https://www.googleapis.com/auth/drive"],
         })
         this.drive = new drive_v3.Drive({ auth: this.auth })
