@@ -10,6 +10,7 @@ import path from "path"
 import { Readable } from "stream"
 import fs from "fs"
 import { WinstonLog } from "@modules/winston"
+import { envConfig } from "@modules/env"
 
 export interface UploadFilesParams {
     files: Array<Express.Multer.File>
@@ -26,7 +27,7 @@ export class GoogleDriveService {
         private readonly logger: WinstonLogger
     ) {
         this.auth = new GoogleAuth({
-            keyFile: this.mountStorageService.gcpGoogleDriveUdSa,
+            keyFile: envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
             scopes: ["https://www.googleapis.com/auth/drive"],
         })
         this.drive = new drive_v3.Drive({ auth: this.auth })
@@ -35,9 +36,9 @@ export class GoogleDriveService {
     private folderEnumToId(folderEnum: GoogleDriveFolderId): string {
         switch (folderEnum) {
         case GoogleDriveFolderId.Db:
-            return this.mountStorageService.appConfig.googleapis.drive.folderIds.db
+            return this.mountStorageService.appConfig.drive.folderIds.db
         case GoogleDriveFolderId.Keys:
-            return this.mountStorageService.appConfig.googleapis.drive.folderIds.keys
+            return this.mountStorageService.appConfig.drive.folderIds.keys
         }
     }
 

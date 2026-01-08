@@ -1,6 +1,4 @@
 import { CommandRunner, SubCommand } from "nest-commander"
-import { InjectPrimaryMongoose } from "@modules/databases"
-import { Connection } from "mongoose"
 import { ExecaService } from "@modules/execa"
 import path from "path"
 import { GoogleDriveService, GoogleDriveFolderId } from "@modules/gcp"
@@ -16,8 +14,6 @@ import { Option } from "nest-commander"
 @SubCommand({ name: "backup", description: "Backup MongoDB and upload to Google Drive" })
 export class BackupCommand extends CommandRunner {
     constructor(
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
     private readonly execaService: ExecaService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly dayjsService: DayjsService,
@@ -53,9 +49,7 @@ export class BackupCommand extends CommandRunner {
 
             const dumpDirName = `kani-mongo-dump-${backupedAt}`
             const archiveName = `kani-${backupedAt}.7z`
-
-            const backupRoot = mountPath.googleapis.googleDrive
-
+            const backupRoot = mountPath.data.backup
             const dumpDirPath = path.join(backupRoot, dumpDirName)
             const archivePath = path.join(backupRoot, archiveName)
             // the aes password is the same as the one used to encrypt the database

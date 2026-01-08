@@ -201,19 +201,20 @@ export const envConfig = () => ({
         keys: process.env.GEN_PATH_KEYS || join(process.cwd(), ".gen", "keys"),
     },
     mountPath: {
-        db: {
-            googleDrive: process.env.GOOGLE_DRIVE_MOUNT_PATH || join(process.cwd(), ".mount", "googleapis", "google-drive"),
+        data: {
+            restore: process.env.DATA_RESTORE_MOUNT_PATH || join(process.cwd(), ".mount", "data", "restore"),
+            backup: process.env.DATA_BACKUP_MOUNT_PATH || join(process.cwd(), ".mount", "data", "backup"),
         },
         terraform: {
             encryptedAesKey: process.env.TERRAFORM_ENCRYPTED_AES_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-aes.key"),
             encryptedJwtSecretKey: process.env.TERRAFORM_ENCRYPTED_JWT_SECRET_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-jwt-secret.key"),
-            gcpCryptoKeyEdSa: process.env.GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-crypto-key-ed-sa.json"),
-            gcpGoogleDriveUdSa: process.env.GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-google-drive-ud-sa.json"),
-            gcpCloudKmsCryptoOperatorSa: process.env.GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-cloud-kms-crypto-operator-sa.json"),
+            gcpCryptoKeyEdSa: process.env.TERRAFORM_GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-crypto-key-ed-sa.json"),
+            gcpGoogleDriveUdSa: process.env.TERRAFORM_GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-google-drive-ud-sa.json"),
+            gcpCloudKmsCryptoOperatorSa: process.env.TERRAFORM_GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-cloud-kms-crypto-operator-sa.json"),
         },
         config: {
-            app: process.env.APP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "app.json"),
-            rpcs: process.env.RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
+            app: process.env.CONFIG_APP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "app.json"),
+            rpcs: process.env.CONFIG_RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
         },
     },
     pollers: {

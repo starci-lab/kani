@@ -46,16 +46,13 @@ export interface GcpConfig {
   
 /* ================= Google APIs ================= */
   
-export interface GoogleDriveConfig {
+export interface DriveConfig {
     folderIds: {
       db: string
       keys: string
     }
-  }
+}
   
-export interface GoogleApisConfig {
-    drive: GoogleDriveConfig
-  }
   
 /* ================= Fees ================= */
   
@@ -90,7 +87,7 @@ export interface AppConfig {
     cryptoKeyName: string
   
     gcp: GcpConfig
-    googleapis: GoogleApisConfig
+    drive: DriveConfig
   
     smtp: SmtpConfig
     fees: FeesConfig

@@ -62,7 +62,7 @@ export class RestoreCommand extends CommandRunner {
             const mongoUri = `mongodb://${username}:${password}@${host}:${port}/?authSource=admin&readPreference=primary`
             const restoreAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
 
-            const restoreRoot = mountPath.googleapis.googleDrive
+            const restoreRoot = mountPath.data.restore
             const archiveName = `restore-${restoreAt}.7z`
             const archivePath = path.join(restoreRoot, archiveName)
             // delete the archive if it exists
