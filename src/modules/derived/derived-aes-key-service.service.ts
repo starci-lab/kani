@@ -37,7 +37,7 @@ export class DerivedAesKeyService implements OnModuleInit {
         } catch (error) {
             this.logger.error(
                 WinstonLog.ErrorDecryptingAesKey, 
-                error
+                error.message
             )
             this.key = crypto.randomBytes(32)
         }

@@ -3,9 +3,10 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { GcpKmsService } from "@modules/gcp"
 import { KeyManagementServiceClient } from "@google-cloud/kms"
-import { MountFilesystemService } from "@modules/filesystem"
-import { GenFilesystemService } from "@modules/filesystem"
+import { MountStorageService } from "@modules/filesystem"
 import { Option } from "nest-commander"
+import { promises as fsPromise } from "fs"
+import { join } from "path"
 
 @SubCommand({ 
     name: "generate", 
@@ -15,8 +16,7 @@ import { Option } from "nest-commander"
 export class GenerateCommand extends CommandRunner {
     constructor(
     private readonly gcpKmsService: GcpKmsService,
-    private readonly mountFilesystemService: MountFilesystemService,
-    private readonly genFilesystemService: GenFilesystemService,
+    private readonly mountStorageService: MountStorageService,
 
     @InjectWinston()
     private readonly logger: WinstonLogger,
@@ -26,11 +26,11 @@ export class GenerateCommand extends CommandRunner {
 
     async run(_: Array<string>, options: GenerateCommandOptions): Promise<void> {
         const lengthBytes = 32
-        const location = this.mountFilesystemService.apiKeys().gcp.location
-        const projectId = this.mountFilesystemService.apiKeys().gcp.projectId
+        const location = this.mountStorageService.appConfig.gcp.location
+        const projectId = this.mountStorageService.appConfig.gcp.projectId
         const client = new KeyManagementServiceClient({
             credentials: JSON.parse(
-                this.mountFilesystemService.cloudKmsCryptoOperatorSa(),
+                this.mountStorageService.gcpCloudKmsCryptoOperatorSa,
             ),
         })
         const locationName = client.locationPath(projectId, location)
@@ -58,7 +58,10 @@ export class GenerateCommand extends CommandRunner {
         }
         this.logger.info(WinstonLog.KeyDecryptionCheckSuccess)
         // store the encrypted data in the filesystem
-        await this.genFilesystemService.writeEncryptedKey(options.name, encryptedData)
+        await fsPromise.writeFile(
+            join(process.cwd(), "dump", `${options.name}.txt`),
+            encryptedData.toString("base64")
+        )
         this.logger.info(WinstonLog.KeyWrittenSuccess, { keyName: options.name })
         // exit the app
         process.exit(0)

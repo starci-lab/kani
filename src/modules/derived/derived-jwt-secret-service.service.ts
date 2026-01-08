@@ -38,7 +38,7 @@ export class DerivedJwtSecretService implements OnModuleInit {
         } catch (error) {
             this.logger.error(
                 WinstonLog.ErrorDecryptingJwtSecretKey, 
-                error
+                error.message
             )
             this.key = crypto.randomBytes(32)
         }
