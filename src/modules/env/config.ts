@@ -207,7 +207,7 @@ export const envConfig = () => ({
         },
         terraform: {
             encryptedAesKey: process.env.TERRAFORM_ENCRYPTED_AES_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-aes.key"),
-            encryptedJwtSecretKey: process.env.TERRAFORM_ENCRYPTED_JWT_SECRET_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-jwt-secret.key"),
+            encryptedJwtSecretKey: process.env.TERRAFORM_ENCRYPTED_JWT_SECRET_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-jwt-secret.key"),
             gcpCryptoKeyEdSa: process.env.TERRAFORM_GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-crypto-key-ed-sa.json"),
             gcpGoogleDriveUdSa: process.env.TERRAFORM_GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-google-drive-ud-sa.json"),
             gcpCloudKmsCryptoOperatorSa: process.env.TERRAFORM_GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-cloud-kms-crypto-operator-sa.json"),
