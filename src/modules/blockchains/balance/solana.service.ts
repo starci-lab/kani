@@ -9,6 +9,7 @@ import {
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { 
+    BotVersion,
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
@@ -51,7 +52,7 @@ import {
 import { fetchToken } from "@solana-program/token"
 import { SolanaAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
-import { SignerService } from "../signers"
+import { SignerService, SignerV2Service } from "../signers"
 import { BotSchema, TokenSchema } from "@modules/databases"
 import Decimal from "decimal.js"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -68,6 +69,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
+        private readonly signerV2Service: SignerV2Service,
         @InjectWinston()
         private readonly logger: winstonLogger,
     ) { }
@@ -184,31 +186,55 @@ export class SolanaBalanceService implements IBalanceService {
                 const swapInstructions = swapTransactionMessage.instructions
                 // we get the latest blockhash
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                return await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        const transactionMessage = pipe(
-                            createTransactionMessage({ version: 0 }),
-                            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                            (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
-                        )
-                        const transaction = compileTransaction(transactionMessage)
-                        // sign the transaction
-                        const signedTransaction = await signTransaction(
-                            [signer.keyPair],
-                            transaction,
-                        )
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        const txHash = transactionSignature.toString()
-                        assertIsSendableTransaction(signedTransaction)
-                        assertIsTransactionWithinSizeLimit(signedTransaction)
-                        return {
-                            txHash,
-                            solanaTx: signedTransaction,
-                        }
-                    },
-                })
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSolanaSigner({
+                        bot,
+                        action: async (signer) => {
+                            const transactionMessage = pipe(
+                                createTransactionMessage({ version: 0 }),
+                                (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
+                                (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                                (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
+                            )
+                            const transaction = compileTransaction(transactionMessage)
+                            // sign the transaction
+                            const signedTransaction = await signTransaction(
+                                [signer.keyPair],
+                                transaction,
+                            )
+                            const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                            const txHash = transactionSignature.toString()
+                            assertIsSendableTransaction(signedTransaction)
+                            assertIsTransactionWithinSizeLimit(signedTransaction)
+                            return {
+                                txHash,
+                                solanaTx: signedTransaction,
+                            }
+                        },
+                    })
+                } else {
+                    throw new Error("Solana transaction not prepared")
+                    // return await this.signerV2Service.withSolanaSigner({
+                    //     bot,
+                    //     action: async (signer) => {
+                    //         const transactionMessage = pipe(
+                    //             createTransactionMessage({ version: 0 }),
+                    //             (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
+                    //             (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    //             (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
+                    //             (tx) => compileTransaction(tx),
+                    //             (tx) => new Uint8Array(getTransactionEncoder().encode(tx))
+                    //         )
+                    //         const { signed_transaction } = await signer.signSolanaTransaction({ 
+                    //             transactionBytes: transactionMessage,
+                    //         })
+                    //         return {
+                    //             txHash: signed_transaction,
+                    //             solanaTx: signed_transaction,
+                    //         }
+                    //     },
+                    // })
+                }
             },
         })
     }

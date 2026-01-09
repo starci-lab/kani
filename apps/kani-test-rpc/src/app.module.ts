@@ -11,6 +11,7 @@ import { AppService } from "./app.service"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { ClientsModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
+import { PrivyModule } from "@modules/privy"
 @Module({
     imports: [
         EnvModule.forRoot(),
@@ -39,6 +40,9 @@ import { ScheduleModule } from "@nestjs/schedule"
             isGlobal: true,
         }),
         ClientsModule.register({
+            isGlobal: true,
+        }),
+        PrivyModule.register({
             isGlobal: true,
         }),
         P2CBalancerModule.register({

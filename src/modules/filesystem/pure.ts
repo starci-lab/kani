@@ -123,3 +123,36 @@ export const getGcpGoogleDriveUdSa = (
     }
     return gcpGoogleDriveUdSa
 }
+
+/**
+ * Pure function to get the privy app secret
+ * in case there is component that not depends on nestjs DI
+ */
+export const getPrivyAppSecretKey = (
+    privyAppSecretKey?: string
+) => {
+    if (!privyAppSecretKey) {
+        privyAppSecretKey = readFileSync(
+            envConfig().mountPath.terraform.privyAppSecretKey,
+            "utf8"
+        )
+    }
+
+    return privyAppSecretKey
+}
+
+/**
+ * Pure function to get the privy signer public key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getPrivySignerPrivateKey = (
+    privySignerPrivateKey?: string
+) => {
+    if (!privySignerPrivateKey) {
+        privySignerPrivateKey = readFileSync(
+            envConfig().mountPath.terraform.privySignerPrivateKeyKey,
+            "utf8"
+        )
+    }
+    return privySignerPrivateKey
+}

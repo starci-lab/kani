@@ -10,7 +10,9 @@ import {
     BotType,
     ExplorerId, 
     GraphQLTypeBotType, 
-    GraphQLTypeExplorerId
+    GraphQLTypeExplorerId,
+    BotVersion,
+    GraphQLTypeBotVersion
 } from "../enums"
 import { PositionSchema } from "./position.schema"
 /**
@@ -41,9 +43,15 @@ export class BotSchema extends AbstractSchema {
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
-    @Prop({ type: MongooseSchema.Types.Mixed })
+    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
         encryptedPrivateKeyPayload: EncryptedPayload
-        
+
+    /**
+     * The encrypted privy wallet id corresponding to the account address.
+     * This value must be securely encrypted before being stored in the database.
+     */
+    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+        encryptedPrivyWalletId: EncryptedPayload
     /**
      * The blockchain network where this bot is operating (e.g., SUI, SOLANA).
      * This determines which on-chain protocol and RPC endpoints are used.
@@ -209,6 +217,13 @@ export class BotSchema extends AbstractSchema {
         nullable: true,
     })
         pnl24h?: number
+
+    @Field(() => GraphQLTypeBotVersion, {
+        description: "The version of the bot",
+        defaultValue: BotVersion.V1,
+    })
+    @Prop({ type: String, enum: BotVersion, required: true, default: BotVersion.V1 })
+        version: BotVersion
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

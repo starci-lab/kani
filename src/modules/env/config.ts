@@ -211,6 +211,8 @@ export const envConfig = () => ({
             gcpCryptoKeyEdSa: process.env.TERRAFORM_GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-crypto-key-ed-sa.json"),
             gcpGoogleDriveUdSa: process.env.TERRAFORM_GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-google-drive-ud-sa.json"),
             gcpCloudKmsCryptoOperatorSa: process.env.TERRAFORM_GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-cloud-kms-crypto-operator-sa.json"),
+            privyAppSecretKey: process.env.TERRAFORM_PRIVY_APP_SECRET_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "privy-app-secret.key"),
+            privySignerPrivateKeyKey: process.env.TERRAFORM_PRIVY_SIGNER_PRIVATE_KEY_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "privy-signer-private-key.key"),
         },
         config: {
             app: process.env.CONFIG_APP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "app.json"),

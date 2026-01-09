@@ -65,7 +65,17 @@ export interface SwapReferralFeeConfig {
     feeToAddress: string
     referralTokenAccountAddress: string
     bps: number
-  }
+}
+
+/* ================= Privy ================= */
+
+export interface PrivyConfig {
+    appId: string
+    signer: {
+        id: string
+        publicKey: string
+    }
+}
   
 export interface FeesConfig {
     openPosition: {
@@ -85,10 +95,9 @@ export interface AppConfig {
     jupiter: string
     sentryDsn: string
     cryptoKeyName: string
-  
     gcp: GcpConfig
     drive: DriveConfig
-  
+    privy: PrivyConfig
     smtp: SmtpConfig
     fees: FeesConfig
 }

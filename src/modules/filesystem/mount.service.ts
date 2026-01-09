@@ -7,7 +7,9 @@ import {
     getEncryptedAesKey,
     getAppConfig,
     getGcpCloudKmsCryptoOperatorSa,
-    getGcpGoogleDriveUdSa
+    getGcpGoogleDriveUdSa,
+    getPrivySignerPrivateKey,
+    getPrivyAppSecretKey
 } from "./pure"
 /**
  * Service responsible for reading secrets mounted into the container filesystem.
@@ -47,5 +49,13 @@ export class MountFilesystemService {
 
     rpcAccessConfigs(): RpcAccessConfigs {
         return getRpcAccessConfigs()
+    }
+
+    privySignerPrivateKey(): string {
+        return getPrivySignerPrivateKey()
+    }
+
+    privyAppSecretKey(): string {
+        return getPrivyAppSecretKey()
     }
 }

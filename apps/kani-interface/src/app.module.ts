@@ -28,6 +28,7 @@ import { ClientsModule, TxBuilderModule } from "@modules/blockchains"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { EventModule, KafkaMode } from "@modules/event"
+import { PrivyModule } from "@modules/privy"
 
 @Module({
     imports: [
@@ -44,6 +45,9 @@ import { EventModule, KafkaMode } from "@modules/event"
             useCluster: envConfig().redis.adapter.useCluster,
         }),
         FormulasModule.register({
+            isGlobal: true,
+        }),
+        PrivyModule.register({
             isGlobal: true,
         }),
         EventEmitterModule.forRoot(),

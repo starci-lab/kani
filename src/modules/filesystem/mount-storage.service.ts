@@ -12,6 +12,8 @@ export class MountStorageService implements OnModuleInit {
     public gcpGoogleDriveUdSa: string
     public appConfig: AppConfig
     public rpcAccessConfigs: RpcAccessConfigs
+    public privySignerPrivateKey: string
+    public privyAppSecretKey: string
     constructor(
         private readonly mountFilesystemService: MountFilesystemService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -33,6 +35,10 @@ export class MountStorageService implements OnModuleInit {
         this.gcpGoogleDriveUdSa = this.mountFilesystemService.gcpGoogleDriveUdSa()
         // get rpc access configs from mount filesystem service
         this.rpcAccessConfigs = this.mountFilesystemService.rpcAccessConfigs()
+        // get privy signer public key from mount filesystem service
+        this.privySignerPrivateKey = this.mountFilesystemService.privySignerPrivateKey()
+        // get privy app secret from mount filesystem service
+        this.privyAppSecretKey = this.mountFilesystemService.privyAppSecretKey()
         // set readiness watcher to true
         this.readinessWatcherFactoryService.setReady(MountStorageService.name)
     }
