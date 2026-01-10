@@ -11,7 +11,7 @@ import {
     PrimaryMemoryStorageService,
     DexId,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
@@ -40,6 +40,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
+        private readonly dayjsService: DayjsService,
     ) { }
 
     // ============================================
@@ -83,6 +84,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             rewards: state.rewardInfos.filter(
                 rewardInfo => rewardInfo.tokenMint.toString() !== "11111111111111111111111111111111"
             ),
+            feeGrowthGlobalA: new BN(state.feeGrowthGlobal0X64.toString()),
+            feeGrowthGlobalB: new BN(state.feeGrowthGlobal1X64.toString()),
+            snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError(
             [

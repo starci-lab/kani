@@ -11,7 +11,7 @@ import {
 } from "../../interfaces"
 import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import { SignerService } from "../../signers"
-import { PrimaryMemoryStorageService, RaydiumPositionMetadata } from "@modules/databases"
+import { BotVersion, PrimaryMemoryStorageService, RaydiumPositionMetadata } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
@@ -50,6 +50,7 @@ import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
 import { PersonalPositionState } from "./beets"
+import { PrivySignService } from "@modules/privy"
 
 @Injectable()
 export class RaydiumOpenPositionActionService implements IOpenActionService {
@@ -59,6 +60,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         private readonly tickMathService: TickMathService,
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly privySignService: PrivySignService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -136,43 +138,68 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc }) => {
-                return await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                        const transactionMessage = pipe(
-                            createTransactionMessage({ version: 0 }),
-                            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                            (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
-                            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                        )
-                        const transaction = compileTransaction(transactionMessage)
-                        // sign the transaction
-                        const signedTransaction = await signTransaction([signer.keyPair, mintKeyPair.keyPair], transaction)
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        assertIsSendableTransaction(signedTransaction)
-                        assertIsTransactionWithinSizeLimit(signedTransaction)   
-                        const txHash = transactionSignature.toString()
-                        // get the raydium position metadata
-                        const metadata: RaydiumPositionMetadata = {
-                            nftMintAddress: mintKeyPair.address.toString(),
-                            ataAddress: ataAddress.toString(),
-                        }
-                        return {
-                            txHash,
-                            solanaTx: signedTransaction,
-                            feeAmountA,
-                            feeAmountB,
-                            tickLower,
-                            tickUpper,
-                            amountA,
-                            amountB,
-                            metadata,  
-                            positionId: personalPosition.toString(),
-                        }
-                    },
-                })
-            },
+                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
+                    (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                )
+                const transaction = compileTransaction(transactionMessage)
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSolanaSigner({
+                        bot,
+                        action: async (signer) => {
+                            const signedTransaction = await signTransaction([signer.keyPair, mintKeyPair.keyPair], transaction)
+                            const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                            const txHash = transactionSignature.toString()
+                            assertIsSendableTransaction(signedTransaction)
+                            assertIsTransactionWithinSizeLimit(signedTransaction)   
+                            const metadata: RaydiumPositionMetadata = {
+                                nftMintAddress: mintKeyPair.address.toString(),
+                                ataAddress: ataAddress.toString(),
+                            }
+                            return {
+                                txHash,
+                                feeAmountA,
+                                feeAmountB,
+                                tickLower,
+                                tickUpper,
+                                amountA,
+                                amountB,
+                                metadata,  
+                                positionId: personalPosition.toString(),
+                            }
+                        },
+                    })
+                } else {
+                    const signedTransaction = await this.privySignService.signSolanaTransaction({
+                        lifetimeConstraint: {
+                            blockhash: latestBlockhash.blockhash,
+                            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                        },
+                        transaction,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                        walletId: bot.privyMetadata.walletId,
+                    })
+                    const metadata: RaydiumPositionMetadata = {
+                        nftMintAddress: mintKeyPair.address.toString(),
+                        ataAddress: ataAddress.toString(),
+                    }
+                    return {
+                        txHash: signedTransaction.txHash,
+                        solanaTx: signedTransaction.signedTransaction,
+                        feeAmountA,
+                        feeAmountB,
+                        tickLower,
+                        tickUpper,
+                        amountA,
+                        amountB,
+                        metadata,
+                        positionId: personalPosition.toString(),
+                    }
+                }
+            },  
         })
     }
 

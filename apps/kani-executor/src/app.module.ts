@@ -19,7 +19,7 @@ import {
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
-import { MutexModule } from "@modules/lock"
+import { LeaseModule } from "@modules/lock"
 import { 
     TxBuilderModule, 
     ExitStrategyEngineModule, 
@@ -115,7 +115,7 @@ import { KafkaMode } from "@modules/event"
         SpinnerModule.register({
             isGlobal: true,
         }),
-        MutexModule.register({
+        LeaseModule.register({
             isGlobal: true,
         }),
         TxBuilderModule.register({

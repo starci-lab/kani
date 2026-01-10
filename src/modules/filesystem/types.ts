@@ -1,30 +1,5 @@
 import { ChainId } from "@typedefs"
 
-export interface SmtpConfig {
-    host: string
-    port: number
-    user: string
-    key: string
-    from: string
-}
-
-export interface GcpConfig {
-    kms: KmsConfig
-}
-
-export interface KmsConfig {
-    keyName: string
-}
-
-export interface SmtpConfig {
-    host: string
-    port: number
-    user: string
-    password: string
-    secure: boolean
-    from: string
-}
-
 export enum RpcAccessType {
     Read = "read",
     Write = "write",
@@ -51,48 +26,78 @@ export interface RpcAccessConfigs {
     [ChainId.Sui]: Array<RpcAccessConfig>
 }
 
-// API keys for external services
-export interface ApiKeys {
-    gcp: {
-        projectId: string
-        location: string
+/* ================= SMTP ================= */
+
+export interface SmtpConfig {
+    host: string
+    port: number
+    user: string
+    password: string
+    from: string
+    secure: boolean
+  }
+  
+/* ================= GCP ================= */
+  
+export interface GcpConfig {
+    projectId: string
+    location: string
+  }
+  
+/* ================= Google APIs ================= */
+  
+export interface DriveConfig {
+    folderIds: {
+      db: string
+      keys: string
     }
-    googleapis: {
-        drive: {
-            folderIds: {
-                db: string
-                keys: string
-            }
-        }
+}
+  
+  
+/* ================= Fees ================= */
+  
+export interface OpenPositionFeeConfig {
+    feeToAddress: string
+    feeRate: number
+  }
+  
+export interface SwapReferralFeeConfig {
+    feeToAddress: string
+    referralTokenAccountAddress: string
+    bps: number
+}
+
+/* ================= Privy ================= */
+
+export interface PrivyConfig {
+    appId: string
+    signer: {
+        id: string
+        publicKey: string
     }
+}
+  
+export interface FeesConfig {
+    openPosition: {
+      solana: OpenPositionFeeConfig
+      sui: OpenPositionFeeConfig
+    }
+    swapReferral: {
+      solana: SwapReferralFeeConfig
+      sui: SwapReferralFeeConfig
+    }
+  }
+  
+/* ================= ROOT CONFIG ================= */
+  
+export interface AppConfig {
+    // api keys & external services
     jupiter: string
     sentryDsn: string
     cryptoKeyName: string
-    fees: {
-        openPosition: {
-            solana: {
-                feeToAddress: string
-                feeRate: number
-            }
-            sui: {
-                feeToAddress: string
-                feeRate: number
-            }
-        }
-        swapReferral: {
-            solana: {
-                referralTokenAccountAddress: string
-                bps: number
-            }
-            sui: {
-                feeToAddress: string
-                bps: number
-            }
-        }
-    }
-}
-
-export interface Keys {
-    encryptedAesKey: string
-    encryptedJwtSecret: string
+    gcp: GcpConfig
+    drive: DriveConfig
+    privy: PrivyConfig
+    smtp: SmtpConfig
+    fees: FeesConfig
 }

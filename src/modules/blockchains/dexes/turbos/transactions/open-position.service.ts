@@ -52,7 +52,7 @@ export class OpenPositionTxbService {
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
-        const feeToAddress = this.mountStorageService.apiKeys.fees.openPosition.sui.feeToAddress
+        const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
             throw new FeeToAddressNotFoundException("Fee to address not found")
         }

@@ -140,7 +140,8 @@ export const envConfig = () => ({
             sealedJwtSecretKey: parseInt(process.env.CACHE_SEALED_JWT_SECRET_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             sealedAesKey: parseInt(process.env.CACHE_SEALED_AES_KEY_TTL || ms("5m").toString(), 10), // 5 mins
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
-            poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || ms("1m").toString(), 10), // 60s
+            poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
+            pythPrice: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
             responses: {
                 fees: parseInt(process.env.CACHE_RESPONSES_FEES_TTL || ms("5m").toString(), 10), // 5 minutes
@@ -200,19 +201,22 @@ export const envConfig = () => ({
         keys: process.env.GEN_PATH_KEYS || join(process.cwd(), ".gen", "keys"),
     },
     mountPath: {
-        googleapis: {
-            googleDrive: process.env.GOOGLE_DRIVE_MOUNT_PATH || join(process.cwd(), ".mount", "googleapis", "google-drive"),
+        data: {
+            restore: process.env.DATA_RESTORE_MOUNT_PATH || join(process.cwd(), ".mount", "data", "restore"),
+            backup: process.env.DATA_BACKUP_MOUNT_PATH || join(process.cwd(), ".mount", "data", "backup"),
         },
-        gcp: {
-            cryptoKeyEdSa: process.env.GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "crypto-key-ed-sa.json"),
-            googleDriveUdSa: process.env.GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "google-drive-ud-sa.json"),
-            cloudKmsCryptoOperatorSa: process.env.GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "gcp", "cloud-kms-crypto-operator-sa.json"),
+        terraform: {
+            encryptedAesKey: process.env.TERRAFORM_ENCRYPTED_AES_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-aes.key"),
+            encryptedJwtSecretKey: process.env.TERRAFORM_ENCRYPTED_JWT_SECRET_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "encrypted-jwt-secret.key"),
+            gcpCryptoKeyEdSa: process.env.TERRAFORM_GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-crypto-key-ed-sa.json"),
+            gcpGoogleDriveUdSa: process.env.TERRAFORM_GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-google-drive-ud-sa.json"),
+            gcpCloudKmsCryptoOperatorSa: process.env.TERRAFORM_GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "gcp-cloud-kms-crypto-operator-sa.json"),
+            privyAppSecretKey: process.env.TERRAFORM_PRIVY_APP_SECRET_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "privy-app-secret.key"),
+            privySignerPrivateKey: process.env.TERRAFORM_PRIVY_SIGNER_PRIVATE_KEY_MOUNT_PATH || join(process.cwd(), ".mount", "terraform", "privy-signer-private-key.key"),
         },
         config: {
-            keys: process.env.KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "keys.json"),
-            smtp: process.env.SMTP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "smtp.json"),
-            rpcs: process.env.RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
-            apiKeys: process.env.API_KEYS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "api-keys.json"),
+            app: process.env.CONFIG_APP_MOUNT_PATH || join(process.cwd(), ".mount", "config", "app.json"),
+            rpcs: process.env.CONFIG_RPCS_MOUNT_PATH || join(process.cwd(), ".mount", "config", "rpcs.json"),
         },
     },
     pollers: {
@@ -225,6 +229,7 @@ export const envConfig = () => ({
         },
     },
     timeConfig: {
+        lease: parseInt(process.env.TIME_CONFIG_LEASE || ms("5m").toString(), 10), // 5 minutes
         retry: {
             maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call
             delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || "1000", 10), // 1s delay between retries
@@ -256,6 +261,8 @@ export const envConfig = () => ({
         completedJobCount: parseInt(process.env.BULLMQ_COMPLETED_JOB_COUNT || "1000", 10),
         failedJobCount: parseInt(process.env.BULLMQ_FAILED_JOB_COUNT || "1000", 10),
         timeout: parseInt(process.env.BULLMQ_TIMEOUT || ms("30s").toString(), 10),
+        stalledInterval: parseInt(process.env.BULLMQ_STALLED_INTERVAL || ms("30s").toString(), 10),
+        maxStalledCount: parseInt(process.env.BULLMQ_MAX_STALLED_COUNT || "1", 10),
     },
     cors: {
         origins: Array.from({ length: 10 }, (_, i) =>

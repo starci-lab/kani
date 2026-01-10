@@ -152,6 +152,7 @@ export class MeteoraFeesService implements IFeesService {
         return {
             tokenA: computeDenomination(totalFeeX, tokenA.decimals),
             tokenB: computeDenomination(totalFeeY, tokenB.decimals),
+            snapshotAt: state.dynamic.snapshotAt,
         }
     }
 }

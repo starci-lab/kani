@@ -98,6 +98,7 @@ export class FeesService {
             tokenA: fees.tokenA.toNumber(),
             tokenB: fees.tokenB.toNumber(),
             lastFetchedAt: lastFetchedAt.toDate(),
+            lastSnapshotAt: fees.snapshotAt.toDate(),
         }
         await this.cacheManager.set(
             createCacheKey(

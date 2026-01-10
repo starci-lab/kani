@@ -22,7 +22,6 @@ import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
 import { ClosePositionPayload } from "../types"
 import { v4 } from "uuid"
-import { getMutexKey, MutexKey, MutexService } from "@modules/lock"
 import { Connection } from "mongoose"
 import { envConfig } from "@modules/env"
 import { ExitStrategyEngineOutputService } from "../exit-strategy-engine"
@@ -30,6 +29,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
+import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -49,7 +49,7 @@ export class ClosePositionOrchestratorService {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
-        private readonly mutexService: MutexService,
+        private readonly leaseService: LeaseService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
@@ -64,13 +64,13 @@ export class ClosePositionOrchestratorService {
         }: EnqueueClosePositionParams,
     ) {
         /**
-         * Retrieve mutex to prevent concurrent actions on the same bot
+         * Atomic lock guard:
+         * Prevent concurrent actions on the same bot.
          */
-        const mutex = this.mutexService.mutex(
-            getMutexKey(MutexKey.Action, bot.id),
+        const lease = this.leaseService.lease(
+            getLeaseKey(LeaseKey.Action, bot.id),
         )
-        // if the mutex is locked, skip the execution
-        if (mutex.isLocked()) {
+        if (lease.isLocked()) {
             return
         }
         /**
@@ -134,44 +134,63 @@ export class ClosePositionOrchestratorService {
             )
             return
         }
-        /* 
-         * Lock the mutex to prevent concurrent actions on the same bot
-         */
-        const releaser = await mutex.acquire()
-        setTimeout(
-            releaser, 
-            envConfig().timeConfig.interval.mutex
-        )
-        /**
-         * Add close position job to the queue
-         */
-        const [ jobRaw ] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    liquidityPool: liquidityPool.id,
-                    bot: bot.id,
-                    executor: envConfig().botExecutor.executorId,
-                    type: JobType.ClosePosition,
-                    status: JobStatus.Pending,
+        // try to lock the lease
+        const leaseId = v4()
+        lease.tryLock(leaseId)
+        const session = await this.connection.startSession()
+        try {
+            await session.withTransaction(async () => {
+            /**
+             * Persist job record.
+             */
+                const [ jobRaw ] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            liquidityPool: liquidityPool.id,
+                            bot: bot.id,
+                            executor: envConfig().botExecutor.executorId,
+                            type: JobType.ClosePosition,
+                            status: JobStatus.Pending,
+                            leaseId,
+                        }
+                    ]
+                )
+                /**
+            * Add close position job to the queue
+            */
+                await this.closePositionQueue.add(
+                    v4(),
+                    {
+                        jobId: jobRaw.toJSON().id,
+                        state: this.superjson.stringify(state),
+                        bot,
+                        leaseId,
+                    }
+                )
+                /**
+            * Structured logging for observability.
+            */
+                this.logger.verbose(
+                    WinstonLog.ClosePositionEnqueued, {
+                        botId: bot.id,
+                        jobId: jobRaw.toJSON().id,
+                        liquidityPoolId,
+                    }
+                )
+            })
+        } catch (error) {
+            // unlock the lease if the job is not enqueued
+            lease.unlock(leaseId)
+            // log the error
+            this.logger.error(
+                WinstonLog.ClosePositionEnqueueFailed, {
+                    botId: bot.id,
+                    error: error.message,
                 }
-            ])
-        await this.closePositionQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                state: this.superjson.stringify(state),
-                bot,
-            }
-        )
-        this.logger.verbose(
-            WinstonLog.ClosePositionEnqueued, {
-                botId: bot.id,
-                jobId: jobRaw.toJSON().id,
-                liquidityPoolId,
-            }
-        )
+            )
+        }
     }
 
     async prepare(

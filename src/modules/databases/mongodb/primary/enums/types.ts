@@ -70,7 +70,7 @@ registerEnumType(GraphQLTypeQuoteRatioStatus, {
 })
 
 export enum BotType {
-    Standard = "standard",   
+    Standard = "standard",
     Privy = "privy",
 }
 
@@ -150,9 +150,9 @@ export enum JobStatus {
     Completed = "completed",
     Failed = "failed",
 }
-  
+
 export const GraphQLTypeJobStatus = createEnumType(JobStatus)
-  
+
 registerEnumType(GraphQLTypeJobStatus, {
     name: "JobStatus",
     description: "Represents the lifecycle status of a background job",
@@ -173,4 +173,27 @@ registerEnumType(GraphQLTypeJobStatus, {
             description: "The job has failed",
         },
     },
-})
+}
+)
+
+export enum BotVersion {
+    V1 = "v1",
+    V2 = "v2",
+}
+
+export const GraphQLTypeBotVersion = createEnumType(BotVersion)
+
+registerEnumType(
+    GraphQLTypeBotVersion, {
+        name: "BotVersion",
+        description: "The version of the bot",
+        valuesMap: {
+            [BotVersion.V1]: {
+                description: "The bot version 1"
+            },
+            [BotVersion.V2]: {
+                description: "The bot version 2"
+            }
+        }
+    }
+)

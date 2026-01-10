@@ -37,6 +37,10 @@ export class JobSchema extends AbstractSchema {
     @Prop({ type: String, enum: JobStatus })
         status: JobStatus
     
+    @Field(() => String, { description: "The lease id of the job" })
+    @Prop({ type: String, required: true })
+        leaseId: string
+
     @Field(() => String, { description: "The transaction hash of the job" })
     @Prop({ type: String, required: false })
         txHash?: string

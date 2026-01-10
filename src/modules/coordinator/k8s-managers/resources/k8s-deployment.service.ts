@@ -258,39 +258,41 @@ export class DeploymentManagerService  {
                                         },
                                     },
                                     volumeMounts: [
+                                        // terraform
                                         {
-                                            mountPath: envConfig().mountPath.keys.aes.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.gcpCloudKmsCryptoOperatorSa.replace(/\/data$/, ""),
+                                            name: "gcp-cloud-kms-crypto-operator-sa",
+                                            readOnly: true
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.terraform.gcpCryptoKeyEdSa.replace(/\/data$/, ""),
+                                            name: "gcp-crypto-key-ed-sa",
+                                            readOnly: true
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.terraform.gcpGoogleDriveUdSa.replace(/\/data$/, ""),
+                                            name: "gcp-google-drive-ud-sa",
+                                            readOnly: true
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.terraform.encryptedAesKey.replace(/\/data$/, ""),
                                             name: "aes",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.gcp.cryptoKeyEdSa.replace(/\/data$/, ""),
-                                            name: "crypto-key-ed-sa",
-                                            readOnly: true
-                                        },
-                                        {
-                                            mountPath: envConfig().mountPath.keys.jwtSecret.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.encryptedJwtSecretKey.replace(/\/data$/, ""),
                                             name: "jwt-secret",
                                             readOnly: true
                                         },
+                                        // config
                                         {
-                                            mountPath: envConfig().mountPath.config.smtp.replace(/\/data$/, ""),
-                                            name: "smtp",
-                                            readOnly: true
-                                        },
-                                        {
-                                            mountPath: envConfig().mountPath.config.apiKeys.replace(/\/data$/, ""),
-                                            name: "api-keys",
+                                            mountPath: envConfig().mountPath.config.app.replace(/\/data$/, ""),
+                                            name: "app",
                                             readOnly: true
                                         },
                                         {
                                             mountPath: envConfig().mountPath.config.rpcs.replace(/\/data$/, ""),
                                             name: "rpcs",
-                                            readOnly: true
-                                        },
-                                        {
-                                            mountPath: envConfig().mountPath.gcp.googleDriveUdSa.replace(/\/data$/, ""),
-                                            name: "google-drive-ud-sa",
                                             readOnly: true
                                         },
                                     ],
@@ -304,16 +306,29 @@ export class DeploymentManagerService  {
                                 fsGroupChangePolicy: "Always",
                             },
                             volumes: [
+                                // terraform
+                                {
+                                    name: "gcp-cloud-kms-crypto-operator-sa",
+                                    secret: {
+                                        secretName: "gcp-cloud-kms-crypto-operator-sa",
+                                    },
+                                },
+                                {
+                                    name: "gcp-crypto-key-ed-sa",
+                                    secret: {
+                                        secretName: "gcp-crypto-key-ed-sa",
+                                    },
+                                },
+                                {
+                                    name: "gcp-google-drive-ud-sa",
+                                    secret: {
+                                        secretName: "gcp-google-drive-ud-sa",
+                                    },
+                                },
                                 {
                                     name: "aes",
                                     secret: {
                                         secretName: "aes",
-                                    },
-                                },
-                                {
-                                    name: "crypto-key-ed-sa",
-                                    secret: {
-                                        secretName: "crypto-key-ed-sa",
                                     },
                                 },
                                 {
@@ -322,28 +337,17 @@ export class DeploymentManagerService  {
                                         secretName: "jwt-secret",
                                     },
                                 },
+                                // config
                                 {
-                                    name: "smtp",
+                                    name: "app",
                                     secret: {
-                                        secretName: "smtp",
-                                    },
-                                },  
-                                {
-                                    name: "api-keys",
-                                    secret: {
-                                        secretName: "api-keys",
+                                        secretName: "app",
                                     },
                                 },
                                 {
                                     name: "rpcs",
                                     secret: {
                                         secretName: "rpcs",
-                                    },
-                                },
-                                {
-                                    name: "google-drive-ud-sa",
-                                    secret: {
-                                        secretName: "google-drive-ud-sa",
                                     },
                                 },
                             ],

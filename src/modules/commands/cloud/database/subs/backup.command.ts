@@ -1,6 +1,4 @@
 import { CommandRunner, SubCommand } from "nest-commander"
-import { InjectPrimaryMongoose } from "@modules/databases"
-import { Connection } from "mongoose"
 import { ExecaService } from "@modules/execa"
 import path from "path"
 import { GoogleDriveService, GoogleDriveFolderId } from "@modules/gcp"
@@ -19,8 +17,6 @@ import { Option } from "nest-commander"
 })
 export class BackupCommand extends CommandRunner {
     constructor(
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
     private readonly execaService: ExecaService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly dayjsService: DayjsService,
@@ -54,6 +50,7 @@ export class BackupCommand extends CommandRunner {
 
           const backupedAt = this.dayjsService.now().format("YYYY-MM-DD_HH-mm-ss")
 
+<<<<<<< HEAD
           const dumpDirName = `kani-mongo-dump-${backupedAt}`
           const archiveName = `kani-${backupedAt}.7z`
 
@@ -133,6 +130,91 @@ export class BackupCommand extends CommandRunner {
           process.exit(1)
       }
   }
+=======
+            const dumpDirName = `kani-mongo-dump-${backupedAt}`
+            const archiveName = `kani-${backupedAt}.7z`
+            const backupRoot = mountPath.data.backup
+            const dumpDirPath = path.join(backupRoot, dumpDirName)
+            const archivePath = path.join(backupRoot, archiveName)
+            // the aes password is the same as the one used to encrypt the database
+            const aesPassword = this.derivedAesKeyService.key
+            // ================================
+            // MongoDB dump
+            // ================================
+            const mongodumpArgs: Array<string> = [
+                `--uri=${mongoUri}`,
+                `--out=${dumpDirPath}`,
+                `--db=${dbName}`,
+                "--gzip",
+                "--quiet",
+            ]
+            await this.execaService.exec(
+                "mongodump", 
+                mongodumpArgs
+            )
+            this.logger.info(WinstonLog.MongoDumpCompleted, { dumpDirName })
+            // ================================
+            // 7z compress + encrypt
+            // ================================
+            const sevenZArgs: Array<string> = [
+                "a",
+                archivePath,
+                dumpDirPath,
+                "-mx=9",
+                "-mmt=on",
+                "-mhe=on",
+            ]
+            if (!withoutPassword) {
+                sevenZArgs.push(`-p${aesPassword}`)
+            }
+            sevenZArgs.push("-y")
+            await this.execaService.exec(
+                "7z",
+                sevenZArgs
+            )
+            this.logger.info(WinstonLog.SevenZCompressionCompleted, { archiveName })
+            // ================================
+            // Cleanup plaintext dump
+            // ================================
+            await fs.rm(dumpDirPath, { recursive: true, force: true })
+            // ================================
+            // Upload to Google Drive
+            // ================================
+            // prepare file for upload in the expected format (like Multer files)
+            const fileBuffer = await fs.readFile(archivePath)
+            const fileName = path.basename(archivePath)
+            const file: Express.Multer.File = {
+                buffer: fileBuffer,
+                originalname: fileName,
+                fieldname: fileName,
+                size: fileBuffer.length,
+                stream: Readable.from(fileBuffer),
+                destination: backupRoot,
+                filename: fileName,
+                path: archivePath,
+                mimetype: "application/octet-stream",
+                encoding: "binary",
+            }
+            // upload file to Google Drive
+            await this.googleDriveService.uploadFiles({
+                files: [file],
+                folderEnum: GoogleDriveFolderId.Db,
+            })
+            this.logger.info(WinstonLog.GoogleDriveFileUploaded, { archiveName })
+            // ================================
+            // Cleanup encrypted archive
+            // ================================
+            await fs.rm(archivePath, { force: true })
+            // log the backup completed
+            this.logger.info(WinstonLog.BackupCompleted, { archiveName })
+            // exit the app
+            process.exit(0)
+        } catch (error) {
+            this.logger.error(WinstonLog.BackupFailed, { error: error.message })
+            process.exit(1)
+        }
+    }
+>>>>>>> 1e2fc5c8552a961608b6128221478f408d000e28
 }
 
 interface BackupCommandOptions {

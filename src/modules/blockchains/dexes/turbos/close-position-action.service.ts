@@ -15,12 +15,15 @@ import {
     ActivePositionNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
+    PrivyPublicKeyNotFoundException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
+import { PrivySignService } from "@modules/privy"
+import { BotVersion } from "@modules/databases"
 
 @Injectable()
 export class TurbosClosePositionActionService implements IClosePositionActionService {
@@ -29,6 +32,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         private readonly closePositionTxbService: ClosePositionTxbService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly privySignService: PrivySignService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) {}
@@ -52,20 +56,37 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        const bytes = await closePositionTxb.build({
-                            client: suiClient,
-                        })
-                        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                        const signatureWithBytes = await signer.signTransaction(bytes)
-                        return {
-                            txHash,
-                            signatureWithBytes,
-                        }
-                    },
-                })
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSuiSigner({
+                        bot,
+                        action: async (signer) => {
+                            const bytes = await closePositionTxb.build({
+                                client: suiClient,
+                            })
+                            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                            const signatureWithBytes = await signer.signTransaction(bytes)
+                            return {
+                                txHash,
+                                signatureWithBytes,
+                            }
+                        },
+                    })
+                } else {
+                    if (!bot.privyMetadata.publicKeyHex) {
+                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                    }
+                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
+                        publicKeyHex: bot.privyMetadata.publicKeyHex,
+                        client: suiClient,
+                        walletId: bot.privyMetadata.walletId,
+                        transaction: closePositionTxb,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    })
+                    return {
+                        txHash,
+                        signatureWithBytes,
+                    }
+                }
             },
         })
     }

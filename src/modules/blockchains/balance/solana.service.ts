@@ -9,6 +9,7 @@ import {
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { 
+    BotVersion,
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
@@ -59,6 +60,7 @@ import { Logger as winstonLogger } from "winston"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
+import { PrivySignService } from "@modules/privy"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -68,6 +70,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
+        private readonly privySignService: PrivySignService,
         @InjectWinston()
         private readonly logger: winstonLogger,
     ) { }
@@ -184,31 +187,47 @@ export class SolanaBalanceService implements IBalanceService {
                 const swapInstructions = swapTransactionMessage.instructions
                 // we get the latest blockhash
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                return await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        const transactionMessage = pipe(
-                            createTransactionMessage({ version: 0 }),
-                            (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                            (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
-                        )
-                        const transaction = compileTransaction(transactionMessage)
-                        // sign the transaction
-                        const signedTransaction = await signTransaction(
-                            [signer.keyPair],
-                            transaction,
-                        )
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        const txHash = transactionSignature.toString()
-                        assertIsSendableTransaction(signedTransaction)
-                        assertIsTransactionWithinSizeLimit(signedTransaction)
-                        return {
-                            txHash,
-                            solanaTx: signedTransaction,
-                        }
-                    },
-                })
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
+                )
+                const transaction = compileTransaction(transactionMessage)
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSolanaSigner({
+                        bot,
+                        action: async (signer) => {
+                            // sign the transaction
+                            const signedTransaction = await signTransaction(
+                                [signer.keyPair],
+                                transaction,
+                            )
+                            const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                            const txHash = transactionSignature.toString()
+                            assertIsSendableTransaction(signedTransaction)
+                            assertIsTransactionWithinSizeLimit(signedTransaction)
+                            return {
+                                txHash,
+                                solanaTx: signedTransaction,
+                            }
+                        },
+                    })
+                } else {
+                    const signedTransaction = await this.privySignService.signSolanaTransaction({
+                        lifetimeConstraint: {
+                            blockhash: latestBlockhash.blockhash,
+                            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                        },
+                        transaction,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                        walletId: bot.privyMetadata.walletId,
+                    })
+                    return {
+                        txHash: signedTransaction.txHash,
+                        solanaTx: signedTransaction.signedTransaction,
+                    }
+                }
             },
         })
     }

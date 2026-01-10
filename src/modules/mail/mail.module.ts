@@ -5,7 +5,7 @@ import { MailerModule } from "@nestjs-modules/mailer"
 import path from "path"
 import { PugAdapter } from "@nestjs-modules/mailer/dist/adapters/pug.adapter"
 import { Send2FactorOtpMailService } from "./send-2-factor-otp-mail.service"
-import { getSmtpConfig } from "@modules/filesystem"
+import { getAppConfig } from "@modules/filesystem"
 
 @Module({})
 export class MailModule extends ConfigurableModuleClass {
@@ -13,7 +13,7 @@ export class MailModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const smtpConfig = getSmtpConfig()
+        const smtpConfig = getAppConfig().smtp
         return {
             ...dynamicModule,
             imports: [

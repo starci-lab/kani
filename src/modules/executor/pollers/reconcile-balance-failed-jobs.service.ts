@@ -115,6 +115,7 @@ export class ReconcileBalanceFailedJobsPollerService implements OnApplicationBoo
             v4(), {
                 jobId: job.id,
                 bot,
+                leaseId: v4(),
             }
         )
         // log success

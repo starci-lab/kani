@@ -48,13 +48,12 @@ export const computeDenomination = (
     decimals = 8,
     fractionDigits = 5,
 ): Decimal => {
-    // amount is a BN
-    const divisor = new BN(10).pow(new BN(decimals))
-    const quotient = amount.div(divisor)
-    const remainder = amount.mod(divisor)
-    const result =
-    quotient.toNumber() + remainder.toNumber() / divisor.toNumber()
-    return new Decimal(result.toFixed(fractionDigits))
+    const multiplier = new BN(10).pow(new BN(decimals)) // 10^decimals
+    const decimalMultiplier = new BN(10).pow(new BN(fractionDigits)) // 10^fractionDigits
+    const scaled = new BN(amount).mul(decimalMultiplier)
+    return new Decimal(scaled.div(multiplier).toString())
+        .div(new Decimal(decimalMultiplier.toString()))
+        .toDecimalPlaces(fractionDigits, Decimal.ROUND_HALF_UP)
 }
 
 export const computeRaw = (
@@ -132,4 +131,12 @@ export const parseI32 = (bits: number): number => {
 
 export const decimalToBips = (decimal: number): number => {
     return Math.round(new Decimal(decimal).mul(1000000).toNumber())
+}
+
+export const divBn = (numerator: BN, denominator: BN, fractionDigits: number = 10): Decimal => {
+    const decimalMultiplier = new BN(10).pow(new BN(fractionDigits)) // 10^fractionDigits
+    const scaledNumerator = new BN(numerator.toString()).mul(decimalMultiplier)
+    return new Decimal(scaledNumerator.div(denominator).toString())
+        .div(new Decimal(decimalMultiplier.toString()))
+        .toDecimalPlaces(fractionDigits, Decimal.ROUND_HALF_UP)
 }

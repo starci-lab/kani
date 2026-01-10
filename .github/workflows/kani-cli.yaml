@@ -57,9 +57,3 @@ jobs:
         env:
           DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
- 
-      # Trigger Jenkins rollout
-      - name: Call Jenkins API to rollout the image
-        run: |
-          curl -X POST \
-            "${{ secrets.JENKINS_URL }}/generic-webhook-trigger/invoke?token=${{ secrets.KANI_CLI_DEPLOYMENT_ROLLOUT_WEBHOOK_TOKEN }}"

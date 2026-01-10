@@ -8,13 +8,13 @@ import {
 } from "../../interfaces"
 import { SignerService } from "../../signers"
 import { 
+    BotVersion,
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import { ClosePositionInstructionService } from "./transactions"
 import { 
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-    TransactionMessageTooLargeException,
     TransactionNotExecutedException,
     TransactionNotPreparedException,
 } from "@exceptions"
@@ -24,10 +24,8 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { 
     pipe,
-    addSignersToTransactionMessage,
     setTransactionMessageFeePayerSigner,
     setTransactionMessageLifetimeUsingBlockhash,
-    isTransactionMessageWithinSizeLimit,
     compileTransaction,
     getSignatureFromTransaction,
     createTransactionMessage,
@@ -37,8 +35,11 @@ import {
     assertIsSendableTransaction,
     assertIsTransactionWithinSizeLimit,
     signTransaction,
+    createNoopSigner,
+    address,
 } from "@solana/kit"
 import { envConfig } from "@modules/env"
+import { PrivySignService } from "@modules/privy"
 
 @Injectable()
 export class MeteoraClosePositionActionService implements IClosePositionActionService {
@@ -47,6 +48,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly signerService: SignerService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly privySignService: PrivySignService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) { }
@@ -75,32 +77,44 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Read,
             callback: async ({ rpc }) => {
-                return await this.signerService.withSolanaSigner({
-                    bot,
-                    action: async (signer) => {
-                        const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
-                        const transactionMessage = pipe(
-                            createTransactionMessage({ version: 0 }),
-                            (tx) => addSignersToTransactionMessage([signer], tx),
-                            (tx) => setTransactionMessageFeePayerSigner(signer, tx),
-                            (tx) => appendTransactionMessageInstructions(instructions, tx),
-                            (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                        )
-                        if (!isTransactionMessageWithinSizeLimit(transactionMessage)) {
-                            throw new TransactionMessageTooLargeException("Transaction message is too large")
-                        }
-                        const transaction = compileTransaction(transactionMessage)
-                        const signedTransaction = await signTransaction([signer.keyPair], transaction)
-                        const transactionSignature = getSignatureFromTransaction(signedTransaction)
-                        const txHash = transactionSignature.toString()
-                        assertIsSendableTransaction(signedTransaction)
-                        assertIsTransactionWithinSizeLimit(signedTransaction)
-                        return {
-                            txHash,
-                            solanaTx: signedTransaction,
-                        }
-                    },
-                })
+                const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                const transactionMessage = pipe(
+                    createTransactionMessage({ version: 0 }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
+                    (tx) => appendTransactionMessageInstructions(instructions, tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                )
+                const transaction = compileTransaction(transactionMessage)
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSolanaSigner({
+                        bot,
+                        action: async (signer) => {
+                            const signedTransaction = await signTransaction([signer.keyPair], transaction)
+                            const transactionSignature = getSignatureFromTransaction(signedTransaction)
+                            const txHash = transactionSignature.toString()
+                            assertIsSendableTransaction(signedTransaction)
+                            assertIsTransactionWithinSizeLimit(signedTransaction)
+                            return {
+                                txHash,
+                                solanaTx: signedTransaction,
+                            }
+                        },
+                    })
+                } else {
+                    const signedTransaction = await this.privySignService.signSolanaTransaction({
+                        lifetimeConstraint: {
+                            blockhash: latestBlockhash.blockhash,
+                            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+                        },
+                        transaction,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                        walletId: bot.privyMetadata.walletId,
+                    })
+                    return {
+                        txHash: signedTransaction.txHash,   
+                        solanaTx: signedTransaction.signedTransaction,
+                    }
+                }   
             },
         })
     }

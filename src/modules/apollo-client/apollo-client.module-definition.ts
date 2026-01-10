@@ -8,5 +8,5 @@ export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
       (definition, extras) => ({
           ...definition,
           global: extras.isGlobal
-      })
+      }) 
   ).build()

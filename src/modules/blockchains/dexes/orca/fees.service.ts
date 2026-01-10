@@ -17,7 +17,7 @@ import { Position } from "./beets"
 import { decodeTickArray } from "@orca-so/whirlpools-client"
 import BN from "bn.js"
 import { LiquidityPoolState } from "../../interfaces"
-import { Q64 } from "@flowx-finance/sdk"
+import { Q128, Q64 } from "@utils"
 import {
     OrcaLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
@@ -168,11 +168,8 @@ export class OrcaFeesService implements IFeesService {
         ) {
             throw new Error("Upper tick index out of range")
         }
-
-        const tickLowerData =
-      tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
-        const tickUpperData =
-      tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
+        const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
+        const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
 
         // ----------------------------
         // Fee growth inside
@@ -194,7 +191,6 @@ export class OrcaFeesService implements IFeesService {
             tickLower,
             tickUpper,
         )
-
         // ----------------------------
         // Position checkpoint
         // ----------------------------
@@ -228,6 +224,7 @@ export class OrcaFeesService implements IFeesService {
         return {
             tokenA: computeDenomination(feeEarnedA, tokenA.decimals),
             tokenB: computeDenomination(feeEarnedB, tokenB.decimals),
+            snapshotAt: state.dynamic.snapshotAt,
         }
     }
 
@@ -239,16 +236,33 @@ export class OrcaFeesService implements IFeesService {
         tickLower: number,
         tickUpper: number,
     ): BN {
+        // current price below range
         if (currentTick < tickLower) {
-            return feeGrowthOutsideLower.sub(feeGrowthOutsideUpper)
+            return this.subQ128(
+                feeGrowthOutsideLower,
+                feeGrowthOutsideUpper,
+            )
         }
-
+    
+        // current price above range
         if (currentTick >= tickUpper) {
-            return feeGrowthOutsideUpper.sub(feeGrowthOutsideLower)
+            return this.subQ128(
+                feeGrowthOutsideUpper,
+                feeGrowthOutsideLower,
+            )
         }
+    
+        // current price inside range
+        return this.subQ128(
+            this.subQ128(feeGrowthGlobal, feeGrowthOutsideLower),
+            feeGrowthOutsideUpper,
+        )
+    }
 
-        return feeGrowthGlobal
-            .sub(feeGrowthOutsideLower)
-            .sub(feeGrowthOutsideUpper)
+    // ----------------------------
+    // u128 subtraction (mod 2^128)
+    // ----------------------------
+    private subQ128(a: BN, b: BN): BN {
+        return a.sub(b).umod(Q128)
     }
 }

@@ -6,7 +6,7 @@ import { SignerService } from "./signer.service"
         SignerService,
     ],
     exports: [
-        SignerService
+        SignerService,
     ],
 })
 export class SignersModule extends ConfigurableModuleClass {}

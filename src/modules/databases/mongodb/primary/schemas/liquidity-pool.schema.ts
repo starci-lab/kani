@@ -93,6 +93,10 @@ export class LiquidityPoolSchema extends AbstractSchema {
     @Field(() => String, { description: "The URL of the liquidity pool" })
     @Prop({ type: String })
         url: string
+
+    @Field(() => Number, { description: "The basis point max of the pool", nullable: true })
+    @Prop({ type: Number, nullable: true })
+        basisPointMax?: number
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)

@@ -1,40 +1,30 @@
 import { envConfig } from "@modules/env"
 import { readFileSync } from "fs"
-import { ApiKeys, Keys, RpcAccessConfigs, SmtpConfig } from "./types"
-/**
- * Pure function to get the smtp config
- * in case there is component that not depends on nestjs DI
- */
-export const getSmtpConfig = (smtpConfig?: SmtpConfig) => {
-    if (!smtpConfig) {
-        const smtpConfigPlainText = readFileSync(
-            envConfig().mountPath.config.smtp,
-            "utf8"
-        )
-        return JSON.parse(smtpConfigPlainText) as SmtpConfig
-    }
-    return smtpConfig
-}
+import { AppConfig, RpcAccessConfigs } from "./types"
 
 /**
  * Pure function to get the crypto key ed sa
  * in case there is component that not depends on nestjs DI
  */
-export const getCryptoKeyEdSa = (cryptoKeyEdSa?: string) => {
-    if (!cryptoKeyEdSa) {
-        cryptoKeyEdSa = readFileSync(
-            envConfig().mountPath.gcp.cryptoKeyEdSa,
+export const getGcpCryptoKeyEdSa = (
+    gcpCryptoKeyEdSa?: string
+) => {
+    if (!gcpCryptoKeyEdSa) {
+        gcpCryptoKeyEdSa = readFileSync(
+            envConfig().mountPath.terraform.gcpCryptoKeyEdSa,
             "utf8"
         )
     }
-    return cryptoKeyEdSa
+    return gcpCryptoKeyEdSa
 }
 
 /**
  * Pure function to get the rpc config
  * in case there is component that not depends on nestjs DI
  */
-export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
+export const getRpcAccessConfigs = (
+    rpcAccessConfigs?: RpcAccessConfigs
+) => {
     if (!rpcAccessConfigs) {
         rpcAccessConfigs = JSON.parse(
             readFileSync(
@@ -46,64 +36,122 @@ export const getRpcAccessConfigs = (rpcAccessConfigs?: RpcAccessConfigs) => {
 }   
 
 /**
- * Pure function to get the api keys
+ * Pure function to get the app config
  * in case there is component that not depends on nestjs DI
  */
-export const getApiKeys = (apiKeys?: ApiKeys) => {
-    if (!apiKeys) {
-        apiKeys = JSON.parse(
+export const getAppConfig = (
+    appConfig?: AppConfig
+) => {
+    if (!appConfig) {
+        appConfig = JSON.parse(
             readFileSync(
-                envConfig().mountPath.config.apiKeys,
+                envConfig().mountPath.config.app,
                 "utf8"
-            )) as ApiKeys
+            )) as AppConfig
     }
-    return apiKeys
-}
-
-/**
- * Pure function to get the kms admin sa
- * in case there is component that not depends on nestjs DI
- */
-export const getCloudKmsCryptoOperatorSa = (cloudKmsCryptoOperatorSa?: string) => {
-    if (!cloudKmsCryptoOperatorSa) {
-        cloudKmsCryptoOperatorSa = readFileSync(
-            envConfig().mountPath.gcp.cloudKmsCryptoOperatorSa,
-            "utf8"
-        )
-    }
-    return cloudKmsCryptoOperatorSa
-}
-
-/**
- * Pure function to get the keys
- * in case there is component that not depends on nestjs DI
- */
-export const getKeys = (keys?: Keys) => {
-    if (!keys) {
-        keys = JSON.parse(
-            readFileSync(envConfig().mountPath.config.keys, "utf8")) as Keys
-    }
-    return keys
-}
-
-/**
- * Pure function to get the jwt secret key
- * in case there is component that not depends on nestjs DI
- */
-export const getEncryptedJwtSecret = (encryptedJwtSecret?: Buffer) => {
-    if (!encryptedJwtSecret) {
-        encryptedJwtSecret = Buffer.from(getKeys().encryptedJwtSecret, "base64")
-    }
-    return encryptedJwtSecret
-}
+    return appConfig
+}   
 
 /**
  * Pure function to get the encrypted aes key
  * in case there is component that not depends on nestjs DI
  */
-export const getEncryptedAesKey = (encryptedAesKey?: Buffer) => {
+export const getEncryptedAesKey = (
+    encryptedAesKey?: Buffer
+) => {
+    const encryptedAesKeyBuffer = readFileSync(
+        envConfig().mountPath.terraform.encryptedAesKey,
+        "utf8"
+    )
     if (!encryptedAesKey) {
-        encryptedAesKey = Buffer.from(getKeys().encryptedAesKey, "base64")
+        encryptedAesKey = Buffer.from(
+            encryptedAesKeyBuffer,
+            "base64"
+        )
     }
     return encryptedAesKey
+}   
+
+/**
+ * Pure function to get the encrypted jwt secret key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getEncryptedJwtSecretKey = (
+    encryptedJwtSecretKey?: Buffer
+) => {
+    const encryptedJwtSecretKeyBuffer = readFileSync(
+        envConfig().mountPath.terraform.encryptedJwtSecretKey,
+        "utf8"
+    )
+    if (!encryptedJwtSecretKey) {
+        encryptedJwtSecretKey = Buffer.from(
+            encryptedJwtSecretKeyBuffer, 
+            "base64"
+        )
+    }
+    return encryptedJwtSecretKey
+}
+
+/**
+ * Pure function to get the crypto key ed sa
+ * in case there is component that not depends on nestjs DI
+ */
+export const getGcpCloudKmsCryptoOperatorSa = (
+    gcpCloudKmsCryptoOperatorSa?: string
+) => {
+    if (!gcpCloudKmsCryptoOperatorSa) {
+        gcpCloudKmsCryptoOperatorSa = readFileSync(
+            envConfig().mountPath.terraform.gcpCloudKmsCryptoOperatorSa,
+            "utf8"
+        )
+    }
+    return gcpCloudKmsCryptoOperatorSa
+}
+
+/**
+ * Pure function to get the google drive ud sa
+ * in case there is component that not depends on nestjs DI
+ */
+export const getGcpGoogleDriveUdSa = (
+    gcpGoogleDriveUdSa?: string
+) => {
+    if (!gcpGoogleDriveUdSa) {
+        gcpGoogleDriveUdSa = readFileSync(
+            envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
+            "utf8"
+        )
+    }
+    return gcpGoogleDriveUdSa
+}
+
+/**
+ * Pure function to get the privy app secret
+ * in case there is component that not depends on nestjs DI
+ */
+export const getPrivyAppSecretKey = (
+    privyAppSecretKey?: string
+) => {
+    if (!privyAppSecretKey) {
+        privyAppSecretKey = readFileSync(
+            envConfig().mountPath.terraform.privyAppSecretKey,
+            "utf8"
+        )
+    }
+    return privyAppSecretKey
+}
+
+/**
+ * Pure function to get the privy signer public key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getPrivySignerPrivateKey = (
+    privySignerPrivateKey?: string
+) => {
+    if (!privySignerPrivateKey) {
+        privySignerPrivateKey = readFileSync(
+            envConfig().mountPath.terraform.privySignerPrivateKey,
+            "utf8"
+        )
+    }
+    return privySignerPrivateKey
 }

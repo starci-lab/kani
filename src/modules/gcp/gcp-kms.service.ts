@@ -17,7 +17,7 @@ export class GcpKmsService {
     ): Promise<Buffer<ArrayBufferLike>> {
         const rawData = Buffer.from(plaintext, "utf8")
         const [result] = await this.kmsClient.encrypt({
-            name: this.mountStorageService.apiKeys.cryptoKeyName,
+            name: this.mountStorageService.appConfig.cryptoKeyName,
             plaintext: rawData,
         })
         if (!result.ciphertext) {
@@ -30,7 +30,7 @@ export class GcpKmsService {
         ciphertext: Buffer<ArrayBufferLike>
     ): Promise<string> {
         const [result] = await this.kmsClient.decrypt({
-            name: this.mountStorageService.apiKeys.cryptoKeyName,
+            name: this.mountStorageService.appConfig.cryptoKeyName,
             ciphertext,
         })
         if (!result.plaintext) {

@@ -42,7 +42,6 @@ export class BalanceProcessorService  {
             createReadinessWatcherName(BalanceProcessorService.name, {
                 botId: this.request.botId,
             }))
-        // Ensure mutex exists for this bot
         this.eventEmitter.on(
             createEventName(
                 EventName.ActiveBotUpdated, {

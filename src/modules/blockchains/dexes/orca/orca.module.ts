@@ -11,6 +11,7 @@ import {
     PositionService 
 } from "./transactions"
 import { OrcaAnalyticsService } from "./analytics.service"
+import { OrcaReservesService } from "./reserves.service"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -50,6 +51,12 @@ export class OrcaModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
         ) {
             providers.push(TickArrayService, OrcaFeesService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(OrcaReservesService)
         }
         return {
             ...dynamicModule,
