@@ -38,6 +38,7 @@ import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { DerivedModule } from "@modules/derived"
 import { KafkaMode } from "@modules/event"
+import { PrivyModule } from "@modules/privy"
 
 @Module({
     imports: [
@@ -67,6 +68,9 @@ import { KafkaMode } from "@modules/event"
             isGlobal: true,
             withSeeders: true,
             memoryStorage: true,
+        }),
+        PrivyModule.register({
+            isGlobal: true,
         }),
         CacheModule.register({
             isGlobal: true,

@@ -3,7 +3,7 @@ import { ConfigurableModuleClass } from "./bot.module-definition"
 import { BackupBotPrivateKeyModule } from "./backup-bot-private-key"
 import { CreateBotModule } from "./create-bot"
 import { ToggleBotModule } from "./toggle-bot"
-import { CreateBotV2Module } from "./create-bot-v2"
+import { CreateBot2Module } from "./create-bot2"
 
 @Module({
     imports: [
@@ -16,7 +16,7 @@ import { CreateBotV2Module } from "./create-bot-v2"
         CreateBotModule.register({
             isGlobal: true,
         }),
-        CreateBotV2Module.register({
+        CreateBot2Module.register({
             isGlobal: true,
         }),
     ],

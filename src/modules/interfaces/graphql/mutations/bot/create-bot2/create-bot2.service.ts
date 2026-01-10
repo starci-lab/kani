@@ -7,9 +7,9 @@ import {
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import { 
-    CreateBotV2Request, 
-    CreateBotV2ResponseData, 
-} from "./create-bot-v2.dto"
+    CreateBot2Request, 
+    CreateBot2ResponseData, 
+} from "./create-bot2.dto"
 import { UserJwtLike } from "@modules/passport"
 import {
     UserNotFoundException,
@@ -20,7 +20,7 @@ import { PrivyCoreService } from "@modules/privy"
 import { DerivedAesKeyService } from "@modules/derived"
 
 @Injectable()
-export class CreateBotV2Service {
+export class CreateBot2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -29,7 +29,7 @@ export class CreateBotV2Service {
         private readonly derivedAesKeyService: DerivedAesKeyService,
     ) { }
 
-    async createBotV2(
+    async createBot2(
         userLike: UserJwtLike,
         {
             name,
@@ -38,8 +38,8 @@ export class CreateBotV2Service {
             quoteTokenId,
             liquidityPoolIds,
             isExitToUsdc,
-        }: CreateBotV2Request,
-    ): Promise<CreateBotV2ResponseData> {
+        }: CreateBot2Request,
+    ): Promise<CreateBot2ResponseData> {
         const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.displayId.toString() === targetTokenId.toString())
         if (!targetTokenInstance) {
             throw new TokenNotFoundException("Target token not found with display id: " + targetTokenId)
