@@ -16,7 +16,7 @@ import {
     TokenNotFoundException
 } from "@exceptions"
 import { Decimal } from "decimal.js"
-import { PrivyWalletService } from "@modules/privy"
+import { PrivyCoreService } from "@modules/privy"
 import { DerivedAesKeyService } from "@modules/derived"
 
 @Injectable()
@@ -25,7 +25,7 @@ export class CreateBotV2Service {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly privyWalletService: PrivyWalletService,
+        private readonly privyCoreService: PrivyCoreService,
         private readonly derivedAesKeyService: DerivedAesKeyService,
     ) { }
 
@@ -86,9 +86,9 @@ export class CreateBotV2Service {
             .liquidityPools
             .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId))
         // create the signer
-        const { keyPair, keyQuorum } = await this.privyWalletService.createSigner()
+        const { keyPair, keyQuorum } = await this.privyCoreService.createSigner()
         // create the wallet
-        const wallet = await this.privyWalletService.createWallet({
+        const wallet = await this.privyCoreService.createWallet({
             policyIds: [],
             additionalSigners: [
                 {

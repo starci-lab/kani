@@ -8,7 +8,7 @@ import {
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { BotVersion, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenNotFoundException, TransactionNotExecutedException, TransactionNotFoundException } from "@exceptions"
+import { TokenNotFoundException, TransactionNotExecutedException, TransactionNotFoundException, PrivyPublicKeyNotFoundException } from "@exceptions"
 import BN from "bn.js"
 import { SuiAggregatorSelectorService } from "../aggregators"
 import { EnsureMathService } from "../math"
@@ -94,7 +94,7 @@ export class SuiBalanceService implements IBalanceService {
                     }
                 } else {
                     if (!bot.privyMetadata.publicKeyHex) {
-                        throw new PublicKeyNotFoundException("Public key not found")
+                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
                     }
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.publicKeyHex ?? "",

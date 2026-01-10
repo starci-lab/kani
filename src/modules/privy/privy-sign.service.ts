@@ -20,6 +20,7 @@ import { SuiClient } from "@mysten/sui/client"
 import { messageWithIntent, SignatureWithBytes, toSerializedSignature } from "@mysten/sui/cryptography"
 import { fromHex, toBase64 } from "@mysten/bcs"
 import { publicKeyFromRawBytes } from "@mysten/sui/verify"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class PrivySignService {
@@ -27,6 +28,7 @@ export class PrivySignService {
         @InjectPrivyClient()
         private readonly privyClient: PrivyClient,
         private readonly derivedAesKeyService: DerivedAesKeyService,
+        private readonly mountStorageService: MountStorageService,
     ) {}
     
     async signSolanaTransaction(
@@ -42,7 +44,10 @@ export class PrivySignService {
         )
         const privySignerPrivateKey = this.derivedAesKeyService.decrypt(encryptedPrivySignerPrivateKey)
         const authorizationContext: AuthorizationContext = {
-            authorization_private_keys: [privySignerPrivateKey],
+            authorization_private_keys: [
+                this.mountStorageService.privySignerPrivateKey, 
+                privySignerPrivateKey
+            ],
         }
         const signedTransaction = await this.privyClient.wallets().solana().signTransaction(
             walletId, 
@@ -83,7 +88,10 @@ export class PrivySignService {
         const txHash = TransactionDataBuilder.getDigestFromBytes(rawBytes)
         const privySignerPrivateKey = this.derivedAesKeyService.decrypt(encryptedPrivySignerPrivateKey)
         const authorizationContext: AuthorizationContext = {
-            authorization_private_keys: [privySignerPrivateKey],
+            authorization_private_keys: [
+                privySignerPrivateKey,
+                this.mountStorageService.privySignerPrivateKey
+            ],
         }
         const signedTransaction = await this.privyClient.wallets().rawSign(
             walletId, 

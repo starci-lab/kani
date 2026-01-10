@@ -8,7 +8,7 @@ import {
 } from "@privy-io/node/resources"
 
 @Injectable()
-export class PrivyWalletService {
+export class PrivyCoreService {
     constructor(
     @InjectPrivyClient()
     private readonly privyClient: PrivyClient,
