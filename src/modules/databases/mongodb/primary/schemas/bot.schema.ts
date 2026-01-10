@@ -47,11 +47,17 @@ export class BotSchema extends AbstractSchema {
         encryptedPrivateKeyPayload: EncryptedPayload
 
     /**
-     * The encrypted privy wallet id corresponding to the account address.
+     * The encrypted privy signer private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
     @Prop({ type: MongooseSchema.Types.Mixed, required: false })
-        encryptedPrivyWalletId: EncryptedPayload
+        encryptedPrivySignerPrivateKeyPayload: EncryptedPayload
+    
+    /**
+     * The metadata of the privy wallet.
+     */
+    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+        privyMetadata: PrivyMetadata
     /**
      * The blockchain network where this bot is operating (e.g., SUI, SOLANA).
      * This determines which on-chain protocol and RPC endpoints are used.
@@ -230,3 +236,8 @@ export class BotSchema extends AbstractSchema {
  * This is what gets registered with the NestJS Mongoose module.
  */
 export const BotSchemaClass = SchemaFactory.createForClass(BotSchema)
+
+export interface PrivyMetadata {
+    walletId: string
+    publicKeyHex?: string
+}

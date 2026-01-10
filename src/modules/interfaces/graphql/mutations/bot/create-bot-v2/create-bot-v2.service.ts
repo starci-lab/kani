@@ -18,7 +18,6 @@ import {
 import { Decimal } from "decimal.js"
 import { PrivyWalletService } from "@modules/privy"
 import { DerivedAesKeyService } from "@modules/derived"
-import { EncryptionService } from "@modules/crypto"
 
 @Injectable()
 export class CreateBotV2Service {
@@ -28,7 +27,6 @@ export class CreateBotV2Service {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly privyWalletService: PrivyWalletService,
         private readonly derivedAesKeyService: DerivedAesKeyService,
-        private readonly encryptionService: EncryptionService,
     ) { }
 
     async createBotV2(
@@ -87,9 +85,22 @@ export class CreateBotV2Service {
         const liquidityPools = this.primaryMemoryStorageService
             .liquidityPools
             .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId))
-        // create bot v2
-        const { id, address: accountAddress } = await this.privyWalletService.createWallet(chainId)
-        const encryptedPrivyWalletId = this.encryptionService.encrypt(id, this.derivedAesKeyService.key)
+        // create the signer
+        const { keyPair, keyQuorum } = await this.privyWalletService.createSigner()
+        // create the wallet
+        const wallet = await this.privyWalletService.createWallet({
+            policyIds: [],
+            additionalSigners: [
+                {
+                    signerId: keyQuorum.id,
+                    policyIds: [],
+                },
+            ],
+            userId: userLike.id,
+            chainId,
+        })
+        // encrypt the signer private key
+        const encryptedPrivySignerPrivateKeyPayload = this.derivedAesKeyService.encrypt(keyPair.privateKey)
         const session = await this.connection.startSession()
         return await session.withTransaction(
             async () => {
@@ -107,8 +118,12 @@ export class CreateBotV2Service {
                                 targetToken: targetTokenInstance.id,
                                 quoteToken: quoteTokenInstance.id,
                                 liquidityPools: liquidityPools.map((liquidityPool) => liquidityPool.id),
-                                accountAddress,
-                                encryptedPrivyWalletId,
+                                accountAddress: wallet.address,
+                                encryptedPrivySignerPrivateKeyPayload,
+                                privyMetadata: {
+                                    walletId: wallet.id,
+                                    publicKeyHex: keyPair.publicKey,
+                                },
                                 isExitToUsdc,
                             }
                         ],
@@ -118,7 +133,7 @@ export class CreateBotV2Service {
                 const bot = botRaw.toJSON()
                 return {
                     id: bot.id,
-                    accountAddress,
+                    accountAddress: wallet.address,
                 }
             })
     }

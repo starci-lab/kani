@@ -7,7 +7,7 @@ import { FilesystemModule } from "@modules/filesystem"
 import { CacheModule } from "@modules/cache"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { EventModule } from "@modules/event"
-import { AppService } from "./app.service"
+import { AppSuiService } from "./app-sui.service"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { ClientsModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
@@ -49,6 +49,6 @@ import { PrivyModule } from "@modules/privy"
             isGlobal: true,
         }),
     ],
-    providers: [AppService],
+    providers: [AppSuiService],
 })
 export class AppModule {}

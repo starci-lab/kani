@@ -1,11 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { AuthorizationContext, PrivyClient } from "@privy-io/node"
+import { P256KeyPair, PrivyClient, generateP256KeyPair } from "@privy-io/node"
 import { InjectPrivyClient } from "./privy.decorators"
 import { ChainId } from "@typedefs"
 import { MountStorageService } from "@modules/filesystem"
 import { 
-    SolanaSignTransactionRpcResponse, 
-    WalletRawSignResponse 
+    KeyQuorum,
 } from "@privy-io/node/resources"
 
 @Injectable()
@@ -22,108 +21,68 @@ export class PrivyWalletService {
      * @returns The wallet
      */
     async createWallet(
-        chainId: ChainId
+        {
+            policyIds,
+            additionalSigners,
+            userId,
+            chainId,
+        }: CreateWalletParams
     ) {
         return await this.privyClient
             .wallets()
             .create(
                 {
-                    chain_type: chainId,
-                    policy_ids: [],
+                    policy_ids: policyIds,
                     owner: {
-                        public_key: this.mountStorageService.appConfig.privy.signer.publicKey,
+                        user_id: userId,
+                    },
+                    chain_type: chainId,
+                    additional_signers: additionalSigners.map((additionalSigner) => ({
+                        signer_id: additionalSigner.signerId,
+                        policy_ids: additionalSigner.policyIds,
                     }
+                    )
+                    ),
                 }
             )
     }
-    
+
     /**
-     * Sign a transaction
-     * @param params - The parameters for signing the transaction
-     * @returns The signed transaction
+     * Create a new signer for the wallet
+     * @returns The signer
      */
-    private async signRawTransaction(
-        {
-            walletId,
-            transactionBytes,
-            encoding,
-            hashFunction,
-            authorizationContext,
-        }: SignRawTransactionParams
-    ) {
-        return await this.privyClient.wallets().rawSign(
-            walletId, {
-                params: {
-                    encoding,
-                    bytes: transactionBytes,
-                    hash_function: hashFunction,
-                },
-                authorization_context: authorizationContext,
+    async createSigner(): Promise<PrivySignerResponse> {
+        const keyPair = await generateP256KeyPair()
+        const keyQuorum = await this.privyClient.keyQuorums().create(
+            {
+                public_keys: [
+                    // user public key
+                    keyPair.publicKey, 
+                    // server public key
+                    this.mountStorageService.appConfig.privy.signer.publicKey,
+                ],
             }
         )
-    }
-    /**
-     * Sign a solana transaction
-     * @param params - The parameters for signing the transaction
-     * @returns The signed transaction
-     */
-    private async signSolanaTransaction(
-        {
-            walletId,
-            transactionBytes,
-            authorizationContext,
-        }: SignSolanaTransactionParams
-    ) {
-        return await this.privyClient.wallets().solana().signTransaction(
-            walletId, {
-                transaction: transactionBytes,
-                authorization_context: authorizationContext,
-            }
-        )
-    }
-    /**
-     * Create a raw signer
-     * @param walletId - The wallet id
-     * @returns The raw signer
-     */
-    createSigner(
-        walletId: string
-    ): PrivySigner {
         return {
-            signRawTransaction: async (
-                params: Omit<SignRawTransactionParams, "walletId">
-            ) => await this.signRawTransaction({ walletId, ...params }),
-            signSolanaTransaction: async (
-                params: Omit<SignSolanaTransactionParams, "walletId">
-            ) => await this.signSolanaTransaction({ walletId, ...params })
+            keyQuorum,
+            keyPair,
         }
     }
 }
 
-export interface SignTransactionParams {
-    walletId: string
-    transactionBytes: string
+export interface PrivySignerResponse {
+    keyQuorum: KeyQuorum
+    keyPair: P256KeyPair
 }
 
-export interface SignSolanaTransactionParams {
-    walletId: string
-    transactionBytes: Uint8Array
-    authorizationContext: AuthorizationContext
+export interface CreateWalletParams {
+    policyIds: Array<string>
+    chainId: ChainId
+    additionalSigners: Array<AdditionalSigner>
+    userId: string
 }
 
-export interface SignRawTransactionParams {
-    walletId: string
-    transactionBytes: string
-    encoding: "utf-8" | "hex"
-    hashFunction: "keccak256" | "sha256"
-    authorizationContext: AuthorizationContext
-}
-
-export interface PrivySigner {
-    signRawTransaction: (
-        params: Omit<SignRawTransactionParams, "walletId">
-    ) => Promise<WalletRawSignResponse.Data>
-    signSolanaTransaction: (
-        params: Omit<SignSolanaTransactionParams, "walletId">
-    ) => Promise<SolanaSignTransactionRpcResponse.Data>
+export interface AdditionalSigner {
+    signerId: string
+    policyIds: Array<string>
 }

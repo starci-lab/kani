@@ -16,12 +16,15 @@ import {
     TransactionNotPreparedException,
     TransactionNotExecutedException,
     TransactionValidationFailedException,
+    PrivyPublicKeyNotFoundException,
 } from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
+import { BotVersion } from "@modules/databases"
+import { PrivySignService } from "@modules/privy"
 
 @Injectable()
 export class CetusClosePositionActionService implements IClosePositionActionService {
@@ -30,6 +33,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         private readonly closePositionTxbService: ClosePositionTxbService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
+        private readonly privySignService: PrivySignService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
     ) {}
@@ -53,28 +57,47 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSuiSigner({
+                        bot,
+                        action: async (signer) => {
                         // dev inspect the transaction block
-                        const devInspect = await suiClient.devInspectTransactionBlock({
-                            transactionBlock: closePositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (devInspect.effects.status.status !== "success") {
-                            throw new TransactionValidationFailedException("Transaction validation failed")
-                        }
-                        const bytes = await closePositionTxb.build({
+                            const devInspect = await suiClient.devInspectTransactionBlock({
+                                transactionBlock: closePositionTxb,
+                                sender: bot.accountAddress,
+                            })
+                            if (devInspect.effects.status.status !== "success") {
+                                throw new TransactionValidationFailedException("Transaction validation failed")
+                            }
+                            const bytes = await closePositionTxb.build({
+                                client: suiClient,
+                            })
+                            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                            const signatureWithBytes = await signer.signTransaction(bytes)
+                            return {
+                                txHash,
+                                signatureWithBytes,
+                            }
+                        },
+                    })
+                } else {
+                    if (!bot.privyMetadata.publicKeyHex) {
+                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                    }
+                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction(
+                        {
+                            publicKeyHex: bot.privyMetadata.publicKeyHex,
                             client: suiClient,
-                        })
-                        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                        const signatureWithBytes = await signer.signTransaction(bytes)
-                        return {
-                            txHash,
-                            signatureWithBytes,
+                            walletId: bot.privyMetadata.walletId,
+                            transaction: closePositionTxb,
+                            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         }
-                    },
-                })
+                    )
+                    return {
+                        txHash,
+                        signatureWithBytes,
+                    }
+                }
             },
         })
     }

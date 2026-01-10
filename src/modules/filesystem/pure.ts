@@ -137,7 +137,6 @@ export const getPrivyAppSecretKey = (
             "utf8"
         )
     }
-
     return privyAppSecretKey
 }
 
@@ -150,7 +149,7 @@ export const getPrivySignerPrivateKey = (
 ) => {
     if (!privySignerPrivateKey) {
         privySignerPrivateKey = readFileSync(
-            envConfig().mountPath.terraform.privySignerPrivateKeyKey,
+            envConfig().mountPath.terraform.privySignerPrivateKey,
             "utf8"
         )
     }

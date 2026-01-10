@@ -13,7 +13,7 @@ import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
-    PrimaryMemoryStorageService
+    BotVersion, PrimaryMemoryStorageService
 } from "@modules/databases"
 import { OpenPositionTxbService } from "./transactions"
 import { TickMathService } from "../../math"
@@ -26,6 +26,7 @@ import {
     PositionInvalidTypeException,
     PositionNotFoundException,
     TransactionValidationFailedException,
+    PrivyPublicKeyNotFoundException,
 } from "@exceptions"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -34,6 +35,7 @@ import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
 import { MomentumClmmPosition } from "./struct"
+import { PrivySignService } from "@modules/privy"
 
 @Injectable()
 export class MomentumOpenPositionActionService implements IOpenActionService {
@@ -46,6 +48,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         private readonly rpcExecutorService: RpcExecutorService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly privySignService: PrivySignService,
     ) {}
     
     async confirm(
@@ -119,35 +122,57 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                return await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        const devInspect = await suiClient.devInspectTransactionBlock({
-                            transactionBlock: openPositionTxb,
-                            sender: bot.accountAddress,
-                        })
-                        if (devInspect.effects.status.status !== "success") {
-                            throw new TransactionValidationFailedException("Transaction validation failed")
-                        }
-                        const bytes = await openPositionTxb.build({
-                            client: suiClient,
-                        })
-                        const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                        const signatureWithBytes = await signer.signTransaction(bytes)
-                        return {
-                            txHash,
-                            signatureWithBytes,
-                            feeAmountA,
-                            feeAmountB,
-                            tickLower,
-                            tickUpper,
-                            amountA,
-                            amountB,
-                        }
-                    },
-                })
-            },
-        })
+                if (bot.version === BotVersion.V1) {
+                    return await this.signerService.withSuiSigner({
+                        bot,
+                        action: async (signer) => {
+                            const devInspect = await suiClient.devInspectTransactionBlock({
+                                transactionBlock: openPositionTxb,
+                                sender: bot.accountAddress,
+                            })
+                            if (devInspect.effects.status.status !== "success") {
+                                throw new TransactionValidationFailedException("Transaction validation failed")
+                            }
+                            const bytes = await openPositionTxb.build({
+                                client: suiClient,
+                            })
+                            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                            const signatureWithBytes = await signer.signTransaction(bytes)
+                            return {
+                                txHash,
+                                signatureWithBytes,
+                                feeAmountA,
+                                feeAmountB,
+                                tickLower,
+                                tickUpper,
+                                amountA,
+                                amountB,
+                            }
+                        },
+                    })
+                } else {
+                    if (!bot.privyMetadata.publicKeyHex) {
+                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                    }
+                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
+                        publicKeyHex: bot.privyMetadata.publicKeyHex,
+                        client: suiClient,
+                        walletId: bot.privyMetadata.walletId,
+                        transaction: openPositionTxb,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    })
+                    return {
+                        txHash,
+                        signatureWithBytes,
+                        feeAmountA,
+                        feeAmountB,
+                        tickLower,
+                        tickUpper,
+                        amountA,
+                        amountB,
+                    }
+                }
+            }})
     }
 
     async execute({

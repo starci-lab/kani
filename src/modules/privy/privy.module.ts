@@ -2,6 +2,7 @@ import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./privy.module-definition"
 import { createPrivyClientProvider } from "./privy.providers"
 import { PrivyWalletService } from "./privy-wallet.service"
+import { PrivySignService } from "./privy-sign.service"
 
 @Module({})
 export class PrivyModule extends ConfigurableModuleClass {
@@ -10,6 +11,7 @@ export class PrivyModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             createPrivyClientProvider(),
             PrivyWalletService,
+            PrivySignService,
         ]
         return {
             ...dynamicModule,

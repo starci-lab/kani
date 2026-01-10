@@ -7,7 +7,7 @@ import {
     PrepareSwapTransactionResponse,
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import { BotVersion, PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenNotFoundException, TransactionNotExecutedException, TransactionNotFoundException } from "@exceptions"
 import BN from "bn.js"
 import { SuiAggregatorSelectorService } from "../aggregators"
@@ -20,7 +20,7 @@ import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
 import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { AsyncService } from "@modules/mixin"
+import { PrivySignService } from "@modules/privy"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -30,9 +30,9 @@ export class SuiBalanceService implements IBalanceService {
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
+        private readonly privySignService: PrivySignService,
         @InjectWinston()
         private readonly logger: winstonLogger,
-        private readonly asyncService: AsyncService,
     ) {}
 
     async prepareSwapTransaction(
@@ -77,19 +77,32 @@ export class SuiBalanceService implements IBalanceService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Read,
             callback: async ({ suiClient }) => {
-                const bytes = await txb.build({
-                    client: suiClient,
-                })
-                const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                const signatureWithBytes = await this.signerService.withSuiSigner({
-                    bot,
-                    action: async (signer) => {
-                        return await signer.signTransaction(bytes)
-                    },
-                })
-                return {
-                    txHash,
-                    signatureWithBytes,
+                if (bot.version === BotVersion.V1) {
+                    const bytes = await txb.build({
+                        client: suiClient,
+                    })
+                    const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                    const signatureWithBytes = await this.signerService.withSuiSigner({
+                        bot,
+                        action: async (signer) => {
+                            return await signer.signTransaction(bytes)
+                        },
+                    })
+                    return {
+                        txHash,
+                        signatureWithBytes,
+                    }
+                } else {
+                    if (!bot.privyMetadata.publicKeyHex) {
+                        throw new PublicKeyNotFoundException("Public key not found")
+                    }
+                    return await this.privySignService.signSuiTransaction({
+                        publicKeyHex: bot.privyMetadata.publicKeyHex ?? "",
+                        client: suiClient,
+                        walletId: bot.privyMetadata.walletId,
+                        transaction: txb,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    })
                 }
             },
         })
