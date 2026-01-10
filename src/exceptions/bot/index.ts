@@ -137,3 +137,10 @@ export class BotAlreadyStoppedException extends AbstractException {
         super(message || "Bot already stopped", "BOT_ALREADY_STOPPED_EXCEPTION")
     }
 }
+
+/** Thrown when bot is not v2 */
+export class BotNotV2Exception extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Bot is not v2", "BOT_NOT_V2_EXCEPTION")
+    }
+}

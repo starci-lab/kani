@@ -7,7 +7,7 @@ import {
     PrepareSwapTransactionResponse,
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
-import { BotVersion, PrimaryMemoryStorageService } from "@modules/databases"
+import { AppVersion, PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenNotFoundException, TransactionNotExecutedException, TransactionNotFoundException, PrivyPublicKeyNotFoundException } from "@exceptions"
 import BN from "bn.js"
 import { SuiAggregatorSelectorService } from "../aggregators"
@@ -77,7 +77,7 @@ export class SuiBalanceService implements IBalanceService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Read,
             callback: async ({ suiClient }) => {
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     const bytes = await txb.build({
                         client: suiClient,
                     })

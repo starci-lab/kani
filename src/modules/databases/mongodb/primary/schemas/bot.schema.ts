@@ -11,8 +11,8 @@ import {
     ExplorerId, 
     GraphQLTypeBotType, 
     GraphQLTypeExplorerId,
-    BotVersion,
-    GraphQLTypeBotVersion
+    AppVersion,
+    GraphQLTypeAppVersion
 } from "../enums"
 import { PositionSchema } from "./position.schema"
 /**
@@ -224,12 +224,12 @@ export class BotSchema extends AbstractSchema {
     })
         pnl24h?: number
 
-    @Field(() => GraphQLTypeBotVersion, {
+    @Field(() => GraphQLTypeAppVersion, {
         description: "The version of the bot",
-        defaultValue: BotVersion.V1,
+        defaultValue: AppVersion.V1,
     })
-    @Prop({ type: String, enum: BotVersion, required: true, default: BotVersion.V1 })
-        version: BotVersion
+    @Prop({ type: String, enum: AppVersion, required: true, default: AppVersion.V1 })
+        version: AppVersion
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

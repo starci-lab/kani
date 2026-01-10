@@ -3,6 +3,7 @@ import { AbstractSchema } from "./abstract"
 import { Field, ObjectType } from "@nestjs/graphql"
 import { EncryptedPayload } from "@typedefs"
 import { Schema as MongooseSchema } from "mongoose"
+import { AppVersion, GraphQLTypeAppVersion } from "../enums"
 
 @Schema({
     timestamps: true,
@@ -53,8 +54,25 @@ export class UserSchema extends AbstractSchema {
     @Field(() => Boolean, {
         description: "Whether the multi-factor authentication is enabled.",
     })
-    @Prop({ type: Boolean, default: false })
+    @Prop({ type: Boolean, required: false })
         mfaEnabled: boolean
-}
+
+    @Field(() => String, {
+        description: "The user's Privy user ID.",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false })
+        privyUserId: string
+
+    @Field(() => GraphQLTypeAppVersion, {
+        description: "The version of the app",
+        defaultValue: AppVersion.V1,
+    })
+    @Prop({ type: String, enum: AppVersion, required: true, default: AppVersion.V1 })
+        version: AppVersion
+}   
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)
+
+// index the user by privy user id
+UserSchemaClass.index({ privyUserId: 1 }, { unique: true })

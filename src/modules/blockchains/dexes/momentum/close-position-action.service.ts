@@ -21,7 +21,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
 import { PrivySignService } from "@modules/privy"
-import { BotVersion } from "@modules/databases"
+import { AppVersion } from "@modules/databases"
 
 @Injectable()
 export class MomentumClosePositionActionService implements IClosePositionActionService {
@@ -54,7 +54,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSuiSigner({
                         bot,
                         action: async (signer) => {

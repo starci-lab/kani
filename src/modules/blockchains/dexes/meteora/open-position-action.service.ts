@@ -10,7 +10,7 @@ import {
     ConfirmOpenPositionParams,
 } from "../../interfaces"
 import { SignerService } from "../../signers"
-import { BotVersion, PrimaryMemoryStorageService } from "@modules/databases"
+import { AppVersion, PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
@@ -110,7 +110,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {

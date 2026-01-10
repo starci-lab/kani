@@ -15,7 +15,7 @@ import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
-    BotVersion, PrimaryMemoryStorageService
+    AppVersion, PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -175,7 +175,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSuiSigner({
                         bot,
                         action: async (signer) => {

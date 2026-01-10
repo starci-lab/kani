@@ -176,23 +176,23 @@ registerEnumType(GraphQLTypeJobStatus, {
 }
 )
 
-export enum BotVersion {
+export enum AppVersion {
     V1 = "v1",
     V2 = "v2",
 }
 
-export const GraphQLTypeBotVersion = createEnumType(BotVersion)
+export const GraphQLTypeAppVersion = createEnumType(AppVersion)
 
 registerEnumType(
-    GraphQLTypeBotVersion, {
-        name: "BotVersion",
-        description: "The version of the bot",
+    GraphQLTypeAppVersion, {
+        name: "AppVersion",
+        description: "The version of the app",
         valuesMap: {
-            [BotVersion.V1]: {
-                description: "The bot version 1"
+            [AppVersion.V1]: {
+                description: "The app version 1, use encrypted private key to process transactions"
             },
-            [BotVersion.V2]: {
-                description: "The bot version 2"
+            [AppVersion.V2]: {
+                description: "The app version 2, use privy signer to process transactions"
             }
         }
     }
