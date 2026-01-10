@@ -5,9 +5,9 @@ import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abst
 
 @InputType({
     description:
-        "Input payload for creating a new bot v2.",
+        "Input payload for creating a new bot 2.",
 })
-export class CreateBotV2Request {
+export class CreateBot2Request {
     @Field(() => String, {
         description: "The new name of the bot.",
     })
@@ -45,7 +45,7 @@ export class CreateBotV2Request {
     description:
         "Response payload returned after successfully creating a new bot.",
 })
-export class CreateBotV2ResponseData {
+export class CreateBot2ResponseData {
     @Field(() => String, {
         description: "The ID of the bot",
     })
@@ -59,15 +59,15 @@ export class CreateBotV2ResponseData {
 
 @ObjectType({
     description:
-        "Response payload returned after successfully creating a new bot v2.",
+        "Response payload returned after successfully creating a new bot 2.",
 })
-export class CreateBotV2Response
+export class CreateBot2Response
     extends AbstractGraphQLResponse
-    implements IAbstractGraphQLResponse<CreateBotV2ResponseData> {
-    @Field(() => CreateBotV2ResponseData, {
+    implements IAbstractGraphQLResponse<CreateBot2ResponseData> {
+    @Field(() => CreateBot2ResponseData, {
         nullable: true,
-        description: "The response data from the createBotV2 mutation",
+        description: "The response data from the createBot2 mutation",
     })
-        data?: CreateBotV2ResponseData
+        data?: CreateBot2ResponseData
 }
 
