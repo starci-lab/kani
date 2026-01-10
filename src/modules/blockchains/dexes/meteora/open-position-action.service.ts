@@ -35,6 +35,7 @@ import {
     address,
     fetchEncodedAccount,
     createNoopSigner,
+    partiallySignTransaction,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -114,7 +115,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
-                            const signedTransaction = await signTransaction([signer.keyPair], transaction)
+                            const signedTransaction = await signTransaction([signer.keyPair, positionKeyPair.keyPair], transaction)
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
@@ -134,12 +135,14 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    // partial sign the transaction
+                    const partialSignedTransaction = await partiallySignTransaction([positionKeyPair.keyPair], transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
                             lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
                         },
-                        transaction,
+                        transaction: partialSignedTransaction,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })

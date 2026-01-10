@@ -93,11 +93,11 @@ export class SuiBalanceService implements IBalanceService {
                         signatureWithBytes,
                     }
                 } else {
-                    if (!bot.privyMetadata.publicKeyHex) {
+                    if (!bot.privyMetadata.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException("Privy public key not found")
                     }
                     return await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.publicKeyHex ?? "",
+                        publicKeyHex: bot.privyMetadata.walletPublicKey,
                         client: suiClient,
                         walletId: bot.privyMetadata.walletId,
                         transaction: txb,

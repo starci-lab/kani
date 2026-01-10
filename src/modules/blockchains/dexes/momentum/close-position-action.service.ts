@@ -70,11 +70,11 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.publicKeyHex) {
+                    if (!bot.privyMetadata.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException("Privy public key not found")
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.publicKeyHex,
+                        publicKeyHex: bot.privyMetadata.walletPublicKey,
                         client: suiClient,
                         walletId: bot.privyMetadata.walletId,
                         transaction: closePositionTxb,

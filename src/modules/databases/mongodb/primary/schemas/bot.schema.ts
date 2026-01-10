@@ -239,5 +239,6 @@ export const BotSchemaClass = SchemaFactory.createForClass(BotSchema)
 
 export interface PrivyMetadata {
     walletId: string
-    publicKeyHex?: string
+    signerPublicKey?: string
+    walletPublicKey?: string
 }

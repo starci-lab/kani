@@ -52,3 +52,7 @@ export class BotsV2Response
         data: BotsV2ResponseData
 }
 
+export interface BotsV2Cursor {
+    // the createdAt of the last record
+    timestamp: string
+}

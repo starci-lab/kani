@@ -3,9 +3,9 @@ import { Injectable } from "@nestjs/common"
 import { InjectPrimaryMongoose, BotSchema, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
 import { 
-    BotsV2Cursor,
     BotsV2Request,
     BotsV2ResponseData,
+    BotsV2Cursor,
 } from "./bots-v2.dto"
 import { NoMoreBotsFoundException, UserNotFoundException } from "@exceptions"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
@@ -89,9 +89,3 @@ export class BotsV2Service {
         }
     }
 }
-
-export interface BotsV2Cursor {
-    // the createdAt of the last record
-    timestamp: string
-}
-

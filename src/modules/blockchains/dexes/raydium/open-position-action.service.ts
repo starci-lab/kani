@@ -37,6 +37,7 @@ import {
     address,
     signature,
     fetchEncodedAccount,
+    partiallySignTransaction,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -173,12 +174,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    // partial sign the transaction
+                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair], transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
                             lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
                         },
-                        transaction,
+                        transaction: partialSignedTransaction,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })

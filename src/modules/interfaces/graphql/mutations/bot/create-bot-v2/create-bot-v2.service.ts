@@ -4,6 +4,7 @@ import {
     BotSchema,
     UserSchema, 
     PrimaryMemoryStorageService,
+    AppVersion,
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import { 
@@ -120,8 +121,10 @@ export class CreateBotV2Service {
                                 encryptedPrivySignerPrivateKeyPayload,
                                 privyMetadata: {
                                     walletId: wallet.id,
-                                    publicKeyHex: keyPair.publicKey,
+                                    signerPublicKey: keyPair.publicKey,
+                                    walletPublicKey: wallet.public_key  
                                 },
+                                version: AppVersion.V2,
                                 isExitToUsdc,
                             }
                         ],
