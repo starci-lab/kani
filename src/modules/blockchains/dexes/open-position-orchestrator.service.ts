@@ -128,10 +128,12 @@ export class OpenPositionOrchestratorService {
          * Balance eligibility check:
          * Ensure bot has sufficient total balance (USD-based).
          */
-        const isSufficient = await this.balanceEligibilityService.isSufficient({
+        const { 
+            isEligible 
+        } = await this.balanceEligibilityService.evaluateBalanceEligibility({
             bot: bot,
         })
-        if (!isSufficient) {
+        if (!isEligible) {
             return
         }
 

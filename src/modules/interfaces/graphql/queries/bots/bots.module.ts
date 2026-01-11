@@ -10,6 +10,7 @@ import { FeesModule } from "./fees"
 import { FeesV2Module } from "./fees-v2"
 import { ReservesModule } from "./reserves"
 import { ReservesV2Module } from "./reserves-v2"
+import { FundingSnapshotV2Module } from "./funding-snapshot-v2"
 
 @Module({
     imports: [
@@ -41,6 +42,9 @@ import { ReservesV2Module } from "./reserves-v2"
             isGlobal: true,
         }),
         ReservesV2Module.register({
+            isGlobal: true,
+        }),
+        FundingSnapshotV2Module.register({
             isGlobal: true,
         }),
     ]

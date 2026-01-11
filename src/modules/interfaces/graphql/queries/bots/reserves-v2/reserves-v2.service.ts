@@ -12,10 +12,6 @@ import {
     ReservesV2ResponseData,
 } from "./reserves-v2.dto"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { InjectSuperJson, DayjsService } from "@modules/mixin"
-import SuperJSON from "superjson"
 import { 
     ActivePositionNotFoundException, 
     BotNotFoundException, 
@@ -23,8 +19,7 @@ import {
     LiquidityPoolNotFoundException,
     UserNotFoundException,
 } from "@exceptions"
-import { LiquidityPoolStateService } from "@modules/blockchains"
-import { ReservesOrchestratorService } from "@modules/blockchains/dexes"
+import { ReservesOrchestratorService } from "@modules/blockchains"
 
 @Injectable()
 export class ReservesV2Service {
@@ -32,12 +27,6 @@ export class ReservesV2Service {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly dayjsService: DayjsService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
-        private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly reservesOrchestratorService: ReservesOrchestratorService,
     ) { }
 
