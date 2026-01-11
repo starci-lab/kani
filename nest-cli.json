@@ -41,6 +41,15 @@
         "tsConfigPath": "apps/kani-executor/tsconfig.app.json"
       }
     },
+    "kani-inspector": {
+      "type": "application",
+      "root": "apps/kani-inspector",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-inspector/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-inspector/tsconfig.app.json"
+      }
+    },
     "kani-interface": {
       "type": "application",
       "root": "apps/kani-interface",

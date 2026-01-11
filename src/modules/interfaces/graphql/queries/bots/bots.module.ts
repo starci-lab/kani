@@ -7,7 +7,9 @@ import { BotsV2Module } from "./bots-v2"
 import { Bots2Module } from "./bots2"
 import { Bots2V2Module } from "./bots2-v2"
 import { FeesModule } from "./fees"
+import { FeesV2Module } from "./fees-v2"
 import { ReservesModule } from "./reserves"
+import { ReservesV2Module } from "./reserves-v2"
 
 @Module({
     imports: [
@@ -32,7 +34,13 @@ import { ReservesModule } from "./reserves"
         FeesModule.register({
             isGlobal: true,
         }),
+        FeesV2Module.register({
+            isGlobal: true,
+        }),
         ReservesModule.register({
+            isGlobal: true,
+        }),
+        ReservesV2Module.register({
             isGlobal: true,
         }),
     ]
