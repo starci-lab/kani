@@ -17,6 +17,7 @@
  * - liquidity: Liquidity operations errors
  * - liquidity-pools: Pool-specific errors
  * - misc: Miscellaneous errors
+ * - pagination: Pagination errors
  * - privy: Privy errors
  * - redlock: Distributed lock errors
  * - rpc: RPC connection errors
@@ -45,6 +46,7 @@ export * from "./gcp"
 export * from "./liquidity"
 export * from "./liquidity-pools"
 export * from "./misc"
+export * from "./pagination"
 export * from "./privy"
 export * from "./redlock"
 export * from "./rpc"

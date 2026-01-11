@@ -10,7 +10,7 @@ import {
 } from "./bots2.dto"
 import { UserJwtLike } from "@modules/passport"
 import Decimal from "decimal.js"
-import { ProfitService } from "../services"
+import { ProfitService } from "../../../services"
 
 @Injectable()
 export class Bots2Service {

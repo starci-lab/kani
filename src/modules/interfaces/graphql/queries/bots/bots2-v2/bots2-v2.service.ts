@@ -10,7 +10,7 @@ import {
     Bots2V2ResponseData,
 } from "./bots2-v2.dto"
 import Decimal from "decimal.js"
-import { ProfitService } from "../services"
+import { ProfitService } from "../../../services"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 import { UserNotFoundException } from "@exceptions"
 

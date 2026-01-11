@@ -3,7 +3,6 @@ import { ConfigurableModuleClass } from "./queries.module-definition"
 import { UsersModule } from "./users"
 import { BotsModule } from "./bots"
 import { StaticModule } from "./static"
-import { DynamicGraphQLModule } from "./dynamic"
 import { ActivityModule } from "./activity"
 
 @Module({
@@ -11,7 +10,6 @@ import { ActivityModule } from "./activity"
         UsersModule.register({ isGlobal: true }),
         BotsModule.register({ isGlobal: true }),
         StaticModule.register({ isGlobal: true }),
-        DynamicGraphQLModule.register({ isGlobal: true }),
         ActivityModule.register({ isGlobal: true }),
     ],
 })

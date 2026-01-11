@@ -9,6 +9,62 @@ import { LiquidityPoolId } from "../enums"
 import { DexSchema } from "./dex.schema"
 import { GraphQLJSON } from "graphql-type-json"
 
+/**
+ * GraphQL response type for the dynamic liquidity pools query.
+ */
+@ObjectType({
+    description: "GraphQL response object for fetching dynamic liquidity pool info.",
+})
+export class GraphQLDynamicLiquidityPoolInfo {
+    @Field(() => Float, {
+        nullable: true,
+        description: "Current tick index of the liquidity pool.",
+    })
+        tickCurrent?: number
+
+    @Field(() => Float, {
+        nullable: true,
+        description: "Current active id of the liquidity pool.",
+    })
+        activeId?: number
+
+    @Field(() => String, {
+        nullable: true,
+        description: "Total liquidity of the pool.",
+    })
+        liquidity?: string
+
+    @Field(() => Float, {
+        nullable: true,
+        description: "Current price of the pool.",
+    })
+        price?: number
+
+    @Field(() => Float, {
+        nullable: true,
+        description: "Trading volume in the last 24 hours.",
+    })
+        volume24H?: number
+
+    @Field(() => Float, {
+        nullable: true,
+        description: "Fees generated in the last 24 hours.",
+    })
+        fees24H?: number
+
+    @Field(() => Float, {
+        nullable: true,
+        description: "APR calculated over the last 24 hours.",
+    })
+        apr24H?: number
+
+    @Field(() => String, {
+        nullable: true,
+        description: "Total value locked (TVL) of the pool.",
+    })
+        tvl?: string
+}
+
 @Schema({
     timestamps: true,
     collection: "liquidity_pools",
@@ -97,6 +153,11 @@ export class LiquidityPoolSchema extends AbstractSchema {
     @Field(() => Number, { description: "The basis point max of the pool", nullable: true })
     @Prop({ type: Number, nullable: true })
         basisPointMax?: number
+
+    @Field(() => GraphQLDynamicLiquidityPoolInfo, 
+        { description: "The dynamic liquidity pool info", nullable: true }
+    )
+        dynamicInfo?: GraphQLDynamicLiquidityPoolInfo
 }
 
 export const LiquidityPoolSchemaClass = SchemaFactory.createForClass(LiquidityPoolSchema)
@@ -155,3 +216,4 @@ export interface MomentumLiquidityPoolMetadata {
     packageId: string
     versionObject: string
 }
+
