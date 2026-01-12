@@ -67,16 +67,12 @@ export class LiquidityPools2Service {
                         addresses.includes(liquidityPool.poolAddress),
                     )
                     : liquidityPools
-        const tokens = this.memoryStorageService.tokens.filter((token) => tokenIds?.includes(token.displayId))
         // token filters (only when not explicit ids)
         if (!ids?.length && !displayIds?.length && !addresses?.length) {
             if (tokenIds?.length) {
-                baseLiquidityPools = baseLiquidityPools.filter(
-                    (liquidityPool) =>
-                        tokens.some((token) => token.id.toString() === liquidityPool.tokenA.toString()
-                        ) 
-                    && tokens.some((token) => token.id.toString() === liquidityPool.tokenB.toString()
-                    ),
+                baseLiquidityPools = baseLiquidityPools.filter((liquidityPool) =>
+                    tokenIds.includes(liquidityPool.tokenA.toString()) &&
+                    tokenIds.includes(liquidityPool.tokenB.toString())
                 )
             }
         }
@@ -145,14 +141,9 @@ export class LiquidityPools2Service {
         }
         // filter by dex ids
         if (dexIds?.length) {
-            const dexes = this.memoryStorageService.dexes.filter((dex) =>
-                dexIds.includes(dex.displayId),
-            )
             paginatedLiquidityPools = paginatedLiquidityPools.filter(
                 (liquidityPool) =>
-                    dexes.some(
-                        (dex) => dex.id.toString() === liquidityPool.dex.toString(),
-                    ),
+                    dexIds.includes(liquidityPool.dex.toString()),
             )
         }
         return {
