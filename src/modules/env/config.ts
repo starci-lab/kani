@@ -88,10 +88,33 @@ export const envConfig = () => ({
         },
     },
     pagination: {
-        limit: {
-            default: parseInt(process.env.PAGINATION_LIMIT_DEFAULT || "10", 10),
-            min: parseInt(process.env.PAGINATION_LIMIT_MIN || "1", 10),
-            max: parseInt(process.env.PAGINATION_LIMIT_MAX || "10", 10),
+        bots2: {
+            limit: {
+                default: parseInt(process.env.PAGINATION_BOTS2_LIMIT_DEFAULT || "10", 10),
+                min: parseInt(process.env.PAGINATION_BOTS2_LIMIT_MIN || "1", 10),
+                max: parseInt(process.env.PAGINATION_BOTS2_LIMIT_MAX || "20", 10),
+            },
+        },
+        positions2: {
+            limit: {
+                default: parseInt(process.env.PAGINATION_POSITIONS2_LIMIT_DEFAULT || "10", 10),
+                min: parseInt(process.env.PAGINATION_POSITIONS2_LIMIT_MIN || "1", 10),
+                max: parseInt(process.env.PAGINATION_POSITIONS2_LIMIT_MAX || "20", 10),
+            },
+        },
+        transactions2: {
+            limit: {
+                default: parseInt(process.env.PAGINATION_TRANSACTIONS2_LIMIT_DEFAULT || "10", 10),
+                min: parseInt(process.env.PAGINATION_TRANSACTIONS2_LIMIT_MIN || "1", 10),
+                max: parseInt(process.env.PAGINATION_TRANSACTIONS2_LIMIT_MAX || "20", 10),
+            },
+        },
+        liquidityPools2: {
+            limit: {
+                default: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS2_LIMIT_DEFAULT || "10", 10),
+                min: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS2_LIMIT_MIN || "1", 10),
+                max: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS2_LIMIT_MAX || "20", 10),
+            },
         },
     },
     totp: {

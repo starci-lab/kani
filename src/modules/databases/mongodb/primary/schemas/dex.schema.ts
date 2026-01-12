@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { AbstractSchema } from "./abstract"
 import { DexId, GraphQLTypeDexId } from "../enums"
 import { Field, ObjectType } from "@nestjs/graphql"
+import { ChainId, GraphQLTypeChainId } from "@typedefs"
 
 /**
  * Represents a decentralized exchange (DEX) supported by the platform.
@@ -64,6 +65,16 @@ export class DexSchema extends AbstractSchema {
         required: false,
     })
         iconUrl?: string
+
+    @Field(() => [GraphQLTypeChainId], {
+        nullable: true,
+        description: "The list of supported chains by the DEX.",
+    })
+    @Prop({
+        type: [String],
+        required: false,
+    })
+        chainIds: Array<ChainId>
 }
 
 export const DexSchemaClass = SchemaFactory.createForClass(DexSchema)

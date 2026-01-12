@@ -6,15 +6,15 @@ import { Field, InputType, Int, ObjectType } from "@nestjs/graphql"
 })
 export class PaginationPageFilters {
   @Field(() => Int, {
-      defaultValue: 1,
       description: "Page number",
+      nullable: true,
   })
-      pageNumber: number
+      pageNumber?: number
   @Field(() => Int, {
-      defaultValue: 10,
       description: "Number of items to fetch per page",
+      nullable: true,
   })
-      limit: number
+      limit?: number
 }
 
 @ObjectType({

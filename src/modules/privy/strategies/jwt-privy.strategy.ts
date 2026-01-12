@@ -28,9 +28,13 @@ export class JwtPrivyStrategy extends PassportStrategy(
         const extractor = ExtractJwt.fromAuthHeaderAsBearerToken()
         const token = extractor(req)
         if (!token) return this.fail(new NoAuthenticationTokenException("No authentication token provided"), 401)
-        const payload = await this.privyClient.utils().auth().verifyAccessToken(token)
-        if (!payload) return this.fail(new InvalidAuthenticationTokenException("Invalid authentication token"), 401)
-        return this.success(payload)
+        try {
+            const payload = await this.privyClient.utils().auth().verifyAccessToken(token)
+            if (!payload) return this.fail(new InvalidAuthenticationTokenException("Invalid authentication token"), 401)
+            return this.success(payload)
+        } catch {
+            return this.fail(new InvalidAuthenticationTokenException("Invalid authentication token"), 401)
+        }
     }
 
     validate(payload: JwtAccessTokenPayload) {

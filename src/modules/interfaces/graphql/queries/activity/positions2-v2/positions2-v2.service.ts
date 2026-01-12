@@ -17,6 +17,7 @@ import {
     UserNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class Positions2V2Service {
@@ -65,9 +66,11 @@ export class Positions2V2Service {
         // sort the positions by positionOpenedAt
         query.sort({ timestamp: sortOrder })
         // If there is a cursor, get the previous/next cursor
-        query.limit(limit)
+        const _limit = limit ?? envConfig().pagination.positions2.limit.default
+        const _pageNumber = pageNumber ?? 1
+        query.limit(_limit)
         // limit the number of positions to return
-        query.skip(new Decimal(pageNumber).sub(1).mul(limit).toNumber())
+        query.skip(new Decimal(_pageNumber).sub(1).mul(_limit).toNumber())
         // execute the query
         const positions = await query.exec()
         // return the positions

@@ -6,6 +6,8 @@ import { CreateBotModule } from "./create-bot"
 import { CreateBotV2Module } from "./create-bot-v2"
 import { ToggleBotModule } from "./toggle-bot"
 import { ToggleBotV2Module } from "./toggle-bot-v2"
+import { UpdateBotLiquidityPoolsV2Module } from "./update-bot-liquidity-pools-v2"
+import { UpdateBotSettingsV2Module } from "./update-bot-settings-v2"
 
 @Module({
     imports: [
@@ -25,6 +27,12 @@ import { ToggleBotV2Module } from "./toggle-bot-v2"
             isGlobal: true,
         }),
         CreateBotV2Module.register({
+            isGlobal: true,
+        }),
+        UpdateBotLiquidityPoolsV2Module.register({
+            isGlobal: true,
+        }),
+        UpdateBotSettingsV2Module.register({
             isGlobal: true,
         }),
     ],

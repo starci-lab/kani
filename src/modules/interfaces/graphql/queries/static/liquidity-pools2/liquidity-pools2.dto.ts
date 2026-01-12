@@ -1,5 +1,5 @@
-import { ObjectType, Field, InputType } from "@nestjs/graphql"
-import { GraphQLTypeLiquidityPoolId, GraphQLTypeTokenId, LiquidityPoolId, LiquidityPoolSchema, TokenId } from "@modules/databases"
+import { ObjectType, Field, InputType, registerEnumType } from "@nestjs/graphql"
+import { DexId, GraphQLTypeDexId, GraphQLTypeLiquidityPoolId, GraphQLTypeTokenId, LiquidityPoolId, LiquidityPoolSchema, TokenId } from "@modules/databases"
 import { 
     AbstractGraphQLResponse, 
     IAbstractGraphQLResponse, 
@@ -7,21 +7,44 @@ import {
     PaginationPageFilters, 
     PaginationPageResponseData
 } from "../../../abstracts"
+import { createEnumType } from "@utils"
 
+
+export enum LiquidityPools2SortBy {
+    Apr = "apr",
+    Volume = "volume",
+    Fees = "fees",
+    Liquidity = "liquidity",
+}
+export const GraphQLTypeLiquidityPools2SortBy = createEnumType(LiquidityPools2SortBy)
+
+registerEnumType(GraphQLTypeLiquidityPools2SortBy, {
+    name: "LiquidityPools2SortBy",
+    description: "The field to sort the liquidity pools by.",
+    valuesMap: {
+        [LiquidityPools2SortBy.Apr]: {
+            description: "The APR of the liquidity pool.",
+        },
+        [LiquidityPools2SortBy.Volume]: {
+            description: "The volume of the liquidity pool.",
+        },
+        [LiquidityPools2SortBy.Fees]: {
+            description: "The fees of the liquidity pool.",
+        },
+        [LiquidityPools2SortBy.Liquidity]: {
+            description: "The liquidity of the liquidity pool.",
+        },
+    },
+})
 @InputType({
     description: "The request for fetching liquidity pools2.",
 })
 export class LiquidityPools2PaginationPageFilters extends PaginationPageFilters {
-    @Field(() => GraphQLTypeTokenId, {
+    @Field(() => [GraphQLTypeTokenId], {
         nullable: true,
-        description: "The token A address.",
+        description: "The token ids to filter by.",
     })
-        tokenA?: TokenId
-    @Field(() => GraphQLTypeTokenId, {
-        description: "The token B address.",
-        nullable: true,
-    })
-        tokenB?: TokenId
+        tokenIds?: Array<TokenId>
     @Field(() => [String], {
         description: "The pool ids.",
         nullable: true,
@@ -34,16 +57,36 @@ export class LiquidityPools2PaginationPageFilters extends PaginationPageFilters 
     })
         displayIds?: Array<LiquidityPoolId>
     
+    @Field(() => [GraphQLTypeDexId], {
+        description: "The DEX ids.",
+        nullable: true,
+    })
+        dexIds?: Array<DexId>
     @Field(() => [String], {
         description: "The pool addresses.",
         nullable: true,
     })
         addresses?: Array<string>
-    @Field(() => Boolean, {
-        defaultValue: true,
-        description: "Whether to sort the liquidity pools by APR in descending order.",
+    @Field(() => GraphQLTypeLiquidityPools2SortBy, {
+        description: "The field to sort the liquidity pools by.",
+        nullable: true,
     })
-        aprDescending?: boolean
+        sortBy?: LiquidityPools2SortBy
+    @Field(() => Boolean, {
+        defaultValue: false,
+        description: "Whether to sort the liquidity pools in ascending order.",
+    })
+        asc?: boolean
+        @Field(() => Boolean, {
+            nullable: true,
+            description: "Whether to include watchlist liquidity pools.",
+        })
+            watchlist?: boolean
+        @Field(() => Boolean, {
+            nullable: true,
+            description: "Whether to include incentivized liquidity pools.",
+        })
+            incentivized?: boolean
 }
 
 @InputType({

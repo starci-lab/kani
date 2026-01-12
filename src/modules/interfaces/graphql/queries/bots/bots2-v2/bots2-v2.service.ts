@@ -13,6 +13,7 @@ import Decimal from "decimal.js"
 import { ProfitService } from "../../../services"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 import { UserNotFoundException } from "@exceptions"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class Bots2V2Service {
@@ -48,10 +49,13 @@ export class Bots2V2Service {
         const sortOrder = filters.timestampAscending ? 1 : -1
         // sort the bots by createdAt
         query.sort({ createdAt: sortOrder })
-        // limit the number of bots to return
-        query.limit(limit)
-        // skip the number of bots based on page number
-        query.skip(new Decimal(pageNumber).sub(1).mul(limit).toNumber())
+        // get the limit number
+        const _limit = limit ?? envConfig().pagination.bots2.limit.default
+        const _pageNumber = pageNumber ?? 1
+        // limit the number of items
+        query.limit(_limit)
+        // skip the number of items
+        query.skip(new Decimal(_pageNumber).sub(1).mul(_limit).toNumber())
         // execute the query
         const bots = await query.exec()
         // get the roi for the bots

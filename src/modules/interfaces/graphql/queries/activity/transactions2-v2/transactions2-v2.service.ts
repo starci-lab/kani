@@ -17,6 +17,7 @@ import {
     UserNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class Transactions2V2Service {
@@ -61,9 +62,11 @@ export class Transactions2V2Service {
         // sort the transactions by createdAt
         query.sort({ timestamp: sortOrder })
         // limit the number of transactions to return
-        query.limit(limit)
+        const _limit = limit ?? envConfig().pagination.transactions2.limit.default
+        const _pageNumber = pageNumber ?? 1
+        query.limit(_limit)
         // skip the number of items
-        query.skip(new Decimal(pageNumber).sub(1).mul(limit).toNumber())
+        query.skip(new Decimal(_pageNumber).sub(1).mul(_limit).toNumber())
         // execute the query
         const transactions = await query.exec()
         // return the transactions

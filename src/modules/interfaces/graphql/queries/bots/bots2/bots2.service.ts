@@ -11,6 +11,7 @@ import {
 import { UserJwtLike } from "@modules/passport"
 import Decimal from "decimal.js"
 import { ProfitService } from "../../../services"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class Bots2Service {
@@ -40,9 +41,11 @@ export class Bots2Service {
         // sort the bots by createdAt
         query.sort({ createdAt: sortOrder })
         // limit the number of bots to return
-        query.limit(limit)
+        const _limit = limit ?? envConfig().pagination.bots2.limit.default
+        const _pageNumber = pageNumber ?? 1
+        query.limit(_limit)
         // skip the number of bots based on page number
-        query.skip(new Decimal(pageNumber).sub(1).mul(limit).toNumber())
+        query.skip(new Decimal(_pageNumber).sub(1).mul(_limit).toNumber())
         // execute the query
         const bots = await query.exec()
         // get the roi for the bots
