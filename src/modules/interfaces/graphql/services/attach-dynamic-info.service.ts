@@ -17,13 +17,13 @@ export class AttachDynamicInfoService {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly clmmTickFormulaService: ClmmTickFormulaService,
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async attachDynamicInfo(
         liquidityPool: LiquidityPoolSchema
     ): Promise<void> {
-        const tokens = this.memoryStorageService.tokens
+        const tokens = this.primaryMemoryStorageService.tokens
 
         const tokenA = tokens.find(token => token.id.toString() === liquidityPool.tokenA.toString())
         const tokenB = tokens.find(token => token.id.toString() === liquidityPool.tokenB.toString())

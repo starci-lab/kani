@@ -32,7 +32,7 @@ export class BalanceEligibilityService {
     /**
      * Check whether a price snapshot is stale
      */
-    private isStalePrice(price: GetPriceResponse): boolean {
+    public isStalePrice(price: GetPriceResponse): boolean {
         const now = this.dayjsService.now()
         const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
         const ageMs = now.diff(price.snapshotAt, "millisecond")

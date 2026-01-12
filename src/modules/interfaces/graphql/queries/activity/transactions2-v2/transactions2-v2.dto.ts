@@ -13,10 +13,10 @@ import { PaginationPageFilters } from "../../../abstracts"
 })
 export class Transactions2V2PaginationPageFilters extends PaginationPageFilters {
     @Field(() => Boolean, {
-        defaultValue: false,
-        description: "Whether to sort the transactions by timestamp in ascending order.",
+        nullable: true,
+        description: "Whether to sort the transactions by createdAt in ascending order.",
     })
-        timestampAscending?: boolean
+        asc?: boolean
 }
 
 @ObjectType({

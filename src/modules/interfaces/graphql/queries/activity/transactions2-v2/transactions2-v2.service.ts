@@ -58,9 +58,9 @@ export class Transactions2V2Service {
             .model<TransactionSchema>(TransactionSchema.name)
             .find({ bot: botId })
         // get the sort order
-        const sortOrder = filters.timestampAscending ? 1 : -1
+        const sortOrder = filters.asc ? 1 : -1
         // sort the transactions by createdAt
-        query.sort({ timestamp: sortOrder })
+        query.sort({ createdAt: sortOrder })
         // limit the number of transactions to return
         const _limit = limit ?? envConfig().pagination.transactions2.limit.default
         const _pageNumber = pageNumber ?? 1

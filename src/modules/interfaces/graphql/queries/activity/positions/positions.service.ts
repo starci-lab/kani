@@ -55,9 +55,9 @@ export class PositionsService {
             .model<PositionSchema>(PositionSchema.name)
             .find({ bot: botId })
         // get the sort order
-        const sortOrder = filters.timestampAscending ? 1 : -1
-        // sort the positions by positionOpenedAt
-        query.sort({ timestamp: sortOrder })
+        const sortOrder = filters.asc ? 1 : -1
+        // sort the positions by createdAt
+        query.sort({ createdAt: sortOrder })
         // If there is a cursor, get the previous/next cursor
         if (cursor) {
             // we use base64 to decode the cursor into a string
@@ -67,7 +67,7 @@ export class PositionsService {
             // Assume the cursor is the timestamp of the last record
             const timestampDate = this.dayjsService.from(timestamp)
             // get the operator
-            const operator = filters.timestampAscending ? "$gt" : "$lt"
+            const operator = filters.asc ? "$gt" : "$lt"
             query.where(
                 "positionOpenedAt",
                 {

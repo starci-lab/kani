@@ -18,12 +18,14 @@ import {
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
+import { AttachLiquidityPoolService } from "../../../services"
 
 @Injectable()
 export class Positions2V2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly attachLiquidityPoolService: AttachLiquidityPoolService,
     ) { }
 
     async positions2V2(
@@ -62,9 +64,9 @@ export class Positions2V2Service {
             }
             )
         // get the sort order
-        const sortOrder = filters.timestampAscending ? 1 : -1
-        // sort the positions by positionOpenedAt
-        query.sort({ timestamp: sortOrder })
+        const sortOrder = filters.asc ? 1 : -1
+        // sort the positions by createdAt
+        query.sort({ createdAt: sortOrder })
         // If there is a cursor, get the previous/next cursor
         const _limit = limit ?? envConfig().pagination.positions2.limit.default
         const _pageNumber = pageNumber ?? 1
@@ -74,6 +76,10 @@ export class Positions2V2Service {
         // execute the query
         const positions = await query.exec()
         // return the positions
+        // attach the associated liquidity pool to the positions
+        for (const position of positions) {
+            this.attachLiquidityPoolService.attachLiquidityPoolToPosition(position)
+        }
         return {
             count: positions.length,
             data: positions,
