@@ -1,40 +1,36 @@
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { TokenNotFoundException } from "@exceptions"
+import {
+    MinOperationalGasAmountNotFoundException,
+    TokenNotFoundException,
+} from "@exceptions"
 import { TokenType } from "@typedefs"
-import { computeDenomination } from "@utils"
+import { computeDenomination, createEnumType } from "@utils"
 import { AsyncService, DayjsService } from "@modules/mixin"
 import { GetPriceResponse, PythPriceService } from "@modules/blockchains"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
+import { registerEnumType } from "@nestjs/graphql"
 
 /**
- * Params for balance eligibility check
+ * Params for balance eligibility evaluation
  */
-export interface IsSufficientParams {
+export interface EvaluateBalanceEligibilityParams {
     bot: BotSchema
 }
 
 @Injectable()
 export class BalanceEligibilityService {
     constructor(
-        // In-memory storage for tokens & configs
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-
-        // Helper for running async calls in parallel with strict success
         private readonly asyncService: AsyncService,
-
-        // Price oracle service (Pyth)
         private readonly pythPriceService: PythPriceService,
-
-        // Time utility service
         private readonly dayjsService: DayjsService,
     ) {}
 
     /**
      * Check whether a price snapshot is stale
-     * (too old to be trusted for eligibility decision)
      */
     public isStalePrice(price: GetPriceResponse): boolean {
         const now = this.dayjsService.now()
@@ -44,35 +40,20 @@ export class BalanceEligibilityService {
     }
 
     /**
-     * Check whether bot has sufficient total balance (target + quote + gas)
-     * to be eligible for running/trading.
-     *
-     * Returns false on:
-     * - missing snapshot balances
-     * - missing token metadata
-     * - stale prices
-     * - insufficient total USD value
-     * - any unexpected error
+     * Evaluate whether a bot has sufficient balance and gas to operate.
+     * Returns eligibility result with detailed failure reason.
      */
-    public async isSufficient({
+    public async evaluateBalanceEligibility({
         bot,
-    }: IsSufficientParams): Promise<boolean> {
+    }: EvaluateBalanceEligibilityParams): Promise<BalanceEligibilityResult> {
         try {
-            // --- 1. Read snapshot balances from bot ---
-            const snapshotTargetBalanceAmount = bot.snapshotTargetBalanceAmount
-            const snapshotQuoteBalanceAmount = bot.snapshotQuoteBalanceAmount
-            const snapshotGasBalanceAmount = bot.snapshotGasBalanceAmount
-
-            // If any snapshot balance is missing → not eligible
-            if (
-                !snapshotTargetBalanceAmount ||
-                !snapshotQuoteBalanceAmount ||
-                !snapshotGasBalanceAmount
-            ) {
-                return false
-            }
-
-            // --- 2. Resolve token metadata ---
+            // --- 1. Read snapshot balances ---
+            const {
+                snapshotTargetBalanceAmount,
+                snapshotQuoteBalanceAmount,
+                snapshotGasBalanceAmount,
+            } = bot
+            // --- 2. Resolve tokens ---
             const targetToken = this.primaryMemoryStorageService.tokens.find(
                 (token) => token.id === bot.targetToken.toString(),
             )
@@ -96,75 +77,155 @@ export class BalanceEligibilityService {
                 throw new TokenNotFoundException("Gas token not found")
             }
 
-            // --- 3. Fetch prices in parallel ---
+            // --- 3. Fetch prices ---
             const [
-                targetPrice,
-                quotePrice,
-                gasPrice,
-            ] = await this.asyncService.allMustDone([
-                this.pythPriceService.getPrice({
-                    tokenId: targetToken.displayId,
-                }),
-                this.pythPriceService.getPrice({
-                    tokenId: quoteToken.displayId,
-                }),
-                this.pythPriceService.getPrice({
-                    tokenId: gasToken.displayId,
-                }),
-            ])
+                targetPrice, 
+                quotePrice, 
+                gasPrice
+            ] =
+                await this.asyncService.allMustDone([
+                    this.pythPriceService.getPrice({
+                        tokenId: targetToken.displayId,
+                    }),
+                    this.pythPriceService.getPrice({
+                        tokenId: quoteToken.displayId,
+                    }),
+                    this.pythPriceService.getPrice({
+                        tokenId: gasToken.displayId,
+                    }),
+                ])
 
-            // Reject if any price is stale
             if (
                 this.isStalePrice(targetPrice) ||
                 this.isStalePrice(quotePrice) ||
                 this.isStalePrice(gasPrice)
             ) {
-                return false
+                return {
+                    isEligible: false,
+                    status: BalanceEligibilityStatus.StalePrice,
+                }
             }
 
-            // --- 4. Convert balances from raw units to decimals ---
-            const targetBalanceAmountDecimal = computeDenomination(
+            // --- 4. Convert balances ---
+            const targetBalance = computeDenomination(
                 new BN(snapshotTargetBalanceAmount),
                 targetToken.decimals,
             )
-            const quoteBalanceAmountDecimal = computeDenomination(
+            const quoteBalance = computeDenomination(
                 new BN(snapshotQuoteBalanceAmount),
                 quoteToken.decimals,
             )
-            const gasBalanceAmountDecimal = computeDenomination(
+            const gasBalance = computeDenomination(
                 new BN(snapshotGasBalanceAmount),
                 gasToken.decimals,
             )
 
-            // --- 5. Convert balances to USD ---
-            const totalTargetBalanceAmountInUsd =
-                targetBalanceAmountDecimal.mul(targetPrice.price)
-            const totalQuoteBalanceAmountInUsd =
-                quoteBalanceAmountDecimal.mul(quotePrice.price)
-            const totalGasBalanceAmountInUsd =
-                gasBalanceAmountDecimal.mul(gasPrice.price)
-                
-            const totalBalanceAmountInUsd =
-                totalTargetBalanceAmountInUsd
-                    .add(totalQuoteBalanceAmountInUsd)
-                    .add(totalGasBalanceAmountInUsd)
+            // --- 5. Compute balances in USDC ---
+            const balanceExcludingGasInUsdc = targetBalance
+                .mul(targetPrice.price)
+                .add(quoteBalance.mul(quotePrice.price))
 
-            // --- 6. Compare against minimum required balance ---
+            const balanceIncludingGasInUsdc = balanceExcludingGasInUsdc.add(
+                gasBalance.mul(gasPrice.price),
+            )
+
+            // --- 6. Check minimum required balance ---
             const minRequiredAmountInUsd = new Decimal(
                 this.primaryMemoryStorageService.balanceConfig
                     .balanceRequired?.[bot.chainId]
                     ?.minRequiredAmountInUsd ?? 0,
             )
+        
+            if (balanceExcludingGasInUsdc.lt(minRequiredAmountInUsd)) {
+                return {
+                    isEligible: false,
+                    status: BalanceEligibilityStatus.InsufficientFunds,
+                    balanceExcludingGasInUsdc,
+                    balanceIncludingGasInUsdc,
+                }
+            }
+            // --- 7. Check gas sufficiency ---
+            const minOperationalGasAmount =
+                this.primaryMemoryStorageService.gasConfig
+                    .gasAmountRequired?.[bot.chainId]
+                    ?.minOperationalAmount
 
-            if (totalBalanceAmountInUsd.lt(minRequiredAmountInUsd)) {
-                return false
+            if (!minOperationalGasAmount) {
+                throw new MinOperationalGasAmountNotFoundException(
+                    bot.chainId,
+                    "Min operational gas amount not found",
+                )
+            }
+            const minOperationalGasAmountDecimal = computeDenomination(
+                new BN(minOperationalGasAmount),
+                gasToken.decimals,
+            )
+            if (gasBalance.lt(minOperationalGasAmountDecimal)) {
+                return {
+                    isEligible: false,
+                    status: BalanceEligibilityStatus.NotEnoughGas,
+                    balanceExcludingGasInUsdc,
+                    balanceIncludingGasInUsdc,
+                }
             }
 
-            // All checks passed → eligible
-            return true
-        } catch {
-            // Fail-safe: any error means not eligible
-            return false
+            // --- Eligible ---
+            return {
+                isEligible: true,
+                status: BalanceEligibilityStatus.Ok,
+                balanceExcludingGasInUsdc,
+                balanceIncludingGasInUsdc,
+            }
+        } catch (error) {
+            console.error(error)
+            return {
+                isEligible: false,
+                status: BalanceEligibilityStatus.Error,
+            }
         }
     }
 }
+
+/**
+ * Result returned by balance eligibility evaluation
+ */
+export interface BalanceEligibilityResult {
+    isEligible: boolean
+    balanceExcludingGasInUsdc?: Decimal
+    balanceIncludingGasInUsdc?: Decimal
+    status: BalanceEligibilityStatus
+}
+
+export enum BalanceEligibilityStatus {
+    Ok = "ok",
+    StalePrice = "stalePrice",
+    NotEnoughGas = "notEnoughGas",
+    InsufficientFunds = "insufficientFunds",
+    Error = "error",
+}
+
+export const GraphQLTypeBalanceEligibilityStatus =
+    createEnumType(BalanceEligibilityStatus)
+
+registerEnumType(GraphQLTypeBalanceEligibilityStatus, {
+    name: "BalanceEligibilityStatus",
+    description:
+        "Eligibility status of the bot based on balance, gas, and price snapshot.",
+    valuesMap: {
+        [BalanceEligibilityStatus.Ok]: {
+            description: "The bot is eligible to operate.",
+        },
+        [BalanceEligibilityStatus.StalePrice]: {
+            description: "One or more price snapshots are stale.",
+        },
+        [BalanceEligibilityStatus.NotEnoughGas]: {
+            description: "Gas balance is below the minimum operational requirement.",
+        },
+        [BalanceEligibilityStatus.InsufficientFunds]: {
+            description: "Total balance excluding gas is insufficient.",
+        },
+        [BalanceEligibilityStatus.Error]: {
+            description: "An unexpected error occurred during evaluation.",
+        },
+    },
+})

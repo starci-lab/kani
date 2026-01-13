@@ -24,7 +24,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { AsyncService } from "@modules/mixin"
 import { PrivySignService } from "@modules/privy"
-import { BotVersion } from "@modules/databases"
+import { AppVersion } from "@modules/databases"
 
 @Injectable()
 export class FlowXClosePositionActionService implements IClosePositionActionService {
@@ -57,7 +57,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,    
             callback: async ({ suiClient }) => {
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSuiSigner({
                         bot,
                         action: async (signer) => {
@@ -81,11 +81,11 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.publicKeyHex) {
+                    if (!bot.privyMetadata.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException("Privy public key not found")
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.publicKeyHex,
+                        publicKeyHex: bot.privyMetadata.walletPublicKey,
                         client: suiClient,
                         walletId: bot.privyMetadata.walletId,
                         transaction: closePositionTxb,

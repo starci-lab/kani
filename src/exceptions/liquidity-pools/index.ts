@@ -61,3 +61,10 @@ export class TurbosPoolBatchInfoNotFoundException extends AbstractException {
         super(message || `Turbos pool batch info ${liquidityPoolIds.join(", ")} not found`, "TURBOS_POOL_BATCH_INFO_NOT_FOUND_EXCEPTION", { liquidityPoolIds })
     }
 }
+
+/** Thrown when some liquidity pools are not found */
+export class SomeLiquidityPoolsNotFoundException extends AbstractException {
+    constructor(liquidityPoolIds: Array<string>, message?: string) {
+        super(message || `Some liquidity pools ${liquidityPoolIds.join(", ")} not found`, "SOME_LIQUIDITY_POOLS_NOT_FOUND_EXCEPTION", { liquidityPoolIds })
+    }
+}

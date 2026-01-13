@@ -76,7 +76,7 @@ export interface PrivySignerResponse {
 }
 
 export interface CreateWalletParams {
-    policyIds: Array<string>
+    policyIds?: Array<string>
     chainId: ChainId
     additionalSigners: Array<AdditionalSigner>
     userId: string
@@ -84,5 +84,5 @@ export interface CreateWalletParams {
 
 export interface AdditionalSigner {
     signerId: string
-    policyIds: Array<string>
+    policyIds?: Array<string>
 }

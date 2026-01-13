@@ -11,8 +11,8 @@ import {
     ExplorerId, 
     GraphQLTypeBotType, 
     GraphQLTypeExplorerId,
-    BotVersion,
-    GraphQLTypeBotVersion
+    AppVersion,
+    GraphQLTypeAppVersion
 } from "../enums"
 import { PositionSchema } from "./position.schema"
 /**
@@ -151,24 +151,21 @@ export class BotSchema extends AbstractSchema {
     // we use snapshot to reduce on-chain calls and improve performance
     @Field(() => String, {
         description: "The snapshot of the target balance amount",
-        nullable: true,
     })
-    @Prop({ type: String, required: false })
-        snapshotTargetBalanceAmount?: string
+    @Prop({ type: String, default: "0" })
+        snapshotTargetBalanceAmount: string
     
     @Field(() => String, {
         description: "The snapshot of the quote balance amount",
-        nullable: true,
     })
-    @Prop({ type: String, required: false })
-        snapshotQuoteBalanceAmount?: string
+    @Prop({ type: String, default: "0" })
+        snapshotQuoteBalanceAmount: string
 
     @Field(() => String, {
         description: "The snapshot of the gas balance amount",
-        nullable: true,
     })
-    @Prop({ type: String, required: false })
-        snapshotGasBalanceAmount?: string
+    @Prop({ type: String, default: "0" })
+        snapshotGasBalanceAmount: string
 
     @Field(() => Date, {
         description: "The date and time the last snapshot was taken",
@@ -224,12 +221,12 @@ export class BotSchema extends AbstractSchema {
     })
         pnl24h?: number
 
-    @Field(() => GraphQLTypeBotVersion, {
+    @Field(() => GraphQLTypeAppVersion, {
         description: "The version of the bot",
-        defaultValue: BotVersion.V1,
+        defaultValue: AppVersion.V1,
     })
-    @Prop({ type: String, enum: BotVersion, required: true, default: BotVersion.V1 })
-        version: BotVersion
+    @Prop({ type: String, enum: AppVersion, required: true, default: AppVersion.V1 })
+        version: AppVersion
 }
 /**
  * The actual Mongoose schema generated from the class definition above.
@@ -239,5 +236,6 @@ export const BotSchemaClass = SchemaFactory.createForClass(BotSchema)
 
 export interface PrivyMetadata {
     walletId: string
-    publicKeyHex?: string
+    signerPublicKey?: string
+    walletPublicKey?: string
 }

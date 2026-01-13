@@ -4,6 +4,9 @@ import { TokensModule } from "./tokens"
 import { LiquidityPoolsModule } from "./liquidity-pools"
 import { DexesModule } from "./dexes"
 import { AccountLimitsModule } from "./account-limits"
+import { GasConfigModule } from "./gas-config"
+import { BalanceConfigModule } from "./balance-config"
+import { LiquidityPools2Module } from "./liquidity-pools2"
 
 @Module({
     imports: [
@@ -13,10 +16,19 @@ import { AccountLimitsModule } from "./account-limits"
         LiquidityPoolsModule.register({
             isGlobal: true,
         }),
+        LiquidityPools2Module.register({
+            isGlobal: true,
+        }),
         DexesModule.register({
             isGlobal: true,
         }),
         AccountLimitsModule.register({
+            isGlobal: true,
+        }),
+        GasConfigModule.register({
+            isGlobal: true,
+        }),
+        BalanceConfigModule.register({
             isGlobal: true,
         }),
     ],

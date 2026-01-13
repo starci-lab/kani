@@ -9,7 +9,7 @@ import {
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { 
-    BotVersion,
+    AppVersion,
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
@@ -194,7 +194,7 @@ export class SolanaBalanceService implements IBalanceService {
                     (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {

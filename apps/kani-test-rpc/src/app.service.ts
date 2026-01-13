@@ -1,5 +1,4 @@
 import { MountStorageService } from "@modules/filesystem"
-import { PrivyWalletService } from "@modules/privy"
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import { getTransferSolInstruction } from "@solana-program/system"
 import { 
@@ -16,7 +15,6 @@ import {
     getBase64Encoder,
     getTransactionDecoder,
     getSignatureFromTransaction,
-    sendAndConfirmTransactionFactory,
     createSolanaRpcSubscriptions,
     assertIsSendableTransaction,
     assertIsFullySignedTransaction,
@@ -27,12 +25,21 @@ import {
     TransactionWithinSizeLimit,
     FullySignedTransaction
 } from "@solana/kit"
+import { PrivyClient } from "@privy-io/node"
+import { InjectPrivyClient } from "@modules/privy"
+import { Connection } from "mongoose"
+import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
+import { DerivedAesKeyService } from "@modules/derived"
 
 @Injectable()
 export class AppService implements OnModuleInit{
     constructor(
-        private readonly privyWalletService: PrivyWalletService,
         private readonly mountStorageService: MountStorageService,
+        @InjectPrivyClient()
+        private readonly privyClient: PrivyClient,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly derivedAesKeyService: DerivedAesKeyService,
     ) {}
 
     async onModuleInit() {
@@ -40,28 +47,36 @@ export class AppService implements OnModuleInit{
         const rpcSubscriptions = createSolanaRpcSubscriptions("wss://mainnet.helius-rpc.com/?api-key=61ebfd1f-ab3d-4a25-869a-80ded3456f52")
         const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
         const transferSolInstruction = getTransferSolInstruction({
-            source: createNoopSigner(address("Dm2punindj5XrkPP4ihuuBacDCLNxsgQAAa8Vr8LjDnM")),
-            destination: address("Dm2punindj5XrkPP4ihuuBacDCLNxsgQAAa8Vr8LjDnM"),
+            source: createNoopSigner(address("GDJwFdAUvGXicYjmiXnnfsi5FpGg4Tw7AAXbffUZuDBs")),
+            destination: address("GDJwFdAUvGXicYjmiXnnfsi5FpGg4Tw7AAXbffUZuDBs"),
             amount: BigInt(1_000_000), // 0.001 SOL
         })
         const transactionMessage = pipe(
             createTransactionMessage({ version: 0 }),
             (tx) => setTransactionMessageFeePayerSigner(
-                createNoopSigner(address("Dm2punindj5XrkPP4ihuuBacDCLNxsgQAAa8Vr8LjDnM")), 
+                createNoopSigner(address("GDJwFdAUvGXicYjmiXnnfsi5FpGg4Tw7AAXbffUZuDBs")), 
                 tx),
             (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
             (tx) => appendTransactionMessageInstructions([transferSolInstruction], tx),
             (tx) => compileTransaction(tx),
             (tx) => new Uint8Array(getTransactionEncoder().encode(tx))
         )
-        
-        const signer = this.privyWalletService.createSigner("tk8j2h0a05c0taebx8zhdsxk")
-        const signedTransaction = await signer.signSolanaTransaction({ 
-            transactionBytes: transactionMessage,
-            authorizationContext: {
-                authorization_private_keys: [this.mountStorageService.privySignerPrivateKey],
-            },
-        })
+        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById("69621f583b3c9277240817c3")
+        if (!bot) {
+            throw new Error("Bot not found")
+        }
+        const signedTransaction = await this.privyClient.wallets().solana().signTransaction(
+            bot.privyMetadata.walletId,
+            { 
+                transaction: transactionMessage,
+                authorization_context: {
+                    authorization_private_keys: [
+                        this.derivedAesKeyService.decrypt(bot.encryptedPrivySignerPrivateKeyPayload),
+                        this.mountStorageService.privySignerPrivateKey,
+                    ],
+                },
+            }
+        )
         // reconstruct the transaction
         const transaction = getTransactionDecoder().decode(
             getBase64Encoder().encode(signedTransaction.signed_transaction),
@@ -81,17 +96,17 @@ export class AppService implements OnModuleInit{
         assertIsTransactionWithBlockhashLifetime(transaction)
         console.log(`Is transaction with blockhash lifetime: ${transaction}`)
         // test send transaction
-        const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-            rpc,
-            rpcSubscriptions,
-        })
+        // const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+        //     rpc,
+        //     rpcSubscriptions,
+        // })
         const txHash = getSignatureFromTransaction(transaction) 
-        await sendAndConfirmTransaction(
-            transaction,
-            {
-                commitment: "confirmed",
-            }
-        )
+        // await sendAndConfirmTransaction(
+        //     transaction,
+        //     {
+        //         commitment: "confirmed",
+        //     }
+        // )
         console.log(txHash)
     }
 }

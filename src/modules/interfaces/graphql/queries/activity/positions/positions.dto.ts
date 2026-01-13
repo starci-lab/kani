@@ -14,9 +14,9 @@ import {
 export class PositionsPaginationCursorFilters extends PaginationCursorFilters {
     @Field(() => Boolean, {
         defaultValue: false,
-        description: "Whether to sort the positions by timestamp in ascending order.",
+        description: "Whether to sort the positions by positionOpenedAt in ascending order.",
     })
-        timestampAscending?: boolean
+        asc?: boolean
 }
 
 @InputType({

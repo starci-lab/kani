@@ -11,7 +11,7 @@ import {
 } from "../../interfaces"
 import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import { SignerService } from "../../signers"
-import { BotVersion, OrcaPositionMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import { AppVersion, OrcaPositionMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
@@ -37,6 +37,7 @@ import {
     address,
     signature,
     fetchEncodedAccount,
+    partiallySignTransaction,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -143,7 +144,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
@@ -176,12 +177,14 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    // partial sign the transaction
+                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair], transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
                             lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
                         },
-                        transaction,
+                        transaction: partialSignedTransaction,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })

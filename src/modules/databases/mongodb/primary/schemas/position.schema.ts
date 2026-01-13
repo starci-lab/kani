@@ -156,6 +156,10 @@ export class PositionSchema extends AbstractSchema {
     @Field(() => Float, { description: "The value of the position at the time of closing", nullable: true })
     @Prop({ type: Number, required: false })
         positionValueAtClose?: number
+
+    // grahpql only, not stored in the database
+    @Field(() => LiquidityPoolSchema, { description: "The liquidity pool associated with this position" })
+        associatedLiquidityPool: LiquidityPoolSchema
 }
 export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
 // index the position by bot, isActive and positionClosedAt

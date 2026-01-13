@@ -5,7 +5,7 @@ import { MixinModule } from "@modules/mixin"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { HttpModule } from "@modules/interfaces/http"
 import { PassportModule } from "@modules/passport"
-import { DexesModule, FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
+import { BalanceModule, DexesModule, FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
 import { CryptoModule } from "@modules/crypto"
 import { GcpModule } from "@modules/gcp"
 import { CodeModule } from "@modules/code"
@@ -70,6 +70,10 @@ import { PrivyModule } from "@modules/privy"
         }),
         ClientsModule.register({
             isGlobal: true,
+        }),
+        BalanceModule.register({
+            isGlobal: true,
+            utilitiesOnly: true,
         }),
         DexesModule.register({
             isGlobal: true,

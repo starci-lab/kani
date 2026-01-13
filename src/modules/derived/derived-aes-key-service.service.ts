@@ -22,7 +22,7 @@ export class DerivedAesKeyService implements OnModuleInit {
 
     async onModuleInit() {
         try {
-        // get base key from gcp kms
+            // get base key from gcp kms
             const key = await this.gcpKmsService.decrypt(
                 this.mountStorageService.encryptedAesKey
             )

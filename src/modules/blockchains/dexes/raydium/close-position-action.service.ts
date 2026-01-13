@@ -8,7 +8,7 @@ import {
 } from "../../interfaces"
 import { SignerService } from "../../signers"
 import { 
-    BotVersion,
+    AppVersion,
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import { 
@@ -87,7 +87,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                     (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
-                if (bot.version === BotVersion.V1) {
+                if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
