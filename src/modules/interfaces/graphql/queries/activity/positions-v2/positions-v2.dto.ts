@@ -1,20 +1,20 @@
 import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
 import { PositionSchema } from "@modules/databases"
 import { 
-    IPaginationCursorResponseData, 
-    PaginationCursorFilters, 
-    PaginationCursorResponseData, 
     AbstractGraphQLResponse, 
-    IAbstractGraphQLResponse 
+    IAbstractGraphQLResponse, 
+    IPaginationPageResponseData, 
+    PaginationPageResponseData
 } from "../../../abstracts"
+import { PaginationPageFilters } from "../../../abstracts"
 
 @InputType({
     description: "The request for fetching positions v2.",
 })
-export class PositionsV2PaginationCursorFilters extends PaginationCursorFilters {
+export class PositionsV2PaginationFilters extends PaginationPageFilters {
     @Field(() => Boolean, {
-        defaultValue: false,
-        description: "Whether to sort the positions by positionOpenedAt in ascending order.",
+        nullable: true,
+        description: "Whether to sort the positions by createdAt in ascending order.",
     })
         asc?: boolean
 }
@@ -23,10 +23,10 @@ export class PositionsV2PaginationCursorFilters extends PaginationCursorFilters 
     description: "The input type for the cursor for fetching positions v2.",
 })
 export class PositionsV2Request {
-    @Field(() => PositionsV2PaginationCursorFilters, {
+    @Field(() => PositionsV2PaginationFilters, {
         description: "The filters for pagination.",
     })
-        filters: PositionsV2PaginationCursorFilters
+        filters: PositionsV2PaginationFilters
     @Field(() => ID, {
         description: "The ID of the bot to fetch positions for.",
     })
@@ -37,8 +37,8 @@ export class PositionsV2Request {
     description: "The response for fetching positions v2.",
 })
 export class PositionsV2ResponseData
-    extends PaginationCursorResponseData
-    implements IPaginationCursorResponseData<PositionSchema> {
+    extends PaginationPageResponseData
+    implements IPaginationPageResponseData<PositionSchema> {
     @Field(() => [PositionSchema], {
         description: "Positions.",
     })
@@ -55,10 +55,5 @@ export class PositionsV2Response
         description: "The data for the positions.",
     })
         data: PositionsV2ResponseData
-}
-
-export interface PositionsV2Cursor {
-    // the positionOpenedAt of the last record
-    timestamp: string
 }
 

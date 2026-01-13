@@ -1,30 +1,30 @@
 import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
 import { TransactionSchema } from "@modules/databases"
 import { 
-    IPaginationCursorResponseData, 
-    PaginationCursorFilters, 
-    PaginationCursorResponseData, 
     AbstractGraphQLResponse, 
-    IAbstractGraphQLResponse 
+    IAbstractGraphQLResponse, 
+    IPaginationPageResponseData, 
+    PaginationPageResponseData
 } from "../../../abstracts"
+import { PaginationPageFilters } from "../../../abstracts"
 
 @InputType({
     description: "The request for fetching transactions.",
 })
-export class TransactionsPaginationCursorFilters extends PaginationCursorFilters {
+export class TransactionsPaginationFilters extends PaginationPageFilters {
     @Field(() => Boolean, {
-        defaultValue: false,
+        nullable: true,
         description: "Whether to sort the transactions by timestamp in ascending order.",
     })
-        timestampAscending?: boolean
+        asc?: boolean
 }
 
 @ObjectType({
     description: "The response for fetching transactions.",
 })
 export class TransactionsResponseData
-    extends PaginationCursorResponseData
-    implements IPaginationCursorResponseData<TransactionSchema> {
+    extends PaginationPageResponseData
+    implements IPaginationPageResponseData<TransactionSchema> {
     @Field(() => [TransactionSchema], {
         description: "Transactions.",
     })
@@ -47,18 +47,12 @@ export class TransactionsResponse
     description: "Input fields required to fetch transactions.",
 })
 export class TransactionsRequest {
-    @Field(() => TransactionsPaginationCursorFilters, {
+    @Field(() => TransactionsPaginationFilters, {
         description: "The filters for pagination.",
     })
-        filters: TransactionsPaginationCursorFilters
+        filters: TransactionsPaginationFilters
     @Field(() => ID, {
         description: "The ID of the user to fetch transactions for.",
     })
         botId: string
 }
-
-export interface TransactionsCursor {
-    // the createdAt of the last record
-    timestamp: string
-}
-

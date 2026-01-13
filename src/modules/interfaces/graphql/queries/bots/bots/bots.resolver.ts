@@ -19,7 +19,7 @@ export class BotsResolver {
     constructor(
         private readonly botsService: BotsService,
     ) { }
-
+    
     @UseThrottler(ThrottlerConfig.Soft)
     @GraphQLSuccessMessage("Bots fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)

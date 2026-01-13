@@ -7,38 +7,42 @@ import {
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import {
-    TransactionsV2Cursor,
     TransactionsV2Request,
     TransactionsV2ResponseData,
 } from "./transactions-v2.dto"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
-import { DayjsService } from "@modules/mixin"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
-    NoMoreTransactionsFoundException,
     UserNotFoundException,
 } from "@exceptions"
+import Decimal from "decimal.js"
+import { envConfig } from "@modules/env"
+import { ValidateService } from "../../../services"
 
 @Injectable()
 export class TransactionsV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
-        private readonly dayjsService: DayjsService,
+        private readonly validateService: ValidateService,
     ) { }
 
     async transactionsV2(
         {
-            filters,
+            filters: {
+                limit = envConfig().pagination.transactions.limit.default,
+                pageNumber = envConfig().pagination.transactions.pageNumber.default,
+                asc = false,
+            },
             botId
         }: TransactionsV2Request,
         response: VerifyAccessTokenResponse,
     ): Promise<TransactionsV2ResponseData> {
+        // validate the limit
+        this.validateService.validateLimit({ limit, min: envConfig().pagination.transactions.limit.min, max: envConfig().pagination.transactions.limit.max })
+        // validate the page number
+        this.validateService.validatePageNumber({ pageNumber, max: envConfig().pagination.transactions.pageNumber.max })
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
@@ -47,7 +51,6 @@ export class TransactionsV2Service {
             throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
         }
         // retrieve the cursor from the filters
-        const cursor = filters.cursor
         // check if the bot exists
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
@@ -62,53 +65,20 @@ export class TransactionsV2Service {
         // create the query to get the transactions
         const query = this.connection
             .model<TransactionSchema>(TransactionSchema.name)
-            .find({ 
-                bot: botId, 
-                isActive: false 
-            })
+            .find({ bot: botId })
         // get the sort order
-        const sortOrder = filters.timestampAscending ? 1 : -1
+        const sortOrder = asc ? 1 : -1
         // sort the transactions by createdAt
-        query.sort({ timestamp: sortOrder })
-        // If there is a cursor, get the previous/next cursor
-        if (cursor) {
-            // we use base64 to decode the cursor into a string
-            const decodedCursor = Buffer.from(cursor, "base64").toString("utf-8")
-            // parse the cursor into a TransactionsV2Cursor object
-            const { timestamp } = this.superJson.parse<TransactionsV2Cursor>(decodedCursor)
-            // Assume the cursor is the timestamp of the last record
-            const timestampDate = this.dayjsService.from(timestamp)
-            // get the operator
-            const operator = filters.timestampAscending ? "$gt" : "$lt"
-            query.where(
-                "timestamp",
-                {
-                    [operator]: timestampDate.toDate(),
-                }
-            )
-        }
+        query.sort({ createdAt: sortOrder })
         // limit the number of transactions to return
-        query.limit(filters.limit ?? 10)
+        query.limit(limit)
+        // limit the number of transactions to return
+        query.skip(new Decimal(pageNumber).sub(1).mul(limit).toNumber())
         // execute the query
         const transactions = await query.exec()
         // return the transactions
-        // create the cursor for the next page
-        // we have to take the last transaction
-        let cursorNext = ""
-        if (transactions.length === filters.limit) {
-            const lastTransaction = transactions.at(-1)
-            if (!lastTransaction) {
-                throw new NoMoreTransactionsFoundException("No more transactions found")
-            }
-            const timestamp = this.dayjsService.from(lastTransaction.timestamp).toISOString()
-            // create the cursor for the next page
-            cursorNext = Buffer.from(
-                this.superJson.stringify({ timestamp }))
-                .toString("base64")
-        }
-        // return the transactions
         return {
-            cursor: cursorNext,
+            count: transactions.length,
             data: transactions,
         }
     }

@@ -1,39 +1,40 @@
 import { Field, InputType, ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
 import { BotSchema } from "@modules/databases"
 import { 
-    IPaginationCursorResponseData, 
-    PaginationCursorFilters, 
-    PaginationCursorResponseData, 
+    AbstractGraphQLResponse, 
+    IAbstractGraphQLResponse, 
+    IPaginationPageResponseData, 
+    PaginationPageResponseData
 } from "../../../abstracts"
+import { PaginationPageFilters } from "../../../abstracts"
 
 @InputType({
     description: "The request for fetching bots.",
 })
-export class BotsPaginationCursorFilters extends PaginationCursorFilters {
+export class BotsPaginationFilters extends PaginationPageFilters {
     @Field(() => Boolean, {
-        defaultValue: false,
+        nullable: true,
         description: "Whether to sort the bots by timestamp in ascending order.",
     })
-        timestampAscending?: boolean
+        asc?: boolean
 }
 
 @InputType({
-    description: "The input type for the cursor for fetching bots.",
+    description: "The input type for fetching bots.",
 })
 export class BotsRequest {
-    @Field(() => BotsPaginationCursorFilters, {
+    @Field(() => BotsPaginationFilters, {
         description: "The filters for pagination.",
     })
-        filters: BotsPaginationCursorFilters
+        filters: BotsPaginationFilters
 }
 
 @ObjectType({
     description: "The response for fetching bots.",
 })
 export class BotsResponseData
-    extends PaginationCursorResponseData
-    implements IPaginationCursorResponseData<BotSchema> {
+    extends PaginationPageResponseData
+    implements IPaginationPageResponseData<BotSchema> {
     @Field(() => [BotSchema], {
         description: "Bots.",
     })
@@ -50,10 +51,5 @@ export class BotsResponse
         description: "The data for the bots.",
     })
         data: BotsResponseData
-}
-
-export interface BotsCursor {
-    // the createdAt of the last record
-    timestamp: string
 }
 

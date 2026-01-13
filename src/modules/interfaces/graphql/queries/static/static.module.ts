@@ -6,7 +6,6 @@ import { DexesModule } from "./dexes"
 import { AccountLimitsModule } from "./account-limits"
 import { GasConfigModule } from "./gas-config"
 import { BalanceConfigModule } from "./balance-config"
-import { LiquidityPools2Module } from "./liquidity-pools2"
 
 @Module({
     imports: [
@@ -14,9 +13,6 @@ import { LiquidityPools2Module } from "./liquidity-pools2"
             isGlobal: true,
         }),
         LiquidityPoolsModule.register({
-            isGlobal: true,
-        }),
-        LiquidityPools2Module.register({
             isGlobal: true,
         }),
         DexesModule.register({

@@ -4,8 +4,7 @@ import { BotModule } from "./bot"
 import { BotV2Module } from "./bot-v2"
 import { BotsModule as BotsCursorModule } from "./bots"
 import { BotsV2Module } from "./bots-v2"
-import { Bots2Module } from "./bots2"
-import { Bots2V2Module } from "./bots2-v2"
+import { BotsModule as BotsQueryModule } from "./bots"
 import { FeesModule } from "./fees"
 import { FeesV2Module } from "./fees-v2"
 import { ReservesModule } from "./reserves"
@@ -26,10 +25,10 @@ import { FundingSnapshotV2Module } from "./funding-snapshot-v2"
         BotsV2Module.register({
             isGlobal: true,
         }),
-        Bots2Module.register({
+        BotsQueryModule.register({
             isGlobal: true,
         }),
-        Bots2V2Module.register({
+        BotsV2Module.register({
             isGlobal: true,
         }),
         FeesModule.register({

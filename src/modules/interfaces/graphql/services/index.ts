@@ -1,3 +1,5 @@
 export * from "./profit.service"
 export * from "./attach-dynamic-info.service"
 export * from "./attach-liquidity-pool.service"
+export * from "./validate.service"
+export * from "./paginate.service"

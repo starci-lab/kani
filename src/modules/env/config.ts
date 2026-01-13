@@ -88,32 +88,48 @@ export const envConfig = () => ({
         },
     },
     pagination: {
-        bots2: {
+        bots: {
             limit: {
                 default: parseInt(process.env.PAGINATION_BOTS2_LIMIT_DEFAULT || "10", 10),
                 min: parseInt(process.env.PAGINATION_BOTS2_LIMIT_MIN || "1", 10),
                 max: parseInt(process.env.PAGINATION_BOTS2_LIMIT_MAX || "20", 10),
             },
-        },
-        positions2: {
-            limit: {
-                default: parseInt(process.env.PAGINATION_POSITIONS2_LIMIT_DEFAULT || "10", 10),
-                min: parseInt(process.env.PAGINATION_POSITIONS2_LIMIT_MIN || "1", 10),
-                max: parseInt(process.env.PAGINATION_POSITIONS2_LIMIT_MAX || "20", 10),
+            pageNumber: {
+                default: parseInt(process.env.PAGINATION_BOTS_PAGE_NUMBER_DEFAULT || "1", 10),
+                max: parseInt(process.env.PAGINATION_BOTS_PAGE_NUMBER_MAX || "100", 100),
             },
         },
-        transactions2: {
+        positions: {
+            limit: {
+                default: parseInt(process.env.PAGINATION_POSITIONS_LIMIT_DEFAULT || "10", 10),
+                min: parseInt(process.env.PAGINATION_POSITIONS_LIMIT_MIN || "1", 10),
+                max: parseInt(process.env.PAGINATION_POSITIONS_LIMIT_MAX || "20", 10),
+            },
+            pageNumber: {
+                default: parseInt(process.env.PAGINATION_POSITIONS_PAGE_NUMBER_DEFAULT || "1", 10),
+                max: parseInt(process.env.PAGINATION_POSITIONS_PAGE_NUMBER_MAX || "100", 100),
+            },
+        },
+        transactions: {
             limit: {
                 default: parseInt(process.env.PAGINATION_TRANSACTIONS2_LIMIT_DEFAULT || "10", 10),
                 min: parseInt(process.env.PAGINATION_TRANSACTIONS2_LIMIT_MIN || "1", 10),
                 max: parseInt(process.env.PAGINATION_TRANSACTIONS2_LIMIT_MAX || "20", 10),
             },
+            pageNumber: {
+                default: parseInt(process.env.PAGINATION_TRANSACTIONS_PAGE_NUMBER_DEFAULT || "1", 10),
+                max: parseInt(process.env.PAGINATION_TRANSACTIONS_PAGE_NUMBER_MAX || "100", 100),
+            },
         },
-        liquidityPools2: {
+        liquidityPools: {
             limit: {
-                default: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS2_LIMIT_DEFAULT || "10", 10),
-                min: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS2_LIMIT_MIN || "1", 10),
-                max: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS2_LIMIT_MAX || "20", 10),
+                default: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS_LIMIT_DEFAULT || "10", 10),
+                min: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS_LIMIT_MIN || "1", 10),
+                max: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS_LIMIT_MAX || "20", 10),
+            },
+            pageNumber: {
+                default: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_DEFAULT || "1", 10),
+                max: parseInt(process.env.PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_MAX || "100", 100),
             },
         },
     },

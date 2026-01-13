@@ -18,15 +18,15 @@ import { VerifyAccessTokenResponse } from "@privy-io/node"
 export class BotsV2Resolver {
     constructor(
         private readonly botsV2Service: BotsV2Service,
-    ) {}
-
+    ) { }
+    
     @UseThrottler(ThrottlerConfig.Soft)
     @GraphQLSuccessMessage("Bots v2 fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtPrivyAuthGuard)
     @Query(() => BotsV2Response, {
         description:
-            "Returns the bots associated with the current user (v2 with Privy authentication).",
+            "Returns the bots associated with the current user.",
     })
     async botsV2(
         @PrivyResponse() response: VerifyAccessTokenResponse,

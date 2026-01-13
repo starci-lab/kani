@@ -6,39 +6,36 @@ import {
 } from "@modules/databases"
 import { Connection } from "mongoose"
 import {
-    TransactionsCursor,
     TransactionsRequest,
     TransactionsResponseData,
 } from "./transactions.dto"
 import { UserJwtLike } from "@modules/passport"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
-import { DayjsService } from "@modules/mixin"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
-    NoMoreTransactionsFoundException,
 } from "@exceptions"
+import Decimal from "decimal.js"
+import { envConfig } from "@modules/env"
 
 @Injectable()
 export class TransactionsService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
-        private readonly dayjsService: DayjsService,
     ) { }
 
     async transactions(
         {
-            filters,
+            filters: {
+                pageNumber = envConfig().pagination.transactions.pageNumber.default,
+                limit = envConfig().pagination.transactions.limit.default,
+                asc = false,
+            },
             botId
         }: TransactionsRequest,
         userLike: UserJwtLike,
     ): Promise<TransactionsResponseData> {
         // retrieve the cursor from the filters
-        const cursor = filters.cursor
         // check if the bot exists
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
@@ -53,53 +50,23 @@ export class TransactionsService {
         // create the query to get the transactions
         const query = this.connection
             .model<TransactionSchema>(TransactionSchema.name)
-            .find({ 
-                bot: botId, 
-                isActive: false 
-            })
+            .find({ bot: botId })
         // get the sort order
-        const sortOrder = filters.timestampAscending ? 1 : -1
+        const sortOrder = asc ? 1 : -1
         // sort the transactions by createdAt
-        query.sort({ timestamp: sortOrder })
-        // If there is a cursor, get the previous/next cursor
-        if (cursor) {
-            // we use base64 to decode the cursor into a string
-            const decodedCursor = Buffer.from(cursor, "base64").toString("utf-8")
-            // parse the cursor into a TransactionsCursor object
-            const { timestamp } = this.superJson.parse<TransactionsCursor>(decodedCursor)
-            // Assume the cursor is the timestamp of the last record
-            const timestampDate = this.dayjsService.from(timestamp)
-            // get the operator
-            const operator = filters.timestampAscending ? "$gt" : "$lt"
-            query.where(
-                "timestamp",
-                {
-                    [operator]: timestampDate.toDate(),
-                }
-            )
-        }
+        query.sort({ createdAt: sortOrder })
         // limit the number of transactions to return
-        query.limit(filters.limit ?? 10)
+        query.limit(limit)
+        // skip the number of items
+        query.skip(new Decimal(pageNumber).sub(1).mul(limit).toNumber())
         // execute the query
         const transactions = await query.exec()
         // return the transactions
         // create the cursor for the next page
         // we have to take the last transaction
-        let cursorNext = ""
-        if (transactions.length === filters.limit) {
-            const lastTransaction = transactions.at(-1)
-            if (!lastTransaction) {
-                throw new NoMoreTransactionsFoundException("No more transactions found")
-            }
-            const timestamp = this.dayjsService.from(lastTransaction.timestamp).toISOString()
-            // create the cursor for the next page
-            cursorNext = Buffer.from(
-                this.superJson.stringify({ timestamp }))
-                .toString("base64")
-        }
         // return the transactions
         return {
-            cursor: cursorNext,
+            count: transactions.length,
             data: transactions,
         }
     }

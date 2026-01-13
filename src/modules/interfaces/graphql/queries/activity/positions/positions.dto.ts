@@ -1,20 +1,20 @@
 import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
 import { PositionSchema } from "@modules/databases"
 import { 
-    IPaginationCursorResponseData, 
-    PaginationCursorFilters, 
-    PaginationCursorResponseData, 
     AbstractGraphQLResponse, 
-    IAbstractGraphQLResponse 
+    IAbstractGraphQLResponse, 
+    IPaginationPageResponseData, 
+    PaginationPageResponseData
 } from "../../../abstracts"
+import { PaginationPageFilters } from "../../../abstracts"
 
 @InputType({
     description: "The request for fetching positions.",
 })
-export class PositionsPaginationCursorFilters extends PaginationCursorFilters {
+export class PositionsPaginationFilters extends PaginationPageFilters {
     @Field(() => Boolean, {
         defaultValue: false,
-        description: "Whether to sort the positions by positionOpenedAt in ascending order.",
+        description: "Whether to sort the positions in ascending order.",
     })
         asc?: boolean
 }
@@ -23,10 +23,10 @@ export class PositionsPaginationCursorFilters extends PaginationCursorFilters {
     description: "The input type for the cursor for fetching positions.",
 })
 export class PositionsRequest {
-    @Field(() => PositionsPaginationCursorFilters, {
+    @Field(() => PositionsPaginationFilters, {
         description: "The filters for pagination.",
     })
-        filters: PositionsPaginationCursorFilters
+        filters: PositionsPaginationFilters
     @Field(() => ID, {
         description: "The ID of the bot to fetch positions for.",
     })
@@ -37,8 +37,8 @@ export class PositionsRequest {
     description: "The response for fetching positions.",
 })
 export class PositionsResponseData
-    extends PaginationCursorResponseData
-    implements IPaginationCursorResponseData<PositionSchema> {
+    extends PaginationPageResponseData
+    implements IPaginationPageResponseData<PositionSchema> {
     @Field(() => [PositionSchema], {
         description: "Positions.",
     })
@@ -55,10 +55,5 @@ export class PositionsResponse
         description: "The data for the positions.",
     })
         data: PositionsResponseData
-}
-
-export interface PositionsCursor {
-    // the positionOpenedAt of the last record
-    timestamp: string
 }
 

@@ -1,30 +1,30 @@
 import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
 import { TransactionSchema } from "@modules/databases"
 import { 
-    IPaginationCursorResponseData, 
-    PaginationCursorFilters, 
-    PaginationCursorResponseData, 
     AbstractGraphQLResponse, 
-    IAbstractGraphQLResponse 
+    IAbstractGraphQLResponse, 
+    IPaginationPageResponseData, 
+    PaginationPageResponseData
 } from "../../../abstracts"
+import { PaginationPageFilters } from "../../../abstracts"
 
 @InputType({
     description: "The request for fetching transactions v2.",
 })
-export class TransactionsV2PaginationCursorFilters extends PaginationCursorFilters {
+export class TransactionsV2PaginationFilters extends PaginationPageFilters {
     @Field(() => Boolean, {
-        defaultValue: false,
-        description: "Whether to sort the transactions by timestamp in ascending order.",
+        nullable: true,
+        description: "Whether to sort the transactions by createdAt in ascending order.",
     })
-        timestampAscending?: boolean
+        asc?: boolean
 }
 
 @ObjectType({
     description: "The response for fetching transactions v2.",
 })
 export class TransactionsV2ResponseData
-    extends PaginationCursorResponseData
-    implements IPaginationCursorResponseData<TransactionSchema> {
+    extends PaginationPageResponseData
+    implements IPaginationPageResponseData<TransactionSchema> {
     @Field(() => [TransactionSchema], {
         description: "Transactions.",
     })
@@ -47,18 +47,13 @@ export class TransactionsV2Response
     description: "Input fields required to fetch transactions v2.",
 })
 export class TransactionsV2Request {
-    @Field(() => TransactionsV2PaginationCursorFilters, {
+    @Field(() => TransactionsV2PaginationFilters, {
         description: "The filters for pagination.",
     })
-        filters: TransactionsV2PaginationCursorFilters
+        filters: TransactionsV2PaginationFilters
     @Field(() => ID, {
         description: "The ID of the bot to fetch transactions for.",
     })
         botId: string
-}
-
-export interface TransactionsV2Cursor {
-    // the timestamp of the last record
-    timestamp: string
 }
 
