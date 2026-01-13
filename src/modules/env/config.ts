@@ -90,7 +90,7 @@ export const envConfig = () => ({
     pagination: {
         bots: {
             limit: {
-                default: parseInt(process.env.PAGINATION_BOTS2_LIMIT_DEFAULT || "10", 10),
+                default: parseInt(process.env.PAGINATION_BOTS2_LIMIT_DEFAULT || "20", 10),
                 min: parseInt(process.env.PAGINATION_BOTS2_LIMIT_MIN || "1", 10),
                 max: parseInt(process.env.PAGINATION_BOTS2_LIMIT_MAX || "20", 10),
             },

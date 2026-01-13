@@ -27,7 +27,7 @@ export class BalanceEligibilityService {
         private readonly asyncService: AsyncService,
         private readonly pythPriceService: PythPriceService,
         private readonly dayjsService: DayjsService,
-    ) {}
+    ) { }
 
     /**
      * Check whether a price snapshot is stale
@@ -52,7 +52,28 @@ export class BalanceEligibilityService {
                 snapshotTargetBalanceAmount,
                 snapshotQuoteBalanceAmount,
                 snapshotGasBalanceAmount,
+                lastBalancesSnapshotAt,
             } = bot
+            /**
+         * Snapshot validity check:
+         * - All snapshot balances must exist
+         * - Snapshot must be recent enough
+         */
+            if (
+                !lastBalancesSnapshotAt ||
+                new Decimal(
+                    this.dayjsService.now().diff(lastBalancesSnapshotAt, "millisecond"),
+                ).gt(
+                    new Decimal(
+                        envConfig().timeConfig.interval.balanceSnapshot,
+                    ),
+                )
+            ) {
+                return {
+                    isEligible: false,
+                    status: BalanceEligibilityStatus.StaleSnapshot,
+                }
+            }
             // --- 2. Resolve tokens ---
             const targetToken = this.primaryMemoryStorageService.tokens.find(
                 (token) => token.id === bot.targetToken.toString(),
@@ -76,11 +97,10 @@ export class BalanceEligibilityService {
             if (!gasToken) {
                 throw new TokenNotFoundException("Gas token not found")
             }
-
             // --- 3. Fetch prices ---
             const [
-                targetPrice, 
-                quotePrice, 
+                targetPrice,
+                quotePrice,
                 gasPrice
             ] =
                 await this.asyncService.allMustDone([
@@ -93,8 +113,8 @@ export class BalanceEligibilityService {
                     this.pythPriceService.getPrice({
                         tokenId: gasToken.displayId,
                     }),
-                ])
-
+                ]
+                )
             if (
                 this.isStalePrice(targetPrice) ||
                 this.isStalePrice(quotePrice) ||
@@ -105,7 +125,6 @@ export class BalanceEligibilityService {
                     status: BalanceEligibilityStatus.StalePrice,
                 }
             }
-
             // --- 4. Convert balances ---
             const targetBalance = computeDenomination(
                 new BN(snapshotTargetBalanceAmount),
@@ -119,7 +138,6 @@ export class BalanceEligibilityService {
                 new BN(snapshotGasBalanceAmount),
                 gasToken.decimals,
             )
-
             // --- 5. Compute balances in USDC ---
             const balanceExcludingGasInUsdc = targetBalance
                 .mul(targetPrice.price)
@@ -135,7 +153,7 @@ export class BalanceEligibilityService {
                     .balanceRequired?.[bot.chainId]
                     ?.minRequiredAmountInUsd ?? 0,
             )
-        
+
             if (balanceExcludingGasInUsdc.lt(minRequiredAmountInUsd)) {
                 return {
                     isEligible: false,
@@ -199,6 +217,7 @@ export interface BalanceEligibilityResult {
 export enum BalanceEligibilityStatus {
     Ok = "ok",
     StalePrice = "stalePrice",
+    StaleSnapshot = "staleSnapshot",
     NotEnoughGas = "notEnoughGas",
     InsufficientFunds = "insufficientFunds",
     Error = "error",

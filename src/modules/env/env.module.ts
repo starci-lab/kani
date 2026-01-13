@@ -17,7 +17,8 @@ export class EnvModule extends ConfigurableModuleClass {
                     load: [envConfig],
                     envFilePath: [
                         ".env.local", 
-                        ".env.secret"
+                        ".env.secret",
+                        ".env.override"
                     ]
                 })
             ]

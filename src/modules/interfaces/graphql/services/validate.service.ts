@@ -19,7 +19,7 @@ export class ValidateService {
         if (!limit) {
             return
         }
-        if (new Decimal(limit).lte(min) || new Decimal(limit).gte(max)) {
+        if (new Decimal(limit).lt(min) || new Decimal(limit).gt(max)) {
             throw new PaginationLimitOutOfRangeException(
                 `Limit must be between ${min} and ${max}`,
             )
@@ -32,7 +32,7 @@ export class ValidateService {
     validatePageNumber(
         { pageNumber, max }: ValidatePageNumberParams
     ): void {
-        if (new Decimal(pageNumber).lte(1) || new Decimal(pageNumber).gte(max)) {
+        if (new Decimal(pageNumber).lt(1) || new Decimal(pageNumber).gt(max)) {
             throw new PaginationPageNumberOutOfRangeException(
                 `Page number must be between 1 and ${max}`,
             )

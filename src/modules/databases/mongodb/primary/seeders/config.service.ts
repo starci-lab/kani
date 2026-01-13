@@ -50,7 +50,7 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                     minRequiredAmountInUsd: 20,
                 },
                 [ChainId.Solana]: {
-                    minRequiredAmountInUsd: 50,
+                    minRequiredAmountInUsd: 20,
                 },
             },
         },

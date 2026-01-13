@@ -49,7 +49,8 @@ export class BotsV2Response
     implements IAbstractGraphQLResponse<BotsV2ResponseData> {
     @Field(() => BotsV2ResponseData, {
         description: "The data for the bots.",
+        nullable: true,
     })
-        data: BotsV2ResponseData
+        data?: BotsV2ResponseData
 }
 

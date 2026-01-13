@@ -42,7 +42,6 @@ import { Cache } from "cache-manager"
 import { CetusOpenPositionActionService } from "./cetus"
 import { TurbosOpenPositionActionService } from "./turbos"
 import { MomentumOpenPositionActionService } from "./momentum"
-import dayjs from "dayjs"
 import { InjectQueue } from "@nestjs/bullmq"
 import { bullData, BullQueueName } from "@modules/bullmq"
 import { Queue } from "bullmq"
@@ -114,7 +113,7 @@ export class OpenPositionOrchestratorService {
         }: EnqueueOpenPositionParams,
     ) {
         /**
-         * Atomic lock guard:
+         * Lease lock guard:
          * Prevent concurrent actions on the same bot.
          */
         const lease = this.leaseService.lease(
@@ -125,38 +124,30 @@ export class OpenPositionOrchestratorService {
         }
 
         /**
+         * Retrieve liquidity pool definition from memory.
+         */
+        const liquidityPool =
+                this.primaryMemoryStorageService.liquidityPools.find(
+                    liquidityPool =>
+                        liquidityPool.displayId === liquidityPoolId,
+                )
+        if (!liquidityPool) {
+            throw new LiquidityPoolNotFoundException(
+                `Liquidity pool ${liquidityPoolId} not found`,
+            )
+        }
+        /**
          * Balance eligibility check:
          * Ensure bot has sufficient total balance (USD-based).
          */
         const { 
-            isEligible 
+            isEligible
         } = await this.balanceEligibilityService.evaluateBalanceEligibility({
             bot: bot,
         })
         if (!isEligible) {
             return
         }
-
-        /**
-         * Snapshot validity check:
-         * - All snapshot balances must exist
-         * - Snapshot must be recent enough
-         */
-        if (
-            !bot.snapshotTargetBalanceAmount ||
-            !bot.snapshotQuoteBalanceAmount ||
-            !bot.snapshotGasBalanceAmount ||
-            new Decimal(
-                dayjs().diff(bot.lastBalancesSnapshotAt, "millisecond"),
-            ).gt(
-                new Decimal(
-                    envConfig().timeConfig.interval.balanceSnapshot,
-                ),
-            )
-        ) {
-            return
-        }
-
         /**
          * Resolve target token metadata.
          */
@@ -239,20 +230,6 @@ export class OpenPositionOrchestratorService {
             )
         ) {
             return
-        }
-
-        /**
-         * Retrieve liquidity pool definition from memory.
-         */
-        const liquidityPool =
-            this.primaryMemoryStorageService.liquidityPools.find(
-                liquidityPool =>
-                    liquidityPool.displayId === liquidityPoolId,
-            )
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(
-                `Liquidity pool ${liquidityPoolId} not found`,
-            )
         }
 
         /**
@@ -350,47 +327,48 @@ export class OpenPositionOrchestratorService {
         lease.tryLock(leaseId)
         const session = await this.connection.startSession()
         try {
-            await session.withTransaction(async () => {
+            await session.withTransaction(
+                async () => {
                 /**
                 * Persist job record.
                 */
-                const [jobRaw] = await this.connection.model<JobSchema>(
-                    JobSchema.name
-                ).create(
-                    [
-                        {
-                            liquidityPool: liquidityPool.id,
-                            bot: bot.id,
-                            executor: envConfig().botExecutor.executorId,
-                            type: JobType.OpenPosition,
-                            status: JobStatus.Pending,
-                            leaseId,
-                        }
-                    ]
-                )
-                /**
+                    const [jobRaw] = await this.connection.model<JobSchema>(
+                        JobSchema.name
+                    ).create(
+                        [
+                            {
+                                liquidityPool: liquidityPool.id,
+                                bot: bot.id,
+                                executor: envConfig().botExecutor.executorId,
+                                type: JobType.OpenPosition,
+                                status: JobStatus.Pending,
+                                leaseId,
+                            }
+                        ]
+                    )
+                    /**
                 * Enqueue open-position job for async processing.
                 */
-                await this.openPositionQueue.add(
-                    v4(),
-                    {
-                        jobId: jobRaw.toJSON().id,
-                        state: this.superjson.stringify(state),
-                        bot,
-                        leaseId,
-                    }
-                )
-                /**
+                    await this.openPositionQueue.add(
+                        v4(),
+                        {
+                            jobId: jobRaw.toJSON().id,
+                            state: this.superjson.stringify(state),
+                            bot,
+                            leaseId,
+                        }
+                    )
+                    /**
                 * Structured logging for observability.
                 */
-                this.logger.verbose(
-                    WinstonLog.OpenPositionEnqueued,
-                    {
-                        botId: bot.id,
-                        liquidityPoolId,
-                    }
-                )
-            }
+                    this.logger.verbose(
+                        WinstonLog.OpenPositionEnqueued,
+                        {
+                            botId: bot.id,
+                            liquidityPoolId,
+                        }
+                    )
+                }
             )
         } catch (error) {
             // unlock the lease if the job is not enqueued
