@@ -1,5 +1,4 @@
-import { GraphQLTypeTokenId, TokenId, GraphQLTypeLiquidityPoolId, LiquidityPoolId } from "@modules/databases"
-import { InputType, Field, ObjectType } from "@nestjs/graphql"
+import { InputType, Field, ObjectType, ID } from "@nestjs/graphql"
 import { GraphQLTypeChainId, ChainId } from "@typedefs"
 import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
 
@@ -18,21 +17,21 @@ export class CreateBotV2Request {
     })
         chainId: ChainId
 
-    @Field(() => GraphQLTypeTokenId, {
+    @Field(() => ID, {
         description: "The token that the bot aims to accumulate as the primary outcome of its liquidity strategy.",
     })
-        targetTokenId: TokenId
+        targetTokenId: string
 
-    @Field(() => GraphQLTypeTokenId, {
+    @Field(() => ID, {
         description: "The quote token ID",
     })
-        quoteTokenId: TokenId
+        quoteTokenId: string
 
-    @Field(() => [GraphQLTypeLiquidityPoolId], {
+    @Field(() => [ID], {
         nullable: true,
         description: "List of liquidity pools where the bot will actively provide and manage liquidity. Must exist in the database.",
     })
-        liquidityPoolIds?: Array<LiquidityPoolId>
+        liquidityPoolIds?: Array<string>
 
     @Field(() => Boolean, {
         description: "Whether the bot is exiting to USDC",

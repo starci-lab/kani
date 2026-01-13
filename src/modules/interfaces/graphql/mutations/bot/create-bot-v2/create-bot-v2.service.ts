@@ -41,13 +41,13 @@ export class CreateBotV2Service {
             isExitToUsdc,
         }: CreateBotV2Request,
     ): Promise<CreateBotV2ResponseData> {
-        const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.displayId.toString() === targetTokenId.toString())
+        const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.id === targetTokenId)
         if (!targetTokenInstance) {
-            throw new TokenNotFoundException("Target token not found with display id: " + targetTokenId)
+            throw new TokenNotFoundException("Target token not found with id: " + targetTokenId)
         }
-        const quoteTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.displayId.toString() === quoteTokenId.toString())
+        const quoteTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.id === quoteTokenId)
         if (!quoteTokenInstance) {
-            throw new TokenNotFoundException("Quote token not found with display id: " + quoteTokenId)
+            throw new TokenNotFoundException("Quote token not found with id: " + quoteTokenId)
         }
         // if user do not pass any liquidity pool ids, 
         // we have to select random liquidity pools (3 at most)
@@ -85,7 +85,7 @@ export class CreateBotV2Service {
         // retrieve the liquidity pools from the cache
         const liquidityPools = this.primaryMemoryStorageService
             .liquidityPools
-            .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId))
+            .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.id))
         // create the signer
         const { keyPair, keyQuorum } = await this.privyCoreService.createSigner()
         // create the wallet
