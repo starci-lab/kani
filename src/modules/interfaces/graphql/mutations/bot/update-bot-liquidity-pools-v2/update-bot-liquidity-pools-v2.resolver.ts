@@ -26,7 +26,7 @@ export class UpdateBotLiquidityPoolsV2Resolver {
      * Mutation for refreshing liquidity pools cache (v2).
      * Requires a valid Privy access token for authentication.
      */
-    @GraphQLSuccessMessage("Bot liquidity pools updated successfully")
+    @GraphQLSuccessMessage("Bot's pools updated successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtPrivyAuthGuard)
