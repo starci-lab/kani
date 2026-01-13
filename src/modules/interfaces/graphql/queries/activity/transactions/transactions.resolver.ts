@@ -27,6 +27,7 @@ export class TransactionsResolver {
     @Query(() => TransactionsResponse, {
         description:
             "Returns the transactions associated with the current user.",
+        deprecationReason: "Use v2 instead",
     })
     async transactions(
         @GraphQLUser() user: UserJwtLike,

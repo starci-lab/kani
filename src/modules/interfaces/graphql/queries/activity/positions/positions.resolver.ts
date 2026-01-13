@@ -27,6 +27,7 @@ export class PositionsResolver {
     @Query(() => PositionsResponse, {
         description:
             "Returns the positions associated with the current user.",
+        deprecationReason: "Use v2 instead",
     })
     async positions(
         @GraphQLUser() user: UserJwtLike,   

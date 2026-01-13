@@ -27,6 +27,7 @@ export class ReservesResolver {
     @Query(() => ReservesResponse, {
         description:
             "Returns the reserves associated with a bot.",
+        deprecationReason: "Use v2 instead",
     })
     async reserves(
         @GraphQLUser() user: UserJwtLike,   

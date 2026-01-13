@@ -1,7 +1,5 @@
 import { ObjectType, Field, InputType, registerEnumType } from "@nestjs/graphql"
 import { 
-    GraphQLTypeLiquidityPoolId, 
-    LiquidityPoolId, 
     LiquidityPoolSchema 
 } from "@modules/databases"
 import {
@@ -53,12 +51,6 @@ export class LiquidityPoolsPaginationPageFilters extends PaginationPageFilters {
         nullable: true,
     })
         ids?: Array<string>
-
-    @Field(() => [GraphQLTypeLiquidityPoolId], {
-        description: "The pool display ids.",
-        nullable: true,
-    })
-        displayIds?: Array<LiquidityPoolId>
 
     @Field(() => [String], {
         description: "The DEX ids.",

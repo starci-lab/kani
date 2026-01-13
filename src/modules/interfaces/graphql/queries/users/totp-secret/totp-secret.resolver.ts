@@ -18,6 +18,7 @@ export class TotpSecretResolver {
     @UseGuards(GraphQLJwtAccessTokenAuthGuard)
     @Query(() => TotpSecretResponse, {
         description: "Fetch the TOTP secret for the current user.",
+        deprecationReason: "Use v2 instead",
     })
     @UseInterceptors(GraphQLTransformInterceptor)
     async totpSecret(

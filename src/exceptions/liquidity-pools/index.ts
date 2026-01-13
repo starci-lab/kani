@@ -68,3 +68,10 @@ export class SomeLiquidityPoolsNotFoundException extends AbstractException {
         super(message || `Some liquidity pools ${liquidityPoolIds.join(", ")} not found`, "SOME_LIQUIDITY_POOLS_NOT_FOUND_EXCEPTION", { liquidityPoolIds })
     }
 }
+
+/** Thrown when only 2 token ids are allowed */
+export class OnlyTwoTokenIdsAllowedException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Only 2 token ids are allowed", "ONLY_TWO_TOKEN_IDS_ALLOWED_EXCEPTION")
+    }
+}

@@ -27,6 +27,7 @@ export class HistoryResolver {
     @Query(() => HistoryResponse, {
         description:
             "Returns the history chart data of a specific bot.",
+        deprecationReason: "Use v2 instead",
     })
     async history(
         @GraphQLUser() user: UserJwtLike,   

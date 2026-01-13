@@ -27,6 +27,7 @@ export class FeesResolver {
     @Query(() => FeesResponse, {
         description:
             "Returns the fees associated with a bot.",
+        deprecationReason: "Use v2 instead",
     })
     async fees(
         @GraphQLUser() user: UserJwtLike,   

@@ -19,6 +19,7 @@ export class UserResolver {
     @UseGuards(GraphQLJwtAccessTokenAuthGuard)
     @Query(() => UserResponse, {
         description: "Fetch a single user by their unique ID.",
+        deprecationReason: "Use v2 instead",
     })
     @UseInterceptors(GraphQLTransformInterceptor)
     async user(

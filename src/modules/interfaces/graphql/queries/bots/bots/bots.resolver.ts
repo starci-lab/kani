@@ -27,6 +27,7 @@ export class BotsResolver {
     @Query(() => BotsResponse, {
         description:
             "Returns the bots associated with the current user.",
+        deprecationReason: "Use v2 instead",
     })
     async bots(
         @GraphQLUser() user: UserJwtLike,   
