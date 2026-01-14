@@ -5,6 +5,7 @@ import { PythSubscriptionsService } from "./pyth-subscriptions.service"
 import { PythOraclePriceService } from "./oracle-price.service"
 import { PythPriceService } from "./price.service"
 import { PythUtilsService } from "./pyth-utils.service"
+import { PythRestService } from "./pyth-rest.service"
 
 @Module({})
 export class PythModule extends ConfigurableModuleClass {
@@ -14,6 +15,7 @@ export class PythModule extends ConfigurableModuleClass {
             PythOraclePriceService,
             PythPriceService,
             PythUtilsService,
+            PythRestService,
         ]
         const utilities: Array<Provider> = []
         if (!options.utilitiesOnly) {

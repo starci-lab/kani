@@ -342,7 +342,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.Pyth,
-                symbol: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744",
+                symbol: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
                 priority: 6,
             },
         ],

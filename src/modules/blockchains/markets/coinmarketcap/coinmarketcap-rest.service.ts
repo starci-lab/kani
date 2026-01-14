@@ -18,7 +18,6 @@ import { CachePriceUtilsService } from "@modules/cache"
 import { Interval } from "@nestjs/schedule"
 import { AxiosInstance } from "axios"
 import { MountStorageService } from "@modules/filesystem"
-import { writeFileSync } from "fs"
 
 @Injectable()
 export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModuleInit {
@@ -93,7 +92,6 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                                             },
                                         }
                                     )
-                                    writeFileSync("coinmarketcap-response.json", JSON.stringify(response.data, null, 2))
                                     return response.data
                                 },
                                 maxRetries: envConfig().timeConfig.retry.maxRetries,
