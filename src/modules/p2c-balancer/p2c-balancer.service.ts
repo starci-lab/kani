@@ -303,7 +303,7 @@ export class P2CBalancerService {
                                             rpcId => (
                                                 {
                                                     rpcId,
-                                                    ejectedAt: this.dayjsService.now(),
+                                                    ejectedAt: this.dayjsService.now().toDate(),
                                                 }
                                             )
                                         ),
