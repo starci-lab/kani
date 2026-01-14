@@ -276,7 +276,7 @@ export class RpcExecutorService {
                             case RpcErrorType.Fatal:
                                 throw new AbortError(new SuiRpcFatalError(error?.message))
                             case RpcErrorType.Retryable:
-                                throw new AbortError(new SuiRpcRetryableError(error?.message))
+                                throw new SuiRpcRetryableError(error?.message)
                             case RpcErrorType.Ignorable:
                                 throw new AbortError(new SuiRpcIgnorableError(error?.message))
                             }
