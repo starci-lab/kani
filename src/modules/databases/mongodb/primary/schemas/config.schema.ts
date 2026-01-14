@@ -23,8 +23,15 @@ export interface GasConfig {
 }
 
 export interface GasAmountRequired {
-    minOperationalAmount: string
-    targetOperationalAmount: string
+    // Minimum gas required for the bot to operate at all
+    minOperationalAmount: number
+    // Target gas amount for stable and uninterrupted operation
+    targetOperationalAmount: number
+    // Gas threshold below which an additional swap is required
+    // (the swap may use primary or secondary tokens, not gas-only)
+    additionalSwapRequiredThreshold: number
+    // Gas amount to swap when the additional swap is triggered
+    additionalSwapAmount: number
 }
 
 export interface ConfigRecord<T> {

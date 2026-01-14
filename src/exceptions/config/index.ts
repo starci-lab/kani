@@ -118,3 +118,17 @@ export class ClientConfigNotFoundException extends AbstractException {
         super(message || "Client config not found", "CLIENT_CONFIG_NOT_FOUND_EXCEPTION")
     }
 }
+
+/** Thrown when additional swap required threshold config is not found */
+export class AdditionalSwapRequiredThresholdNotFoundException extends AbstractException {
+    constructor(chainId: ChainId, message?: string) {
+        super(message || "Additional swap required threshold not found", "ADDITIONAL_SWAP_REQUIRED_THRESHOLD_NOT_FOUND_EXCEPTION", { chainId })
+    }
+}
+
+/** Thrown when additional swap amount config is not found */
+export class AdditionalSwapAmountNotFoundException extends AbstractException {
+    constructor(chainId: ChainId, message?: string) {
+        super(message || "Additional swap amount not found", "ADDITIONAL_SWAP_AMOUNT_NOT_FOUND_EXCEPTION", { chainId })
+    }
+}

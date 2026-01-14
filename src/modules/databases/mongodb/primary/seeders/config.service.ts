@@ -5,8 +5,7 @@ import { Seeder } from "./seeder.interface"
 import { InjectPrimaryMongoose } from "../mongodb.decorators"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
-import { computeRaw, createObjectId } from "@utils"
-import Decimal from "decimal.js"
+import { createObjectId } from "@utils"
 
 @Injectable()
 export class ConfigService implements Seeder {
@@ -31,12 +30,16 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
         value: {
             gasAmountRequired: {
                 [ChainId.Sui]: {
-                    minOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
-                    targetOperationalAmount: computeRaw(new Decimal(0.2), 9).toString(),
+                    minOperationalAmount: 0.05, // 25%
+                    targetOperationalAmount: 0.2, // 100%
+                    additionalSwapRequiredThreshold: 0.1, // 50%
+                    additionalSwapAmount: 0.1, // 50%
                 },
                 [ChainId.Solana]: {
-                    minOperationalAmount: computeRaw(new Decimal(0.025), 9).toString(),
-                    targetOperationalAmount: computeRaw(new Decimal(0.1), 9).toString(),
+                    minOperationalAmount: 0.025, // 25%
+                    targetOperationalAmount: 0.1, // 100%
+                    additionalSwapRequiredThreshold: 0.05, // 50%
+                    additionalSwapAmount: 0.05, // 50%
                 },
             },
         },

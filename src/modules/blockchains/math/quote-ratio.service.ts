@@ -32,10 +32,12 @@ export class QuoteRatioService {
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
         }
-        const oraclePrice = await this.pythOraclePriceService.getPythOraclePrice({
-            tokenA: targetToken.displayId,
-            tokenB: quoteToken.displayId,
-        })
+        const oraclePrice = await this.pythOraclePriceService.getPythOraclePrice(
+            {
+                tokenA: targetToken.displayId,
+                tokenB: quoteToken.displayId,
+            }
+        )
         const targetBalanceAmountInQuote = computeDenomination(
             targetBalanceAmount,
             targetToken.decimals

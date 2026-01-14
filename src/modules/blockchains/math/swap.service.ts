@@ -3,7 +3,9 @@ import {
     TokenNotFoundException,
     GasBalanceAmountNotFoundException,
     MinOperationalGasAmountNotFoundException,
-    InsufficientMinGasBalanceAmountException
+    InsufficientMinGasBalanceAmountException,
+    AdditionalSwapRequiredThresholdNotFoundException,
+    AdditionalSwapAmountNotFoundException
 } from "@exceptions"
 import { 
     PrimaryMemoryStorageService, 
@@ -211,6 +213,10 @@ export class SwapMathService {
             .gasAmountRequired?.[chainId]?.targetOperationalAmount
         const minOperationalGasAmount = this.primaryMemoryStorageService
             .gasConfig.gasAmountRequired?.[chainId]?.minOperationalAmount
+        const additionalSwapRequiredThreshold = this.primaryMemoryStorageService
+            .gasConfig.gasAmountRequired?.[chainId]?.additionalSwapRequiredThreshold
+        const additionalSwapAmount = this.primaryMemoryStorageService
+            .gasConfig.gasAmountRequired?.[chainId]?.additionalSwapAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 chainId, 
@@ -223,14 +229,21 @@ export class SwapMathService {
                 "Quote operational gas amount not found"
             )
         }
-        if (!gasBalanceAmount) {
-            throw new GasBalanceAmountNotFoundException(
+        if (!additionalSwapRequiredThreshold) {
+            throw new AdditionalSwapRequiredThresholdNotFoundException(
                 chainId, 
-                "Gas balance amount not found"
+                "Additional swap required threshold not found"
             )
         }
-        const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
-        const minOperationalGasAmountBN = new BN(minOperationalGasAmount)
+        if (!additionalSwapAmount) {
+            throw new AdditionalSwapAmountNotFoundException(
+                chainId, 
+                "Additional swap amount not found"
+            )
+        }
+        const targetOperationalGasAmountBN = computeRaw(new Decimal(targetOperationalGasAmount), gasToken.decimals)
+        console.log("gasBalanceAmount", targetOperationalGasAmountBN.toString())
+        console.log("gasBalanceAmount", gasBalanceAmount.toString())
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
             quoteRatio: quoteRatioResponse.quoteRatio,
         })
@@ -245,12 +258,6 @@ export class SwapMathService {
                     quoteRatioResponse,
                 }
             }
-            if (gasBalanceAmount.lt(minOperationalGasAmountBN)) {
-                throw new InsufficientMinGasBalanceAmountException(
-                    chainId, 
-                    "Gas balance amount is insufficient"
-                )
-            }
             return {
                 processSwaps: false,
                 quoteRatioStatus,
@@ -258,6 +265,7 @@ export class SwapMathService {
             }
         }
         case QuoteRatioStatus.TargetTooLow: {
+            // target too low mean, the quote is too much, we need to swap a partial of quote to the target and gas
             const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResponse.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
@@ -360,7 +368,7 @@ export interface ComputeSwapAmountsParams {
     quoteTokenId: TokenId
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
-    gasBalanceAmount?: BN
+    gasBalanceAmount: BN
 }
 
 export interface ComputeSwapAmountsResponse {

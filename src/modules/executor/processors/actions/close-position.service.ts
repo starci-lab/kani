@@ -94,7 +94,7 @@ export class ClosePositionProcessorService {
                 payload: DlmmLiquidityPoolsFetchedEvent
             ) => {
                 // if the bot is not running, or has no active position, return
-                if (!this.bot || !this.bot.running || !this.bot.activePosition) {
+                if (!this.bot || !this.bot.running || !this.bot.activePosition || this.bot.frozen) {
                     return
                 }
                 // enqueue the close position

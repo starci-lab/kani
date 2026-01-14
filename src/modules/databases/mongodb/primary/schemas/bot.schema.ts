@@ -227,6 +227,13 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: String, enum: AppVersion, required: true, default: AppVersion.V1 })
         version: AppVersion
+
+    @Field(() => Boolean, {
+        description: "Whether trading is paused (no opening or closing positions)",
+        nullable: true,
+    })
+    @Prop({ type: Boolean, required: false })
+        frozen?: boolean
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

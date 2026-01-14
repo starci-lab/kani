@@ -76,7 +76,7 @@ export class OpenPositionProcessorService  {
                 payload: LiquidityPoolsFetchedEvent
             ) => {
                 // if the bot is not running, or has an active position, return
-                if (!this.bot || !this.bot.running || this.bot.activePosition) {
+                if (!this.bot || !this.bot.running || this.bot.activePosition || this.bot.frozen) {
                     return
                 }
                 // enqueue the open position
