@@ -46,7 +46,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                 // on open event
                 onOpen: async (ws, markMessageReceived) => {
                     const promise = new Promise<void>((_, reject) => {
-                    // open event
+                        // open event
                         ws.on("open", () => {
                             this.logger.info(WinstonLog.WebsocketConnected, {
                                 streamName: "binance-last-price",
@@ -111,11 +111,13 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                         ws.on("error", (err) => {
                             ws.close()
                             reject(new WsConnectionErrorException(err.message))
-                        })
+                        }
+                        )
                         // close event reject promise and signal retryWs reconnect
                         ws.on("close", () => {
                             reject(new WsConnectionClosedException("WS closed"))
-                        })
+                        }
+                        )
                     })
                     return await promise
                 },

@@ -8,7 +8,6 @@ import { WsConnectionClosedException, WsConnectionErrorException } from "@except
 import { CachePriceUtilsService } from "@modules/cache"
 import WebSocket from "ws"
 import { AsyncService, DayjsService, RetryService } from "@modules/mixin"
-import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { GateUtilsService } from "./gate-utils.service"

@@ -37,7 +37,7 @@ export class RetryService {
             })
     }
 
-    private async retryWsInternal<T>(params: WsRetryParams<T>): Promise<never> { 
+    private retryWsInternal<T>(params: WsRetryParams<T>): Promise<never> { 
         const {
             closeFnName = "close",
             createConnection,
@@ -61,11 +61,14 @@ export class RetryService {
         let aborted = false
         // create a promise to return the connection
         return new Promise<never>((_, reject) => {
+            // cleanup the connection
             const cleanup = () => {
                 connection?.[closeFnName]?.()
                 connection = null
             }
+            // create a function to connect to the server
             const connect = async () => {
+                // if the connection is aborted, return
                 if (aborted) return
                 try {
                     // initialize the timeout
@@ -80,6 +83,7 @@ export class RetryService {
                             envConfig().timeConfig.ws.idleTimeout
                         )
                     }
+                    // create a function to create a promise to reject the timeout
                     const createRejectTimeoutPromise = () => {
                         return new Promise<never>((_, reject) => setTimeoutPromise(reject))
                     }
