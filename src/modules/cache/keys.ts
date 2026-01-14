@@ -1,3 +1,4 @@
+import { MarketId } from "@modules/databases"
 import { ChainId } from "@typedefs"
 import BN from "bn.js"
 import { Dayjs } from "dayjs"
@@ -39,22 +40,14 @@ export interface SpotPriceCacheResult {
     price: number
 }
 
-export enum OracleType {
-    Pyth = "pyth",
-    Coingecko = "coingecko",
-    CoinMarketCap = "coinmarketcap",
-    Binance = "binance",
-    Gate = "gate",
-    Bybit = "bybit",
-}
 
 export interface OracleTokenPriceCache extends NonExpiredCacheResult {
     price: number
     snapshotAt: Dayjs
 }
 
-export interface OracleTokenPricesCacheResult extends NonExpiredCacheResult {
-    prices: Partial<Record<OracleType, OracleTokenPriceCache>>
+export interface OracleTokenPriceCacheResult extends NonExpiredCacheResult {
+    prices: Partial<Record<MarketId, OracleTokenPriceCache>>
 }
 
 export interface DynamicLiquidityPoolInfoCacheResult {

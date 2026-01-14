@@ -14,6 +14,7 @@ export class MountStorageService implements OnModuleInit {
     public rpcAccessConfigs: RpcAccessConfigs
     public privySignerPrivateKey: string
     public privyAppSecretKey: string
+    public coinMarketCapApiKey: string
     constructor(
         private readonly mountFilesystemService: MountFilesystemService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
@@ -39,6 +40,8 @@ export class MountStorageService implements OnModuleInit {
         this.privySignerPrivateKey = this.mountFilesystemService.privySignerPrivateKey()
         // get privy app secret from mount filesystem service
         this.privyAppSecretKey = this.mountFilesystemService.privyAppSecretKey()
+        // get coinmarketcap api key from mount filesystem service
+        this.coinMarketCapApiKey = this.mountFilesystemService.coinMarketCapApiKey()
         // set readiness watcher to true
         this.readinessWatcherFactoryService.setReady(MountStorageService.name)
     }

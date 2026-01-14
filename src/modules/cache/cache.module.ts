@@ -9,7 +9,7 @@ import {
     createMemoryCacheManagerProvider 
 } from "./cache.providers"
 import { CacheService } from "./cache.service"
-
+import { CachePriceUtilsService } from "./price-utils.service"
 @Module({})
 export class CacheModule extends ConfigurableModuleClass {
     static register(
@@ -20,11 +20,12 @@ export class CacheModule extends ConfigurableModuleClass {
             createRedisCacheManagerProvider(),
             createMemoryCacheManagerProvider(),
             CacheService,
+            CachePriceUtilsService,
         ]
         return {
             ...dynamicModule,
             providers: [...dynamicModule.providers || [], ...providers],
-            exports: [...providers],
+            exports: [...providers, CachePriceUtilsService],
         }
     }
 }

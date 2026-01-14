@@ -9,7 +9,8 @@ import {
     getGcpCloudKmsCryptoOperatorSa,
     getGcpGoogleDriveUdSa,
     getPrivySignerPrivateKey,
-    getPrivyAppSecretKey
+    getPrivyAppSecretKey,
+    getCoinMarketCapApiKey
 } from "./pure"
 /**
  * Service responsible for reading secrets mounted into the container filesystem.
@@ -57,5 +58,9 @@ export class MountFilesystemService {
 
     privyAppSecretKey(): string {
         return getPrivyAppSecretKey()
+    }
+
+    coinMarketCapApiKey(): string {
+        return getCoinMarketCapApiKey()
     }
 }

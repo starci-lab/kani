@@ -155,3 +155,19 @@ export const getPrivySignerPrivateKey = (
     }
     return privySignerPrivateKey
 }
+
+/**
+ * Pure function to get the coinmarketcap api key
+ * in case there is component that not depends on nestjs DI
+ */
+export const getCoinMarketCapApiKey = (
+    coinMarketCapApiKey?: string
+) => {
+    if (!coinMarketCapApiKey) {
+        coinMarketCapApiKey = readFileSync(
+            envConfig().mountPath.terraform.coinMarketCapApiKey,
+            "utf8"
+        )
+    }
+    return coinMarketCapApiKey
+}

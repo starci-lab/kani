@@ -40,7 +40,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "usd-coin",
+                symbol: "3408",
                 priority: 2,
             },
             {
@@ -86,7 +86,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "cetus-protocol",
+                symbol: "25114",
                 priority: 2,
             },
             {
@@ -132,7 +132,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "sui",
+                symbol: "20947",
                 priority: 2,
             },
             {
@@ -173,7 +173,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         marketListings: [
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "ika",
+                symbol: "37454",
                 priority: 1,
             },
             {
@@ -209,7 +209,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         marketListings: [
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "alkimiexchange",
+                symbol: "38131",
                 priority: 1,
             },
             {
@@ -245,7 +245,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         marketListings: [
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "walrus-xyz",
+                symbol: "36119",
                 priority: 1,
             },
             {
@@ -281,7 +281,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         marketListings: [
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "deepbook-protocol",
+                symbol: "33391",
                 priority: 1,
             },
             {
@@ -322,7 +322,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "ethereum",
+                symbol: "1027",
                 priority: 2,
             },
             {
@@ -379,7 +379,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "solana",
+                symbol: "5426",
                 priority: 2,
             },
             {
@@ -424,7 +424,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "usd-coin",
+                symbol: "3408",
                 priority: 2,
             },
             {
@@ -464,7 +464,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         marketListings: [
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "tether",
+                symbol: "825",
                 priority: 1,
             },
             {
@@ -501,7 +501,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
             },
             {
                 id: MarketId.CoinMarketCap,
-                symbol: "raydium",
+                symbol: "8526",
                 priority: 2,
             },
             {

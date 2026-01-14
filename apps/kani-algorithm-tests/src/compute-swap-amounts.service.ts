@@ -47,15 +47,15 @@ export class ComputeSwapAmountsService implements OnApplicationBootstrap {
             },
         ]
         // get the swap amounts
-        for (const scenario of scenarios) {
-            const swapAmounts = await this.swapMathService.computeSwapAmounts({
-                targetTokenId,
-                quoteTokenId,
-                targetBalanceAmount: new BN(scenario.inputs.targetBalanceAmount),
-                quoteBalanceAmount: new BN(scenario.inputs.quoteBalanceAmount),
-                gasBalanceAmount: new BN(scenario.inputs.gasBalanceAmount),
-            })
-            console.log(swapAmounts)
-        }
+        // for (const scenario of scenarios) {
+        //     const swapAmounts = await this.swapMathService.computeSwapAmounts({
+        //         targetTokenId,
+        //         quoteTokenId,
+        //         targetBalanceAmount: new BN(scenario.inputs.targetBalanceAmount),
+        //         quoteBalanceAmount: new BN(scenario.inputs.quoteBalanceAmount),
+        //         gasBalanceAmount: new BN(scenario.inputs.gasBalanceAmount),
+        //     })
+        //     console.log(swapAmounts)
+        // }
     }
 }
