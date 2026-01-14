@@ -287,11 +287,12 @@ export class RpcExecutorService {
                     })
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
-                    if (error.message === RpcErrorType.Fatal) {
+                    if (error instanceof SuiRpcFatalError) {
+                        this.logger.error(WinstonLog.EjectRpcFatalError, { rpcId: id })
                         await this.p2cBalancerService.ejectRpcs([id])
                         throw error
                     }
-                    throw new AbortError(error.message)
+                    throw error
                 }
             },
             maxRetries: envConfig().timeConfig.retry.maxRetries,
