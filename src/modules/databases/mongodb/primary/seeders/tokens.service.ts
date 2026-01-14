@@ -95,19 +95,14 @@ const data: Array<DeepPartial<TokenSchema>> = [
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
-                symbol: "CETUSUSDT",
-                priority: 4,
-            },
-            {
                 id: MarketId.Gate,
                 symbol: "CETUS_USDT",
-                priority: 5,
+                priority: 4,
             },
             {
                 id: MarketId.Pyth,
                 symbol: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef",
-                priority: 6,
+                priority: 5,
             },
         ],
         chainId: ChainId.Sui,
@@ -510,19 +505,14 @@ const data: Array<DeepPartial<TokenSchema>> = [
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
-                symbol: "RAYUSDT",
-                priority: 4,
-            },
-            {
                 id: MarketId.Gate,
                 symbol: "RAY_USDT",
-                priority: 5,
+                priority: 4,
             },
             {
                 id: MarketId.Pyth,
                 symbol: "0x91568baa8beb53db23eb3fb7f22c6e8bd303d103919e19733f2bb642d3e7987a",
-                priority: 6,
+                priority: 5,
             },
         ],
         type: TokenType.Regular,

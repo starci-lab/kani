@@ -2,47 +2,32 @@ import {
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
-import { EventEmitterService, EventName } from "@modules/event"
 import { GATE_WS_URL } from "./constants"
-import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
+import { MarketId } from "@modules/databases"
+import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
+import { CachePriceUtilsService } from "@modules/cache"
 import WebSocket from "ws"
 import { AsyncService, DayjsService, RetryService } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { GateUtilsService } from "./gate-utils.service"
   
 @Injectable()
 export class GateLastPriceService implements OnApplicationBootstrap {
     constructor(
-      @InjectRedisCache()
-      private readonly cacheManager: Cache,
-      private readonly eventEmitterService: EventEmitterService,
-      private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
       private readonly dayjsService: DayjsService,
-      private readonly asyncService: AsyncService,
       private readonly retryService: RetryService,
+      private readonly gateUtilsService: GateUtilsService,
       @InjectWinston()
       private readonly logger: WinstonLogger,
+      private readonly cachePriceUtilsService: CachePriceUtilsService,
+      private readonly asyncService: AsyncService,
     ) {}
   
     onApplicationBootstrap() {
-        const tokens = this.primaryMemoryStorageService.tokens
-            .filter(
-                token => !!token.cexIds?.includes(CexId.Gate)
-            )
-
-        if (!tokens.length) {
-            throw new TokenListIsEmptyException("No Gate.io tokens found for mainnet")
-        }
-
-        // Gate.io stream format: "<symbol_lowercase>.ticker"
-        const symbols = tokens
-            .map(token => token.cexSymbols?.[CexId.Gate])
-            .filter(Boolean)
-            .map(symbol => `${symbol}`)
+        const symbols = this.gateUtilsService.getGateSymbols()
+        if (!symbols.length) return
 
         this.retryService.retryWs<WebSocket>({
             closeFnName: "close",
@@ -65,28 +50,32 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                     })
                     // message event
                     ws.on("message", async (data: WebSocket.RawData) => {
-                        markMessageReceived?.()
                         try {
                             const parsed = JSON.parse(data.toString()) as GateTickerUpdate
-                            const token = this.primaryMemoryStorageService.tokens
-                                .find(token => token.cexSymbols?.[CexId.Gate] === parsed.result.currency_pair)
-                            if (!token) return
-                            const lastPrice = parseFloat(parsed.result.last)
-                            // cache the last price and emit the event in parallel
-                            await this.asyncService.allIgnoreError([
-                                this.cacheManager.set(
-                                    createCacheKey(CacheKey.WsCexLastPrice, {
-                                        cexId: CexId.Gate,
-                                        tokenId: token.displayId,
-                                    }),
-                                    lastPrice
-                                ),  
-                                this.eventEmitterService.emit(EventName.WsCexLastPricesUpdated, {
-                                    cexId: CexId.Gate,
-                                    tokenId: token.displayId,
-                                    lastPrice,
-                                })
-                            ])
+                            const tokenPrices = this.gateUtilsService.getGateTokenPrices(
+                                [
+                                    {
+                                        symbol: parsed.result.currency_pair,
+                                        price: parseFloat(parsed.result.last),
+                                    }
+                                ]
+                            )
+                            // mark message received if there are token prices
+                            if (tokenPrices.length) {
+                                markMessageReceived?.()
+                            } else {
+                                // return if there are no token prices
+                                return
+                            }
+                            await this.asyncService.allIgnoreError(
+                                tokenPrices.map((tokenPrice) =>
+                                    this.cachePriceUtilsService.updateOracleTokenPrice({
+                                        tokenId: tokenPrice.tokenId,
+                                        price: tokenPrice.price,
+                                        marketId: MarketId.Gate,
+                                    })
+                                )
+                            )
                         } catch (error) {
                             this.logger.error(WinstonLog.WebsocketMessageError, {
                                 error: error.message,
@@ -119,13 +108,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                     streamName: "gate-last-price",
                 })
             },
-            options: {
-                baseDelay: envConfig().timeConfig.retry.delay,
-                factor: envConfig().timeConfig.retry.factor,
-                maxDelay: envConfig().timeConfig.retry.maxDelay,
-                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                jitter: true,
-            },
+            options: {},
             throwOnFatal: false,
         })
     }

@@ -10,16 +10,28 @@ import { CacheableMemory } from "cacheable"
 export const createRedisCacheManagerProvider = (): Provider => ({
     provide: REDIS_CACHE_MANAGER,
     useFactory: async (): Promise<Cache> => {
-        const client = createClient({
-            url: `redis://${envConfig().redis.cache.host}:${envConfig().redis.cache.port}`,
-            password: envConfig().redis.cache.password,
-        })
+        const client = createClient(
+            {
+                url: `redis://${envConfig().redis.cache.host}:${envConfig().redis.cache.port}`,
+                password: envConfig().redis.cache.password,
+            }
+        )
         await client.connect()
         const keyv = new Keyv(new KeyvRedis(client))
-        return createCache({
-            stores: [keyv],
-            ttl: 0,
-        })
+        return createCache(
+            {
+                stores: [
+                // priority cache
+                    keyv, 
+                    // fallback cache
+                    new Keyv({
+                        store: new CacheableMemory({ ttl: 0 }),
+                    }
+                    )
+                ],
+                ttl: 0,
+            }
+        )
     },
 })
 

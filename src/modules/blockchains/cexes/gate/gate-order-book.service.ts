@@ -4,8 +4,8 @@ import {
 } from "@nestjs/common"
 import { EventEmitterService, EventName } from "@modules/event"
 import { GATE_WS_URL } from "./constants"
-import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
+import { CexId } from "@modules/databases"
+import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
@@ -14,6 +14,7 @@ import { OrderBook } from "../types"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { GateUtilsService } from "./gate-utils.service"
   
 @Injectable()
 export class GateOrderBookService implements OnApplicationBootstrap {
@@ -21,7 +22,7 @@ export class GateOrderBookService implements OnApplicationBootstrap {
       @InjectRedisCache()
       private readonly cacheManager: Cache,
       private readonly eventEmitterService: EventEmitterService,
-      private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+      private readonly gateUtilsService: GateUtilsService,
       private readonly retryService: RetryService,
       private readonly dayjsService: DayjsService,
       private readonly asyncService: AsyncService,
@@ -30,20 +31,8 @@ export class GateOrderBookService implements OnApplicationBootstrap {
     ) {}
   
     onApplicationBootstrap() {
-        const tokens = this.primaryMemoryStorageService.tokens
-            .filter(
-                token => !!token.cexIds?.includes(CexId.Gate)
-            )
-
-        if (!tokens.length) {
-            throw new TokenListIsEmptyException("No Gate.io tokens found for mainnet")
-        }
-
-        // Gate.io stream format: "<symbol_lowercase>.ticker"
-        const symbols = tokens
-            .map(token => token.cexSymbols?.[CexId.Gate])
-            .filter(Boolean)
-            .map(symbol => `${symbol}`)
+        const symbols = this.gateUtilsService.getGateSymbols()
+        if (!symbols.length) return
 
         this.retryService.retryWs<WebSocket>({
             closeFnName: "close",
@@ -54,9 +43,11 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                 const promise = new Promise<void>((_, reject) => {
                     // open event
                     ws.on("open", () => {
-                        this.logger.info(WinstonLog.WebsocketConnected, {
-                            streamName: "gate-order-book",
-                        })
+                        this.logger.info(
+                            WinstonLog.WebsocketConnected, {
+                                streamName: "gate-order-book",
+                            }
+                        )
                         ws.send(JSON.stringify({
                             channel: "spot.book_ticker",
                             event: "subscribe",
@@ -69,9 +60,8 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                         markMessageReceived?.()
                         try {
                             const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
-                            const token = this.primaryMemoryStorageService.tokens
-                                .find(token => token.cexSymbols?.[CexId.Gate] === parsed.result.s)
-                            if (!token) return
+                            const tokenId = this.gateUtilsService.getGateTokenIdBySymbol(parsed.result.s)
+                            if (!tokenId) return
                             const bestBidPrice = parseFloat(parsed.result.b)
                             const bestAskPrice = parseFloat(parsed.result.a)
                             const bestBidQty = parseFloat(parsed.result.B)
@@ -82,19 +72,27 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                                 bidQty: bestBidQty,
                                 askPrice: bestAskPrice,
                                 askQty: bestAskQty,
-                            }   
+                            }
+                            if (
+                                !Number.isFinite(orderBook.bidPrice) ||
+                                !Number.isFinite(orderBook.bidQty) ||
+                                !Number.isFinite(orderBook.askPrice) ||
+                                !Number.isFinite(orderBook.askQty)
+                            ) {
+                                return
+                            }
                             await this.asyncService.allIgnoreError([
                                 this.cacheManager.set(
                                     createCacheKey(CacheKey.WsCexOrderBook, {
                                         cexId: CexId.Gate,
-                                        tokenId: token.displayId,
+                                        tokenId,
                                     }),
                                     orderBook
                                 ),  
                                 this.eventEmitterService.emit(
                                     EventName.WsCexOrderBookUpdated, {
                                         cexId: CexId.Gate,
-                                        tokenId: token.displayId,
+                                        tokenId,
                                         ...orderBook,
                                     })
                             ])

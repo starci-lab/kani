@@ -4,8 +4,8 @@ import {
 } from "@nestjs/common"
 import { EventEmitterService, EventName } from "@modules/event"
 import { BYBIT_WS_URL } from "./constants"
-import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
+import { CexId } from "@modules/databases"
+import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
@@ -15,6 +15,7 @@ import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { chunkArray } from "@utils"
+import { BybitUtilsService } from "./bybit-utils.service"
 
 @Injectable()
 export class BybitOrderBookService implements OnApplicationBootstrap {
@@ -22,7 +23,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
         @InjectRedisCache()
         private readonly cacheManager: Cache,
         private readonly eventEmitterService: EventEmitterService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly bybitUtilsService: BybitUtilsService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
         @InjectWinston()
@@ -30,18 +31,8 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
     ) {}
 
     onApplicationBootstrap() {
-        const tokens = this.primaryMemoryStorageService.tokens
-            .filter(
-                token => !!token.cexIds?.includes(CexId.Bybit)
-            )
-        if (!tokens.length) {
-            throw new TokenListIsEmptyException("No Bybit tokens found for mainnet")
-        }
-
-        // Extract Bybit symbols from the tokens
-        const symbols = tokens
-            .map(token => token.cexSymbols?.[CexId.Bybit])
-            .filter(Boolean)
+        const symbols = this.bybitUtilsService.getBybitSymbols()
+        if (!symbols.length) return
     
         // Split symbols into chunks of maximum 10, due to Bybit API limit
         const symbolChunks = chunkArray(symbols, 10)
@@ -75,15 +66,17 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                                 return
                             }
                             if ("data" in parsed) {
-                                // Find token in local memory
-                                const token = this.primaryMemoryStorageService.tokens
-                                    .find(t => t.cexSymbols?.[CexId.Bybit] === parsed.data.s)
-                                if (!token) return
+                                const tokenId = this.bybitUtilsService.getBybitTokenIdBySymbol(parsed.data.s)
+                                if (!tokenId) return
 
-                                const bestBidPrice = parseFloat(parsed.data.b?.[0]?.[0] || "0") // first level bid price
-                                const bestBidQty = parseFloat(parsed.data.b?.[0]?.[1] || "0")   // first level bid qty
-                                const bestAskPrice = parseFloat(parsed.data.a?.[0]?.[0] || "0") // first level ask price
-                                const bestAskQty = parseFloat(parsed.data.a?.[0]?.[1] || "0")   // first level ask qty
+                                const bestBid = parsed.data.b?.[0]
+                                const bestAsk = parsed.data.a?.[0]
+                                if (!bestBid || !bestAsk) return
+
+                                const bestBidPrice = parseFloat(bestBid[0]) // first level bid price
+                                const bestBidQty = parseFloat(bestBid[1])   // first level bid qty
+                                const bestAskPrice = parseFloat(bestAsk[0]) // first level ask price
+                                const bestAskQty = parseFloat(bestAsk[1])   // first level ask qty
 
                                 const orderBook: OrderBook = {
                                     bidPrice: bestBidPrice,
@@ -91,18 +84,26 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                                     askPrice: bestAskPrice,
                                     askQty: bestAskQty,
                                 }
+                                if (
+                                    !Number.isFinite(orderBook.bidPrice) ||
+                                    !Number.isFinite(orderBook.bidQty) ||
+                                    !Number.isFinite(orderBook.askPrice) ||
+                                    !Number.isFinite(orderBook.askQty)
+                                ) {
+                                    return
+                                }
 
                                 await this.asyncService.allIgnoreError([
                                     this.cacheManager.set(
                                         createCacheKey(CacheKey.WsCexOrderBook, {
                                             cexId: CexId.Bybit,
-                                            tokenId: token.displayId,
+                                            tokenId,
                                         }),
                                         orderBook
                                     ),
                                     this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
                                         cexId: CexId.Bybit,
-                                        tokenId: token.displayId,
+                                        tokenId,
                                         ...orderBook,
                                     })
                                 ])

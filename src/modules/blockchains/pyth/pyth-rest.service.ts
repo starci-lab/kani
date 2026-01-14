@@ -61,7 +61,6 @@ export class PythRestService implements OnApplicationBootstrap {
                 throw new TokenListIsEmptyException("No Pyth tokens found for mainnet")
             }
             const feedIds = this.pythUtilsService.getPythIds()
-            console.log(feedIds.length)
             // we split the feed ids into chunks of 5
             const chunks = _.chunk(feedIds, envConfig().chunks.pythPrices.rest)
             const prices = await this.asyncService.allIgnoreError(
@@ -96,7 +95,6 @@ export class PythRestService implements OnApplicationBootstrap {
             )
             try {
                 const tokenList = this.pythUtilsService.getPythTokenPrices(priceData)
-                console.log(tokenList)
                 // cache the prices and emit the event
                 await this.asyncService.allIgnoreError(
                     tokenList.map(

@@ -296,7 +296,9 @@ export const envConfig = () => ({
             maxDelay: parseInt(process.env.TIME_CONFIG_RETRY_MAX_DELAY || "30000", 10), // 30s max delay
             factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
         },
-        wsTimeout: parseInt(process.env.TIME_CONFIG_WS_TIMEOUT || "10000", 10), // 10s
+        ws: {
+            idleTimeout: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT || "10000", 10), // 10s
+        },
         lockCooldown: {
             openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "10000", 10), // 10s
             closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s

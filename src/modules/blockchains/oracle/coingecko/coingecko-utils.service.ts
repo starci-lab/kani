@@ -37,16 +37,17 @@ export class CoingeckoUtilsService {
     getCoingeckoTokenPrices(tokenPriceData: Array<CoingeckoTokenPriceData>): Array<CoingeckoTokenPrice> {
         // retrieve the tokens from the primary memory storage service
         const tokens = this.primaryMemoryStorageService.tokens
-        // filter out the tokens that do not have a Coingecko market listing
-        const tokensWithCoingeckoMarketListing = tokens.filter(token => token.marketListings.some(market => market.id === MarketId.Coingecko))
         // map the token prices to the Coingecko token prices
-        return tokenPriceData.map(
-            tokenPriceData => {
-                const token = tokensWithCoingeckoMarketListing.find(token => token.marketListings.some(market => market.id === MarketId.Coingecko && market.symbol === tokenPriceData.coinId))
-                if (!token) return undefined
+        return tokens.map(
+            token => {
+                const tokenPrice = tokenPriceData.find(
+                    tokenPriceData => tokenPriceData.coinId === token.marketListings
+                        .find(market => market.id === MarketId.Coingecko)?.symbol
+                )
+                if (!tokenPrice) return undefined
                 return {
                     tokenId: token.displayId,
-                    price: tokenPriceData.price,
+                    price: tokenPrice.price,
                 }
             }
         ).filter(Boolean) as Array<CoingeckoTokenPrice>

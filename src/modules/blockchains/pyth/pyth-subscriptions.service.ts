@@ -69,7 +69,6 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             async (event: MessageEvent<string>) => {
                                 try {
                                     const update: PriceUpdate = JSON.parse(event.data)
-                                    markMessageReceived?.()
                                     const priceData = update.parsed?.map<PythTokenPriceData>(data => {
                                         const price = computeDenomination(
                                             new BN(data?.ema_price?.price ?? 0), 
@@ -81,6 +80,13 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                         }
                                     }) 
                                     const tokenList = this.pythUtilsService.getPythTokenPrices(priceData ?? [])
+                                    // mark message received if there are token prices
+                                    if (tokenList.length) {
+                                        markMessageReceived?.()
+                                    } else {
+                                        // return if there are no token prices
+                                        return
+                                    }
                                     // cache the prices and emit the event
                                     await this.asyncService.allIgnoreError(
                                         tokenList.map(
@@ -123,13 +129,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                         }
                     )
                 },
-                options: {
-                    baseDelay: envConfig().timeConfig.retry.delay,
-                    factor: envConfig().timeConfig.retry.factor,
-                    maxDelay: envConfig().timeConfig.retry.maxDelay,
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    jitter: true,
-                },
+                options: {},
                 throwOnFatal: false,
             })
         }

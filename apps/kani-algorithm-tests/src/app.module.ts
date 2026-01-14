@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
-import { CoingeckoModule, CoinMarketCapModule, FormulasModule, MathModule, SpotModule } from "@modules/blockchains"
+import { CexesModule, CoingeckoModule, CoinMarketCapModule, FormulasModule, MathModule, SpotModule } from "@modules/blockchains"
 import { EnvModule } from "@modules/env"
 import { FilesystemModule } from "@modules/filesystem"
 import { MixinModule } from "@modules/mixin"
@@ -28,6 +28,9 @@ import { AxiosModule } from "@modules/axios"
             level: WinstonLevel.Info,
         }),
         CacheModule.register({
+            isGlobal: true,
+        }),
+        CexesModule.register({
             isGlobal: true,
         }),
         AxiosModule.register({

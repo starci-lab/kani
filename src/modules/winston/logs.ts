@@ -158,4 +158,7 @@ export enum WinstonLog {
     ReconcileBalanceEnqueueFailed = "Reconcile.Balance.Enqueue.Failed",
     OpenPositionEnqueueFailed = "Open.Position.Enqueue.Failed",
     ClosePositionEnqueueFailed = "Close.Position.Enqueue.Failed",
+    BinanceLastPriceUpdatedFailed = "Binance.Last.Price.Updated.Failed",
+    GateLastPriceUpdatedFailed = "Gate.Last.Price.Updated.Failed",
+    BybitLastPriceUpdatedFailed = "Bybit.Last.Price.Updated.Failed",
 }

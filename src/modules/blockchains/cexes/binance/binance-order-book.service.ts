@@ -4,8 +4,8 @@ import {
 } from "@nestjs/common"
 import { EventEmitterService, EventName } from "@modules/event"
 import { BINANCE_WS_URL } from "./constants"
-import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
+import { CexId, MarketId, PrimaryMemoryStorageService } from "@modules/databases"
+import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
 import WebSocket from "ws"
@@ -30,15 +30,15 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
 
     onApplicationBootstrap() {
         const tokens = this.primaryMemoryStorageService.tokens
-            .filter(token => !!token.cexIds?.includes(CexId.Binance))
+            .filter(token => !!token.marketListings.find(market => market.id === MarketId.Binance))
 
         if (!tokens.length) {
-            throw new TokenListIsEmptyException("No Binance tokens found for mainnet")
+            return
         }
 
         // Subscribe to top 5 levels of order book
         const symbols = tokens
-            .map(token => token.cexSymbols?.[CexId.Binance])
+            .map(token => token.marketListings.find(market => market.id === MarketId.Binance)?.symbol)
             .filter(Boolean)
             .map(symbol => `${symbol}@depth5@100ms`)
 
@@ -67,8 +67,10 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                             const parsed = JSON.parse(data.toString()) as OrderBookStream | NullOrderBookStream
                             if ("result" in parsed && parsed.result === null) return
                             if ("data" in parsed) {
-                                const token = this.primaryMemoryStorageService.tokens
-                                    .find(token => token.cexSymbols?.[CexId.Binance] === parsed.stream)
+                                const streamSymbol = parsed.stream.split("@")[0]
+                                const token = tokens.find(
+                                    token => token.marketListings.find(market => market.id === MarketId.Binance)?.symbol === streamSymbol
+                                )
                                 if (!token) return
                                 // Only take top-of-book (best bid/ask)
                                 const bestBid = parsed.data.bids[0]
@@ -81,6 +83,14 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                                     bidQty: parseFloat(bestBid[1]),
                                     askPrice: parseFloat(bestAsk[0]),
                                     askQty: parseFloat(bestAsk[1]),
+                                }
+                                if (
+                                    !Number.isFinite(orderBook.bidPrice) ||
+                                    !Number.isFinite(orderBook.bidQty) ||
+                                    !Number.isFinite(orderBook.askPrice) ||
+                                    !Number.isFinite(orderBook.askQty)
+                                ) {
+                                    return
                                 }
                                 await this.asyncService.allIgnoreError([
                                 // Cache best bid/ask

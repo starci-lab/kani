@@ -2,144 +2,141 @@ import {
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
-import { EventEmitterService, EventName  } from "@modules/event"
 import { BINANCE_WS_URL } from "./constants"
-import { CexId, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenListIsEmptyException, WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
+import { MarketId, PrimaryMemoryStorageService } from "@modules/databases"
+import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import WebSocket from "ws"
 import { AsyncService, RetryService } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { CachePriceUtilsService } from "@modules/cache"
+import { BinanceUtilsService } from "./binance-utils.service"
+import _ from "lodash"
 
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        private readonly eventEmitterService: EventEmitterService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
+        private readonly binanceUtilsService: BinanceUtilsService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly cachePriceUtilsService: CachePriceUtilsService,
+        private readonly asyncService: AsyncService,
     ) {
     }
 
     onApplicationBootstrap() {
         const tokens = this.primaryMemoryStorageService.tokens
             .filter(
-                token => !!token.cexIds?.includes(CexId.Binance)
+                token => !!token.marketListings.find(market => market.id === MarketId.Binance)
             )
         if (!tokens.length) {
-            throw new TokenListIsEmptyException("No Binance tokens found for mainnet")
+            return
         }
-        const symbols = tokens
-            .map(token => token.cexSymbols?.[CexId.Binance])
-            .filter(Boolean)
-            .map(symbol => `${symbol}@ticker`)
-
-        this.retryService.retryWs<WebSocket>({
+        const symbols = this.binanceUtilsService.getBinanceSymbols()
+        const batches = _.chunk(symbols, envConfig().chunks.pythPrices.subscriptions)
+        for (const batch of batches) {
+            this.retryService.retryWs<WebSocket>({
             // close the websocket
-            closeFnName: "close",
-            // create a new connection
-            createConnection: () => new WebSocket(BINANCE_WS_URL),
-            // on open event
-            onOpen: async (ws, markMessageReceived) => {
-                const promise = new Promise<void>((_, reject) => {
+                closeFnName: "close",
+                // create a new connection
+                createConnection: () => new WebSocket(BINANCE_WS_URL),
+                // on open event
+                onOpen: async (ws, markMessageReceived) => {
+                    const promise = new Promise<void>((_, reject) => {
                     // open event
-                    ws.on("open", () => {
-                        this.logger.info(WinstonLog.WebsocketConnected, {
+                        ws.on("open", () => {
+                            this.logger.info(WinstonLog.WebsocketConnected, {
+                                streamName: "binance-last-price",
+                            })
+                            ws.send(
+                                JSON.stringify(
+                                    {
+                                        method: "SUBSCRIBE",
+                                        params: batch,
+                                        id: 1,
+                                    }
+                                ),
+                            )
+                        })
+                        // message event
+                        ws.on("message", async (data: WebSocket.RawData) => {
+                            try {
+                                const parsed = JSON.parse(
+                                    data.toString(),
+                                ) as Ticker24hrStream | NullTicker24hrStream
+              
+                                if ("result" in parsed && parsed.result === null) return
+                                if (!("data" in parsed)) return
+
+                                const streamSymbol = parsed.stream.split("@")[0]
+                                const tokenPrices = this.binanceUtilsService.getBinanceTokenPrices(
+                                    [
+                                        {
+                                            price: parseFloat(parsed.data.c),
+                                            symbol: streamSymbol,
+                                        }
+                                    ]
+                                )
+                                // mark message received if there are token prices
+                                if (tokenPrices.length) {
+                                    // mark message received if there are token prices
+                                    markMessageReceived?.()
+                                } else {
+                                    // return if there are no token prices
+                                    return
+                                }
+                                await this.asyncService.allIgnoreError(
+                                    tokenPrices.map(async (tokenPrice) => {
+                                        await this.cachePriceUtilsService.updateOracleTokenPrice(
+                                            {
+                                                tokenId: tokenPrice.tokenId,
+                                                price: tokenPrice.price,
+                                                marketId: MarketId.Binance,
+                                            }
+                                        )
+                                    })
+                                )
+                            } catch (error) {
+                                this.logger.error(
+                                    WinstonLog.WebsocketMessageError, {
+                                        error: error.message,
+                                    }
+                                )
+                            }
+                        })
+                        // error event throw error and close WS
+                        ws.on("error", (err) => {
+                            ws.close()
+                            reject(new WsConnectionErrorException(err.message))
+                        })
+                        // close event reject promise and signal retryWs reconnect
+                        ws.on("close", () => {
+                            reject(new WsConnectionClosedException("WS closed"))
+                        })
+                    })
+                    return await promise
+                },
+                onReconnect: async (error) => {
+                    this.logger.warn(
+                        WinstonLog.WebsocketReconnect, 
+                        {
+                            reason: error?.message,
                             streamName: "binance-last-price",
                         })
-                        ws.send(
-                            JSON.stringify({
-                                method: "SUBSCRIBE",
-                                params: symbols,
-                                id: 1,
-                            }),
-                        )
-                    })
-                    // message event
-                    ws.on("message", async (data: WebSocket.RawData) => {
-                        markMessageReceived?.()
-                        try {
-                            const parsed = JSON.parse(
-                                data.toString(),
-                            ) as Ticker24hrStream | NullTicker24hrStream
-              
-                            if ("result" in parsed && parsed.result === null) return
-                            if (!("data" in parsed)) return
-              
-                            const token =
-                        this.primaryMemoryStorageService.tokens.find(
-                            (token) =>
-                                token.cexSymbols?.[CexId.Binance] === parsed.stream,
-                        )
-                            if (!token) return
-              
-                            const lastPrice = parseFloat(parsed.data.c)
-              
-                            await this.asyncService.allIgnoreError([
-                                this.cacheManager.set(
-                                    createCacheKey(CacheKey.WsCexLastPrice, {
-                                        cexId: CexId.Binance,
-                                        tokenId: token.displayId,
-                                    }),
-                                    lastPrice,
-                                ),
-                                this.eventEmitterService.emit(
-                                    EventName.WsCexLastPricesUpdated,
-                                    {
-                                        cexId: CexId.Binance,
-                                        tokenId: token.displayId,
-                                        lastPrice,
-                                    },
-                                ),
-                            ])
-                        } catch (error) {
-                            this.logger.error(WinstonLog.WebsocketMessageError, {
-                                error: error.message,
-                            })
-                        }
-                    })
-                    // error event → close WS
-                    ws.on("error", (err) => {
-                        ws.close()
-                        reject(new WsConnectionErrorException(err.message))
-                    })
-                    // close event → signal retryWs reconnect
-                    ws.on("close", () => {
-                        reject(new WsConnectionClosedException("WS closed"))
-                    })
-                })
-                return await promise
-            },
-            onReconnect: async (error) => {
-                this.logger.warn(
-                    WinstonLog.WebsocketReconnect, 
-                    {
-                        reason: error?.message,
+                },
+                onFatal: async () => {
+                    this.logger.error(WinstonLog.WebsocketFatalError, {
+                        error: "WS connection failed",
                         streamName: "binance-last-price",
                     })
-            },
-            onFatal: async () => {
-                this.logger.error(WinstonLog.WebsocketFatalError, {
-                    error: "WS connection failed",
-                    streamName: "binance-last-price",
-                })
-            },
-            options: {
-                baseDelay: envConfig().timeConfig.retry.delay,
-                factor: envConfig().timeConfig.retry.factor,
-                maxDelay: envConfig().timeConfig.retry.maxDelay,
-                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                jitter: true,
-            },
-            throwOnFatal: false,
-        })
+                },
+                options: {},
+                throwOnFatal: false,
+            })
+        }
     }
 }
 

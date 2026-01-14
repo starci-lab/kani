@@ -42,7 +42,9 @@ export class PythUtilsService {
         return tokens.map(
             token => {
                 const tokenPrice = tokenPriceData.find(
-                    tokenPriceData => token.marketListings.find(market => market.id === MarketId.Pyth)?.symbol?.includes(tokenPriceData.feedId)
+                    tokenPriceData => token.marketListings.find(
+                        market => market.id === MarketId.Pyth
+                    )?.symbol?.includes(tokenPriceData.feedId)
                 )
                 if (!tokenPrice) return undefined
                 return {

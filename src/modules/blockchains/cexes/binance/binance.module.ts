@@ -3,6 +3,7 @@ import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./binance.module-definition"   
 import { BinanceLastPriceService } from "./binance-last-price.service"
 import { BinanceOrderBookService } from "./binance-order-book.service"
+import { BinanceUtilsService } from "./binance-utils.service"
 
 @Module({})
 export class BinanceModule extends ConfigurableModuleClass {
@@ -13,6 +14,7 @@ export class BinanceModule extends ConfigurableModuleClass {
         const providers = [
             BinanceLastPriceService,
             BinanceOrderBookService,
+            BinanceUtilsService,
         ]
         return {
             ...dynamicModule,

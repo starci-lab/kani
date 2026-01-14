@@ -7,6 +7,7 @@ import { Injectable } from "@nestjs/common"
 import { sleep } from "@utils"
 import pRetry from "p-retry"
 import { envConfig } from "@modules/env"
+import Decimal from "decimal.js"
 
 export interface RetryParams<T> {
   signal?: AbortSignal;
@@ -60,13 +61,6 @@ export class RetryService {
         let aborted = false
         // create a promise to return the connection
         return new Promise<never>((_, reject) => {
-            const safe = async (fn?: () => Promise<void>) => {
-                try {
-                    await fn?.()
-                } catch {
-                    // do nothing
-                }
-            }
             const cleanup = () => {
                 connection?.[closeFnName]?.()
                 connection = null
@@ -74,28 +68,42 @@ export class RetryService {
             const connect = async () => {
                 if (aborted) return
                 try {
+                    // initialize the timeout
                     let timeout: NodeJS.Timeout | null = null
+                    // create a function to set a new timeout to reject the promise
+                    const setTimeoutPromise = (reject: (error: Error) => void) => {
+                        timeout = setTimeout(
+                            () =>
+                                reject(
+                                    new WsConnectionTimeoutException("WS connection timed out")
+                                ),
+                            envConfig().timeConfig.ws.idleTimeout
+                        )
+                    }
+                    const createRejectTimeoutPromise = () => {
+                        return new Promise<never>((_, reject) => setTimeoutPromise(reject))
+                    }
+                    // wait for the timeout or the connection to be created
                     await Promise.race(
                         [
-                            new Promise<never>((_, reject) =>
-                                timeout = setTimeout(
-                                    () =>
-                                        reject(
-                                            new WsConnectionTimeoutException("WS connection timed out")
-                                        ),
-                                    envConfig().timeConfig.wsTimeout
-                                )
-                            ),
-                            (async () => {
-                                const connection = await createConnection()
-                                await onOpen(
-                                    connection, () => {
-                                        if (timeout) {
-                                            clearTimeout(timeout)
-                                            timeout = null
+                            // create a promise to reject the promise if the timeout is reached
+                            createRejectTimeoutPromise(),
+                            // create a promise to create the connection and onOpen the connection
+                            (
+                                async () => {
+                                    connection = await createConnection()
+                                    await onOpen(
+                                        connection, () => {
+                                        // clear the timeout
+                                            if (timeout) {
+                                                clearTimeout(timeout)
+                                            }
+                                            // clear the timeout promise
+                                            setTimeoutPromise(reject)
                                         }
-                                    })
-                            })(),
+                                    )
+                                }
+                            )(),
                         ]
                     )
                 } catch (err) {
@@ -106,25 +114,27 @@ export class RetryService {
             const scheduleReconnect = async (err?: Error) => {
                 if (aborted) return
                 // call the onReconnect callback
-                await safe(async () => onReconnect?.(err))
+                await onReconnect?.(err)
                 // cleanup the connection
                 cleanup()
                 // increment the retries
                 retries++
                 if (retries > maxRetries) {
                     aborted = true
-                    await safe(onFatal)
+                    await onFatal?.()
                     return reject(
                         new WsRetryLimitReachedException(retries, "WS connection failed"),
                     )
                 }
                 // calculate the delay
-                let delay = Math.min(baseDelay * factor ** retries, maxDelay)
-                if (jitter) delay += delay * Math.random() * 0.3
+                let delay = Decimal.min(new Decimal(baseDelay).mul(new Decimal(factor).pow(new Decimal(retries))), new Decimal(maxDelay))
+                if (jitter) delay = delay.add(delay.mul(new Decimal(Math.random()).mul(0.3)))
                 // sleep for the delay
-                await sleep(delay)
+                await sleep(delay.toNumber())
                 // connect to the server
                 await connect()
+                // set retries to 0
+                retries = 0
             }
         
             // handle the abort signal
@@ -132,7 +142,7 @@ export class RetryService {
                 if (aborted) return
                 aborted = true
                 // call the onFatal callback
-                await safe(onFatal)
+                await onFatal?.()
                 // cleanup the connection
                 cleanup()
                 // reject the promise
@@ -155,6 +165,7 @@ export class RetryService {
             }
         }
     }
+
 }
 
 export interface WsRetryOptions {
