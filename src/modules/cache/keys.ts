@@ -20,7 +20,7 @@ export enum CacheKey {
     TokenPriceData = "tokenPriceData",
     BinanceWsOrderBook = "binanceWsOrderBook",
     OraclePrices = "oraclePrices",
-    PythTokenPrice = "pythTokenPrice",
+    OracleTokenPrice = "oracleTokenPrice",
     User = "user",
     UserIds = "userIds",
     SessionId = "sessionId",
@@ -31,13 +31,30 @@ export enum CacheKey {
     FeesResponse = "feesResponse",
 }
 
+export interface NonExpiredCacheResult {
+    snapshotAt: Dayjs
+}
+
 export interface SpotPriceCacheResult {
     price: number
 }
 
-export interface PythTokenPriceCacheResult {
+export enum OracleType {
+    Pyth = "pyth",
+    Coingecko = "coingecko",
+    CoinMarketCap = "coinmarketcap",
+    Binance = "binance",
+    Gate = "gate",
+    Bybit = "bybit",
+}
+
+export interface OracleTokenPriceCache extends NonExpiredCacheResult {
     price: number
     snapshotAt: Dayjs
+}
+
+export interface OracleTokenPricesCacheResult extends NonExpiredCacheResult {
+    prices: Partial<Record<OracleType, OracleTokenPriceCache>>
 }
 
 export interface DynamicLiquidityPoolInfoCacheResult {

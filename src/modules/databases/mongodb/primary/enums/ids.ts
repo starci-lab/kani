@@ -252,3 +252,39 @@ registerEnumType(GraphQLTypeExplorerId, {
         },
     },
 })
+
+export enum MarketId {
+    Binance = "binance",
+    Gate = "gate",
+    Bybit = "bybit",
+    Pyth = "pyth",
+    Coingecko = "coingecko",
+    CoinMarketCap = "coinmarketcap",
+}
+
+export const GraphQLTypeMarketId = createEnumType(MarketId)
+
+registerEnumType(GraphQLTypeMarketId, {
+    name: "MarketId",
+    description: "The name of the market",
+    valuesMap: {
+        [MarketId.Binance]: {
+            description: "The binance market",
+        },
+        [MarketId.Gate]: {
+            description: "The gate market",
+        },
+        [MarketId.Bybit]: {
+            description: "The bybit market",
+        },
+        [MarketId.Pyth]: {
+            description: "The pyth market",
+        },
+        [MarketId.Coingecko]: {
+            description: "The coingecko market",
+        },
+        [MarketId.CoinMarketCap]: {
+            description: "The coinmarketcap market",
+        },
+    },
+})

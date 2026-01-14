@@ -1,4 +1,4 @@
-import { CexId, TokenId } from "../enums"
+import { MarketId, TokenId } from "../enums"
 import { ChainId, DeepPartial, TokenType } from "@typedefs"
 import { TokenSchema } from "../schemas"
 import { Seeder } from "./seeder.interface"
@@ -32,20 +32,42 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
         decimals: 6,
-        coinMarketCapId: "usdc",
-        coinGeckoId: "usd-coin",
-        cexSymbols: {
-            [CexId.Binance]: "usdcusdt",
-            [CexId.Gate]: "USDC_USDT",
-            [CexId.Bybit]: "USDCUSDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "usdcusdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "usd-coin",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "usd-coin",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "USDCUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "USDC_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+                priority: 6,
+            },
+        ],
         chainId: ChainId.Sui,
         iconUrl: "https://r2.kanibot.xyz/tokens/usdc.png",
         projectUrl: "https://www.centre.io/",
-        cexIds: [CexId.Binance, CexId.Gate, CexId.Bybit],
-        whichCex: CexId.Binance,
         type: TokenType.StableUsdc,
-        pythFeedId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
         selectable: true,
     },
     {
@@ -56,19 +78,42 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS",
         decimals: 9,
-        coinMarketCapId: "cetus",
-        coinGeckoId: "cetus-protocol",
-        cexSymbols: {
-            [CexId.Binance]: "cetususdt",
-            [CexId.Gate]: "CETUS_USDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "cetususdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "cetus-protocol",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "cetus-protocol",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "CETUSUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "CETUS_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef",
+                priority: 6,
+            },
+        ],
         chainId: ChainId.Sui,
         iconUrl: "https://r2.kanibot.xyz/tokens/cetus.png",
         projectUrl: "https://cetus.zone/",
-        cexIds: [CexId.Gate],
-        whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef",
         selectable: true,
     },
     {
@@ -77,22 +122,43 @@ const data: Array<DeepPartial<TokenSchema>> = [
         name: "SUI",
         symbol: "SUI",
         chainId: ChainId.Sui,
-        tokenAddress:
-          "0x2::sui::SUI",
+        tokenAddress: "0x2::sui::SUI",
         decimals: 9,
-        coinMarketCapId: "sui",
-        coinGeckoId: "sui",
-        cexSymbols: {
-            [CexId.Binance]: "suiusdt",
-            [CexId.Gate]: "SUI_USDT",
-            [CexId.Bybit]: "SUIUSDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "suiusdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "sui",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "sui",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "SUIUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "SUI_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744",
+                priority: 6,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/sui.png",
         projectUrl: "https://sui.io/",
-        cexIds: [CexId.Binance, CexId.Gate, CexId.Bybit],
-        whichCex: CexId.Binance,
         type: TokenType.Native,
-        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744",
         selectable: true,
     },
     {
@@ -104,17 +170,31 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0x7262fb2f7a3a14c888c438a3cd9b912469a58cf60f367352c46584262e8299aa::ika::IKA",
         decimals: 9,
-        coinMarketCapId: "ika",
-        coinGeckoId: "ika",
-        cexSymbols: {
-            [CexId.Gate]: "IKA_USDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "ika",
+                priority: 1,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "ika",
+                priority: 2,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "IKA_USDT",
+                priority: 3,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x2b529621fa6e2c8429f623ba705572aa64175d7768365ef829df6a12c9f365f4",
+                priority: 4,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/ika.png",
         projectUrl: "https://ika.xyz/",
-        cexIds: [CexId.Gate],
-        whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0x2b529621fa6e2c8429f623ba705572aa64175d7768365ef829df6a12c9f365f4",
         selectable: true,
     },
     {
@@ -126,17 +206,31 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0x1a8f4bc33f8ef7fbc851f156857aa65d397a6a6fd27a7ac2ca717b51f2fd9489::alkimi::ALKIMI",
         decimals: 9,
-        coinMarketCapId: "alkimi",
-        coinGeckoId: "alkimi",
-        cexSymbols: {
-            [CexId.Gate]: "ALKIMI_USDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "alkimiexchange",
+                priority: 1,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "alkimi",
+                priority: 2,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "ALKIMI_USDT",
+                priority: 3,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x1b2deae525b02c52de4a411c4f37139931215d7cc754e57dd6c84387336ccc74",
+                priority: 4,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/alkimi.png",
         projectUrl: "https://alkimi.org/",
-        cexIds: [CexId.Gate],
-        whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0x1b2deae525b02c52de4a411c4f37139931215d7cc754e57dd6c84387336ccc74",
         selectable: true,
     },
     {
@@ -148,17 +242,31 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
         decimals: 9,
-        coinMarketCapId: "walrus-xyz",
-        coinGeckoId: "walrus-2",
-        cexSymbols: {
-            [CexId.Gate]: "WAL_USDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "walrus-xyz",
+                priority: 1,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "walrus-2",
+                priority: 2,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "WAL_USDT",
+                priority: 3,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0xeba0732395fae9dec4bae12e52760b35fc1c5671e2da8b449c9af4efe5d54341",
+                priority: 4,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/walrus.png",
         projectUrl: "https://www.walrus.xyz/",
-        cexIds: [CexId.Gate],
-        whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0xeba0732395fae9dec4bae12e52760b35fc1c5671e2da8b449c9af4efe5d54341",
         selectable: true,
     },
     {
@@ -170,17 +278,31 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0xdee9f43a24e3ecf35f9581e6ce46f2c826c27ba7d8a88e64e8a1bde4374d8b5e::deep::DEEP",
         decimals: 9,
-        coinMarketCapId: "deepbook",
-        coinGeckoId: "deepbook",
-        cexSymbols: {
-            [CexId.Gate]: "DEEP_USDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "deepbook-protocol",
+                priority: 1,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "deep",
+                priority: 2,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "DEEP_USDT",
+                priority: 3,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff",
+                priority: 4,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/deep.png",
         projectUrl: "https://deepbook.org/",
-        cexIds: [CexId.Gate],
-        whichCex: CexId.Gate,
         type: TokenType.Wrapper,
-        pythFeedId: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff",
         selectable: true,
     },
     {
@@ -192,19 +314,41 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress:
           "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH",
         decimals: 8,
-        coinMarketCapId: "ethereum",
-        coinGeckoId: "ethereum",
-        cexSymbols: {
-            [CexId.Binance]: "ethusdt",
-            [CexId.Gate]: "ETH_USDT",
-            [CexId.Bybit]: "ETHUSDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "ethusdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "ethereum",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "ethereum",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "ETHUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "ETH_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744",
+                priority: 6,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/eth.png",
         projectUrl: "https://ethereum.org/",
-        cexIds: [CexId.Binance, CexId.Gate, CexId.Bybit],
-        whichCex: CexId.Binance,
         type: TokenType.Wrapper,
-        pythFeedId: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744", 
         selectable: true,
     },
     {
@@ -213,8 +357,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         name: "X Staked SUI",
         symbol: "xSUI",
         chainId: ChainId.Sui,
-        tokenAddress:
-          "0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI",
+        tokenAddress: "0x2b6602099970374cf58a2a1b9d96f005fccceb81e92eb059873baf420eb6c717::x_sui::X_SUI",
         decimals: 8,
         iconUrl: "https://r2.kanibot.xyz/tokens/x_sui.webp",
         projectUrl: "https://ethereum.org/",
@@ -228,21 +371,42 @@ const data: Array<DeepPartial<TokenSchema>> = [
         symbol: "SOL",
         decimals: 9,
         chainId: ChainId.Solana,
-        coinMarketCapId: "solana",
-        coinGeckoId: "solana",
-        cexSymbols: {
-            [CexId.Binance]: "solusdt",
-            [CexId.Gate]: "SOL_USDT",
-            [CexId.Bybit]: "SOLUSDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "solusdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "solana",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "solana",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "SOLUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "SOL_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+                priority: 6,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/sol.png",
         projectUrl: "https://solana.com/",
-        cexIds: [CexId.Binance, CexId.Gate, CexId.Bybit],
-        whichCex: CexId.Binance,
         type: TokenType.Native,
-        pythFeedId: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
         selectable: true,
-        minRequiredAmountInTotal: 0.3,
     },
     {
         _id: createObjectId(TokenId.SolUsdc),
@@ -252,21 +416,42 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 6,
         chainId: ChainId.Solana,
         tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        coinMarketCapId: "usdc",
-        coinGeckoId: "usdc",
-        cexSymbols: {
-            [CexId.Binance]: "usdcusdt",
-            [CexId.Gate]: "USDC_USDT",
-            [CexId.Bybit]: "USDCUSDT",
-        },
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "usdcusdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "usd-coin",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "usd-coin",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "USDCUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "USDC_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+                priority: 6,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/usdc.png",
         projectUrl: "https://www.centre.io/",
-        cexIds: [CexId.Binance, CexId.Gate, CexId.Bybit],
-        whichCex: CexId.Binance,
         type: TokenType.StableUsdc,
-        pythFeedId: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
         selectable: false,
-        minRequiredAmountInTotal: 30,
     },
     {
         _id: createObjectId(TokenId.SolUsdt),
@@ -276,15 +461,27 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 6,
         tokenAddress: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
         chainId: ChainId.Solana,
-        coinMarketCapId: "usdt",
-        coinGeckoId: "usdt",
+        marketListings: [
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "tether",
+                priority: 1,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "tether",
+                priority: 2,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+                priority: 4,
+            },
+        ],
         iconUrl: "https://r2.kanibot.xyz/tokens/usdt.png",
         projectUrl: "https://tether.to/",
-        whichCex: CexId.Binance,
         type: TokenType.StableUsdc,
-        pythFeedId: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
         selectable: false,
-        minRequiredAmountInTotal: 30,
     },
     {
         _id: createObjectId(TokenId.SolRay),
@@ -296,7 +493,39 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
         iconUrl: "https://r2.kanibot.xyz/tokens/ray.png",
         projectUrl: "https://raydium.io/",
+        marketListings: [
+            {
+                id: MarketId.Binance,
+                symbol: "rayusdt",
+                priority: 1,
+            },
+            {
+                id: MarketId.CoinMarketCap,
+                symbol: "raydium",
+                priority: 2,
+            },
+            {
+                id: MarketId.Coingecko,
+                symbol: "raydium",
+                priority: 3,
+            },
+            {
+                id: MarketId.Bybit,
+                symbol: "RAYUSDT",
+                priority: 4,
+            },
+            {
+                id: MarketId.Gate,
+                symbol: "RAY_USDT",
+                priority: 5,
+            },
+            {
+                id: MarketId.Pyth,
+                symbol: "0x91568baa8beb53db23eb3fb7f22c6e8bd303d103919e19733f2bb642d3e7987a",
+                priority: 6,
+            },
+        ],
         type: TokenType.Regular,
-        selectable: false,
+        selectable: true,
     },
 ]

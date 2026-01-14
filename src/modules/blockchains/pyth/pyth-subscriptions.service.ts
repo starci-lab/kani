@@ -115,7 +115,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                     data => {
                         return {
                             key: createCacheKey(
-                                CacheKey.PythTokenPrice, 
+                                CacheKey.OracleTokenPrice, 
                                 data.tokenId
                             ),
                             value: this.superjson.stringify({

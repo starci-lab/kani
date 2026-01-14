@@ -10,6 +10,15 @@
   "monorepo": true,
   "root": "apps/app",
   "projects": {
+    "kani-algorithm-tests": {
+      "type": "application",
+      "root": "apps/kani-algorithm-tests",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-algorithm-tests/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-algorithm-tests/tsconfig.app.json"
+      }
+    },
     "kani-cli": {
       "type": "application",
       "root": "apps/kani-cli",

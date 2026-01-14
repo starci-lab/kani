@@ -1,16 +1,16 @@
 import { 
     TargetOperationalGasAmountNotFoundException, 
     TokenNotFoundException,
-    GasBalanceAmountNotFoundException,
     MinOperationalGasAmountNotFoundException,
+    GasSwapThresholdAmountNotFoundException,
+    AdditionalSwapAmountGasNotFoundException,
     InsufficientMinGasBalanceAmountException,
-    AdditionalSwapRequiredThresholdNotFoundException,
-    AdditionalSwapAmountNotFoundException
 } from "@exceptions"
 import { 
     PrimaryMemoryStorageService, 
     QuoteRatioStatus, 
-    TokenId 
+    TokenId, 
+    TokenSchema
 } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import { Decimal } from "decimal.js"
@@ -209,49 +209,74 @@ export class SwapMathService {
         if (!gasToken) {
             throw new TokenNotFoundException("Gas token not found")
         }
-        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
-            .gasAmountRequired?.[chainId]?.targetOperationalAmount
-        const minOperationalGasAmount = this.primaryMemoryStorageService
-            .gasConfig.gasAmountRequired?.[chainId]?.minOperationalAmount
-        const additionalSwapRequiredThreshold = this.primaryMemoryStorageService
-            .gasConfig.gasAmountRequired?.[chainId]?.additionalSwapRequiredThreshold
-        const additionalSwapAmount = this.primaryMemoryStorageService
-            .gasConfig.gasAmountRequired?.[chainId]?.additionalSwapAmount
+        // check quote ratio status
+        const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus(
+            {
+                quoteRatio: quoteRatioResponse.quoteRatio,
+            }
+        )
+        // retrieve the gas config
+        const {
+            minOperationalAmount: minOperationalGasAmount,
+            targetOperationalAmount: targetOperationalGasAmount,
+            swapThresholdAmount: swapThresholdGasAmount,
+            additionalSwapAmount: additionalSwapAmountGas,
+        } = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId] ?? {}
+        // validate the gas config
+        if (!minOperationalGasAmount) {
+            throw new MinOperationalGasAmountNotFoundException(
+                chainId, 
+                "Min operational gas amount not found"
+            )
+        }
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 chainId, 
                 "Target operational gas amount not found"
             )
         }
-        if (!minOperationalGasAmount) {
-            throw new MinOperationalGasAmountNotFoundException(
+        if (!swapThresholdGasAmount) {
+            throw new GasSwapThresholdAmountNotFoundException(
                 chainId, 
-                "Quote operational gas amount not found"
+                "Gas swap threshold amount not found"
             )
         }
-        if (!additionalSwapRequiredThreshold) {
-            throw new AdditionalSwapRequiredThresholdNotFoundException(
+        if (!additionalSwapAmountGas) {
+            throw new AdditionalSwapAmountGasNotFoundException(
                 chainId, 
-                "Additional swap required threshold not found"
+                "Additional swap amount gas not found"
+            )
+        }   
+        const targetOperationalGasAmountBN = computeRaw(
+            new Decimal(targetOperationalGasAmount), gasToken.decimals
+        )
+        const minOperationalGasAmountBN = computeRaw(
+            new Decimal(minOperationalGasAmount), gasToken.decimals
+        )
+        const swapThresholdGasAmountBN = computeRaw(
+            new Decimal(swapThresholdGasAmount), gasToken.decimals
+        )
+        const additionalSwapAmountGasBN = computeRaw(
+            new Decimal(additionalSwapAmountGas), gasToken.decimals
+        )
+        // whether we need to swap from either quote or target to gas
+        let needsGasSwap = false
+        // check gas status
+        if (gasBalanceAmount.lt(swapThresholdGasAmountBN)) {
+            // we have to perform a swap from either quote or target to gas
+            needsGasSwap = true
+        } else if (gasBalanceAmount.lt(minOperationalGasAmountBN)) {
+            // do nothing, since the gas amount is not enough
+            throw new InsufficientMinGasBalanceAmountException(
+                chainId,
+                "Insufficient min gas balance amount",
             )
         }
-        if (!additionalSwapAmount) {
-            throw new AdditionalSwapAmountNotFoundException(
-                chainId, 
-                "Additional swap amount not found"
-            )
-        }
-        const targetOperationalGasAmountBN = computeRaw(new Decimal(targetOperationalGasAmount), gasToken.decimals)
-        console.log("gasBalanceAmount", targetOperationalGasAmountBN.toString())
-        console.log("gasBalanceAmount", gasBalanceAmount.toString())
-        const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
-            quoteRatio: quoteRatioResponse.quoteRatio,
-        })
         switch (quoteRatioStatus) {
         case QuoteRatioStatus.Good: {
             // good ratio, no need to swap between target to quote or quote to target
             // but we must ensure that gas amount is enough, or >= target operational gas amount
-            if (gasBalanceAmount.gte(targetOperationalGasAmountBN)) {
+            if (gasBalanceAmount.gte(swapThresholdGasAmountBN)) {
                 return {
                     processSwaps: false,
                     quoteRatioStatus,
@@ -265,6 +290,25 @@ export class SwapMathService {
             }
         }
         case QuoteRatioStatus.TargetTooLow: {
+            // since this case is target too low, which means we have too much quote, so that
+            if (needsGasSwap) {
+                // this case mean we need to swap a partial of to gas
+                const swapResult = await this.computeSwapResult(
+                    {
+                        amountIn: additionalSwapAmountGasBN,
+                        tokenIn: gasToken,
+                        tokenOut: quoteToken,
+                        oraclePrice: quoteRatioResponse.oraclePrice,
+                    }
+                )
+                console.log("additionalSwapAmountGasBN", additionalSwapAmountGasBN.toString())
+                console.log("swapResult", swapResult.toString())
+                console.log("quoteToken.decimals", quoteToken.decimals)
+                console.log("quoteRatioResponse.oraclePrice", quoteRatioResponse.oraclePrice.toString())
+                console.log("targetToken.decimals", targetToken.decimals)
+                console.log("quoteRatioResponse.oraclePrice", quoteRatioResponse.oraclePrice.toString())
+                console.log("quoteRatioResponse.oraclePrice", quoteRatioResponse.oraclePrice.toString())
+            }
             // target too low mean, the quote is too much, we need to swap a partial of quote to the target and gas
             const idealQuoteBalanceInQuote = quoteRatioResponse.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResponse.quoteBalanceAmountInQuote)
@@ -361,6 +405,21 @@ export class SwapMathService {
         }
         }
     }
+
+    private async computeSwapResult(
+        {
+            amountIn,
+            tokenIn,
+            tokenOut,
+            oraclePrice,
+        }: ComputeSwapResultParams
+    ): Promise<BN> {
+        return toScaledBN(
+            toUnit(tokenIn.decimals),
+            new Decimal(1).div(new Decimal(oraclePrice))
+        )
+            .mul(amountIn).div(toUnit(tokenOut.decimals))
+    }
 }
 
 export interface ComputeSwapAmountsParams {
@@ -408,4 +467,16 @@ export interface ComputeQuoteRatioResponse {
 
 export interface ExtendedComputeSwapAmountsParams extends ComputeSwapAmountsParams {
     quoteRatioResponse: ComputeQuoteRatioResponse
+}
+
+export interface ComputeSwapResultParams {
+    amountIn: BN
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
+    oraclePrice: Decimal
+}
+
+export interface ComputeSwapResultResponse {
+    swapTargetToQuoteAmount: BN
+    swapQuoteToTargetAmount: BN
 }

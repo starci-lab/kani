@@ -1,9 +1,9 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { Field, Float, Int, ObjectType } from "@nestjs/graphql"
+import { Field, Int, ObjectType } from "@nestjs/graphql"
 import { ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType } from "@typedefs"
 import { AbstractSchema } from "./abstract"
-import { CexId, GraphQLTypeCexId, GraphQLTypeTokenId, TokenId } from "../enums"
-import GraphQLJSON from "graphql-type-json"
+import { GraphQLTypeTokenId, TokenId } from "../enums"
+import { MarketListingSchema } from "./market-listing.schema"
 
 @Schema({ timestamps: true, collection: "tokens" })
 @ObjectType({ description: "Represents a blockchain token with metadata such as symbol, address, decimals, and chain information." })
@@ -28,20 +28,6 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: String, nullable: true })
         tokenAddress: string
 
-    @Field(() => String, { 
-        description: "CoinMarketCap ID of the token, (eg: 'sui', 'solana', 'bitcoin')",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
-        coinMarketCapId?: string
-
-    @Field(() => String, { 
-        description: "CoinGecko ID of the token (e.g. 'sui', 'solana', 'bitcoin')",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
-        coinGeckoId?: string
-
     @Field(() => String, { description: "URL of the token icon" })
     @Prop({ type: String, required: true })
         iconUrl: string
@@ -54,25 +40,9 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: String, required: true })
         projectUrl: string
 
-    @Field(() => [GraphQLTypeCexId], { description: "List of CEXs where the token is listed", nullable: true })
-    @Prop({ type: [String], enum: CexId, required: false })
-        cexIds?: Array<CexId>
-
-    @Field(() => GraphQLTypeCexId, { description: "Primary CEX where the token is listed", nullable: true })
-    @Prop({ type: String, enum: CexId, required: false })
-        whichCex?: CexId
-
-    @Field(() => GraphQLJSON, { description: "CEX trading symbols map (CexId -> symbol)", nullable: true })
-    @Prop({ type: Map, of: String, default: {} })
-        cexSymbols?: Record<string, string>
-
     @Field(() => GraphQLTypeTokenType, { description: "Type of the token" })
     @Prop({ type: String, enum: TokenType, required: true })
         type: TokenType
-
-    @Field(() => String, { description: "Pyth feed ID of the token", nullable: true })
-    @Prop({ type: String, required: false })
-        pythFeedId?: string
 
     @Field(() => Boolean, { description: "Whether the token is selectable for liquidity yield farming"})
     @Prop({ type: Boolean, required: true })
@@ -83,12 +53,9 @@ export class TokenSchema extends AbstractSchema {
     @Prop({ type: Boolean, required: false })
         is2022Token?: boolean
 
-    @Field(() => Float, { 
-        description: "The minimum required amount of the token in total to be eligible for the bot",
-        nullable: true,
-    })
-    @Prop({ type: Number, required: false })
-        minRequiredAmountInTotal?: number
+    @Field(() => [MarketListingSchema], { description: "List of markets where the token is listed" })
+    @Prop({ type: [MarketListingSchema], required: true })
+        marketListings: Array<MarketListingSchema>
 }
 
 export const TokenSchemaClass = SchemaFactory.createForClass(TokenSchema)

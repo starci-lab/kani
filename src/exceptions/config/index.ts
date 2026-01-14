@@ -77,6 +77,20 @@ export class MinOperationalGasAmountNotFoundException extends AbstractException 
     }
 }
 
+/** Thrown when gas swap threshold amount config is not found */
+export class GasSwapThresholdAmountNotFoundException extends AbstractException {
+    constructor(chainId: ChainId, message?: string) {
+        super(message || "Gas swap threshold amount not found", "GAS_SWAP_THRESHOLD_AMOUNT_NOT_FOUND_EXCEPTION", { chainId })
+    }
+}
+
+/** Thrown when additional swap amount gas config is not found */
+export class AdditionalSwapAmountGasNotFoundException extends AbstractException {
+    constructor(chainId: ChainId, message?: string) {
+        super(message || "Additional swap amount gas not found", "ADDITIONAL_SWAP_AMOUNT_GAS_NOT_FOUND_EXCEPTION", { chainId })
+    }
+}
+
 /** Thrown when quote operational gas amount config is not found */
 export class QuoteOperationalGasAmountNotFoundException extends AbstractException {
     constructor(chainId: ChainId, message?: string) {

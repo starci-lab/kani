@@ -46,6 +46,8 @@ import {
     HistorySchemaClass,
     HistorySerieSchema,
     HistorySerieSchemaClass,
+    MarketListingSchema,
+    MarketListingSchemaClass,
 } from "./schemas"
 import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
 import {
@@ -224,6 +226,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: HistorySerieSchema.name,
                         useFactory: () => HistorySerieSchemaClass,
+                    },
+                    {
+                        name: MarketListingSchema.name,
+                        useFactory: () => MarketListingSchemaClass,
                     },
                 ], CONNECTION_NAME),
             ],
