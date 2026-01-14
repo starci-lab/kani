@@ -5,6 +5,7 @@ import { ChainId } from "@typedefs"
 import { MountStorageService } from "@modules/filesystem"
 import { 
     KeyQuorum,
+    WalletCreateParams,
 } from "@privy-io/node/resources"
 
 @Injectable()
@@ -28,14 +29,17 @@ export class PrivyCoreService {
             chainId,
         }: CreateWalletParams
     ) {
+        const owner: WalletCreateParams.PublicKeyOwner | WalletCreateParams.UserOwner = userId ? {
+            user_id: userId,
+        } : {
+            public_key: this.mountStorageService.appConfig.privy.signer.publicKey,
+        }
         return await this.privyClient
             .wallets()
             .create(
                 {
                     policy_ids: policyIds,
-                    owner: {
-                        user_id: userId,
-                    },
+                    owner,
                     chain_type: chainId,
                     additional_signers: additionalSigners.map((additionalSigner) => ({
                         signer_id: additionalSigner.signerId,
@@ -79,7 +83,7 @@ export interface CreateWalletParams {
     policyIds?: Array<string>
     chainId: ChainId
     additionalSigners: Array<AdditionalSigner>
-    userId: string
+    userId?: string
 }
 
 export interface AdditionalSigner {

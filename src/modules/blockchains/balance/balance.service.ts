@@ -181,9 +181,11 @@ export class BalanceService implements IBalanceService {
                 targetBalanceAmount: fetchedTargetBalanceAmount,
                 quoteBalanceAmount: fetchedQuoteBalanceAmount,
                 gasBalanceAmount: fetchedGasBalanceAmount,
-            } = await this.fetchBalances({
-                bot,
-            })
+            } = await this.fetchBalances(
+                {
+                    bot,
+                }
+            )
             targetBalanceAmount = fetchedTargetBalanceAmount
             quoteBalanceAmount = fetchedQuoteBalanceAmount
             gasBalanceAmount = fetchedGasBalanceAmount
@@ -195,13 +197,15 @@ export class BalanceService implements IBalanceService {
             estimatedSwappedTargetAmount,
             estimatedSwappedQuoteAmount,
             quoteRatioResponse,
-        } = await this.swapMathService.computeSwapAmounts({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount
-        })
+        } = await this.swapMathService.computeSwapAmounts(
+            {
+                targetTokenId: targetToken.displayId,
+                quoteTokenId: quoteToken.displayId,
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount
+            }
+        )
         if (!processSwaps) {
             // just snapshot the balances and return
             return {

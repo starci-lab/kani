@@ -31,8 +31,8 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
         value: {
             gasAmountRequired: {
                 [ChainId.Sui]: {
-                    minOperationalAmount: computeRaw(new Decimal(0.25), 9).toString(),
-                    targetOperationalAmount: computeRaw(new Decimal(1), 9).toString(),
+                    minOperationalAmount: computeRaw(new Decimal(0.05), 9).toString(),
+                    targetOperationalAmount: computeRaw(new Decimal(0.2), 9).toString(),
                 },
                 [ChainId.Solana]: {
                     minOperationalAmount: computeRaw(new Decimal(0.025), 9).toString(),

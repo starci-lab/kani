@@ -19,6 +19,9 @@ import {
 } from "@exceptions"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 import { DerivedAesKeyService } from "@modules/derived"
+import { InjectPrivyClient } from "@modules/privy"
+import { PrivyClient } from "@privy-io/node"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
 export class BackupBotPrivateKeyV2Service {
@@ -26,9 +29,13 @@ export class BackupBotPrivateKeyV2Service {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly derivedAesKeyService: DerivedAesKeyService,
+        @InjectPrivyClient()
+        private readonly privyClient: PrivyClient,
+        private readonly mountStorageService: MountStorageService,
     ) { }
 
     async backupBotPrivateKeyV2(
+        accessToken: string,
         response: VerifyAccessTokenResponse,
         { botId }: BackupBotPrivateKeyV2Request,
     ): Promise<BackupBotPrivateKeyV2ResponseData> {
@@ -58,11 +65,28 @@ export class BackupBotPrivateKeyV2Service {
         if (!bot.encryptedPrivySignerPrivateKeyPayload) {
             throw new BotNotFoundException("Bot v2 does not have privy signer private key")
         }
-        const privateKey = this.derivedAesKeyService.decrypt(bot.encryptedPrivySignerPrivateKeyPayload)
-        // update the bot backup private key
-        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-            { _id: botId },
-            { $set: { backupPrivateKey: true } }
+        const session = await this.connection.startSession()
+        const privateKey = await session.withTransaction(
+            async () => {
+                // update the bot backup private key to true
+                // await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                //     { _id: botId },
+                //     { $set: { backupPrivateKey: true } }
+                // )
+                // export the private key
+                console.log(accessToken)
+                const { private_key } = await this.privyClient.wallets().export(
+                    bot.privyMetadata.walletId,
+                    {
+                        authorization_context: {
+                            user_jwts: [
+                                accessToken,
+                            ],
+                        }
+                    }
+                )
+                return private_key
+            }
         )
         return {
             privateKey,

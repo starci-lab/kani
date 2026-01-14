@@ -32,6 +32,7 @@ export class BotsLoaderService implements OnModuleInit {
             .model<BotSchema>(BotSchema.name)
             .find({
                 user: { $in: [id] },
+                running: true,
             })
             .lean()
             .exec()
@@ -55,6 +56,7 @@ export class BotsLoaderService implements OnModuleInit {
                     user: { 
                         $in: userIds.map((id) => new Types.ObjectId(id)) 
                     },
+                    running: true,
                 },
                 { _id: 1 },              // only select ID
             )

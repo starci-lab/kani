@@ -14,7 +14,7 @@ import {
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 import {
     UserNotFoundException,
-    TokenNotFoundException
+    TokenNotFoundException,
 } from "@exceptions"
 import { Decimal } from "decimal.js"
 import { PrivyCoreService } from "@modules/privy"
@@ -38,7 +38,7 @@ export class CreateBotV2Service {
             targetTokenId,
             quoteTokenId,
             liquidityPoolIds,
-            isExitToUsdc,
+            isExitToUsdc
         }: CreateBotV2Request,
     ): Promise<CreateBotV2ResponseData> {
         const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.id === targetTokenId)
@@ -132,9 +132,10 @@ export class CreateBotV2Service {
                     )
                 // return the bot
                 const bot = botRaw.toJSON()
+                // return the bot
                 return {
                     id: bot.id,
-                    accountAddress: wallet.address,
+                    accountAddress: wallet.address
                 }
             })
     }

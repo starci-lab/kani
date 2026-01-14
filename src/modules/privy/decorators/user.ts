@@ -5,4 +5,5 @@ export const PrivyResponse = createParamDecorator(
     (_: unknown, context: ExecutionContext) => {
         const ctx = GqlExecutionContext.create(context).getContext()
         return ctx.req?.user ?? null
-    })
+    }
+)
