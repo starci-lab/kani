@@ -288,7 +288,6 @@ export class RpcExecutorService {
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
                     if (error.message === RpcErrorType.Fatal) {
-                        this.logger.error(`Ejecting rpc ${id} because of fatal error`)
                         await this.p2cBalancerService.ejectRpcs([id])
                         throw error
                     }
