@@ -67,7 +67,7 @@ export class MeteoraFeesService implements IFeesService {
             ...binArrayAccounts
         ] = await this.rpcExecutorService.withSolanaRpc(
             {
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await fetchEncodedAccounts(
                         rpc, 

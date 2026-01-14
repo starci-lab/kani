@@ -63,7 +63,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         { positionId }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResponse> {
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 const positionNft = await suiClient.getObject({
                     id: positionId,
@@ -230,7 +230,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Read,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,

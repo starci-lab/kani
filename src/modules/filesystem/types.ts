@@ -1,7 +1,8 @@
 import { ChainId } from "@typedefs"
 
 export enum RpcAccessType {
-    Read = "read",
+    Http = "http",
+    Ws = "ws",
     Write = "write",
 }
 
@@ -14,10 +15,8 @@ export interface RpcAccessConfig {
     // the higher the weight, the more likely 
     // the rpc will be used
     weight: number
-    // Whether the rpc supports ws
-    supportWs: boolean
     // The access types of the rpc
-    accessTypes: Array<RpcAccessType>
+    accessType: RpcAccessType
 }
 
 // Simplified client config schema, only contains the rpc access configs for each chain

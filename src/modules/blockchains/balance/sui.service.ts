@@ -75,7 +75,7 @@ export class SuiBalanceService implements IBalanceService {
             txb.transferObjects([outputCoin], bot.accountAddress)
         }
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 if (bot.version === AppVersion.V1) {
                     const bytes = await txb.build({
@@ -120,7 +120,7 @@ export class SuiBalanceService implements IBalanceService {
     ): Promise<void> {
         if (isRetry) {
             return await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     const transaction = await suiClient.getTransactionBlock({
                         digest: txHash,
@@ -173,7 +173,7 @@ export class SuiBalanceService implements IBalanceService {
             throw new TokenNotFoundException("Token not found")
         }
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 const { totalBalance } = await suiClient.getBalance({
                     owner: bot.accountAddress,

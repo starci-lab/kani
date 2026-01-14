@@ -88,7 +88,7 @@ export class SolanaBalanceService implements IBalanceService {
             throw new TokenNotFoundException("Token not found")
         }
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 // return the native token balance
                 if (token.type === TokenType.Native) {
@@ -177,7 +177,7 @@ export class SolanaBalanceService implements IBalanceService {
             swapTransaction.messageBytes,
         )
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 const swapTransactionMessage = await decompileTransactionMessageFetchingLookupTables(
                     compiledSwapTransactionMessage,
@@ -244,7 +244,7 @@ export class SolanaBalanceService implements IBalanceService {
     ): Promise<void> {
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(signature(txHash), { commitment: "confirmed", encoding: "base58" }).send()
                     if (transaction) {

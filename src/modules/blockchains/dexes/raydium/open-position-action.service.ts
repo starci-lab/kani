@@ -220,7 +220,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         const _state = state as LiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
@@ -272,7 +272,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResponse> {
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 

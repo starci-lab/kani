@@ -59,7 +59,7 @@ export class MeteoraReservesService implements IReservesService {
             ...binArrayAccounts
         ] = await this.rpcExecutorService.withSolanaRpc(
             {
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await fetchEncodedAccounts(
                         rpc, 

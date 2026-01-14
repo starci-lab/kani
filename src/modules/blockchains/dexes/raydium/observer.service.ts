@@ -128,7 +128,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
                         commitment: "confirmed",
@@ -159,7 +159,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 requiredWs: true,
                 callback: async ({ rpcSubscriptions }) => {
                     const controller = new AbortController()

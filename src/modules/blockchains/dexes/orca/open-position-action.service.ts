@@ -134,7 +134,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             tickUpper,
         })
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
@@ -223,7 +223,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         const _state = state as LiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
@@ -274,7 +274,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResponse> {
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 

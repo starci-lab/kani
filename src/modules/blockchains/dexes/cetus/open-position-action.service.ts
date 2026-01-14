@@ -65,7 +65,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
 
     async confirm({ positionId }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 const objectInfo = await suiClient.getObject({
                     id: positionId,
@@ -241,7 +241,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Read,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,

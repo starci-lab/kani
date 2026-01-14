@@ -101,4 +101,4 @@ export interface ExecuteWithFallbacksParams<T> {
     attempts?: number
 }
 
-export type ResolveTupleResult<T> = [T,null] | [null, Error]
+export type ResolveTupleResult<T> = [T , null] | [null, Error]

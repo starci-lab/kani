@@ -63,7 +63,7 @@ export class CetusObserverService {
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
 
             const objectInfo = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     return await suiClient.getObject({
                         id: liquidityPool.poolAddress,

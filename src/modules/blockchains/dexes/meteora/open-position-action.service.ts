@@ -177,7 +177,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         const _state = state as DlmmLiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
@@ -227,7 +227,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResponse> {
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 

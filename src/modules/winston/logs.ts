@@ -1,4 +1,5 @@
 export enum WinstonLog {
+    EjectRpcFatalError = "Eject.RPC.Fatal.Error",
     ErrorDecryptingJwtSecretKey = "Error.Decrypting.JWT.Secret.Key",
     ErrorDecryptingAesKey = "Error.Decrypting.AES.Key",
     PythPriceDiagnosticSuccess = "Pyth.Price.Diagnostic.Success",

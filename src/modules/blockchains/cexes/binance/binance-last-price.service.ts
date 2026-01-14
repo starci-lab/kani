@@ -39,7 +39,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         const batches = _.chunk(symbols, envConfig().chunks.pythPrices.subscriptions)
         for (const batch of batches) {
             this.retryService.retryWs<WebSocket>({
-            // close the websocket
+                // close the websocket
                 closeFnName: "close",
                 // create a new connection
                 createConnection: () => new WebSocket(BINANCE_WS_URL),
@@ -48,9 +48,11 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                     const promise = new Promise<void>((_, reject) => {
                         // open event
                         ws.on("open", () => {
-                            this.logger.info(WinstonLog.WebsocketConnected, {
-                                streamName: "binance-last-price",
-                            })
+                            this.logger.info(
+                                WinstonLog.WebsocketConnected, {
+                                    streamName: "binance-last-price",
+                                }
+                            )
                             ws.send(
                                 JSON.stringify(
                                     {
@@ -130,10 +132,12 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                         })
                 },
                 onFatal: async () => {
-                    this.logger.error(WinstonLog.WebsocketFatalError, {
-                        error: "WS connection failed",
-                        streamName: "binance-last-price",
-                    })
+                    this.logger.error(
+                        WinstonLog.WebsocketFatalError, {
+                            error: "WS connection failed",
+                            streamName: "binance-last-price",
+                        }
+                    )
                 },
                 options: {},
                 throwOnFatal: false,

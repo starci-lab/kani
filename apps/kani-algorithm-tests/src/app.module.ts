@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
-import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
-import { CexesModule, CoingeckoModule, CoinMarketCapModule, FormulasModule, MathModule, SpotModule } from "@modules/blockchains"
+//import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
+import { CexesModule, ClientsModule, CoingeckoModule, CoinMarketCapModule, FormulasModule, MathModule, SpotModule } from "@modules/blockchains"
 import { EnvModule } from "@modules/env"
 import { FilesystemModule } from "@modules/filesystem"
 import { MixinModule } from "@modules/mixin"
@@ -11,6 +11,8 @@ import { EventModule } from "@modules/event"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { WinstonModule, WinstonLevel } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
+import { RpcTestsService } from "./rpc-tests.service"
+import { P2CBalancerModule } from "@modules/p2c-balancer"
 
 @Module({
     imports: [
@@ -40,6 +42,12 @@ import { AxiosModule } from "@modules/axios"
         EventModule.register({
             isGlobal: true,
         }),
+        P2CBalancerModule.register({
+            isGlobal: true,
+        }),
+        ClientsModule.register({
+            isGlobal: true,
+        }),
         PythModule.register({
             isGlobal: true,      
         }),
@@ -63,7 +71,8 @@ import { AxiosModule } from "@modules/axios"
         }),
     ],
     providers: [
-        ComputeSwapAmountsService,
+        //ComputeSwapAmountsService,
+        RpcTestsService,
     ],
 })
 export class AppModule {}

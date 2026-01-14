@@ -123,7 +123,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
                         commitment: "confirmed",
@@ -155,8 +155,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             // infinite loop to ensure the connection is alive
             while (true) {
                 await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Read,
-                    requiredWs: true,
+                    accessType: RpcAccessType.Ws,
                     callback: async ({ rpcSubscriptions }) => {
                         await this.asyncService.suppressErrorAfterTimeout(
                             async () => {
@@ -175,7 +174,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                                     await this.handlePoolStateUpdate(liquidityPoolId, state)
                                 }
                             },
-                            envConfig().timeConfig.wsTimeout,
+                            envConfig().timeConfig.ws.idleTimeout,
                         )
                     },
                 })

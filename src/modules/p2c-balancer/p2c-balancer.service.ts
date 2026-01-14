@@ -8,10 +8,6 @@ import { MountStorageService, RpcAccessType } from "@modules/filesystem"
 import { RpcAccessConfig } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import {
-    AllRpcsEjectedException,
-    NoAvailableRpcException,
-} from "@exceptions"
 import { 
     RpcEjection, 
     InjectPrimaryMongoose, 
@@ -45,7 +41,6 @@ export enum RpcTransport {
  */
 export interface BalanceParams {
     chainId: ChainId
-    transport: RpcTransport
     accessType: RpcAccessType
 }
 
@@ -76,7 +71,7 @@ export class P2CBalancerService {
             Partial<
                 Record<
                     RpcAccessType,
-                    Partial<Record<RpcTransport, P2CBalancerData>>
+                    P2CBalancerData
                 >
             >
         >
@@ -112,33 +107,28 @@ export class P2CBalancerService {
         await this.readinessWatcherFactoryService.waitUntilReady(
             MountStorageService.name,
         )
+        // re-arrange the rpc access configs by weight
+        const chainIds = Object.keys(this.mountStorageService.rpcAccessConfigs) as Array<ChainId>
         for (
-            const chainId of Object.keys(
-                this.mountStorageService.rpcAccessConfigs,
-            )) {
-            const _chainId = chainId as ChainId
+            const chainId of chainIds) {
             const baseConfigs =
-                this.mountStorageService.rpcAccessConfigs[_chainId]
+                this.mountStorageService.rpcAccessConfigs[chainId]
 
             const expanded = this.expandByWeight(baseConfigs)
-            this.balancers[_chainId] = {}
+            this.balancers[chainId] = {}
             for (const accessType of Object.values(RpcAccessType)) {
-                const accessFiltered = expanded.filter(cfg =>
-                    cfg.accessTypes?.includes(accessType),
+                this.balancers[chainId]![accessType] = this.createBalancer(
+                    expanded.filter(
+                        cfg => cfg.accessType === accessType
+                    )
                 )
-                if (!accessFiltered.length) continue
-                const http = accessFiltered
-                const ws = accessFiltered.filter(cfg => cfg.supportWs)
-
-                if (!http.length || !ws.length) continue
-
-                this.balancers[_chainId]![accessType] = {
-                    [RpcTransport.Http]: this.createBalancer(http),
-                    [RpcTransport.Ws]: this.createBalancer(ws),
-                }
             }
         }
+        // initialize the balancers
+        // 1. Load eject state from database
+        // 2. Initialize balancers for each chain, access type, and transport
         await this.initializeBalancers()
+        // log the initialization
         this.winstonLogger.debug(WinstonLog.P2CBalancersInitialized)
     }
 
@@ -149,19 +139,22 @@ export class P2CBalancerService {
     /**
      * Pick an RPC endpoint using P2C.
      */
-    balance({ 
-        chainId, 
-        transport, 
-        accessType 
-    }: BalanceParams): RpcAccessConfig {
+    balance(
+        { 
+            chainId, 
+            accessType 
+        }: BalanceParams): RpcAccessConfig {
         const entry =
-            this.balancers[chainId]?.[accessType]?.[transport]
-
+            this.balancers[chainId]?.[accessType]
         if (!entry || entry.rpcAccessConfigs.length === 0) {
-            throw new NoAvailableRpcException(
-                chainId,
-                `No available ${transport} RPC for ${accessType} on chain ${chainId}`,
+            this.winstonLogger.error(
+                WinstonLog.NoAvailableRpc, {
+                    chainId,
+                    accessType,
+                }
             )
+            // exit the application
+            process.exit(1)
         }
         const index = entry.instance.pick()
         return entry.rpcAccessConfigs[index]
@@ -172,11 +165,10 @@ export class P2CBalancerService {
      * Eject state is persisted in Redis.
      */
     async ejectRpcs(
-        chainId: ChainId,
         rpcIds: Array<string>,
     ): Promise<void> {
         if (!rpcIds.length) throw new Error("No RPC IDs to eject")
-        await this.addEjectedRpcs(chainId, rpcIds)
+        await this.addEjectedRpcs(rpcIds)
         const ejectedRpcs = await this.loadRpcEjectionState()
         await this.eventEmitterService.emit<ReinitializeBalancersEvent>(
             EventName.ReinitializeBalancers, 
@@ -184,12 +176,15 @@ export class P2CBalancerService {
                 ejectedRpcs,
             },
             {
+                // emit the event to the kafka and local event emitter
                 withoutKafka: false,
+                // emit the event to the local event emitter
                 withoutLocal: false,
             }
         )
     }
-
+    
+    // handle the reinitialize balancers event
     @OnEvent(EventName.ReinitializeBalancers)
     async handleReinitializeBalancers(
         event?: ReinitializeBalancersEvent
@@ -201,14 +196,11 @@ export class P2CBalancerService {
         const ejectedRpcs = event?.ejectedRpcs ?? await this.loadRpcEjectionState()
         for (const chainId of Object.values(ChainId)) {
             for (const accessType of Object.values(RpcAccessType)) {
-                for (const transport of Object.values(RpcTransport)) {
-                    this.initializeBalancer(
-                        chainId,
-                        accessType,
-                        transport,
-                        ejectedRpcs,
-                    )
-                }
+                this.initializeBalancer(
+                    chainId,
+                    accessType,
+                    ejectedRpcs,
+                )
             }
         }
     }
@@ -216,40 +208,30 @@ export class P2CBalancerService {
     private initializeBalancer(
         chainId: ChainId,
         accessType: RpcAccessType,
-        transport: RpcTransport,
         ejectedRpcs: Array<RpcEjection>,
     ) {
-        const entry = this.balancers[chainId]?.[accessType]?.[transport]
+        const entry = this.balancers[chainId]?.[accessType]
         if (!entry) return
+        const { rpcAccessConfigs } = entry
         const now = this.dayjsService.now()
         const ttl = envConfig().ejection.rpcTtl
         // filter out the ejected RPCs
-        const filteredConfigs = entry.rpcAccessConfigs.filter(
+        const filteredConfigs = rpcAccessConfigs.filter(
             rpcAccessConfig => !ejectedRpcs.some(
                 ejected => {
+                    // take the time difference between the current time and the ejected time
                     const timeDiff = now.diff(
                         this.dayjsService.from(ejected.ejectedAt),
                         "millisecond"
                     )
-                    return ejected.chainId === chainId
-                    && ejected.rpcId === rpcAccessConfig.id
+                    // check if the ejected RPC is for the same chain and has not expired
+                    return ejected.rpcId === rpcAccessConfig.id
+                    // check if the time difference is less than the ttl
                     && new Decimal(timeDiff).lt(ttl)
-
-                }),
+                }
+            ),
         )
-        if (!filteredConfigs.length) {
-            this.winstonLogger.error(
-                WinstonLog.AllRpcsEjected, {
-                    chainId,
-                    accessType,
-                    transport,
-                })
-            throw new AllRpcsEjectedException(
-                chainId,
-                `All ${transport} RPCs ejected for ${accessType} on chain ${chainId}`,
-            )
-        }
-        this.balancers[chainId]![accessType]![transport] = this.createBalancer(filteredConfigs)
+        this.balancers[chainId]![accessType] = this.createBalancer(filteredConfigs)
     }
 
     /* ---------------------------------------------------------
@@ -280,14 +262,12 @@ export class P2CBalancerService {
         rpcAccessConfigs: Array<RpcAccessConfig>,
     ): Array<RpcAccessConfig> {
         const expanded: Array<RpcAccessConfig> = []
-
         for (const rpcAccessConfig of rpcAccessConfigs) {
             const weight = Math.max(1, Math.floor(rpcAccessConfig.weight ?? 1))
             for (let i = 0; i < weight; i++) {
                 expanded.push(rpcAccessConfig)
             }
         }
-
         return expanded
     }
 
@@ -300,42 +280,67 @@ export class P2CBalancerService {
                 createObjectId(StateId.RpcEjection)
             )
         if (!state) {
-            // create a new state
-            await this.connection.model<StateSchema>(StateSchema.name)
-                .create(
-                    [
-                        {
-                            _id: createObjectId(StateId.RpcEjection),
-                            displayId: StateId.RpcEjection,
-                            value: {
-                                data: [],
-                            },
-                        }
-                    ]
-                )
             return []
         }
         return state.value.data
     }   
 
     private async addEjectedRpcs(
-        chainId: ChainId,
         rpcIds: Array<string>,
     ): Promise<void> {
         await this.connection
             .model<StateSchema>(StateSchema.name)
             .updateOne(
                 { _id: createObjectId(StateId.RpcEjection) },
-                {
-                    $push: {
-                        "value.data": {
-                            $each: rpcIds.map(rpcId => ({
-                                chainId,
-                                rpcId,
-                                ejectedAt: this.dayjsService.now().toDate(),
-                            })),
+                [
+                    {
+                        $set: {
+                            "value.data": {
+                                $let: {
+                                    vars: {
+                                        existing: { $ifNull: ["$value.data", []] },
+                                        incoming: rpcIds.map(
+                                            rpcId => (
+                                                {
+                                                    rpcId,
+                                                    ejectedAt: this.dayjsService.now(),
+                                                }
+                                            )
+                                        ),
+                                    },
+                                    in: {
+                                        $concatArrays: [
+                                            "$$existing",
+                                            {
+                                                $filter: {
+                                                    input: "$$incoming",
+                                                    as: "new",
+                                                    cond: {
+                                                        $not: {
+                                                            $anyElementTrue: {
+                                                                $map: {
+                                                                    input: "$$existing",
+                                                                    as: "old",
+                                                                    in: {
+                                                                        $and: [
+                                                                            { $eq: ["$$old.rpcId", "$$new.rpcId"] },
+                                                                        ],
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
                         },
                     },
+                ],
+                {
+                    upsert: true,
                 }
             )
     }
@@ -344,7 +349,6 @@ export class P2CBalancerService {
      * Remove ejected RPCs from database.
      */
     async removeEjectedRpcs(
-        chainId: ChainId,
         rpcIds: Array<string>,
     ): Promise<void> {
         await this.connection
@@ -355,7 +359,6 @@ export class P2CBalancerService {
                     $pull: {
                         value: {
                             data: {
-                                chainId,
                                 rpcId: { $in: rpcIds },
                             },
                         },

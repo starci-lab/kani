@@ -102,7 +102,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
-                    accessType: RpcAccessType.Read,
+                    accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,

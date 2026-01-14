@@ -79,7 +79,7 @@ export class OrcaFeesService implements IFeesService {
             tickArrayLowerAccount,
             tickArrayUpperAccount,
         ] = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 return fetchEncodedAccounts(rpc, [
                     address(positionId),

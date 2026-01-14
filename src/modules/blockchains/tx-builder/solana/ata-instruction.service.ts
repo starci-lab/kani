@@ -74,7 +74,7 @@ export class AtaInstructionService {
         }
         // we fetch the encoded account to check if it exists
         const encodedAccount = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 return await fetchEncodedAccount(rpc, ataAddress)
             },
@@ -111,7 +111,7 @@ export class AtaInstructionService {
             : TOKEN_PROGRAM_ADDRESS
         const space = is2022Token ? getToken2022Size() : getTokenSize()
         const balanceNeeded = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 return await rpc
                     .getMinimumBalanceForRentExemption(

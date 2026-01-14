@@ -74,7 +74,7 @@ export class RaydiumFeesService implements IFeesService {
             tickArrayLowerAccount,
             tickArrayUpperAccount,
         ] = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) =>
                 fetchEncodedAccounts(rpc, [
                     address(positionId),

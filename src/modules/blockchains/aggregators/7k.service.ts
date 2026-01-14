@@ -37,7 +37,7 @@ export class SevenKAggregatorService implements IAggregatorService {
         }: QuoteRequest
     ): Promise<QuoteResponse> {
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 SevenK.setSuiClient(suiClient)
                 const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
@@ -96,7 +96,7 @@ export class SevenKAggregatorService implements IAggregatorService {
             requiredAmount: new BN(_payload.swapAmountWithDecimal),
         })
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 SevenK.setSuiClient(suiClient)
                 txb.setSender(accountAddress)

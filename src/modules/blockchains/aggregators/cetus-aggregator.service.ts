@@ -53,7 +53,7 @@ export class CetusAggregatorService implements IAggregatorService {
         }
 
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                 const quote = await cetusAggregatorClient.findRouters({
@@ -80,7 +80,7 @@ export class CetusAggregatorService implements IAggregatorService {
     }: SwapRequest): Promise<SwapResponse> {
         const _payload = payload as unknown as RouterDataV3 
         return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                 const _txb = txb || new Transaction()

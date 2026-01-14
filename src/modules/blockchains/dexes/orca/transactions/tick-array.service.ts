@@ -116,7 +116,7 @@ export class TickArrayService {
             throw new BotMissingParametersException("Bot is required")
         }
         const account = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 return await fetchEncodedAccount(rpc, pda)
             },

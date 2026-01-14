@@ -2,7 +2,6 @@ import { AbstractSchema } from "./abstract"
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 import { StateId } from "../enums"
 import { Schema as MongooseSchema } from "mongoose"
-import { ChainId } from "@typedefs"
 
 @Schema({
     timestamps: true,
@@ -20,7 +19,6 @@ export const StateSchemaClass = SchemaFactory.createForClass(StateSchema)
 
 
 export interface RpcEjection {
-    chainId: ChainId
     rpcId: string
     ejectedAt: Date
 }

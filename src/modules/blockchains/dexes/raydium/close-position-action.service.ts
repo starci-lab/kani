@@ -77,7 +77,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
             state: _state,
         })
         return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Read,
+            accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
@@ -129,7 +129,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         }
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Read,
+                accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
