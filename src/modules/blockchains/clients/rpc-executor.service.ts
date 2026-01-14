@@ -180,13 +180,12 @@ export class RpcExecutorService {
                                     // if the error is a solana error, throw the error
                                     if (isSolanaError(error)) {
                                         const errorType = this.getSolanaRpcErrorType(error)
-                                        if (errorType === RpcErrorType.Fatal) {
+                                        switch (errorType) {
+                                        case RpcErrorType.Fatal:
                                             throw new AbortError(new SolanaRpcFatalError(error?.message))
-                                        }
-                                        if (errorType === RpcErrorType.Retryable) {
+                                        case RpcErrorType.Retryable:
                                             throw new SolanaRpcRetryableError(error?.message)
-                                        }
-                                        if (errorType === RpcErrorType.Ignorable) {
+                                        case RpcErrorType.Ignorable:
                                             throw new AbortError(new SolanaRpcIgnorableError(error?.message))
                                         }
                                     }
@@ -273,13 +272,14 @@ export class RpcExecutorService {
                                 throw new AbortError(new SuiRpcFatalError("Unknown error"))
                             }
                             const errorType = this.getSuiRpcErrorType(error)
-                            if (errorType === RpcErrorType.Fatal) {
-                                throw new AbortError(RpcErrorType.Fatal)
+                            switch (errorType) {
+                            case RpcErrorType.Fatal:
+                                throw new AbortError(new SuiRpcFatalError(error?.message))
+                            case RpcErrorType.Retryable:
+                                throw new AbortError(new SuiRpcRetryableError(error?.message))
+                            case RpcErrorType.Ignorable:
+                                throw new AbortError(new SuiRpcIgnorableError(error?.message))
                             }
-                            if (errorType === RpcErrorType.Retryable) {
-                                throw new SuiRpcRetryableError(error?.message)
-                            }
-                            throw new AbortError(error?.message ?? "Unknown error")
                         },
                         maxRetries: envConfig().timeConfig.retry.maxRetries,
                         delay: envConfig().timeConfig.retry.delay,
