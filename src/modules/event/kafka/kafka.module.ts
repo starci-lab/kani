@@ -26,12 +26,10 @@ import { KafkaMode } from "./types"
 @Module({})
 export class KafkaModule extends ConfigurableModuleClass {
     public static register(options: typeof OPTIONS_TYPE = {}): DynamicModule {
-        const dynamicModule = super.register(options)
-        
+        const dynamicModule = super.register(options)   
         // Core providers
         const kafkaProvider = createKafkaProvider()
-        const adminProvider = createKafkaAdminProvider()
-        
+        const adminProvider = createKafkaAdminProvider()   
         const providers: Array<Provider> = [
             // Core Kafka client
             kafkaProvider,

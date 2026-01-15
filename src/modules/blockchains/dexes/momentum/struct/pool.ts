@@ -1,9 +1,16 @@
-import { parseI32 } from "@utils"
-import { SuiObjectI32, SuiObjectI64, SuiObjectID, TypeName } from "./types"
+import BN from "bn.js"
+import {
+    SuiObject,
+    SuiObjectID,
+    SuiObjectI32,
+    SuiObjectI64,
+    TypeName,
+} from "../../../structs"
+import { parseSuiI32, parseSuiI64 } from "../../../structs/sui/parsers/int"
 
 /** ---------- OBSERVATION ---------- */
 
-export interface SuiObjectPoolObservation {
+export interface MomentumSuiObjectPoolObservation {
     type: string // oracle::Observation
     fields: {
         initialized: boolean
@@ -15,8 +22,8 @@ export interface SuiObjectPoolObservation {
 
 /** ---------- REWARD INFO ---------- */
 
-export interface SuiObjectPoolRewardInfo {
-    type: string // pool::PoolRewardInfo
+export interface MomentumSuiObjectPoolRewardInfo {
+    type: string
     fields: {
         ended_at_seconds: string
         last_update_time: string
@@ -30,7 +37,7 @@ export interface SuiObjectPoolRewardInfo {
 
 /** ---------- ROOT POOL INTERFACE ---------- */
 
-export interface SuiObjectPool {
+export interface MomentumSuiObjectPoolFields {
     fee_growth_global_x: string
     fee_growth_global_y: string
     flash_loan_fee_rate: string
@@ -40,14 +47,14 @@ export interface SuiObjectPool {
     observation_cardinality: string
     observation_cardinality_next: string
     observation_index: string
-    observations: Array<SuiObjectPoolObservation>
+    observations: Array<MomentumSuiObjectPoolObservation>
     protocol_fee_share: string
     protocol_fee_x: string
     protocol_fee_y: string
     protocol_flash_loan_fee_share: string
     reserve_x: string
     reserve_y: string
-    reward_infos: Array<SuiObjectPoolRewardInfo>
+    reward_infos: Array<MomentumSuiObjectPoolRewardInfo>
     sqrt_price: string
     swap_fee_rate: string
     tick_index: SuiObjectI32
@@ -56,100 +63,92 @@ export interface SuiObjectPool {
     type_y: TypeName
 }
 
-export interface PoolObservation {
-    type: string
-    fields: {
+export type MomentumSuiObjectPool = SuiObject<
+    MomentumSuiObjectPoolFields,
+    `${string}::pool::Pool`
+>
+
+// ========== PARSED POOL INTERFACE ==========
+export interface MomentumPool {
+    feeGrowthGlobalX: BN
+    feeGrowthGlobalY: BN
+    flashLoanFeeRate: BN
+    id: string
+    liquidity: BN
+    maxLiquidityPerTick: BN
+    observationCardinality: BN
+    observationCardinalityNext: BN
+    observationIndex: BN
+    observations: Array<{
         initialized: boolean
-        secondsPerLiquidityCumulative: string
-        tickCumulative: SuiObjectI64
-        timestampS: string
-    }
-}
-
-/** ---------- REWARD INFO ---------- */
-
-export interface PoolRewardInfo {
-    endedAtSeconds: string
-    lastUpdateTime: string
-    rewardCoinType: string
-    rewardGrowthGlobal: string
-    rewardPerSeconds: string
-    totalReward: string
-    totalRewardAllocated: string
-}
-
-/** ---------- ROOT POOL INTERFACE ---------- */
-
-export interface Pool {
-    feeGrowthGlobalX: string
-    feeGrowthGlobalY: string
-    flashLoanFeeRate: string
-    id: SuiObjectID
-    liquidity: string
-    maxLiquidityPerTick: string
-    observationCardinality: string
-    observationCardinalityNext: string
-    observationIndex: string
-    observations: Array<PoolObservation>
-    protocolFeeShare: string
-    protocolFeeX: string
-    protocolFeeY: string
-    protocolFlashLoanFeeShare: string
-    reserveX: string
-    reserveY: string
-    rewardInfos: Array<PoolRewardInfo>
-    sqrtPrice: string
-    swapFeeRate: string
-    tickIndex: number
+        secondsPerLiquidityCumulative: BN
+        tickCumulative: BN
+        timestampS: BN
+    }>
+    protocolFeeShare: BN
+    protocolFeeX: BN
+    protocolFeeY: BN
+    protocolFlashLoanFeeShare: BN
+    reserveX: BN
+    reserveY: BN
+    rewardInfos: Array<{
+        endedAtSeconds: BN
+        lastUpdateTime: BN
+        rewardCoinType: string
+        rewardGrowthGlobal: BN
+        rewardPerSeconds: BN
+        totalReward: BN
+        totalRewardAllocated: BN
+    }>
+    sqrtPrice: BN
+    swapFeeRate: BN
+    tickIndex: BN
     tickSpacing: number
     typeX: string
     typeY: string
 }
 
-export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
+// ========== PARSER FUNCTION ==========
+/**
+ * Parses a Momentum Pool Sui object into a MomentumPool interface
+ */
+export const parseMomentumPool = (target: MomentumSuiObjectPoolFields): MomentumPool => {
     return {
-        feeGrowthGlobalX: raw.fee_growth_global_x,
-        feeGrowthGlobalY: raw.fee_growth_global_y,
-        flashLoanFeeRate: raw.flash_loan_fee_rate,
-        id: raw.id,
-        liquidity: raw.liquidity,
-        maxLiquidityPerTick: raw.max_liquidity_per_tick,
-        observationCardinality: raw.observation_cardinality,
-        observationCardinalityNext: raw.observation_cardinality_next,
-        observationIndex: raw.observation_index,
-        observations: raw.observations.map((observation) => ({
+        feeGrowthGlobalX: new BN(target.fee_growth_global_x),
+        feeGrowthGlobalY: new BN(target.fee_growth_global_y),
+        flashLoanFeeRate: new BN(target.flash_loan_fee_rate),
+        id: target.id.id,
+        liquidity: new BN(target.liquidity),
+        maxLiquidityPerTick: new BN(target.max_liquidity_per_tick),
+        observationCardinality: new BN(target.observation_cardinality),
+        observationCardinalityNext: new BN(target.observation_cardinality_next),
+        observationIndex: new BN(target.observation_index),
+        observations: target.observations.map((observation) => ({
             initialized: observation.fields.initialized,
-            secondsPerLiquidityCumulative: observation.fields.seconds_per_liquidity_cumulative,
-            tickCumulative: observation.fields.tick_cumulative,
-            timestampS: observation.fields.timestamp_s,
-            fields: {
-                initialized: observation.fields.initialized,
-                secondsPerLiquidityCumulative: observation.fields.seconds_per_liquidity_cumulative,
-                tickCumulative: observation.fields.tick_cumulative,
-                timestampS: observation.fields.timestamp_s,
-            },
-            type: observation.type,
+            secondsPerLiquidityCumulative: new BN(observation.fields.seconds_per_liquidity_cumulative),
+            tickCumulative: parseSuiI64(observation.fields.tick_cumulative),
+            timestampS: new BN(observation.fields.timestamp_s),
         })),
-        protocolFeeShare: raw.protocol_fee_share,
-        protocolFeeX: raw.protocol_fee_x,
-        protocolFeeY: raw.protocol_fee_y,
-        protocolFlashLoanFeeShare: raw.protocol_flash_loan_fee_share,
-        reserveX: raw.reserve_x,
-        reserveY: raw.reserve_y,
-        rewardInfos: raw.reward_infos.map((rewardInfo) => ({
-            endedAtSeconds: rewardInfo.fields.ended_at_seconds,
-            lastUpdateTime: rewardInfo.fields.last_update_time,
+        protocolFeeShare: new BN(target.protocol_fee_share),
+        protocolFeeX: new BN(target.protocol_fee_x),
+        protocolFeeY: new BN(target.protocol_fee_y),
+        protocolFlashLoanFeeShare: new BN(target.protocol_flash_loan_fee_share),
+        reserveX: new BN(target.reserve_x),
+        reserveY: new BN(target.reserve_y),
+        rewardInfos: target.reward_infos.map((rewardInfo) => ({
+            endedAtSeconds: new BN(rewardInfo.fields.ended_at_seconds),
+            lastUpdateTime: new BN(rewardInfo.fields.last_update_time),
             rewardCoinType: rewardInfo.fields.reward_coin_type.fields.name,
-            rewardGrowthGlobal: rewardInfo.fields.reward_growth_global,
-            rewardPerSeconds: rewardInfo.fields.reward_per_seconds,
-            totalReward: rewardInfo.fields.total_reward,
-            totalRewardAllocated: rewardInfo.fields.total_reward_allocated,
+            rewardGrowthGlobal: new BN(rewardInfo.fields.reward_growth_global),
+            rewardPerSeconds: new BN(rewardInfo.fields.reward_per_seconds),
+            totalReward: new BN(rewardInfo.fields.total_reward),
+            totalRewardAllocated: new BN(rewardInfo.fields.total_reward_allocated),
         })),
-        sqrtPrice: raw.sqrt_price,
-        swapFeeRate: raw.swap_fee_rate,
-        tickIndex: parseI32(raw.tick_index.fields.bits),
-        tickSpacing: raw.tick_spacing,
-        typeX: raw.type_x.fields.name,
-        typeY: raw.type_y.fields.name,
+        sqrtPrice: new BN(target.sqrt_price),
+        swapFeeRate: new BN(target.swap_fee_rate),
+        tickIndex: parseSuiI32(target.tick_index),
+        tickSpacing: target.tick_spacing,
+        typeX: target.type_x.fields.name,
+        typeY: target.type_y.fields.name,
     }
 }

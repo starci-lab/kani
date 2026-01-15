@@ -6,16 +6,20 @@ import { Injectable } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import BN from "bn.js"
-import { CacheKey, createCacheKey, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
+import { 
+    CacheKey, 
+    createCacheKey, 
+    DynamicClmmLiquidityPoolInfoCacheResult, 
+    InjectRedisCache 
+} from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Logger as winstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { EventEmitterService, EventName } from "@modules/event"
+import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
-import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
+import { parseFlowxPool, FlowxPool, FlowxSuiObjectPoolFields } from "./struct"
 
 @Injectable()
 export class FlowXObserverService {
@@ -74,8 +78,8 @@ export class FlowXObserverService {
             })
             if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             if (objectInfo.data?.content?.dataType !== "moveObject") throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
-            const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
-            const pool = parseSuiPoolObject(fields)
+            const fields = objectInfo.data.content.fields as unknown as FlowxSuiObjectPoolFields
+            const pool = parseFlowxPool(fields)
             await this.handlePoolStateUpdate(liquidityPoolId, pool)
         } catch (error) {
             this.winstonLogger.error(
@@ -88,15 +92,19 @@ export class FlowXObserverService {
 
     private async handlePoolStateUpdate(
         liquidityPoolId: LiquidityPoolId,
-        state: Pool
+        state: FlowxPool
     ) {
-        const parsed: DynamicLiquidityPoolInfoCacheResult = {
+        const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickIndex,
-            liquidity: new BN(state.liquidity),
-            sqrtPriceX64: new BN(state.sqrtPrice),
-            rewards: state.rewardInfos,
-            feeGrowthGlobalA: new BN(state.feeGrowthGlobalX),
-            feeGrowthGlobalB: new BN(state.feeGrowthGlobalY),
+            liquidity: state.liquidity,
+            sqrtPriceX64: state.sqrtPrice,
+            rewards: state.rewardInfos.map((reward) => ({
+                tokenAddress: reward.rewardCoinType,
+                emissionPerSecond: reward.rewardPerSeconds,
+                growthGlobal: reward.rewardGrowthGlobal,
+            })),
+            feeGrowthGlobalA: state.feeGrowthGlobalX,
+            feeGrowthGlobalB: state.feeGrowthGlobalY,
             snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError(
@@ -104,14 +112,14 @@ export class FlowXObserverService {
             // cache
                 this.cacheManager.set(
                     createCacheKey(
-                        CacheKey.DynamicLiquidityPoolInfo, 
+                        CacheKey.DynamicClmmLiquidityPoolInfo, 
                         liquidityPoolId
                     ),
                     this.superjson.stringify(parsed),
                 ),
                 // event
-                this.eventEmitterService.emit(
-                    EventName.LiquidityPoolsFetched,
+                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
+                    EventName.ClmmLiquidityPoolsFetched,
                     { liquidityPoolId, ...parsed },
                     { withoutLocal: true },
                 ),

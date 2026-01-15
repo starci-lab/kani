@@ -21,7 +21,7 @@ export const eventMetadataMap: Record<EventName, EventMetadata> = {
     [EventName.ExecutorLoaded]: {},
     [EventName.ReinitializeBalancers]: {
         kafka: {
-            requiredInObserver: false
+            requiredInObserver: true
         }
     },
     [EventName.ExecutorDeleted]: {},
@@ -32,7 +32,7 @@ export const eventMetadataMap: Record<EventName, EventMetadata> = {
     [EventName.CoinMarketCapPricesFetched]: {},
     [EventName.CoinGeckoPricesFetched]: {},
     [EventName.PoolsUpdated]: {},
-    [EventName.LiquidityPoolsFetched]: {
+    [EventName.ClmmLiquidityPoolsFetched]: {
         kafka: {
             requiredInObserver: true
         }

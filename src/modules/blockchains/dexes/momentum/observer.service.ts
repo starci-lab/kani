@@ -1,5 +1,4 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo } from "../../types"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
@@ -7,16 +6,20 @@ import { Injectable } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import BN from "bn.js"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { 
+    CacheKey, 
+    createCacheKey, 
+    DynamicClmmLiquidityPoolInfoCacheResult, 
+    InjectRedisCache 
+} from "@modules/cache"
 import { Cache } from "cache-manager"
 import { Logger as winstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { EventEmitterService, EventName } from "@modules/event"
+import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
-import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
+import { parseMomentumPool, MomentumPool, MomentumSuiObjectPoolFields } from "./struct"
 
 @Injectable()
 export class MomentumObserverService {
@@ -74,8 +77,8 @@ export class MomentumObserverService {
             })
             if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             if (objectInfo.data?.content?.dataType !== "moveObject") throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
-            const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
-            const pool = parseSuiPoolObject(fields)
+            const fields = objectInfo.data.content.fields as unknown as MomentumSuiObjectPoolFields
+            const pool = parseMomentumPool(fields)
             await this.handlePoolStateUpdate(liquidityPoolId, pool)
         } catch (error) {
             this.winstonLogger.error(
@@ -88,40 +91,39 @@ export class MomentumObserverService {
 
     private async handlePoolStateUpdate(
         liquidityPoolId: LiquidityPoolId,
-        state: Pool
+        state: MomentumPool
     ) {
-        const parsed: DynamicLiquidityPoolInfo = {
+        const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickIndex,
-            liquidity: new BN(state.liquidity),
-            sqrtPriceX64: new BN(state.sqrtPrice),
-            rewards: state.rewardInfos,
-            feeGrowthGlobalA: new BN(state.feeGrowthGlobalX),
-            feeGrowthGlobalB: new BN(state.feeGrowthGlobalY),
+            liquidity: state.liquidity,
+            sqrtPriceX64: state.sqrtPrice,
+            rewards: state.rewardInfos.map((reward) => ({
+                tokenAddress: reward.rewardCoinType,
+                emissionPerSecond: reward.rewardPerSeconds,
+                growthGlobal: reward.rewardGrowthGlobal,
+            })),
+            feeGrowthGlobalA: state.feeGrowthGlobalX,
+            feeGrowthGlobalB: state.feeGrowthGlobalY,
             snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError(
             [
-            // cache
+                // store in cache
                 this.cacheManager.set(
-                    createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                    createCacheKey(
+                        CacheKey.DynamicClmmLiquidityPoolInfo, 
+                        liquidityPoolId
+                    ),
                     this.superjson.stringify(parsed),
                 ),
-                // event
-                this.eventEmitterService.emit(
-                    EventName.LiquidityPoolsFetched,
+                // emit event through event emitter
+                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
+                    EventName.ClmmLiquidityPoolsFetched,
                     { liquidityPoolId, ...parsed },
                     { withoutLocal: true },
                 ),
             ]
         )
-        // logging
-        this.winstonLogger.debug(
-            WinstonLog.ObserveClmmPool, {
-                liquidityPoolId,
-                tickCurrent: parsed.tickCurrent.toString(),
-                liquidity: parsed.liquidity.toString(),
-                sqrtPriceX64: parsed.sqrtPriceX64.toString(),
-            })
         return parsed
     }
 }

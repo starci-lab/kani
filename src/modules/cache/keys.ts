@@ -13,7 +13,7 @@ export enum CacheKey {
     ClosePositionTransaction = "closePositionTransaction",
     WsCexLastPrice = "wsCexLastPrice",
     WsCexOrderBook = "wsCexOrderBook",
-    DynamicLiquidityPoolInfo = "dynamicLiquidityPoolInfo",
+    DynamicClmmLiquidityPoolInfo = "dynamicClmmLiquidityPoolInfo",
     DynamicDlmmLiquidityPoolInfo = "dynamicDlmmLiquidityPoolInfo",
     CoinMarketCapPrices = "coinMarketCapPrices",
     CoinGeckoPrices = "coinGeckoPrices",
@@ -50,18 +50,22 @@ export interface OracleTokenPriceCacheResult extends NonExpiredCacheResult {
     prices: Partial<Record<MarketId, OracleTokenPriceCache>>
 }
 
-export interface DynamicLiquidityPoolInfoCacheResult {
-    snapshotAt: Dayjs
-    tickCurrent: number
+export interface ClmmRewardInfo {
+    tokenAddress: string
+    emissionPerSecond: BN
+    growthGlobal: BN
+}
+
+export interface DynamicClmmLiquidityPoolInfoCacheResult extends NonExpiredCacheResult {
+    tickCurrent: BN
     liquidity: BN
     sqrtPriceX64: BN
-    rewards: Array<unknown>
+    rewards: Array<ClmmRewardInfo>
     feeGrowthGlobalA: BN
     feeGrowthGlobalB: BN
 }
 
-export interface DynamicDlmmLiquidityPoolInfoCacheResult {
-    snapshotAt: Dayjs
+export interface DynamicDlmmLiquidityPoolInfoCacheResult extends NonExpiredCacheResult {
     activeId: number
     rewards: Array<unknown>
 }

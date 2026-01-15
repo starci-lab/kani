@@ -1,29 +1,28 @@
-import { parseI32 } from "@utils"
-import { SuiObjectI32, SuiObjectI64, SuiObjectID, TypeName } from "./types"
+import BN from "bn.js"
+import {
+    SuiObject,
+    SuiObjectID,
+    SuiObjectI32,
+    SuiObjectI64,
+    TypeName,
+    SuiObjectTable,
+    parseSuiI32,
+    parseSuiI64,
+} from "../../../structs"
 
-/** ========== OBSERVATION ========== */
-
-export interface PoolObservation {
-    type: string
+// ========== Observation Types ==========
+export interface FlowxSuiObjectPoolObservation {
     fields: {
         initialized: boolean
         seconds_per_liquidity_cumulative: string
         tick_cumulative: SuiObjectI64
         timestamp_s: string
     }
+    type: string // ::oracle::Observation
 }
 
-export interface Observation {
-    initialized: boolean
-    secondsPerLiquidityCumulative: string
-    tickCumulative: number
-    timestamp: number
-}
-
-/** ========== REWARD INFO ========== */
-
-export interface PoolRewardInfo {
-    type: string
+// ========== Reward Info Types ==========
+export interface FlowxSuiObjectPoolRewardInfo {
     fields: {
         ended_at_seconds: string
         last_update_time: string
@@ -33,130 +32,137 @@ export interface PoolRewardInfo {
         total_reward: string
         total_reward_allocated: string
     }
+    type: string // ::pool::PoolRewardInfo
 }
 
-export interface RewardInfo {
-    endedAtSeconds: number
-    lastUpdateTime: number
-    rewardCoinType: string
-    rewardGrowthGlobal: string
-    rewardPerSeconds: string
-    totalReward: string
-    totalRewardAllocated: string
-}
-
-/** ========== RAW POOL STRUCT (SuiObjectPool) ========== */
-
-export interface SuiObjectPool {
+// ========== RAW POOL STRUCT ==========
+export interface FlowxSuiObjectPoolFields {
     coin_type_x: TypeName
     coin_type_y: TypeName
-
     fee_growth_global_x: string
     fee_growth_global_y: string
-
     id: SuiObjectID
-
     liquidity: string
     locked: boolean
     max_liquidity_per_tick: string
-
     observation_cardinality: string
     observation_cardinality_next: string
     observation_index: string
-    observations: Array<PoolObservation>
-
+    observations: Array<FlowxSuiObjectPoolObservation>
     protocol_fee_rate: string
     protocol_fee_x: string
     protocol_fee_y: string
-
     reserve_x: string
     reserve_y: string
-
-    reward_infos: Array<PoolRewardInfo>
-
+    reward_infos: Array<FlowxSuiObjectPoolRewardInfo>
     sqrt_price: string
     swap_fee_rate: string
-
+    tick_bitmap: SuiObjectTable<`${string}::i32::I32`, "u256">
     tick_index: SuiObjectI32
-
     tick_spacing: number
+    ticks: SuiObjectTable<`${string}::i32::I32`, `${string}::tick::TickInfo`>
 }
 
-/** ========== PARSED POOL STRUCT ========== */
+export type FlowxSuiObjectPool = SuiObject<
+    FlowxSuiObjectPoolFields,
+    `${string}::pool::Pool`
+>
 
-export interface Pool {
+// ========== PARSED POOL INTERFACE ==========
+export interface FlowxPool {
     coinTypeX: string
     coinTypeY: string
-
-    feeGrowthGlobalX: string
-    feeGrowthGlobalY: string
-
+    feeGrowthGlobalX: BN
+    feeGrowthGlobalY: BN
     id: string
-
-    liquidity: string
+    liquidity: BN
     locked: boolean
-    maxLiquidityPerTick: string
-
-    observationCardinality: number
-    observationCardinalityNext: number
-    observationIndex: number
-
-    observations: Array<Observation>
-
-    protocolFeeRate: string
-    protocolFeeX: string
-    protocolFeeY: string
-
-    reserveX: string
-    reserveY: string
-
-    rewardInfos: Array<RewardInfo>
-
-    sqrtPrice: string
-    swapFeeRate: string
-
-    tickIndex: number
+    maxLiquidityPerTick: BN
+    observationCardinality: BN
+    observationCardinalityNext: BN
+    observationIndex: BN
+    observations: Array<{
+        initialized: boolean
+        secondsPerLiquidityCumulative: BN
+        tickCumulative: BN
+        timestampS: BN
+    }>
+    protocolFeeRate: BN
+    protocolFeeX: BN
+    protocolFeeY: BN
+    reserveX: BN
+    reserveY: BN
+    rewardInfos: Array<{
+        endedAtSeconds: BN
+        lastUpdateTime: BN
+        rewardCoinType: string
+        rewardGrowthGlobal: BN
+        rewardPerSeconds: BN
+        totalReward: BN
+        totalRewardAllocated: BN
+    }>
+    sqrtPrice: BN
+    swapFeeRate: BN
+    tickBitmap: {
+        id: string
+        size: BN
+    }
+    tickIndex: BN
     tickSpacing: number
+    ticks: {
+        id: string
+        size: BN
+    }
 }
 
-/** ========== PARSER ========== */
-
-export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
+// ========== PARSER FUNCTION ==========
+/**
+ * Parses a FlowX Pool Sui object into a FlowxPool interface
+ */
+export const parseFlowxPool = (target: FlowxSuiObjectPoolFields): FlowxPool => {
     return {
-        coinTypeX: raw.coin_type_x.fields.name,
-        coinTypeY: raw.coin_type_y.fields.name,
-        feeGrowthGlobalX: raw.fee_growth_global_x,
-        feeGrowthGlobalY: raw.fee_growth_global_y,
-        id: raw.id.id,
-        liquidity: raw.liquidity,
-        locked: raw.locked,
-        maxLiquidityPerTick: raw.max_liquidity_per_tick,
-        observationCardinality: Number(raw.observation_cardinality),
-        observationCardinalityNext: Number(raw.observation_cardinality_next),
-        observationIndex: Number(raw.observation_index),
-        observations: raw.observations.map((obs) => ({
+        coinTypeX: target.coin_type_x.fields.name,
+        coinTypeY: target.coin_type_y.fields.name,
+        feeGrowthGlobalX: new BN(target.fee_growth_global_x),
+        feeGrowthGlobalY: new BN(target.fee_growth_global_y),
+        id: target.id.id,
+        liquidity: new BN(target.liquidity),
+        locked: target.locked,
+        maxLiquidityPerTick: new BN(target.max_liquidity_per_tick),
+        observationCardinality: new BN(target.observation_cardinality),
+        observationCardinalityNext: new BN(target.observation_cardinality_next),
+        observationIndex: new BN(target.observation_index),
+        observations: target.observations.map((obs) => ({
             initialized: obs.fields.initialized,
-            secondsPerLiquidityCumulative: obs.fields.seconds_per_liquidity_cumulative,
-            tickCumulative: Number(obs.fields.tick_cumulative.fields.bits),
-            timestamp: Number(obs.fields.timestamp_s),
+            secondsPerLiquidityCumulative: new BN(obs.fields.seconds_per_liquidity_cumulative),
+            tickCumulative: parseSuiI64(obs.fields.tick_cumulative),
+            timestampS: new BN(obs.fields.timestamp_s),
         })),
-        protocolFeeRate: raw.protocol_fee_rate,
-        protocolFeeX: raw.protocol_fee_x,
-        protocolFeeY: raw.protocol_fee_y,
-        reserveX: raw.reserve_x,
-        reserveY: raw.reserve_y,
-        rewardInfos: raw.reward_infos.map((info) => ({
-            endedAtSeconds: Number(info.fields.ended_at_seconds),
-            lastUpdateTime: Number(info.fields.last_update_time),
-            rewardCoinType: info.fields.reward_coin_type.fields.name,
-            rewardGrowthGlobal: info.fields.reward_growth_global,
-            rewardPerSeconds: info.fields.reward_per_seconds,
-            totalReward: info.fields.total_reward,
-            totalRewardAllocated: info.fields.total_reward_allocated,
+        protocolFeeRate: new BN(target.protocol_fee_rate),
+        protocolFeeX: new BN(target.protocol_fee_x),
+        protocolFeeY: new BN(target.protocol_fee_y),
+        reserveX: new BN(target.reserve_x),
+        reserveY: new BN(target.reserve_y),
+        rewardInfos: target.reward_infos.map((reward) => ({
+            endedAtSeconds: new BN(reward.fields.ended_at_seconds),
+            lastUpdateTime: new BN(reward.fields.last_update_time),
+            rewardCoinType: reward.fields.reward_coin_type.fields.name,
+            rewardGrowthGlobal: new BN(reward.fields.reward_growth_global),
+            rewardPerSeconds: new BN(reward.fields.reward_per_seconds),
+            totalReward: new BN(reward.fields.total_reward),
+            totalRewardAllocated: new BN(reward.fields.total_reward_allocated),
         })),
-        sqrtPrice: raw.sqrt_price,
-        swapFeeRate: raw.swap_fee_rate,
-        tickIndex: parseI32(raw.tick_index.fields.bits),
-        tickSpacing: raw.tick_spacing,
+        sqrtPrice: new BN(target.sqrt_price),
+        swapFeeRate: new BN(target.swap_fee_rate),
+        tickBitmap: {
+            id: target.tick_bitmap.fields.id.id,
+            size: new BN(target.tick_bitmap.fields.size),
+        },
+        tickIndex: parseSuiI32(target.tick_index),
+        tickSpacing: target.tick_spacing,
+        ticks: {
+            id: target.ticks.fields.id.id,
+            size: new BN(target.ticks.fields.size),
+        },
     }
 }

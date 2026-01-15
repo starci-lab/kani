@@ -16,7 +16,7 @@ import {
     FormulasModule 
 } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
-import { EventModule, KafkaMode } from "@modules/event"
+import { EventModule, EventName, KafkaMode } from "@modules/event"
 import { GcpModule } from "@modules/gcp"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { AxiosModule } from "@modules/axios"
@@ -67,7 +67,13 @@ import { DerivedModule } from "@modules/derived"
             isGlobal: true,
             kafka: {
                 createTopics: true,
-                modes: [KafkaMode.Producer],
+                modes: [
+                    KafkaMode.Producer, 
+                    KafkaMode.Consumer
+                ],
+                kafkaTopics: [
+                    EventName.ReinitializeBalancers,
+                ],
             },
         }),
         TxBuilderModule.register({

@@ -309,7 +309,7 @@ export const envConfig = () => ({
             activeBot: parseInt(process.env.INTERVAL_ACTIVE_BOT_INTERVAL || ms("10s").toString(), 10), // 10s
             rebalancing: parseInt(process.env.INTERVAL_REBALANCING || ms("10s").toString(), 10), // 10 seconds
             poolStateUpdate: parseInt(process.env.INTERVAL_POOL_STATE_UPDATE || ms("10s").toString(), 10), // 10s
-            suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || ms("1s").toString(), 10), // 1s
+            suiPoolStateUpdate: parseInt(process.env.INTERVAL_SUI_POOL_STATE_UPDATE || ms("5s").toString(), 10), // 1s
             analytics: parseInt(process.env.INTERVAL_ANALYTICS || ms("30s").toString(), 10), // 30s
             balanceSnapshot: parseInt(process.env.INTERVAL_BALANCE_SNAPSHOT || ms("30s").toString(), 10), // 30s
             coingecko: parseInt(process.env.INTERVAL_COINGECKO || ms("10s").toString(), 10), // 10s

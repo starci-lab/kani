@@ -1,238 +1,240 @@
-import { parseI32 } from "@utils"
-import { SuiObjectI32, SuiObjectID, SuiObjectOptionU64 } from "./types"
+import BN from "bn.js"
+import {
+    parseSuiI32,
+    SuiObject,
+    SuiObjectID,
+    SuiObjectI32,
+    TypeName,
+} from "../../../structs"
 
-/** ========== POOL OBJECT ROOT ========== */
+// ========== Position Manager Types ==========
+export interface CetusSuiObjectPositionManagerFields {
+    position_index: string;
+    tick_spacing: number;
+    positions: SuiObject<
+        {
+            head: string;
+            tail: string;
+            size: string;
+            id: SuiObjectID;
+        },
+        `${string}::linked_table::LinkedTable<${string}, ${string}>`
+    >;
+}
 
-export interface SuiObjectPool {
+export type CetusSuiObjectPositionManager = SuiObject<
+    CetusSuiObjectPositionManagerFields,
+    `${string}::position::PositionManager`
+>;
+
+// ========== Rewarder Types ==========
+export interface CetusSuiObjectRewarderFields {
+    emissions_per_second: string;
+    growth_global: string;
+    reward_coin: TypeName;
+}
+
+export type CetusSuiObjectRewarder = SuiObject<
+    CetusSuiObjectRewarderFields,
+    `${string}::rewarder::Rewarder`
+>;
+
+export interface CetusSuiObjectRewarderManagerFields {
+    last_updated_time: string;
+    points_growth_global: string;
+    points_released: string;
+    rewarders: Array<CetusSuiObjectRewarder>;
+}
+
+export type CetusSuiObjectRewarderManager = SuiObject<
+    CetusSuiObjectRewarderManagerFields,
+    `${string}::rewarder::RewarderManager`
+>;
+
+// ========== Tick Manager Types ==========
+export interface CetusSuiObjectSkipListFields {
+    id: SuiObjectID;
+    level: string;
+    max_level: string;
+    list_p: string;
+    size: string;
+    head: Array<{
+        v: string;
+        is_none: boolean;
+    }>;
+    tail: {
+        v: string;
+        is_none: boolean;
+    };
+    random: SuiObject<
+        {
+            seed: string;
+        },
+        `${string}::random::Random`
+    >;
+}
+
+export interface CetusSuiObjectTickManagerFields {
+    tick_spacing: number;
+    ticks: SuiObject<
+        CetusSuiObjectSkipListFields,
+        `${string}::skip_list::SkipList<${string}::tick::Tick>`
+    >;
+}
+
+export type CetusSuiObjectTickManager = SuiObject<
+    CetusSuiObjectTickManagerFields,
+    `${string}::tick::TickManager`
+>;
+
+// ========== Pool Types ==========
+export interface CetusSuiObjectPoolFields {
     coin_a: string;
     coin_b: string;
     current_sqrt_price: string;
-
-    current_tick_index: SuiObjectI32;
-
+    current_tick_index: SuiObjectI32<`${string}::i32::I32`>;
     fee_growth_global_a: string;
     fee_growth_global_b: string;
     fee_protocol_coin_a: string;
     fee_protocol_coin_b: string;
     fee_rate: string;
-
     id: SuiObjectID;
     index: string;
     is_pause: boolean;
     liquidity: string;
-
-    position_manager: SuiObjectPositionManager;
-    rewarder_manager: SuiObjectRewarderManager;
-    tick_manager: SuiObjectTickManager;
-
+    position_manager: CetusSuiObjectPositionManager;
+    rewarder_manager: CetusSuiObjectRewarderManager;
+    tick_manager: CetusSuiObjectTickManager;
     tick_spacing: number;
     url: string;
 }
 
-/** ========== POSITION MANAGER ========== */
+export type CetusSuiObjectPool = SuiObject<
+    CetusSuiObjectPoolFields,
+    `${string}::pool::Pool`
+>;
 
-export interface SuiObjectPositionManager {
-    type: string;
-    fields: {
-        position_index: string;
-        positions: SuiObjectLinkedTable;
-        tick_spacing: number;
+// ========== Parsed Pool Interface ==========
+export interface CetusPool {
+    coinA: string;
+    coinB: string;
+    currentSqrtPrice: BN;
+    currentTickIndex: BN;
+    feeGrowthGlobalA: BN;
+    feeGrowthGlobalB: BN;
+    feeProtocolCoinA: BN;
+    feeProtocolCoinB: BN;
+    feeRate: BN;
+    id: string;
+    index: string;
+    isPause: boolean;
+    liquidity: BN;
+    positionManager: {
+        positionIndex: string;
+        tickSpacing: number;
+        positions: {
+            head: string;
+            tail: string;
+            size: string;
+            id: string;
+        };
     };
-}
-
-export interface SuiObjectLinkedTable {
-    type: string;
-    fields: {
-        head: string;
-        id: SuiObjectID;
-        size: string;
-        tail: string;
+    rewarderManager: {
+        lastUpdatedTime: BN;
+        pointsGrowthGlobal: BN;
+        pointsReleased: BN;
+        rewarders: Array<{
+            emissionsPerSecond: BN;
+            growthGlobal: BN;
+            rewardCoin: string;
+        }>;
     };
-}
-
-/** FULL PositionInfo */
-
-export interface SuiObjectPositionInfo {
-    type: string;
-    fields: {
-        index: string;
-        liquidity: string;
-
-        fee_growth_inside_a: string;
-        fee_growth_inside_b: string;
-
-        rewarder_growth_inside: string;
-
-        tick_lower_index: SuiObjectI32;
-        tick_upper_index: SuiObjectI32;
-
-        pool_id: string;
-
-        fee_owed_a: string;
-        fee_owed_b: string;
-
-        rewarder_owed: string;
-    };
-}
-
-/** ========== REWARDER MANAGER ========== */
-
-export interface SuiObjectRewarderManager {
-    type: string;
-    fields: SuiObjectRewarderManagerFields;
-}
-
-export interface SuiObjectRewarderManagerFields {
-    last_updated_time: string;
-    points_growth_global: string;
-    points_released: string;
-    rewarders: Array<SuiObjectRewarder>;
-}
-
-export interface SuiObjectRewarder {
-    type: string;
-    fields: {
-        emissions_per_second: string;
-        growth_global: string;
-        reward_coin: {
-            type: string;
-            fields: {
-                name: string; // e.g. CETUS
+    tickManager: {
+        tickSpacing: number;
+        ticks: {
+            id: string;
+            level: string;
+            maxLevel: string;
+            listP: string;
+            size: string;
+            head: Array<{
+                v: string;
+                isNone: boolean;
+            }>;
+            tail: {
+                v: string;
+                isNone: boolean;
+            };
+            random: {
+                seed: string;
             };
         };
     };
-}
-
-/** ========== TICK MANAGER ========== */
-
-export interface SuiObjectTickManager {
-    type: string;
-    fields: {
-        tick_spacing: number;
-        ticks: SuiObjectSkipList;
-    };
-}
-
-export interface SuiObjectSkipList {
-    type: string;
-    fields: {
-        head: Array<SuiObjectOptionU64>;
-        id: SuiObjectID;
-        level: string;
-        list_p: string;
-        max_level: string;
-        random: SuiObjectRandom;
-        size: string;
-        tail: SuiObjectOptionU64;
-    };
-}
-
-export interface SuiObjectRandom {
-    type: string;
-    fields: {
-        seed: string;
-    };
-}
-
-/** ========== TICK STRUCT ========== */
-
-export interface SuiObjectTick {
-    type: string;
-    fields: {
-        index: SuiObjectI32;
-        liquidity_gross: string;
-        liquidity_net: string;
-
-        fee_growth_outside_a: string;
-        fee_growth_outside_b: string;
-
-        rewarder_growth_outside: string;
-    };
-}
-
-export interface Pool {
-    coinA: string;
-    coinB: string;
-    currentSqrtPrice: string;
-    currentTickIndex: number;
-    feeGrowthGlobalA: string;
-    feeGrowthGlobalB: string;
-    feeProtocolCoinA: string;
-    feeProtocolCoinB: string;
-    feeRate: string;
-    id: string;
-    index: number;
-    isPause: boolean;
-    liquidity: string;
     tickSpacing: number;
     url: string;
-    positionManager: PositionManager;
-    rewarderManager: RewarderManager;
-    tickManager: TickManager;
 }
 
-export interface PositionManager {
-    positionIndex: number;
-    tickSpacing: number;
-}
-
-export interface RewarderManager {
-    lastUpdatedTime: number;
-    pointsGrowthGlobal: string;
-    pointsReleased: string;
-    rewarders: Array<Rewarder>;
-}
-
-export interface Rewarder {
-    emissionsPerSecond: string;
-    growthGlobal: string;
-    rewardCoinName: string;
-}
-
-export interface TickManager {
-    tickSpacing: number;
-    size: number;
-}
-
-export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
-    try {
-        return {
-            coinA: raw.coin_a,
-            coinB: raw.coin_b,
-            currentSqrtPrice: raw.current_sqrt_price,
-            currentTickIndex: parseI32(raw.current_tick_index.fields.bits),
-            feeGrowthGlobalA: raw.fee_growth_global_a,
-            feeGrowthGlobalB: raw.fee_growth_global_b,
-            feeProtocolCoinA: raw.fee_protocol_coin_a,
-            feeProtocolCoinB: raw.fee_protocol_coin_b,
-            feeRate: raw.fee_rate,
-            id: raw.id.id,
-            index: Number(raw.index),
-            isPause: raw.is_pause,
-            liquidity: raw.liquidity,
-            tickSpacing: raw.tick_spacing,
-            url: raw.url,
-            positionManager: {
-                positionIndex: Number(raw.position_manager.fields.position_index),
-                tickSpacing: raw.position_manager.fields.tick_spacing,
+// ========== Parser Functions ==========
+/**
+ * Parses a Cetus Pool Sui object into a CetusPool interface
+ */
+export const parseCetusPool = (target: CetusSuiObjectPoolFields): CetusPool => {
+    return {
+        coinA: target.coin_a,
+        coinB: target.coin_b,
+        currentSqrtPrice: new BN(target.current_sqrt_price),
+        currentTickIndex: parseSuiI32(target.current_tick_index),
+        feeGrowthGlobalA: new BN(target.fee_growth_global_a),
+        feeGrowthGlobalB: new BN(target.fee_growth_global_b),
+        feeProtocolCoinA: new BN(target.fee_protocol_coin_a),
+        feeProtocolCoinB: new BN(target.fee_protocol_coin_b),
+        feeRate: new BN(target.fee_rate),
+        id: target.id.id,
+        index: target.index,
+        isPause: target.is_pause,
+        liquidity: new BN(target.liquidity),
+        positionManager: {
+            positionIndex: target.position_manager.fields.position_index,
+            tickSpacing: target.position_manager.fields.tick_spacing,
+            positions: {
+                head: target.position_manager.fields.positions.fields.head,
+                tail: target.position_manager.fields.positions.fields.tail,
+                size: target.position_manager.fields.positions.fields.size,
+                id: target.position_manager.fields.positions.fields.id.id,
             },
-            rewarderManager: {
-                lastUpdatedTime: Number(raw.rewarder_manager.fields.last_updated_time),
-                pointsGrowthGlobal: raw.rewarder_manager.fields.points_growth_global,
-                pointsReleased: raw.rewarder_manager.fields.points_released,
-                rewarders: raw.rewarder_manager.fields.rewarders.map((x) => ({
-                    emissionsPerSecond: x.fields.emissions_per_second,
-                    growthGlobal: x.fields.growth_global,
-                    rewardCoinName: x.fields.reward_coin.fields.name
+        },
+        rewarderManager: {
+            lastUpdatedTime: new BN(target.rewarder_manager.fields.last_updated_time),
+            pointsGrowthGlobal: new BN(target.rewarder_manager.fields.points_growth_global),
+            pointsReleased: new BN(target.rewarder_manager.fields.points_released),
+            rewarders: target.rewarder_manager.fields.rewarders.map((rewarder) => ({
+                emissionsPerSecond: new BN(rewarder.fields.emissions_per_second),
+                growthGlobal: new BN(rewarder.fields.growth_global),
+                rewardCoin: rewarder.fields.reward_coin.fields.name,
+            })),
+        },
+        tickManager: {
+            tickSpacing: target.tick_manager.fields.tick_spacing,
+            ticks: {
+                id: target.tick_manager.fields.ticks.fields.id.id,
+                level: target.tick_manager.fields.ticks.fields.level,
+                maxLevel: target.tick_manager.fields.ticks.fields.max_level,
+                listP: target.tick_manager.fields.ticks.fields.list_p,
+                size: target.tick_manager.fields.ticks.fields.size,
+                head: target.tick_manager.fields.ticks.fields.head.map((item) => ({
+                    v: item.v,
+                    isNone: item.is_none,
                 })),
+                tail: {
+                    v: target.tick_manager.fields.ticks.fields.tail.v,
+                    isNone: target.tick_manager.fields.ticks.fields.tail.is_none,
+                },
+                random: {
+                    seed: target.tick_manager.fields.ticks.fields.random.fields.seed,
+                },
             },
-            tickManager: {
-                tickSpacing: raw.tick_manager.fields.tick_spacing,
-                size: Number(raw.tick_manager.fields.ticks.fields.size),
-            },
-        }
-    } catch (error) {
-        console.error(error)
-        throw error
+        },
+        tickSpacing: target.tick_spacing,
+        url: target.url,
     }
 }

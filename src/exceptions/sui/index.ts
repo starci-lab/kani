@@ -53,3 +53,10 @@ export class TransactionEventNotFoundException extends AbstractException {
         super(message || "Transaction event not found", "TRANSACTION_EVENT_NOT_FOUND_EXCEPTION")
     }
 }
+
+/** Thrown when Sui object is not found */
+export class SuiObjectDataNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Sui object data not found", "SUI_OBJECT_DATA_NOT_FOUND_EXCEPTION")
+    }
+}

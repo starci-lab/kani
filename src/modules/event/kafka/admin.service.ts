@@ -81,7 +81,6 @@ export class KafkaAdminService implements OnModuleInit {
         this.readinessWatcherFactoryService.createWatcher(
             KafkaAdminService.name,
         )
-
         /**
          * Topic management is explicitly enabled via module options.
          *

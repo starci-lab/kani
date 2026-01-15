@@ -10,10 +10,11 @@ export class EventModule extends ConfigurableModuleClass {
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const imports: Array<DynamicModule> = []
+        const kafkaOptions = options?.kafka || {}
         imports.push(
             KafkaModule.register({
                 isGlobal: options.isGlobal,
-                ...(options?.kafka || {}),
+                ...kafkaOptions,
             })
         )
         const providers: Array<Provider> = [

@@ -1,9 +1,13 @@
-import { parseI32 } from "@utils"
-import { SuiObjectI32, SuiObjectID } from "./types"
+import BN from "bn.js"
+import {
+    SuiObject,
+    SuiObjectID,
+    SuiObjectI32,
+} from "../../../structs"
+import { parseSuiI32 } from "../../../structs/sui/parsers/int"
 
-/** ========== REWARD INFO RAW ========== */
-
-export interface SuiObjectRewardInfo {
+// ========== Reward Info Types ==========
+export interface TurbosSuiObjectPoolRewardInfo {
     type: string
     fields: {
         emissions_per_second: string
@@ -15,104 +19,92 @@ export interface SuiObjectRewardInfo {
     }
 }
 
-/** ========== RAW POOL STRUCT (FROM RPC) ========== */
-
-export interface SuiObjectPool {
+// ========== RAW POOL STRUCT ==========
+export interface TurbosSuiObjectPoolFields {
     coin_a: string
     coin_b: string
-
     deploy_time_ms: string
-
     fee: number
-
     fee_growth_global_a: string
     fee_growth_global_b: string
-
     fee_protocol: number
-
     id: SuiObjectID
-
     liquidity: string
     max_liquidity_per_tick: string
-
     protocol_fees_a: string
     protocol_fees_b: string
-
-    reward_infos: Array<SuiObjectRewardInfo>
-
+    reward_infos: Array<TurbosSuiObjectPoolRewardInfo>
     reward_last_updated_time_ms: string
-
     sqrt_price: string
-
     tick_current_index: SuiObjectI32
-
     tick_spacing: number
-
     unlocked: boolean
 }
 
-/** ========== PARSED REWARD INFO ========== */
+export type TurbosSuiObjectPool = SuiObject<
+    TurbosSuiObjectPoolFields,
+    `${string}::pool::Pool`
+>
 
-export interface RewardInfo {
-    emissionsPerSecond: string
-    growthGlobal: string
-    rewardId: string
-    manager: string
-    vault: string
-    vaultCoinType: string
-}
-
-/** ========== PARSED POOL STRUCT =========== */
-
-export interface Pool {
+// ========== PARSED POOL INTERFACE ==========
+export interface TurbosPool {
     coinA: string
     coinB: string
-    deployTimeMs: number
+    deployTimeMs: BN
     fee: number
-    feeGrowthGlobalA: string
-    feeGrowthGlobalB: string
+    feeGrowthGlobalA: BN
+    feeGrowthGlobalB: BN
     feeProtocol: number
     id: string
-    liquidity: string
-    maxLiquidityPerTick: string
-    protocolFeesA: string
-    protocolFeesB: string
-    rewardInfos: Array<RewardInfo>
-    rewardLastUpdatedTimeMs: number
-    sqrtPrice: string
-    tickCurrentIndex: number
+    liquidity: BN
+    maxLiquidityPerTick: BN
+    protocolFeesA: BN
+    protocolFeesB: BN
+    rewardInfos: Array<{
+        emissionsPerSecond: BN
+        growthGlobal: BN
+        rewardId: string
+        manager: string
+        vault: string
+        vaultCoinType: string
+    }>
+    rewardLastUpdatedTimeMs: BN
+    sqrtPrice: BN
+    tickCurrentIndex: BN
     tickSpacing: number
     unlocked: boolean
 }
 
-/** ========== PARSER ========== */
-
-export const parseSuiPoolObject = (raw: SuiObjectPool): Pool => {
+// ========== PARSER FUNCTION ==========
+/**
+ * Parses a Turbos Pool Sui object into a TurbosPool interface
+ */
+export const parseTurbosPool = (target: TurbosSuiObjectPoolFields): TurbosPool => {
     return {
-        coinA: raw.coin_a,
-        coinB: raw.coin_b,
-        deployTimeMs: Number(raw.deploy_time_ms),
-        fee: raw.fee,
-        feeGrowthGlobalA: raw.fee_growth_global_a,
-        feeGrowthGlobalB: raw.fee_growth_global_b,
-        feeProtocol: raw.fee_protocol,
-        id: raw.id.id,
-        liquidity: raw.liquidity,
-        maxLiquidityPerTick: raw.max_liquidity_per_tick,
-        protocolFeesA: raw.protocol_fees_a,
-        protocolFeesB: raw.protocol_fees_b,
-        rewardInfos: raw.reward_infos.map((r) => ({
-            emissionsPerSecond: r.fields.emissions_per_second,
-            growthGlobal: r.fields.growth_global,
+        coinA: target.coin_a,
+        coinB: target.coin_b,
+        deployTimeMs: new BN(target.deploy_time_ms),
+        fee: target.fee,
+        feeGrowthGlobalA: new BN(target.fee_growth_global_a),
+        feeGrowthGlobalB: new BN(target.fee_growth_global_b),
+        feeProtocol: target.fee_protocol,
+        id: target.id.id,
+        liquidity: new BN(target.liquidity),
+        maxLiquidityPerTick: new BN(target.max_liquidity_per_tick),
+        protocolFeesA: new BN(target.protocol_fees_a),
+        protocolFeesB: new BN(target.protocol_fees_b),
+        rewardInfos: target.reward_infos.map((r) => ({
+            emissionsPerSecond: new BN(r.fields.emissions_per_second),
+            growthGlobal: new BN(r.fields.growth_global),
             rewardId: r.fields.id.id,
             manager: r.fields.manager,
             vault: r.fields.vault,
             vaultCoinType: r.fields.vault_coin_type,
         })),
-        rewardLastUpdatedTimeMs: Number(raw.reward_last_updated_time_ms),
-        sqrtPrice: raw.sqrt_price,
-        tickCurrentIndex: parseI32(raw.tick_current_index.fields.bits),
-        tickSpacing: raw.tick_spacing,
-        unlocked: raw.unlocked,
+        rewardLastUpdatedTimeMs: new BN(target.reward_last_updated_time_ms),
+        sqrtPrice: new BN(target.sqrt_price),
+        tickCurrentIndex: parseSuiI32(target.tick_current_index),
+        tickSpacing: target.tick_spacing,
+        unlocked: target.unlocked,
     }
 }

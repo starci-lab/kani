@@ -3,6 +3,7 @@ import { ChainId, Network } from "@typedefs"
 import { CexId, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
 import BN from "bn.js"
 import crypto from "crypto"
+import { DynamicClmmLiquidityPoolInfoCacheResult } from "@modules/cache"
 
 export enum EventName {
     ExecutorCreated = "executorCreated",
@@ -16,7 +17,7 @@ export enum EventName {
     CoinMarketCapPricesFetched = "coinMarketCapPricesFetched",
     CoinGeckoPricesFetched = "coinGeckoPricesFetched",
     PoolsUpdated = "poolsUpdated",
-    LiquidityPoolsFetched = "liquidityPoolsFetched",
+    ClmmLiquidityPoolsFetched = "clmmLiquidityPoolsFetched",
     DlmmLiquidityPoolsFetched = "dlmmLiquidityPoolsFetched",
     LiquidityPoolsUpdated = "liquidityPoolsUpdated",
     WsCexLastPricesUpdated = "wsCexLastPricesUpdated",
@@ -54,6 +55,10 @@ export interface DlmmLiquidityPoolsFetchedEvent {
     sqrtPriceX64: BN
 }
 
+export type WithLiquidityPoolId<T> = T & {
+    liquidityPoolId: LiquidityPoolId
+}
+
 export interface PythSuiPricesUpdatedEvent {
     network: Network
     tokenId: TokenId
@@ -61,12 +66,7 @@ export interface PythSuiPricesUpdatedEvent {
     chainId: ChainId
 }
 
-export interface LiquidityPoolsFetchedEvent {
-    liquidityPoolId: LiquidityPoolId
-    tickCurrent: number
-    liquidity: BN
-    sqrtPriceX64: BN
-}
+export type ClmmLiquidityPoolsFetchedEvent = WithLiquidityPoolId<DynamicClmmLiquidityPoolInfoCacheResult>
 
 export interface LiquidityPoolsUpdatedEvent {
     pool: FetchedPool

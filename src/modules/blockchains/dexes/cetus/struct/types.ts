@@ -1,83 +1,44 @@
-/** ========== COMMON TYPES ========== */
+// {
+//     type: '0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::skip_list::Node<0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick>',
+//     fields: {
+//       nexts: [
+//         {
+//           type: '0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64',
+//           fields: { is_none: false, v: '502856' }
+//         }
+//       ],
+//       prev: {
+//         type: '0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64',
+//         fields: { is_none: false, v: '502826' }
+//       },
+//       score: '502836',
+//       value: {
+//         type: '0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick',        
+//         fields: {
+//           fee_growth_outside_a: '167144806409375916',
+//           fee_growth_outside_b: '58404152144592000380',
+//           index: {
+//             type: '0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i32::I32',      
+//             fields: { bits: 59200 }
+//           },
+//           liquidity_gross: '1690659375132',
+//           liquidity_net: {
+//             type: '0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i128::I128',    
+//             fields: { bits: '1690659375132' }
+//           },
+//           points_growth_outside: '840010655612271973090099',
+//           rewards_growth_outside: [ '326900452328961232842' ],
+//           sqrt_price: '355932067783162035534'
+//         }
+//       }
+//     }
+//   }
 
-// Object ID wrapper
-export interface SuiObjectID {
-    id: string;
+import { SuiMoveObjectContentFields, SuiObject, SuiObjectOptionU64 } from "../../../structs"
+
+export interface CetusSuiSkipListNodeFields<Value, TypeName extends string = string> {
+    nexts: Array<SuiObjectOptionU64<`${string}::option_u64::OptionU64`>>;
+    prev: SuiObjectOptionU64<`${string}::option_u64::OptionU64`>;
+    score: string;
+    fields: SuiMoveObjectContentFields<SuiObject<Value, TypeName>>;
 }
-
-// I32 wrapper used by Cetus
-export interface SuiObjectI32 {
-    type: string;
-    fields: {
-        bits: number;
-    };
-}
-
-// I128 wrapper used by Cetus
-export interface SuiObjectI128 {
-    type: string;
-    fields: {
-        /** Move i128 serialized as string bits */
-        bits: string;
-    };
-}
-
-// option_u64::OptionU64 used by Cetus skip list
-export interface SuiObjectOptionU64 {
-    type: string;
-    fields: {
-        is_none: boolean;
-        v: string;
-    };
-}
-
-/** Generic Move object content wrapper (Sui RPC) */
-export interface SuiMoveObjectContent<TFields> {
-    dataType: "moveObject";
-    type: string;
-    hasPublicTransfer: boolean;
-    fields: TFields;
-}
-
-/** Generic Sui RPC object data wrapper */
-export interface SuiObjectData<TFields> {
-    objectId: string;
-    version: string;
-    digest: string;
-    type: string;
-    owner: {
-        ObjectOwner: string;
-    };
-    previousTransaction: string;
-    storageRebate: string;
-    content: SuiMoveObjectContent<TFields>;
-}
-
-/** Generic Sui RPC object response wrapper */
-export interface SuiObjectResponse<TFields> {
-    data: SuiObjectData<TFields>;
-}
-
-/** Cetus code often uses dynamic fields; these aliases keep naming consistent in the module */
-export type CetusSuiDynamicFieldObjectResponse<TFields> = SuiObjectResponse<TFields>;
-export type CetusSuiDynamicFieldObjectData<TFields> = SuiObjectData<TFields>;
-
-/** Generic Cetus skip_list::Node<T> wrapper */
-export interface CetusSuiSkipListNode<TValue> {
-    type: string;
-    fields: {
-        nexts: Array<SuiObjectOptionU64>;
-        prev: SuiObjectOptionU64;
-        score: string;
-        value: TValue;
-    };
-}
-
-// Common TypeName structure
-export interface TypeName {
-    fields: {
-        name: string;
-    };
-    type: "0x1::type_name::TypeName";
-}
-

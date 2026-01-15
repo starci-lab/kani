@@ -1,5 +1,4 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { DynamicLiquidityPoolInfo } from "@modules/blockchains"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
@@ -7,15 +6,20 @@ import { Injectable } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import { parseSuiPoolObject, Pool, SuiObjectPool } from "./struct"
+import { parseCetusPool, CetusPool, CetusSuiObjectPoolFields } from "./struct"
 import BN from "bn.js"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
+import { 
+    CacheKey, 
+    createCacheKey, 
+    DynamicClmmLiquidityPoolInfoCacheResult, 
+    InjectRedisCache 
+} from "@modules/cache"
 import { Cache } from "cache-manager"
-import { Logger as winstonLogger } from "winston"
+import { Logger as WinstonLogger } from "winston"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
-import { EventEmitterService, EventName } from "@modules/event"
+import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
 
 @Injectable()
@@ -28,7 +32,7 @@ export class CetusObserverService {
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonLogger: WinstonLogger,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
@@ -62,23 +66,25 @@ export class CetusObserverService {
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
 
-            const objectInfo = await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return await suiClient.getObject({
-                        id: liquidityPool.poolAddress,
-                        options: {
-                            showContent: true,
-                        },
-                    })
-                },
-            })
+            const objectInfo = await this.rpcExecutorService.withSuiClient(
+                {
+                    accessType: RpcAccessType.Http,
+                    callback: async ({ suiClient }) => {
+                        return await suiClient.getObject({
+                            id: liquidityPool.poolAddress,
+                            options: {
+                                showContent: true,
+                            },
+                        })
+                    },
+                }
+            )
             if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             if (objectInfo.data?.content?.dataType !== "moveObject")
                 throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
-            const fields = objectInfo.data.content.fields as unknown as SuiObjectPool
-            const pool = parseSuiPoolObject(fields)
-            await this.handlePoolStateUpdate(liquidityPoolId, pool)
+            const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
+            const pool = parseCetusPool(fields)
+            return await this.handlePoolStateUpdate(liquidityPoolId, pool)
         } catch (error) {
             this.winstonLogger.error(
                 WinstonLog.FetchClmmPoolError, {
@@ -91,40 +97,40 @@ export class CetusObserverService {
 
     private async handlePoolStateUpdate(
         liquidityPoolId: LiquidityPoolId,
-        state: Pool
+        state: CetusPool
     ) {
-        const parsed: DynamicLiquidityPoolInfo = {
+        const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.currentTickIndex,
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.currentSqrtPrice),
-            rewards: state.rewarderManager.rewarders,
+            rewards: state.rewarderManager.rewarders.map((rewarder) => ({
+                tokenAddress: rewarder.rewardCoin,
+                emissionPerSecond: new BN(rewarder.emissionsPerSecond),
+                growthGlobal: new BN(rewarder.growthGlobal),
+            })),
             feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
             snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError(
             [
-            // cache
+                // store in cache
                 this.cacheManager.set(
-                    createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                    createCacheKey(
+                        CacheKey.DynamicClmmLiquidityPoolInfo, 
+                        liquidityPoolId
+                    ),
                     this.superjson.stringify(parsed),
                 ),
-                // event
-                this.eventEmitterService.emit(
-                    EventName.LiquidityPoolsFetched,
+                // emit event through event emitter
+                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>
+                (
+                    EventName.ClmmLiquidityPoolsFetched,
                     { liquidityPoolId, ...parsed },
                     { withoutLocal: true },
                 ),
             ]
         )
-        // logging
-        this.winstonLogger.debug(
-            WinstonLog.ObserveClmmPool, {
-                liquidityPoolId,
-                tickCurrent: parsed.tickCurrent.toString(),
-                liquidity: parsed.liquidity.toString(),
-                sqrtPriceX64: parsed.sqrtPriceX64.toString(),
-            })
         return parsed
     }
 }
