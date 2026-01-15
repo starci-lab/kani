@@ -292,17 +292,18 @@ export const envConfig = () => ({
         lease: parseInt(process.env.TIME_CONFIG_LEASE || ms("5m").toString(), 10), // 5 minutes
         retry: {
             maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call
-            delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || "1000", 10), // 1s delay between retries
-            maxDelay: parseInt(process.env.TIME_CONFIG_RETRY_MAX_DELAY || "30000", 10), // 30s max delay
+            delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || ms("1s").toString(), 10), // 1s delay between retries
+            maxDelay: parseInt(process.env.TIME_CONFIG_RETRY_MAX_DELAY || ms("30s").toString(), 10), // 30s max delay
             factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
         },
         ws: {
-            idleTimeout: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT || "10000", 10), // 10s
+            idleTimeout: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT || ms("10s").toString(), 10), // 10s
+            solanaRpcIdleTimeout: parseInt(process.env.TIME_CONFIG_SOLANA_RPC_IDLE_TIMEOUT || ms("1m").toString(), 10), // 1 minute
         },
         lockCooldown: {
-            openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || "10000", 10), // 10s
-            closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || "10000", 10), // 10s
-            rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || "5000", 10), // 5s
+            openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || ms("10s").toString(), 10), // 10s
+            closePosition: parseInt(process.env.LOCK_COOLDOWN_CLOSE_POSITION || ms("10s").toString(), 10), // 10s
+            rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || ms("5s").toString(), 10), // 5s
         },
         interval: {
             mutex: parseInt(process.env.INTERVAL_MUTEX || ms("30m").toString(), 10), // 30 minutes

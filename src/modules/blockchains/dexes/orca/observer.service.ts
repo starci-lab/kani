@@ -1,5 +1,10 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { CacheKey, InjectRedisCache, createCacheKey } from "@modules/cache"
+import { 
+    CacheKey, 
+    InjectRedisCache, 
+    createCacheKey,
+    DynamicClmmLiquidityPoolInfoCacheResult,
+} from "@modules/cache"
 import BN from "bn.js"
 import {
     LiquidityPoolId,
@@ -10,7 +15,7 @@ import { AsyncService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
-import { EventEmitterService, EventName } from "@modules/event"
+import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
@@ -20,7 +25,6 @@ import { envConfig } from "@modules/env"
 import { Interval } from "@nestjs/schedule"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
-import { DynamicLiquidityPoolInfoCacheResult } from "@modules/cache"
 import { DayjsService } from "@modules/mixin"
 
 @Injectable()
@@ -73,40 +77,38 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         liquidityPoolId: LiquidityPoolId,
         state: ReturnType<typeof Whirlpool.struct["read"]>
     ) {
-        const parsed: DynamicLiquidityPoolInfoCacheResult = {
-            tickCurrent: state.tickCurrentIndex,
+        const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
+            tickCurrent: new BN(state.tickCurrentIndex),
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPrice),
-            rewards: state.rewardInfos,
+            rewards: state.rewardInfos
+                .filter((reward) => reward.mint.toString() !== "11111111111111111111111111111111") // Filter out empty rewards
+                .map((reward) => ({
+                    tokenAddress: reward.mint.toString(),
+                    emissionPerSecond: new BN(reward.emissionsPerSecondX64),
+                    growthGlobal: new BN(reward.growthGlobalX64),
+                })),
             feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
             snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError([
-            // cache
+            // store in cache
             this.cacheManager.set(
                 createCacheKey(
-                    CacheKey.DynamicLiquidityPoolInfo, 
+                    CacheKey.DynamicClmmLiquidityPoolInfo, 
                     liquidityPoolId
                 ),
                 this.superjson.stringify(parsed),
                 envConfig().cache.ttl.poolState,
             ),
-            // event emit
-            this.eventEmitterService.emit(
-                EventName.LiquidityPoolsFetched,
+            // emit event through event emitter
+            this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
+                EventName.ClmmLiquidityPoolsFetched,
                 { liquidityPoolId, ...parsed },
                 { withoutLocal: true },
             ),
         ])
-
-        // logging
-        this.winstonLogger.debug(WinstonLog.ObserveClmmPool, {
-            liquidityPoolId,
-            tickCurrent: parsed.tickCurrent.toString(),
-            liquidity: parsed.liquidity.toString(),
-            sqrtPriceX64: parsed.sqrtPriceX64.toString(),
-        })
 
         return parsed
     }
@@ -157,25 +159,24 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Ws,
                     callback: async ({ rpcSubscriptions }) => {
-                        await this.asyncService.suppressErrorAfterTimeout(
-                            async () => {
-                                const controller = new AbortController()
-                                const accountNotifications = await rpcSubscriptions.accountNotifications(
-                                    address(liquidityPool.poolAddress),
-                                    {
-                                        commitment: "confirmed",
-                                        encoding: "base64",
-                                    }
-                                ).subscribe({
-                                    abortSignal: controller.signal,
-                                })
-                                for await (const accountNotification of accountNotifications) {
-                                    const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
-                                    await this.handlePoolStateUpdate(liquidityPoolId, state)
-                                }
-                            },
-                            envConfig().timeConfig.ws.idleTimeout,
-                        )
+                        const controller = new AbortController()
+                        const accountNotifications = await rpcSubscriptions.accountNotifications(
+                            address(liquidityPool.poolAddress),
+                            {
+                                commitment: "confirmed",
+                                encoding: "base64",
+                            }
+                        ).subscribe({
+                            abortSignal: controller.signal,
+                        })
+                        for await (const accountNotification of accountNotifications) {
+                            const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
+                            await this.handlePoolStateUpdate(liquidityPoolId, state)
+                        }
+                    },
+                    options: {
+                        // never throw an error, if the rpc is not available, just retry
+                        maxRetries: Infinity,
                     },
                 })
             }

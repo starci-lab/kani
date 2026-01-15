@@ -125,6 +125,7 @@ export class RpcExecutorService {
     public async withSolanaRpc<TResponse = void>({
         callback,
         accessType,
+        options,
     }: WithSolanaRpcParams<TResponse>): Promise<TResponse> {
         return await this.retryService.retry(
             {
@@ -177,7 +178,6 @@ export class RpcExecutorService {
                                     if (response !== null) {
                                         return response
                                     }
-                                    console.log(error)
                                     // if the error is a solana error, throw the error
                                     if (isSolanaError(error)) {
                                         const errorType = this.getSolanaRpcErrorType(error)
@@ -193,9 +193,9 @@ export class RpcExecutorService {
                                     // if the error is not a solana error, throw the error
                                     throw new AbortError(new SolanaRpcIgnorableError(error?.message))
                                 },
-                                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                                delay: envConfig().timeConfig.retry.delay,
-                                factor: envConfig().timeConfig.retry.factor,
+                                maxRetries: options?.maxRetries ?? envConfig().timeConfig.retry.maxRetries,
+                                delay: options?.delay ?? envConfig().timeConfig.retry.delay,
+                                factor: options?.factor ?? envConfig().timeConfig.retry.factor,
                             }
                         )
                     } catch (error) {
@@ -210,9 +210,9 @@ export class RpcExecutorService {
                         throw error
                     } 
                 },
-                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                delay: envConfig().timeConfig.retry.delay,
-                factor: envConfig().timeConfig.retry.factor,
+                maxRetries: options?.maxRetries ?? envConfig().timeConfig.retry.maxRetries,
+                delay: options?.delay ?? envConfig().timeConfig.retry.delay,
+                factor: options?.factor ?? envConfig().timeConfig.retry.factor,
             })
     }
 
@@ -304,7 +304,7 @@ export class RpcExecutorService {
 }
 
 export type WithSolanaRpcParams<TResponse = void> = 
-{
+({
     callback: (params: Omit<WithSolanaRpcCallbackParams, "rpcSubscriptions">) => Promise<TResponse>
     accessType: RpcAccessType.Http
 } | {
@@ -313,12 +313,22 @@ export type WithSolanaRpcParams<TResponse = void> =
 } | {
     callback: (params: WithSolanaRpcCallbackParams) => Promise<TResponse>
     accessType: RpcAccessType.Write
-}
+}) & ({
+    options?: WithSolanaRpcOptions
+})
 
 export interface WithSolanaRpcCallbackParams {
     rpc: Rpc<SolanaRpcApi>
     rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
-    rpcUrl: string
+    rpcUrl: string 
+}
+
+export interface WithSolanaRpcOptions {
+    abortSignal?: AbortSignal
+    timeout?: number
+    maxRetries?: number
+    delay?: number
+    factor?: number
 }
 
 export type WithSuiClientParams<TResponse = void> = 

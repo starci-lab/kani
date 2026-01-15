@@ -65,9 +65,28 @@ export interface DynamicClmmLiquidityPoolInfoCacheResult extends NonExpiredCache
     feeGrowthGlobalB: BN
 }
 
+// ["mint", publicKey],
+// ["vault", publicKey],
+// ["funder", publicKey],
+// ["reward_duration", u64],
+// ["reward_duration_end", u64],
+// ["reward_rate", u128],
+// ["last_update_time", u64],
+// ["cumulative_seconds_with_empty_liquidity_reward", u64],
+export interface DlmmRewardInfo {
+    tokenAddress: string
+    vault: string
+    funder: string
+    rewardDuration: BN
+    rewardDurationEnd: BN
+    rewardRate: BN
+    lastUpdateTime: BN
+    cumulativeSecondsWithEmptyLiquidityReward: BN
+}
+
 export interface DynamicDlmmLiquidityPoolInfoCacheResult extends NonExpiredCacheResult {
     activeId: number
-    rewards: Array<unknown>
+    rewards: Array<DlmmRewardInfo>
 }
 
 export interface PoolAnalyticsCacheResult {

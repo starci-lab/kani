@@ -1,9 +1,8 @@
 import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@typedefs"
 import { CexId, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
-import BN from "bn.js"
 import crypto from "crypto"
-import { DynamicClmmLiquidityPoolInfoCacheResult } from "@modules/cache"
+import { DynamicClmmLiquidityPoolInfoCacheResult, DynamicDlmmLiquidityPoolInfoCacheResult } from "@modules/cache"
 
 export enum EventName {
     ExecutorCreated = "executorCreated",
@@ -48,12 +47,7 @@ export interface LiquidityPoolsFetchedEvent {
     pools: string // serialized
 }
 
-export interface DlmmLiquidityPoolsFetchedEvent {
-    liquidityPoolId: LiquidityPoolId
-    tickCurrent: number
-    liquidity: BN
-    sqrtPriceX64: BN
-}
+export type DlmmLiquidityPoolsFetchedEvent = WithLiquidityPoolId<DynamicDlmmLiquidityPoolInfoCacheResult>
 
 export type WithLiquidityPoolId<T> = T & {
     liquidityPoolId: LiquidityPoolId

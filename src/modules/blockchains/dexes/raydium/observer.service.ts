@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import {
     CacheKey,
-    DynamicLiquidityPoolInfoCacheResult,
+    DynamicClmmLiquidityPoolInfoCacheResult,
     InjectRedisCache,
     createCacheKey
 } from "@modules/cache"
@@ -15,7 +15,7 @@ import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
-import { EventEmitterService, EventName } from "@modules/event"
+import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
@@ -77,41 +77,40 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         liquidityPoolId: LiquidityPoolId,
         state: PoolState
     ) {
-        const parsed: DynamicLiquidityPoolInfoCacheResult = {
-            tickCurrent: state.tickCurrent,
+        const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
+            tickCurrent: new BN(state.tickCurrent),
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.sqrtPriceX64),
-            rewards: state.rewardInfos.filter(
-                rewardInfo => rewardInfo.tokenMint.toString() !== "11111111111111111111111111111111"
-            ),
+            rewards: state.rewardInfos
+                .filter((rewardInfo) => rewardInfo.tokenMint.toString() !== "11111111111111111111111111111111")
+                .map((rewardInfo) => ({
+                    tokenAddress: rewardInfo.tokenMint.toString(),
+                    emissionPerSecond: new BN(rewardInfo.emissionsPerSecondX64.toString()),
+                    growthGlobal: new BN(rewardInfo.rewardGrowthGlobalX64.toString()),
+                })),
             feeGrowthGlobalA: new BN(state.feeGrowthGlobal0X64.toString()),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobal1X64.toString()),
             snapshotAt: this.dayjsService.now(),
         }
         await this.asyncService.allIgnoreError(
             [
-                // cache
+                // store in cache
                 this.cacheManager.set(
-                    createCacheKey(CacheKey.DynamicLiquidityPoolInfo, liquidityPoolId),
+                    createCacheKey(
+                        CacheKey.DynamicClmmLiquidityPoolInfo, 
+                        liquidityPoolId
+                    ),
                     this.superjson.stringify(parsed),
                     envConfig().cache.ttl.poolState,
                 ),
-                // event
-                this.eventEmitterService.emit(
-                    EventName.LiquidityPoolsFetched,
+                // emit event through event emitter
+                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
+                    EventName.ClmmLiquidityPoolsFetched,
                     { liquidityPoolId, ...parsed },
                     { withoutLocal: true },
                 ),
             ]
         )
-        // logging
-        this.winstonLogger.debug(
-            WinstonLog.ObserveClmmPool, {
-                liquidityPoolId,
-                tickCurrent: parsed.tickCurrent.toString(),
-                liquidity: parsed.liquidity.toString(),
-                sqrtPriceX64: parsed.sqrtPriceX64.toString(),
-            })
 
         return parsed
     }
@@ -158,26 +157,34 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-            await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                requiredWs: true,
-                callback: async ({ rpcSubscriptions }) => {
-                    const controller = new AbortController()
-                    const accountNotifications = await rpcSubscriptions.accountNotifications(
-                        address(liquidityPool.poolAddress),
-                        {
-                            commitment: "confirmed",
-                            encoding: "base64",
+            // infinite loop to ensure the connection is alive
+            while (true) {
+                await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Ws,
+                    callback: async ({ rpcSubscriptions }) => {
+                        const controller = new AbortController()
+                        const accountNotifications = await rpcSubscriptions.accountNotifications(
+                            address(liquidityPool.poolAddress),
+                            {
+                                commitment: "confirmed",
+                                encoding: "base64",
+                            }
+                        ).subscribe({
+                            abortSignal: controller.signal,
+                        })
+                        for await (const accountNotification of accountNotifications) {
+                            const [state] = PoolState.struct.deserialize(
+                                Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
+                            )
+                            await this.handlePoolStateUpdate(liquidityPoolId, state)
                         }
-                    ).subscribe({
-                        abortSignal: controller.signal,
-                    })
-                    for await (const accountNotification of accountNotifications) {
-                        const [state] = PoolState.struct.deserialize(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
-                        await this.handlePoolStateUpdate(liquidityPoolId, state)
-                    }
-                },
-            })
+                    },
+                    options: {
+                        // never throw an error, if the rpc is not available, just retry
+                        maxRetries: Infinity,
+                    },
+                })
+            }
         } catch (error) {
             this.winstonLogger.error(
                 WinstonLog.ObserveClmmPoolError, {

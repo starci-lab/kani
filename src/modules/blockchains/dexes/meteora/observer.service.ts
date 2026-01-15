@@ -12,7 +12,7 @@ import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { EventEmitterService, EventName } from "@modules/event"
+import { DlmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { Cache } from "cache-manager"
 import SuperJSON from "superjson"
 import { createObjectId } from "@utils"
@@ -24,6 +24,7 @@ import { address, fetchEncodedAccount } from "@solana/kit"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { envConfig } from "@modules/env"
+import BN from "bn.js"
 
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap {
@@ -85,7 +86,18 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
       const dynamicDlmmLiquidityPoolInfo: DynamicDlmmLiquidityPoolInfoCacheResult =
       {
           activeId: state.active_id,
-          rewards: state.reward_infos,
+          rewards: state.reward_infos
+              .filter((reward) => reward.mint.toString() !== "11111111111111111111111111111111") // Filter out empty rewards
+              .map((reward) => ({
+                  tokenAddress: reward.mint.toString(),
+                  vault: reward.vault.toString(),
+                  funder: reward.funder.toString(),
+                  rewardDuration: new BN(reward.reward_duration.toString()),
+                  rewardDurationEnd: new BN(reward.reward_duration_end.toString()),
+                  rewardRate: new BN(reward.reward_rate.toString()),
+                  lastUpdateTime: new BN(reward.last_update_time.toString()),
+                  cumulativeSecondsWithEmptyLiquidityReward: new BN(reward.cumulative_seconds_with_empty_liquidity_reward.toString()),
+              })),
           snapshotAt: this.dayjsService.now(),
       }
       await this.asyncService.allIgnoreError([
@@ -96,7 +108,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
               envConfig().cache.ttl.poolState,
           ),
           // event
-          this.eventEmitterService.emit(
+          this.eventEmitterService.emit<DlmmLiquidityPoolsFetchedEvent>(
               EventName.DlmmLiquidityPoolsFetched,
               { liquidityPoolId, ...dynamicDlmmLiquidityPoolInfo },
               { withoutLocal: true },
@@ -131,7 +143,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                           commitment: "confirmed",
                       },
                   )
-              },
+              }
           })
           if (!accountInfo || !accountInfo.exists)
               throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
@@ -160,27 +172,32 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
               await this.rpcExecutorService.withSolanaRpc({
                   accessType: RpcAccessType.Ws,
                   callback: async ({ rpcSubscriptions }) => {
-                      await this.asyncService.suppressErrorAfterTimeout(async () => {
-                          const controller = new AbortController()
-                          const accountNotifications = await rpcSubscriptions
-                              .accountNotifications(address(liquidityPool.poolAddress), {
+                      const controller = new AbortController()
+                      const accountNotifications = await rpcSubscriptions
+                          .accountNotifications(
+                              address(liquidityPool.poolAddress), 
+                              {
                                   commitment: "confirmed",
                                   encoding: "base64",
-                              })
-                              .subscribe({
-                                  abortSignal: controller.signal,
-                              })
-                          for await (const accountNotification of accountNotifications) {
-                              const state = LbPair.struct.read(
-                                  Buffer.from(
-                                      accountNotification.value?.data.toString(),
-                                      "base64",
-                                  ),
-                                  8,
-                              )
-                              await this.handlePoolStateUpdate(liquidityPoolId, state)
-                          }
-                      }, envConfig().timeConfig.ws.idleTimeout)
+                              }
+                          )
+                          .subscribe({
+                              abortSignal: controller.signal,
+                          })
+                      for await (const accountNotification of accountNotifications) {
+                          const state = LbPair.struct.read(
+                              Buffer.from(
+                                  accountNotification.value?.data.toString(),
+                                  "base64",
+                              ),
+                              8,
+                          )
+                          await this.handlePoolStateUpdate(liquidityPoolId, state)
+                      }
+                  },
+                  options: {
+                      // retry forever if the rpc is not available
+                      maxRetries: Infinity,
                   },
               })
           }

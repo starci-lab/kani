@@ -86,7 +86,7 @@ export class PythRestService implements OnApplicationBootstrap {
                     price: price.toNumber(),
                 }
             }) 
-            this.logger.info(
+            this.logger.debug(
                 WinstonLog.PythPricesFetched,
                 {
                     fetchedCount: priceData.length,
