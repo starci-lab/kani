@@ -5,15 +5,14 @@ import {
 import { EventEmitterService, EventName } from "@modules/event"
 import { BINANCE_WS_URL } from "./constants"
 import { CexId, MarketId, PrimaryMemoryStorageService } from "@modules/databases"
-import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
-import WebSocket from "ws"
 import { AsyncService, RetryService } from "@modules/mixin"
 import { OrderBook } from "../types"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
+import { WebSocketStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
 
 @Injectable()
 export class BinanceOrderBookService implements OnApplicationBootstrap {
@@ -26,6 +25,7 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
         private readonly retryService: RetryService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
+        private readonly wsAsyncIteratorService: WsAsyncIteratorService,
     ) {}
 
     onApplicationBootstrap() {
@@ -42,113 +42,122 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
             .filter(Boolean)
             .map(symbol => `${symbol}@depth5@100ms`)
 
-        this.retryService.retryWs<WebSocket>({
-            closeFnName: "close",
-            // create a new connection
-            createConnection: () => new WebSocket(BINANCE_WS_URL),
-            // on open event
-            onOpen: async (ws, markMessageReceived) => {
-                const promise = new Promise<void>((_, reject) => {
-                    // open event
-                    ws.on("open", () => {
+        this.retryService.retry({
+            options: {
+                retries: Infinity,
+            },
+            action: async () => {
+                const connection = new WebSocketStreamConnection(BINANCE_WS_URL)
+                const abortController = new AbortController()
+                let timeout: NodeJS.Timeout | undefined = undefined
+
+                const resetTimeout = () => {
+                    if (timeout) {
+                        clearTimeout(timeout)
+                    }
+                    timeout = setTimeout(
+                        () => abortController.abort(),
+                        envConfig().timeConfig.retry.maxTimeout,
+                    )
+                }
+
+                const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({
+                    connection,
+                    signal: abortController.signal,
+                    onOpen: (connection: WebSocketStreamConnection) => {
                         this.logger.info(WinstonLog.WebsocketConnected, {
                             streamName: "binance-order-book",
                         })
-                        ws.send(JSON.stringify({
-                            method: "SUBSCRIBE",
-                            params: symbols,
-                            id: 1
-                        }))
-                    })
-                    // message event
-                    ws.on("message", async (data: WebSocket.RawData) => {
-                        markMessageReceived?.()
+                        connection.ws.send(
+                            JSON.stringify({
+                                method: "SUBSCRIBE",
+                                params: symbols,
+                                id: 1,
+                            }))
+                    },
+                    onError: (error: Error) => {
+                        this.logger.error(WinstonLog.WebsocketCloseError, {
+                            error: error.message,
+                            streamName: "binance-order-book",
+                        })
+                    },
+                    onClose: () => {
+                        this.logger.error(WinstonLog.WebsocketClosed, {
+                            streamName: "binance-order-book",
+                        })
+                    }
+                })
+
+                try {
+                    for await (const data of asyncIterator) {
                         try {
                             const parsed = JSON.parse(data.toString()) as OrderBookStream | NullOrderBookStream
-                            if ("result" in parsed && parsed.result === null) return
-                            if ("data" in parsed) {
-                                const streamSymbol = parsed.stream.split("@")[0]
-                                const token = tokens.find(
-                                    token => token.marketListings.find(market => market.id === MarketId.Binance)?.symbol === streamSymbol
-                                )
-                                if (!token) return
-                                // Only take top-of-book (best bid/ask)
-                                const bestBid = parsed.data.bids[0]
-                                const bestAsk = parsed.data.asks[0]
 
-                                if (!bestBid || !bestAsk) return
+                            // Subscription ACK: { result: null, id: 1 }
+                            if ("result" in parsed && parsed.result === null) {
+                                continue
+                            }
 
-                                const orderBook: OrderBook = {
-                                    bidPrice: parseFloat(bestBid[0]),
-                                    bidQty: parseFloat(bestBid[1]),
-                                    askPrice: parseFloat(bestAsk[0]),
-                                    askQty: parseFloat(bestAsk[1]),
-                                }
-                                if (
-                                    !Number.isFinite(orderBook.bidPrice) ||
-                                    !Number.isFinite(orderBook.bidQty) ||
-                                    !Number.isFinite(orderBook.askPrice) ||
-                                    !Number.isFinite(orderBook.askQty)
-                                ) {
-                                    return
-                                }
-                                await this.asyncService.allIgnoreError([
-                                // Cache best bid/ask
-                                    this.cacheManager.set(
-                                        createCacheKey(CacheKey.WsCexOrderBook, {
-                                            cexId: CexId.Binance,
-                                            tokenId: token.displayId,
-                                        }),
-                                        orderBook
-                                    ),
-                                    // Emit event
-                                    this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
+                            if (!("data" in parsed)) {
+                                continue
+                            }
+
+                            const streamSymbol = parsed.stream.split("@")[0]
+                            const token = tokens.find(
+                                token =>
+                                    token.marketListings.find(market => market.id === MarketId.Binance)?.symbol === streamSymbol
+                            )
+                            if (!token) continue
+
+                            const bestBid = parsed.data.bids[0]
+                            const bestAsk = parsed.data.asks[0]
+                            if (!bestBid || !bestAsk) continue
+
+                            const orderBook: OrderBook = {
+                                bidPrice: parseFloat(bestBid[0]),
+                                bidQty: parseFloat(bestBid[1]),
+                                askPrice: parseFloat(bestAsk[0]),
+                                askQty: parseFloat(bestAsk[1]),
+                            }
+
+                            if (
+                                !Number.isFinite(orderBook.bidPrice) ||
+                                !Number.isFinite(orderBook.bidQty) ||
+                                !Number.isFinite(orderBook.askPrice) ||
+                                !Number.isFinite(orderBook.askQty)
+                            ) {
+                                continue
+                            }
+
+                            resetTimeout()
+
+                            await this.asyncService.allIgnoreError([
+                                this.cacheManager.set(
+                                    createCacheKey(CacheKey.WsCexOrderBook, {
                                         cexId: CexId.Binance,
                                         tokenId: token.displayId,
-                                        ...orderBook,
-                                    })
-                                ])
-                            }
+                                    }),
+                                    orderBook,
+                                ),
+                                this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
+                                    cexId: CexId.Binance,
+                                    tokenId: token.displayId,
+                                    ...orderBook,
+                                })
+                            ])
                         } catch (error) {
                             this.logger.error(WinstonLog.WebsocketMessageError, {
                                 error: error.message,
+                                streamName: "binance-order-book",
                             })
                         }
-                    })
-                    // error event → close WS
-                    ws.on("error", (err) => {
-                        ws.close()
-                        reject(new WsConnectionErrorException(err.message))
-                    })
-                    // close event → signal retryWs reconnect
-                    ws.on("close", () => {
-                        reject(new WsConnectionClosedException("WS closed"))
-                    })
-                })
-                return await promise
-            },
-            onReconnect: async (error) => {
-                this.logger.warn(
-                    WinstonLog.WebsocketReconnect, 
-                    {
-                        reason: error?.message,
-                        streamName: "binance-order-book",
-                    })
-            },
-            onFatal: async () => {
-                this.logger.error(WinstonLog.WebsocketFatalError, {
-                    error: "WS connection failed",
-                    streamName: "binance-order-book",
-                })
-            },
-            options: {
-                baseDelay: envConfig().timeConfig.retry.delay,
-                factor: envConfig().timeConfig.retry.factor,
-                maxDelay: envConfig().timeConfig.retry.maxDelay,
-                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                jitter: true,
-            },
-            throwOnFatal: false,
+                    }
+                } finally {
+                    if (timeout) {
+                        clearTimeout(timeout)
+                    }
+                }
+            }
         })
     }
 }

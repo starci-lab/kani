@@ -78,6 +78,7 @@ export enum WinstonLog {
     WebsocketMessageError = "Websocket.Message.Error",
     WebsocketConnectionError = "Websocket.Connection.Error",
     WebsocketCloseError = "Websocket.Close.Error",
+    WebsocketClosed = "Websocket.Closed",
     WebsocketReconnect = "Websocket.Reconnect",
     WebsocketFatalError = "Websocket.Fatal.Error",
     UsersLoaded = "Users.Loaded",

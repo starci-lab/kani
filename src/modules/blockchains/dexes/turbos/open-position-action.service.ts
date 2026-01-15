@@ -40,7 +40,7 @@ import { EnsureMathService } from "../../math"
 import { toScaledBN } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
-import { MintNftEvent, TurbosClmmPosition, TurbosPositionNFT } from "./struct"
+import { MintNftEvent, TurbosClmmPosition, TurbosPosition } from "./struct"
 import { envConfig } from "@modules/env"
 import { PrivySignService } from "@modules/privy"
         

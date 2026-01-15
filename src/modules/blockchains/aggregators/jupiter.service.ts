@@ -8,7 +8,6 @@ import { RetryService } from "@modules/mixin"
 import { ChainId } from "@typedefs"
 import { address } from "@solana/kit"
 import { MountStorageService } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
 
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 
@@ -86,10 +85,6 @@ export class JupiterService implements IAggregatorService {
                     throw error
                 }
             },
-            // Retry config
-            maxRetries: envConfig().timeConfig.retry.maxRetries,
-            delay: envConfig().timeConfig.retry.delay,
-            factor: envConfig().timeConfig.retry.factor,
         })
     }
 

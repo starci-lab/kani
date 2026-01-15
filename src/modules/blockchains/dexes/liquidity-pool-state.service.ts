@@ -1,11 +1,11 @@
 import { LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
-import { CacheKey, createCacheKey, DynamicDlmmLiquidityPoolInfoCacheResult, DynamicLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
+import { CacheKey, createCacheKey, DynamicDlmmLiquidityPoolInfoCacheResult, DynamicClmmLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
 import { Injectable } from "@nestjs/common"
 import { Cache } from "cache-manager"
 import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
 import { 
     DynamicDlmmLiquidityPoolInfoNotFoundException, 
-    DynamicLiquidityPoolInfoNotFoundException, 
+    DynamicClmmLiquidityPoolInfoNotFoundException, 
     LiquidityPoolNotFoundException 
 } from "@exceptions"
 import { InjectSuperJson } from "@modules/mixin"
@@ -30,12 +30,12 @@ export class LiquidityPoolStateService {
         if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
         const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
             createCacheKey(
-                CacheKey.DynamicLiquidityPoolInfo, 
+                CacheKey.DynamicClmmLiquidityPoolInfo, 
                 liquidityPoolId 
             ))
         const dynamicLiquidityPoolInfo = this.superjson
-            .parse<DynamicLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfoCacheResult as string)
-        if (!dynamicLiquidityPoolInfo) throw new DynamicLiquidityPoolInfoNotFoundException(liquidityPoolId)
+            .parse<DynamicClmmLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfoCacheResult as string)
+        if (!dynamicLiquidityPoolInfo) throw new DynamicClmmLiquidityPoolInfoNotFoundException(liquidityPoolId)
         return {
             static: staticLiquidityPool,
             dynamic: dynamicLiquidityPoolInfo,

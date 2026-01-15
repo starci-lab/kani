@@ -102,10 +102,7 @@ export class CetusAggregatorService implements IAggregatorService {
                             txb: _txb,
                             inputCoin,
                         })
-                    },
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    delay: envConfig().timeConfig.retry.delay,
-                    factor: envConfig().timeConfig.retry.factor,
+                    }
                 })
                 return {
                     outputCoin,

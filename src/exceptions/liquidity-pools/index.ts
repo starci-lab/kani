@@ -34,6 +34,13 @@ export class DynamicDlmmLiquidityPoolInfoNotFoundException extends AbstractExcep
     }
 }
 
+/** Thrown when dynamic CLMM pool info cannot be found */
+export class DynamicClmmLiquidityPoolInfoNotFoundException extends AbstractException {
+    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
+        super(message || `Dynamic clmm liquidity pool info ${liquidityPoolId} not found`, "DYNAMIC_CLMM_LIQUIDITY_POOL_INFO_NOT_FOUND_EXCEPTION", { liquidityPoolId })
+    }
+}
+
 /** Thrown when SUI pool has invalid type */
 export class SuiLiquidityPoolInvalidTypeException extends AbstractException {
     constructor(liquidityPoolId: LiquidityPoolId, message?: string) {

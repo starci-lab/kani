@@ -11,7 +11,7 @@ import {
     PrimaryMemoryStorageService,
     DexId,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
+import { AsyncService, InjectSuperJson, RetryService } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
@@ -41,6 +41,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
+        private readonly retryService: RetryService,
     ) {}
 
     // ============================================
@@ -123,16 +124,24 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
                 (pool) => pool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!liquidityPool) 
+                throw new LiquidityPoolNotFoundException(
+                    `Liquidity pool ${liquidityPoolId} not found`
+                )
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
-                    return await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
-                        commitment: "confirmed",
-                    })
+                    return await fetchEncodedAccount(
+                        rpc, 
+                        address(liquidityPool.poolAddress), {
+                            commitment: "confirmed",
+                        })
                 },
             })
-            if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!accountInfo || !accountInfo.exists) 
+                throw new LiquidityPoolNotFoundException(
+                    `Liquidity pool ${liquidityPoolId} not found`
+                )
             const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
             await this.handlePoolStateUpdate(liquidityPoolId, state)
         } catch (error) {
@@ -153,40 +162,55 @@ export class OrcaObserverService implements OnApplicationBootstrap {
             const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
                 (pool) => pool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!liquidityPool) 
+                throw new LiquidityPoolNotFoundException(
+                    `Liquidity pool ${liquidityPoolId} not found`
+                )
             // infinite loop to ensure the connection is alive
-            while (true) {
-                await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Ws,
-                    callback: async ({ rpcSubscriptions }) => {
-                        await this.asyncService.suppressErrorAfterTimeout(async () => {
-                        const controller = new AbortController()
-                        const accountNotifications = await rpcSubscriptions.accountNotifications(
-                            address(liquidityPool.poolAddress),
-                            {
-                                commitment: "confirmed",
-                                encoding: "base64",
-                            }
-                        ).subscribe({
-                            abortSignal: controller.signal,
-                        })
-                        for await (const accountNotification of accountNotifications) {
-                            const state = Whirlpool.struct.read(Buffer.from(accountNotification.value?.data.toString(), "base64"), 8)
-                            await this.handlePoolStateUpdate(liquidityPoolId, state)
-                        }
-                    },
-                    options: {
-                        // never throw an error, if the rpc is not available, just retry
-                        maxRetries: Infinity,
-                    },
-                })
+            const abortController = new AbortController()
+            let timeout: NodeJS.Timeout | undefined = undefined
+            const resetTimeout = () => {
+                if (timeout) {
+                    clearTimeout(timeout)
+                }
+                timeout = setTimeout(() => abortController.abort(), envConfig().timeConfig.ws.solanaRpcIdleTimeout)
             }
+            await this.retryService.retry({
+                action: async () => {
+                    await this.rpcExecutorService.withSolanaRpc({
+                        accessType: RpcAccessType.Ws,
+                        callback: async ({ rpcSubscriptions }) => {
+                            const controller = new AbortController()
+                            const accountNotifications = await rpcSubscriptions.accountNotifications(
+                                address(liquidityPool.poolAddress),
+                                {
+                                    commitment: "confirmed",
+                                    encoding: "base64",
+                                }
+                            ).subscribe({
+                                abortSignal: controller.signal,
+                            })
+                            for await (const accountNotification of accountNotifications) {
+                                const state = Whirlpool.struct.read(
+                                    Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
+                                )
+                                resetTimeout()
+                                await this.handlePoolStateUpdate(liquidityPoolId, state)
+                            }
+                        },
+                        options: {
+                            retries: Infinity,
+                        },
+                    })
+                }
+            })
         } catch (error) {
             this.winstonLogger.error(
                 WinstonLog.ObserveClmmPoolError, {
                     liquidityPoolId,
                     error: error.message,
-                })
+                }
+            )
         }
     }
 }

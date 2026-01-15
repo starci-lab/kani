@@ -251,7 +251,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 await sendAndConfirmTransaction(
                     solanaTx, {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     }
                 )
                 this.logger.info(

@@ -4,16 +4,14 @@ import {
 } from "@nestjs/common"
 import { BINANCE_WS_URL } from "./constants"
 import { MarketId, PrimaryMemoryStorageService } from "@modules/databases"
-import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
-import WebSocket from "ws"
-import { AsyncService, RetryService } from "@modules/mixin"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { CachePriceUtilsService } from "@modules/cache"
 import { BinanceUtilsService } from "./binance-utils.service"
 import _ from "lodash"
-
+import { AsyncService, RetryService } from "@modules/mixin"
+import { WebSocketStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(
@@ -24,6 +22,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         private readonly logger: WinstonLogger,
         private readonly cachePriceUtilsService: CachePriceUtilsService,
         private readonly asyncService: AsyncService,
+        private readonly wsAsyncIteratorService: WsAsyncIteratorService,
     ) {
     }
 
@@ -36,44 +35,90 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
             return
         }
         const symbols = this.binanceUtilsService.getBinanceSymbols()
-        const batches = _.chunk(symbols, envConfig().chunks.pythPrices.subscriptions)
+        const batches = _.chunk(symbols, envConfig().chunks.binanceLastPrice.subscriptions)
         for (const batch of batches) {
-            this.retryService.retryWs<WebSocket>({
-                // close the websocket
-                closeFnName: "close",
-                // create a new connection
-                createConnection: () => new WebSocket(BINANCE_WS_URL),
-                // on open event
-                onOpen: async (ws, markMessageReceived) => {
-                    const promise = new Promise<void>((_, reject) => {
-                        // open event
-                        ws.on("open", () => {
-                            this.logger.info(
-                                WinstonLog.WebsocketConnected, {
-                                    streamName: "binance-last-price",
+            this.retryService.retry(
+                {
+                    options: {
+                        retries: Infinity,
+                    },
+                    action: async () => {
+                        // create the connection
+                        const connection = new WebSocketStreamConnection(
+                            BINANCE_WS_URL
+                        )
+                        // create the abort controller
+                        const abortController = new AbortController()
+                        // create the timeout
+                        let timeout: NodeJS.Timeout | undefined = undefined
+                        // on
+                        // create the reset timeout function
+                        const resetTimeout = () => {
+                            if (timeout) {
+                                clearTimeout(timeout)
+                            }
+                            timeout = setTimeout(
+                                () => abortController.abort(), 
+                                envConfig().timeConfig.ws.idleTimeout
+                            )
+                        }
+                        // create the async iterator
+                        const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator(
+                            {
+                                connection,
+                                signal: abortController.signal,
+                                onOpen: (
+                                    connection: WebSocketStreamConnection
+                                ) => {
+                                    this.logger.info(
+                                        WinstonLog.WebsocketConnected, {
+                                            streamName: "binance-last-price",
+                                            symbols: batch,
+                                        }
+                                    )
+                                    connection.ws.send(
+                                        JSON.stringify(
+                                            {
+                                                method: "SUBSCRIBE",
+                                                params: batch,
+                                                id: 1,
+                                            }
+                                        ),
+                                    )
+                                },
+                                onError: (error: Error) => {
+                                    this.logger.error(
+                                        WinstonLog.WebsocketCloseError, {
+                                            error: error.message,
+                                            streamName: "binance-last-price",
+                                            symbols: batch,
+                                        }
+                                    )
+                                },
+                                onClose: () => {
+                                    this.logger.error(
+                                        WinstonLog.WebsocketClosed, {
+                                            streamName: "binance-last-price",
+                                            symbols: batch,
+                                        }
+                                    )
                                 }
-                            )
-                            ws.send(
-                                JSON.stringify(
-                                    {
-                                        method: "SUBSCRIBE",
-                                        params: batch,
-                                        id: 1,
-                                    }
-                                ),
-                            )
-                        })
-                        // message event
-                        ws.on("message", async (data: WebSocket.RawData) => {
+                            }
+                        )
+                        // subscribe to the async iterator
+                        for await (const data of asyncIterator) {
                             try {
+                                // parse the data
                                 const parsed = JSON.parse(
                                     data.toString(),
                                 ) as Ticker24hrStream | NullTicker24hrStream
-              
-                                if ("result" in parsed && parsed.result === null) return
-                                if (!("data" in parsed)) return
-
+                                // if the result is null then return
+                                if ("result" in parsed && parsed.result === null) continue
+                                // if the data is not in the parsed data then return
+                                if (!("data" in parsed)) continue
+                                // get the stream symbol
                                 const streamSymbol = parsed.stream.split("@")[0]
+                                // get the token prices
                                 const tokenPrices = this.binanceUtilsService.getBinanceTokenPrices(
                                     [
                                         {
@@ -82,14 +127,11 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                         }
                                     ]
                                 )
-                                // mark message received if there are token prices
-                                if (tokenPrices.length) {
-                                    // mark message received if there are token prices
-                                    markMessageReceived?.()
-                                } else {
-                                    // return if there are no token prices
-                                    return
+                                if (!tokenPrices.length) {
+                                    continue
                                 }
+                                resetTimeout()
+                                // update the token prices
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map(async (tokenPrice) => {
                                         await this.cachePriceUtilsService.updateOracleTokenPrice(
@@ -102,46 +144,20 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     })
                                 )
                             } catch (error) {
+                            // log the error
                                 this.logger.error(
                                     WinstonLog.WebsocketMessageError, {
                                         error: error.message,
+                                        streamName: "binance-last-price",
+                                        symbols: batch,
                                     }
                                 )
                             }
-                        })
-                        // error event throw error and close WS
-                        ws.on("error", (err) => {
-                            ws.close()
-                            reject(new WsConnectionErrorException(err.message))
                         }
-                        )
-                        // close event reject promise and signal retryWs reconnect
-                        ws.on("close", () => {
-                            reject(new WsConnectionClosedException("WS closed"))
-                        }
-                        )
-                    })
-                    return await promise
+                    }
                 },
-                onReconnect: async (error) => {
-                    this.logger.warn(
-                        WinstonLog.WebsocketReconnect, 
-                        {
-                            reason: error?.message,
-                            streamName: "binance-last-price",
-                        })
-                },
-                onFatal: async () => {
-                    this.logger.error(
-                        WinstonLog.WebsocketFatalError, {
-                            error: "WS connection failed",
-                            streamName: "binance-last-price",
-                        }
-                    )
-                },
-                options: {},
-                throwOnFatal: false,
-            })
+                
+            )
         }
     }
 }
@@ -170,14 +186,14 @@ interface Ticker24hrEvent {
     F: number;      // First trade ID
     L: number;      // Last trade ID
     n: number;      // Total number of trades
-  }
-  
-  interface Ticker24hrStream {
+}
+
+interface Ticker24hrStream {
     stream: string;           // Stream name, e.g., "suiusdt@ticker"
     data: Ticker24hrEvent;    // Detailed ticker data
-  }
+}
 
-  interface NullTicker24hrStream {
+interface NullTicker24hrStream {
     result: null
     id: number
-  }
+}

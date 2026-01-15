@@ -8,7 +8,6 @@ import { AccountLimitsConfig, BalanceConfig, ConfigRecord, ConfigSchema } from "
 import { ConfigId } from "../enums"
 import { createObjectId } from "@utils"
 import { AccountLimitsConfigNotFoundException, BalanceConfigNotFoundException, GasConfigNotFoundException } from "@exceptions"
-import { envConfig } from "@modules/env"
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
@@ -58,9 +57,6 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                             .find()
                         this.dexes = dexes.map(dex => dex.toJSON())
                     },
-                    delay: envConfig().timeConfig.retry.delay,
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    factor: envConfig().timeConfig.retry.factor,
                 })
             })(),
             (async () => {
@@ -74,9 +70,6 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         }
                         this.gasConfig = gasConfig.value
                     },
-                    delay: envConfig().timeConfig.retry.delay,
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    factor: envConfig().timeConfig.retry.factor,
                 })
             })(),
             (async () => {
@@ -90,26 +83,21 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         }
                         this.balanceConfig = balanceConfig.value
                     },
-                    delay: envConfig().timeConfig.retry.delay,
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    factor: envConfig().timeConfig.retry.factor,
                 })
             })(),
             (async () => {
-                await this.retryService.retry({
-                    action: async () => {
-                        const accountLimits = await this.connection
-                            .model<ConfigSchema>(ConfigSchema.name)
-                            .findById<ConfigRecord<AccountLimitsConfig>>(createObjectId(ConfigId.AccountLimits))
-                        if (!accountLimits) {
-                            throw new AccountLimitsConfigNotFoundException("Account limits config not found")
-                        }
-                        this.accountLimits = accountLimits.value
-                    },
-                    delay: envConfig().timeConfig.retry.delay,
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    factor: envConfig().timeConfig.retry.factor,
-                })
+                await this.retryService.retry(
+                    {
+                        action: async () => {
+                            const accountLimits = await this.connection
+                                .model<ConfigSchema>(ConfigSchema.name)
+                                .findById<ConfigRecord<AccountLimitsConfig>>(createObjectId(ConfigId.AccountLimits))
+                            if (!accountLimits) {
+                                throw new AccountLimitsConfigNotFoundException("Account limits config not found")
+                            }
+                            this.accountLimits = accountLimits.value
+                        },
+                    })
             })(),
         ])
     }

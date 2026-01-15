@@ -155,7 +155,6 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                 await sendAndConfirmTransaction(
                     solanaTx, {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
                 this.logger.verbose(
                     WinstonLog.ClosePositionExecuted, {

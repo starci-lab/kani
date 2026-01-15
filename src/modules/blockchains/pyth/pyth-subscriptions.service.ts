@@ -5,12 +5,8 @@ import { InjectHermesClient } from "./pyth.decorators"
 import { MarketId } from "@modules/databases"
 import BN from "bn.js"
 import { computeDenomination } from "@utils"
-import { 
-    WsConnectionClosedException,
-    WsConnectionErrorException,
-} from "@exceptions"
 import {
-    AsyncService,  
+    AsyncService,
     RetryService,
 } from "@modules/mixin"
 import { envConfig } from "@modules/env"
@@ -19,6 +15,7 @@ import { Logger as WinstonLogger } from "winston"
 import { PythUtilsService } from "./pyth-utils.service"
 import _ from "lodash"
 import { PythTokenPriceData } from "./types"
+import { EventSourceStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
 
 @Injectable()
 export class PythSubscriptionsService implements OnApplicationBootstrap {
@@ -30,7 +27,8 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly cachePriceUtilsService: CachePriceUtilsService,
-    ) {}
+        private readonly wsAsyncIteratorService: WsAsyncIteratorService,
+    ) { }
 
     onApplicationBootstrap() {
         this.subscribe()
@@ -39,98 +37,97 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
     async subscribe() {
         const feedIds = this.pythUtilsService.getPythIds()
         // seperate into batches of 5
-        const batches = _.chunk(feedIds, envConfig().chunks.pythPrices.subscriptions)
+        const batches = _.chunk(feedIds, envConfig().chunks.pythPrices.rest)
         for (const batch of batches) {
-        // we split the feed ids into chunks of 5
-            this.retryService.retryWs({
-                closeFnName: "close",
-                // create a new connection each time the retry is called
-                createConnection: async () => {
-                    return this.hermesClient.getPriceUpdatesStream(batch)
-                },
-                // register the listener
-                onOpen: async (stream, markMessageReceived) => {
-                    const promise = new Promise<void>((_, reject) => {
-                    // handle the open event
-                        stream.addEventListener("open", () => {
-                            this.logger.info(WinstonLog.WebsocketConnected, { streamName: "pyth-price-updates" })
-                        })
-                        // handle the error - reject to signal retryWs reconnect
-                        stream.addEventListener("error", (err) => {
-                            stream.close()
-                            reject(new WsConnectionErrorException(err.message))
-                        })
-                        // handle the close event - reject to signal retryWs reconnect
-                        stream.addEventListener("close", () => {
-                            reject(new WsConnectionClosedException("WS closed"))
-                        })
-                        stream.addEventListener(
-                            "message",
-                            async (event: MessageEvent<string>) => {
-                                try {
-                                    const update: PriceUpdate = JSON.parse(event.data)
-                                    const priceData = update.parsed?.map<PythTokenPriceData>(data => {
-                                        const price = computeDenomination(
-                                            new BN(data?.ema_price?.price ?? 0), 
-                                            data?.ema_price?.expo ?? 8
-                                        )
-                                        return {
-                                            feedId: data?.id ?? "",
-                                            price: price.toNumber(),
-                                        }
-                                    }) 
-                                    const tokenList = this.pythUtilsService.getPythTokenPrices(priceData ?? [])
-                                    // mark message received if there are token prices
-                                    if (tokenList.length) {
-                                        markMessageReceived?.()
-                                    } else {
-                                        // return if there are no token prices
-                                        return
-                                    }
-                                    // cache the prices and emit the event
-                                    await this.asyncService.allIgnoreError(
-                                        tokenList.map(
-                                            async (data) => {
-                                                await this.cachePriceUtilsService.updateOracleTokenPrice(
-                                                    {
-                                                        tokenId: data.tokenId,
-                                                        price: data.price,
-                                                        marketId: MarketId.Pyth,
-                                                    }
-                                                )
-                                            }
-                                        ),
-                                    )
-                                } catch (error) {
-                                    this.logger.error(
-                                        WinstonLog.PythPricesSubscriptionFailed, {
-                                            error: error.message,
-                                        }
-                                    )
-                                }
-                            }
-                        )
-                    })
-                    return await promise
-                }, 
-                onReconnect: async (error) => {
-                    this.logger.warn(
-                        WinstonLog.WebsocketReconnect, 
-                        {
-                            reason: error?.message,
-                            streamName: "pyth-price-updates",
-                        })
-                },
-                onFatal: async () => {
-                    this.logger.error(
-                        WinstonLog.WebsocketFatalError, {
-                            error: "WS connection failed",
-                            streamName: "pyth-price-updates",
-                        }
+            this.retryService.retry({
+                action: async () => {
+                    // create the connection
+                    const connection = new EventSourceStreamConnection(
+                        await this.hermesClient.getPriceUpdatesStream(batch)
                     )
+                    const abortController = new AbortController()
+                    let timeout: NodeJS.Timeout | undefined = undefined
+                    const resetTimeout = () => {
+                        if (timeout) {
+                            clearTimeout(timeout)
+                        }
+                        timeout = setTimeout(
+                            () => abortController.abort(),
+                            envConfig().timeConfig.ws.idleTimeout,
+                        )
+                    }
+                    const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({
+                        connection,
+                        onOpen: () => {
+                            this.logger.info(
+                                WinstonLog.WebsocketConnected, {
+                                    streamName: "pyth-subscriptions",
+                                    symbols: batch,
+                                })
+                        },
+                        onError: (error) => {
+                            this.logger.error(
+                                WinstonLog.WebsocketCloseError, {
+                                    error: error.message,
+                                    streamName: "pyth-subscriptions",
+                                    symbols: batch,
+                                })
+                        },
+                        onClose: () => {
+                            this.logger.info(
+                                WinstonLog.WebsocketClosed,
+                                {
+                                    streamName: "pyth-subscriptions",
+                                    symbols: batch,
+                                }
+                            )
+                        },
+                    })
+                    for await (const data of asyncIterator) {
+                        try {
+                            const update: PriceUpdate = JSON.parse(data.data)
+                            const priceData = update.parsed?.map<PythTokenPriceData>(data => {
+                                const price = computeDenomination(
+                                    new BN(data?.ema_price?.price ?? 0), 
+                                    data?.ema_price?.expo ?? 8
+                                )
+                                return {
+                                    feedId: data?.id ?? "",
+                                    price: price.toNumber(),
+                                }
+                            }) 
+                            const tokenList = this.pythUtilsService.getPythTokenPrices(priceData ?? [])
+                            // mark message received if there are token prices
+                            if (!tokenList.length) {
+                                continue
+                            }
+                            resetTimeout()
+                            // cache the prices and emit the event
+                            await this.asyncService.allIgnoreError(
+                                tokenList.map(
+                                    async (data) => {
+                                        await this.cachePriceUtilsService.updateOracleTokenPrice(
+                                            {
+                                                tokenId: data.tokenId,
+                                                price: data.price,
+                                                marketId: MarketId.Pyth,
+                                            }
+                                        )
+                                    }
+                                ),
+                            )
+                        } catch (error) {
+                            this.logger.error(
+                                WinstonLog.PythPricesSubscriptionFailed, {
+                                    error: error.message,
+                                    streamName: "pyth-subscriptions",
+                                    symbols: batch,
+                                }
+                            )
+                        
+                        }
+                    }
                 },
-                options: {},
-                throwOnFatal: false,
             })
         }
     }

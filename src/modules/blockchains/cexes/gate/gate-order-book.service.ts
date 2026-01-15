@@ -5,16 +5,15 @@ import {
 import { EventEmitterService, EventName } from "@modules/event"
 import { GATE_WS_URL } from "./constants"
 import { CexId } from "@modules/databases"
-import { WsConnectionClosedException, WsConnectionErrorException } from "@exceptions"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"
-import WebSocket from "ws"
 import { AsyncService, DayjsService, RetryService } from "@modules/mixin"
 import { OrderBook } from "../types"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { GateUtilsService } from "./gate-utils.service"
+import { WebSocketStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
   
 @Injectable()
 export class GateOrderBookService implements OnApplicationBootstrap {
@@ -28,116 +27,112 @@ export class GateOrderBookService implements OnApplicationBootstrap {
       private readonly asyncService: AsyncService,
       @InjectWinston()
       private readonly logger: WinstonLogger,
+      private readonly wsAsyncIteratorService: WsAsyncIteratorService,
     ) {}
   
     onApplicationBootstrap() {
         const symbols = this.gateUtilsService.getGateSymbols()
         if (!symbols.length) return
 
-        this.retryService.retryWs<WebSocket>({
-            closeFnName: "close",
-            // create a new connection
-            createConnection: () => new WebSocket(GATE_WS_URL),
-            // on open event
-            onOpen: async (ws, markMessageReceived) => {
-                const promise = new Promise<void>((_, reject) => {
-                    // open event
-                    ws.on("open", () => {
-                        this.logger.info(
-                            WinstonLog.WebsocketConnected, {
-                                streamName: "gate-order-book",
-                            }
-                        )
-                        ws.send(JSON.stringify({
+        this.retryService.retry({
+            options: {
+                retries: Infinity,
+            },
+            action: async () => {
+                const connection = new WebSocketStreamConnection(GATE_WS_URL)
+                const abortController = new AbortController()
+                let timeout: NodeJS.Timeout | undefined = undefined
+
+                const resetTimeout = () => {
+                    if (timeout) {
+                        clearTimeout(timeout)
+                    }
+                    timeout = setTimeout(
+                        () => abortController.abort(),
+                        envConfig().timeConfig.retry.maxTimeout,
+                    )
+                }
+
+                const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({
+                    connection,
+                    signal: abortController.signal,
+                    onOpen: (connection: WebSocketStreamConnection) => {
+                        this.logger.info(WinstonLog.WebsocketConnected, {
+                            streamName: "gate-order-book",
+                        })
+                        resetTimeout()
+                        connection.ws.send(JSON.stringify({
                             channel: "spot.book_ticker",
                             event: "subscribe",
                             time: this.dayjsService.now().unix(),
                             payload: symbols,
                         }))
-                    })
-                    // message event
-                    ws.on("message", async (data: WebSocket.RawData) => {
-                        markMessageReceived?.()
+                    },
+                    onError: (error: Error) => {
+                        this.logger.error(WinstonLog.WebsocketCloseError, {
+                            error: error.message,
+                            streamName: "gate-order-book",
+                        })
+                    },
+                    onClose: () => {
+                        this.logger.error(WinstonLog.WebsocketClosed, {
+                            streamName: "gate-order-book",
+                        })
+                    }
+                })
+
+                try {
+                    for await (const data of asyncIterator) {
                         try {
                             const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
                             const tokenId = this.gateUtilsService.getGateTokenIdBySymbol(parsed.result.s)
-                            if (!tokenId) return
-                            const bestBidPrice = parseFloat(parsed.result.b)
-                            const bestAskPrice = parseFloat(parsed.result.a)
-                            const bestBidQty = parseFloat(parsed.result.B)
-                            const bestAskQty = parseFloat(parsed.result.A)
-                            // cache the last price and emit the event in parallel
+                            if (!tokenId) continue
+
                             const orderBook: OrderBook = {
-                                bidPrice: bestBidPrice,
-                                bidQty: bestBidQty,
-                                askPrice: bestAskPrice,
-                                askQty: bestAskQty,
+                                bidPrice: parseFloat(parsed.result.b),
+                                bidQty: parseFloat(parsed.result.B),
+                                askPrice: parseFloat(parsed.result.a),
+                                askQty: parseFloat(parsed.result.A),
                             }
+
                             if (
                                 !Number.isFinite(orderBook.bidPrice) ||
                                 !Number.isFinite(orderBook.bidQty) ||
                                 !Number.isFinite(orderBook.askPrice) ||
                                 !Number.isFinite(orderBook.askQty)
                             ) {
-                                return
+                                continue
                             }
+
+                            resetTimeout()
+
                             await this.asyncService.allIgnoreError([
                                 this.cacheManager.set(
                                     createCacheKey(CacheKey.WsCexOrderBook, {
                                         cexId: CexId.Gate,
                                         tokenId,
                                     }),
-                                    orderBook
-                                ),  
-                                this.eventEmitterService.emit(
-                                    EventName.WsCexOrderBookUpdated, {
-                                        cexId: CexId.Gate,
-                                        tokenId,
-                                        ...orderBook,
-                                    })
+                                    orderBook,
+                                ),
+                                this.eventEmitterService.emit(EventName.WsCexOrderBookUpdated, {
+                                    cexId: CexId.Gate,
+                                    tokenId,
+                                    ...orderBook,
+                                })
                             ])
                         } catch (error) {
-                            this.logger.error(
-                                WinstonLog.WebsocketMessageError, {
-                                    error: error.message,
-                                }
-                            )
+                            this.logger.error(WinstonLog.WebsocketMessageError, {
+                                error: error.message,
+                                streamName: "gate-order-book",
+                            })
                         }
-                    })
-                    // error event → close WS
-                    ws.on("error", (err) => {
-                        ws.close()
-                        reject(new WsConnectionErrorException(err.message))
-                    })
-                    // close event → signal retryWs reconnect
-                    ws.on("close", () => {
-                        reject(new WsConnectionClosedException("WS closed"))
-                    })
-                })
-                return await promise
-            },
-            onReconnect: async (error) => {
-                this.logger.warn(
-                    WinstonLog.WebsocketReconnect, 
-                    {
-                        reason: error?.message,
-                        streamName: "gate-order-book",
-                    })
-            },
-            onFatal: async () => {
-                this.logger.error(WinstonLog.WebsocketFatalError, {
-                    error: "WS connection failed",
-                    streamName: "gate-order-book",
-                })
-            },
-            options: {
-                baseDelay: envConfig().timeConfig.retry.delay,
-                factor: envConfig().timeConfig.retry.factor,
-                maxDelay: envConfig().timeConfig.retry.maxDelay,
-                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                jitter: true,
-            },
-            throwOnFatal: false,
+                    }
+                } finally {
+                    if (timeout) {
+                        clearTimeout(timeout)
+                    }
+                }
+            }
         })
     }
 }

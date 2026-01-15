@@ -69,9 +69,6 @@ export class PythRestService implements OnApplicationBootstrap {
                         const prices = await this.retryService.retry(
                             {
                                 action: () => this.hermesClient.getLatestPriceUpdates(chunk),
-                                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                                delay: envConfig().timeConfig.retry.delay,
-                                factor: envConfig().timeConfig.retry.factor,
                             }
                         )
                         return prices.parsed

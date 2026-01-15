@@ -77,6 +77,15 @@
         "tsConfigPath": "apps/kani-observer/tsconfig.app.json"
       }
     },
+    "kani-test": {
+      "type": "application",
+      "root": "apps/kani-test",
+      "entryFile": "main",
+      "sourceRoot": "apps/kani-test/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/kani-test/tsconfig.app.json"
+      }
+    },
     "kani-test-rpc": {
       "type": "application",
       "root": "apps/kani-test-rpc",

@@ -268,7 +268,6 @@ export class SolanaBalanceService implements IBalanceService {
                 await sendAndConfirmTransaction(
                     solanaTx, {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
                 this.logger.verbose(
                     WinstonLog.SwapExecuted, {

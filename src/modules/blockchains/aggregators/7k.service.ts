@@ -64,10 +64,7 @@ export class SevenKAggregatorService implements IAggregatorService {
                             amountOut: new BN(quote.returnAmountWithDecimal),
                             payload: quote,
                         }
-                    },
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    delay: envConfig().timeConfig.retry.delay,
-                    factor: envConfig().timeConfig.retry.factor,
+                    }
                 }
                 )
             },
@@ -121,10 +118,7 @@ export class SevenKAggregatorService implements IAggregatorService {
                             payload: null,
                             txb: tx instanceof BluefinXTx ? Transaction.from(tx.txBytes) : tx,
                         }
-                    },
-                    maxRetries: envConfig().timeConfig.retry.maxRetries,
-                    delay: envConfig().timeConfig.retry.delay,
-                    factor: envConfig().timeConfig.retry.factor,
+                    }
                 })
             },
         })

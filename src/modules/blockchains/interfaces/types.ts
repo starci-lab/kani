@@ -2,9 +2,10 @@ import { Rewarder } from "@mmt-finance/clmm-sdk/dist/types"
 import { ClmmPool } from "@flowx-finance/sdk"
 import { BotSchema, LiquidityPoolId, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
 import BN from "bn.js"
-import { DynamicDlmmLiquidityPoolInfo, DynamicLiquidityPoolInfo } from "../types"
+import { DynamicDlmmLiquidityPoolInfo } from "../types"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { FullySignedTransaction, TransactionWithinSizeLimit, TransactionWithBlockhashLifetime, TransactionMessageBytes, SignaturesMap } from "@solana/kit"
+import { DynamicClmmLiquidityPoolInfoCacheResult } from "@modules/cache"
 
 export interface FetchedPool {
     poolAddress: string
@@ -34,7 +35,7 @@ export interface FetchedPosition {
 // Common types shared between open and close position
 export interface LiquidityPoolState {
     static: LiquidityPoolSchema;
-    dynamic: DynamicLiquidityPoolInfo;
+    dynamic: DynamicClmmLiquidityPoolInfoCacheResult;
 }
 
 export interface DlmmLiquidityPoolState {

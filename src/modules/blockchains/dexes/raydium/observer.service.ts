@@ -11,7 +11,7 @@ import {
     PrimaryMemoryStorageService,
     DexId,
 } from "@modules/databases"
-import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
+import { AsyncService, DayjsService, InjectSuperJson, RetryService } from "@modules/mixin"
 import { LiquidityPoolNotFoundException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
@@ -41,6 +41,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
+        private readonly retryService: RetryService,
     ) { }
 
     // ============================================
@@ -158,33 +159,44 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             // infinite loop to ensure the connection is alive
-            while (true) {
-                await this.rpcExecutorService.withSolanaRpc({
-                    accessType: RpcAccessType.Ws,
-                    callback: async ({ rpcSubscriptions }) => {
-                        const controller = new AbortController()
-                        const accountNotifications = await rpcSubscriptions.accountNotifications(
-                            address(liquidityPool.poolAddress),
-                            {
-                                commitment: "confirmed",
-                                encoding: "base64",
-                            }
-                        ).subscribe({
-                            abortSignal: controller.signal,
-                        })
-                        for await (const accountNotification of accountNotifications) {
-                            const [state] = PoolState.struct.deserialize(
-                                Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
-                            )
-                            await this.handlePoolStateUpdate(liquidityPoolId, state)
-                        }
-                    },
-                    options: {
-                        // never throw an error, if the rpc is not available, just retry
-                        maxRetries: Infinity,
-                    },
-                })
+            const abortController = new AbortController()
+            let timeout: NodeJS.Timeout | undefined = undefined
+            const resetTimeout = () => {
+                if (timeout) {
+                    clearTimeout(timeout)
+                }
+                timeout = setTimeout(() => abortController.abort(), envConfig().timeConfig.ws.solanaRpcIdleTimeout)
             }
+            await this.retryService.retry({
+                action: async () => {
+                    await this.rpcExecutorService.withSolanaRpc({
+                        accessType: RpcAccessType.Ws,
+                        callback: async ({ rpcSubscriptions }) => {
+                            const controller = new AbortController()
+                            const accountNotifications = await rpcSubscriptions.accountNotifications(
+                                address(liquidityPool.poolAddress),
+                                {
+                                    commitment: "confirmed",
+                                    encoding: "base64",
+                                }
+                            ).subscribe({
+                                abortSignal: controller.signal,
+                            })
+                            for await (const accountNotification of accountNotifications) {
+                                const [state] = PoolState.struct.deserialize(
+                                    Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
+                                )
+                                resetTimeout()
+                                await this.handlePoolStateUpdate(liquidityPoolId, state)
+                            }
+                        },
+                        options: {
+                        // never throw an error, if the rpc is not available, just retry
+                            retries: Infinity,
+                        },
+                    })
+                }
+            })
         } catch (error) {
             this.winstonLogger.error(
                 WinstonLog.ObserveClmmPoolError, {

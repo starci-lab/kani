@@ -277,9 +277,18 @@ export const envConfig = () => ({
         },
     },
     chunks: {
+        binanceLastPrice: {
+            subscriptions: parseInt(process.env.CHUNKS_BINANCE_LAST_PRICE_SUBSCRIPTIONS || "5", 10), // 5 chunks
+        },
+        bybitLastPrice: {
+            subscriptions: parseInt(process.env.CHUNKS_BYBIT_LAST_PRICE_SUBSCRIPTIONS || "5", 10), // 5 chunks
+        },
+        gateLastPrice: {
+            subscriptions: parseInt(process.env.CHUNKS_GATE_LAST_PRICE_SUBSCRIPTIONS || "5", 10), // 5 chunks
+        },
         pythPrices: {
-            rest: parseInt(process.env.CHUNKS_PYTH_PRICES_REST || "20", 10), // 20 chunks
-            subscriptions: parseInt(process.env.CHUNKS_PYTH_PRICES_SUBSCRIPTIONS || "20", 10), // 20 chunks
+            rest: parseInt(process.env.CHUNKS_PYTH_PRICES_REST || "5", 10), // 20 chunks
+            subscriptions: parseInt(process.env.CHUNKS_PYTH_PRICES_SUBSCRIPTIONS || "5", 10), // 20 chunks
         },
         coingeckoPrices: {
             rest: parseInt(process.env.CHUNKS_COINGECKO_PRICES_REST || "20", 10), // 20 chunks
@@ -291,10 +300,12 @@ export const envConfig = () => ({
     timeConfig: {
         lease: parseInt(process.env.TIME_CONFIG_LEASE || ms("5m").toString(), 10), // 5 minutes
         retry: {
-            maxRetries: parseInt(process.env.TIME_CONFIG_RETRY_MAX_RETRIES || "3", 10), // 3 retries for each RPC call
+            retries: parseInt(process.env.TIME_CONFIG_RETRY_RETRIES || "3", 10), // 3 retries for each RPC call
             delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || ms("1s").toString(), 10), // 1s delay between retries
-            maxDelay: parseInt(process.env.TIME_CONFIG_RETRY_MAX_DELAY || ms("30s").toString(), 10), // 30s max delay
             factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
+            minTimeout: parseInt(process.env.TIME_CONFIG_RETRY_MIN_TIMEOUT || ms("1s").toString(), 10), // 1s min timeout
+            maxTimeout: parseInt(process.env.TIME_CONFIG_RETRY_MAX_TIMEOUT || ms("30s").toString(), 10), // 30s max timeout
+            randomize: Boolean(process.env.TIME_CONFIG_RETRY_RANDOMIZE) || true, // randomize the timeout
         },
         ws: {
             idleTimeout: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT || ms("10s").toString(), 10), // 10s

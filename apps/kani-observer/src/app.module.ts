@@ -26,6 +26,7 @@ import { DependencyName, TerminusModule } from "@modules/terminus"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { DerivedModule } from "@modules/derived"
+import { WsAsyncIteratorModule } from "@modules/ws-async-iterator"
 
 @Module({
     imports: [
@@ -36,13 +37,15 @@ import { DerivedModule } from "@modules/derived"
         SentryModule.register({
             isGlobal: true,
         }),
-
         WinstonModule.register({
             isGlobal: true,
             appName: "kani-observer",
             level: WinstonLevel.Info,
         }),
         FormulasModule.register({
+            isGlobal: true,
+        }),
+        WsAsyncIteratorModule.register({
             isGlobal: true,
         }),
         EventEmitterModule.forRoot(),
