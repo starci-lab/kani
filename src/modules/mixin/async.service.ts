@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { RetryService } from "./retry.service"
 import { DayjsService } from "./dayjs.service"
 import { envConfig } from "@modules/env"
+import { from, Subject, race, EMPTY, catchError, switchMap, timeout, lastValueFrom } from "rxjs"
 
 @Injectable()
 export class AsyncService {
@@ -46,20 +47,28 @@ export class AsyncService {
         }
     }   
 
-    async suppressErrorAfterTimeout<T>(
-        action: () => Promise<T>,
+    async suppressErrorAfterTimeoutRx<T>(
+        action: (markMessageReceived: () => void) => Promise<T>,
         timeoutMs: number
-    ): Promise<T | null> {
-        const timeAtStart = this.dayjsService.now()
-        try {
-            return await action()
-        } catch (error) {
-            if (this.dayjsService.now().diff(timeAtStart, "millisecond") > timeoutMs) {
-                return null
-            }
-            throw error
-        }
-    }   
+    ): Promise<T | void> {
+        const heartbeat$ = new Subject<void>()
+        
+        const action$ = from(
+            action(() => heartbeat$.next())
+        )
+        return await lastValueFrom(
+            race(
+                action$,
+                heartbeat$.pipe(
+                    timeout({ each: timeoutMs }),
+                    switchMap(() => EMPTY)
+                )
+            )
+                .pipe(
+                    catchError(() => EMPTY)
+                )
+        )
+    }
 
     async executeWithFallbacks<T>({
         action,

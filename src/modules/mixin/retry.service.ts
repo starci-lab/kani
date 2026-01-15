@@ -1,20 +1,21 @@
-import { 
-    WsConnectionAbortedException, 
-    WsConnectionTimeoutException, 
-    WsRetryLimitReachedException 
+import {
+    WsConnectionAbortedException,
+    WsConnectionTimeoutException,
+    WsRetryLimitReachedException
 } from "@exceptions"
 import { Injectable } from "@nestjs/common"
 import { sleep } from "@utils"
 import pRetry from "p-retry"
 import { envConfig } from "@modules/env"
 import Decimal from "decimal.js"
+import { catchError, from, lastValueFrom, race, Subject, switchMap, timeout } from "rxjs"
 
 export interface RetryParams<T> {
-  signal?: AbortSignal;
-  action: () => Promise<T> | T;
-  maxRetries?: number;
-  delay?: number;
-  factor?: number;
+    signal?: AbortSignal;
+    action: () => Promise<T> | T;
+    maxRetries?: number;
+    delay?: number;
+    factor?: number;
 }
 
 @Injectable()
@@ -37,7 +38,7 @@ export class RetryService {
             })
     }
 
-    private retryWsInternal<T>(params: WsRetryParams<T>): Promise<never> { 
+    private retryWsInternal<T>(params: WsRetryParams<T>): Promise<never> {
         const {
             closeFnName = "close",
             createConnection,
@@ -66,49 +67,37 @@ export class RetryService {
                 connection?.[closeFnName]?.()
                 connection = null
             }
-            // create a function to connect to the server
             const connect = async () => {
-                // if the connection is aborted, return
                 if (aborted) return
+
+                const heartbeat$ = new Subject<void>()
+
+                const connect$ = from(
+                    (async () => {
+                        connection = await createConnection()
+
+                        await onOpen(connection, () => {
+                            heartbeat$.next()
+                        })
+
+                        return connection
+                    })()
+                )
+
+                const idleTimeout$ = heartbeat$.pipe(
+                    timeout({ each: envConfig().timeConfig.ws.idleTimeout }),
+                    switchMap(() => {
+                        throw new WsConnectionTimeoutException("WS connection timed out")
+                    })
+                )
+
                 try {
-                    // initialize the timeout
-                    let timeout: NodeJS.Timeout | null = null
-                    // create a function to set a new timeout to reject the promise
-                    const setTimeoutPromise = (reject: (error: Error) => void) => {
-                        timeout = setTimeout(
-                            () =>
-                                reject(
-                                    new WsConnectionTimeoutException("WS connection timed out")
-                                ),
-                            envConfig().timeConfig.ws.idleTimeout
+                    await lastValueFrom(
+                        race(connect$, idleTimeout$).pipe(
+                            catchError(err => {
+                                throw err
+                            })
                         )
-                    }
-                    // create a function to create a promise to reject the timeout
-                    const createRejectTimeoutPromise = () => {
-                        return new Promise<never>((_, reject) => setTimeoutPromise(reject))
-                    }
-                    // wait for the timeout or the connection to be created
-                    await Promise.race(
-                        [
-                            // create a promise to reject the promise if the timeout is reached
-                            createRejectTimeoutPromise(),
-                            // create a promise to create the connection and onOpen the connection
-                            (
-                                async () => {
-                                    connection = await createConnection()
-                                    await onOpen(
-                                        connection, () => {
-                                        // clear the timeout
-                                            if (timeout) {
-                                                clearTimeout(timeout)
-                                            }
-                                            // clear the timeout promise
-                                            setTimeoutPromise(reject)
-                                        }
-                                    )
-                                }
-                            )(),
-                        ]
                     )
                 } catch (err) {
                     await scheduleReconnect(err)
@@ -140,7 +129,7 @@ export class RetryService {
                 // set retries to 0
                 retries = 0
             }
-        
+
             // handle the abort signal
             signal?.addEventListener("abort", async () => {
                 if (aborted) return
@@ -154,7 +143,7 @@ export class RetryService {
             }, {
                 once: true,
             })
-        
+
             // connect to the server
             connect()
         })

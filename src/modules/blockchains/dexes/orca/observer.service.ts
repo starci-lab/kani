@@ -159,6 +159,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Ws,
                     callback: async ({ rpcSubscriptions }) => {
+                        await this.asyncService.suppressErrorAfterTimeout(async () => {
                         const controller = new AbortController()
                         const accountNotifications = await rpcSubscriptions.accountNotifications(
                             address(liquidityPool.poolAddress),
