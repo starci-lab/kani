@@ -5,6 +5,7 @@ import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
 import { CetusOpenPositionActionService } from "./open-position-action.service"
 import { CetusAnalyticsService } from "./analytics.service"
 import { CetusClosePositionActionService } from "./close-position-action.service"
+import { CetusFeesService } from "./fees.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -12,9 +13,7 @@ export class CetusModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            
-        ]
+        const providers: Array<Provider> = []
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -38,6 +37,18 @@ export class CetusModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(CetusAnalyticsService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(CetusFeesService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push()
         }
         return {
             ...dynamicModule,

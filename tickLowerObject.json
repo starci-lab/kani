@@ -1,0 +1,71 @@
+{
+  "data": {
+    "objectId": "0x67a938a37f17db164cbb4e086111486205aa8e39b05fd468a14cf179730531d1",
+    "version": "753498556",
+    "digest": "Z9yUjjWPh9kMoDpKjCx5uEPuKaaenNCZNbMjj2yBhbu",
+    "type": "0x2::dynamic_field::Field<u64, 0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::skip_list::Node<0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick>>",
+    "owner": {
+      "ObjectOwner": "0x7f07284d6d6373a1b32d8f721991c3c17aa2f895abcc34e0d5990a8a99aaf2ae"
+    },
+    "previousTransaction": "7mz1jR7BvaMiXHcSDMFAKcrfndneJmLFjvGsc35Ur25p",
+    "storageRebate": "3199600",
+    "content": {
+      "dataType": "moveObject",
+      "type": "0x2::dynamic_field::Field<u64, 0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::skip_list::Node<0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick>>",
+      "hasPublicTransfer": false,
+      "fields": {
+        "id": {
+          "id": "0x67a938a37f17db164cbb4e086111486205aa8e39b05fd468a14cf179730531d1"
+        },
+        "name": "502836",
+        "value": {
+          "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::skip_list::Node<0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick>",
+          "fields": {
+            "nexts": [
+              {
+                "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+                "fields": {
+                  "is_none": false,
+                  "v": "502856"
+                }
+              }
+            ],
+            "prev": {
+              "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::option_u64::OptionU64",
+              "fields": {
+                "is_none": false,
+                "v": "502826"
+              }
+            },
+            "score": "502836",
+            "value": {
+              "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::tick::Tick",
+              "fields": {
+                "fee_growth_outside_a": "167144806409375916",
+                "fee_growth_outside_b": "58404152144592000380",
+                "index": {
+                  "type": "0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i32::I32",
+                  "fields": {
+                    "bits": 59200
+                  }
+                },
+                "liquidity_gross": "1690639447376",
+                "liquidity_net": {
+                  "type": "0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i128::I128",
+                  "fields": {
+                    "bits": "1690639447376"
+                  }
+                },
+                "points_growth_outside": "840010655612271973090099",
+                "rewards_growth_outside": [
+                  "326900452328961232842"
+                ],
+                "sqrt_price": "355932067783162035534"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

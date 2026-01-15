@@ -1,5 +1,5 @@
 import { parseI32 } from "@utils"
-import { SuiObjectI32, SuiObjectID } from "./types"
+import { SuiObjectI32, SuiObjectID, SuiObjectOptionU64 } from "./types"
 
 /** ========== POOL OBJECT ROOT ========== */
 
@@ -131,14 +131,6 @@ export interface SuiObjectRandom {
     type: string;
     fields: {
         seed: string;
-    };
-}
-
-export interface SuiObjectOptionU64 {
-    type: string;
-    fields: {
-        is_none: boolean;
-        v: string;
     };
 }
 

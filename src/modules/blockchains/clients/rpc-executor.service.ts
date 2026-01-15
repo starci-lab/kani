@@ -177,6 +177,7 @@ export class RpcExecutorService {
                                     if (response !== null) {
                                         return response
                                     }
+                                    console.log(error)
                                     // if the error is a solana error, throw the error
                                     if (isSolanaError(error)) {
                                         const errorType = this.getSolanaRpcErrorType(error)
@@ -190,7 +191,7 @@ export class RpcExecutorService {
                                         }
                                     }
                                     // if the error is not a solana error, throw the error
-                                    throw new AbortError(new SolanaRpcFatalError(error?.message))
+                                    throw new AbortError(new SolanaRpcIgnorableError(error?.message))
                                 },
                                 maxRetries: envConfig().timeConfig.retry.maxRetries,
                                 delay: envConfig().timeConfig.retry.delay,
@@ -269,7 +270,7 @@ export class RpcExecutorService {
                                 return response
                             }
                             if (error === null) {
-                                throw new AbortError(new SuiRpcFatalError("Unknown error"))
+                                throw new AbortError(new SuiRpcIgnorableError("Unknown error"))
                             }
                             const errorType = this.getSuiRpcErrorType(error)
                             switch (errorType) {

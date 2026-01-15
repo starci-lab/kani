@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common"
 //import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
-import { CexesModule, ClientsModule, CoingeckoModule, CoinMarketCapModule, FormulasModule, MathModule, SpotModule } from "@modules/blockchains"
+import { BalanceModule, CexesModule, ClientsModule, CoingeckoModule, CoinMarketCapModule, DexesModule, ExitStrategyEngineModule, FormulasModule, MathModule, SignersModule, SpotModule, TxBuilderModule } from "@modules/blockchains"
 import { EnvModule } from "@modules/env"
 import { FilesystemModule } from "@modules/filesystem"
 import { MixinModule } from "@modules/mixin"
-import { PrimaryMongoDbModule } from "@modules/databases"
+import { DexId, PrimaryMongoDbModule } from "@modules/databases"
 import { PythModule } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { EventModule } from "@modules/event"
@@ -13,6 +13,14 @@ import { WinstonModule, WinstonLevel } from "@modules/winston"
 import { AxiosModule } from "@modules/axios"
 import { RpcTestsService } from "./rpc-tests.service"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
+import { BullModule } from "@modules/bullmq"
+import { LeaseModule } from "@modules/lock"
+import { CryptoModule } from "@modules/crypto"
+import { DerivedModule } from "@modules/derived"
+import { GcpModule } from "@modules/gcp"
+import { PrivyModule } from "@modules/privy"
+import { ApolloClientModule } from "@modules/apollo-client"
+import { FeesTestService } from "./fees-test.service"
 
 @Module({
     imports: [
@@ -48,8 +56,61 @@ import { P2CBalancerModule } from "@modules/p2c-balancer"
         ClientsModule.register({
             isGlobal: true,
         }),
+        GcpModule.register({
+            isGlobal: true,
+        }),
+        CryptoModule.register({
+            isGlobal: true,
+        }),
+        DerivedModule.register({
+            isGlobal: true,
+        }),
+        PrivyModule.register({
+            isGlobal: true,
+        }),
+        AxiosModule.register({
+            isGlobal: true,
+        }),
+        ApolloClientModule.register({
+            isGlobal: true,
+        }),
+        SignersModule.register({
+            isGlobal: true,
+        }),
+        TxBuilderModule.register({
+            isGlobal: true,
+        }),
+        LeaseModule.register({
+            isGlobal: true,
+        }),
+        ExitStrategyEngineModule.register({
+            isGlobal: true,
+        }),
+        BalanceModule.register({
+            isGlobal: true,
+            utilitiesOnly: true,
+        }),
         PythModule.register({
             isGlobal: true,      
+        }),
+        BullModule.forRoot({
+            isGlobal: true,
+        }),
+        DexesModule.register({
+            isGlobal: true,
+            dexIds: [
+                DexId.Cetus,
+                DexId.Turbos,
+                DexId.Momentum,
+                DexId.FlowX,
+                DexId.Raydium,
+                DexId.Orca,
+                DexId.Meteora,
+                DexId.Saros,
+            ],
+            enabled: {
+                fees: true,
+            },
         }),
         CoingeckoModule.register({
             isGlobal: true,
@@ -72,7 +133,8 @@ import { P2CBalancerModule } from "@modules/p2c-balancer"
     ],
     providers: [
         //ComputeSwapAmountsService,
-        RpcTestsService,
+        // RpcTestsService,
+        FeesTestService,
     ],
 })
 export class AppModule {}
