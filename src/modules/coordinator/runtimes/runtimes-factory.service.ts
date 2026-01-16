@@ -1,11 +1,11 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
 import { ContextIdFactory, ModuleRef } from "@nestjs/core"
 import { AsyncService } from "@modules/mixin"
 import { ExecutorsLoaderService } from "../loaders"
 import { ExecutorSchema } from "@modules/databases"
 import { EventName, ExecutorCreatedEvent, ExecutorDeletedEvent } from "@modules/event"
 import { OnEvent } from "@nestjs/event-emitter"
-import { RuntimeRequest, RuntimeRequestService } from "./runtime.request-service"
+import { RuntimeContext, RuntimeContextService } from "./runtime.context-service"
 
 /**
  * Factory service responsible for creating and managing runtime instances for executors.
@@ -15,8 +15,8 @@ import { RuntimeRequest, RuntimeRequestService } from "./runtime.request-service
  * created or detected, this factory creates a new runtime context for it.
  */
 @Injectable()
-export class RuntimesFactoryService implements OnApplicationBootstrap {
-    private readonly runtimes: Map<string, RuntimeRequestService> = new Map()
+export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplicationShutdown {
+    private readonly runtimes: Map<string, RuntimeContextService> = new Map()
     constructor(
         private readonly moduleRef: ModuleRef,
         private readonly asyncService: AsyncService,
@@ -37,6 +37,16 @@ export class RuntimesFactoryService implements OnApplicationBootstrap {
             this.executorsLoaderService.executors.map(async (executor) => {
                 await this.createRuntime(executor)
             }
+            )
+        )
+    }
+
+    async onApplicationShutdown() {
+        this.asyncService.allMustDone(
+            Array.from(this.runtimes.values()).map(
+                async (runtime) => {
+                    await runtime.dispose()
+                }
             )
         )
     }
@@ -82,21 +92,21 @@ export class RuntimesFactoryService implements OnApplicationBootstrap {
                 const contextId = ContextIdFactory.create()
                 // Register a request-scoped context with the executor ID
                 // This allows request-scoped services to access the executor ID
-                this.moduleRef.registerRequestByContextId<RuntimeRequest>(
+                this.moduleRef.registerRequestByContextId<RuntimeContext>(
                     { id: executor.id?.toString() || "" }, 
                     contextId
                 )
                 // Resolve the RuntimeRequestService within the executor's context
                 // This ensures the service is scoped to this specific executor
-                const runtimeRequestService = await this.moduleRef.resolve(
-                    RuntimeRequestService, 
+                const runtimeContextService = await this.moduleRef.resolve(
+                    RuntimeContextService, 
                     contextId
                 )
                 // Initialize the runtime service for this executor
-                await runtimeRequestService.init()
+                await runtimeContextService.initialize()
                 this.runtimes.set(
                     executor.id?.toString() || "", 
-                    runtimeRequestService
+                    runtimeContextService
                 )
             })(),
         ])
@@ -108,7 +118,15 @@ export class RuntimesFactoryService implements OnApplicationBootstrap {
     async handleExecutorDeleted(
         payload: ExecutorDeletedEvent
     ) {
-        await this.runtimes.get(payload.id)?.destroy()
+        const runtime = this.runtimes.get(payload.id)
+        if (!runtime) {
+            return
+        }
+        // dispose & destroy the runtime
+        await runtime.dispose()
+        await runtime.destroy()
+        // delete the runtime from the map
         this.runtimes.delete(payload.id)
     }
+
 }   

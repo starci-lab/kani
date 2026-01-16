@@ -1,14 +1,15 @@
 import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@typedefs"
-import { CexId, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
+import { CexId, ExecutorSchema, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
 import crypto from "crypto"
 import { DynamicClmmLiquidityPoolInfoCacheResult, DynamicDlmmLiquidityPoolInfoCacheResult } from "@modules/cache"
 
 export enum EventName {
-    ExecutorCreated = "executorCreated",
+    CoordinatorExecutorCreated = "coordinatorExecutorCreated",
     ExecutorLoaded = "executorLoaded",
     ReinitializeBalancers = "reinitializeBalancers",
-    ExecutorDeleted = "executorDeleted",
+    CoordinatorExecutorDeleted = "coordinatorExecutorDeleted",
+    CoordinatorExecutorUpdated = "coordinatorExecutorUpdated",
     UserCreated = "userCreated",
     UserDeleted = "userDeleted",
     BotCreated = "botCreated",
@@ -123,9 +124,13 @@ export interface ExecutorLoadedEvent {
 }
 
 export interface ExecutorUpdatedEvent {
-    id: string
+    executor?: ExecutorSchema
 }
 
 export interface ExecutorCreatedEvent {
     id: string
+}
+
+export interface CoordinatorExecutorUpdatedEvent {
+    executor: ExecutorSchema
 }

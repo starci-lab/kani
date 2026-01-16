@@ -169,4 +169,5 @@ export enum WinstonLog {
     ServiceDeleted = "Service.Deleted",
     CleanupDeploymentsError = "Cleanup.Deployments.Error",
     CleanupServicesError = "Cleanup.Services.Error",
+    RuntimeInitializationFailed = "Runtime.Initialization.Failed",
 }

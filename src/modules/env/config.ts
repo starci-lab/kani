@@ -14,6 +14,9 @@ export const envConfig = () => ({
     port: {
         core: Number(process.env.CORE_PORT) || 3010,
     },
+    version: {
+        coordinator: process.env.VERSION_COORDINATOR || "0.0.1",
+    },
     slippage: {
         openPosition: {
             liquidtyAdjustment: parseFloat(

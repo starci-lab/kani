@@ -8,7 +8,7 @@ import { ResumeToken } from "mongodb"
 import { Interval } from "@nestjs/schedule"
 import { ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
 import { EventEmitter2 } from "@nestjs/event-emitter"
-import { EventName } from "@modules/event"
+import { createEventName, EventName } from "@modules/event"
 import { MongoDBChangeStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
 import _ from "lodash"
 import { envConfig } from "@modules/env"
@@ -43,28 +43,65 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
     }
 
     async load(): Promise<void> {
-        // query all executors
-        const executorRaws = await this.connection
+        const model = this.connection
             .model<ExecutorSchema>(ExecutorSchema.name)
-            .find({}, { _id: 1 })
+        // query all executors (include fields used for update detection)
+        const executorRaws = await model
+            .find({}, { _id: 1, version: 1 })
             .lean()
             .exec()
         // map the executors to a partial executor schema
         const newExecutors: Array<Partial<ExecutorSchema>> =
-          executorRaws?.map(executor => ({ id: executor._id.toString() })) ?? []
+          executorRaws?.map(executor => ({
+              id: executor._id.toString(),
+              // used for update detection
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              version: (executor as any).version,
+          })) ?? []
         // get the old and new executor ids
-        const oldExecutorIds = this.executors.map(e => e.id)
-        const newExecutorIds = newExecutors.map(e => e.id)     
+        const oldExecutorIds = this.executors.map(e => e.id).filter(Boolean) as Array<string>
+        const newExecutorIds = newExecutors.map(e => e.id).filter(Boolean) as Array<string>
         // get the added and removed executor ids
         const addedExecutorIds = _.difference(newExecutorIds, oldExecutorIds)
         const removedExecutorIds = _.difference(oldExecutorIds, newExecutorIds)  
+        // detect updated executors by comparing snapshots (excluding created/deleted)
+        const oldById = _.keyBy(this.executors, "id")
+        const updatedExecutorIds = newExecutors
+            .map((executor) => {
+                const id = executor.id
+                if (!id) return null
+                if (addedExecutorIds.includes(id) || removedExecutorIds.includes(id)) return null
+                const old = oldById[id]
+                if (!old) return null
+                // Compare only the fields we fetched for update detection.
+                const oldSnapshot = _.pick(old, ["version"])
+                const newSnapshot = _.pick(executor, ["version"])
+                return _.isEqual(oldSnapshot, newSnapshot) ? null : id
+            })
+            .filter(Boolean) as Array<string>
         // emit events
         for (const id of addedExecutorIds) {
-            this.eventEmitter2.emit(EventName.ExecutorCreated, { id })
+            this.eventEmitter2.emit(EventName.CoordinatorExecutorCreated, { id })
         }
         // emit events for removed executors
         for (const id of removedExecutorIds) {
-            this.eventEmitter2.emit(EventName.ExecutorDeleted, { id })
+            this.eventEmitter2.emit(EventName.CoordinatorExecutorDeleted, { id })
+        }
+        // emit events for updated executors (load full document for consumers)
+        if (updatedExecutorIds.length > 0) {
+            const updatedRaws = await model
+                .find(
+                    { _id: { $in: updatedExecutorIds.map((id) => new Types.ObjectId(id)) } },
+                )
+                .lean()
+                .exec()
+            for (const raw of updatedRaws) {
+                const data = model.hydrate(raw).toJSON() as ExecutorSchema
+                this.eventEmitter2.emit(
+                    createEventName(EventName.CoordinatorExecutorUpdated, { id: data.id }),
+                    { executor: data },
+                )
+            }
         }
         // update the executors
         this.executors = newExecutors
@@ -98,7 +135,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     pipeline: [
                         {
                             $match: {
-                                operationType: { $in: ["insert", "delete"] },
+                                operationType: { $in: ["insert", "delete", "update"] },
                             },
                         },
                     ],
@@ -146,14 +183,23 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                         this.executors.push({
                             id: data.id,
                         })
-                        this.eventEmitter2.emit(EventName.ExecutorCreated, { id: data.id })
+                        this.eventEmitter2.emit(EventName.CoordinatorExecutorCreated, { id: data.id })
                         break
                     } 
                     case "delete": {
                         const id = (change.documentKey._id as Types.ObjectId).toString()
                         const idx = this.executors.findIndex((executorId) => executorId === id)
                         if (idx >= 0) this.executors.splice(idx, 1)
-                        this.eventEmitter2.emit(EventName.ExecutorDeleted, { id })
+                        this.eventEmitter2.emit(EventName.CoordinatorExecutorDeleted, { id })
+                        break
+                    }
+                    case "update": {
+                        const data = model.hydrate(change.fullDocument).toJSON() as ExecutorSchema
+                        if (this.executors.find((executor) => executor.id === data.id)) break
+                        this.executors.push({
+                            id: data.id,
+                        })
+                        this.eventEmitter2.emit(createEventName(EventName.CoordinatorExecutorUpdated, { id: data.id }), { executor: data })
                         break
                     }
                     }
