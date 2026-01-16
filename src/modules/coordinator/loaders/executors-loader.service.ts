@@ -20,9 +20,9 @@ import { Sema } from "async-sema"
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
     // mutex for loading executors
-    private sema: Sema
+    private sema!: Sema
     // executors
-    public executors: Array<Partial<ExecutorSchema>> = []
+    public executors: Map<string, Partial<ExecutorSchema>> = new Map()
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -70,19 +70,18 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             version: executor.version,
                         })) ?? []
             // get the old and new executor ids
-            const oldExecutorIds = this.executors.map(executor => executor.id).filter(Boolean) as Array<string>
+            const oldExecutorIds = Array.from(this.executors.keys())
             const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
             // get the added and removed executor ids
             const createdExecutorIds = _.difference(newExecutorIds, oldExecutorIds)
             const deletedExecutorIds = _.difference(oldExecutorIds, newExecutorIds)
             // detect updated executors by comparing snapshots (excluding created/deleted)
-            const oldById = _.keyBy(this.executors, "id")
             const updatedExecutorIds = newExecutors
                 .map((executor) => {
                     const id = executor.id
                     if (!id) return null
                     if (createdExecutorIds.includes(id) || deletedExecutorIds.includes(id)) return null
-                    const old = oldById[id]
+                    const old = this.executors.get(id)
                     if (!old) return null
                     // Compare only the fields we fetched for update detection.
                     const oldSnapshot = _.pick(old, ["version"])
@@ -138,8 +137,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     )
                 }
             }
-            // update the executors list
-            this.executors = newExecutors
+            // update the executors map snapshot
+            this.executors = new Map(
+                newExecutors
+                    .filter((e): e is Partial<ExecutorSchema> & { id: string } => Boolean(e.id))
+                    .map((e) => [e.id!, e]),
+            )
         } finally {
             this.sema.release()
         }
@@ -231,9 +234,10 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id: data.id,
                                     }
                                 )
-                                if (this.executors.find((executor) => executor.id === data.id)) break
-                                this.executors.push({
+                                if (this.executors.has(data.id)) break
+                                this.executors.set(data.id, {
                                     id: data.id,
+                                    version: data.version,
                                 })
                                 this.eventEmitter2.emit(EventName.CoordinatorExecutorCreated, { id: data.id })
                                 break
@@ -245,8 +249,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id,
                                     }
                                 )
-                                const idx = this.executors.findIndex((executor) => executor.id === id)
-                                if (idx >= 0) this.executors.splice(idx, 1)
+                                this.executors.delete(id)
                                 this.eventEmitter2.emit(EventName.CoordinatorExecutorDeleted, { id })
                                 break
                             }
@@ -257,23 +260,13 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id: data.id,
                                     }
                                 )
-                                const idx = this.executors.findIndex((executor) => executor.id === data.id)
-                                if (idx >= 0) {
-                                    // keep local snapshot fresh for update detection in `load()`
-                                    this.executors[idx] = {
-                                        ...this.executors[idx],
-                                        id: data.id,
-                                        version: data.version,
-                                    }
-                                } else {
-                                    // If we somehow missed the insert, treat it as created locally.
-                                    this.executors.push(
-                                        {
-                                            id: data.id,
-                                            version: data.version,
-                                        }
-                                    )
-                                }
+                                // keep local snapshot fresh for update detection in `load()`
+                                const prev = this.executors.get(data.id) ?? { id: data.id }
+                                this.executors.set(data.id, {
+                                    ...prev,
+                                    id: data.id,
+                                    version: data.version,
+                                })
                                 const event: CoordinatorExecutorUpdatedEvent = { executor: data }
                                 this.eventEmitter2.emit(
                                     createEventName(EventName.CoordinatorExecutorUpdated, { id: data.id }),
