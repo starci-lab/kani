@@ -11,8 +11,12 @@ import { ClmmUtilsService } from "./clmm-utils.service"
  *
  * - feeGrowthInside is computed with u128 wrapping arithmetic
  * - feeEarned is computed from:
- *    deltaGrowth = (growthInsideNow - growthInsideLast) mod 2^128
- *    feeDelta = (liquidity × deltaGrowth) / 2^64
+ *    deltaGrowth = (growthInsideNow - growthInsideLast) mod insideDeltaWrapModulus
+ *    feeDelta = (liquidity × deltaGrowth) / resultDiv
+ *
+ * Defaults:
+ *  - insideDeltaWrapModulus = Q128 (u128 wrapping)
+ *  - resultDiv = Q64 (Q64 fixed-point; >> 64)
  */
 @Injectable()
 export class ClmmFeesFormulaService {
@@ -79,9 +83,13 @@ export class ClmmFeesFormulaService {
     /**
      * Compute fee earned since last position checkpoint.
      *
-     * On-chain:
-     *  deltaGrowth = (growthInsideNow - growthInsideLast) mod 2^128
-     *  feeDelta = (liquidity × deltaGrowth) / 2^64
+     * Generalized fixed-point formula:
+     *  - deltaGrowth = (feeGrowthInside - feeGrowthInsideLast) mod insideDeltaWrapModulus
+     *  - feeDelta = (liquidity × deltaGrowth) / resultDiv
+     *
+     * Notes:
+     *  - `insideDeltaWrapModulus` controls wrapping (typically Q128 for u128).
+     *  - `resultDiv` controls fixed-point scaling (commonly Q64 for Q64.64 growth values).
      */
     public computeFeeEarned(
         {

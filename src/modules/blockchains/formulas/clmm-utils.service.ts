@@ -5,9 +5,10 @@ import BN from "bn.js"
 /**
  * CLMM Utility Service
  *
- * Common low-level helpers used across CLMM math:
- *  - wrapping arithmetic
- *  - fixed-point overflow handling
+ * Common low-level helpers used across CLMM math.
+ *
+ * Currently provides:
+ *  - wrapping arithmetic (unsigned overflow semantics)
  *
  * This service is designed to mirror on-chain `u128::wrapping_sub`
  * behavior used in CLMM protocols (Uniswap V3-style).

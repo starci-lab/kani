@@ -5,12 +5,15 @@ import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
 /**
  * CLMM Tick / Price formula service
  *
- * This service wraps Cetus TickMath utilities and provides:
+ * This service wraps a TickMath implementation and provides:
  *  - tick -> sqrtPriceX64
  *  - sqrtPriceX64 -> spot price
  *  - tick -> spot price
  *
- * The math model follows Uniswap V3 / Orca / Cetus CLMM design.
+ * The math model follows Uniswap V3-style CLMM design.
+ *
+ * Implementation note:
+ *  - Current TickMath backend is imported from `@cetusprotocol/cetus-sui-clmm-sdk`
  */
 @Injectable()
 export class ClmmTickFormulaService {
@@ -27,7 +30,7 @@ export class ClmmTickFormulaService {
      *  - price = (sqrtPriceX64 / 2^64)^2
      *
      * Note:
-     *  - We rely on Cetus TickMath implementation for correctness
+     *  - We rely on the imported TickMath implementation for correctness
      *  - This is equivalent to Uniswap V3 tick -> sqrtPrice logic
      */
     public tickToSqrtPriceX64(
@@ -35,7 +38,7 @@ export class ClmmTickFormulaService {
             tickIndex,
         }: TickToSqrtPriceX64Params
     ): BN {
-        // Use Cetus high-precision formula to compute sqrtPriceX64
+        // Use TickMath implementation to compute sqrtPriceX64
         return TickMath.tickIndexToSqrtPriceX64(tickIndex.toNumber())
     }
 

@@ -4,8 +4,7 @@ import Decimal from "decimal.js"
 /**
  * DLMM Bin Formula Service
  *
- * This service implements price calculation for DLMM-style AMMs
- * (e.g. Meteora DLMM on Solana).
+ * This service implements price calculation for DLMM-style AMMs.
  *
  * DLMM does NOT use ticks like CLMM.
  * Instead, price is discretized into bins indexed by `activeId`.

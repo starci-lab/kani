@@ -8,9 +8,13 @@ import { ClmmUtilsService } from "./clmm-utils.service"
  *
  * Implements Uniswap V3-style “reward/points growth” math for positions.
  *
- * Core formula:
- *   deltaGrowth = (growthInsideNow - growthInsideLast) mod 2^128
- *   rewardDelta = (liquidity × deltaGrowth) / 2^64
+ * Core formula (generalized):
+ *   deltaGrowth = (growthInsideNow - growthInsideLast) mod insideDeltaWrapModulus
+ *   rewardDelta = (liquidity × deltaGrowth) / resultDiv
+ *
+ * Defaults:
+ *  - insideDeltaWrapModulus = Q128 (u128 wrapping)
+ *  - resultDiv = Q64 (Q64 fixed-point; >> 64)
  */
 @Injectable()
 export class ClmmRewardsFormulaService {
@@ -81,8 +85,8 @@ export class ClmmRewardsFormulaService {
     /**
      * Compute reward earned since last checkpoint
      *
-     * On-chain formula:
-     *   deltaGrowth = (growthInside - growthInsideLast) mod 2^128
+     * Generalized fixed-point formula:
+     *   deltaGrowth = (rewardGrowthInside - rewardGrowthInsideLast) mod insideDeltaWrapModulus
      *   rewardDelta = (liquidity × deltaGrowth) / resultDiv
      */
     public computeRewardEarned(
@@ -95,14 +99,14 @@ export class ClmmRewardsFormulaService {
         }: ComputeRewardEarnedParams
     ): BN {
 
-        // wrapping delta growth (u128)
+        // wrapping delta growth (typically u128)
         const deltaGrowth = this.clmmUtilsService.wrapSub(
             rewardGrowthInside,
             rewardGrowthInsideLast,
             insideDeltaWrapModulus,
         )
 
-        // liquidity * deltaGrowth / 2^64
+        // liquidity * deltaGrowth / resultDiv
         return liquidity.mul(deltaGrowth).div(resultDiv)
     }
 
