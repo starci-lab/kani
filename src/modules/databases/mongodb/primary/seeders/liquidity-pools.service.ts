@@ -6,6 +6,7 @@ import { createObjectId } from "@utils"
 import { Seeder } from "./seeder.interface"
 import { Connection } from "mongoose"
 import { Injectable } from "@nestjs/common"
+import ms from "ms"
 
 @Injectable()
 export class LiquidityPoolsService implements Seeder {
@@ -197,6 +198,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             ]
         },
         url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
+        wsIdleTimeoutMs: ms("1 minute")
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdt001),
@@ -211,6 +213,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tickSpacing: 1,
         tickMultiplier: 200,
         url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
+        wsIdleTimeoutMs: ms("1 minute")
     },
     {
         _id: createObjectId(LiquidityPoolId.OrcaSolUsdc004),
@@ -230,6 +233,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tokenVault1: "2WLWEuKDgkDUccTpbwYp1GToYktiSB1cXvreHUwiSUVP",
         },
         url: "https://www.orca.so/pools/Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+        wsIdleTimeoutMs: ms("2 minute")
     },
     {
         _id: createObjectId(LiquidityPoolId.MeteoraSolUsdcBinStep4),
@@ -249,5 +253,6 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             reserveYAddress: "CoaxzEh8p5YyGLcj36Eo3cUThVJxeKCs7qvLAGDYwBcz",
         },
         url: "https://www.meteora.ag/dlmm/5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6?referrer=home",
+        wsIdleTimeoutMs: ms("1 minute")
     },
 ]

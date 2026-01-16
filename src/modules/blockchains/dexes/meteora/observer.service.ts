@@ -9,7 +9,7 @@ import {
     DexId,
 } from "@modules/databases"
 import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
-import { LiquidityPoolNotFoundException } from "@exceptions"
+import { LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { DlmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
@@ -169,6 +169,12 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
             )
             if (!liquidityPool)
                 throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!liquidityPool.wsIdleTimeoutMs) {
+                throw new LiquidityPoolNoWsIdleTimeoutException(
+                    liquidityPoolId,
+                    "Liquidity pool has no WS idle timeout"
+                )
+            }
             // infinite loop to observe the pool
             const abortController = new AbortController()
             let timeout: NodeJS.Timeout | undefined = undefined
@@ -177,7 +183,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                     clearTimeout(timeout)
                 }
                 timeout = setTimeout(() => abortController.abort(),
-                    envConfig().timeConfig.ws.solanaRpcIdleTimeout
+                    liquidityPool.wsIdleTimeoutMs
                 )
             }
             await this.retryService.retry({

@@ -59,7 +59,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                             }
                             timeout = setTimeout(
                                 () => abortController.abort(), 
-                                envConfig().timeConfig.ws.idleTimeout
+                                envConfig().timeConfig.ws.idleTimeout.binance.lastPrice,
                             )
                         }
                         // create the async iterator

@@ -308,8 +308,20 @@ export const envConfig = () => ({
             randomize: Boolean(process.env.TIME_CONFIG_RETRY_RANDOMIZE) || true, // randomize the timeout
         },
         ws: {
-            idleTimeout: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT || ms("10s").toString(), 10), // 10s
-            solanaRpcIdleTimeout: parseInt(process.env.TIME_CONFIG_SOLANA_RPC_IDLE_TIMEOUT || ms("1m").toString(), 10), // 1 minute
+            idleTimeout: {
+                binance: {
+                    lastPrice: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT_BINANCE_LAST_PRICE || ms("10s").toString(), 10), // 10s
+                },
+                bybit: {
+                    lastPrice: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT_BYBIT_LAST_PRICE || ms("10s").toString(), 10), // 10s
+                },
+                gate: {
+                    lastPrice: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT_GATE_LAST_PRICE || ms("10s").toString(), 10), // 10s
+                },
+                pyth: {
+                    subscriptions: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT_PYTH_SUBSCRIPTIONS || ms("10s").toString(), 10), // 10s
+                },
+            }
         },
         lockCooldown: {
             openPosition: parseInt(process.env.LOCK_COOLDOWN_OPEN_POSITION || ms("10s").toString(), 10), // 10s

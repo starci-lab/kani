@@ -45,7 +45,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout,
+                            envConfig().timeConfig.ws.idleTimeout.gate.lastPrice,
                         )
                     }
                     const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({

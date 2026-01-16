@@ -47,7 +47,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout
+                            envConfig().timeConfig.ws.idleTimeout.bybit.lastPrice,
                         )
                     }
 

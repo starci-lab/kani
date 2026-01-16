@@ -53,7 +53,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout,
+                            envConfig().timeConfig.ws.idleTimeout.pyth.subscriptions,
                         )
                     }
                     const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({

@@ -12,7 +12,7 @@ import {
     DexId,
 } from "@modules/databases"
 import { AsyncService, DayjsService, InjectSuperJson, RetryService } from "@modules/mixin"
-import { LiquidityPoolNotFoundException } from "@exceptions"
+import { LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException } from "@exceptions"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as winstonLogger } from "winston"
 import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
@@ -158,6 +158,12 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
             if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!liquidityPool.wsIdleTimeoutMs) {
+                throw new LiquidityPoolNoWsIdleTimeoutException(
+                    liquidityPoolId,
+                    "Liquidity pool has no WS idle timeout"
+                )
+            }
             // infinite loop to ensure the connection is alive
             const abortController = new AbortController()
             let timeout: NodeJS.Timeout | undefined = undefined
@@ -165,7 +171,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 if (timeout) {
                     clearTimeout(timeout)
                 }
-                timeout = setTimeout(() => abortController.abort(), envConfig().timeConfig.ws.solanaRpcIdleTimeout)
+                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
             }
             await this.retryService.retry({
                 action: async () => {

@@ -6,7 +6,7 @@
 import { AbstractException } from "../abstract"
 import { LiquidityPoolId } from "@modules/databases"
 
-/** Thrown when liquidity pool cannot be found */
+/** Thrown when liquidity po    l cannot be found */
 export class LiquidityPoolNotFoundException extends AbstractException {
     constructor(message?: string) {
         super(message || "Liquidity pool not found", "LIQUIDITY_POOL_NOT_FOUND_EXCEPTION")
@@ -80,5 +80,12 @@ export class SomeLiquidityPoolsNotFoundException extends AbstractException {
 export class OnlyTwoTokenIdsAllowedException extends AbstractException {
     constructor(message?: string) {
         super(message || "Only 2 token ids are allowed", "ONLY_TWO_TOKEN_IDS_ALLOWED_EXCEPTION")
+    }
+}
+
+/** Thrown when liquidity pool has no WS idle timeout */
+export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
+    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
+        super(message || `Liquidity pool ${liquidityPoolId} has no WS idle timeout`, "LIQUIDITY_POOL_NO_WS_IDLE_TIMEOUT_EXCEPTION", { liquidityPoolId })
     }
 }
