@@ -227,7 +227,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             case "insert": {
                                 const data = model.hydrate(change.fullDocument).toJSON() as ExecutorSchema
                                 this.logger.verbose(
-                                    WinstonLog.CoordinatorExecutorChangeStreamCreated, {
+                                    WinstonLog.CoordinatorChangeStreamExecutorCreated, {
                                         id: data.id,
                                     }
                                 )
@@ -241,7 +241,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             case "delete": {
                                 const id = (change.documentKey._id as Types.ObjectId).toString()
                                 this.logger.verbose(
-                                    WinstonLog.CoordinatorExecutorChangeStreamDeleted, {
+                                    WinstonLog.CoordinatorChangeStreamExecutorDeleted, {
                                         id,
                                     }
                                 )
@@ -253,7 +253,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             case "update": {
                                 const data = model.hydrate(change.fullDocument).toJSON() as ExecutorSchema
                                 this.logger.verbose(
-                                    WinstonLog.CoordinatorExecutorChangeStreamUpdated, {
+                                    WinstonLog.CoordinatorChangeStreamExecutorUpdated, {
                                         id: data.id,
                                     }
                                 )
