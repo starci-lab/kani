@@ -4,10 +4,9 @@ import { Q128, Q64 } from "@utils"
 import { ClmmUtilsService } from "./clmm-utils.service"
 
 /**
- * Cetus CLMM Reward Formula Service
+ * CLMM Reward Formula Service
  *
- * Implements on-chain reward math exactly as in
- * `update_rewards_internal` (Move).
+ * Implements Uniswap V3-style “reward/points growth” math for positions.
  *
  * Core formula:
  *   deltaGrowth = (growthInsideNow - growthInsideLast) mod 2^128
@@ -34,7 +33,7 @@ export class ClmmRewardsFormulaService {
      *   inside = global - outsideLower - outsideUpper
      *
      * Wrapping:
-     *  - Cetus uses wrapping u128 arithmetic
+     *  - Many CLMM implementations use wrapping u128 arithmetic
      */
     public computeRewardGrowthInside(
         {
@@ -85,10 +84,6 @@ export class ClmmRewardsFormulaService {
      * On-chain formula:
      *   deltaGrowth = (growthInside - growthInsideLast) mod 2^128
      *   rewardDelta = (liquidity × deltaGrowth) / resultDiv
-     *
-     * For Cetus:
-     *   insideDeltaWrapModulus = Q128
-     *   resultDiv = Q64
      */
     public computeRewardEarned(
         {
@@ -195,7 +190,7 @@ export interface ComputeRewardEarnedParams {
 
     /**
      * Divisor for final reward calculation
-     * Cetus uses Q64 (>> 64)
+     * Commonly Q64 (>> 64)
      */
     resultDiv?: typeof Q64 | typeof Q128
 }

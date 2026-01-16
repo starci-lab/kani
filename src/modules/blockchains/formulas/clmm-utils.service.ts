@@ -10,7 +10,7 @@ import BN from "bn.js"
  *  - fixed-point overflow handling
  *
  * This service is designed to mirror on-chain `u128::wrapping_sub`
- * behavior used in CLMM protocols (Uniswap V3, Orca, Cetus).
+ * behavior used in CLMM protocols (Uniswap V3-style).
  */
 @Injectable()
 export class ClmmUtilsService {
@@ -25,9 +25,7 @@ export class ClmmUtilsService {
      *
      * Typical usage:
      *  - Fee growth math (wrapModulus = Q128 or Q64)
-     *
-     * DO NOT use for:
-     *  - Reward growth (usually no wrapping)
+     *  - Reward/points growth math when the underlying on-chain type uses wrapping arithmetic
      *
      * @param a - Minuend
      * @param b - Subtrahend

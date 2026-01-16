@@ -5,9 +5,9 @@ import { Q128, Q64 } from "@utils"
 import { ClmmUtilsService } from "./clmm-utils.service"
 
 /**
- * Cetus / UniswapV3-style CLMM Fee Formula Service
+ * CLMM Fee Formula Service
  *
- * Mirrors on-chain fee math for positions:
+ * Implements Uniswap V3-style fee math for concentrated liquidity positions:
  *
  * - feeGrowthInside is computed with u128 wrapping arithmetic
  * - feeEarned is computed from:
@@ -31,7 +31,7 @@ export class ClmmFeesFormulaService {
      *  else:
      *    inside = global - outsideLower - outsideUpper
      *
-     * Cetus uses wrapping u128 arithmetic for these deltas.
+     * Many CLMM implementations use wrapping u128 arithmetic for these deltas.
      */
     public computeFeeGrowthInside(
         {
