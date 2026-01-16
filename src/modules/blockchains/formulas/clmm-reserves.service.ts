@@ -23,7 +23,7 @@ import { ClmmUtilsService } from "./clmm-utils.service"
  *  - priceDiv = Q64 (Q64 fixed-point; >> 64)
  */
 @Injectable()
-export class ClmmReservesService {
+export class ClmmReservesFormulaService {
     constructor(
         private readonly clmmUtilsService: ClmmUtilsService,
     ) {}
