@@ -52,15 +52,15 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             .exec()
         // map the executors to a partial executor schema
         const newExecutors: Array<Partial<ExecutorSchema>> =
-          executorRaws?.map(executor => ({
-              id: executor._id.toString(),
-              // used for update detection
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              version: (executor as any).version,
-          })) ?? []
+          executorRaws?.map(
+              executor => ({
+                  id: executor._id.toString(),
+                  // used for update detection
+                  version: executor.version,
+              })) ?? []
         // get the old and new executor ids
-        const oldExecutorIds = this.executors.map(e => e.id).filter(Boolean) as Array<string>
-        const newExecutorIds = newExecutors.map(e => e.id).filter(Boolean) as Array<string>
+        const oldExecutorIds = this.executors.map(executor => executor.id).filter(Boolean) as Array<string>
+        const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
         // get the added and removed executor ids
         const addedExecutorIds = _.difference(newExecutorIds, oldExecutorIds)
         const removedExecutorIds = _.difference(oldExecutorIds, newExecutorIds)  
