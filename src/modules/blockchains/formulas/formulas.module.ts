@@ -5,12 +5,14 @@ import { DlmmBinFormulaService } from "./dlmm-bin.service"
 import { ClmmRewardsFormulaService } from "./clmm-rewards.service"
 import { ClmmUtilsService } from "./clmm-utils.service"
 import { ClmmFeesFormulaService } from "./clmm-fees.service"
+import { ClmmReservesService } from "./clmm-reserves.service"
 @Module({
     providers: [
         ClmmTickFormulaService,
         DlmmBinFormulaService,
         ClmmRewardsFormulaService,
         ClmmFeesFormulaService,
+        ClmmReservesService,
         ClmmUtilsService,
     ],
     exports: [
@@ -18,6 +20,7 @@ import { ClmmFeesFormulaService } from "./clmm-fees.service"
         DlmmBinFormulaService,
         ClmmRewardsFormulaService,
         ClmmFeesFormulaService,
+        ClmmReservesService,
         ClmmUtilsService,
     ],
 })
