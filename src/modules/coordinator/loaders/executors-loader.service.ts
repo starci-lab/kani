@@ -52,7 +52,10 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
 
     async load(): Promise<void> {
         // run under semaphore
-        await this.sema.acquire()
+        const token  = await this.sema.tryAcquire()
+        if (!token) {
+            return
+        }
         try {
             const model = this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)
@@ -144,7 +147,9 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     .map((e) => [e.id!, e]),
             )
         } finally {
-            this.sema.release()
+            if (token) {
+                this.sema.release(token)
+            }
         }
     }
 
@@ -221,7 +226,10 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                         }
                     )
                     for await (const change of stream) {
-                        await this.sema.acquire()
+                        const token = await this.sema.tryAcquire()
+                        if (!token) {
+                            continue
+                        }
                         try {   
                             // update resume token
                             resumeToken = change._id
@@ -278,7 +286,9 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             // reset timeout when a change is processed
                             resetTimeout()
                         } finally {
-                            this.sema.release()
+                            if (token) {
+                                this.sema.release(token)
+                            }
                         }
                     }
                 }
