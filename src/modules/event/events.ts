@@ -91,7 +91,7 @@ export interface WsPythLastPricesUpdatedEvent {
     price: number
 }
 
-export interface ExecutorCreatedEvent {
+export interface CoordinatorExecutorCreatedEvent {
     id: string
 }
 
@@ -115,16 +115,12 @@ export interface ReinitializeBalancersEvent {
     ejectedRpcs: Array<RpcEjection>
 }
 
-export interface ExecutorDeletedEvent {
+export interface CoordinatorExecutorDeletedEvent {
     id: string
 }
 
 export interface ExecutorLoadedEvent {
     id: string
-}
-
-export interface ExecutorUpdatedEvent {
-    executor?: ExecutorSchema
 }
 
 export interface ExecutorCreatedEvent {

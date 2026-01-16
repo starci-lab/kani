@@ -13,6 +13,7 @@ const bootstrap = async () => {
         logger: new ContextLoggerService(),
     })
     setupCors(app)
+    app.enableShutdownHooks()
     app.setGlobalPrefix("api")
     app.use(compression())
     await app.listen(envConfig().ports.kaniCoordinator)

@@ -3,7 +3,7 @@ import { ContextIdFactory, ModuleRef } from "@nestjs/core"
 import { AsyncService } from "@modules/mixin"
 import { ExecutorsLoaderService } from "../loaders"
 import { ExecutorSchema } from "@modules/databases"
-import { EventName, ExecutorCreatedEvent, ExecutorDeletedEvent } from "@modules/event"
+import { CoordinatorExecutorCreatedEvent, EventName, CoordinatorExecutorDeletedEvent } from "@modules/event"
 import { OnEvent } from "@nestjs/event-emitter"
 import { RuntimeContext, RuntimeContextService } from "./runtime.context-service"
 
@@ -60,10 +60,10 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
      * @param payload - The event payload containing the executor ID
      */
     @OnEvent(
-        EventName.ExecutorCreated
+        EventName.CoordinatorExecutorCreated
     )
-    async handleExecutorCreated(
-        payload: ExecutorCreatedEvent
+    async handleCoordinatorExecutorCreated(
+        payload: CoordinatorExecutorCreatedEvent
     ) {
         await this.createRuntime({ id: payload.id })
     }
@@ -113,10 +113,10 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
     }
 
     @OnEvent(
-        EventName.ExecutorDeleted
+        EventName.CoordinatorExecutorDeleted
     )
     async handleExecutorDeleted(
-        payload: ExecutorDeletedEvent
+        payload: CoordinatorExecutorDeletedEvent
     ) {
         const runtime = this.runtimes.get(payload.id)
         if (!runtime) {
