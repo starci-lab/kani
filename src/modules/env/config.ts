@@ -377,8 +377,8 @@ export const envConfig = () => ({
         retentionMs: parseInt(process.env.KAFKA_RETENTION_MS || ms("1s").toString(), 10), // 1 second
         cleanupPolicy: process.env.KAFKA_CLEANUP_POLICY || "delete",
         segmentMs: parseInt(process.env.KAFKA_SEGMENT_MS || "1000", 10), // 1 second
-        segmentBytes: parseInt(process.env.KAFKA_SEGMENT_BYTES || bytes("10MB"), 10), // 10 MB
-        maxMessageBytes: parseInt(process.env.KAFKA_MAX_MESSAGE_BYTES || bytes("1KB"), 10), // 1 KB
+        segmentBytes: parseInt(process.env.KAFKA_SEGMENT_BYTES || bytes("10MB")?.toString() || "10485760", 10), // 10 MB
+        maxMessageBytes: parseInt(process.env.KAFKA_MAX_MESSAGE_BYTES || bytes("1KB")?.toString() || "1024", 10), // 1 KB
         fileDeleteDelayMs: parseInt(process.env.KAFKA_FILE_DELETE_DELAY_MS || ms("1s").toString(), 10), // 1 second
         host: process.env.KAFKA_BROKER_HOST || "localhost",
         port: parseInt(process.env.KAFKA_BROKER_PORT || "9092", 10),

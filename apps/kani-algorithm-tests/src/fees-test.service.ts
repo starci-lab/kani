@@ -20,7 +20,7 @@ export class FeesTestService implements OnApplicationBootstrap {
     private async testCetusFees() {
         const bot = await this.connection.model<BotSchema>(BotSchema.name).findOne(
             {
-                accountAddress: "0xb36ba968411da3eda4f9703010e602a9493398d293503483add061f0143d3212",
+                accountAddress: "0xb3bfefc489424c473174331f69506d4d73262816d2ea8c1ba6c357ab1c59dfc7",
             }
         )
         if (!bot) {

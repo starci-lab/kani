@@ -1,0 +1,65 @@
+{
+  "data": {
+    "objectId": "0xe59c24fb77473e7be9de92d7ee67fc4a1b1c5c22566ec173f074a46cf8b2f96c",
+    "version": "753823554",
+    "digest": "F8ELL3UHdzZtir4RTbKbcGVV1L621Frd4LxaxbU7M54d",
+    "type": "0x2::dynamic_field::Field<0x2::object::ID, 0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::linked_table::Node<0x2::object::ID, 0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionInfo>>",
+    "owner": {
+      "ObjectOwner": "0x0bad9ea1bcb68c4ac3eb71819639360906392047f5fcd1675902cbb84d6157e8"
+    },
+    "previousTransaction": "EDPF2Wx2PXUyBowYKrL8cTx3c5vQw8JNq9oQC11VN3RW",
+    "storageRebate": "4788000",
+    "content": {
+      "dataType": "moveObject",
+      "type": "0x2::dynamic_field::Field<0x2::object::ID, 0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::linked_table::Node<0x2::object::ID, 0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionInfo>>",
+      "hasPublicTransfer": false,
+      "fields": {
+        "id": {
+          "id": "0xe59c24fb77473e7be9de92d7ee67fc4a1b1c5c22566ec173f074a46cf8b2f96c"
+        },
+        "name": "0xd2abe2ea0c6f2b18a09692d1f703e9491db817ff0c14bb9830c05cc0b9794bd6",
+        "value": {
+          "type": "0xbe21a06129308e0495431d12286127897aff07a8ade3970495a4404d97f9eaaa::linked_table::Node<0x2::object::ID, 0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionInfo>",
+          "fields": {
+            "next": "0x4df312d8bd0aae0fae40979e259221f51f8ab75688407ebb129c74b28fc3b8be",
+            "prev": "0x9ccd8be162bac52ca426f276bd585acecf597e40245ccac2e46933bea535d1a8",
+            "value": {
+              "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionInfo",
+              "fields": {
+                "fee_growth_inside_a": "1307261945981327",
+                "fee_growth_inside_b": "719599275427530854",
+                "fee_owned_a": "0",
+                "fee_owned_b": "0",
+                "liquidity": "2378743",
+                "points_growth_inside": "31392782673851868",
+                "points_owned": "0",
+                "position_id": "0xd2abe2ea0c6f2b18a09692d1f703e9491db817ff0c14bb9830c05cc0b9794bd6",
+                "rewards": [
+                  {
+                    "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionReward",
+                    "fields": {
+                      "amount_owned": "0",
+                      "growth_inside": "7266847841189848530"
+                    }
+                  }
+                ],
+                "tick_lower_index": {
+                  "type": "0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i32::I32",
+                  "fields": {
+                    "bits": 59200
+                  }
+                },
+                "tick_upper_index": {
+                  "type": "0x714a63a0dba6da4f017b42d5d0fb78867f18bcde904868e51d951a5a6f5b7f57::i32::I32",
+                  "fields": {
+                    "bits": 68780
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

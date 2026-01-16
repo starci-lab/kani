@@ -2,6 +2,7 @@ import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { SwapMathService } from "@modules/blockchains"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
 import { ChainId, TokenType } from "@typedefs"
+import BN from "bn.js"
 
 @Injectable()
 export class ComputeSwapAmountsService implements OnApplicationBootstrap {
@@ -46,15 +47,15 @@ export class ComputeSwapAmountsService implements OnApplicationBootstrap {
             },
         ]
         // get the swap amounts
-        // for (const scenario of scenarios) {
-        //     const swapAmounts = await this.swapMathService.computeSwapAmounts({
-        //         targetTokenId,
-        //         quoteTokenId,
-        //         targetBalanceAmount: new BN(scenario.inputs.targetBalanceAmount),
-        //         quoteBalanceAmount: new BN(scenario.inputs.quoteBalanceAmount),
-        //         gasBalanceAmount: new BN(scenario.inputs.gasBalanceAmount),
-        //     })
-        //     console.log(swapAmounts)
-        // }
+        for (const scenario of scenarios) {
+            const swapAmounts = await this.swapMathService.computeSwapAmounts({
+                targetTokenId,
+                quoteTokenId,
+                targetBalanceAmount: new BN(scenario.inputs.targetBalanceAmount),
+                quoteBalanceAmount: new BN(scenario.inputs.quoteBalanceAmount),
+                gasBalanceAmount: new BN(scenario.inputs.gasBalanceAmount),
+            })
+            console.log(swapAmounts)
+        }
     }
 }

@@ -490,29 +490,24 @@ const data: Array<DeepPartial<TokenSchema>> = [
         projectUrl: "https://raydium.io/",
         marketListings: [
             {
-                id: MarketId.Binance,
-                symbol: "rayusdt",
-                priority: 1,
-            },
-            {
                 id: MarketId.CoinMarketCap,
                 symbol: "8526",
-                priority: 2,
+                priority: 1,
             },
             {
                 id: MarketId.Coingecko,
                 symbol: "raydium",
-                priority: 3,
+                priority: 2,
             },
             {
                 id: MarketId.Gate,
                 symbol: "RAY_USDT",
-                priority: 4,
+                priority: 3,
             },
             {
                 id: MarketId.Pyth,
                 symbol: "0x91568baa8beb53db23eb3fb7f22c6e8bd303d103919e19733f2bb642d3e7987a",
-                priority: 5,
+                priority: 4,
             },
         ],
         type: TokenType.Regular,

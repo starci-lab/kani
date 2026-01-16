@@ -20,6 +20,8 @@ import { DerivedModule } from "@modules/derived"
 import { GcpModule } from "@modules/gcp"
 import { PrivyModule } from "@modules/privy"
 import { ApolloClientModule } from "@modules/apollo-client"
+import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
+import { WsAsyncIteratorModule } from "@modules/ws-async-iterator"
 import { FeesTestService } from "./fees-test.service"
 
 @Module({
@@ -38,6 +40,9 @@ import { FeesTestService } from "./fees-test.service"
             level: WinstonLevel.Info,
         }),
         CacheModule.register({
+            isGlobal: true,
+        }),
+        WsAsyncIteratorModule.register({
             isGlobal: true,
         }),
         CexesModule.register({
@@ -133,7 +138,7 @@ import { FeesTestService } from "./fees-test.service"
     ],
     providers: [
         //ComputeSwapAmountsService,
-        // RpcTestsService,
+        //RpcTestsService,
         FeesTestService,
     ],
 })

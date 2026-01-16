@@ -1,3 +1,5 @@
 export * from "./formulas.module"
 export * from "./clmm-tick.service"
 export * from "./dlmm-bin.service"
+export * from "./clmm-rewards.service"
+export * from "./clmm-fees.service"

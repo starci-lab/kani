@@ -14,10 +14,10 @@ import { computeDenomination, Q128, Q64 } from "@utils"
 import { DayjsService } from "@modules/mixin"
 import { RpcAccessType } from "@modules/filesystem"
 import Decimal from "decimal.js"
-import { tickIndexToPrice } from "@orca-so/whirlpools-core"
 import { CetusSuiObjectTickFields, CetusSuiSkipListNodeFields, parseCetusTick } from "./struct"
 import { SuiMoveObjectData } from "../../structs"
 import fs from "fs"
+import { ClmmRewardsFormulaService } from "../../formulas"
 
 @Injectable()
 export class CetusFeesService implements IFeesService {
@@ -25,11 +25,11 @@ export class CetusFeesService implements IFeesService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly rpcExecutorService: RpcExecutorService,
     private readonly dayyjsService: DayjsService,
+    private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResponse> {
         const _state = state as LiquidityPoolState
-
         // if (!bot.activePosition) {
         //     throw new ActivePositionNotFoundException("Active position not found")
         // }
@@ -42,9 +42,7 @@ export class CetusFeesService implements IFeesService {
         const tickUpper = new Decimal(68780)
         const lowerScore = this.tickScore(tickLower)
         const upperScore = this.tickScore(tickUpper)
-        const priceLower = tickIndexToPrice(tickLower.toNumber(), 6, 6)
-        const priceUpper = tickIndexToPrice(tickUpper.toNumber(), 6, 6)
-        console.log(priceLower.toString(), priceUpper.toString())
+
         //try get the tick
         const object = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -103,7 +101,7 @@ export class CetusFeesService implements IFeesService {
             _state.dynamic.feeGrowthGlobalA,
             new BN(cetusTickLower.feeGrowthOutsideA.toString()),
             new BN(cetusTickUpper.feeGrowthOutsideA.toString()),
-            new Decimal(_state.dynamic.tickCurrent),
+            new Decimal(new BN(_state.dynamic.tickCurrent).toString()),
             tickLower,
             tickUpper,
         )
@@ -111,7 +109,7 @@ export class CetusFeesService implements IFeesService {
             _state.dynamic.feeGrowthGlobalB,
             new BN(cetusTickLower.feeGrowthOutsideB.toString()),
             new BN(cetusTickUpper.feeGrowthOutsideB.toString()),
-            new Decimal(_state.dynamic.tickCurrent),
+            new Decimal(new BN(_state.dynamic.tickCurrent).toString()),
             tickLower,
             tickUpper,
         )
@@ -121,11 +119,43 @@ export class CetusFeesService implements IFeesService {
         // ----------------------------
         // Fee calculation (WRAPPED)
         // ----------------------------
+        const x = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Http,
+            callback: async ({ suiClient }) => {
+                return suiClient.getDynamicFieldObject({
+                    parentId: "0x0bad9ea1bcb68c4ac3eb71819639360906392047f5fcd1675902cbb84d6157e8",
+                    name: {
+                        type: "0x2::object::ID",
+                        value: positionId,
+                    },
+                })
+            },
+        })
+        fs.writeFileSync("x.json", JSON.stringify(x, null, 2))
+        // {
+        //     "fee_growth_inside_a": "1307261945981327",
+        //     "fee_growth_inside_b": "719599275427530854",
+        //     "fee_owned_a": "0",
+        //     "fee_owned_b": "0",
+        //     "liquidity": "2378743",
+        //     "points_growth_inside": "31392782673851868",
+        //     "points_owned": "0",
+        //     "position_id": "0xd2abe2ea0c6f2b18a09692d1f703e9491db817ff0c14bb9830c05cc0b9794bd6",
+        //     "rewards": [
+        //       {
+        //         "type": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::position::PositionReward",
+        //         "fields": {
+        //           "amount_owned": "0",
+        //           "growth_inside": "7266847841189848530"
+        //         }
+        //       }
+        //     ],
+
         const feeGrowthInsideALastX64 = new BN(
-            "1325429509736368",
+            "1307261945981327",
         )
         const feeGrowthInsideBLastX64 = new BN(
-            "730388557831876976",
+            "719599275427530854",
         )
         const feeGrowthDeltaA = this.subQ128(
             feeGrowthInsideA,
@@ -136,9 +166,41 @@ export class CetusFeesService implements IFeesService {
             feeGrowthInsideB,
             feeGrowthInsideBLastX64,
         )
-        const liquidity = new BN("19927756")
+        const liquidity = new BN("2378743")
         const feeEarnedA = liquidity.mul(feeGrowthDeltaA).div(Q64)
         const feeEarnedB = liquidity.mul(feeGrowthDeltaB).div(Q64)
+
+        console.log(
+            {
+                rewardGrowthGlobal: new BN(_state.dynamic.rewards[0].growthGlobal.toString()).toString(),
+                rewardGrowthOutsideLower: new BN(cetusTickLower.feeGrowthOutsideA.toString()).toString(),
+                rewardGrowthOutsideUpper: new BN(cetusTickUpper.feeGrowthOutsideA.toString()).toString(),
+                currentTick: new Decimal(new BN(_state.dynamic.tickCurrent).toString()).toString(),
+                tickLower: tickLower.toString(),
+                tickUpper: tickUpper.toString(),
+                rewardGrowthInsideLast: new BN("7266847841189848530").toString(),
+                liquidity: liquidity.toString(),
+                rewardOwned: new BN("0").toString(),
+                wrapModulus: Q64.toString(),
+            }
+        )
+        const totalReward = this.clmmRewardsFormulaService.computeTotalReward(
+            {
+                rewardGrowthGlobal: new BN("335255938512901042076"),
+                rewardGrowthOutsideLower: new BN(cetusTickLower.rewardsGrowthOutside[0].toString()),
+                rewardGrowthOutsideUpper: new BN(cetusTickUpper.rewardsGrowthOutside[0].toString()),
+                currentTick: new Decimal(new BN(_state.dynamic.tickCurrent).toString()),
+                tickLower,
+                tickUpper,
+                rewardGrowthInsideLast: new BN("7266847841189848530"),
+                liquidity,
+                rewardOwned: new BN("0"),
+                insideDeltaWrapModulus: Q128,
+                outsideDeltaWrapModulus: Q128,
+                resultDiv: Q64,
+            }
+        )
+        console.log(`totalReward: ${totalReward.toString()}`)
         return {
             snapshotAt: _state.dynamic.snapshotAt,
             tokenA: computeDenomination(feeEarnedA, 6, 6),
@@ -155,23 +217,23 @@ export class CetusFeesService implements IFeesService {
         tickUpper: Decimal,
     ): BN {
         if (currentTick.lessThan(tickLower)) {
-            return feeGrowthOutsideLower.sub(feeGrowthOutsideUpper)
+            return feeGrowthOutsideLower
+                .sub(feeGrowthOutsideUpper)
+                .umod(Q128)
         }
-
+      
         if (currentTick.greaterThanOrEqualTo(tickUpper)) {
-            return feeGrowthOutsideUpper.sub(feeGrowthOutsideLower)
+            return feeGrowthOutsideUpper
+                .sub(feeGrowthOutsideLower)
+                .umod(Q128)
         }
-
+      
         return feeGrowthGlobal
             .sub(feeGrowthOutsideLower)
             .sub(feeGrowthOutsideUpper)
+            .umod(Q128)
     }
 
-    // fun tick_score(tick: I32): u64 {
-    //     let t = i32::as_u32(i32::add(tick, i32::from(tick_math::tick_bound())));
-    //     assert!((t >= 0) && (t <= (tick_math::tick_bound() * 2)), EInvalidTick);
-    //     (t as u64)
-    // }
     private tickScore(tick: Decimal): Decimal {
         const tickScore = new Decimal(tick).add(this.tickBound())
         if (tickScore.lessThan(0) || tickScore.greaterThan(this.tickBound().mul(2))) {
