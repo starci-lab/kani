@@ -1,4 +1,5 @@
 export enum WinstonLog {
+    // Coordinator
     EjectRpcFatalError = "Eject.RPC.Fatal.Error",
     ErrorDecryptingJwtSecretKey = "Error.Decrypting.JWT.Secret.Key",
     ErrorDecryptingAesKey = "Error.Decrypting.AES.Key",
@@ -19,6 +20,7 @@ export enum WinstonLog {
     DeploymentCreated = "Deployment.Created",
     DeploymentRecreated = "Deployment.Recreated",
     DeploymentPatched = "Deployment.Patched",
+    DeploymentDeleted = "Deployment.Deleted",
     ServiceCreated = "Service.Created",
     ServiceRecreated = "Service.Recreated",
     OpenPositionTransactionCommitFailed = "Open.Position.Transaction.Commit.Failed",
@@ -163,4 +165,8 @@ export enum WinstonLog {
     BinanceLastPriceUpdatedFailed = "Binance.Last.Price.Updated.Failed",
     GateLastPriceUpdatedFailed = "Gate.Last.Price.Updated.Failed",
     BybitLastPriceUpdatedFailed = "Bybit.Last.Price.Updated.Failed",
+    // Coordinator - Bussiness
+    ServiceDeleted = "Service.Deleted",
+    CleanupDeploymentsError = "Cleanup.Deployments.Error",
+    CleanupServicesError = "Cleanup.Services.Error",
 }

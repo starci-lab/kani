@@ -10,7 +10,7 @@ import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { GateUtilsService } from "./gate-utils.service"
-import { WebSocketStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
+import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
 
 @Injectable()
 export class GateLastPriceService implements OnApplicationBootstrap {
@@ -22,7 +22,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
         private readonly logger: WinstonLogger,
         private readonly cachePriceUtilsService: CachePriceUtilsService,
         private readonly asyncService: AsyncService,
-        private readonly wsAsyncIteratorService: WsAsyncIteratorService,
+        private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) { }
 
     onApplicationBootstrap() {
@@ -48,7 +48,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                             envConfig().timeConfig.ws.idleTimeout.gate.lastPrice,
                         )
                     }
-                    const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({
+                    const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         signal: abortController.signal,
                         onOpen: (connection: WebSocketStreamConnection) => {
@@ -87,7 +87,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                     })
 
                     try {
-                        for await (const data of asyncIterator) {
+                        for await (const data of stream) {
                             try {
                                 const parsed = JSON.parse(data.toString()) as GateTickerUpdate
                                 const tokenPrices = this.gateUtilsService.getGateTokenPrices([

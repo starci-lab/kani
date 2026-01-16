@@ -113,3 +113,19 @@ export interface BotDeletedEvent {
 export interface ReinitializeBalancersEvent {
     ejectedRpcs: Array<RpcEjection>
 }
+
+export interface ExecutorDeletedEvent {
+    id: string
+}
+
+export interface ExecutorLoadedEvent {
+    id: string
+}
+
+export interface ExecutorUpdatedEvent {
+    id: string
+}
+
+export interface ExecutorCreatedEvent {
+    id: string
+}

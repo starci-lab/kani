@@ -11,7 +11,7 @@ import { CachePriceUtilsService } from "@modules/cache"
 import { BinanceUtilsService } from "./binance-utils.service"
 import _ from "lodash"
 import { AsyncService, RetryService } from "@modules/mixin"
-import { WebSocketStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
+import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(
@@ -22,7 +22,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         private readonly logger: WinstonLogger,
         private readonly cachePriceUtilsService: CachePriceUtilsService,
         private readonly asyncService: AsyncService,
-        private readonly wsAsyncIteratorService: WsAsyncIteratorService,
+        private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) {
     }
 
@@ -62,8 +62,8 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 envConfig().timeConfig.ws.idleTimeout.binance.lastPrice,
                             )
                         }
-                        // create the async iterator
-                        const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator(
+                        // create the stream
+                        const stream = await this.streamAsyncIteratorService.createStream(
                             {
                                 connection,
                                 signal: abortController.signal,
@@ -106,7 +106,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                             }
                         )
                         // subscribe to the async iterator
-                        for await (const data of asyncIterator) {
+                        for await (const data of stream) {
                             try {
                                 // parse the data
                                 const parsed = JSON.parse(

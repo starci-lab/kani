@@ -309,6 +309,9 @@ export const envConfig = () => ({
         },
         ws: {
             idleTimeout: {
+                mongoDbChangeStream: {
+                    loader: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT_MONGO_DB_CHANGE_STREAM_LOADER || ms("30 minutes").toString(), 10), // 30 minutes
+                },
                 binance: {
                     lastPrice: parseInt(process.env.TIME_CONFIG_WS_IDLE_TIMEOUT_BINANCE_LAST_PRICE || ms("10s").toString(), 10), // 10s
                 },
@@ -329,6 +332,10 @@ export const envConfig = () => ({
             rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || ms("5s").toString(), 10), // 5s
         },
         interval: {
+            coordinator: {
+                executorsLoader: parseInt(process.env.INTERVAL_COORDINATOR_EXECUTORS_LOADER || ms("10s").toString(), 10), // 10s
+                resourceCleanup: parseInt(process.env.INTERVAL_COORDINATOR_RESOURCE_CLEANUP || ms("10s").toString(), 10), // 10s
+            },
             mutex: parseInt(process.env.INTERVAL_MUTEX || ms("30m").toString(), 10), // 30 minutes
             activeBot: parseInt(process.env.INTERVAL_ACTIVE_BOT_INTERVAL || ms("10s").toString(), 10), // 10s
             rebalancing: parseInt(process.env.INTERVAL_REBALANCING || ms("10s").toString(), 10), // 10 seconds

@@ -2,14 +2,18 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./coordinator.module-definition"
 import { LoadersModule } from "./loaders"
-import { K8sResourseManagersModule } from "./k8s-managers"
+import { BussinessModule } from "./bussiness"
+import { RuntimesModule } from "./runtimes"
 
 @Module({
     imports: [
         LoadersModule.register({
             isGlobal: true,
         }),
-        K8sResourseManagersModule.register({
+        BussinessModule.register({
+            isGlobal: true,
+        }),
+        RuntimesModule.register({
             isGlobal: true,
         }),
     ],

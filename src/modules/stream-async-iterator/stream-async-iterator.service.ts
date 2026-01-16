@@ -1,14 +1,20 @@
 import { StreamConnection } from "./types"
-import { WsConnectionAbortedException, WsConnectionClosedException } from "@exceptions"
+import { StreamConnectionAbortedException, StreamConnectionClosedException } from "@exceptions"
 import { Injectable } from "@nestjs/common"
 
 @Injectable()
-export class WsAsyncIteratorService {
+export class StreamAsyncIteratorService {
     constructor() {}
-    // create the async iterator
-    async createAsyncIterator<TData>(
+    // create the stream
+    async createStream<TData>(
         // define the parameters
-        { connection, signal, onOpen, onError, onClose }: CreateAsyncIteratorParams<TData>
+        { 
+            connection, 
+            signal, 
+            onOpen, 
+            onError, 
+            onClose 
+        }: CreateStreamParams<TData>
     ): Promise<AsyncIterable<TData>> {
         // return the async iterable
         return {
@@ -26,7 +32,7 @@ export class WsAsyncIteratorService {
                     resolve = null
                 }
                 // define the abort error function
-                const abortError = () => new WsConnectionAbortedException("WS connection aborted")
+                const abortError = () => new StreamConnectionAbortedException("Stream connection aborted")
                 // define the onAbort handler
                 const onAbort = () => {
                     closed = true
@@ -102,7 +108,7 @@ export class WsAsyncIteratorService {
                             // if there is an error then throw it
                             if (error) throw error
                             // throw the connection closed exception
-                            throw new WsConnectionClosedException("WS connection closed")
+                            throw new StreamConnectionClosedException("Stream connection closed")
                         }
                         // wait for the next message
                         await new Promise<void>(
@@ -113,7 +119,7 @@ export class WsAsyncIteratorService {
                         )
                     }
                 } finally {
-                // remove the abort event listener from the signal
+                    // remove the abort event listener from the signal
                     signal?.removeEventListener("abort", onAbort)
                     // close the connection
                     connection.close()
@@ -123,7 +129,7 @@ export class WsAsyncIteratorService {
     }
 }
 
-export interface CreateAsyncIteratorParams<TData> {
+export interface CreateStreamParams<TData> {
     // define the connection
     connection: StreamConnection<TData>,
     // define the abort signal

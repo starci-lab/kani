@@ -26,10 +26,23 @@ export class K8sManagerFactoryService implements OnApplicationBootstrap {
         this.asyncService.allMustDone(
             this.executorsLoaderService.executors.map(async (executor) => {
                 await this.resolveK8sManager(executor)
-            }))
+            }
+            )
+        )
+    }
+
+    @OnEvent(
+        EventName.ExecutorDeleted
+    )
+    async handleExecutorDeleted(
+        payload: ExecutorDeletedEvent
+    ) {
+        await this.resolveK8sManager({ id: payload.id })
     }
     
-    @OnEvent(EventName.ExecutorCreated)
+    @OnEvent(
+        EventName.ExecutorCreated
+    )
     async handleExecutorCreated(
         payload: ExecutorCreatedEvent
     ) {

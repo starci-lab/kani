@@ -15,7 +15,7 @@ import { Logger as WinstonLogger } from "winston"
 import { PythUtilsService } from "./pyth-utils.service"
 import _ from "lodash"
 import { PythTokenPriceData } from "./types"
-import { EventSourceStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
+import { EventSourceStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
 
 @Injectable()
 export class PythSubscriptionsService implements OnApplicationBootstrap {
@@ -27,7 +27,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly cachePriceUtilsService: CachePriceUtilsService,
-        private readonly wsAsyncIteratorService: WsAsyncIteratorService,
+        private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) { }
 
     onApplicationBootstrap() {
@@ -56,7 +56,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             envConfig().timeConfig.ws.idleTimeout.pyth.subscriptions,
                         )
                     }
-                    const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({
+                    const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         onOpen: () => {
                             this.logger.info(
@@ -83,7 +83,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             )
                         },
                     })
-                    for await (const data of asyncIterator) {
+                    for await (const data of stream) {
                         try {
                             const update: PriceUpdate = JSON.parse(data.data)
                             const priceData = update.parsed?.map<PythTokenPriceData>(data => {

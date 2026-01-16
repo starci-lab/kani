@@ -11,7 +11,7 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { BybitUtilsService } from "./bybit-utils.service"
 import _ from "lodash"
-import { WebSocketStreamConnection, WsAsyncIteratorService } from "@modules/ws-async-iterator"
+import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
   
 @Injectable()
 export class BybitLastPriceService implements OnApplicationBootstrap {
@@ -22,7 +22,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
       private readonly logger: WinstonLogger,
       private readonly cachePriceUtilsService: CachePriceUtilsService,
       private readonly asyncService: AsyncService,
-      private readonly wsAsyncIteratorService: WsAsyncIteratorService,
+      private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) {}
   
     onApplicationBootstrap() {
@@ -51,7 +51,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         )
                     }
 
-                    const asyncIterator = await this.wsAsyncIteratorService.createAsyncIterator({
+                    const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         signal: abortController.signal,
                         onOpen: (connection: WebSocketStreamConnection) => {
@@ -84,7 +84,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                     })
 
                     try {
-                        for await (const data of asyncIterator) {
+                        for await (const data of stream) {
                             try {
                                 const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResponse
 

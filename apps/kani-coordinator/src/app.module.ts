@@ -9,6 +9,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
 import { KubernetesModule } from "@modules/kubernetes"
 import { DependencyName, TerminusModule } from "@modules/terminus"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
+import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
 
 @Module({
     imports: [
@@ -21,6 +22,9 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
             isGlobal: true,
             appName: "kani-coordinator",
             level: WinstonLevel.Verbose,
+        }),
+        StreamAsyncIteratorModule.register({
+            isGlobal: true,
         }),
         TerminusModule.register({
             isGlobal: true,

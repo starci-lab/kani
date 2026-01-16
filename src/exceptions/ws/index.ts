@@ -12,10 +12,17 @@ export class WsRetryLimitReachedException extends AbstractException {
     }
 }
 
-/** Thrown when WebSocket connection is aborted */
-export class WsConnectionAbortedException extends AbstractException {
+/** Thrown when stream connection is aborted */
+export class StreamConnectionAbortedException extends AbstractException {
     constructor(message?: string) {
-        super(message || "WS connection aborted", "WS_CONNECTION_ABORTED_EXCEPTION")
+        super(message || "Stream connection aborted", "STREAM_CONNECTION_ABORTED_EXCEPTION")
+    }
+}
+
+/** @deprecated Use StreamConnectionAbortedException instead */
+export class WsConnectionAbortedException extends StreamConnectionAbortedException {
+    constructor(message?: string) {
+        super(message || "WS connection aborted")
     }
 }
 
@@ -26,10 +33,17 @@ export class WsConnectionFailedException extends AbstractException {
     }
 }
 
-/** Thrown when WebSocket connection is closed */
-export class WsConnectionClosedException extends AbstractException {
+/** Thrown when stream connection is closed */
+export class StreamConnectionClosedException extends AbstractException {
     constructor(message?: string) {
-        super(message || "WS connection closed", "WS_CONNECTION_CLOSED_EXCEPTION")
+        super(message || "Stream connection closed", "STREAM_CONNECTION_CLOSED_EXCEPTION")
+    }
+}
+
+/** @deprecated Use StreamConnectionClosedException instead */
+export class WsConnectionClosedException extends StreamConnectionClosedException {
+    constructor(message?: string) {
+        super(message || "WS connection closed")
     }
 }
 

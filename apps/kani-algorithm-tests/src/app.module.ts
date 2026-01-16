@@ -21,7 +21,7 @@ import { GcpModule } from "@modules/gcp"
 import { PrivyModule } from "@modules/privy"
 import { ApolloClientModule } from "@modules/apollo-client"
 import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
-import { WsAsyncIteratorModule } from "@modules/ws-async-iterator"
+import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
 import { FeesTestService } from "./fees-test.service"
 
 @Module({
@@ -42,7 +42,7 @@ import { FeesTestService } from "./fees-test.service"
         CacheModule.register({
             isGlobal: true,
         }),
-        WsAsyncIteratorModule.register({
+        StreamAsyncIteratorModule.register({
             isGlobal: true,
         }),
         CexesModule.register({

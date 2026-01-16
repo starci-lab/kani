@@ -26,7 +26,7 @@ import { DependencyName, TerminusModule } from "@modules/terminus"
 import { P2CBalancerModule } from "@modules/p2c-balancer"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { DerivedModule } from "@modules/derived"
-import { WsAsyncIteratorModule } from "@modules/ws-async-iterator"
+import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
 
 @Module({
     imports: [
@@ -45,7 +45,7 @@ import { WsAsyncIteratorModule } from "@modules/ws-async-iterator"
         FormulasModule.register({
             isGlobal: true,
         }),
-        WsAsyncIteratorModule.register({
+        StreamAsyncIteratorModule.register({
             isGlobal: true,
         }),
         EventEmitterModule.forRoot(),
