@@ -56,19 +56,16 @@ export class RuntimeContextService {
     ) {
         if (event) {
             this.executor = event.executor
-            return
+        } else {
+            const executor = await this.connection
+                .model<ExecutorSchema>(ExecutorSchema.name)
+                .findById(this.context.id)
+
+            if (!executor) {
+                return
+            }
+            this.executor = executor.toJSON()
         }
-
-        const executor = await this.connection
-            .model<ExecutorSchema>(ExecutorSchema.name)
-            .findById(this.context.id)
-
-        if (!executor) {
-            this.executor = null
-            return
-        }
-
-        this.executor = executor.toJSON()
         // reconcile the deployment and service
         await this.asyncService.allMustDone(
             [
@@ -102,7 +99,7 @@ export class RuntimeContextService {
                 },
                 // set the action to initialize the runtime
                 action: async () => {
-                // subscribe to executor updated events
+                    // subscribe to executor updated events
                     this.eventEmitter2.on(
                         createEventName(
                             EventName.CoordinatorExecutorUpdated,
@@ -154,26 +151,22 @@ export class RuntimeContextService {
 
         const annotations = deployment.metadata?.annotations
         if (!annotations) {
-            await this.k8sDeploymentService.deleteDeployment(this.executor)
+            await this.k8sDeploymentService.deleteDeployment(this.executor.id)
             await this.k8sDeploymentService.createDeployment(this.executor)
             return
         }
-
         const executorVersion =
             annotations[K8SAnnotationKey.ExecutorVersion]
         const coordinatorVersion =
             annotations[K8SAnnotationKey.CoordinatorVersion]
-
+        // if the executor version or coordinator version is not the same as the cached executor, delete the deployment and create a new one
         if (
             executorVersion !== this.executor.version ||
             coordinatorVersion !== envConfig().version.coordinator
         ) {
-            await this.k8sDeploymentService.deleteDeployment(this.executor)
+            await this.k8sDeploymentService.deleteDeployment(this.executor.id)
             await this.k8sDeploymentService.createDeployment(this.executor)
-            return
         }
-
-        await this.k8sDeploymentService.patchDeployment(this.executor)
     }
 
     /**
@@ -198,7 +191,7 @@ export class RuntimeContextService {
 
         const annotations = service.metadata?.annotations
         if (!annotations) {
-            await this.k8sServiceService.deleteService(this.executor)
+            await this.k8sServiceService.deleteService(this.executor.id)
             await this.k8sServiceService.createService(this.executor)
             return
         }
@@ -212,7 +205,7 @@ export class RuntimeContextService {
             executorVersion !== this.executor.version ||
             coordinatorVersion !== envConfig().version.coordinator
         ) {
-            await this.k8sServiceService.deleteService(this.executor)
+            await this.k8sServiceService.deleteService(this.executor.id)
             await this.k8sServiceService.createService(this.executor)
         }
     }
@@ -222,7 +215,7 @@ export class RuntimeContextService {
      *
      * Called when the request scope is destroyed.
      */
-    async dispose() {
+    async dispose(withDestroy: boolean = false) {
         if (!this.executor) {
             return
         }
@@ -236,22 +229,24 @@ export class RuntimeContextService {
             ),
             this.executorUpdatedHandler,
         )
+        if (withDestroy) {
+            await this.destroy()
+        }
         // clear the cached executor
         this.executor = null
     }
 
-    /**
-     * Delete the runtime request lifecycle.
-     *
-     * Called when the executor is deleted.
-     */
-    async destroy() {
+    private async destroy() {
         if (!this.executor) {
             return
         }
         // destroy the deployment and service
-        await this.k8sDeploymentService.deleteDeployment(this.executor)
-        await this.k8sServiceService.deleteService(this.executor)
+        await this.asyncService.allMustDone(
+            [
+                this.k8sDeploymentService.deleteDeployment(this.executor.id),
+                this.k8sServiceService.deleteService(this.executor.id),
+            ]
+        )
     }
 }
 

@@ -116,17 +116,16 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         EventName.CoordinatorExecutorDeleted
     )
     async handleExecutorDeleted(
-        payload: CoordinatorExecutorDeletedEvent
+        { id}: CoordinatorExecutorDeletedEvent
     ) {
-        const runtime = this.runtimes.get(payload.id)
+        const runtime = this.runtimes.get(id)
         if (!runtime) {
             return
         }
         // dispose & destroy the runtime
-        await runtime.dispose()
-        await runtime.destroy()
+        await runtime.dispose(true)
         // delete the runtime from the map
-        this.runtimes.delete(payload.id)
+        this.runtimes.delete(id)
     }
 
 }   

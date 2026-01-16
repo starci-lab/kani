@@ -336,7 +336,7 @@ export const envConfig = () => ({
         },
         interval: {
             coordinator: {
-                executorsLoader: parseInt(process.env.INTERVAL_COORDINATOR_EXECUTORS_LOADER || ms("10s").toString(), 10), // 10s
+                executorsLoader: parseInt(process.env.INTERVAL_COORDINATOR_EXECUTORS_LOADER || ms("1 minute").toString(), 10), // 1 minute
                 resourceCleanup: parseInt(process.env.INTERVAL_COORDINATOR_RESOURCE_CLEANUP || ms("10s").toString(), 10), // 10s
             },
             mutex: parseInt(process.env.INTERVAL_MUTEX || ms("30m").toString(), 10), // 30 minutes

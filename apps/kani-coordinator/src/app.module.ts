@@ -5,11 +5,13 @@ import { WinstonLevel, WinstonModule } from "@modules/winston"
 import { CoordinatorModule } from "@modules/coordinator"
 import { PrimaryMongoDbModule } from "@modules/databases"
 import { MixinModule } from "@modules/mixin"
+import { SemaModule } from "@modules/lock"
 import { EventEmitterModule } from "@nestjs/event-emitter"
 import { KubernetesModule } from "@modules/kubernetes"
 import { DependencyName, TerminusModule } from "@modules/terminus"
 import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
+import { ScheduleModule } from "@nestjs/schedule"
 
 @Module({
     imports: [
@@ -23,6 +25,7 @@ import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
             appName: "kani-coordinator",
             level: WinstonLevel.Verbose,
         }),
+        ScheduleModule.forRoot(),
         StreamAsyncIteratorModule.register({
             isGlobal: true,
         }),
@@ -46,6 +49,9 @@ import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
             isGlobal: true,
             withSeeders: true,
             memoryStorage: true,
+        }),
+        SemaModule.register({
+            isGlobal: true,
         }),
         CoordinatorModule.register({
             isGlobal: true,

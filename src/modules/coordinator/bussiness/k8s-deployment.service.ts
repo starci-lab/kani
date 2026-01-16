@@ -376,9 +376,9 @@ export class K8SDeploymentService  {
      * 
      * @param executor - executor schema
      */
-    public async deleteDeployment(executor: ExecutorSchema) {
+    public async deleteDeployment(executorId: string) {
         // create the deployment name
-        const name = createExecutorName(executor.id)
+        const name = createExecutorName(executorId)
         // we delete the deployment
         await this.kubernetesApi.deleteNamespacedDeployment(
             {
@@ -388,7 +388,7 @@ export class K8SDeploymentService  {
         )
         this.winstonLogger.verbose(
             WinstonLog.DeploymentDeleted, {
-                executorId: executor.id,
+                executorId,
             }
         )
     }

@@ -95,14 +95,14 @@ export class K8SServiceService {
      *
      * @param executor - executor schema
      */
-    public async deleteService(executor: ExecutorSchema) {
-        const name = createExecutorName(executor.id)
+    public async deleteService(executorId: string) {
+        const name = createExecutorName(executorId)
         await this.kubernetesCoreApi.deleteNamespacedService({
             name,
             namespace: envConfig().kubernetes.podNamespace,
         })
         this.winstonLogger.verbose(WinstonLog.ServiceDeleted, {
-            executorId: executor.id,
+            executorId,
         })
     }
 }
