@@ -1,7 +1,7 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./runtimes.module-definition"
 import { RuntimesFactoryService } from "./runtimes-factory.service"
-import { RuntimeRequestService } from "./runtime.context-service"
+import { RuntimeContextService } from "./runtime.context-service"
 
 @Module({})
 export class RuntimesModule extends ConfigurableModuleClass {
@@ -11,7 +11,7 @@ export class RuntimesModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             RuntimesFactoryService,
-            RuntimeRequestService,
+            RuntimeContextService,
         ]
         return {
             ...dynamicModule,
