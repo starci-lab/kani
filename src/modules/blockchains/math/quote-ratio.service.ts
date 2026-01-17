@@ -3,15 +3,15 @@ import { Injectable } from "@nestjs/common"
 import { ComputeQuoteRatioParams, ComputeQuoteRatioResult } from "./swap.service"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
-import { PythOraclePriceService } from "../price-feeds/pyth"
 import { SAFE_QUOTE_RATIO_ABOVE, SAFE_QUOTE_RATIO_BELOW } from "."
 import { Decimal } from "decimal.js"
+import { PriceService } from "./price.service"
 
 @Injectable()
 export class QuoteRatioService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly pythOraclePriceService: PythOraclePriceService,
+        private readonly priceService: PriceService,
     ) {}
 
     public async computeQuoteRatio(
@@ -32,16 +32,16 @@ export class QuoteRatioService {
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
         }
-        const oraclePrice = await this.pythOraclePriceService.getPythOraclePrice(
+        const { price: relativePrice } = await this.priceService.resolveRelativePrice(
             {
-                tokenA: targetToken.displayId,
-                tokenB: quoteToken.displayId,
+                tokenAId: targetToken.displayId,
+                tokenBId: quoteToken.displayId,
             }
         )
         const targetBalanceAmountInQuote = computeDenomination(
             targetBalanceAmount,
             targetToken.decimals
-        ).mul(oraclePrice)
+        ).mul(relativePrice)
         const quoteBalanceAmountInQuote = computeDenomination(
             quoteBalanceAmount,
             quoteToken.decimals
@@ -53,7 +53,7 @@ export class QuoteRatioService {
             totalBalanceAmountInQuote,
             targetBalanceAmountInQuote,
             quoteBalanceAmountInQuote,
-            oraclePrice,
+            relativePrice,
         }
     }
 

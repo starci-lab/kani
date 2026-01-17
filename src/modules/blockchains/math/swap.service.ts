@@ -75,7 +75,7 @@ export class SwapMathService {
             )
             const targetBalanceAmountSwapToQuote = toScaledBN(
                 toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.oraclePrice)
+                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
                 ))
                 .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
             return {
@@ -95,7 +95,7 @@ export class SwapMathService {
             )
             const estimatedSwappedTargetAmount = toScaledBN(
                 toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.oraclePrice)
+                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
                 ))
                 .mul(excessQuoteInQuoteBN).div(toUnit(quoteToken.decimals))
             // quote is too much, we need to swap from quote to target
@@ -150,7 +150,7 @@ export class SwapMathService {
             )
             const targetBalanceAmountSwapToQuote = toScaledBN(
                 toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.oraclePrice)
+                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
                 ))
                 .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
             return {
@@ -169,7 +169,7 @@ export class SwapMathService {
             )
             const quoteToTargetSwapAmount = toScaledBN(
                 toUnit(quoteToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.oraclePrice))
+                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice))
             )
             // quote is too much, we need to swap from quote to target
             return {
@@ -295,16 +295,17 @@ export class SwapMathService {
                         amountIn: additionalSwapAmountGasBN,
                         tokenIn: gasToken,
                         tokenOut: quoteToken,
-                        oraclePrice: quoteRatioResult.oraclePrice,
+                        relativePrice: quoteRatioResult.relativePrice,
                     }
                 )
                 console.log("additionalSwapAmountGasBN", additionalSwapAmountGasBN.toString())
                 console.log("swapResult", swapResult.toString())
                 console.log("quoteToken.decimals", quoteToken.decimals)
-                console.log("quoteRatioResult.oraclePrice", quoteRatioResult.oraclePrice.toString())
+                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
                 console.log("targetToken.decimals", targetToken.decimals)
-                console.log("quoteRatioResult.oraclePrice", quoteRatioResult.oraclePrice.toString())
-                console.log("quoteRatioResult.oraclePrice", quoteRatioResult.oraclePrice.toString())
+                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
+                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
+                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
             }
             // target too low mean, the quote is too much, we need to swap a partial of quote to the target and gas
             const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
@@ -317,7 +318,7 @@ export class SwapMathService {
             )
             const targetBalanceAmountSwapToQuote = toScaledBN(
                 toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.oraclePrice)
+                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
                 ))
                 .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
             return {
@@ -363,7 +364,7 @@ export class SwapMathService {
         } else if (quoteToken.type === TokenType.Native) {
             gasStatus = GasStatus.IsQuote
         }
-        const quoteRatioResponse = await this.quoteRatioService.computeQuoteRatio({
+        const quoteRatioResult = await this.quoteRatioService.computeQuoteRatio({
             targetTokenId,
             quoteTokenId,
             targetBalanceAmount,
@@ -408,12 +409,12 @@ export class SwapMathService {
             amountIn,
             tokenIn,
             tokenOut,
-            oraclePrice,
+            relativePrice,
         }: ComputeSwapResultParams
     ): Promise<BN> {
         return toScaledBN(
             toUnit(tokenIn.decimals),
-            new Decimal(1).div(new Decimal(oraclePrice))
+            new Decimal(1).div(new Decimal(relativePrice))
         )
             .mul(amountIn).div(toUnit(tokenOut.decimals))
     }
@@ -459,7 +460,7 @@ export interface ComputeQuoteRatioResult {
     totalBalanceAmountInQuote: Decimal
     targetBalanceAmountInQuote: Decimal
     quoteBalanceAmountInQuote: Decimal
-    oraclePrice: Decimal
+    relativePrice: Decimal
 }
 
 export interface ExtendedComputeSwapAmountsParams extends ComputeSwapAmountsParams {
@@ -470,7 +471,7 @@ export interface ComputeSwapResultParams {
     amountIn: BN
     tokenIn: TokenSchema
     tokenOut: TokenSchema
-    oraclePrice: Decimal
+    relativePrice: Decimal
 }
 
 export interface ComputeSwapResult {

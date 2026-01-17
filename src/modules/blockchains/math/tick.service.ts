@@ -5,13 +5,12 @@ import BN from "bn.js"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { LiquidityPoolState } from "../interfaces"
 import {
+    PriceStaleException,
     SnapshotBalancesNotSetException, 
     TokenNotFoundException
 } from "@exceptions"
-import { PythOraclePriceService } from "../price-feeds/pyth"
+import { PriceService } from "./price.service"
 import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
-import { SpotPriceService } from "../spot"
-import { AsyncService } from "@modules/mixin"
 import { ClmmTickFormulaService } from "../formulas"
 // import assert from "assert"
 
@@ -19,9 +18,7 @@ import { ClmmTickFormulaService } from "../formulas"
 export class TickMathService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly pythOraclePriceService: PythOraclePriceService,
-        private readonly spotPriceService: SpotPriceService,
-        private readonly asyncService: AsyncService,
+        private readonly priceService: PriceService,
         private readonly clmmTickFormulaService: ClmmTickFormulaService,
     ) {}
 
@@ -80,20 +77,12 @@ export class TickMathService {
             : snapshotTargetBalanceAmount
     
         // we get the price from the oracle or the spot price
-        const price = await this.asyncService.executeWithFallbacks({
-            action: async () => {
-                return await this.pythOraclePriceService.getPythOraclePrice({
-                    tokenA: tokenAEntity.displayId,
-                    tokenB: tokenBEntity.displayId,
-                })
-            },
-            fallbacks: [
-                async () => {
-                    return await this.spotPriceService.getSpotPrice({ state })
-                },
-            ],
-            attempts: 1,
+        const { isStale, price } = await this.priceService.resolvePrice({
+            tokenId: tokenAEntity.displayId,
         })
+        if (isStale) {
+            throw new PriceStaleException("Price is stale")
+        }
         // token amounts in B denomination
         const tokenAAmountInB = computeDenomination(
             new BN(snapshotTokenAAmount),
@@ -130,7 +119,7 @@ export class TickMathService {
             const { amountA: amountAOut, amountB: amountBOut } =
                 LiquidityMath.getAmountsFromLiquidity(
                     this.clmmTickFormulaService.tickToSqrtPriceX64({
-                        tickIndex: new Decimal(tickCurrent),
+                        tickIndex: new Decimal(tickCurrent.toString()),
                     }),
                     this.clmmTickFormulaService.tickToSqrtPriceX64({
                         tickIndex: tickLower,
@@ -160,7 +149,7 @@ export class TickMathService {
         }
     
         // we find the best tick range (NO ARRAY)
-        let tickLowerEntry = new Decimal(tickCurrent)
+        let tickLowerEntry = new Decimal(tickCurrent.toString())
             .sub(S)
             .div(tickSpacing)
             .ceil()

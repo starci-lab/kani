@@ -1,7 +1,7 @@
 import { Field, ObjectType } from "@nestjs/graphql"
 import { AbstractSchema } from "./abstract"
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { AssignedBotSchema, AssignedBotSchemaClass } from "./assigned-user.schema"
+import { AssignedBotSchema, AssignedBotSchemaClass } from "./assigned-bot.schema"
 
 @ObjectType({
     description: "Represents an executor",
