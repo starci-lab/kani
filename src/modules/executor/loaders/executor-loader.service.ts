@@ -218,9 +218,11 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                                         .filter((bot) => Boolean(bot.id) && bot.version === AppVersion.V2)
                                         .map((bot) => ({ id: bot.id }))
                                     // log the deleted bots
-                                    this.logger.verbose(WinstonLog.ExecutorBotsDeleted, {
-                                        ids: filteredDeletedBots.map((bot) => bot.id),
-                                    })
+                                    this.logger.verbose(
+                                        WinstonLog.ExecutorBotsDeleted, {
+                                            ids: filteredDeletedBots.map((bot) => bot.id),
+                                        }
+                                    )
                                     // emit the event for the deleted bots
                                     for (const bot of filteredDeletedBots) {
                                         this.eventEmitter2.emit(EventName.ExecutorBotDeleted, { id: bot.id })
