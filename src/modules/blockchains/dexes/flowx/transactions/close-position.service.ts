@@ -14,7 +14,6 @@ import { ClmmSqrtPriceMath, ClmmTickMath, MaxUint64 } from "@flowx-finance/sdk"
 import { Decimal } from "decimal.js"
 import BN from "bn.js"
 import { ZERO_BN } from "@utils"
-import { RewardInfo } from "../struct"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -90,14 +89,14 @@ export class ClosePositionTxbService {
             ], 
             bot.accountAddress
         )
-        const rewardTokens = state.dynamic.rewards as Array<RewardInfo>
+        const rewardTokens = state.dynamic.rewards
         for (const rewardToken of rewardTokens) {
             const rewardTxResult = txb.moveCall({
                 target: `${packageId}::position_manager::collect_pool_reward`,
                 typeArguments: [
                     tokenA.tokenAddress,
                     tokenB.tokenAddress,
-                    rewardToken.rewardCoinType
+                    rewardToken.tokenAddress
                 ],
                 arguments: [
                     txb.object(poolRegistryObject),
@@ -130,7 +129,7 @@ export class ClosePositionTxbService {
         if (!activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
-        if (new Decimal(state.dynamic.tickCurrent).lt(new Decimal(activePosition.tickLower || 0))) {
+        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickLower || 0))) {
             return ClmmSqrtPriceMath.getAmountXDelta(
                 ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickLower || 0),
                 ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickUpper || 0),
@@ -138,7 +137,7 @@ export class ClosePositionTxbService {
                 false
             )
         } else if (
-            new Decimal(state.dynamic.tickCurrent).lt(new Decimal(activePosition.tickUpper || 0))
+            new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickUpper || 0))
         ) {
             return ClmmSqrtPriceMath.getAmountXDelta(
                 state.dynamic.sqrtPriceX64,
@@ -159,9 +158,9 @@ export class ClosePositionTxbService {
         if (!activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
-        if (new Decimal(state.dynamic.tickCurrent).lt(new Decimal(activePosition.tickLower || 0))) {
+        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickLower || 0))) {
             return ZERO_BN
-        } else if (new Decimal(state.dynamic.tickCurrent).lt(new Decimal(activePosition.tickUpper || 0))) {
+        } else if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickUpper || 0))) {
             return ClmmSqrtPriceMath.getAmountYDelta(
                 ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickLower || 0),
                 state.dynamic.sqrtPriceX64,

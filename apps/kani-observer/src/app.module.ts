@@ -7,7 +7,7 @@ import { CexesModule, ClientsModule, DexesModule } from "@modules/blockchains"
 import { ScheduleModule } from "@nestjs/schedule"
 import { CryptoModule } from "@modules/crypto"
 import { DexId, PrimaryMongoDbModule } from "@modules/databases"
-import { PriceFeedsModule, SpotModule } from "@modules/blockchains"
+import { PriceFeedsModule } from "@modules/blockchains"
 import { 
     SignersModule, 
     SnapshotsModule, 
@@ -105,9 +105,6 @@ import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
             isGlobal: true,
         }),
         PriceFeedsModule.register({
-            isGlobal: true,
-        }),
-        SpotModule.register({
             isGlobal: true,
         }),
         SnapshotsModule.register({

@@ -191,7 +191,7 @@ export const envConfig = () => ({
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
             pythPrice: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
-            AggregatedTokenPrice: parseInt(process.env.CACHE_ORACLE_TOKEN_PRICE_TTL || "0", 10), // never expire
+            aggregatedTokenPrice: parseInt(process.env.CACHE_AGGREGATED_TOKEN_PRICE_TTL || "0", 10), // never expire
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
             responses: {
                 fees: parseInt(process.env.CACHE_RESPONSES_FEES_TTL || ms("5m").toString(), 10), // 5 minutes
@@ -303,12 +303,14 @@ export const envConfig = () => ({
     timeConfig: {
         lease: parseInt(process.env.TIME_CONFIG_LEASE || ms("5m").toString(), 10), // 5 minutes
         retry: {
-            retries: parseInt(process.env.TIME_CONFIG_RETRY_RETRIES || "3", 10), // 3 retries for each RPC call
-            delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || ms("1s").toString(), 10), // 1s delay between retries
-            factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
-            minTimeout: parseInt(process.env.TIME_CONFIG_RETRY_MIN_TIMEOUT || ms("1s").toString(), 10), // 1s min timeout
-            maxTimeout: parseInt(process.env.TIME_CONFIG_RETRY_MAX_TIMEOUT || ms("30s").toString(), 10), // 30s max timeout
-            randomize: Boolean(process.env.TIME_CONFIG_RETRY_RANDOMIZE) || true, // randomize the timeout
+            base: {
+                retries: parseInt(process.env.TIME_CONFIG_RETRY_RETRIES || "3", 10), // 3 retries for each RPC call
+                delay: parseInt(process.env.TIME_CONFIG_RETRY_DELAY || ms("1s").toString(), 10), // 1s delay between retries
+                factor: parseFloat(process.env.TIME_CONFIG_RETRY_FACTOR || "2.0"), // 2x exponential backoff
+                minTimeout: parseInt(process.env.TIME_CONFIG_RETRY_MIN_TIMEOUT || ms("1s").toString(), 10), // 1s min timeout
+                maxTimeout: parseInt(process.env.TIME_CONFIG_RETRY_MAX_TIMEOUT || ms("30s").toString(), 10), // 30s max timeout
+                randomize: Boolean(process.env.TIME_CONFIG_RETRY_RANDOMIZE) || true, // randomize the timeout
+            }
         },
         ws: {
             idleTimeout: {
@@ -425,5 +427,8 @@ export const envConfig = () => ({
         botCoordinator: process.env.BOT_COORDINATOR_PORT ? parseInt(process.env.BOT_COORDINATOR_PORT, 10) : 3002,
         botExecutor: process.env.BOT_EXECUTOR_PORT ? parseInt(process.env.BOT_EXECUTOR_PORT, 10) : 3004,
         kaniObserver: process.env.KANI_OBSERVER_PORT ? parseInt(process.env.KANI_OBSERVER_PORT, 10) : 3005,
+    },
+    price: {
+        deviationMaxRatio: parseFloat(process.env.PRICE_DEVIATION_MAX_RATIO || "0.01"),
     },
 })

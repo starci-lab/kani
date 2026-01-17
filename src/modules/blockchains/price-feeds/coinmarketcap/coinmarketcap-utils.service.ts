@@ -14,18 +14,19 @@ export class CoinMarketCapUtilsService {
      * @returns The CoinMarketCap symbols without duplicates
      */
     getCoinMarketCapSymbols() {
-        const tokens = this.primaryMemoryStorageService.tokens
+        const tokens = this.primaryMemoryStorageService.tokenArray
             .filter(
                 token => !!token.marketListings.find(market => market.id === MarketId.CoinMarketCap)
             )
         if (!tokens.length) {
             throw new TokenListIsEmptyException("No CoinMarketCap tokens found for mainnet")
         }
-        return [...new Set(
-            tokens.map(
-                token => token.marketListings.find(market => market.id === MarketId.CoinMarketCap)?.symbol
+        return [
+            ...new Set(
+                tokens.map(
+                    token => token.marketListings.find(market => market.id === MarketId.CoinMarketCap)?.symbol
+                )
             )
-        )
         ].filter(Boolean) as Array<string>
     }
 
@@ -36,7 +37,7 @@ export class CoinMarketCapUtilsService {
      */
     getCoinMarketCapTokenPrices(tokenPriceData: Array<CoinMarketCapTokenPriceData>): Array<CoinMarketCapTokenPrice> {
         // retrieve the tokens from the primary memory storage service
-        const tokens = this.primaryMemoryStorageService.tokens
+        const tokens = this.primaryMemoryStorageService.tokenArray
         // map the token prices to the CoinMarketCap token prices
         return tokens.map(
             token => {

@@ -55,11 +55,14 @@ implements OnModuleInit, OnApplicationBootstrap
     private async setBatchPoolAnalytics(
         liquidityPoolIds: Array<LiquidityPoolId>,
     ) {
-    // Get the liquidity pool
-        const liquidityPools =
-      this.primaryMemoryStorageService.liquidityPools.filter((liquidityPool) =>
-          liquidityPoolIds.includes(liquidityPool.displayId),
-      )
+        // Get the liquidity pool
+        const liquidityPools: Array<LiquidityPoolSchema> = []
+        for (const liquidityPoolId of liquidityPoolIds) {
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(createObjectId(liquidityPoolId).toString())
+            if (!liquidityPool) {
+                continue
+            }
+        }
         if (!liquidityPools.length) {
             return
         }
@@ -111,20 +114,20 @@ implements OnModuleInit, OnApplicationBootstrap
 
   @Interval(envConfig().timeConfig.interval.analytics)
     async handleAnalyticsUpdateInterval() {
-        const liquidityPools =
-      this.primaryMemoryStorageService.liquidityPools.filter(
-          (liquidityPool) =>
-              liquidityPool.dex.toString() ===
-          createObjectId(DexId.Cetus).toString(),
-      )
+        const liquidityPools: Array<LiquidityPoolSchema> = []
+        for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolArray) {
+            if (liquidityPool.dex.toString() !== createObjectId(DexId.Cetus).toString()) {
+                continue
+            }
+            liquidityPools.push(liquidityPool)
+        }
         // split into chunks of 10
         const chunks = liquidityPools.reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []), liquidityPool]
                 return acc
-            },
-      [] as Array<Array<LiquidityPoolSchema>>,
+            }, [] as Array<Array<LiquidityPoolSchema>>,
         )
         const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {

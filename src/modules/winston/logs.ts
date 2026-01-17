@@ -1,5 +1,5 @@
 export enum WinstonLog {
-    ExecutorNotFound = "Executor.NotFound",
+    ExecutorNotFound = "Executor.Not.Found",
     // Coordinator
     EjectRpcFatalError = "Eject.RPC.Fatal.Error",
     ErrorDecryptingJwtSecretKey = "Error.Decrypting.JWT.Secret.Key",
@@ -173,7 +173,8 @@ export enum WinstonLog {
     ServiceDeleted = "Service.Deleted",
     CleanupDeploymentsError = "Cleanup.Deployments.Error",
     CleanupServicesError = "Cleanup.Services.Error",
-    RuntimeInitializationFailed = "Runtime.Initialization.Failed",
+    CoordinatorRuntimeInitializationFailed = "Coordinator.Runtime.Initialization.Failed",
+    ExecutorRuntimeInitializationFailed = "Executor.Runtime.Initialization.Failed",
     // Executor
     ExecutorBotsCreated = "Executor.Bots.Created",
     ExecutorBotsDeleted = "Executor.Bots.Deleted",

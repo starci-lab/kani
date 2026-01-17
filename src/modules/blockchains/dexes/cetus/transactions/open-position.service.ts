@@ -32,15 +32,11 @@ export class OpenPositionTxbService {
             amountBMax,
             bot,
         }: CreateOpenPositionTxbParams
-    ): Promise<CreateOpenPositionTxbResponse> {
+    ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }

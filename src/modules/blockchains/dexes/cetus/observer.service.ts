@@ -1,8 +1,8 @@
 import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
+import { PrimaryMemoryStorageService, DexId } from "@modules/databases"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
@@ -21,9 +21,12 @@ import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
 import { envConfig } from "@modules/env"
+import { LiquidityPoolSchema } from "@modules/databases"
 
 @Injectable()
-export class CetusObserverService {
+export class CetusObserverService implements OnApplicationBootstrap, OnModuleInit {
+    // snapshot here to reduce the computational complexity
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -38,6 +41,13 @@ export class CetusObserverService {
         private readonly dayjsService: DayjsService,
     ) {}
 
+    // snapshot here
+    onModuleInit() {
+        this.liquidityPools = this.memoryStorageService.liquidityPoolArray.filter(
+            liquidityPool => liquidityPool.dex.toString() === createObjectId(DexId.Cetus).toString(),
+        )
+    }
+
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
     }
@@ -45,27 +55,23 @@ export class CetusObserverService {
     @Interval(envConfig().timeConfig.interval.suiPoolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+        for (const liquidityPool of this.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Cetus).toString()) continue
             promises.push(
                 (
                     async () => {
-                        await this.fetchPoolInfo(liquidityPool.displayId)
-                    })()
+                        await this.fetchPoolInfo(liquidityPool)
+                    })
+                ()
             )
         }
         await this.asyncService.allIgnoreError(promises)
     }
 
     private async fetchPoolInfo(
-        liquidityPoolId: LiquidityPoolId
+        liquidityPool: LiquidityPoolSchema
     ) {
         try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                liquidityPool => liquidityPool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-
             const objectInfo = await this.rpcExecutorService.withSuiClient(
                 {
                     accessType: RpcAccessType.Http,
@@ -79,16 +85,16 @@ export class CetusObserverService {
                     },
                 }
             )
-            if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPool.displayId} not found`)
             if (objectInfo.data?.content?.dataType !== "moveObject")
-                throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
+                throw new SuiLiquidityPoolInvalidTypeException(liquidityPool.displayId)
             const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
             const pool = parseCetusPool(fields)
-            return await this.handlePoolStateUpdate(liquidityPoolId, pool)
+            return await this.handlePoolStateUpdate(liquidityPool, pool)
         } catch (error) {
             this.winstonLogger.error(
                 WinstonLog.FetchClmmPoolError, {
-                    liquidityPoolId,
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
                 }
             )
@@ -96,7 +102,7 @@ export class CetusObserverService {
     }
 
     private async handlePoolStateUpdate(
-        liquidityPoolId: LiquidityPoolId,
+        liquidityPool: LiquidityPoolSchema,
         state: CetusPool
     ) {
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
@@ -104,7 +110,7 @@ export class CetusObserverService {
             liquidity: new BN(state.liquidity),
             sqrtPriceX64: new BN(state.currentSqrtPrice),
             rewards: state.rewarderManager.rewarders.map((rewarder) => ({
-                tokenAddress: rewarder.rewardCoin,
+                tokenAddress: `0x${rewarder.rewardCoin}`,
                 emissionPerSecond: new BN(rewarder.emissionsPerSecond),
                 growthGlobal: new BN(rewarder.growthGlobal),
             })),
@@ -118,7 +124,7 @@ export class CetusObserverService {
                 this.cacheManager.set(
                     createCacheKey(
                         CacheKey.DynamicClmmLiquidityPoolInfo, 
-                        liquidityPoolId
+                        liquidityPool.displayId
                     ),
                     this.superjson.stringify(parsed),
                 ),
@@ -126,7 +132,7 @@ export class CetusObserverService {
                 this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>
                 (
                     EventName.ClmmLiquidityPoolsFetched,
-                    { liquidityPoolId, ...parsed },
+                    { liquidityPoolId: liquidityPool.displayId, ...parsed },
                     { withoutLocal: true },
                 ),
             ]

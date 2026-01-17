@@ -24,7 +24,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
     // mutex for loading executor
     private sema!: Sema
     // executor
-    public executor: Partial<ExecutorSchema> | null = null
+    public executor: ExecutorSchema | null = null
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,

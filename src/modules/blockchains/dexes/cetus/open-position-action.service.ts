@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
+    ExecuteOpenPositionResult,
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
@@ -36,7 +37,7 @@ import {
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
-import { ExecuteOpenPositionParams, ExecuteOpenPositionResult } from "../../interfaces"
+import { ExecuteOpenPositionParams } from "../../interfaces"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -116,8 +117,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }
         const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
         const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }       
@@ -138,7 +139,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             true,
             false,
             0, // zero slippage
-            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent.toNumber()),
         )
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,

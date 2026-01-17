@@ -35,17 +35,13 @@ export class RaydiumReservesService implements IReservesService {
         const _state = state as LiquidityPoolState
         const { dynamic } = _state
         const { tickCurrent } = dynamic
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === _state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === _state.static.tokenB.toString(),
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
         const sqrtPriceX64 = this.clmmTickFormulaService.tickToSqrtPriceX64({
-            tickIndex: new Decimal(tickCurrent),
+            tickIndex: new Decimal(tickCurrent.toNumber()),
         })
         const sqrtPriceAX64 = this.clmmTickFormulaService.tickToSqrtPriceX64({
             tickIndex: new Decimal(bot.activePosition?.tickLower ?? 0),

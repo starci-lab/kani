@@ -150,7 +150,7 @@ export class ClosePositionOrchestratorService {
                         {
                             liquidityPool: liquidityPool.id,
                             bot: bot.id,
-                            executor: envConfig().botExecutor.executorId,
+                            executor: envConfig().executor.id,
                             type: JobType.ClosePosition,
                             status: JobStatus.Pending,
                             leaseId,

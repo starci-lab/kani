@@ -30,14 +30,13 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { Sema } from "async-sema"
 import { ExecutorLoaderService } from "./executor-loader.service"
-import { WithId } from "@typedefs"
 
 @Injectable()
 export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
     // mutex for loading bots
     private sema!: Sema
     // bots
-    public bots: Map<string, Partial<BotSchema>> = new Map()
+    public bots: Map<string, BotSchema> = new Map()
     constructor(
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
@@ -89,16 +88,10 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
             // get the bots model
             const model = this.connection.model<BotSchema>(BotSchema.name)
             // query all bots (include fields used for update detection)
-            const botRaws = await model
-                .find({ _id: { $in: botIds } }, { _id: 1, version: 1 })
-                .lean()
-                .exec()
+            const bots = await model
+                .find({ _id: { $in: botIds } })
             // map the bots to a partial bot schema
-            const newBots: Array<Partial<BotSchema>> =
-        botRaws?.map((bot) => ({
-            id: bot._id.toString(),
-            version: bot.version,
-        })) ?? []
+            const newBots: Array<BotSchema> = bots.map((bot) => bot.toJSON<BotSchema>()) ?? []
             // detect updated bots by comparing snapshots (excluding created/deleted)
             const updatedBotIds = newBots
                 .map((bot) => {
@@ -140,7 +133,7 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
             // update the executors map snapshot
             this.bots = new Map(
                 newBots
-                    .filter((bot): bot is WithId<Partial<BotSchema>> =>
+                    .filter((bot) =>
                         Boolean(bot.id),
                     )
                     .map((bot) => [bot.id!, bot]),

@@ -98,7 +98,7 @@ export class MomentumObserverService {
             liquidity: state.liquidity,
             sqrtPriceX64: state.sqrtPrice,
             rewards: state.rewardInfos.map((reward) => ({
-                tokenAddress: reward.rewardCoinType,
+                tokenAddress: `0x${reward.rewardCoinType}`,
                 emissionPerSecond: reward.rewardPerSeconds,
                 growthGlobal: reward.rewardGrowthGlobal,
             })),

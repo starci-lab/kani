@@ -13,7 +13,6 @@ import {
     SignersModule, 
     MathModule,
     FormulasModule,
-    SpotModule
 } from "@modules/blockchains"
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
@@ -62,9 +61,6 @@ import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
             level: WinstonLevel.Verbose,
         }),
         FormulasModule.register({
-            isGlobal: true,
-        }),
-        SpotModule.register({
             isGlobal: true,
         }),
         ExitStrategyEngineModule.register({

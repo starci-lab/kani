@@ -11,9 +11,16 @@ import { AccountLimitsConfigNotFoundException, BalanceConfigNotFoundException, G
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
-    public tokens: Array<TokenSchema> = []
-    public liquidityPools: Array<LiquidityPoolSchema> = []
-    public dexes: Array<DexSchema> = []
+    // tokens
+    public tokenArray: Array<TokenSchema> = []
+    public tokenMap: Map<string, TokenSchema> = new Map()
+    // liquidity pools
+    public liquidityPoolArray: Array<LiquidityPoolSchema> = []
+    public liquidityPoolMap: Map<string, LiquidityPoolSchema> = new Map()
+    // dexes
+    public dexArray: Array<DexSchema> = []
+    public dexMap: Map<string, DexSchema> = new Map()
+    // gas config
     public gasConfig: GasConfig
     public balanceConfig: BalanceConfig
     public accountLimits: AccountLimitsConfig
@@ -35,7 +42,8 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         const tokens = await this.connection
                             .model<TokenSchema>(TokenSchema.name)
                             .find()
-                        this.tokens = tokens.map(token => token.toJSON())
+                        this.tokenArray = tokens.map(token => token.toJSON())
+                        this.tokenMap = new Map(tokens.map(token => [token.id, token]))
                     },
                 })
             })(),
@@ -45,7 +53,8 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         const liquidityPools = await this.connection
                             .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                             .find()
-                        this.liquidityPools = liquidityPools.map(liquidityPool => liquidityPool.toJSON())
+                        this.liquidityPoolArray = liquidityPools.map(liquidityPool => liquidityPool.toJSON())
+                        this.liquidityPoolMap = new Map(liquidityPools.map(liquidityPool => [liquidityPool.id, liquidityPool]))
                     },
                 })
             })(),
@@ -55,7 +64,8 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                         const dexes = await this.connection
                             .model<DexSchema>(DexSchema.name)
                             .find()
-                        this.dexes = dexes.map(dex => dex.toJSON())
+                        this.dexArray = dexes.map(dex => dex.toJSON())
+                        this.dexMap = new Map(dexes.map(dex => [dex.id, dex]))
                     },
                 })
             })(),

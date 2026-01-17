@@ -54,6 +54,7 @@ export interface ClmmRewardInfo {
     tokenAddress: string
     emissionPerSecond: BN
     growthGlobal: BN
+    vaultAddress?: string
 }
 
 export interface DynamicClmmLiquidityPoolInfoCacheResult extends NonExpiredCacheResult {

@@ -12,7 +12,9 @@ import {
     GraphQLTypeBotType, 
     GraphQLTypeExplorerId,
     AppVersion,
-    GraphQLTypeAppVersion
+    GraphQLTypeAppVersion,
+    LiquidityPoolType,
+    GraphQLTypeLiquidityPoolType
 } from "../enums"
 import { PositionSchema } from "./position.schema"
 /**
@@ -234,6 +236,20 @@ export class BotSchema extends AbstractSchema {
     })
     @Prop({ type: Boolean, required: false })
         frozen?: boolean
+
+    @Field(() => GraphQLTypeLiquidityPoolType, {
+        description: "The type of the active liquidity pool that the bot is operating on, null if not operating on any liquidity pool",
+        nullable: true,
+    })
+    @Prop({ type: String, required: false, enum: LiquidityPoolType })
+        activeLiquidityPoolType?: LiquidityPoolType
+
+    @Field(() => ID, { 
+        description: "Reference to the active liquidity pool associated with this bot, null if not operating on any liquidity pool", 
+        nullable: true,
+    })
+    @Prop({ type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name, required: false })
+        activeLiquidityPool?: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

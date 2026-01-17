@@ -1,25 +1,24 @@
 import { Injectable } from "@nestjs/common"
 import { AsyncService, RetryOptions, RetryService } from "@modules/mixin"
-import { 
-    createSolanaRpc, 
-    createSolanaRpcSubscriptions, 
-    isSolanaError, 
-    Rpc, 
-    RpcSubscriptions, 
-    SolanaError, 
-    SolanaRpcApi, 
+import {
+    createSolanaRpc,
+    createSolanaRpcSubscriptions,
+    isSolanaError,
+    Rpc,
+    RpcSubscriptions,
+    SolanaError,
+    SolanaRpcApi,
     SolanaRpcSubscriptionsApi
 } from "@solana/kit"
-import { 
-    SuiClient, 
-    JsonRpcError, 
+import {
+    SuiClient,
+    JsonRpcError,
     SuiHTTPStatusError
 } from "@mysten/sui/client"
 import { P2CBalancerService } from "@modules/p2c-balancer"
 import { ChainId } from "@typedefs"
 import { RpcAccessType } from "@modules/filesystem"
 import { AbortError } from "p-retry"
-import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 
@@ -27,12 +26,12 @@ import { Logger as WinstonLogger } from "winston"
 // (e.g. request timeout, transient cluster issues, blockhash expiration,
 // or temporary on-chain execution failure).
 // Safe to retry with backoff; do not ban/eject the RPC endpoint.
-export class SolanaRpcRetryableError extends Error {}
-export class SolanaRpcFatalError extends Error {}
-export class SolanaRpcIgnorableError extends Error {}
-export class SuiRpcRetryableError extends Error {}
-export class SuiRpcFatalError extends Error {}
-export class SuiRpcIgnorableError extends Error {}
+export class SolanaRpcRetryableError extends Error { }
+export class SolanaRpcFatalError extends Error { }
+export class SolanaRpcIgnorableError extends Error { }
+export class SuiRpcRetryableError extends Error { }
+export class SuiRpcFatalError extends Error { }
+export class SuiRpcIgnorableError extends Error { }
 
 export enum RpcErrorType {
     Ignorable = "ignorable",
@@ -57,7 +56,7 @@ export class RpcExecutorService {
         private readonly asyncService: AsyncService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
-    ) {}
+    ) { }
 
     private getSolanaRpcErrorType(error: SolanaError): RpcErrorType {
         const code = error.context?.__code
@@ -77,7 +76,7 @@ export class RpcExecutorService {
             // Other HTTP errors -> retry cautiously
             return RpcErrorType.Ignorable
         }
-      
+
         // API plan missing for RPC method -> permanent misconfiguration
         if (code === 8100003 /* SOLANA_ERROR__RPC__API_PLAN_MISSING_FOR_RPC_METHOD */) {
             return RpcErrorType.Fatal
@@ -129,8 +128,9 @@ export class RpcExecutorService {
     }: WithSolanaRpcParams<TResult>): Promise<TResult> {
         return await this.retryService.retry(
             {
+                options,
                 action: async () => {
-                // take the url from the p2c balancer
+                    // take the url from the p2c balancer
                     const { url: rpcUrl, id } = this.p2cBalancerService.balance(
                         {
                             chainId: ChainId.Solana,
@@ -143,9 +143,9 @@ export class RpcExecutorService {
                     let rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
                     // if the access type is ws, create the rpc subscriptions
                     if (accessType === RpcAccessType.Http) {
-                        rpc = createSolanaRpc(rpcUrl)     
+                        rpc = createSolanaRpc(rpcUrl)
                     } else if (accessType === RpcAccessType.Ws) {
-                    // if the access type is http, create the rpc
+                        // if the access type is http, create the rpc
                         rpcSubscriptions = createSolanaRpcSubscriptions(rpcUrl)
                     } else {
                         rpc = createSolanaRpc(rpcUrl)
@@ -160,15 +160,16 @@ export class RpcExecutorService {
                     try {
                         return await this.retryService.retry(
                             {
+                                options,
                                 action: async () => {
-                                // resolve the tuple of response and error
+                                    // resolve the tuple of response and error
                                     const [
-                                        result, 
+                                        result,
                                         error
                                     ] = await this.asyncService.resolveTuple(
                                         callback(
-                                            { 
-                                                rpc, 
+                                            {
+                                                rpc,
                                                 rpcSubscriptions,
                                                 rpcUrl
                                             }
@@ -193,35 +194,19 @@ export class RpcExecutorService {
                                     // if the error is not a solana error, throw the error
                                     throw new AbortError(new SolanaRpcIgnorableError(error?.message))
                                 },
-                                options: {
-                                    ...options,
-                                    retries: options?.retries ?? envConfig().timeConfig.retry.retries,
-                                    minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.minTimeout,
-                                    maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.maxTimeout,
-                                    factor: options?.factor ?? envConfig().timeConfig.retry.factor,
-                                    randomize: options?.randomize ?? envConfig().timeConfig.retry.randomize,
-                                }
-                            }
+                            },
                         )
                     } catch (error) {
                         if (error instanceof SolanaRpcFatalError) {
                             this.logger.error(
-                                WinstonLog.EjectRpcFatalError, 
+                                WinstonLog.EjectRpcFatalError,
                                 { rpcId: id }
                             )
                             await this.p2cBalancerService.ejectRpcs([id])
                             throw error
                         }
                         throw error
-                    } 
-                },
-                options: {
-                    ...options,
-                    retries: options?.retries ?? envConfig().timeConfig.retry.retries,
-                    minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.minTimeout,
-                    maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.maxTimeout,
-                    factor: options?.factor ?? envConfig().timeConfig.retry.factor,
-                    randomize: options?.randomize ?? envConfig().timeConfig.retry.randomize,
+                    }
                 }
             })
     }
@@ -254,7 +239,7 @@ export class RpcExecutorService {
         callback,
         accessType,
         options,
-    }: WithSuiClientParams<TResult>): Promise<TResult> {  
+    }: WithSuiClientParams<TResult>): Promise<TResult> {
         return await this.retryService.retry({
             action: async () => {
                 // take the url from the p2c balancer
@@ -271,6 +256,7 @@ export class RpcExecutorService {
                 try {
                     // try to call the rpc
                     return await this.retryService.retry({
+                        options,
                         action: async () => {
                             // resolve the tuple of response and error
                             const [result, error] = await this.asyncService.resolveTuple(
@@ -293,13 +279,6 @@ export class RpcExecutorService {
                                 throw new AbortError(new SuiRpcIgnorableError(error?.message))
                             }
                         },
-                        options: options ?? {
-                            retries: envConfig().timeConfig.retry.retries,
-                            minTimeout: envConfig().timeConfig.retry.minTimeout,
-                            maxTimeout: envConfig().timeConfig.retry.maxTimeout,
-                            factor: envConfig().timeConfig.retry.factor,
-                            randomize: envConfig().timeConfig.retry.randomize,
-                        },
                     })
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
@@ -310,48 +289,45 @@ export class RpcExecutorService {
                     }
                     throw error
                 }
-            },
-            options: options ?? {
-                retries: envConfig().timeConfig.retry.retries,
-                minTimeout: envConfig().timeConfig.retry.minTimeout,
-                maxTimeout: envConfig().timeConfig.retry.maxTimeout,
-                factor: envConfig().timeConfig.retry.factor,
-                randomize: envConfig().timeConfig.retry.randomize,
-            },
-        })  
-    }   
+            }
+        })
+    }
 }
 
-export type WithSolanaRpcParams<TResult = void> = 
-({
-    callback: (params: Omit<WithSolanaRpcCallbackParams, "rpcSubscriptions">) => Promise<TResult>
-    accessType: RpcAccessType.Http
-} | {
-    callback: (params: Omit<WithSolanaRpcCallbackParams, "rpc">) => Promise<TResult>
-    accessType: RpcAccessType.Ws
-} | {
-    callback: (params: WithSolanaRpcCallbackParams) => Promise<TResult>
-    accessType: RpcAccessType.Write
-}) & ({
-    options?: RetryOptions
-})
+export type WithSolanaRpcParams<TResult = void> =
+    (
+        {
+            callback: (params: Omit<WithSolanaRpcCallbackParams, "rpcSubscriptions">) => Promise<TResult>
+            accessType: RpcAccessType.Http
+        } | {
+            callback: (params: Omit<WithSolanaRpcCallbackParams, "rpc">) => Promise<TResult>
+            accessType: RpcAccessType.Ws
+        } | {
+            callback: (params: WithSolanaRpcCallbackParams) => Promise<TResult>
+            accessType: RpcAccessType.Write
+        }
+    ) & {
+        options?: RetryOptions
+    }
 
 export interface WithSolanaRpcCallbackParams {
     rpc: Rpc<SolanaRpcApi>
     rpcSubscriptions: RpcSubscriptions<SolanaRpcSubscriptionsApi>
-    rpcUrl: string 
+    rpcUrl: string
 }
 
-export type WithSuiClientParams<TResult = void> = 
-({
-    callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
-    accessType: RpcAccessType.Http
-} | {
-    callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
-    accessType: RpcAccessType.Write
-}) & ({
-    options?: RetryOptions
-})
+export type WithSuiClientParams<TResult = void> =
+    (
+        {
+            callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
+            accessType: RpcAccessType.Http
+        } | {
+            callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
+            accessType: RpcAccessType.Write
+        }
+    ) & {
+        options?: RetryOptions
+    }
 
 export interface WithSuiClientCallbackParams {
     suiClient: SuiClient

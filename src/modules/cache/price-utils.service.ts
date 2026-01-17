@@ -51,7 +51,7 @@ export class CachePriceUtilsService {
         await this.cacheManager.set(
             createCacheKey(CacheKey.AggregatedTokenPrice, tokenId),
             this.superjson.stringify(cachedResult),
-            envConfig().cache.ttl.AggregatedTokenPrice,
+            envConfig().cache.ttl.aggregatedTokenPrice,
         )
     }
 

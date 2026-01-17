@@ -1,9 +1,9 @@
 import { StreamConnection } from "../types"
-import { ChangeStream, ChangeStreamOptions } from "mongodb"
-import { ChangeDoc } from "@modules/databases"
+import { ChangeStream, ChangeStreamDeleteDocument, ChangeStreamInsertDocument, ChangeStreamOptions, ChangeStreamReplaceDocument, ChangeStreamUpdateDocument } from "mongodb"
 import { AbstractSchema } from "@modules/databases/mongodb/primary/schemas"
 import { Model } from "mongoose"
 
+type ChangeDoc<TSchema extends AbstractSchema> = ChangeStreamInsertDocument<TSchema> | ChangeStreamUpdateDocument<TSchema> | ChangeStreamDeleteDocument<TSchema> | ChangeStreamReplaceDocument<TSchema>
 /**
  * MongoDBChangeStreamConnection
  *
