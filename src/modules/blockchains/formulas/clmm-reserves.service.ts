@@ -1,95 +1,149 @@
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { Q128, Q64 } from "@utils"
-import { ClmmUtilsService } from "./clmm-utils.service"
+import { computeDenomination, Q128, Q64, Q96 } from "@utils"
+import { ClmmTickFormulaService } from "./clmm-tick.service"
 
 /**
  * CLMM Reserves Formula Service
  *
- * Implements Uniswap V3-style reserve calculation for concentrated liquidity positions:
+ * Computes the actual token reserves (token A & token B)
+ * held by a concentrated liquidity position at the current price.
  *
- * - Token amounts are calculated based on current tick relative to position range
- * - Three cases are handled:
- *   1. Current tick below range: only token A
- *   2. Current tick within range: both tokens A and B
- *   3. Current tick above range: only token B
+ * This follows Uniswap V3 / CLMM mathematics:
  *
- * Formulas use fixed-point arithmetic with configurable modulus:
- *  - priceDiv = Q64 (default for Q64.64 sqrt prices)
- *  - Supports Q128 for extended precision if needed
+ * A position is defined by a price range [tickLower, tickUpper).
+ * Depending on the current price (tickCurrent), liquidity is
+ * represented as:
  *
- * Defaults:
- *  - priceDiv = Q64 (Q64 fixed-point; >> 64)
+ * 1) tickCurrent < tickLower
+ *    → Position is inactive
+ *    → 100% token A, 0% token B
+ *
+ * 2) tickLower ≤ tickCurrent < tickUpper
+ *    → Position is active
+ *    → Holds both token A and token B
+ *
+ * 3) tickCurrent ≥ tickUpper
+ *    → Position is fully converted
+ *    → 0% token A, 100% token B
+ *
+ * All calculations are performed using fixed-point arithmetic
+ * on sqrt prices (√P), with configurable precision:
+ *
+ * - Q64  : common for Solana CLMM (sqrtPriceX64)
+ * - Q96  : Uniswap V3 (Ethereum)
+ * - Q128 : extended precision
+ *
+ * Final results are converted to human-readable Decimal amounts
+ * using token decimals.
  */
 @Injectable()
 export class ClmmReservesFormulaService {
     constructor(
-        private readonly clmmUtilsService: ClmmUtilsService,
+        private readonly clmmTickFormulaService: ClmmTickFormulaService
     ) {}
 
     /**
-     * Calculate token deltas (amounts) for a liquidity position.
+     * Computes token A and token B reserves for a CLMM position.
      *
-     * Implements Uniswap V3-style concentrated liquidity math:
+     * @param params.tickLower      Lower tick boundary of the position
+     * @param params.tickUpper      Upper tick boundary of the position
+     * @param params.tickCurrent    Current pool tick (price)
+     * @param params.liquidity      Liquidity amount (L)
+     * @param params.fixedPointScale Fixed-point scale used for sqrt prices (Q64/Q96/Q128)
+     * @param params.decimalsA      Decimals of token A
+     * @param params.decimalsB      Decimals of token B
      *
-     * Case 1: Current tick below position range (tickCurrent < tickLower)
-     *   - Only token A is present
-     *   - deltaA = liquidity × (sqrtPriceUpper - sqrtPriceLower) × priceDiv / (sqrtPriceLower × sqrtPriceUpper)
-     *   - deltaB = 0
-     *
-     * Case 2: Current tick within position range (tickLower <= tickCurrent < tickUpper)
-     *   - Both tokens are present
-     *   - deltaA = liquidity × (sqrtPriceUpper - sqrtPriceCurrent) × priceDiv / (sqrtPriceCurrent × sqrtPriceUpper)
-     *   - deltaB = liquidity × (sqrtPriceCurrent - sqrtPriceLower) / priceDiv
-     *
-     * Case 3: Current tick above position range (tickCurrent >= tickUpper)
-     *   - Only token B is present
-     *   - deltaA = 0
-     *   - deltaB = liquidity × (sqrtPriceUpper - sqrtPriceLower) / priceDiv
-     *
-     * @param params - Calculation parameters
-     * @returns Object containing deltaA and deltaB token amounts
+     * @returns Human-readable reserves of token A and token B
      */
-    public calculateLiquidityTokenDeltas(
-        {
-            tickCurrent,
-            sqrtPriceX64,
-            tickLower,
-            tickUpper,
-            sqrtPriceLowerX64,
-            sqrtPriceUpperX64,
-            liquidity,
-            priceDiv = Q64,
-        }: CalculateLiquidityTokenDeltasParams
-    ): CalculateLiquidityTokenDeltasResult {
-        // Case 1: below range
-        if (tickCurrent.lessThan(tickLower)) {
-            const deltaA = liquidity
-                .mul(sqrtPriceUpperX64.sub(sqrtPriceLowerX64))
-                .mul(priceDiv)
-                .div(sqrtPriceLowerX64.mul(sqrtPriceUpperX64))
-            return { deltaA, deltaB: new BN(0) }
+    public computeReserves({
+        tickLower,
+        tickUpper,
+        tickCurrent,
+        liquidity,
+        fixedPointScale = Q64,
+        decimalsA,
+        decimalsB,
+    }: CalculateReservesParams): CalculateReservesResult {
+
+        /**
+         * Convert ticks to fixed-point sqrt prices:
+         *
+         *   sqrtPrice      = √P_current × Q
+         *   sqrtPriceLower = √P_lower   × Q
+         *   sqrtPriceUpper = √P_upper   × Q
+         */
+        const sqrtPrice = this.clmmTickFormulaService.tickToSqrtPrice({
+            tickIndex: tickCurrent,
+            fixedPointScale,
+        })
+
+        const sqrtPriceLower = this.clmmTickFormulaService.tickToSqrtPrice({
+            tickIndex: tickLower,
+            fixedPointScale,
+        })
+
+        const sqrtPriceUpper = this.clmmTickFormulaService.tickToSqrtPrice({
+            tickIndex: tickUpper,
+            fixedPointScale,
+        })
+
+        /**
+         * CASE 1:
+         * Current price is below the position range.
+         * Liquidity is entirely represented as token A.
+         */
+        if (tickCurrent.lt(tickLower)) {
+            const tokenA = liquidity
+                .mul(sqrtPriceUpper.sub(sqrtPriceLower))
+                .mul(fixedPointScale)
+                .div(sqrtPriceLower)
+                .div(sqrtPriceUpper)
+
+            return {
+                reserveA: computeDenomination(tokenA, decimalsA),
+                reserveB: new Decimal(0),
+            }
         }
 
-        // Case 2: in range
-        if (tickCurrent.lessThan(tickUpper)) {
-            const deltaA = liquidity
-                .mul(sqrtPriceUpperX64.sub(sqrtPriceX64))
-                .mul(priceDiv)
-                .div(sqrtPriceX64.mul(sqrtPriceUpperX64))
-            const deltaB = liquidity
-                .mul(sqrtPriceX64.sub(sqrtPriceLowerX64))
-                .div(priceDiv)
+        /**
+         * CASE 3:
+         * Current price is above the position range.
+         * Liquidity is entirely represented as token B.
+         */
+        if (tickCurrent.gt(tickUpper)) {
+            const tokenB = liquidity
+                .mul(sqrtPriceUpper.sub(sqrtPriceLower))
+                .div(fixedPointScale)
+                .div(sqrtPriceLower)
+                .div(sqrtPriceUpper)
 
-            return { deltaA, deltaB }
+            return {
+                reserveA: new Decimal(0),
+                reserveB: computeDenomination(tokenB, decimalsB),
+            }
         }
 
-        // Case 3: above range
-        const deltaB = liquidity
-            .mul(sqrtPriceUpperX64.sub(sqrtPriceLowerX64))
-            .div(priceDiv)
-        return { deltaA: new BN(0), deltaB }
+        /**
+         * CASE 2:
+         * Current price is inside the position range.
+         * Liquidity is split between token A and token B.
+         */
+        const tokenA = liquidity
+            .mul(sqrtPriceUpper.sub(sqrtPrice))
+            .mul(fixedPointScale)
+            .div(sqrtPrice)
+            .div(sqrtPriceUpper)
+
+        const tokenB = liquidity
+            .mul(sqrtPrice.sub(sqrtPriceLower))
+            .div(fixedPointScale)
+
+        return {
+            reserveA: computeDenomination(tokenA, decimalsA),
+            reserveB: computeDenomination(tokenB, decimalsB),
+        }
     }
 }
 
@@ -97,50 +151,39 @@ export class ClmmReservesFormulaService {
 /*                                   Types                                    */
 /* -------------------------------------------------------------------------- */
 
-export interface CalculateLiquidityTokenDeltasParams {
-    /**
-     * Current pool tick
-     */
-    tickCurrent: Decimal
-
-    /**
-     * Current sqrt price in Q64 format
-     */
-    sqrtPriceX64: BN
-
+export interface CalculateReservesParams {
     /**
      * Lower tick of the position
      */
     tickLower: Decimal
-
     /**
      * Upper tick of the position
      */
     tickUpper: Decimal
-
     /**
-     * Sqrt price at lower tick in Q64 format
+     * Current sqrt price
      */
-    sqrtPriceLowerX64: BN
-
-    /**
-     * Sqrt price at upper tick in Q64 format
-     */
-    sqrtPriceUpperX64: BN
-
+    tickCurrent: Decimal
     /**
      * Liquidity amount (unsigned)
      */
     liquidity: BN
-
     /**
-     * Divisor for price calculations (default: Q64)
+     * Fixed point scale for sqrt price
      * Controls fixed-point scaling for sqrt price arithmetic
      */
-    priceDiv?: typeof Q64 | typeof Q128
+    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
+    /**
+     * Decimals of token A
+     */
+    decimalsA: number
+    /**
+     * Decimals of token B
+     */
+    decimalsB: number
 }
 
-export interface CalculateLiquidityTokenDeltasResult {
-    deltaA: BN
-    deltaB: BN
+export interface CalculateReservesResult {
+    reserveA: Decimal
+    reserveB: Decimal
 }

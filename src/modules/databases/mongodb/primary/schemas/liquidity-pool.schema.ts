@@ -232,6 +232,7 @@ export interface FlowXLiquidityPoolMetadata {
     i32Type: string;
     poolFeeCollectEventType: string;
     poolRewardCollectEventType: string;
+    ticksId: string;
 }
 
 export interface CetusLiquidityPoolMetadata {
@@ -239,6 +240,8 @@ export interface CetusLiquidityPoolMetadata {
     globalConfigObject: string;
     clmmPackageId: string;
     rewarderGlobalVaultObject: string;
+    tickManagerId: string;
+    positionManagerId: string;
 }
 
 export interface TurbosLiquidityPoolMetadata {
@@ -246,9 +249,12 @@ export interface TurbosLiquidityPoolMetadata {
     feeType: string;
     positionsObject: string;
     versionObject: string;
+    i32Type: string;
 }
 
 export interface MomentumLiquidityPoolMetadata {
     packageId: string;
     versionObject: string;
+    ticksId: string;
+    i32Type: string;
 }

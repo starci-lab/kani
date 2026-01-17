@@ -1,13 +1,19 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
 } from "../../interfaces"
-import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
+import {
+    TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SignerService 
+} from "../../signers"
 import {
     ClosePositionTxbService,
 } from "./transactions"
@@ -18,13 +24,27 @@ import {
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { AsyncService } from "@modules/mixin"
-import { PrivySignService } from "@modules/privy"
-import { AppVersion } from "@modules/databases"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    PrivySignService 
+} from "@modules/privy"
+import {
+    AppVersion 
+} from "@modules/databases"
+import {
+    WinstonService 
+} from "@modules/winston"
+import {
+    WinstonLog 
+} from "@modules/winston"
 
 @Injectable()
 export class FlowXClosePositionActionService implements IClosePositionActionService {
@@ -34,8 +54,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
 
     async prepare(
@@ -43,11 +62,12 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
     ): Promise<PrepareClosePositionResult> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id,
-                "Active position not found",
+                {
+                    botId: bot.id,
+                }
             )
         }
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         const {
             txb: closePositionTxb,
         } = await this.closePositionTxbService.createClosePositionTxb({
@@ -67,7 +87,11 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                                 sender: bot.accountAddress,
                             })
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException("Transaction validation failed")
+                                throw new TransactionValidationFailedException({
+                                    botId: bot.id,
+                                    txHash: devInspect.effects.transactionDigest,
+                                    liquidityPoolId: _state.static.displayId,
+                                })
                             }
                             const bytes = await closePositionTxb.build({
                                 client: suiClient,
@@ -82,7 +106,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     })
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -110,11 +136,12 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             txHash,
         }: ExecuteClosePositionParams
     ): Promise<void> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id,
-                "Active position not found",
+                {
+                    botId: bot.id,
+                }
             )
         }
         if (isRetry) {
@@ -131,10 +158,22 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             if (txBlock !== null) {
                 return
             }
-            throw new TransactionNotExecutedException("Transaction not executed")
+            throw new TransactionNotExecutedException(
+                {
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: _state.static.displayId,
+                }
+            )
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException(
+                {
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: _state.static.displayId,
+                }
+            )
         }
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -146,8 +185,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 await suiClient.waitForTransaction({
                     digest,
                 })
-                this.logger.verbose(
-                    WinstonLog.ClosePositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.ClosePositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,

@@ -1,10 +1,30 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./momentum.module-definition"
-import { OpenPositionTxbService, ClosePositionTxbService } from "./transactions"
-import { MomentumObserverService } from "./observer.service"
-import { MomentumOpenPositionActionService } from "./open-position-action.service"
-import { MomentumClosePositionActionService } from "./close-position-action.service"
-import { MomentumAnalyticsService } from "./analytics.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./momentum.module-definition"
+import {
+    OpenPositionTxbService, ClosePositionTxbService 
+} from "./transactions"
+import {
+    MomentumObserverService 
+} from "./observer.service"
+import {
+    MomentumOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    MomentumClosePositionActionService 
+} from "./close-position-action.service"
+import {
+    MomentumAnalyticsService 
+} from "./analytics.service"
+import {
+    MomentumFeesService 
+} from "./fees.service"
+import {
+    MomentumReservesService 
+} from "./reserves.service"
 @Injectable()
 export class MomentumModule extends ConfigurableModuleClass {
     static register(
@@ -35,6 +55,18 @@ export class MomentumModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(MomentumAnalyticsService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(MomentumFeesService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(MomentumReservesService)
         }
         return {
             ...dynamicModule,

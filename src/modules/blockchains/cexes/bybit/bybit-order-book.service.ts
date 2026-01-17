@@ -88,7 +88,6 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                     for await (const data of stream) {
                         try {
                             const parsed = JSON.parse(data.toString()) as BybitOrderBookUpdate | BybitOrderBookWsSubscribeResult
-
                             if ("success" in parsed) {
                                 if (!parsed.success) {
                                     continue

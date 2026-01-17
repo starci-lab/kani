@@ -1,11 +1,11 @@
 import { asUintN } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { LiquidityPoolState } from "../../../interfaces"
+import { ClmmLiquidityPoolState } from "../../../interfaces"
 import { BotSchema, CetusLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { Transaction } from "@mysten/sui/transactions"
 import { Injectable } from "@nestjs/common"
-import { InvalidPoolTokensException } from "src/exceptions/tokens"
+import { InvalidPoolTokensException } from "@exceptions"
 import Decimal from "decimal.js"
-import { TargetOperationalGasAmountNotFoundException } from "@exceptions"
+import { ActivePositionNotFoundException, TargetOperationalGasAmountNotFoundException } from "@exceptions"
 import { FeeService } from "../../../math"
 import { SelectCoinsService } from "../../../tx-builder"
 import BN from "bn.js"
@@ -20,7 +20,7 @@ export class OpenPositionTxbService {
         private readonly feeService: FeeService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly mountStorageService: MountStorageService,
-    ) {}
+    ) { }
 
     async createOpenPositionTxb(
         {
@@ -35,10 +35,32 @@ export class OpenPositionTxbService {
     ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenB.toString())
+        if (
+            !bot.activePosition ||
+            !bot.activePositionLiquidityPool ||
+            !bot.activePositionLiquidityPoolType
+        ) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: state.static.tokenA.toString()
+            }
+
+        )
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: state.static.tokenB.toString()
+            }
+        )
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException(
+                {
+                    liquidityPoolId: state.static.displayId,
+                }
+            )
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
         const {
@@ -62,12 +84,13 @@ export class OpenPositionTxbService {
             targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                ChainId.Sui,
-                "Target operational gas amount not found"
+                {
+                    chainId: bot.chainId,
+                }
             )
         }
-        const { 
-            sourceCoin: sourceCoinA 
+        const {
+            sourceCoin: sourceCoinA
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
                 txb,
@@ -76,8 +99,8 @@ export class OpenPositionTxbService {
                 requiredAmount: amountAMax,
                 suiGasAmount: new BN(targetOperationalAmount),
             })
-        const { 
-            sourceCoin: sourceCoinB 
+        const {
+            sourceCoin: sourceCoinB
         } = await this.selectCoinsService.fetchAndMergeCoins(
             {
                 txb,
@@ -86,20 +109,29 @@ export class OpenPositionTxbService {
                 requiredAmount: amountBMax,
                 suiGasAmount: new BN(targetOperationalAmount),
             })
-        const { spendCoin: feeCoinA } = this.selectCoinsService.splitCoin({
-            txb,
-            sourceCoin: sourceCoinA,
-            requiredAmount: feeAmountA,
-        })
-        const { spendCoin: feeCoinB } = this.selectCoinsService.splitCoin({
-            txb,
-            sourceCoin: sourceCoinB,
-            requiredAmount: feeAmountB,
-        })
-        txb.transferObjects([
-            feeCoinA.coinArg, 
-            feeCoinB.coinArg
-        ], feeToAddress)
+        const {
+            spendCoin: feeCoinA
+        } = this.selectCoinsService.splitCoin(
+            {
+                txb,
+                sourceCoin: sourceCoinA,
+                requiredAmount: feeAmountA,
+            }
+        )
+        const {
+            spendCoin: feeCoinB
+        } = this.selectCoinsService.splitCoin(
+            {
+                txb,
+                sourceCoin: sourceCoinB,
+                requiredAmount: feeAmountB,
+            }
+        )
+        txb.transferObjects(
+            [
+                feeCoinA.coinArg,
+                feeCoinB.coinArg
+            ], feeToAddress)
         const {
             intergratePackageId,
             globalConfigObject,
@@ -127,13 +159,13 @@ export class OpenPositionTxbService {
             txb,
             feeAmountA,
             feeAmountB,
-        }  
+        }
     }
 }
 
 export interface CreateOpenPositionTxbParams {
     txb?: Transaction
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
     tickLower: Decimal
     tickUpper: Decimal
     amountAMax: BN

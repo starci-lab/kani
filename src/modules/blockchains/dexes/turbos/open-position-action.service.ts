@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import {
     IOpenActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
@@ -14,12 +14,13 @@ import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
     AppVersion,
+    BotSchema,
+    DexId,
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import { OpenPositionTxbService } from "./transactions"
 import { TickMathService } from "../../math"
 import { 
-    AmountBInBetweenExpectedException,
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionEventNotFoundException,
@@ -29,18 +30,21 @@ import {
     PositionInvalidTypeException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
+    SuiObjectInvalidTypeException,
+    ErrorSuiObjectName,
+    EnsureCalculationException,
+    EnsureRangeType,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { WinstonLog, WinstonService } from "@modules/winston"
 import { Network, TurbosSdk } from "turbos-clmm-sdk"
 import { EnsureMathService } from "../../math"
 import { toScaledBN } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
-import { MintNftEvent, TurbosClmmPosition, TurbosPosition } from "./struct"
+import { MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosPosition, TurbosSuiObjectPositionNFT } from "./struct"
 import { envConfig } from "@modules/env"
 import { PrivySignService } from "@modules/privy"
         
@@ -54,14 +58,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly ensureMathService: EnsureMathService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
         private readonly privySignService: PrivySignService,
+        private readonly winstonService: WinstonService,
     ) {}
     
     async confirm(
-        { positionId }: ConfirmOpenPositionParams
+        { positionId, state }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
+        const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -77,9 +81,10 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 if (positionNft?.data?.content?.dataType !== "moveObject") {
                     throw new PositionInvalidTypeException("Position is not a move object")
                 }
-                const positionNftFields = positionNft.data.content.fields as unknown as TurbosPositionNFT
+                const positionNftFields = positionNft.data.content.fields as unknown as TurbosSuiObjectPositionNFT
+                const turbosPositionNFT = parseTurbosSuiObjectPositionNFT(positionNftFields)
                 const clmmPosition = await suiClient.getObject({
-                    id: positionNftFields.position_id,
+                    id: turbosPositionNFT.positionId,
                     options: {
                         showContent: true,
                     }
@@ -88,7 +93,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     throw new PositionNotFoundException("CLMM position not found")
                 }
                 if (clmmPosition?.data?.content?.dataType !== "moveObject") {
-                    throw new PositionInvalidTypeException("CLMM position is not a move object")
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.Position,
+                        id: turbosPositionNFT.positionId,
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
+                    })  
                 }
                 const clmmPositionFields = clmmPosition.data.content.fields as unknown as TurbosClmmPosition
                 return {
@@ -104,16 +114,28 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             state,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as LiquidityPoolState
-        if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+        const _state = state as ClmmLiquidityPoolState
+        if (
+            !bot.snapshotTargetBalanceAmount 
+            || !bot.snapshotQuoteBalanceAmount 
+            || !bot.snapshotGasBalanceAmount
+        ) {
+            throw new SnapshotBalancesNotSetException({
+                botId: bot.id,
+            })
         }
         const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
         const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }       
         const targetIsA = bot.targetToken.toString() === tokenA.id
         const { 
@@ -133,16 +155,24 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             tickLower: tickLower.toNumber(),
             tickUpper: tickUpper.toNumber(),
         })
+        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds))
+        const upperBound = new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds))
+        const actual = new BN(actualAmountB)
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,
-            actual: new BN(actualAmountB),
-            upperBound: new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds)),
-            lowerBound: new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds)),
+            actual,
+            upperBound,
+            lowerBound,
         })
         if (!isAcceptable) {
-            throw new AmountBInBetweenExpectedException(
-                ratio, 
-                "Amount B is not in between expected"
+            throw new EnsureCalculationException(
+                {
+                    expected: amountB,
+                    actual,
+                    rangeType: EnsureRangeType.Between,
+                    lowerBound,
+                    upperBound,
+                }
             )
         }
         if (ratio.gt(new Decimal(1))) {
@@ -174,7 +204,11 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                 sender: bot.accountAddress,
                             })
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException("Transaction validation failed")
+                                throw new TransactionValidationFailedException({
+                                    botId: bot.id,
+                                    txHash: devInspect.effects.transactionDigest,
+                                    liquidityPoolId: _state.static.displayId,
+                                })
                             }
                             const bytes = await openPositionTxb.build({
                                 client: suiClient,
@@ -195,7 +229,9 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     })
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -226,7 +262,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         txHash,
         signatureWithBytes,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -242,15 +278,28 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 })
             )
             if (txBlock !== null) {
-                const { positionId } = this.parseMintEvents(txBlock?.events || [])
+                const { positionId } = this.parseMintEvents({
+                    bot,
+                    txHash,
+                    state: _state,
+                    events: txBlock?.events || [],
+                })
                 return {
                     positionId,
                 }
             }
-            throw new TransactionNotExecutedException("Transaction not executed")
+            throw new TransactionNotExecutedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -265,14 +314,19 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 await suiClient.waitForTransaction({
                     digest,
                 })
-                this.logger.verbose(
-                    WinstonLog.OpenPositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted, {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                const { positionId } = this.parseMintEvents(events || [])
+                const { positionId } = this.parseMintEvents({
+                    bot,
+                    txHash,
+                    state: _state,
+                    events: events || [],
+                })
                 return {
                     positionId,
                 }
@@ -281,13 +335,25 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
     }
 
     private parseMintEvents(
-        events?: Array<SuiEvent>,
+        {
+            bot,
+            txHash,
+            state,
+            events,
+        }: ParseMintEventsParams
     ): ParseMintEventsResult {
-        const mintNftEvent = events?.find(
-            event => event.type.includes("position_manager::MintNftEvent")
+        const _state = state as ClmmLiquidityPoolState
+        const eventType = "::position_manager::MintNftEvent"
+        const mintNftEvent = events.find(
+            event => event.type.includes(eventType)
         )
         if (!mintNftEvent) {
-            throw new TransactionEventNotFoundException("MintNft event not found")
+            throw new TransactionEventNotFoundException({
+                botId: bot.id,
+                txHash,
+                eventType,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const mintNftEventParsed = mintNftEvent.parsedJson as MintNftEvent
         const positionId = mintNftEventParsed.nft_address
@@ -299,4 +365,11 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
 
 interface ParseMintEventsResult {
     positionId: string
+}
+
+interface ParseMintEventsParams {
+    bot: BotSchema
+    txHash: string
+    state: ClmmLiquidityPoolState
+    events: Array<SuiEvent>
 }

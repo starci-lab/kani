@@ -33,7 +33,7 @@ export interface FetchedPosition {
 }
 
 // Common types shared between open and close position
-export interface LiquidityPoolState {
+export interface ClmmLiquidityPoolState {
     static: LiquidityPoolSchema;
     dynamic: DynamicClmmLiquidityPoolInfoCacheResult;
 }
@@ -45,13 +45,13 @@ export interface DlmmLiquidityPoolState {
 
 export interface PrepareOpenPositionParams {
     bot: BotSchema;
-    state: LiquidityPoolState | DlmmLiquidityPoolState;
+    state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
 }
 
 
 export interface PrepareClosePositionParams {
     bot: BotSchema;
-    state: LiquidityPoolState | DlmmLiquidityPoolState;
+    state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
 }
 
 export interface PrepareClosePositionResult {

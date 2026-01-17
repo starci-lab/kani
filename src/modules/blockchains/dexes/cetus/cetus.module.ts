@@ -1,11 +1,30 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cetus.module-definition"
-import { CetusObserverService } from "./observer.service"
-import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
-import { CetusOpenPositionActionService } from "./open-position-action.service"
-import { CetusAnalyticsService } from "./analytics.service"
-import { CetusClosePositionActionService } from "./close-position-action.service"
-import { CetusFeesService } from "./fees.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./cetus.module-definition"
+import {
+    CetusObserverService 
+} from "./observer.service"
+import {
+    ClosePositionTxbService, OpenPositionTxbService 
+} from "./transactions"
+import {
+    CetusOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    CetusAnalyticsService 
+} from "./analytics.service"
+import {
+    CetusClosePositionActionService 
+} from "./close-position-action.service"
+import {
+    CetusFeesService 
+} from "./fees.service"
+import {
+    CetusReservesService 
+} from "./reserves.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -48,7 +67,7 @@ export class CetusModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
         ) {
-            providers.push()
+            providers.push(CetusReservesService)
         }
         return {
             ...dynamicModule,

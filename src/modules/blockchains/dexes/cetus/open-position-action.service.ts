@@ -4,7 +4,7 @@ import {
     ConfirmOpenPositionResult,
     ExecuteOpenPositionResult,
     IOpenActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
 } from "../../interfaces"
@@ -16,7 +16,7 @@ import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
 import BN from "bn.js"
 import { 
-    AppVersion, PrimaryMemoryStorageService
+    AppVersion, BotSchema, DexId, PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -25,23 +25,24 @@ import {
     EnsureMathService, TickMathService 
 } from "../../math"
 import { 
-    AmountBInBetweenExpectedException,
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
-    PositionNotFoundException,
-    PositionInvalidTypeException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
+    EnsureCalculationException,
+    EnsureRangeType,
+    SuiObjectNotFoundException,
+    ErrorSuiObjectName,
+    SuiObjectInvalidTypeException,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { ExecuteOpenPositionParams } from "../../interfaces"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { WinstonService, WinstonLog } from "@modules/winston"
 import { toScaledBN } from "@utils"
 import { envConfig } from "@modules/env"
 import { AsyncService } from "@modules/mixin"
@@ -59,12 +60,12 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     private readonly asyncService: AsyncService,
     private readonly rpcExecutorService: RpcExecutorService,
     private readonly ensureMathService: EnsureMathService,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
+    private readonly winstonService: WinstonService,
     private readonly privySignService: PrivySignService,
     ) {}
 
-    async confirm({ positionId }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+    async confirm({ positionId, state }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+        const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -75,10 +76,24 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     }
                 })
                 if (!objectInfo) {
-                    throw new PositionNotFoundException("Position not found")
+                    throw new SuiObjectNotFoundException(
+                        {
+                            name: ErrorSuiObjectName.Position,
+                            id: positionId,
+                            dexId: DexId.Cetus,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                 }
                 if (objectInfo?.data?.content?.dataType !== "moveObject") {
-                    throw new PositionInvalidTypeException("Position is not a move object")
+                    throw new SuiObjectInvalidTypeException(
+                        {
+                            name: ErrorSuiObjectName.Position,
+                            id: positionId,
+                            dexId: DexId.Cetus,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                 }
                 const fields = objectInfo.data.content.fields as unknown as CetusLiquidityPosition
                 return {
@@ -89,14 +104,25 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     }
 
     private parseAddLiquidityEvent(
-        events?: Array<SuiEvent>,
+        {
+            state,
+            bot,
+            txHash,
+            events,
+        }: ParseAddLiquidityEventParams
     ): ParseAddLiquidityEventResult {
+        const eventType = "::pool::AddLiquidityV2Event"
         const event = events?.find(event =>
-            event.type.includes("::pool::AddLiquidityV2Event"),
+            event.type.includes(eventType),
         )
         if (!event) {
             throw new TransactionEventNotFoundException(
-                "AddLiquidityV2Event event not found",
+                {
+                    botId: bot.id,
+                    txHash,
+                    eventType,
+                    liquidityPoolId: state.static.displayId,
+                }
             )
         }
         const parsed = event.parsedJson as AddLiquidityV2Event 
@@ -111,16 +137,24 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             state,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+            throw new SnapshotBalancesNotSetException({
+                botId: bot.id,
+            })
         }
         const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
         const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const tokenA = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenA.toString()
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenB.toString()
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }       
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const { 
@@ -141,17 +175,26 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             0, // zero slippage
             TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent.toNumber()),
         )
-        const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
-            expected: amountB,
-            actual: expectedAmountB,
-            // this indicates the slippage tolerance
-            lowerBound: new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds)),
-            upperBound: new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds)),
-        })
+        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds))
+        const upperBound = new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds))
+        const { isAcceptable, ratio } = this.ensureMathService.ensureBetween(
+            {
+                expected: amountB,
+                actual: expectedAmountB,
+                // this indicates the slippage tolerance
+                lowerBound,
+                upperBound,
+            }
+        )
         if (!isAcceptable) {
-            throw new AmountBInBetweenExpectedException(
-                ratio, 
-                `Amount B is not in between expected: ${ratio.toString()}`
+            throw new EnsureCalculationException(
+                {
+                    expected: amountB,
+                    actual: expectedAmountB,
+                    rangeType: EnsureRangeType.Between,
+                    lowerBound,
+                    upperBound,
+                }
             )
         }
         if (ratio.gt(new Decimal(1))) {
@@ -186,7 +229,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                                 sender: bot.accountAddress,
                             })
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException("Transaction validation failed")
+                                throw new TransactionValidationFailedException(
+                                    {
+                                        botId: bot.id,
+                                        txHash: devInspect.effects.transactionDigest,
+                                        liquidityPoolId: _state.static.displayId,
+                                    }
+                                )
                             }
                             const bytes = await openPositionTxb.build({
                                 client: suiClient,
@@ -207,7 +256,11 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     })
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException(
+                            {
+                                botId: bot.id,
+                            }
+                        )
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -238,7 +291,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         txHash, // the tx hash of the open position transaction
         signatureWithBytes, // the signature with bytes of the open position transaction    
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -254,15 +307,28 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 })
             )
             if (txBlock !== null) {
-                const { positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                const { positionId } = this.parseAddLiquidityEvent({
+                    state: _state,
+                    bot,
+                    txHash,
+                    events: txBlock?.events || [],
+                })
                 return {
                     positionId,
                 }
             }
-            throw new TransactionNotExecutedException("Transaction not executed")
+            throw new TransactionNotExecutedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -277,15 +343,20 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 await suiClient.waitForTransaction({
                     digest,
                 })
-                this.logger.verbose(
-                    WinstonLog.OpenPositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted, {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
                 // parse the add liquidity event
-                const { positionId } = this.parseAddLiquidityEvent(events || [])
+                const { positionId } = this.parseAddLiquidityEvent({
+                    state: _state,
+                    bot,
+                    txHash,
+                    events: events || [],
+                })
                 return {
                     positionId,
                 }
@@ -306,4 +377,11 @@ export interface AddLiquidityV2Event {
 
 export interface ParseAddLiquidityEventResult {
     positionId: string
+}
+
+export interface ParseAddLiquidityEventParams {
+    state: ClmmLiquidityPoolState
+    events?: Array<SuiEvent>
+    bot: BotSchema
+    txHash: string
 }

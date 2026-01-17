@@ -1,24 +1,46 @@
-import { LiquidityPoolState } from "../../../interfaces"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 import { 
     BotSchema,
     PrimaryMemoryStorageService, 
     TurbosLiquidityPoolMetadata 
 } from "@modules/databases"
-import { Transaction } from "@mysten/sui/transactions"
-import { Injectable } from "@nestjs/common"
-import { Decimal } from "decimal.js"
-import { BN } from "turbos-clmm-sdk"
-import { FeeService } from "../../../math"
-import { SelectCoinsService } from "../../../tx-builder"
-import { DayjsService } from "@modules/mixin"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    BN 
+} from "turbos-clmm-sdk"
+import {
+    FeeService 
+} from "../../../math"
+import {
+    SelectCoinsService 
+} from "../../../tx-builder"
+import {
+    DayjsService 
+} from "@modules/mixin"
 import { 
     FeeToAddressNotFoundException, 
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException 
 } from "@exceptions"
-import { ChainId } from "@typedefs"
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    SUI_CLOCK_OBJECT_ID 
+} from "@mysten/sui/utils"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -43,18 +65,22 @@ export class OpenPositionTxbService {
     ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString()
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString()
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
+            throw new FeeToAddressNotFoundException({
+                feeToAddress,
+            })
         }
         const {
             feeAmount: feeAmountA,
@@ -77,8 +103,9 @@ export class OpenPositionTxbService {
             targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                ChainId.Sui,
-                "Target operational gas amount not found"
+                {
+                    chainId: ChainId.Sui,
+                }
             )
         }
         const { 
@@ -135,7 +162,8 @@ export class OpenPositionTxbService {
                 txb.object(sourceCoinB.coinArg),
             ]
         })
-        const deadline = this.dayjsService.now().add(5, "minute").utc().valueOf().toString()
+        const deadline = this.dayjsService.now().add(5,
+            "minute").utc().valueOf().toString()
         txb.moveCall({
             target: `${packageId}::position_manager::mint`,
             typeArguments: [
@@ -192,7 +220,7 @@ export class OpenPositionTxbService {
 
 export interface CreateOpenPositionTxbParams {
     txb?: Transaction
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
     tickLower: Decimal
     tickUpper: Decimal
     amountAMax: BN

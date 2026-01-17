@@ -1,10 +1,27 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./flowx.module-definition"
-import { FlowXObserverService } from "./observer.service"
-import { FlowXOpenPositionActionService } from "./open-position-action.service"
-import { FlowXClosePositionActionService } from "./close-position-action.service"
-import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
-import { FlowXAnalyticsService } from "./analytics.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./flowx.module-definition"
+import {
+    FlowXObserverService 
+} from "./observer.service"
+import {
+    FlowXOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    FlowXClosePositionActionService 
+} from "./close-position-action.service"
+import {
+    ClosePositionTxbService, OpenPositionTxbService 
+} from "./transactions"
+import {
+    FlowXAnalyticsService 
+} from "./analytics.service"
+import {
+    FlowXReservesService 
+} from "./reserves.service"
 
 @Injectable()
 export class FlowXModule extends ConfigurableModuleClass {
@@ -36,6 +53,18 @@ export class FlowXModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(FlowXAnalyticsService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(FlowXReservesService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(FlowXReservesService)
         }
         return {
             ...dynamicModule,

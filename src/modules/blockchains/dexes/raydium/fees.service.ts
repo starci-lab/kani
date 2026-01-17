@@ -24,6 +24,7 @@ import { computeDenomination, Q128, Q64 } from "@utils"
 import { TickArrayService } from "./transactions"
 import { Decimal } from "decimal.js"
 import { PersonalPositionState } from "./beets"
+import { ClmmFeesFormulaService } from "../../formulas"
 
 @Injectable()
 export class RaydiumFeesService implements IFeesService {
@@ -31,6 +32,7 @@ export class RaydiumFeesService implements IFeesService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly tickArrayService: TickArrayService,
+        private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
@@ -166,37 +168,6 @@ export class RaydiumFeesService implements IFeesService {
         const tickUpperData =
             tickArrayUpper.ticks[tickUpperIndex.toNumber()]
 
-        // ----------------------------
-        // Fee growth inside
-        // ----------------------------
-        const feeGrowthInsideA = this.computeFeeGrowthInside(
-            _state.dynamic.feeGrowthGlobalA,
-            new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
-            new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
-            _state.dynamic.tickCurrent,
-            tickLower,
-            tickUpper,
-        )
-
-        const feeGrowthInsideB = this.computeFeeGrowthInside(
-            _state.dynamic.feeGrowthGlobalB,
-            new BN(tickLowerData.feeGrowthOutsideX64B.toString()),
-            new BN(tickUpperData.feeGrowthOutsideX64B.toString()),
-            _state.dynamic.tickCurrent,
-            tickLower,
-            tickUpper,
-        )
-
-        // ----------------------------
-        // Position checkpoint
-        // ----------------------------
-        const feeGrowthInsideALastX64 = new BN(
-            positionState.feeGrowthInside0LastX64.toString(),
-        )
-        const feeGrowthInsideBLastX64 = new BN(
-            positionState.feeGrowthInside1LastX64.toString(),
-        )
-
         if (!positionState.liquidity) {
             throw new ActivePositionLiquidityNotSetException(
                 bot.id,
@@ -206,64 +177,28 @@ export class RaydiumFeesService implements IFeesService {
 
         const liquidity = new BN(positionState.liquidity.toString())
 
-        // ----------------------------
-        // Fee calculation (WRAPPED)
-        // ----------------------------
-        const feeGrowthDeltaA = this.subQ128(
-            feeGrowthInsideA,
-            feeGrowthInsideALastX64,
-        )
-
-        const feeGrowthDeltaB = this.subQ128(
-            feeGrowthInsideB,
-            feeGrowthInsideBLastX64,
-        )
-
-        const feeEarnedA = liquidity.mul(feeGrowthDeltaA).div(Q64)
-        const feeEarnedB = liquidity.mul(feeGrowthDeltaB).div(Q64)
+        const { amountA, amountB } = this.clmmFeesFormulaService.computeFees({
+            feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
+            feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
+            feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
+            currentTick: new Decimal(_state.dynamic.tickCurrent.toString()),
+            tickLower: new Decimal(tickLower),
+            tickUpper: new Decimal(tickUpper),
+            feeGrowthInsideLastA: new BN(positionState.feeGrowthInside0LastX64.toString()),
+            feeGrowthInsideLastB: new BN(positionState.feeGrowthInside1LastX64.toString()),
+            liquidity,
+            feeOwnedA: new BN(0),
+            feeOwnedB: new BN(0),
+            outsideDeltaWrapModulus: Q128,
+            insideDeltaWrapModulus: Q128,
+            resultDiv: Q64,
+        })
 
         return {
-            tokenA: computeDenomination(feeEarnedA, tokenA.decimals),
-            tokenB: computeDenomination(feeEarnedB, tokenB.decimals),
+            reserveA: computeDenomination(amountA, tokenA.decimals),
+            reserveB: computeDenomination(amountB, tokenB.decimals),
+            rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }
-    }
-
-    // ----------------------------
-    // Fee growth inside (CLMM spec)
-    // ----------------------------
-    computeFeeGrowthInside(
-        feeGrowthGlobal: BN,
-        feeGrowthOutsideLower: BN,
-        feeGrowthOutsideUpper: BN,
-        currentTick: number,
-        tickLower: number,
-        tickUpper: number,
-    ): BN {
-        if (currentTick < tickLower) {
-            return this.subQ128(
-                feeGrowthOutsideLower,
-                feeGrowthOutsideUpper,
-            )
-        }
-
-        if (currentTick >= tickUpper) {
-            return this.subQ128(
-                feeGrowthOutsideUpper,
-                feeGrowthOutsideLower,
-            )
-        }
-
-        return this.subQ128(
-            this.subQ128(feeGrowthGlobal, feeGrowthOutsideLower),
-            feeGrowthOutsideUpper,
-        )
-    }
-
-    // ----------------------------
-    // u128 subtraction (mod 2^128)
-    // ----------------------------
-    private subQ128(a: BN, b: BN): BN {
-        return a.sub(b).umod(Q128)
     }
 }

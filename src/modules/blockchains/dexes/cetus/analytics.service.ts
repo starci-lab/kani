@@ -1,7 +1,6 @@
 import { AxiosService } from "@modules/axios"
 import {
     DexId,
-    LiquidityPoolId,
     LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -32,6 +31,7 @@ export class CetusAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
     private axios: AxiosInstance
+    private liquidityPools: Array<LiquidityPoolSchema>
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -50,19 +50,17 @@ implements OnModuleInit, OnApplicationBootstrap
         const key = "cetus-analytics"
         this.axios = this.axiosService.create(key)
         this.axiosService.addRetry({ key })
+        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.Cetus)
+            }
+        )
     }
 
     private async setBatchPoolAnalytics(
-        liquidityPoolIds: Array<LiquidityPoolId>,
+        liquidityPools: Array<LiquidityPoolSchema>,
     ) {
         // Get the liquidity pool
-        const liquidityPools: Array<LiquidityPoolSchema> = []
-        for (const liquidityPoolId of liquidityPoolIds) {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(createObjectId(liquidityPoolId).toString())
-            if (!liquidityPool) {
-                continue
-            }
-        }
         if (!liquidityPools.length) {
             return
         }
@@ -115,7 +113,7 @@ implements OnModuleInit, OnApplicationBootstrap
   @Interval(envConfig().timeConfig.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         const liquidityPools: Array<LiquidityPoolSchema> = []
-        for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolArray) {
+        for (const liquidityPool of this.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Cetus).toString()) {
                 continue
             }
@@ -133,7 +131,7 @@ implements OnModuleInit, OnApplicationBootstrap
         for (const chunk of chunks) {
             promises.push(
                 this.setBatchPoolAnalytics(
-                    chunk.map((liquidityPool) => liquidityPool.displayId),
+                    chunk,
                 ),
             )
         }

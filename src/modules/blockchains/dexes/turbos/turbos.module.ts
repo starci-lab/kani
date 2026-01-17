@@ -1,10 +1,30 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./turbos.module-definition"
-import { ClosePositionTxbService, OpenPositionTxbService } from "./transactions"
-import { TurbosOpenPositionActionService } from "./open-position-action.service"
-import { TurbosClosePositionActionService } from "./close-position-action.service"
-import { TurbosObserverService } from "./observer.service"
-import { TurbosAnalyticsService } from "./analytics.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./turbos.module-definition"
+import {
+    ClosePositionTxbService, OpenPositionTxbService 
+} from "./transactions"
+import {
+    TurbosOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    TurbosClosePositionActionService 
+} from "./close-position-action.service"
+import {
+    TurbosObserverService 
+} from "./observer.service"
+import {
+    TurbosAnalyticsService 
+} from "./analytics.service"
+import {
+    TurbosReservesService 
+} from "./reserves.service"
+import {
+    TurbosFeesService 
+} from "./fees.service"
 
 @Injectable()
 export class TurbosModule extends ConfigurableModuleClass {
@@ -38,6 +58,18 @@ export class TurbosModule extends ConfigurableModuleClass {
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(TurbosAnalyticsService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+        ) {
+            providers.push(TurbosReservesService)
+        }
+        if (typeof options.enabled === "boolean" 
+            ? options.enabled
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+        ) {
+            providers.push(TurbosFeesService)
         }
         return {
             ...dynamicModule,

@@ -7,16 +7,11 @@ import { ClmmUtilsService } from "./clmm-utils.service"
 /**
  * CLMM Fee Formula Service
  *
- * Implements Uniswap V3-style fee math for concentrated liquidity positions:
+ * Implements Uniswap V3-style fee math for concentrated liquidity positions.
  *
- * - feeGrowthInside is computed with u128 wrapping arithmetic
- * - feeEarned is computed from:
- *    deltaGrowth = (growthInsideNow - growthInsideLast) mod insideDeltaWrapModulus
- *    feeDelta = (liquidity × deltaGrowth) / resultDiv
- *
- * Defaults:
- *  - insideDeltaWrapModulus = Q128 (u128 wrapping)
- *  - resultDiv = Q64 (Q64 fixed-point; >> 64)
+ * All fee growth values are assumed to be:
+ * - wrapped u128
+ * - fixed-point (usually Q64.64)
  */
 @Injectable()
 export class ClmmFeesFormulaService {
@@ -26,31 +21,17 @@ export class ClmmFeesFormulaService {
 
     /**
      * Compute fee growth inside a position tick range.
-     *
-     * Uniswap V3 style:
-     *  if current < lower:
-     *    inside = outsideLower - outsideUpper
-     *  else if current >= upper:
-     *    inside = outsideUpper - outsideLower
-     *  else:
-     *    inside = global - outsideLower - outsideUpper
-     *
-     * Many CLMM implementations use wrapping u128 arithmetic for these deltas.
      */
-    public computeFeeGrowthInside(
-        {
-            feeGrowthGlobal,
-            feeGrowthOutsideLower,
-            feeGrowthOutsideUpper,
-            currentTick,
-            tickLower,
-            tickUpper,
-            outsideDeltaWrapModulus = Q128,
-        }: ComputeFeeGrowthInsideParams
-    ): BN {
-
-        // current < lower
-        if (currentTick.lessThan(tickLower)) {
+    public computeFeeGrowthInside({
+        feeGrowthGlobal,
+        feeGrowthOutsideLower,
+        feeGrowthOutsideUpper,
+        tickCurrent,
+        tickLower,
+        tickUpper,
+        outsideDeltaWrapModulus = Q128,
+    }: ComputeFeeGrowthInsideParams): BN {
+        if (tickCurrent.lessThan(tickLower)) {
             return this.clmmUtilsService.wrapSub(
                 feeGrowthOutsideLower,
                 feeGrowthOutsideUpper,
@@ -58,8 +39,7 @@ export class ClmmFeesFormulaService {
             )
         }
 
-        // current >= upper
-        if (currentTick.greaterThanOrEqualTo(tickUpper)) {
+        if (tickCurrent.greaterThanOrEqualTo(tickUpper)) {
             return this.clmmUtilsService.wrapSub(
                 feeGrowthOutsideUpper,
                 feeGrowthOutsideLower,
@@ -67,8 +47,6 @@ export class ClmmFeesFormulaService {
             )
         }
 
-        // inside range:
-        // global - outsideLower - outsideUpper  (wrapped)
         return this.clmmUtilsService.wrapSub(
             this.clmmUtilsService.wrapSub(
                 feeGrowthGlobal,
@@ -81,25 +59,15 @@ export class ClmmFeesFormulaService {
     }
 
     /**
-     * Compute fee earned since last position checkpoint.
-     *
-     * Generalized fixed-point formula:
-     *  - deltaGrowth = (feeGrowthInside - feeGrowthInsideLast) mod insideDeltaWrapModulus
-     *  - feeDelta = (liquidity × deltaGrowth) / resultDiv
-     *
-     * Notes:
-     *  - `insideDeltaWrapModulus` controls wrapping (typically Q128 for u128).
-     *  - `resultDiv` controls fixed-point scaling (commonly Q64 for Q64.64 growth values).
+     * Compute fee earned since last checkpoint.
      */
-    public computeFeeEarned(
-        {
-            feeGrowthInside,
-            feeGrowthInsideLast,
-            liquidity,
-            insideDeltaWrapModulus = Q128,
-            resultDiv = Q64,
-        }: ComputeFeeEarnedParams
-    ): BN {
+    public computeFeeEarned({
+        feeGrowthInside,
+        feeGrowthInsideLast,
+        liquidity,
+        insideDeltaWrapModulus = Q128,
+        resultDiv = Q64,
+    }: ComputeFeeEarnedParams): BN {
         const deltaGrowth = this.clmmUtilsService.wrapSub(
             feeGrowthInside,
             feeGrowthInsideLast,
@@ -110,65 +78,195 @@ export class ClmmFeesFormulaService {
     }
 
     /**
-     * Compute total fees for a position:
-     *  feesOwned + feesEarnedSinceCheckpoint
+     * Compute total fees (token A & token B) for a CLMM position.
      */
-    public computeTotalFees(
-        {
+    public computeFees({
+        feeGrowthGlobal,
+        feeGrowthOutsideLower,
+        feeGrowthOutsideUpper,
+        tickCurrent,
+        tickLower,
+        tickUpper,
+        feeGrowthInsideLastA,
+        feeGrowthInsideLastB,
+        liquidity,
+        feeOwnedA = new BN(0),
+        feeOwnedB = new BN(0),
+        outsideDeltaWrapModulus = Q128,
+        insideDeltaWrapModulus = Q128,
+        resultDiv = Q64,
+    }: ComputeFeesParams): ComputeFeesResult {
+        // -------- Token A --------
+        const feeGrowthInsideA = this.computeFeeGrowthInside({
             feeGrowthGlobal,
             feeGrowthOutsideLower,
             feeGrowthOutsideUpper,
-            currentTick,
-            tickLower,
-            tickUpper,
-
-            feeGrowthInsideLast,
-            liquidity,
-            feeOwned = new BN(0),
-
-            outsideDeltaWrapModulus = Q128,
-            insideDeltaWrapModulus = Q128,
-            resultDiv = Q64,
-        }: ComputeTotalFeesParams
-    ): BN {
-
-        const feeGrowthInside = this.computeFeeGrowthInside({
-            feeGrowthGlobal,
-            feeGrowthOutsideLower,
-            feeGrowthOutsideUpper,
-            currentTick,
+            tickCurrent,
             tickLower,
             tickUpper,
             outsideDeltaWrapModulus,
         })
 
-        const feeEarned = this.computeFeeEarned({
-            feeGrowthInside,
-            feeGrowthInsideLast,
+        const feeEarnedA = this.computeFeeEarned({
+            feeGrowthInside: feeGrowthInsideA,
+            feeGrowthInsideLast: feeGrowthInsideLastA,
             liquidity,
             insideDeltaWrapModulus,
             resultDiv,
         })
 
-        return feeOwned.add(feeEarned)
+        // -------- Token B --------
+        const feeGrowthInsideB = this.computeFeeGrowthInside({
+            feeGrowthGlobal,
+            feeGrowthOutsideLower,
+            feeGrowthOutsideUpper,
+            tickCurrent,
+            tickLower,
+            tickUpper,
+            outsideDeltaWrapModulus,
+        })
+
+        const feeEarnedB = this.computeFeeEarned({
+            feeGrowthInside: feeGrowthInsideB,
+            feeGrowthInsideLast: feeGrowthInsideLastB,
+            liquidity,
+            insideDeltaWrapModulus,
+            resultDiv,
+        })
+
+        return {
+            feeA: feeOwnedA.add(feeEarnedA),
+            feeB: feeOwnedB.add(feeEarnedB),
+        }
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
-
-export interface ComputeFeeGrowthInsideParams {
+export interface ComputeFeesParams {
+    /**
+     * Global fee growth accumulator of the pool (for a specific token).
+     *
+     * Monotonically increasing value tracking total fees per unit liquidity,
+     * represented in fixed-point (usually Q64.64) and wrapped in u128.
+     */
     feeGrowthGlobal: BN
+
+    /**
+     * Fee growth outside the lower tick boundary.
+     *
+     * Used to exclude fee growth that occurred below the position range.
+     * Stored as wrapped u128.
+     */
     feeGrowthOutsideLower: BN
+
+    /**
+     * Fee growth outside the upper tick boundary.
+     *
+     * Used to exclude fee growth that occurred above the position range.
+     * Stored as wrapped u128.
+     */
     feeGrowthOutsideUpper: BN
-    currentTick: Decimal
+
+    /**
+     * Current pool tick (current market price).
+     *
+     * Determines whether the position is below, inside, or above its range.
+     */
+    tickCurrent: Decimal
+
+    /**
+     * Lower tick boundary of the liquidity position.
+     */
     tickLower: Decimal
+
+    /**
+     * Upper tick boundary of the liquidity position.
+     */
     tickUpper: Decimal
 
     /**
-     * Wrapping modulus for inside calculation (default: Q128)
+     * Fee growth inside the position range at the last checkpoint (token A).
+     *
+     * Used to compute incremental fees earned since the last update.
+     * Stored as wrapped u128.
      */
+    feeGrowthInsideLastA: BN
+
+    /**
+     * Fee growth inside the position range at the last checkpoint (token B).
+     *
+     * Used to compute incremental fees earned since the last update.
+     * Stored as wrapped u128.
+     */
+    feeGrowthInsideLastB: BN
+
+    /**
+     * Liquidity amount of the position (L).
+     *
+     * This is an unsigned integer representing liquidity units,
+     * not a token amount.
+     */
+    liquidity: BN
+
+    /**
+     * Fees already owned by the position for token A.
+     *
+     * These are fees that have been previously accrued and stored
+     * on the position account.
+     */
+    feeOwnedA?: BN
+
+    /**
+     * Fees already owned by the position for token B.
+     *
+     * These are fees that have been previously accrued and stored
+     * on the position account.
+     */
+    feeOwnedB?: BN
+
+    /**
+     * Wrapping modulus used when computing fee growth deltas.
+     *
+     * Defaults to Q128 to match u128 wrapping behavior
+     * used by most CLMM implementations.
+     */
+    outsideDeltaWrapModulus?: typeof Q128 | typeof Q64
+
+    /**
+     * Wrapping modulus used when computing delta growth
+     * between two fee growth checkpoints.
+     *
+     * Defaults to Q128 (u128 wrapping).
+     */
+    insideDeltaWrapModulus?: typeof Q128 | typeof Q64
+
+    /**
+     * Divisor applied when converting fee growth into
+     * actual token amounts.
+     *
+     * Commonly Q64 for Q64.64 fixed-point fee growth values.
+     */
+    resultDiv?: typeof Q64 | typeof Q128
+}
+
+export interface ComputeFeesResult {
+    /**
+     * Fees earned for token A.
+     */
+    feeA: BN
+    /**
+     * Fees earned for token B.
+     */
+    feeB: BN
+}
+
+
+export interface ComputeFeeGrowthInsideParams { 
+    feeGrowthGlobal: BN
+    feeGrowthOutsideLower: BN
+    feeGrowthOutsideUpper: BN
+    tickCurrent: Decimal
+    tickLower: Decimal
+    tickUpper: Decimal
     outsideDeltaWrapModulus?: typeof Q128 | typeof Q64
 }
 
@@ -176,32 +274,6 @@ export interface ComputeFeeEarnedParams {
     feeGrowthInside: BN
     feeGrowthInsideLast: BN
     liquidity: BN
-
-    /**
-     * Wrapping modulus for delta growth (default: Q128)
-     */
-    insideDeltaWrapModulus?: typeof Q128 | typeof Q64
-
-    /**
-     * Divisor for final fee result (default: Q64)
-     */
-    resultDiv?: typeof Q64 | typeof Q128
-}
-
-export interface ComputeTotalFeesParams {
-    feeGrowthGlobal: BN
-    feeGrowthOutsideLower: BN
-    feeGrowthOutsideUpper: BN
-    currentTick: Decimal
-    tickLower: Decimal
-    tickUpper: Decimal
-
-    feeGrowthInsideLast: BN
-    liquidity: BN
-    feeOwned?: BN
-
-    outsideDeltaWrapModulus?: typeof Q128 | typeof Q64
     insideDeltaWrapModulus?: typeof Q128 | typeof Q64
     resultDiv?: typeof Q64 | typeof Q128
 }
-

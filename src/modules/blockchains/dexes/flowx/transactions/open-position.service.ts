@@ -3,26 +3,46 @@ import {
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException
 } from "@exceptions"
-import { LiquidityPoolState } from "../../../interfaces"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 import { 
     BotSchema, 
     FlowXLiquidityPoolMetadata, 
     PrimaryMemoryStorageService
 } from "@modules/databases"
-import { Transaction } from "@mysten/sui/transactions"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
 import {
     SUI_CLOCK_OBJECT_ID,
 } from "@mysten/sui/utils"
-import { Injectable } from "@nestjs/common"
-import { adjustSlippage, decimalToBips } from "@utils"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    adjustSlippage, decimalToBips 
+} from "@utils"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { DayjsService } from "@modules/mixin"
-import { SelectCoinsService } from "../../../tx-builder"
-import { ChainId } from "@typedefs"
-import { FeeService } from "../../../math"
-import { MountStorageService } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    SelectCoinsService 
+} from "../../../tx-builder"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    FeeService 
+} from "../../../math"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -53,14 +73,16 @@ export class OpenPositionTxbService {
             poolRegistryObject,
             versionObject
         } = state.static.metadata as FlowXLiquidityPoolMetadata
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const targetOperationalAmount = this.primaryMemoryStorageService.
             gasConfig.
@@ -68,13 +90,16 @@ export class OpenPositionTxbService {
             targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                ChainId.Sui,
-                "Target operational gas amount not found"
+                {
+                    chainId: ChainId.Sui,
+                }
             )
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
+            throw new FeeToAddressNotFoundException({
+                feeToAddress,
+            })
         }
         const {
             feeAmount: feeAmountA,
@@ -124,7 +149,8 @@ export class OpenPositionTxbService {
         txb.transferObjects([
             feeCoinA.coinArg, 
             feeCoinB.coinArg
-        ], feeToAddress)
+        ],
+        feeToAddress)
         const [
             tickLowerI32, 
             tickUpperI32
@@ -170,14 +196,18 @@ export class OpenPositionTxbService {
                 position,
                 sourceCoinA.coinArg,
                 sourceCoinB.coinArg,
-                txb.pure.u64(adjustSlippage(remainingAmountA, new Decimal(envConfig().slippage.openPosition.amountBounds)).toString()),
-                txb.pure.u64(adjustSlippage(remainingAmountB, new Decimal(envConfig().slippage.openPosition.amountBounds)).toString()),
-                txb.pure.u64(this.dayjsService.now().add(5, "minute").utc().valueOf().toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountA,
+                    new Decimal(envConfig().slippage.openPosition.amountBounds)).toString()),
+                txb.pure.u64(adjustSlippage(remainingAmountB,
+                    new Decimal(envConfig().slippage.openPosition.amountBounds)).toString()),
+                txb.pure.u64(this.dayjsService.now().add(5,
+                    "minute").utc().valueOf().toString()),
                 txb.object(versionObject),
                 txb.object(SUI_CLOCK_OBJECT_ID),
             ],
         })
-        txb.transferObjects([position], txb.pure.address(bot.accountAddress))
+        txb.transferObjects([position],
+            txb.pure.address(bot.accountAddress))
         return {
             txb,
             feeAmountA,
@@ -189,7 +219,7 @@ export class OpenPositionTxbService {
 export interface CreateOpenPositionTxbParams { 
     txb?: Transaction 
     bot: BotSchema,
-    state: LiquidityPoolState,
+    state: ClmmLiquidityPoolState,
     tickLower: Decimal,
     tickUpper: Decimal,
     liquidity: BN,

@@ -7,10 +7,10 @@ import { Injectable } from "@nestjs/common"
 import { Transaction } from "@mysten/sui/transactions"
 import { 
     InvalidPoolTokensException, 
-    ActivePositionNotFoundException 
+    ActivePositionNotFoundException,
 } from "@exceptions"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { LiquidityPoolState } from "../../../interfaces"
+import { ClmmLiquidityPoolState } from "../../../interfaces"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -27,13 +27,27 @@ export class ClosePositionTxbService {
     ): Promise<CreateClosePositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+        if (
+            !bot.activePosition ||
+            !bot.activePositionLiquidityPool ||
+            !bot.activePositionLiquidityPoolType
+        ) {
+            throw new ActivePositionNotFoundException(
+                {
+                    botId: bot.id,
+                }
+            )
         }
-        const tokenA = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString()
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString()
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const {
             intergratePackageId,
@@ -89,7 +103,7 @@ export class ClosePositionTxbService {
 export interface CreateClosePositionTxbParams {
     txb?: Transaction
     bot: BotSchema
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
 }
 
 export interface CreateClosePositionTxbResult {

@@ -37,9 +37,9 @@ export interface SuiObjectOptionU64Fields {
 }
 export type SuiObjectOptionU64<TypeName extends string = string> = SuiObject<SuiObjectOptionU64Fields, TypeName>;
 
-export interface SuiMoveObjectContentFields<Value> {
+export interface SuiMoveObjectContentFields<Fields> {
     name: string;
-    value: Value;
+    value: Fields;
     id: SuiObjectID;
 }
 export interface SuiMoveObjectContent<Fields, TypeName extends string = string> {
@@ -50,7 +50,7 @@ export interface SuiMoveObjectContent<Fields, TypeName extends string = string> 
 }
 
 /** Generic Sui RPC object data wrapper */
-export interface SuiMoveObjectData<Fields> {
+export interface SuiMoveObjectData<Fields, TypeName extends string = string> {
     objectId: string;
     version: string;
     digest: string;
@@ -60,7 +60,7 @@ export interface SuiMoveObjectData<Fields> {
     };
     previousTransaction: string;
     storageRebate: string;
-    content: SuiMoveObjectContent<Fields>;
+    content: SuiMoveObjectContent<Fields, TypeName>;
 }
 
 /** Generic Sui RPC object response wrapper */

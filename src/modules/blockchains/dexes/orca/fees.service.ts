@@ -16,7 +16,7 @@ import {
 import { Position } from "./beets"
 import { decodeTickArray } from "@orca-so/whirlpools-client"
 import BN from "bn.js"
-import { LiquidityPoolState } from "../../interfaces"
+import { ClmmLiquidityPoolState } from "../../interfaces"
 import { Q128, Q64 } from "@utils"
 import {
     OrcaLiquidityPoolMetadata,
@@ -25,6 +25,7 @@ import {
 import { computeDenomination } from "@utils"
 import { TickArrayService } from "./transactions"
 import { Decimal } from "decimal.js"
+import { ClmmFeesFormulaService } from "../../formulas"
 
 @Injectable()
 export class OrcaFeesService implements IFeesService {
@@ -32,10 +33,11 @@ export class OrcaFeesService implements IFeesService {
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly rpcExecutorService: RpcExecutorService,
     private readonly tickArrayService: TickArrayService,
+    private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
 
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
@@ -124,17 +126,15 @@ export class OrcaFeesService implements IFeesService {
         // ----------------------------
         // Token validation
         // ----------------------------
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === _state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === _state.static.tokenB.toString(),
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenB.toString(),
+        })
 
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException(
-                "Either token A or token B is not in the pool",
-            )
+            throw new InvalidPoolTokensException()
         }
 
         // ----------------------------
@@ -171,36 +171,6 @@ export class OrcaFeesService implements IFeesService {
         const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
         const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
 
-        // ----------------------------
-        // Fee growth inside
-        // ----------------------------
-        const feeGrowthInsideA = this.computeFeeGrowthInside(
-            _state.dynamic.feeGrowthGlobalA,
-            new BN(tickLowerData.feeGrowthOutsideA.toString()),
-            new BN(tickUpperData.feeGrowthOutsideA.toString()),
-            _state.dynamic.tickCurrent,
-            tickLower,
-            tickUpper,
-        )
-
-        const feeGrowthInsideB = this.computeFeeGrowthInside(
-            _state.dynamic.feeGrowthGlobalB,
-            new BN(tickLowerData.feeGrowthOutsideB.toString()),
-            new BN(tickUpperData.feeGrowthOutsideB.toString()),
-            _state.dynamic.tickCurrent,
-            tickLower,
-            tickUpper,
-        )
-        // ----------------------------
-        // Position checkpoint
-        // ----------------------------
-        const feeGrowthCheckpointA = new BN(
-            positionState.feeGrowthCheckpointA.toString(),
-        )
-        const feeGrowthCheckpointB = new BN(
-            positionState.feeGrowthCheckpointB.toString(),
-        )
-
         if (!bot.activePosition.liquidity) {
             throw new ActivePositionLiquidityNotSetException(
                 bot.id,
@@ -210,59 +180,29 @@ export class OrcaFeesService implements IFeesService {
 
         const liquidity = new BN(bot.activePosition.liquidity)
 
-        // ----------------------------
-        // Fee calculation
-        // ----------------------------
-        const feeEarnedA = liquidity
-            .mul(feeGrowthInsideA.sub(feeGrowthCheckpointA))
-            .div(Q64)
-
-        const feeEarnedB = liquidity
-            .mul(feeGrowthInsideB.sub(feeGrowthCheckpointB))
-            .div(Q64)
+        const { amountA, amountB } = this.clmmFeesFormulaService.computeFees({
+            // -------- Token A --------
+            feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
+            feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideA.toString()),
+            feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideA.toString()),
+            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toString()),
+            tickLower: new Decimal(tickLower),
+            tickUpper: new Decimal(tickUpper),
+            feeGrowthInsideLastA: new BN(positionState.feeGrowthCheckpointA.toString()),
+            feeGrowthInsideLastB: new BN(positionState.feeGrowthCheckpointB.toString()),
+            liquidity,
+            feeOwnedA: new BN(0),
+            feeOwnedB: new BN(0),
+            outsideDeltaWrapModulus: Q128,
+            insideDeltaWrapModulus: Q128,
+            resultDiv: Q64,
+        })
 
         return {
-            tokenA: computeDenomination(feeEarnedA, tokenA.decimals),
-            tokenB: computeDenomination(feeEarnedB, tokenB.decimals),
+            reserveA: computeDenomination(amountA, tokenA.decimals),
+            reserveB: computeDenomination(amountB, tokenB.decimals),
+            rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }
-    }
-
-    computeFeeGrowthInside(
-        feeGrowthGlobal: BN,
-        feeGrowthOutsideLower: BN,
-        feeGrowthOutsideUpper: BN,
-        currentTick: number,
-        tickLower: number,
-        tickUpper: number,
-    ): BN {
-        // current price below range
-        if (currentTick < tickLower) {
-            return this.subQ128(
-                feeGrowthOutsideLower,
-                feeGrowthOutsideUpper,
-            )
-        }
-    
-        // current price above range
-        if (currentTick >= tickUpper) {
-            return this.subQ128(
-                feeGrowthOutsideUpper,
-                feeGrowthOutsideLower,
-            )
-        }
-    
-        // current price inside range
-        return this.subQ128(
-            this.subQ128(feeGrowthGlobal, feeGrowthOutsideLower),
-            feeGrowthOutsideUpper,
-        )
-    }
-
-    // ----------------------------
-    // u128 subtraction (mod 2^128)
-    // ----------------------------
-    private subQ128(a: BN, b: BN): BN {
-        return a.sub(b).umod(Q128)
     }
 }

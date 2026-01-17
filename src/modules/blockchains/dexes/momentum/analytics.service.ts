@@ -1,5 +1,6 @@
 import {
     DexId,
+    LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
@@ -13,15 +14,30 @@ import {
     InjectRedisCache,
     PoolAnalyticsCacheResult,
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { Interval } from "@nestjs/schedule"
-import { createObjectId } from "@utils"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import {
+    Cache 
+} from "cache-manager"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    AsyncService, InjectSuperJson 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 import Decimal from "decimal.js"
-import { AxiosService } from "@modules/axios"
-import { AxiosInstance } from "axios"
+import {
+    AxiosService 
+} from "@modules/axios"
+import {
+    AxiosInstance 
+} from "axios"
 import SuperJSON from "superjson"
+import {
+    createObjectId 
+} from "@utils"
+
 // Implement analytics for Momentum DEX
 // We use the API provided by Momentum to get the analytics data
 @Injectable()
@@ -29,6 +45,7 @@ export class MomentumAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
     private axios: AxiosInstance
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -46,24 +63,20 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "momentum-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({ key })
+        this.axiosService.addRetry({
+            key 
+        })
+        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
+            dex: createObjectId(DexId.Momentum),
+        })
     }
 
     private async setAllPoolAnalytics() {
-        const liquidityPools =
-      this.primaryMemoryStorageService.liquidityPools.filter(
-          (liquidityPool) =>
-              liquidityPool.dex.toString() ===
-          createObjectId(DexId.Momentum).toString(),
-      )
-        if (!liquidityPools.length) {
-            return
-        }
         const { data } = await this.axios.get<LiquidityPoolsApiResult>(
             "https://api.mmt.finance/pools/v3",
         )
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of liquidityPools) {
+        for (const liquidityPool of this.liquidityPools) {
             promises.push(
                 (async () => {
                     const pool = data.data.find(
@@ -88,7 +101,9 @@ implements OnModuleInit, OnApplicationBootstrap
                         tvl: new Decimal(tvl).toString(),
                         apr24H: new Decimal(total).div(365).div(100).toString(),
                     }
-                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                    await this.cacheManager.set(poolAnalyticsCacheKey,
+                        this.superjson.stringify(poolAnalyticsCacheResult),
+                        envConfig().cache.ttl.poolAnalytics)
                 })(),
             )
         }

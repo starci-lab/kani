@@ -64,7 +64,7 @@ implements OnModuleInit, OnApplicationBootstrap
         for (const liquidityPool of liquidityPools) {
             baseURL.searchParams.append("include_pool_token_pairs", liquidityPool.poolAddress)
         }
-        const { data } = await this.axios.get<PoolAnalyticsResponse>(baseURL.toString())
+        const { data } = await this.axios.get<PoolAnalyticsResult>(baseURL.toString())
         const promises: Array<Promise<void>> = []
         for (const group of data.groups) {
             for (const pair of group.pairs) {
@@ -123,7 +123,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface PoolAnalyticsResponse   {
+export interface PoolAnalyticsResult   {
     groups: Array<Group>
     total: number
   }

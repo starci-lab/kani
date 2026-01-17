@@ -1,20 +1,29 @@
-import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
+import {
+    ErrorSuiObjectName,
+    LiquidityPoolNotFoundException,
+    SuiObjectInvalidTypeException,
+    SuiObjectNotFoundException
+} from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
+import {
+    PrimaryMemoryStorageService,
+    LiquidityPoolId,
+    DexId,
+    LiquidityPoolSchema
+} from "@modules/databases"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { AsyncService } from "@modules/mixin"
 import { Interval } from "@nestjs/schedule"
 import { createObjectId } from "@utils"
-import { 
-    CacheKey, 
-    createCacheKey, 
-    DynamicClmmLiquidityPoolInfoCacheResult, 
-    InjectRedisCache 
+import {
+    CacheKey,
+    createCacheKey,
+    DynamicClmmLiquidityPoolInfoCacheResult,
+    InjectRedisCache
 } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { Logger as winstonLogger } from "winston"
-import { InjectWinston, WinstonLog } from "@modules/winston"
+import { WinstonLog, WinstonService } from "@modules/winston"
 import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
@@ -22,7 +31,9 @@ import { envConfig } from "@modules/env"
 import { parseFlowxPool, FlowxPool, FlowxSuiObjectPoolFields } from "./struct"
 
 @Injectable()
-export class FlowXObserverService {
+export class FlowXObserverService implements OnApplicationBootstrap, OnModuleInit {
+    // snapshot here to reduce the computational complexity
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -30,21 +41,28 @@ export class FlowXObserverService {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
-    ) {}
+    ) { }
+
+    onModuleInit() {
+        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.FlowX),
+            }
+        )
+    }
 
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
     }
-    
+
     @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+        for (const liquidityPool of this.liquidityPools) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.FlowX).toString()) continue
             promises.push(
                 (
@@ -60,10 +78,12 @@ export class FlowXObserverService {
         liquidityPoolId: LiquidityPoolId
     ) {
         try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                liquidityPool => liquidityPool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            const liquidityPool = this.memoryStorageService.liquidityPoolCollection.findOne({
+                displayId: liquidityPoolId,
+            })
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException({
+                displayId: liquidityPoolId,
+            })
 
             const objectInfo = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
@@ -76,17 +96,32 @@ export class FlowXObserverService {
                     })
                 },
             })
-            if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-            if (objectInfo.data?.content?.dataType !== "moveObject") throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
+            if (!objectInfo) {
+                throw new SuiObjectNotFoundException({
+                    name: ErrorSuiObjectName.Pool,
+                    id: liquidityPool.poolAddress,
+                    dexId: DexId.FlowX,
+                    liquidityPoolId: liquidityPoolId,
+                })
+            }
+            if (objectInfo.data?.content?.dataType !== "moveObject") {
+                throw new SuiObjectInvalidTypeException({
+                    name: ErrorSuiObjectName.Pool,
+                    id: liquidityPool.poolAddress,
+                    dexId: DexId.FlowX,
+                    liquidityPoolId: liquidityPoolId,
+                })
+            }
             const fields = objectInfo.data.content.fields as unknown as FlowxSuiObjectPoolFields
             const pool = parseFlowxPool(fields)
             await this.handlePoolStateUpdate(liquidityPoolId, pool)
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.FetchClmmPoolError, {
-                    liquidityPoolId,
-                    error: error.message,
-                })
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolFetchedError, {
+                liquidityPoolId,
+                error: error.message,
+            }
+            )
         }
     }
 
@@ -109,10 +144,10 @@ export class FlowXObserverService {
         }
         await this.asyncService.allIgnoreError(
             [
-            // cache
+                // cache
                 this.cacheManager.set(
                     createCacheKey(
-                        CacheKey.DynamicClmmLiquidityPoolInfo, 
+                        CacheKey.DynamicClmmLiquidityPoolInfo,
                         liquidityPoolId
                     ),
                     this.superjson.stringify(parsed),
@@ -125,14 +160,6 @@ export class FlowXObserverService {
                 ),
             ]
         )
-        // logging
-        this.winstonLogger.debug(
-            WinstonLog.ObserveClmmPool, {
-                liquidityPoolId,
-                tickCurrent: parsed.tickCurrent.toString(),
-                liquidity: parsed.liquidity.toString(),
-                sqrtPriceX64: parsed.sqrtPriceX64.toString(),
-            })
         return parsed
     }
 }

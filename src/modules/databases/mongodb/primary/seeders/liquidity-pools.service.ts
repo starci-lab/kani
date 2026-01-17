@@ -53,7 +53,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             globalConfigObject: "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f",
             clmmPackageId: "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb",
             rewarderGlobalVaultObject: "0xce7bceef26d3ad1f6d9b6f13a953f053e6ed3ca77907516481ce99ae8e588f2b",
-            tickManagerId: "0x7f07284d6d6373a1b32d8f721991c3c17aa2f895abcc34e0d5990a8a99aaf2ae"
+            tickManagerId: "0x7f07284d6d6373a1b32d8f721991c3c17aa2f895abcc34e0d5990a8a99aaf2ae",
+            positionManagerId: "0x0bad9ea1bcb68c4ac3eb71819639360906392047f5fcd1675902cbb84d6157e8"
         },
         url: "https://app.cetus.zone/clmm?poolAddress=0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab",
     },
@@ -127,6 +128,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             i32Type: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::i32::I32",
             poolFeeCollectEventType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::Collect",
             poolRewardCollectEventType: "0x25929e7f29e0a30eb4e692952ba1b5b65a3a4d65ab5f2a32e1ba3edcb587f26d::pool::CollectPoolReward",
+            ticksId: "0x79327cb85a89aab545ff507fab821183e67ce286b55b6acd2ff393499c6a01e4",
         },
         url: "https://flowx.finance/explore/pools/0x325239132e2b619147c00052986461cea02815172ea9d000c58e68484f514a90",
     },
@@ -151,6 +153,11 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tokenA: createObjectId(TokenId.SuiWalrus),
         tokenB: createObjectId(TokenId.SuiNative),
         fee: 0.002,
+        metadata: {
+            packageId: "0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
+            versionObject: "0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
+            ticksId: "0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
+        },
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         tickSpacing: 1000,
@@ -169,6 +176,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         tickSpacing: 40,
         tickMultiplier: 8,
         metadata: { 
+            ticksId: "0x9f32239c50285ce8fbf9b97c52be85088d70fbcb01727c3fc0750185086ffc3c",
             packageId: "0xcf60a40f45d46fc1e828871a647c1e25a0915dec860d2662eb10fdb382c3c1d1",
             versionObject: "0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a",
         },

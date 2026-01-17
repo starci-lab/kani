@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { BN, Decimal } from "turbos-clmm-sdk"
 import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import { Q128, Q64, Q96 } from "@utils"
 
 /**
  * CLMM Tick / Price formula service
@@ -17,6 +18,17 @@ import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
  */
 @Injectable()
 export class ClmmTickFormulaService {
+    private assertValidTickIndex(tickIndex: Decimal): number {
+        // Tick index must be an integer (CLMM discrete ticks).
+        if (!tickIndex.isInteger()) {
+            throw new Error(`Invalid tickIndex (must be integer): ${tickIndex.toString()}`)
+        }
+        const asNumber = tickIndex.toNumber()
+        if (!Number.isSafeInteger(asNumber)) {
+            throw new Error(`Invalid tickIndex (unsafe integer): ${tickIndex.toString()}`)
+        }
+        return asNumber
+    }
 
     /**
      * Convert tick index to sqrt price (Q64 fixed point)
@@ -33,13 +45,16 @@ export class ClmmTickFormulaService {
      *  - We rely on the imported TickMath implementation for correctness
      *  - This is equivalent to Uniswap V3 tick -> sqrtPrice logic
      */
-    public tickToSqrtPriceX64(
+    public tickToSqrtPrice(
         {
             tickIndex,
-        }: TickToSqrtPriceX64Params
+            fixedPointScale = Q64,
+        }: TickToSqrtPriceParams
     ): BN {
-        // Use TickMath implementation to compute sqrtPriceX64
-        return TickMath.tickIndexToSqrtPriceX64(tickIndex.toNumber())
+        // Use TickMath implementation to compute sqrtPrice
+        const tick = this.assertValidTickIndex(tickIndex)
+        const tickIndexX64 = TickMath.tickIndexToSqrtPriceX64(tick)
+        return tickIndexX64.mul(fixedPointScale).div(Q64)
     }
 
     /**
@@ -55,18 +70,16 @@ export class ClmmTickFormulaService {
      * Returned price:
      *  - price of token A in terms of token B
      */
-    public sqrtPriceX64ToPrice(
+    public sqrtPriceToPrice(
         {
-            sqrtPriceX64,
+            sqrtPrice,
             decimalsA,
             decimalsB,
-        }: SqrtPriceX64ToPriceParams
+            fixedPointScale = Q64,
+        }: SqrtPriceToPriceParams
     ): Decimal {
-        return TickMath.sqrtPriceX64ToPrice(
-            sqrtPriceX64,
-            decimalsA,
-            decimalsB
-        )
+        const sqrtPriceX64 = sqrtPrice.mul(Q64).div(fixedPointScale)
+        return TickMath.sqrtPriceX64ToPrice(sqrtPriceX64, decimalsA, decimalsB)
     }
 
     /**
@@ -84,12 +97,22 @@ export class ClmmTickFormulaService {
             tickIndex,
             decimalsA,
             decimalsB,
+            fixedPointScale = Q64,
         }: TickToPriceParams
     ): Decimal {
-        return TickMath.tickIndexToPrice(
-            tickIndex.toNumber(),
-            decimalsA,
-            decimalsB
+        const sqrtPrice = this.tickToSqrtPrice(
+            {
+                tickIndex,
+                fixedPointScale,
+            }
+        )
+        return this.sqrtPriceToPrice(
+            {
+                sqrtPrice,
+                decimalsA,
+                decimalsB,
+                fixedPointScale,
+            }
         )
     }
 }
@@ -97,21 +120,26 @@ export class ClmmTickFormulaService {
 /**
  * Params for tick -> sqrtPriceX64 conversion
  */
-export interface TickToSqrtPriceX64Params {
+export interface TickToSqrtPriceParams {
     /**
      * CLMM tick index (discrete price step)
      */
     tickIndex: Decimal
+    /**
+     * Divisor for price calculations (default: Q64)
+     * Controls fixed-point scaling for sqrt price arithmetic
+     */
+    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
 }
 
 /**
  * Params for sqrtPriceX64 -> price conversion
  */
-export interface SqrtPriceX64ToPriceParams {
+export interface SqrtPriceToPriceParams {
     /**
      * sqrt(price) in Q64 fixed-point format
      */
-    sqrtPriceX64: BN
+    sqrtPrice: BN
 
     /**
      * Decimals of token A
@@ -122,6 +150,12 @@ export interface SqrtPriceX64ToPriceParams {
      * Decimals of token B
      */
     decimalsB: number
+
+    /**
+     * Divisor for price calculations (default: Q64)
+     * Controls fixed-point scaling for sqrt price arithmetic
+     */
+    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
 }
 
 /**
@@ -142,4 +176,10 @@ export interface TickToPriceParams {
      * Decimals of token B
      */
     decimalsB: number
+
+    /**
+     * Divisor for price calculations (default: Q64)
+     * Controls fixed-point scaling for sqrt price arithmetic
+     */
+    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
 }

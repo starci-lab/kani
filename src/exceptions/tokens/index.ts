@@ -43,13 +43,6 @@ export class TokenListIsEmptyException extends AbstractException {
     }
 }
 
-/** Thrown when pool tokens are invalid */
-export class InvalidPoolTokensException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Either token A or token B is not in the pool", "INVALID_POOL_TOKENS_EXCEPTION")
-    }
-}
-
 /** Thrown when token address is invalid */
 export class InvalidTokenAddressException extends AbstractException {
     constructor(message?: string) {
@@ -103,12 +96,5 @@ export class AmountBInBetweenExpectedException extends AbstractException {
 export class PythAndSpotPriceNotFoundException extends AbstractException {
     constructor(tokenA: TokenId, tokenB: TokenId, message?: string) {
         super(message || "Pyth and spot price not found for the given tokens", "PYTH_AND_SPOT_PRICE_NOT_FOUND_EXCEPTION", { tokenA, tokenB })
-    }
-}
-
-/** Thrown when transaction validation fails */
-export class TransactionValidationFailedException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Transaction validation failed", "TRANSACTION_VALIDATION_FAILED_EXCEPTION")
     }
 }

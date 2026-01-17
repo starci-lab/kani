@@ -15,5 +15,15 @@ export enum WinstonLogType {
 export interface WinstonOptions {
     appName: string
     level: WinstonLevel
-    logTypes?: Array<WinstonLogType>
+}
+
+export interface WinstonLogConfig<TName, TMessage> {
+    // the name of the log
+    name: TName
+    // the level of the log
+    level: WinstonLevel
+    // whether to log to loki
+    loki?: boolean
+    // the type of the log
+    messageType: TMessage
 }

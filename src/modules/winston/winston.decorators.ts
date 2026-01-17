@@ -1,4 +1,9 @@
-import { Inject } from "@nestjs/common"
-import { WINSTON_MODULE_PROVIDER } from "nest-winston"
+import {
+    Inject 
+} from "@nestjs/common"
+import {
+    CONSOLE_WINSTON, LOKI_WINSTON 
+} from "./constants"
 
-export const InjectWinston = () => Inject(WINSTON_MODULE_PROVIDER)
+export const InjectConsoleWinston = () => Inject(CONSOLE_WINSTON)
+export const InjectLokiWinston = () => Inject(LOKI_WINSTON)

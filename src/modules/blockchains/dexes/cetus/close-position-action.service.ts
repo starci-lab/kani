@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
 } from "../../interfaces"
@@ -20,8 +20,7 @@ import {
 } from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { WinstonLog, WinstonService } from "@modules/winston"
 import { AsyncService } from "@modules/mixin"
 import { AppVersion } from "@modules/databases"
 import { PrivySignService } from "@modules/privy"
@@ -34,18 +33,18 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
+                {
+                    botId: bot.id,
+                }
             )
         }
         const {
@@ -67,7 +66,13 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                                 sender: bot.accountAddress,
                             })
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException("Transaction validation failed")
+                                throw new TransactionValidationFailedException(
+                                    {
+                                        botId: bot.id,
+                                        txHash: devInspect.effects.transactionDigest,
+                                        liquidityPoolId: _state.static.displayId,
+                                    }
+                                )
                             }
                             const bytes = await closePositionTxb.build({
                                 client: suiClient,
@@ -82,7 +87,11 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     })
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException(
+                            {
+                                botId: bot.id,
+                            }
+                        )
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction(
                         {
@@ -111,13 +120,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             txHash,
         }: ExecuteClosePositionParams
     ): Promise<void> {
-        const _state = state as LiquidityPoolState
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
-            )
-        }
+        const _state = state as ClmmLiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -135,10 +138,22 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             if (txBlock !== null) {
                 return
             }
-            throw new TransactionNotExecutedException("Transaction not executed")
+            throw new TransactionNotExecutedException(
+                {
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: _state.static.displayId,
+                }
+            )
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException(
+                {
+                    botId: bot.id,
+                    txHash,
+                    liquidityPoolId: _state.static.displayId,
+                }
+            )
         }
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -150,8 +165,9 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 await suiClient.waitForTransaction({
                     digest,
                 })
-                this.logger.verbose(
-                    WinstonLog.ClosePositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.ClosePositionTransactionExecuted, 
+                    {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,

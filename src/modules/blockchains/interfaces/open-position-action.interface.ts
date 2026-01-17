@@ -1,11 +1,10 @@
 import BN from "bn.js"
 import {
     BotSchema,
-    LiquidityPoolId,
 } from "@modules/databases"
 import { Decimal } from "decimal.js"
 import { SolanaTx } from "./types"
-import { DlmmLiquidityPoolState, LiquidityPoolState, PrepareOpenPositionParams } from "./types"
+import { DlmmLiquidityPoolState, ClmmLiquidityPoolState, PrepareOpenPositionParams } from "./types"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { Dayjs } from "dayjs"
 
@@ -27,7 +26,7 @@ export interface PrepareOpenPositionResult {
 
 export interface ExecuteOpenPositionParams {
     bot: BotSchema;
-    state: LiquidityPoolState | DlmmLiquidityPoolState;
+    state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
     isRetry: boolean;
     signatureWithBytes?: SignatureWithBytes
     solanaTx?: SolanaTx;
@@ -81,7 +80,7 @@ export interface CreateExecuteResult {
 
 export interface ConfirmOpenPositionParams {
   positionId: string;
-  state: LiquidityPoolState | DlmmLiquidityPoolState;
+  state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
 }
 
 export interface ConfirmOpenPositionResult {
@@ -90,13 +89,13 @@ export interface ConfirmOpenPositionResult {
 
 export interface FeesParams {
   bot: BotSchema
-  liquidityPoolId: LiquidityPoolId
-  state: LiquidityPoolState | DlmmLiquidityPoolState;
+  state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
 }
 
 export interface FeesResult {
-  tokenA: Decimal;
-  tokenB: Decimal;
+  feeA: Decimal;
+  feeB: Decimal;
+  rewards: Array<Decimal>;
   snapshotAt: Dayjs;
 }
 
@@ -107,14 +106,13 @@ export interface IFeesService {
 }
 
 export interface ReservesParams {
-  liquidityPoolId: LiquidityPoolId;
-  state: LiquidityPoolState | DlmmLiquidityPoolState;
+  state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
   bot: BotSchema;
 }
 
 export interface ReservesResult {
-  tokenA: Decimal;
-  tokenB: Decimal;
+  reserveA: Decimal;
+  reserveB: Decimal;
   snapshotAt: Dayjs;
 }
 

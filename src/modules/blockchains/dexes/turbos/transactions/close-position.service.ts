@@ -1,21 +1,37 @@
-import { LiquidityPoolState } from "../../../interfaces"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 import { 
     BotSchema, 
     PrimaryMemoryStorageService, 
     TurbosLiquidityPoolMetadata 
 } from "@modules/databases"
-import { Transaction } from "@mysten/sui/transactions"
-import { Injectable } from "@nestjs/common"
-import { DayjsService } from "@modules/mixin"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    DayjsService 
+} from "@modules/mixin"
 import { 
     ActivePositionNotFoundException,
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException 
 } from "@exceptions"
-import { ChainId } from "@typedefs"
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { MAX_UINT_64 } from "@utils"
-import { deprecatedPoolRewards } from "turbos-clmm-sdk"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    SUI_CLOCK_OBJECT_ID 
+} from "@mysten/sui/utils"
+import {
+    MAX_UINT_64 
+} from "@utils"
+import {
+    deprecatedPoolRewards 
+} from "turbos-clmm-sdk"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -32,18 +48,22 @@ export class ClosePositionTxbService {
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString()
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString()
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const targetOperationalAmount = this.primaryMemoryStorageService.
             gasConfig.
@@ -51,18 +71,21 @@ export class ClosePositionTxbService {
             targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                ChainId.Sui,
-                "Target operational gas amount not found"
+                {
+                    chainId: ChainId.Sui,
+                }
             )
         }
-        const deadline = this.dayjsService.now().add(5, "minute").utc().valueOf().toString()
+        const deadline = this.dayjsService.now().add(5,
+            "minute").utc().valueOf().toString()
         const {
             packageId,
             feeType,
             positionsObject,
             versionObject 
         } = state.static.metadata as TurbosLiquidityPoolMetadata
-        const [coinA, coinB] = txb.moveCall({
+        const [coinA,
+            coinB] = txb.moveCall({
             target: `${packageId}::position_manager::decrease_liquidity_with_return_`,
             typeArguments: [
                 tokenA.tokenAddress,
@@ -119,9 +142,11 @@ export class ClosePositionTxbService {
             ],
         })
         const rewards = state.dynamic.rewards
-        for (const [index, reward] of rewards.entries()) {
+        for (const [index,
+            reward] of rewards.entries()) {
             if (
-                !deprecatedPoolRewards(state.static.poolAddress, index)
+                !deprecatedPoolRewards(state.static.poolAddress,
+                    index)
             ) {
                 txb.moveCall({
                     target: `${packageId}::position_manager::collect_reward`,
@@ -185,7 +210,7 @@ export class ClosePositionTxbService {
 export interface CreateClosePositionTxbParams {
     txb?: Transaction
     bot: BotSchema
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
 }
 
 export interface CreateClosePositionTxbResult {

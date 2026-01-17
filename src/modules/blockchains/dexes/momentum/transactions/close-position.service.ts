@@ -3,14 +3,22 @@ import {
     MomentumLiquidityPoolMetadata, 
     PrimaryMemoryStorageService 
 } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { Transaction, TransactionResult } from "@mysten/sui/transactions"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Transaction, TransactionResult 
+} from "@mysten/sui/transactions"
 import { 
     InvalidPoolTokensException, 
     ActivePositionNotFoundException 
 } from "@exceptions"
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { LiquidityPoolState } from "../../../interfaces"
+import {
+    SUI_CLOCK_OBJECT_ID 
+} from "@mysten/sui/utils"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -26,24 +34,29 @@ export class ClosePositionTxbService {
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const {
             packageId,
             versionObject,
         } = state.static.metadata as MomentumLiquidityPoolMetadata
-        const [coinAOut, coinBOut] = txb.moveCall({
+        const [coinAOut,
+            coinBOut] = txb.moveCall({
             target: `${packageId}::liquidity::remove_liquidity`,
             typeArguments: [
                 tokenA.tokenAddress,
@@ -59,7 +72,9 @@ export class ClosePositionTxbService {
                 txb.object(versionObject),
             ],
         })
-        txb.transferObjects([coinAOut, coinBOut], txb.pure.address(bot.accountAddress))
+        txb.transferObjects([coinAOut,
+            coinBOut],
+        txb.pure.address(bot.accountAddress))
 
         const rewards = state.dynamic.rewards
         const rewardCoins: Array<TransactionResult> = []
@@ -84,7 +99,8 @@ export class ClosePositionTxbService {
             })
             rewardCoins.push(rewardCoin)
         }
-        txb.transferObjects(rewardCoins, txb.pure.address(bot.accountAddress))
+        txb.transferObjects(rewardCoins,
+            txb.pure.address(bot.accountAddress))
         return {
             txb,
         }
@@ -94,7 +110,7 @@ export class ClosePositionTxbService {
 export interface CreateClosePositionTxbParams {
     txb?: Transaction
     bot: BotSchema
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
 }
 
 export interface CreateClosePositionTxbResult {

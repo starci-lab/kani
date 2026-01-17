@@ -3,8 +3,8 @@ import {
     SuiObject,
     SuiObjectID,
     SuiObjectI32,
+    parseSuiI32
 } from "../../../structs"
-import { parseSuiI32 } from "../../../structs/sui/parsers/int"
 
 // ========== Reward Info Types ==========
 export interface TurbosSuiObjectPoolRewardInfo {

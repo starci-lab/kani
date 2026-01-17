@@ -26,20 +26,6 @@ export class TransactionExecutionFailedException extends AbstractException {
     }
 }
 
-/** Thrown when transaction has not been prepared */
-export class TransactionNotPreparedException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Transaction not prepared", "TRANSACTION_NOT_PREPARED_EXCEPTION")
-    }
-}
-
-/** Thrown when transaction has not been executed */
-export class TransactionNotExecutedException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Transaction not executed", "TRANSACTION_NOT_EXECUTED_EXCEPTION")
-    }
-}
-
 /** Thrown when mint keypair is not set */
 export class MintKeyPairNotSetException extends AbstractException {
     constructor(message?: string) {

@@ -1,28 +1,59 @@
-import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { PrimaryMemoryStorageService, LiquidityPoolId, DexId } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { AsyncService, DayjsService } from "@modules/mixin"
-import { Interval } from "@nestjs/schedule"
-import { createObjectId } from "@utils"
+import {
+    ErrorSuiObjectName,
+    LiquidityPoolNotFoundException, 
+    SuiObjectInvalidTypeException, 
+    SuiObjectNotFoundException
+} from "@exceptions"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    PrimaryMemoryStorageService, LiquidityPoolId, DexId, LiquidityPoolSchema 
+} from "@modules/databases"
+import {
+    Injectable, OnApplicationBootstrap, OnModuleInit 
+} from "@nestjs/common"
+import {
+    AsyncService, DayjsService 
+} from "@modules/mixin"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    createObjectId 
+} from "@utils"
 import { 
     CacheKey, 
     createCacheKey, 
     DynamicClmmLiquidityPoolInfoCacheResult, 
     InjectRedisCache 
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { Logger as winstonLogger } from "winston"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { InjectSuperJson } from "@modules/mixin"
+import {
+    Cache 
+} from "cache-manager"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
 import SuperJSON from "superjson"
-import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
-import { envConfig } from "@modules/env"
-import { parseTurbosPool, TurbosPool, TurbosSuiObjectPoolFields } from "./struct"
+import {
+    ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName 
+} from "@modules/event"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    parseTurbosPool, TurbosPool, TurbosSuiObjectPoolFields 
+} from "./struct"
 
 @Injectable()
-export class TurbosObserverService {
+export class TurbosObserverService implements OnApplicationBootstrap, OnModuleInit {
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -30,12 +61,19 @@ export class TurbosObserverService {
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
     ) {}
+
+    onModuleInit() {
+        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.Turbos)
+            }
+        )
+    }
 
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
@@ -44,8 +82,7 @@ export class TurbosObserverService {
     @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Turbos).toString()) continue
+        for (const liquidityPool of this.liquidityPools) {
             promises.push(
                 (
                     async () => {
@@ -60,10 +97,12 @@ export class TurbosObserverService {
         liquidityPoolId: LiquidityPoolId
     ) {
         try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
+            const liquidityPool = this.liquidityPools.find(
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            if (!liquidityPool) throw new LiquidityPoolNotFoundException({
+                displayId: liquidityPoolId,
+            })
             const objectInfo = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
@@ -75,22 +114,39 @@ export class TurbosObserverService {
                     })
                 },
             })
-            if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-            if (objectInfo.data?.content?.dataType !== "moveObject") throw new SuiLiquidityPoolInvalidTypeException(liquidityPoolId)
+            if (!objectInfo) {
+                throw new SuiObjectNotFoundException({
+                    name: ErrorSuiObjectName.Pool,
+                    id: liquidityPool.poolAddress,
+                    dexId: DexId.Turbos,
+                    liquidityPoolId: liquidityPoolId,
+                })
+            }
+            if (objectInfo.data?.content?.dataType !== "moveObject") {
+                throw new SuiObjectInvalidTypeException({
+                    name: ErrorSuiObjectName.Pool,
+                    id: liquidityPool.poolAddress,
+                    dexId: DexId.Turbos,
+                    liquidityPoolId: liquidityPoolId,
+                })
+            }
             const fields = objectInfo.data.content.fields as unknown as TurbosSuiObjectPoolFields
             const pool = parseTurbosPool(fields)
-            await this.handlePoolStateUpdate(liquidityPoolId, pool)
+            await this.handlePoolStateUpdate(liquidityPool,
+                pool)
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.FetchDlmmPoolError, {
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolFetchedError,
+                {
                     liquidityPoolId,
                     error: error.message,
-                })
+                }
+            )
         }
     }
 
     private async handlePoolStateUpdate(
-        liquidityPoolId: LiquidityPoolId,
+        liquidityPool: LiquidityPoolSchema,
         state: TurbosPool
     ) {
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
@@ -113,15 +169,19 @@ export class TurbosObserverService {
                 this.cacheManager.set(
                     createCacheKey(
                         CacheKey.DynamicClmmLiquidityPoolInfo, 
-                        liquidityPoolId
+                        liquidityPool.displayId
                     ),
                     this.superjson.stringify(parsed),
                 ),
                 // emit event through event emitter
                 this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
                     EventName.ClmmLiquidityPoolsFetched,
-                    { liquidityPoolId, ...parsed },
-                    { withoutLocal: true },
+                    {
+                        liquidityPoolId: liquidityPool.displayId, ...parsed 
+                    },
+                    {
+                        withoutLocal: true 
+                    },
                 ),
             ]
         )

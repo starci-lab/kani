@@ -5,7 +5,9 @@ import {
     SuiObjectI32,
     TypeName,
 } from "../../../structs"
-import { parseSuiI32 } from "../../../structs/sui/parsers/int"
+import {
+    parseSuiI32 
+} from "../../../structs"
 
 // ========== Position Reward Info Types ==========
 export interface MomentumSuiObjectPositionRewardInfo {

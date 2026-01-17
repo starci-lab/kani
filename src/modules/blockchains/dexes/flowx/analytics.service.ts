@@ -1,6 +1,5 @@
 import {
     DexId,
-    LiquidityPoolId,
     LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -9,29 +8,47 @@ import {
     OnApplicationBootstrap,
     OnModuleInit,
 } from "@nestjs/common"
-import { FlowXPoolBatchInfoNotFoundException } from "@exceptions"
 import {
     CacheKey,
     createCacheKey,
     InjectRedisCache,
     PoolAnalyticsCacheResult,
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { Interval } from "@nestjs/schedule"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import {
+    Cache 
+} from "cache-manager"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    AsyncService, InjectSuperJson 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 import Decimal from "decimal.js"
-import { ApolloClientService } from "@modules/apollo-client"
-import { ApolloClient, gql } from "@apollo/client"
-import { createObjectId } from "@utils"
+import {
+    ApolloClientService 
+} from "@modules/apollo-client"
+import {
+    ApolloClient, gql 
+} from "@apollo/client"
+import {
+    createObjectId 
+} from "@utils"
 import SuperJSON from "superjson"
+import {
+    GraphQLDataNotFoundException 
+} from "@exceptions"
 // Implement analytics for FlowX DEX
 // We use the API provided by FlowX to get the analytics data
 @Injectable()
 export class FlowXAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
+    private readonly graphqlUrl = "https://api.flowx.finance/flowx-be/graphql"
     private apolloClient: ApolloClient
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
     private readonly apolloClientService: ApolloClientService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -50,25 +67,20 @@ implements OnModuleInit, OnApplicationBootstrap
         const key = "flowx-analytics"
         this.apolloClient = this.apolloClientService.createNoCacheClient({
             key,
-            url: "https://api.flowx.finance/flowx-be/graphql",
+            url: this.graphqlUrl,
         })
+        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.FlowX),
+            }
+        )
     }
 
     private async setBatchPoolAnalytics(
-        liquidityPoolIds: Array<LiquidityPoolId>,
+        liquidityPools: Array<LiquidityPoolSchema>,
     ) {
-    // Get the liquidity pool
-        const liquidityPools =
-      this.primaryMemoryStorageService.liquidityPools.filter((liquidityPool) =>
-          liquidityPoolIds.includes(liquidityPool.displayId),
-      )
-        if (!liquidityPools.length) {
-            return
-        }
-        const { data } =
-      await this.apolloClient.query<GetClmmPoolDetailRootResult>({
-          query: gql`
-          query GetClmmPoolsDetail($poolIds: String!) {
+        const rawQuery = `
+        query GetClmmPoolsDetail($poolIds: String!) {
   getClmmPoolsDetail(poolIds: $poolIds) {
     items {
       id
@@ -108,16 +120,24 @@ implements OnModuleInit, OnApplicationBootstrap
     }
     total
   }
-}
-        `,
-          variables: {
-              poolIds: liquidityPools
-                  .map((liquidityPool) => liquidityPool.poolAddress)
-                  .join(","),
-          },
+}` 
+        const query = gql(rawQuery)
+        const variables = {
+            poolIds: liquidityPools.map((liquidityPool) => liquidityPool.poolAddress).join(","),
+        }
+        const { data } =
+      await this.apolloClient.query<GetClmmPoolDetailRootResult>({
+          query,
+          variables,
       })
         if (!data) {
-            throw new FlowXPoolBatchInfoNotFoundException(liquidityPoolIds, "Pool batch info not found")
+            throw new GraphQLDataNotFoundException(
+                {
+                    query: rawQuery,
+                    variables,
+                    url: this.graphqlUrl,
+                }
+            )
         }
         const {
             getClmmPoolsDetail: { items },
@@ -142,7 +162,9 @@ implements OnModuleInit, OnApplicationBootstrap
                         tvl: item.stats.totalLiquidityInUSD,
                         apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
                     }
-                    await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
+                    await this.cacheManager.set(poolAnalyticsCacheKey,
+                        this.superjson.stringify(poolAnalyticsCacheResult),
+                        envConfig().cache.ttl.poolAnalytics)
                 })(),
             )
         }
@@ -151,17 +173,12 @@ implements OnModuleInit, OnApplicationBootstrap
 
     @Interval(envConfig().timeConfig.interval.analytics)
     async handleAnalyticsUpdateInterval() {
-        const liquidityPools =
-      this.primaryMemoryStorageService.liquidityPools.filter(
-          (liquidityPool) =>
-              liquidityPool.dex.toString() ===
-          createObjectId(DexId.FlowX).toString(),
-      )
         // split into chunks of 10
-        const chunks = liquidityPools.reduce(
+        const chunks = this.liquidityPools.reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
-                acc[chunkIndex] = [...(acc[chunkIndex] || []), liquidityPool]
+                acc[chunkIndex] = [...(acc[chunkIndex] || []),
+                    liquidityPool]
                 return acc
             },
       [] as Array<Array<LiquidityPoolSchema>>,
@@ -170,7 +187,7 @@ implements OnModuleInit, OnApplicationBootstrap
         for (const chunk of chunks) {
             promises.push(
                 this.setBatchPoolAnalytics(
-                    chunk.map((liquidityPool) => liquidityPool.displayId),
+                    chunk,
                 ),
             )
         }

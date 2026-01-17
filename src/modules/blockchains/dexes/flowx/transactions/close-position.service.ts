@@ -5,15 +5,15 @@ import {
 } from "@modules/databases"
 import { DayjsService } from "@modules/mixin"
 import { Injectable } from "@nestjs/common"
-import { LiquidityPoolState } from "../../../interfaces"
 import { Transaction } from "@mysten/sui/transactions"
-import { InvalidPoolTokensException } from "src/exceptions/tokens"
+import { InvalidPoolTokensException } from "@exceptions"
 import { ActivePositionNotFoundException } from "@exceptions"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { ClmmSqrtPriceMath, ClmmTickMath, MaxUint64 } from "@flowx-finance/sdk"
 import { Decimal } from "decimal.js"
 import BN from "bn.js"
 import { ZERO_BN } from "@utils"
+import { ClmmLiquidityPoolState } from "../../../interfaces"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -30,18 +30,22 @@ export class ClosePositionTxbService {
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const {
             packageId,
@@ -123,11 +127,13 @@ export class ClosePositionTxbService {
 
     public computeAmountX(
         bot: BotSchema, 
-        state: LiquidityPoolState
+        state: ClmmLiquidityPoolState
     ): BN {
         const activePosition = bot.activePosition
         if (!activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickLower || 0))) {
             return ClmmSqrtPriceMath.getAmountXDelta(
@@ -152,11 +158,13 @@ export class ClosePositionTxbService {
 
     public computeAmountY(
         bot: BotSchema, 
-        state: LiquidityPoolState
+        state: ClmmLiquidityPoolState
     ): BN {
         const activePosition = bot.activePosition
         if (!activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickLower || 0))) {
             return ZERO_BN
@@ -181,7 +189,7 @@ export class ClosePositionTxbService {
 export interface CreateClosePositionTxbParams {
     txb?: Transaction
     bot: BotSchema
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
 }
 
 export interface CreateClosePositionTxbResult {

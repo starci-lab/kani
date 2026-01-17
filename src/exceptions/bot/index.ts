@@ -1,3 +1,6 @@
+export * from "./position"
+export * from "./transaction"
+export * from "./snapshot"
 /**
  * Bot Exceptions
  * Errors related to bot operations, positions, and transactions
@@ -11,14 +14,6 @@ export class BotNotFoundException extends AbstractException {
         super(message || "Bot not found", "BOT_NOT_FOUND_EXCEPTION")
     }
 }
-
-/** Thrown when snapshot balances have not been set */
-export class SnapshotBalancesNotSetException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Snapshot balances not set", "SNAPSHOT_BALANCES_NOT_SET_EXCEPTION")
-    }
-}
-
 /** Thrown when attempting to backup an already backed up private key */
 export class BotAlreadyBackupedPrivateKeyException extends AbstractException {
     constructor(message?: string) {
@@ -54,10 +49,10 @@ export class InsufficientQuoteBalanceAmountException extends AbstractException {
     }
 }
 
-/** Thrown when active position cannot be found for bot */
-export class ActivePositionNotFoundException extends AbstractException {
+/** Thrown when active position liquidity pool cannot be found for bot */
+export class ActivePositionLiquidityPoolNotFoundException extends AbstractException {
     constructor(botId: string, message?: string) {
-        super(message || "Active position not found", "ACTIVE_POSITION_NOT_FOUND_EXCEPTION", { botId })
+        super(message || "Active position liquidity pool not found", "ACTIVE_POSITION_LIQUIDITY_POOL_NOT_FOUND_EXCEPTION", { botId })
     }
 }
 

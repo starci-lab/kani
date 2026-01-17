@@ -1,29 +1,46 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable
+} from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
 } from "../../interfaces"
-import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
-import { 
-    ClosePositionTxbService, 
+import {
+    TransactionDataBuilder
+} from "@mysten/sui/transactions"
+import {
+    SignerService
+} from "../../signers"
+import {
+    ClosePositionTxbService,
 } from "./transactions"
-import { 
+import {
     ActivePositionNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { AsyncService } from "@modules/mixin"
-import { PrivySignService } from "@modules/privy"
-import { AppVersion } from "@modules/databases"
+import {
+    RpcExecutorService
+} from "../../clients"
+import {
+    RpcAccessType
+} from "@modules/filesystem"
+import {
+    WinstonLog, WinstonService
+} from "@modules/winston"
+import {
+    AsyncService
+} from "@modules/mixin"
+import {
+    PrivySignService
+} from "@modules/privy"
+import {
+    AppVersion
+} from "@modules/databases"
 
 @Injectable()
 export class TurbosClosePositionActionService implements IClosePositionActionService {
@@ -33,20 +50,18 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-    ) {}
+        private readonly winstonService: WinstonService,
+    ) { }
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
-            )
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         const {
             txb: closePositionTxb,
         } = await this.closePositionTxbService.createClosePositionTxb({
@@ -73,7 +88,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     })
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -94,11 +111,12 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
     async execute(
         { bot, state, isRetry, signatureWithBytes, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
+                {
+                    botId: bot.id,
+                }
             )
         }
         if (isRetry) {
@@ -115,10 +133,18 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             if (txBlock !== null) {
                 return
             }
-            throw new TransactionNotExecutedException("Transaction not executed")
+            throw new TransactionNotExecutedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -130,8 +156,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                 await suiClient.waitForTransaction({
                     digest,
                 })
-                this.logger.verbose(
-                    WinstonLog.ClosePositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.ClosePositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,

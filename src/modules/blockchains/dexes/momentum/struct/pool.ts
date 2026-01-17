@@ -5,8 +5,9 @@ import {
     SuiObjectI32,
     SuiObjectI64,
     TypeName,
+    parseSuiI32, 
+    parseSuiI64 
 } from "../../../structs"
-import { parseSuiI32, parseSuiI64 } from "../../../structs/sui/parsers/int"
 
 /** ---------- OBSERVATION ---------- */
 

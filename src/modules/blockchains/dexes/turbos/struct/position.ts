@@ -2,8 +2,8 @@ import BN from "bn.js"
 import {
     SuiObject,
     SuiObjectI32,
+    parseSuiI32
 } from "../../../structs"
-import { parseSuiI32 } from "../../../structs/sui/parsers/int"
 
 // ========== Position Reward Info Types ==========
 export interface TurbosSuiObjectPositionRewardInfo {
@@ -72,6 +72,9 @@ export const parseTurbosPosition = (target: TurbosSuiObjectPositionFields): Turb
 }
 
 // ========== POSITION NFT STRUCT ==========
+export interface TurbosPositionNFT {
+    positionId: string
+}
 export interface TurbosSuiObjectPositionNFTFields {
     position_id: string
 }
@@ -80,3 +83,9 @@ export type TurbosSuiObjectPositionNFT = SuiObject<
     TurbosSuiObjectPositionNFTFields,
     `${string}::position_nft::PositionNFT`
 >
+
+export const parseTurbosSuiObjectPositionNFT = (target: TurbosSuiObjectPositionNFT): TurbosPositionNFT => {
+    return {
+        positionId: target.fields.position_id,
+    }
+}

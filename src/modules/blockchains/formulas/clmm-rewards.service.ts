@@ -118,7 +118,7 @@ export class ClmmRewardsFormulaService {
      *  2. Compute reward earned since last checkpoint
      *  3. Add already owned reward
      */
-    public computeTotalReward(
+    public computeRewards(
         {
             rewardGrowthGlobal,
             rewardGrowthOutsideLower,
@@ -134,7 +134,7 @@ export class ClmmRewardsFormulaService {
             outsideDeltaWrapModulus = Q128,
             insideDeltaWrapModulus = Q128,
             resultDiv = Q64,
-        }: ComputeTotalRewardParams
+        }: ComputeRewardsParams
     ): BN {
 
         // Step 1: reward growth inside range
@@ -199,7 +199,7 @@ export interface ComputeRewardEarnedParams {
     resultDiv?: typeof Q64 | typeof Q128
 }
 
-export interface ComputeTotalRewardParams {
+export interface ComputeRewardsParams {
     rewardGrowthGlobal: BN
     rewardGrowthOutsideLower: BN
     rewardGrowthOutsideUpper: BN

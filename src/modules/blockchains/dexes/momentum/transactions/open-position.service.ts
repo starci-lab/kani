@@ -1,26 +1,50 @@
-import { LiquidityPoolState } from "../../../interfaces"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 import {
     BotSchema,
     MomentumLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import { Transaction } from "@mysten/sui/transactions"
-import { Injectable } from "@nestjs/common"
-import { InvalidPoolTokensException } from "@exceptions"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    InvalidPoolTokensException 
+} from "@exceptions"
 import Decimal from "decimal.js"
 import {
     FeeToAddressNotFoundException,
     TargetOperationalGasAmountNotFoundException,
 } from "@exceptions"
-import { FeeService } from "../../../math"
-import { SelectCoinsService } from "../../../tx-builder"
+import {
+    FeeService 
+} from "../../../math"
+import {
+    SelectCoinsService 
+} from "../../../tx-builder"
 import BN from "bn.js"
-import { ChainId } from "@typedefs"
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { adjustSlippage } from "@utils"
-import { TickMath } from "@mmt-finance/clmm-sdk"
-import { MountStorageService } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    SUI_CLOCK_OBJECT_ID 
+} from "@mysten/sui/utils"
+import {
+    adjustSlippage 
+} from "@utils"
+import {
+    TickMath 
+} from "@mmt-finance/clmm-sdk"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -42,20 +66,24 @@ export class OpenPositionTxbService {
     }: CreateOpenPositionTxbParams): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString(),
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
-                "Either token A or token B is not in the pool",
+                {
+                    liquidityPoolId: state.static.displayId,
+                }
             )
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.sui.feeToAddress
         if (!feeToAddress) {
-            throw new FeeToAddressNotFoundException("Fee to address not found")
+            throw new FeeToAddressNotFoundException({
+                feeToAddress,
+            })
         }
         const { feeAmount: feeAmountA, remainingAmount: remainingAmountA } =
       this.feeService.splitAmount({
@@ -73,8 +101,9 @@ export class OpenPositionTxbService {
           ?.targetOperationalAmount
         if (!targetOperationalAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                ChainId.Sui,
-                "Target operational gas amount not found",
+                {
+                    chainId: ChainId.Sui,
+                }
             )
         }
         const { sourceCoin: sourceCoinA } =
@@ -103,7 +132,9 @@ export class OpenPositionTxbService {
             sourceCoin: sourceCoinB,
             requiredAmount: feeAmountB,
         })
-        txb.transferObjects([feeCoinA.coinArg, feeCoinB.coinArg], feeToAddress)
+        txb.transferObjects([feeCoinA.coinArg,
+            feeCoinB.coinArg],
+        feeToAddress)
         const { packageId, versionObject } = state.static
             .metadata as MomentumLiquidityPoolMetadata
         const [lowerTick1] = txb.moveCall({
@@ -120,21 +151,25 @@ export class OpenPositionTxbService {
         })
         const [lowerTickmod] = txb.moveCall({
             target: `${packageId}::i32::mod`,
-            arguments: [lowerTick1, tick_spacing],
+            arguments: [lowerTick1,
+                tick_spacing],
         })
 
         const [upperTickmod] = txb.moveCall({
             target: `${packageId}::i32::mod`,
-            arguments: [upperTick1, tick_spacing],
+            arguments: [upperTick1,
+                tick_spacing],
         })
         const [upperTick] = txb.moveCall({
             target: `${packageId}::i32::sub`,
-            arguments: [upperTick1, upperTickmod],
+            arguments: [upperTick1,
+                upperTickmod],
         })
 
         const [lowerTick] = txb.moveCall({
             target: `${packageId}::i32::sub`,
-            arguments: [lowerTick1, lowerTickmod],
+            arguments: [lowerTick1,
+                lowerTickmod],
         })
         const [positionObj] = txb.moveCall({
             target: `${packageId}::liquidity::open_position`,
@@ -144,11 +179,14 @@ export class OpenPositionTxbService {
                 txb.object(upperTick),
                 txb.object(versionObject),
             ],
-            typeArguments: [tokenA.tokenAddress, tokenB.tokenAddress],
+            typeArguments: [tokenA.tokenAddress,
+                tokenB.tokenAddress],
         })
-        const [coinAOut, coinBOut] = txb.moveCall({
+        const [coinAOut,
+            coinBOut] = txb.moveCall({
             target: `${packageId}::liquidity::add_liquidity`,
-            typeArguments: [tokenA.tokenAddress, tokenB.tokenAddress],
+            typeArguments: [tokenA.tokenAddress,
+                tokenB.tokenAddress],
             arguments: [
                 txb.object(state.static.poolAddress),
                 txb.object(positionObj),
@@ -170,8 +208,11 @@ export class OpenPositionTxbService {
                 txb.object(versionObject),
             ],
         })
-        txb.transferObjects([coinAOut, coinBOut], bot.accountAddress)
-        txb.transferObjects([positionObj], bot.accountAddress)
+        txb.transferObjects([coinAOut,
+            coinBOut],
+        bot.accountAddress)
+        txb.transferObjects([positionObj],
+            bot.accountAddress)
         return {
             txb,
             feeAmountA,
@@ -182,7 +223,7 @@ export class OpenPositionTxbService {
 
 export interface CreateOpenPositionTxbParams {
   txb?: Transaction;
-  state: LiquidityPoolState;
+  state: ClmmLiquidityPoolState;
   tickLower: Decimal;
   tickUpper: Decimal;
   amountA: BN;

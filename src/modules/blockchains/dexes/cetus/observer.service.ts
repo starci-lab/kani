@@ -1,4 +1,4 @@
-import { LiquidityPoolNotFoundException, SuiLiquidityPoolInvalidTypeException } from "@exceptions"
+import { ErrorSuiObjectName, SuiObjectInvalidTypeException, SuiObjectNotFoundException } from "@exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 import { PrimaryMemoryStorageService, DexId } from "@modules/databases"
@@ -15,8 +15,7 @@ import {
     InjectRedisCache 
 } from "@modules/cache"
 import { Cache } from "cache-manager"
-import { Logger as WinstonLogger } from "winston"
-import { InjectWinston, WinstonLog } from "@modules/winston"
+import { WinstonLog, WinstonService } from "@modules/winston"
 import { InjectSuperJson, DayjsService } from "@modules/mixin"
 import SuperJSON from "superjson"
 import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
@@ -34,8 +33,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly cacheManager: Cache,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
@@ -43,8 +41,10 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
 
     // snapshot here
     onModuleInit() {
-        this.liquidityPools = this.memoryStorageService.liquidityPoolArray.filter(
-            liquidityPool => liquidityPool.dex.toString() === createObjectId(DexId.Cetus).toString(),
+        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.Cetus)
+            }
         )
     }
 
@@ -85,15 +85,33 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                     },
                 }
             )
-            if (!objectInfo) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPool.displayId} not found`)
-            if (objectInfo.data?.content?.dataType !== "moveObject")
-                throw new SuiLiquidityPoolInvalidTypeException(liquidityPool.displayId)
+            if (!objectInfo) {
+                throw new SuiObjectNotFoundException(
+                    {
+                        name: ErrorSuiObjectName.Pool,
+                        id: liquidityPool.poolAddress,
+                        dexId: DexId.Cetus,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            }
+            if (objectInfo.data?.content?.dataType !== "moveObject") {
+                throw new SuiObjectInvalidTypeException(
+                    {
+                        name: ErrorSuiObjectName.Pool,
+                        id: liquidityPool.poolAddress,
+                        dexId: DexId.Cetus,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            }
             const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
             const pool = parseCetusPool(fields)
             return await this.handlePoolStateUpdate(liquidityPool, pool)
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.FetchClmmPoolError, {
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolFetchedError, 
+                {
                     liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
                 }

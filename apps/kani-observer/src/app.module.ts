@@ -1,13 +1,33 @@
-import { Module } from "@nestjs/common"
-import { APP_FILTER } from "@nestjs/core"
-import { EnvModule } from "@modules/env"
-import { WinstonLevel, WinstonModule } from "@modules/winston"
-import { MixinModule } from "@modules/mixin"
-import { CexesModule, ClientsModule, DexesModule } from "@modules/blockchains"
-import { ScheduleModule } from "@nestjs/schedule"
-import { CryptoModule } from "@modules/crypto"
-import { DexId, PrimaryMongoDbModule } from "@modules/databases"
-import { PriceFeedsModule } from "@modules/blockchains"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    APP_FILTER 
+} from "@nestjs/core"
+import {
+    EnvModule 
+} from "@modules/env"
+import {
+    WinstonLevel, WinstonModule 
+} from "@modules/winston"
+import {
+    MixinModule 
+} from "@modules/mixin"
+import {
+    CexesModule, ClientsModule, DexesModule 
+} from "@modules/blockchains"
+import {
+    ScheduleModule 
+} from "@nestjs/schedule"
+import {
+    CryptoModule 
+} from "@modules/crypto"
+import {
+    DexId, PrimaryMongoDbModule 
+} from "@modules/databases"
+import {
+    PriceFeedsModule 
+} from "@modules/blockchains"
 import { 
     SignersModule, 
     SnapshotsModule, 
@@ -15,18 +35,42 @@ import {
     MathModule,
     FormulasModule 
 } from "@modules/blockchains"
-import { CacheModule } from "@modules/cache"
-import { EventModule, EventName, KafkaMode } from "@modules/event"
-import { GcpModule } from "@modules/gcp"
-import { EventEmitterModule } from "@nestjs/event-emitter"
-import { AxiosModule } from "@modules/axios"
-import { ApolloClientModule } from "@modules/apollo-client"
-import { FilesystemModule } from "@modules/filesystem"
-import { DependencyName, TerminusModule } from "@modules/terminus"
-import { P2CBalancerModule } from "@modules/p2c-balancer"
-import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
-import { DerivedModule } from "@modules/derived"
-import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
+import {
+    CacheModule 
+} from "@modules/cache"
+import {
+    EventModule, EventName, KafkaMode 
+} from "@modules/event"
+import {
+    GcpModule 
+} from "@modules/gcp"
+import {
+    EventEmitterModule 
+} from "@nestjs/event-emitter"
+import {
+    AxiosModule 
+} from "@modules/axios"
+import {
+    ApolloClientModule 
+} from "@modules/apollo-client"
+import {
+    FilesystemModule 
+} from "@modules/filesystem"
+import {
+    DependencyName, TerminusModule 
+} from "@modules/terminus"
+import {
+    P2CBalancerModule 
+} from "@modules/p2c-balancer"
+import {
+    SentryCatchAllExceptionFilter, SentryModule 
+} from "@modules/sentry"
+import {
+    DerivedModule 
+} from "@modules/derived"
+import {
+    StreamAsyncIteratorModule 
+} from "@modules/stream-async-iterator"
 
 @Module({
     imports: [
@@ -39,7 +83,7 @@ import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
         }),
         WinstonModule.register({
             isGlobal: true,
-            appName: "kani-observer",
+            appName: "Kani Observer",
             level: WinstonLevel.Info,
         }),
         FormulasModule.register({

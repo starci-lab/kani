@@ -1,3 +1,7 @@
+export * from "./not-found"
+export * from "./types"
+export * from "./invalid"
+export * from "./misc"
 /**
  * SUI Blockchain Exceptions
  * Errors related to SUI blockchain operations
@@ -47,16 +51,30 @@ export class TransactionStimulateFailedException extends AbstractException {
     }
 }
 
-/** Thrown when transaction event is not found */
-export class TransactionEventNotFoundException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Transaction event not found", "TRANSACTION_EVENT_NOT_FOUND_EXCEPTION")
-    }
-}
-
 /** Thrown when Sui object is not found */
 export class SuiObjectDataNotFoundException extends AbstractException {
     constructor(message?: string) {
         super(message || "Sui object data not found", "SUI_OBJECT_DATA_NOT_FOUND_EXCEPTION")
+    }
+}
+
+/** Thrown when Sui object tick lower is not found */
+export class SuiObjectTickLowerNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Sui object tick lower not found", "SUI_OBJECT_TICK_LOWER_NOT_FOUND_EXCEPTION")
+    }
+}
+
+/** Thrown when Sui object tick upper is not found */
+export class SuiObjectTickUpperNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Sui object tick upper not found", "SUI_OBJECT_TICK_UPPER_NOT_FOUND_EXCEPTION")
+    }
+}
+
+/** Thrown when Sui object position is not found */
+export class SuiObjectPositionNotFoundException extends AbstractException {
+    constructor(message?: string) {
+        super(message || "Sui object position not found", "SUI_OBJECT_POSITION_NOT_FOUND_EXCEPTION")
     }
 }

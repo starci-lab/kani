@@ -8,7 +8,7 @@ import {
 import { parseSuiI32 } from "../../../structs/sui/parsers/int"
 
 // ========== Position Reward Info Types ==========
-export interface FlowxSuiObjectPositionRewardInfo {
+export interface FlowXSuiObjectPositionRewardInfo {
     fields: {
         coins_owed_reward: string // u64 / u128 -> string
         reward_growth_inside_last: string // u128 -> string
@@ -17,7 +17,7 @@ export interface FlowxSuiObjectPositionRewardInfo {
 }
 
 // ========== RAW POSITION STRUCT ==========
-export interface FlowxSuiObjectPositionFields {
+export interface FlowXSuiObjectPositionFields {
     coin_type_x: TypeName
     coin_type_y: TypeName
     coins_owed_x: string // u64 / u128
@@ -28,23 +28,23 @@ export interface FlowxSuiObjectPositionFields {
     id: SuiObjectID
     liquidity: string // u128
     pool_id: string
-    reward_infos: Array<FlowxSuiObjectPositionRewardInfo>
+    reward_infos: Array<FlowXSuiObjectPositionRewardInfo>
     tick_lower_index: SuiObjectI32
     tick_upper_index: SuiObjectI32
 }
 
-export type FlowxSuiObjectPosition = SuiObject<
-    FlowxSuiObjectPositionFields,
+export type FlowXSuiObjectPosition = SuiObject<
+    FlowXSuiObjectPositionFields,
     `${string}::position::Position`
 >
 
 // ========== POSITION INTERFACE (Raw Structure - matches Sui object fields) ==========
 // This interface matches the raw Sui object structure for direct field access
 // Alias to SuiObjectPositionFields for convenience
-export type FlowxClmmPosition = FlowxSuiObjectPositionFields
+export type FlowXClmmPosition = FlowXSuiObjectPositionFields
 
 // ========== PARSED POSITION INTERFACE ==========
-export interface FlowxPosition {
+export interface FlowXPosition {
     coinTypeX: string
     coinTypeY: string
     coinsOwedX: BN
@@ -67,7 +67,7 @@ export interface FlowxPosition {
 /**
  * Parses a FlowX Position Sui object into a FlowxPosition interface
  */
-export const parseFlowxPosition = (target: FlowxSuiObjectPositionFields): FlowxPosition => {
+export const parseFlowXPosition = (target: FlowXSuiObjectPositionFields): FlowXPosition => {
     return {
         coinTypeX: target.coin_type_x.fields.name,
         coinTypeY: target.coin_type_y.fields.name,

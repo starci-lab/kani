@@ -1,3 +1,5 @@
+export * from "./gas"
+export * from "./fee"
 /**
  * Configuration Exceptions
  * Errors related to missing or invalid configuration settings
@@ -63,20 +65,6 @@ export class MinTargetTokenRequiredNotFoundException extends AbstractException {
     }
 }
 
-/** Thrown when target operational gas amount config is not found */
-export class TargetOperationalGasAmountNotFoundException extends AbstractException {
-    constructor(chainId: ChainId, message?: string) {
-        super(message || "Target operational gas amount not found", "TARGET_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", { chainId })
-    }
-}
-
-/** Thrown when minimum operational gas amount config is not found */
-export class MinOperationalGasAmountNotFoundException extends AbstractException {
-    constructor(chainId: ChainId, message?: string) {
-        super(message || "Min operational gas amount not found", "MIN_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", { chainId })
-    }
-}
-
 /** Thrown when gas swap threshold amount config is not found */
 export class GasSwapThresholdAmountNotFoundException extends AbstractException {
     constructor(chainId: ChainId, message?: string) {
@@ -109,20 +97,6 @@ export class GasBalanceAmountNotFoundException extends AbstractException {
 export class InsufficientMinGasBalanceAmountException extends AbstractException {
     constructor(chainId: ChainId, message?: string) {
         super(message || "Insufficient min gas balance amount", "INSUFFICIENT_MIN_GAS_BALANCE_AMOUNT_EXCEPTION", { chainId })
-    }
-}
-
-/** Thrown when fee rate configuration is not found */
-export class FeeRateNotFoundException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Fee rate not found", "FEE_RATE_NOT_FOUND_EXCEPTION")
-    }
-}
-
-/** Thrown when fee destination address is not found */
-export class FeeToAddressNotFoundException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Fee to address not found", "FEE_TO_ADDRESS_NOT_FOUND_EXCEPTION")
     }
 }
 

@@ -26,6 +26,23 @@ export const parseSuiI32 = <TypeName extends string = string>(
     return bn
 }
 
+export const serializeSuiI32 = <TypeName extends string = string>(
+    value: BN,
+    type: TypeName
+): SuiObjectI32<TypeName> => {
+    const TWO_POW_32 = new BN(2).pow(new BN(32))
+
+    const bits = value.isNeg()
+        ? value.add(TWO_POW_32) // two’s complement
+        : value
+
+    return {
+        type,
+        fields: {
+            bits: bits.toNumber()
+        }
+    }
+}
 /**
  * Parses a Sui i64 object into a signed BN.
  *

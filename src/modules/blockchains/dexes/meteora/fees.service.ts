@@ -150,8 +150,9 @@ export class MeteoraFeesService implements IFeesService {
         const tokenB = this.primaryMemoryStorageService.tokens.find(token => token.id === state.static.tokenB.toString())
         if (!tokenA || !tokenB) throw new InvalidPoolTokensException("Invalid pool tokens")
         return {
-            tokenA: computeDenomination(totalFeeX, tokenA.decimals),
-            tokenB: computeDenomination(totalFeeY, tokenB.decimals),
+            reserveA: computeDenomination(totalFeeX, tokenA.decimals),
+            reserveB: computeDenomination(totalFeeY, tokenB.decimals),
+            rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }
     }

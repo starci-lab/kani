@@ -28,11 +28,11 @@ import {
     DlmmLiquidityPoolState,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
 } from "../interfaces"
-import { BN } from "bn.js"
+import { BN } fr    om "bn.js"
 import { QuoteRatioService } from "../math"
 import { computeDenomination, createObjectId } from "@utils"
 import Decimal from "decimal.js"

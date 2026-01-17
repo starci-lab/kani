@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IOpenActionService,
-    LiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
@@ -9,14 +10,22 @@ import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
 } from "../../interfaces"
-import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
+import {
+    Transaction, TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SignerService 
+} from "../../signers"
 import BN from "bn.js"
 import { 
-    AppVersion, PrimaryMemoryStorageService
+    AppVersion, BotSchema, PrimaryMemoryStorageService
 } from "@modules/databases"
-import { OpenPositionTxbService } from "./transactions"
-import { TickMathService } from "../../math"
+import {
+    OpenPositionTxbService 
+} from "./transactions"
+import {
+    TickMathService 
+} from "../../math"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
@@ -28,14 +37,31 @@ import {
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { AsyncService } from "@modules/mixin"
-import { SuiEvent } from "@mysten/sui/client"
-import { MomentumClmmPosition } from "./struct"
-import { PrivySignService } from "@modules/privy"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonService,
+    WinstonLog,
+} from "@modules/winston"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    SuiEvent 
+} from "@mysten/sui/client"
+import {
+    MomentumClmmPosition 
+} from "./struct"
+import {
+    PrivySignService 
+} from "@modules/privy"
+import {
+    ClmmLiquidityPoolState 
+} from "../../interfaces"
 
 @Injectable()
 export class MomentumOpenPositionActionService implements IOpenActionService {
@@ -46,8 +72,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         private readonly tickMathService: TickMathService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly privySignService: PrivySignService,
     ) {}
     
@@ -83,17 +108,25 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             state,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+            throw new SnapshotBalancesNotSetException({
+                botId: bot.id,
+            })
         }
         const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
         const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }       
         const targetIsA = bot.targetToken.toString() === tokenA.id
         const { 
@@ -131,7 +164,13 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                 sender: bot.accountAddress,
                             })
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException("Transaction validation failed")
+                                throw new TransactionValidationFailedException(
+                                    {
+                                        botId: bot.id,
+                                        txHash: devInspect.effects.transactionDigest,
+                                        liquidityPoolId: _state.static.displayId,
+                                    }
+                                )
                             }
                             const bytes = await openPositionTxb.build({
                                 client: suiClient,
@@ -152,7 +191,9 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     })
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -172,7 +213,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         amountB,
                     }
                 }
-            }})
+            }
+        })
     }
 
     async execute({
@@ -182,7 +224,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         txHash,
         signatureWithBytes,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -198,15 +240,28 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 })
             )
             if (txBlock !== null) {
-                const { positionId } = this.parseAddLiquidityEvent(txBlock?.events || [])
+                const { positionId } = this.parseAddLiquidityEvent({
+                    events: txBlock?.events || [],
+                    bot,
+                    txHash,
+                    state: _state,
+                })
                 return {
                     positionId,
                 }
             }
-            throw new TransactionNotExecutedException("Transaction not executed")
+            throw new TransactionNotExecutedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -221,14 +276,22 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 await suiClient.waitForTransaction({
                     digest,
                 })
-                this.logger.verbose(
-                    WinstonLog.OpenPositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                const { positionId } = this.parseAddLiquidityEvent(events || [])
+                const { positionId } = this.parseAddLiquidityEvent(
+                    {
+                        events: events || [],
+                        bot,
+                        txHash,
+                        state: _state,
+                    }
+                )
                 return {
                     positionId,
                 }
@@ -237,13 +300,20 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     }
 
     private parseAddLiquidityEvent(
-        events?: Array<SuiEvent>,
+        { events, bot, txHash, state }: ParseAddLiquidityEventParams
     ): ParseAddLiquidityEventResult {
+        const _state = state as ClmmLiquidityPoolState
+        const eventType = "::liquidity::AddLiquidityEvent"
         const event = events?.find(
-            event => event.type.includes("::liquidity::AddLiquidityEvent")
+            event => event.type.includes(eventType)
         )
         if (!event) {
-            throw new TransactionEventNotFoundException("AddLiquidity event not found")
+            throw new TransactionEventNotFoundException({
+                botId: bot.id,
+                txHash,
+                eventType,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const parsed = event.parsedJson as AddLiquidityEvent
         return {
@@ -265,4 +335,11 @@ interface AddLiquidityEvent {
 
 interface ParseAddLiquidityEventResult {
     positionId: string
+}
+
+interface ParseAddLiquidityEventParams {
+    events?: Array<SuiEvent>
+    bot: BotSchema
+    txHash: string
+    state: ClmmLiquidityPoolState
 }
