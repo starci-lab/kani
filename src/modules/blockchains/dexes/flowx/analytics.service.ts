@@ -178,7 +178,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface GetClmmPoolDetailRootResponse {
+export interface GetClmmPoolDetailRootResult {
   getClmmPoolsDetail: {
     items: Array<ClmmPoolDetail>;
   };

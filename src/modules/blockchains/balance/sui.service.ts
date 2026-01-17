@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import { 
     FetchBalanceParams, 
-    FetchBalanceResponse, 
+    FetchBalanceResult, 
     IBalanceService, 
     PrepareSwapTransactionParams,
-    PrepareSwapTransactionResponse,
+    PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { AppVersion, PrimaryMemoryStorageService } from "@modules/databases"
@@ -43,7 +43,7 @@ export class SuiBalanceService implements IBalanceService {
             amountIn,
             estimatedSwappedAmount,
         }: PrepareSwapTransactionParams
-    ): Promise<PrepareSwapTransactionResponse> {
+    ): Promise<PrepareSwapTransactionResult> {
         const { 
             aggregatorId, 
             response
@@ -165,7 +165,7 @@ export class SuiBalanceService implements IBalanceService {
             bot,
             tokenId,
         }: FetchBalanceParams
-    ): Promise<FetchBalanceResponse> {
+    ): Promise<FetchBalanceResult> {
         const token = this.primaryMemoryStorageService.tokens.find(
             (token) => token.displayId === tokenId.toString()
         )

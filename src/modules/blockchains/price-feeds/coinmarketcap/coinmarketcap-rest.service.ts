@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
 import { AxiosService } from "@modules/axios"
 import { MarketId, PrimaryMemoryStorageService } from "@modules/databases"
 import { 
@@ -11,15 +11,16 @@ import {
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { CoingeckoUtilsService } from "./coingecko-utils.service"
+import { CoinMarketCapUtilsService } from "./coinmarketcap-utils.service"
 import _ from "lodash"
-import { CoingeckoTokenPriceData } from "./types"
+import { CoinMarketCapTokenPriceData } from "./types"
 import { CachePriceUtilsService } from "@modules/cache"
 import { Interval } from "@nestjs/schedule"
 import { AxiosInstance } from "axios"
+import { MountStorageService } from "@modules/filesystem"
 
 @Injectable()
-export class CoingeckoRestService implements OnApplicationBootstrap {
+export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModuleInit {
     private axios: AxiosInstance
 
     constructor(
@@ -27,14 +28,22 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
-        private readonly coingeckoUtilsService: CoingeckoUtilsService,
+        private readonly coinMarketCapUtilsService: CoinMarketCapUtilsService,
         @InjectWinston()
         private readonly logger: WinstonLogger,
         private readonly cachePriceUtilsService: CachePriceUtilsService,
-    ) {
-        const key = "coingecko"
-        this.axios = this.axiosService.create(key)
+        private readonly mountStorageService: MountStorageService,
+    ) {}
+
+    onModuleInit() {
+        const key = "coinmarketcap"
+        this.axios = this.axiosService.create(
+            key, {
+                baseURL: "https://pro-api.coinmarketcap.com",
+            }
+        )
         this.axiosService.addRetry({ key })
+        this.axios.defaults.headers.common["X-CMC_PRO_API_KEY"] = this.mountStorageService.coinMarketCapApiKey
     }
 
     /**
@@ -47,7 +56,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
     /**
      * Fetch the prices interval
      */
-    @Interval(envConfig().timeConfig.interval.coingecko)
+    @Interval(envConfig().timeConfig.interval.coinmarketcap)
     async fetchPricesInterval() {
         await this.fetchPrices()
     }
@@ -59,26 +68,27 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         try {
             const tokens = this.primaryMemoryStorageService.tokens
                 .filter(
-                    token => !!token.marketListings.find(market => market.id === MarketId.Coingecko)
+                    token => !!token.marketListings.find(market => market.id === MarketId.CoinMarketCap)
                 )
             if (!tokens.length) {
-                throw new TokenListIsEmptyException("No Coingecko tokens found for mainnet")
+                throw new TokenListIsEmptyException("No CoinMarketCap tokens found for mainnet")
             }
-            const coinIds = this.coingeckoUtilsService.getCoingeckoIds()
-            // we split the coin ids into chunks of 10
-            const chunks = _.chunk(coinIds, envConfig().chunks.coingeckoPrices?.rest || 10)
+            const symbols = this.coinMarketCapUtilsService.getCoinMarketCapSymbols()
+            // we split the symbols into chunks of 10
+            const chunks = _.chunk(symbols, envConfig().chunks.coinmarketcapPrices?.rest || 10)
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
                         const prices = await this.retryService.retry(
                             {
                                 action: async () => {
-                                    const response = await this.axios.get<CoingeckoTokenPriceResponse>(
-                                        "https://api.coingecko.com/api/v3/simple/price",
+                                    const ids = chunk.join(",")
+                                    console.log(ids)
+                                    const response = await this.axios.get<CoinMarketCapTokenPriceResponse>(
+                                        "/v1/cryptocurrency/quotes/latest",
                                         {
                                             params: {
-                                                ids: chunk.join(","),
-                                                vs_currencies: "usd",
+                                                id: ids,
                                             },
                                         }
                                     )
@@ -89,32 +99,32 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                                 factor: envConfig().timeConfig.retry.factor,
                             }
                         )
-                        return Object.entries(prices).map(([coinId, data]) => ({
-                            coinId,
-                            price: data?.usd ?? 0,
+                        return Object.entries(prices.data || {}).map(([symbol, data]) => ({
+                            symbol,
+                            price: data?.quote?.USD?.price ?? 0,
                         }))
                     }))
-            const priceData = prices.flat().map<CoingeckoTokenPriceData>(data => ({
-                coinId: data?.coinId ?? "",
+            const priceData = prices.flat().map<CoinMarketCapTokenPriceData>(data => ({
+                symbol: data?.symbol ?? "",
                 price: data?.price ?? 0,
             }))
             this.logger.info(
-                WinstonLog.CoingeckoPricesFetched,
+                WinstonLog.CoinMarketCapPricesFetched,
                 {
                     fetchedCount: priceData.length,
-                    expectedCount: coinIds.length,
+                    expectedCount: symbols.length,
                 }
             )
-            const tokenList = this.coingeckoUtilsService.getCoingeckoTokenPrices(priceData)
+            const tokenList = this.coinMarketCapUtilsService.getCoinMarketCapTokenPrices(priceData)
             // cache the prices and emit the event
             await this.asyncService.allIgnoreError(
                 tokenList.map(
                     async (data) => {
-                        await this.cachePriceUtilsService.updateOracleTokenPrice(
+                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
                             {
                                 tokenId: data.tokenId,
                                 price: data.price,
-                                marketId: MarketId.Coingecko,
+                                marketId: MarketId.CoinMarketCap,
                             }
                         )
                     }
@@ -123,7 +133,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         } catch (error) {
             // throw the error to prevent the application from crashing
             this.logger.error(
-                WinstonLog.CoingeckoPricesFetchFailed,
+                WinstonLog.CoinMarketCapPricesFetchFailed,
                 {
                     error: error.message,
                 }
@@ -132,8 +142,14 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
     }
 }
 
-export interface CoingeckoTokenPriceResponse {
-    [coinId: string]: {
-        usd: number
+export interface CoinMarketCapTokenPriceResult {
+    data: {
+        [symbol: string]: {
+            quote: {
+                USD: {
+                    price: number
+                }
+            }
+        }
     }
 }

@@ -9,8 +9,8 @@ import { SignatureWithBytes } from "@mysten/sui/cryptography"
  * It returns a quote + executable swap data.
  */
 export interface IBalanceService {
-    fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResponse>
-    prepareSwapTransaction(params: PrepareSwapTransactionParams): Promise<PrepareSwapTransactionResponse>
+    fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResult>
+    prepareSwapTransaction(params: PrepareSwapTransactionParams): Promise<PrepareSwapTransactionResult>
     executeSwapTransaction(params: ExecuteSwapTransactionParams): Promise<void>
 }
 
@@ -22,7 +22,7 @@ export interface DetermineReconcileBalancePlanParams {
     snapshotGasBalanceAmount?: BN
 }
 
-export interface DetermineReconcileBalancePlanResponse {
+export interface DetermineReconcileBalancePlanResult {
     needsSwap: boolean
     needsSnapshot: boolean
     swapDirection?: "targetToQuote" | "quoteToTarget"
@@ -36,7 +36,7 @@ export interface FetchBalanceParams {
     tokenId: TokenId
 }
 
-export interface FetchBalanceResponse {
+export interface FetchBalanceResult {
     balanceAmount: BN
 }
 
@@ -50,7 +50,7 @@ export interface FetchBalancesParams {
     bot: BotSchema
 }
 
-export interface FetchBalancesResponse {
+export interface FetchBalancesResult {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount: BN
@@ -64,7 +64,7 @@ export interface ProcessTransferFeesTransactionParams {
     quoteBalanceAmount: BN
 }
 
-export interface ProcessTransferFeesResponse {
+export interface ProcessTransferFeesResult {
     txHash: string
     targetFeeAmount: BN
     quoteFeeAmount: BN
@@ -78,7 +78,7 @@ export interface ProcessSwapTransactionParams {
     estimatedSwappedAmount: BN
 }
 
-export interface ProcessSwapTransactionResponse {
+export interface ProcessSwapTransactionResult {
     txHash: string
 }
 
@@ -90,7 +90,7 @@ export interface PrepareSwapTransactionParams {
     estimatedSwappedAmount: BN
 }
 
-export interface PrepareSwapTransactionResponse {
+export interface PrepareSwapTransactionResult {
     txHash: string
     solanaTx?: SolanaTx // Solana Transaction object
     signatureWithBytes?: SignatureWithBytes
@@ -114,6 +114,6 @@ export interface GetBalanceAmountInUsdParams {
     bot: BotSchema
 }
 
-export interface GetBalanceAmountInUsdResponse {
+export interface GetBalanceAmountInUsdResult {
     balanceAmountInUsd: Decimal
 }

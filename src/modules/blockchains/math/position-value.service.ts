@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import Decimal from "decimal.js"
-import { PythOraclePriceService } from "../pyth"
+import { PythOraclePriceService } from "../price-feeds/pyth"
 import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenType } from "@typedefs"
 import { TokenNotFoundException } from "@exceptions"
@@ -27,7 +27,7 @@ export class PositionValueMathService {
             isOpen,
             state,
         }: CalculatePositionValueParams
-    ): Promise<CalculatePositionValueResponse> {
+    ): Promise<CalculatePositionValueResult> {
         const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException("Target token not found")
@@ -86,7 +86,7 @@ export class PositionValueMathService {
                     attempts: 1
                 }
                 )
-            ]
+            ] as const
         )
         // priceA/priceB
         const beforeTargetBalanceAmountInTarget = computeDenomination(
@@ -141,6 +141,6 @@ export interface CalculatePositionValue {
     gasBalanceAmount: BN
 }
 
-export interface CalculatePositionValueResponse {
+export interface CalculatePositionValueResult {
     positionValue: Decimal
 }

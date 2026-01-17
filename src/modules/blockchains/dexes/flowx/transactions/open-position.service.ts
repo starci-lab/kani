@@ -44,7 +44,7 @@ export class OpenPositionTxbService {
             amountA,
             amountB,
         }: CreateOpenPositionTxbParams
-    ): Promise<CreateOpenPositionTxbResponse> {
+    ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const {
@@ -197,7 +197,7 @@ export interface CreateOpenPositionTxbParams {
     amountB: BN,
 }
 
-export interface CreateOpenPositionTxbResponse {
+export interface CreateOpenPositionTxbResult {
     txb: Transaction
     feeAmountA: BN
     feeAmountB: BN

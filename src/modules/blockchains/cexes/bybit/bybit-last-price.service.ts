@@ -86,7 +86,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                     try {
                         for await (const data of stream) {
                             try {
-                                const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResponse
+                                const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResult
 
                                 if ("success" in parsed) {
                                     if (!parsed.success) {
@@ -113,7 +113,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 resetTimeout()
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map((tokenPrice) =>
-                                        this.cachePriceUtilsService.updateOracleTokenPrice({
+                                        this.cachePriceUtilsService.updateAggregatedTokenPrice({
                                             tokenId: tokenPrice.tokenId,
                                             price: tokenPrice.price,
                                             marketId: MarketId.Bybit,
@@ -166,7 +166,7 @@ export interface BybitTickerData {
   
 
 // Interface for Bybit WebSocket subscription confirmation
-export interface BybitWsSubscribeResponse {
+export interface BybitWsSubscribeResult {
     success: boolean;       // true if subscription succeeded
     ret_msg: string;        // return message from server, e.g., "subscribe"
     conn_id: string;        // unique connection id for the WebSocket session

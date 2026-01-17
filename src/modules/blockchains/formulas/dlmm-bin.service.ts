@@ -37,7 +37,7 @@ export class DlmmBinFormulaService {
             basisPointMax = 10000, 
             binStep 
         }: ActiveIdToPriceParams
-    ): ActiveIdToPriceResponse {
+    ): ActiveIdToPriceResult {
 
         // Step 1:
         // Compute raw DLMM price without token decimal normalization
@@ -76,7 +76,7 @@ export class DlmmBinFormulaService {
             binStep,
             basisPointMax = 10000,
         }: ActiveIdToPriceRawParams
-    ): ActiveIdToPriceRawResponse {
+    ): ActiveIdToPriceRawResult {
 
         const ratio = new Decimal(1)
             .add(new Decimal(binStep).div(basisPointMax))
@@ -141,14 +141,14 @@ export interface ActiveIdToPriceRawParams {
     basisPointMax?: number
 }
 
-export interface ActiveIdToPriceRawResponse {
+export interface ActiveIdToPriceRawResult {
     /**
      * Raw DLMM price (without decimals)
      */
     price: Decimal
 }
 
-export interface ActiveIdToPriceResponse {
+export interface ActiveIdToPriceResult {
     /**
      * Human-readable price (token A / token B)
      */

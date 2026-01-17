@@ -60,7 +60,7 @@ export class OpenPositionInstructionService {
         tickLower,
         tickUpper,
     }: CreateOpenPositionInstructionsParams)
-    : Promise<CreateOpenPositionInstructionsResponse>
+    : Promise<CreateOpenPositionInstructionsResult>
     {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
@@ -338,7 +338,7 @@ export class OpenPositionInstructionService {
     }
 }
 
-export interface CreateOpenPositionInstructionsResponse {
+export interface CreateOpenPositionInstructionsResult {
     instructions: Array<Instruction>
     mintKeyPair: KeyPairSigner
     ataAddress: Address

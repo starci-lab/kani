@@ -11,7 +11,7 @@ export class PositionService {
         nftMintAddress,
         programAddress,
     }: GetPositionPdaParams): 
-    Promise<GetPositionPdaResponse> 
+    Promise<GetPositionPdaResult> 
     {
         // Derive the PDA using Solana Kit
         const [pda] = await getProgramDerivedAddress({
@@ -32,6 +32,6 @@ export interface GetPositionPdaParams {
     programAddress: Address
 }
 
-export interface GetPositionPdaResponse {
+export interface GetPositionPdaResult {
     pda: Address
 }

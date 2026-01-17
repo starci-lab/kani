@@ -3,11 +3,11 @@ import {
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
-    ExecuteOpenPositionResponse,
+    ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
-    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionResult,
 } from "../../interfaces"
 import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
@@ -61,7 +61,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
     
     async confirm(
         { positionId }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -103,7 +103,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             bot,
             state,
         }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
@@ -225,7 +225,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         isRetry,
         txHash,
         signatureWithBytes,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         const _state = state as LiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -282,7 +282,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
 
     private parseMintEvents(
         events?: Array<SuiEvent>,
-    ): ParseMintEventsResponse {
+    ): ParseMintEventsResult {
         const mintNftEvent = events?.find(
             event => event.type.includes("position_manager::MintNftEvent")
         )
@@ -297,6 +297,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
     }
 }
 
-interface ParseMintEventsResponse {
+interface ParseMintEventsResult {
     positionId: string
 }

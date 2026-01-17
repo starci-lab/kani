@@ -21,7 +21,7 @@ export class PoolMathService {
             tokenAId,
             tokenBId,
         }: GetRatioFromAmountAParams
-    ): GetRatioFromAmountAResponse {
+    ): GetRatioFromAmountAResult {
         const tokenA = this.primaryMemoryStorageService.tokens
             .find(token => token.displayId === tokenAId)
         const tokenB = this.primaryMemoryStorageService.tokens
@@ -58,6 +58,6 @@ export interface GetRatioFromAmountAParams {
     tokenBId: TokenId
 }
 
-export interface GetRatioFromAmountAResponse {
+export interface GetRatioFromAmountAResult {
     ratio: Decimal,
 }

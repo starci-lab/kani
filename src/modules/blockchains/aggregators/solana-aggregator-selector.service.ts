@@ -6,10 +6,10 @@ import { ChainId } from "@typedefs"
 import { AggregatorId } from "./types"
 import { 
     BatchQuoteParams, 
-    BatchQuoteResponse, 
+    BatchQuoteResult, 
     IAggregatorSelectorService, 
     SelectorSwapParams, 
-    SelectorSwapResponse 
+    SelectorSwapResult 
 } from "./aggregator-selector.interface"
 
 @Injectable()
@@ -19,8 +19,8 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
         private readonly asyncService: AsyncService,
     ) { }
 
-    async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResponse> {
-        const promises: Array<Promise<BatchQuoteResponse>> = []
+    async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResult> {
+        const promises: Array<Promise<BatchQuoteResult>> = []
 
         // Jupiter
         if (this.jupiterService.supportedChains().includes(ChainId.Solana)) {
@@ -35,7 +35,7 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
         const results = await this.asyncService.allIgnoreError(promises)
         // Remove null or undefined
         const filteredResults = results.filter(
-            (r): r is BatchQuoteResponse => r != null
+            (r): r is BatchQuoteResult => r != null
         )
         if (filteredResults.length === 0) {
             throw new AggregatorNotFoundException("No aggregator found")
@@ -49,7 +49,7 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
 
     async selectorSwap(
         params: SelectorSwapParams
-    ): Promise<SelectorSwapResponse> {
+    ): Promise<SelectorSwapResult> {
         const { payload } = await this.jupiterService.swap(params.base)
         return {
             payload,

@@ -288,7 +288,7 @@ export interface GetPotentialToken2022IxDataAndAccountsParams {
     rewardIndex?: number,
 }
 
-export interface GetPotentialToken2022IxDataAndAccountsResponse {
+export interface GetPotentialToken2022IxDataAndAccountsResult {
     slices: Array<RemainingAccountsInfoSlice>,
     accounts: Array<AccountMeta>,
 }

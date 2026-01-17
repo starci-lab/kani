@@ -1,6 +1,6 @@
 import { createJupiterApiClient, QuoteResponse as JupiterQuoteResponse, SwapApi } from "@jup-ag/api"
 import { Injectable, Logger } from "@nestjs/common"
-import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
+import { IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult } from "./aggregator.interface"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { TokenNotFoundException } from "@exceptions"
 import BN from "bn.js"
@@ -46,7 +46,7 @@ export class JupiterService implements IAggregatorService {
         tokenIn,
         tokenOut,
         amountIn,
-    }: QuoteRequest): Promise<QuoteResponse> {
+    }: QuoteParams): Promise<QuoteResult> {
         // We wrap the whole quote flow inside the retry service
         return await this.retryService.retry({
             action: async () => {
@@ -93,8 +93,8 @@ export class JupiterService implements IAggregatorService {
             payload,
             accountAddress,
         }: 
-    SwapRequest): 
-    Promise<SwapResponse> 
+    SwapParams): 
+    Promise<SwapResult> 
     {
         try {
             const referralTokenAccount = this.jupiterReferralTokenAccountAddress()

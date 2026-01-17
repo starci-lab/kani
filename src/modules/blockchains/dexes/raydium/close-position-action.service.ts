@@ -4,7 +4,7 @@ import {
     IClosePositionActionService,
     LiquidityPoolState,
     PrepareClosePositionParams,
-    PrepareClosePositionResponse,
+    PrepareClosePositionResult,
 } from "../../interfaces"
 import { SignerService } from "../../signers"
 import { 
@@ -57,7 +57,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
-    ): Promise<PrepareClosePositionResponse> {
+    ): Promise<PrepareClosePositionResult> {
         const _state = state as LiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(

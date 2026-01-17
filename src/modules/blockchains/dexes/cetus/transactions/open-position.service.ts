@@ -146,7 +146,7 @@ export interface CreateOpenPositionTxbParams {
     liquidity: BN
 }
 
-export interface CreateOpenPositionTxbResponse {
+export interface CreateOpenPositionTxbResult {
     txb: Transaction
     feeAmountA: BN
     feeAmountB: BN

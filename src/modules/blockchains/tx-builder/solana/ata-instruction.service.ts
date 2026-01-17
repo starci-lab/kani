@@ -47,7 +47,7 @@ export class AtaInstructionService {
         is2022Token = false,
         pdaOnly = false,
         amount = new BN(0),
-    }: GetOrCreateAtaInstructionsParams): Promise<GetOrCreateAtaInstructionsResponse> {
+    }: GetOrCreateAtaInstructionsParams): Promise<GetOrCreateAtaInstructionsResult> {
         if (!tokenMint) {
             return await this.createWSolAccountInstructions({
                 ownerAddress,
@@ -105,7 +105,7 @@ export class AtaInstructionService {
         ownerAddress,
         is2022Token = false,
         amount,
-    }: CreateWSolAccountInstructionsParams): Promise<CreateWSolAccountInstructionsResponse> {
+    }: CreateWSolAccountInstructionsParams): Promise<CreateWSolAccountInstructionsResult> {
         const programAddress = is2022Token
             ? TOKEN_2022_PROGRAM_ADDRESS
             : TOKEN_PROGRAM_ADDRESS
@@ -166,7 +166,7 @@ export class AtaInstructionService {
         fromAddress,
         programAddress,
         assignSeed,
-    }: GeneratePubKeyParams): Promise<GeneratePubKeyResponse> {
+    }: GeneratePubKeyParams): Promise<GeneratePubKeyResult> {
         const { address } = await generateKeyPairSigner()
         const seed = assignSeed
             ? btoa(assignSeed).slice(0, 32)
@@ -198,7 +198,7 @@ export interface GetOrCreateAtaInstructionsParams {
   pdaOnly?: boolean;
 }
 
-export interface GetOrCreateAtaInstructionsResponse {
+export interface GetOrCreateAtaInstructionsResult {
   ataAddress: Address;
   instructions?: Array<Instruction>;
   endInstructions?: Array<Instruction>;
@@ -211,7 +211,7 @@ export interface CreateWSolAccountInstructionsParams {
   pdaOnly?: boolean;
 }
 
-export interface CreateWSolAccountInstructionsResponse {
+export interface CreateWSolAccountInstructionsResult {
   instructions: Array<Instruction>;
   endInstructions: Array<Instruction>;
   ataAddress: Address;
@@ -223,7 +223,7 @@ export interface GeneratePubKeyParams {
   assignSeed?: string;
 }
 
-export interface GeneratePubKeyResponse {
+export interface GeneratePubKeyResult {
   publicKey: Address;
   seed: string;
 }

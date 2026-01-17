@@ -37,7 +37,7 @@ export interface CreateOpenPositionInstructionsParams {
     amountB: BN
 }
 
-export interface CreateOpenPositionInstructionsResponse {
+export interface CreateOpenPositionInstructionsResult {
     instructions: Array<Instruction>
     positionKeyPair: KeyPairSigner
     minBinId: Decimal
@@ -64,7 +64,7 @@ export class OpenPositionInstructionService {
         amountA,
         amountB,
     }: CreateOpenPositionInstructionsParams)
-    : Promise<CreateOpenPositionInstructionsResponse>
+    : Promise<CreateOpenPositionInstructionsResult>
     {
         const {
             feeAmount: feeAmountA,

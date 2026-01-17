@@ -5,10 +5,10 @@ import { ChainId } from "@typedefs"
 import { AggregatorId } from "./types"
 import { 
     BatchQuoteParams, 
-    BatchQuoteResponse, 
+    BatchQuoteResult, 
     IAggregatorSelectorService, 
     SelectorSwapParams, 
-    SelectorSwapResponse 
+    SelectorSwapResult 
 } from "./aggregator-selector.interface"
 import { SevenKAggregatorService } from "./7k.service"
 import { CetusAggregatorService } from "./cetus-aggregator.service"
@@ -21,8 +21,8 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
         private readonly asyncService: AsyncService,
     ) { }
 
-    async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResponse> {
-        const promises: Array<Promise<BatchQuoteResponse>> = []
+    async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResult> {
+        const promises: Array<Promise<BatchQuoteResult>> = []
         // Cetus Aggregator
         if (
             this.cetusAggregatorService.supportedChains().includes(ChainId.Sui)) 
@@ -56,7 +56,7 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
         const results = await this.asyncService.allIgnoreError(promises)
         // Remove null or undefined
         const filteredResults = results.filter(
-            (filteredResult): filteredResult is BatchQuoteResponse => filteredResult != null
+            (filteredResult): filteredResult is BatchQuoteResult => filteredResult != null
         )
         if (filteredResults.length === 0) {
             throw new AggregatorNotFoundException("No aggregator found")
@@ -72,7 +72,7 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
 
     async selectorSwap(
         params: SelectorSwapParams
-    ): Promise<SelectorSwapResponse> {
+    ): Promise<SelectorSwapResult> {
         switch (params.aggregatorId) {
         case AggregatorId.CetusAggregator: {
             return await this.cetusAggregatorService.swap(params.base)

@@ -1,4 +1,4 @@
-import { QuoteRequest, QuoteResponse, SwapRequest } from "./aggregator.interface"
+import { QuoteParams, QuoteResult, SwapParams, SwapResult } from "./aggregator.interface"
 import { AggregatorId } from "./types"
 import { TransactionObjectArgument, Transaction } from "@mysten/sui/transactions"
 
@@ -6,14 +6,14 @@ import { TransactionObjectArgument, Transaction } from "@mysten/sui/transactions
  * Params for batch quote request.
  * Directly reused from QuoteRequest.
  */
-export type BatchQuoteParams = QuoteRequest
+export type BatchQuoteParams = QuoteParams
 
 /**
  * One result entry returned from an aggregator
  * when calling batchQuote.
  */
-export interface BatchQuoteResponse {
-    response: QuoteResponse
+export interface BatchQuoteResult {
+    response: QuoteResult
     aggregatorId: AggregatorId
 }
 
@@ -22,7 +22,7 @@ export interface BatchQuoteResponse {
  * aggregatorId decides which aggregator to call.
  */
 export interface SelectorSwapParams {
-    base: SwapRequest
+    base: SwapParams
     aggregatorId: AggregatorId
 }
 
@@ -30,13 +30,13 @@ export interface SelectorSwapParams {
  * Unified swap response payload.
  * Each aggregator returns its own internal payload format.
  */
-export interface SelectorSwapResponse {
+export interface SelectorSwapResult {
     payload: unknown
     outputCoin?: TransactionObjectArgument
     txb?: Transaction
 }
 
 export interface IAggregatorSelectorService {
-    batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResponse>
-    selectorSwap(params: SelectorSwapParams): Promise<SelectorSwapResponse>
+    batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResult>
+    selectorSwap(params: SelectorSwapParams): Promise<SelectorSwapResult>
 }

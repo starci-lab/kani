@@ -40,7 +40,7 @@ export class OpenPositionTxbService {
             amountBMax,
             bot,     
         }: CreateOpenPositionTxbParams
-    ): Promise<CreateOpenPositionTxbResponse> {
+    ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokens.find(
@@ -201,7 +201,7 @@ export interface CreateOpenPositionTxbParams {
     liquidity: BN
 }
 
-export interface CreateOpenPositionTxbResponse {
+export interface CreateOpenPositionTxbResult {
     txb: Transaction
     feeAmountA: BN
     feeAmountB: BN

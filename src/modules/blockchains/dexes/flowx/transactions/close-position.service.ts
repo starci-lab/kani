@@ -29,7 +29,7 @@ export class ClosePositionTxbService {
             bot,
             state,
         }: CreateClosePositionTxbParams
-    ): Promise<CreateClosePositionTxbResponse> {
+    ): Promise<CreateClosePositionTxbResult> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
@@ -185,6 +185,6 @@ export interface CreateClosePositionTxbParams {
     state: LiquidityPoolState
 }
 
-export interface CreateClosePositionTxbResponse {
+export interface CreateClosePositionTxbResult {
     txb: Transaction
 }

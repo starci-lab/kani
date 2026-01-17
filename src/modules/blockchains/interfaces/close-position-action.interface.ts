@@ -5,7 +5,7 @@ import {
     SolanaTx
 } from "./types"
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
-import { PrepareClosePositionParams, PrepareClosePositionResponse } from "./types"
+import { PrepareClosePositionParams, PrepareClosePositionResult } from "./types"
 
 export interface ExecuteClosePositionParams {
   bot: BotSchema;
@@ -20,7 +20,7 @@ export interface ExecuteClosePositionParams {
 export interface IClosePositionActionService {
   prepare(
     params: PrepareClosePositionParams,
-  ): Promise<PrepareClosePositionResponse>;
+  ): Promise<PrepareClosePositionResult>;
   execute(
     params: ExecuteClosePositionParams,
   ): Promise<void>;

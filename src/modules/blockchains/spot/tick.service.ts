@@ -9,7 +9,7 @@ import {
     SnapshotBalancesNotSetException, 
     TokenNotFoundException
 } from "@exceptions"
-import { PythOraclePriceService } from "../pyth"
+import { PythOraclePriceService } from "../price-feeds/pyth"
 import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
 import { SpotPriceService } from "../spot"
 import { AsyncService } from "@modules/mixin"
@@ -76,23 +76,17 @@ export class TickMathService {
         const tokenBEntity = targetIsA ? quoteTokenEntity : targetTokenEntity
         const snapshotTokenAAmount = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const snapshotTokenBAmount = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
-        // get the price from the oracle or the spot price
-        const price = await this.asyncService.executeWithFallbacks({
-            action: async () => {
+        // get the price from the oracle or fallback to spot price
+        const price = await (async () => {
+            try {
                 return await this.pythOraclePriceService.getPythOraclePrice({
                     tokenA: tokenAEntity.displayId,
                     tokenB: tokenBEntity.displayId,
                 })
-            },
-            fallbacks: [
-                async () => {
-                    return await this.spotPriceService.getSpotPrice({
-                        state,
-                    })
-                },
-            ],
-            attempts: 1
-        })
+            } catch {
+                return await this.spotPriceService.getSpotPrice({ state })
+            }
+        })()
         // compute the token amount in the other token
         const tokenAAmountInB = computeDenomination(
             new BN(snapshotTokenAAmount),
@@ -176,7 +170,7 @@ export class TickMathService {
 
     public sqrtPriceX64ToPrice(
         params: SqrtPriceX64ToPriceParams
-    ): SqrtPriceX64ToPriceResponse {
+    ): SqrtPriceX64ToPriceResult {
         const { sqrtPriceX64, decimalsA, decimalsB } = params
 
         const sqrtPrice = new Decimal(sqrtPriceX64.toString())
@@ -199,7 +193,7 @@ export class TickMathService {
             decimalsA, 
             decimalsB 
         }: TickIndexToPriceParams
-    ): TickIndexToPriceResponse {
+    ): TickIndexToPriceResult {
         const sqrtPriceX64 = TickMath.tickIndexToSqrtPriceX64(tickIndex)
         return this.sqrtPriceX64ToPrice({
             sqrtPriceX64,
@@ -216,7 +210,7 @@ export class TickMathService {
             basisPointMax = 10000, 
             binStep 
         }: ActiveIdToPriceParams
-    ): ActiveIdToPriceResponse {
+    ): ActiveIdToPriceResult {
         // ?: price = (1 + binStep / basisPointMax)^activeId * 10^(decimalsA - decimalsB)
         const base = new Decimal(1).add(
             new Decimal(binStep).div(basisPointMax)
@@ -237,7 +231,7 @@ export interface ActiveIdToPriceParams {
     binStep: number
 }
 
-export interface ActiveIdToPriceResponse {
+export interface ActiveIdToPriceResult {
     price: Decimal
 }
 
@@ -247,7 +241,7 @@ export interface TickIndexToPriceParams {
     decimalsB: number
 }
 
-export interface TickIndexToPriceResponse {
+export interface TickIndexToPriceResult {
     price: Decimal
 }
 
@@ -257,7 +251,7 @@ export interface SqrtPriceX64ToPriceParams {
     decimalsB: number
 }
 
-export interface SqrtPriceX64ToPriceResponse {
+export interface SqrtPriceX64ToPriceResult {
     price: Decimal
 }
 
@@ -266,7 +260,7 @@ export interface GetTickBoundsParams {
     bot: BotSchema
 }
 
-export interface GetTickBoundsResponse {
+export interface GetTickBoundsResult {
     tickLower: Decimal
     tickUpper: Decimal
 }

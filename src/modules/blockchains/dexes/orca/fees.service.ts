@@ -1,4 +1,4 @@
-import { FeesParams, FeesResponse, IFeesService } from "../../interfaces"
+import { FeesParams, FeesResult, IFeesService } from "../../interfaces"
 import { Injectable } from "@nestjs/common"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
@@ -34,7 +34,7 @@ export class OrcaFeesService implements IFeesService {
     private readonly tickArrayService: TickArrayService,
     ) {}
 
-    async fees({ bot, state }: FeesParams): Promise<FeesResponse> {
+    async fees({ bot, state }: FeesParams): Promise<FeesResult> {
         const _state = state as LiquidityPoolState
 
         if (!bot.activePosition) {

@@ -55,7 +55,7 @@ export class PrivyCoreService {
      * Create a new signer for the wallet
      * @returns The signer
      */
-    async createSigner(): Promise<PrivySignerResponse> {
+    async createSigner(): Promise<PrivySignerResult> {
         const keyPair = await generateP256KeyPair()
         const keyQuorum = await this.privyClient.keyQuorums().create(
             {
@@ -74,7 +74,7 @@ export class PrivyCoreService {
     }
 }
 
-export interface PrivySignerResponse {
+export interface PrivySignerResult {
     keyQuorum: KeyQuorum
     keyPair: P256KeyPair
 }

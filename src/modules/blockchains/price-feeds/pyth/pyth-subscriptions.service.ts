@@ -106,7 +106,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             await this.asyncService.allIgnoreError(
                                 tokenList.map(
                                     async (data) => {
-                                        await this.cachePriceUtilsService.updateOracleTokenPrice(
+                                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
                                             {
                                                 tokenId: data.tokenId,
                                                 price: data.price,

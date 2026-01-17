@@ -13,7 +13,7 @@ import { TurbosClosePositionActionService } from "./turbos"
 import { MomentumClosePositionActionService } from "./momentum"
 import { 
     PrepareClosePositionParams, 
-    PrepareClosePositionResponse, 
+    PrepareClosePositionResult, 
     ExecuteClosePositionParams as ExecuteClosePositionParamsInterface 
 } from "../interfaces"
 import { createObjectId } from "@utils"
@@ -198,7 +198,7 @@ export class ClosePositionOrchestratorService {
             bot,
             state,
         }: PrepareClosePositionParams,
-    ): Promise<PrepareClosePositionResponse> {
+    ): Promise<PrepareClosePositionResult> {
         const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === state.static.dex.toString())
         if (!dex) throw new DexNotFoundException("Dex not found")
         if (!this.options.dexIds?.includes(dex.displayId)) {

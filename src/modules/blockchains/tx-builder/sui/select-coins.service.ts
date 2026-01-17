@@ -16,7 +16,7 @@ export class SelectCoinsService {
         requiredAmount,
         sourceCoin,
         txb,
-    }: SplitCoinParams): SplitCoinResponse {
+    }: SplitCoinParams): SplitCoinResult {
         if (!sourceCoin) {
             throw new Error("sourceCoin is required to perform splitCoin")
         }
@@ -41,7 +41,7 @@ export class SelectCoinsService {
         coins,
         amount,
         exclude,
-    }: SelectCoinAssetGreaterThanOrEqualParams): SelectCoinAssetGreaterThanOrEqualResponse {
+    }: SelectCoinAssetGreaterThanOrEqualParams): SelectCoinAssetGreaterThanOrEqualResult {
         if (!coins) throw new Error("coins is required")
         if (!amount) throw new Error("amount is required")
 
@@ -116,7 +116,7 @@ export class SelectCoinsService {
         coinType,
         suiGasAmount,
         requiredAmount,
-    }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResponse> {
+    }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResult> {
         txb = txb ?? new Transaction()
         const fetchedCoins = await this.fetchCoinsService.fetchCoins({ owner, coinType })
         if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
@@ -185,7 +185,7 @@ export interface SelectCoinAssetGreaterThanOrEqualParams {
     exclude: Array<string>
 }
 
-export interface SelectCoinAssetGreaterThanOrEqualResponse {
+export interface SelectCoinAssetGreaterThanOrEqualResult {
     selectedCoins: Array<CoinAsset>
     remainingCoins: Array<CoinAsset>
 }
@@ -199,7 +199,7 @@ export interface FetchAndMergeCoinsParams {
     requiredAmount?: BN
 }
 
-export interface FetchAndMergeCoinsResponse {
+export interface FetchAndMergeCoinsResult {
     sourceCoin: CoinArgument
     balance: BN
 }
@@ -210,6 +210,6 @@ export interface SplitCoinParams {
     requiredAmount: BN
 }
 
-export interface SplitCoinResponse {
+export interface SplitCoinResult {
     spendCoin: CoinArgument
 }

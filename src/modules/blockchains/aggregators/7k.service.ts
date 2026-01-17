@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
+import { IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult } from "./aggregator.interface"
 import { RetryService } from "@modules/mixin"
 import { 
     TokenNotFoundException
@@ -34,8 +34,8 @@ export class SevenKAggregatorService implements IAggregatorService {
             tokenIn,
             amountIn,
             tokenOut,
-        }: QuoteRequest
-    ): Promise<QuoteResponse> {
+        }: QuoteParams
+    ): Promise<QuoteResult> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -77,7 +77,7 @@ export class SevenKAggregatorService implements IAggregatorService {
             txb,
             accountAddress,
             tokenIn
-        }: SwapRequest): Promise<SwapResponse> {
+        }: SwapParams): Promise<SwapResult> {
         const _payload = payload as SevenKQuoteResponse
         txb = txb || new Transaction()
         const tokenInInstance = this.primaryMemoryStorageService.tokens.find(

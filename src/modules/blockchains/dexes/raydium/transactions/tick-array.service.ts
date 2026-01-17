@@ -103,7 +103,7 @@ export class TickArrayService {
         tickIndex,
         tickSpacing,
         programAddress,
-    }: GetTickArrayPdaParams): Promise<GetTickArrayPdaResponse> {
+    }: GetTickArrayPdaParams): Promise<GetTickArrayPdaResult> {
         const startIndex = this.getArrayStartIndex(tickIndex, tickSpacing)
         return this.getTickArrayPda({
             poolStateAddress,
@@ -158,6 +158,6 @@ export interface GetTickArrayPdaParams {
     programAddress: Address
 }
 
-export interface GetTickArrayPdaResponse {
+export interface GetTickArrayPdaResult {
     pda: Address
 }

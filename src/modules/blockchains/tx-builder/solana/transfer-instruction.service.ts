@@ -24,7 +24,7 @@ export class TransferInstructionService {
             amount,
             tokenId,
         }: CreateTransferInstructionsParams
-    ): Promise<CreateTransferInstructionsResponse> {
+    ): Promise<CreateTransferInstructionsResult> {
         const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === tokenId.toString())
         if (!token) {
             throw new TokenNotFoundException("From token not found")
@@ -86,6 +86,6 @@ export interface CreateTransferInstructionsParams {
     tokenId: TokenId
 }
 
-export interface CreateTransferInstructionsResponse {
+export interface CreateTransferInstructionsResult {
     instructions: Array<Instruction>
 }

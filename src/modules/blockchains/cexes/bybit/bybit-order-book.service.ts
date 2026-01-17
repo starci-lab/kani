@@ -87,7 +87,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                 try {
                     for await (const data of stream) {
                         try {
-                            const parsed = JSON.parse(data.toString()) as BybitOrderBookUpdate | BybitOrderBookWsSubscribeResponse
+                            const parsed = JSON.parse(data.toString()) as BybitOrderBookUpdate | BybitOrderBookWsSubscribeResult
 
                             if ("success" in parsed) {
                                 if (!parsed.success) {
@@ -172,7 +172,7 @@ export interface BybitOrderBookData {
     ts: number;        // update timestamp
 }
 
-export interface BybitOrderBookWsSubscribeResponse {
+export interface BybitOrderBookWsSubscribeResult {
     success: boolean;       // true if subscription succeeded
     ret_msg: string;        // return message from server, e.g., "subscribe"
     conn_id: string;        // unique connection id for the WebSocket session

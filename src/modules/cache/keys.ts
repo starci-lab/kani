@@ -21,7 +21,7 @@ export enum CacheKey {
     TokenPriceData = "tokenPriceData",
     BinanceWsOrderBook = "binanceWsOrderBook",
     OraclePrices = "oraclePrices",
-    OracleTokenPrice = "oracleTokenPrice",
+    AggregatedTokenPrice = "aggregatedTokenPrice",
     User = "user",
     UserIds = "userIds",
     SessionId = "sessionId",
@@ -41,13 +41,13 @@ export interface SpotPriceCacheResult {
 }
 
 
-export interface OracleTokenPriceCache extends NonExpiredCacheResult {
+export interface AggregatedTokenPriceCache extends NonExpiredCacheResult {
     price: number
     snapshotAt: Dayjs
 }
 
-export interface OracleTokenPriceCacheResult extends NonExpiredCacheResult {
-    prices: Partial<Record<MarketId, OracleTokenPriceCache>>
+export interface AggregatedTokenPriceCacheResult extends NonExpiredCacheResult {
+    prices: Partial<Record<MarketId, AggregatedTokenPriceCache>>
 }
 
 export interface ClmmRewardInfo {

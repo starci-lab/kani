@@ -1,16 +1,16 @@
 import { Injectable } from "@nestjs/common"
 import {
     FetchBalanceParams,
-    FetchBalanceResponse,
+    FetchBalanceResult,
     FetchBalancesParams,
-    FetchBalancesResponse,
+    FetchBalancesResult,
     IBalanceService,
     PrepareSwapTransactionParams,
-    PrepareSwapTransactionResponse,
+    PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
     EnqueueBalanceRebalancingParams,
     DetermineReconcileBalancePlanParams,
-    DetermineReconcileBalancePlanResponse,
+    DetermineReconcileBalancePlanResult,
 } from "./balance.interface"
 import { SolanaBalanceService } from "./solana.service"
 import { TokenType, ChainId } from "@typedefs"
@@ -151,7 +151,7 @@ export class BalanceService implements IBalanceService {
         snapshotTargetBalanceAmount,
         snapshotQuoteBalanceAmount,
         snapshotGasBalanceAmount,
-    }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResponse> {
+    }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === bot.targetToken.toString(),
         )
@@ -196,7 +196,7 @@ export class BalanceService implements IBalanceService {
             swapQuoteToTargetAmount,
             estimatedSwappedTargetAmount,
             estimatedSwappedQuoteAmount,
-            quoteRatioResponse,
+            quoteRatioResult,
         } = await this.swapMathService.computeSwapAmounts(
             {
                 targetTokenId: targetToken.displayId,
@@ -220,13 +220,13 @@ export class BalanceService implements IBalanceService {
         const quoteBalanceAmountInTarget = computeDenomination(
             quoteBalanceAmount,
             quoteToken.decimals,
-        ).div(quoteRatioResponse.oraclePrice)
+        ).div(quoteRatioResult.oraclePrice)
         const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(
             quoteBalanceAmountInTarget,
         )
         if (
             totalBalanceAmountInTarget.lt(
-                new Decimal(targetToken.minRequiredAmountInTotal || 0),
+                new Decimal(targetToken.minRequiredAmount || 0),
             )
         ) {
             // snapshot the balances and return, since the balance is not enough to swap
@@ -273,7 +273,7 @@ export class BalanceService implements IBalanceService {
 
     async prepareSwapTransaction(
         params: PrepareSwapTransactionParams,
-    ): Promise<PrepareSwapTransactionResponse> {
+    ): Promise<PrepareSwapTransactionResult> {
         switch (params.bot.chainId) {
         case ChainId.Solana:
             return this.solanaBalanceService.prepareSwapTransaction(params)
@@ -299,7 +299,7 @@ export class BalanceService implements IBalanceService {
 
     public async fetchBalances({
         bot,
-    }: FetchBalancesParams): Promise<FetchBalancesResponse> {
+    }: FetchBalancesParams): Promise<FetchBalancesResult> {
         const targetToken = this.primaryMemoryStorageService.tokens.find(
             (token) => token.id === bot.targetToken.toString(),
         )
@@ -398,7 +398,7 @@ export class BalanceService implements IBalanceService {
 
     public async fetchBalance(
         params: FetchBalanceParams,
-    ): Promise<FetchBalanceResponse> {
+    ): Promise<FetchBalanceResult> {
         switch (params.bot.chainId) {
         case ChainId.Solana:
             return this.solanaBalanceService.fetchBalance(params)

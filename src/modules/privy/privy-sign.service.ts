@@ -78,7 +78,7 @@ export class PrivySignService {
             client,
             encryptedPrivySignerPrivateKey,
         }: SignSuiTransactionParams
-    ): Promise<SignSuiTransactionResponse> {
+    ): Promise<SignSuiTransactionResult> {
         const publicKey = publicKeyFromRawBytes("ED25519", fromHex(publicKeyHex.slice(2) ?? ""))
         const accountAddress = publicKey.toSuiAddress()
         transaction.setSender(accountAddress)
@@ -133,12 +133,12 @@ export interface SignSuiTransactionParams extends SignTransactionParams<Transact
     client: SuiClient
 }
 
-export interface SignSuiTransactionResponse {
+export interface SignSuiTransactionResult {
     txHash: string
     signatureWithBytes: SignatureWithBytes
 }
 
-export interface SignSolanaTransactionResponse {
+export interface SignSolanaTransactionResult {
     signedTransaction: FullySolanaTransaction
     txHash: string
 }

@@ -17,7 +17,7 @@ export class MintInstructionService {
 
             withInitialize = false,
         }: CreateMint2InstructionParams
-    ): Promise<CreateMint2InstructionResponse> {
+    ): Promise<CreateMint2InstructionResult> {
         const rpc = createSolanaRpc(url)
         const space = getMintSize()
         const balanceNeeded = await rpc.getMinimumBalanceForRentExemption(
@@ -61,7 +61,7 @@ export interface CreateMint2InstructionParams {
     withInitialize?: boolean;
 }
 
-export interface CreateMint2InstructionResponse {
+export interface CreateMint2InstructionResult {
     instructions: Array<Instruction>
     mintKeyPair: KeyPairSigner
 }

@@ -1,9 +1,9 @@
 import { PrimaryMemoryStorageService, QuoteRatioStatus } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
-import { ComputeQuoteRatioParams, ComputeQuoteRatioResponse } from "./swap.service"
+import { ComputeQuoteRatioParams, ComputeQuoteRatioResult } from "./swap.service"
 import { TokenNotFoundException } from "@exceptions"
 import { computeDenomination } from "@utils"
-import { PythOraclePriceService } from "../pyth"
+import { PythOraclePriceService } from "../price-feeds/pyth"
 import { SAFE_QUOTE_RATIO_ABOVE, SAFE_QUOTE_RATIO_BELOW } from "."
 import { Decimal } from "decimal.js"
 
@@ -21,7 +21,7 @@ export class QuoteRatioService {
             targetBalanceAmount,
             quoteBalanceAmount,
         }: ComputeQuoteRatioParams
-    ): Promise<ComputeQuoteRatioResponse> {
+    ): Promise<ComputeQuoteRatioResult> {
         const targetToken = this.primaryMemoryStorageService
             .tokens.find(token => token.displayId === targetTokenId)
         if (!targetToken) {

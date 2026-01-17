@@ -8,7 +8,7 @@ import {
     SnapshotBalancesNotSetException, 
     TokenNotFoundException
 } from "@exceptions"
-import { PythOraclePriceService } from "../pyth"
+import { PythOraclePriceService } from "../price-feeds/pyth"
 import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
 import { SpotPriceService } from "../spot"
 import { AsyncService } from "@modules/mixin"
@@ -334,7 +334,7 @@ export interface GetTickBoundsParams {
     bot: BotSchema
 }
 
-export interface GetTickBoundsResponse {
+export interface GetTickBoundsResult {
     tickLower: Decimal
     tickUpper: Decimal
 }

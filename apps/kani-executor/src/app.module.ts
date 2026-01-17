@@ -10,7 +10,6 @@ import { EventEmitterModule } from "@nestjs/event-emitter"
 import { 
     ClientsModule, 
     DexesModule, 
-    PythModule, 
     SignersModule, 
     MathModule,
     FormulasModule,
@@ -114,10 +113,6 @@ import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
         }),
         CryptoModule.register({
             isGlobal: true,
-        }),
-        PythModule.register({
-            isGlobal: true,
-            utilitiesOnly: true,
         }),
         ScheduleModule.forRoot(),
         AggregatorsModule.register({

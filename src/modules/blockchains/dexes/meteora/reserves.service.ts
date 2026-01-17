@@ -2,7 +2,7 @@ import {
     DlmmLiquidityPoolState,
     IReservesService,
     ReservesParams,
-    ReservesResponse,
+    ReservesResult,
 } from "../../interfaces"
 import { Decimal } from "decimal.js"
 import { Injectable } from "@nestjs/common"
@@ -29,7 +29,7 @@ export class MeteoraReservesService implements IReservesService {
     async reserves({
         bot,
         state,
-    }: ReservesParams): Promise<ReservesResponse> {
+    }: ReservesParams): Promise<ReservesResult> {
         if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
         const _state = state as DlmmLiquidityPoolState
         const activeBinId = new Decimal(_state.dynamic.activeId)

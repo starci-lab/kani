@@ -3,7 +3,7 @@ import {
     IReservesService, 
     LiquidityPoolState, 
     ReservesParams, 
-    ReservesResponse 
+    ReservesResult 
 } from "../../interfaces"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
@@ -52,7 +52,7 @@ export class OrcaReservesService implements IReservesService {
             liquidityPoolId,
             state,
             bot,
-        }: ReservesParams): Promise<ReservesResponse> {
+        }: ReservesParams): Promise<ReservesResult> {
         const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
             liquidityPool => liquidityPool.displayId === liquidityPoolId.toString(),
         )

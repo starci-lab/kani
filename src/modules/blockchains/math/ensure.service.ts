@@ -11,7 +11,7 @@ export interface EnsureCalculationParams {
     upperBound?: Decimal  // for ensureActualNotAboveExpected
 }
 
-export interface EnsureCalculationResponse {
+export interface EnsureCalculationResult {
     ratio: Decimal
     isAcceptable: boolean
 }
@@ -32,7 +32,7 @@ export class EnsureMathService {
      */
     public ensureActualNotBelowExpected(
         { expected, actual, lowerBound }: EnsureCalculationParams
-    ): EnsureCalculationResponse {
+    ): EnsureCalculationResult {
         const ratio = this.computeRatio(expected, actual)
         const bound = lowerBound ?? LOWER_BOUND_DEFAULT
 
@@ -48,7 +48,7 @@ export class EnsureMathService {
      */
     public ensureActualNotAboveExpected(
         { expected, actual, upperBound }: EnsureCalculationParams
-    ): EnsureCalculationResponse {
+    ): EnsureCalculationResult {
         const ratio = this.computeRatio(expected, actual)
         const bound = upperBound ?? UPPER_BOUND_DEFAULT
 
@@ -63,7 +63,7 @@ export class EnsureMathService {
      */
     public ensureBetween(
         { expected, actual, lowerBound, upperBound }: EnsureCalculationParams
-    ): EnsureCalculationResponse {
+    ): EnsureCalculationResult {
         const ratio = this.computeRatio(expected, actual)
 
         const lower = lowerBound ?? LOWER_BOUND_DEFAULT

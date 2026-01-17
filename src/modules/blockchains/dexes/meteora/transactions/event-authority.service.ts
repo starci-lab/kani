@@ -8,7 +8,7 @@ export class EventAuthorityService {
      */
     async getPda({
         programAddress,
-    }: GetEventAuthorityPdaParams): Promise<GetEventAuthorityPdaResponse> {
+    }: GetEventAuthorityPdaParams): Promise<GetEventAuthorityPdaResult> {
         const [pda] = await getProgramDerivedAddress({
             programAddress: address(programAddress),
             seeds: [
@@ -25,6 +25,6 @@ export interface GetEventAuthorityPdaParams {
     programAddress: Address
 }
 
-export interface GetEventAuthorityPdaResponse {
+export interface GetEventAuthorityPdaResult {
     pda: Address
 }

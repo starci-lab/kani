@@ -1,2 +1,2 @@
 export * from "./diagnostics.module"
-export * from "./pyth-price.service"
+export * from "./oracle-price.service"

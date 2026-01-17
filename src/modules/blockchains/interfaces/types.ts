@@ -54,7 +54,7 @@ export interface PrepareClosePositionParams {
     state: LiquidityPoolState | DlmmLiquidityPoolState;
 }
 
-export interface PrepareClosePositionResponse {
+export interface PrepareClosePositionResult {
     txHash: string;
     signatureWithBytes?: SignatureWithBytes;
     solanaTx?: SolanaTx;

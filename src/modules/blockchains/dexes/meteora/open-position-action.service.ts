@@ -3,10 +3,10 @@ import {
     IOpenActionService,
     DlmmLiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
-    ExecuteOpenPositionResponse,
-    ConfirmOpenPositionResponse,
+    ExecuteOpenPositionResult,
+    ConfirmOpenPositionResult,
     ConfirmOpenPositionParams,
 } from "../../interfaces"
 import { SignerService } from "../../signers"
@@ -63,7 +63,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     async prepare({
         state,
         bot,
-    }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResponse> {
+    }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
@@ -170,7 +170,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         solanaTx,
         txHash,
         positionId,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         if (!positionId) {
             throw new PositionIdNotSetException("Position id not set")
         }
@@ -225,7 +225,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         {
             positionId,
         }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {

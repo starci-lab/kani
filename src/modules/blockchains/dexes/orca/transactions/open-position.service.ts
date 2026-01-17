@@ -67,7 +67,7 @@ export class OpenPositionInstructionService {
         liquidity,
         amountA,
         amountB,
-    }: CreateOpenPositionInstructionsParams): Promise<CreateOpenPositionInstructionsResponse> {
+    }: CreateOpenPositionInstructionsParams): Promise<CreateOpenPositionInstructionsResult> {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
@@ -373,7 +373,7 @@ export interface CreateOpenPositionInstructionsParams {
   amountB: BN;
 }
 
-export interface CreateOpenPositionInstructionsResponse {
+export interface CreateOpenPositionInstructionsResult {
   instructions: Array<Instruction>;
   mintKeyPair: KeyPairSigner;
   personalPosition: Address;

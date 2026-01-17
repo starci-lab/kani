@@ -1,6 +1,6 @@
 import { DynamicModule, Module } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./diagnostics.module-definition"
-import { PythPriceDiagnosticService } from "./pyth-price.service"
+import { PythPriceDiagnosticService } from "./oracle-price.service"
 @Module({})
 export class DiagnosticsModule extends ConfigurableModuleClass {
     static register(

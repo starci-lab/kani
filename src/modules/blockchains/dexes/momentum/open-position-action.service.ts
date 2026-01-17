@@ -3,11 +3,11 @@ import {
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
-    ExecuteOpenPositionResponse,
+    ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
-    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionResult,
 } from "../../interfaces"
 import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
@@ -53,7 +53,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     
     async confirm(
         { positionId }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -82,7 +82,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             bot,
             state,
         }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState
         const txb = new Transaction()
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
@@ -181,7 +181,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         isRetry,
         txHash,
         signatureWithBytes,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         const _state = state as LiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -238,7 +238,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
 
     private parseAddLiquidityEvent(
         events?: Array<SuiEvent>,
-    ): ParseAddLiquidityEventResponse {
+    ): ParseAddLiquidityEventResult {
         const event = events?.find(
             event => event.type.includes("::liquidity::AddLiquidityEvent")
         )
@@ -263,6 +263,6 @@ interface AddLiquidityEvent {
     sender: string
 }
 
-interface ParseAddLiquidityEventResponse {
+interface ParseAddLiquidityEventResult {
     positionId: string
 }

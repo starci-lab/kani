@@ -63,7 +63,7 @@ implements OnModuleInit, OnApplicationBootstrap
         if (!liquidityPools.length) {
             return
         }
-        const { data: { data: { list } } } = await this.axios.post<CetusPoolListResponse>(
+        const { data: { data: { list } } } = await this.axios.post<CetusPoolListResult>(
             "https://api-sui.cetus.zone/v3/sui/clmm/stats_pools",
             {
                 filter: "all",
@@ -138,7 +138,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface CetusPoolListResponse {
+export interface CetusPoolListResult {
   code: number;
   msg: string;
   data: CetusPoolListData;

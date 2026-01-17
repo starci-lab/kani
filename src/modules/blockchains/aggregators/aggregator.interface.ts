@@ -8,15 +8,15 @@ import BN from "bn.js"
  * It returns a quote + executable swap data.
  */
 export interface IAggregatorService {
-    quote(params: QuoteRequest): Promise<QuoteResponse>
-    swap(params: SwapRequest): Promise<SwapResponse>
+    quote(params: QuoteParams): Promise<QuoteResult>
+    swap(params: SwapParams): Promise<SwapResult>
     supportedChains(): Array<ChainId>
 }
 
 /**
  * Parameters for requesting a swap quote.
  */
-export interface QuoteRequest {
+export interface QuoteParams {
     tokenIn: TokenId
     tokenOut: TokenId
     amountIn: BN
@@ -27,7 +27,7 @@ export interface QuoteRequest {
 /**
  * Result of a quote from an aggregator.
  */
-export interface QuoteResponse {
+export interface QuoteResult {
     amountOut: BN
     /** 
      * Raw aggregator-specific data required to execute the swap.
@@ -36,7 +36,7 @@ export interface QuoteResponse {
     payload: unknown
 }
 
-export interface SwapRequest {
+export interface SwapParams {
     payload: unknown
     tokenIn: TokenId
     tokenOut: TokenId
@@ -45,7 +45,7 @@ export interface SwapRequest {
     txb?: Transaction
 }
 
-export interface SwapResponse {
+export interface SwapResult {
     payload: unknown
     outputCoin?: TransactionObjectArgument
     txb?: Transaction

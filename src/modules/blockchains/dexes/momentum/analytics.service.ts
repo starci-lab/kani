@@ -59,7 +59,7 @@ implements OnModuleInit, OnApplicationBootstrap
         if (!liquidityPools.length) {
             return
         }
-        const { data } = await this.axios.get<LiquidityPoolsApiResponse>(
+        const { data } = await this.axios.get<LiquidityPoolsApiResult>(
             "https://api.mmt.finance/pools/v3",
         )
         const promises: Array<Promise<void>> = []
@@ -103,7 +103,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface LiquidityPoolsApiResponse {
+export interface LiquidityPoolsApiResult {
   status: number;
   message: string;
   data: Array<LiquidityPool>;

@@ -15,7 +15,7 @@ export class FetchCoinsService {
     async fetchCoins({
         owner,
         coinType,
-    }: FetchCoinsParams): Promise<FetchCoinsResponse> {
+    }: FetchCoinsParams): Promise<FetchCoinsResult> {
         let cursor: string | null | undefined = undefined
         const coinAssets: Array<CoinAsset> = []
         do {
@@ -52,7 +52,7 @@ export class FetchCoinsService {
             coinAssets,
             txb,
         }: ResolveCoinAssetParams): 
-        Promise<ResolveCoinAssetResponse> 
+        Promise<ResolveCoinAssetResult> 
     {
         if (!coinAssets.length) {
             throw new CoinAssetNotFoundException("No coin assets provided")
@@ -79,7 +79,7 @@ export interface FetchCoinsParams {
     coinType: string
 }
 
-export interface FetchCoinsResponse {
+export interface FetchCoinsResult {
     coinAssets: Array<CoinAsset>
     totalBalance: BN
     
@@ -90,7 +90,7 @@ export interface ResolveCoinAssetParams {
     txb: Transaction
 }
 
-export interface ResolveCoinAssetResponse {
+export interface ResolveCoinAssetResult {
     coinAsset: CoinAsset
     txResult?: TransactionResult
 }

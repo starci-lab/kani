@@ -1,4 +1,4 @@
-import { FeesParams, FeesResponse, IFeesService } from "../../interfaces"
+import { FeesParams, FeesResult, IFeesService } from "../../interfaces"
 import { Injectable } from "@nestjs/common"
 import { RpcExecutorService } from "../../clients"
 import {
@@ -28,7 +28,7 @@ export class CetusFeesService implements IFeesService {
     private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
     ) {}
 
-    async fees({ bot, state }: FeesParams): Promise<FeesResponse> {
+    async fees({ bot, state }: FeesParams): Promise<FeesResult> {
         const _state = state as LiquidityPoolState
         // if (!bot.activePosition) {
         //     throw new ActivePositionNotFoundException("Active position not found")

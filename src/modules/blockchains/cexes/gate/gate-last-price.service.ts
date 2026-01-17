@@ -104,7 +104,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map(
                                         (tokenPrice) =>
-                                            this.cachePriceUtilsService.updateOracleTokenPrice({
+                                            this.cachePriceUtilsService.updateAggregatedTokenPrice({
                                                 tokenId: tokenPrice.tokenId,
                                                 price: tokenPrice.price,
                                                 marketId: MarketId.Gate,

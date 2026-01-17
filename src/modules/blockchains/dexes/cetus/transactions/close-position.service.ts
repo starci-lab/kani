@@ -25,7 +25,7 @@ export class ClosePositionTxbService {
             bot,
             state,
         }: CreateClosePositionTxbParams
-    ): Promise<CreateClosePositionTxbResponse> {
+    ): Promise<CreateClosePositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         if (!bot.activePosition) {
@@ -97,6 +97,6 @@ export interface CreateClosePositionTxbParams {
     state: LiquidityPoolState
 }
 
-export interface CreateClosePositionTxbResponse {
+export interface CreateClosePositionTxbResult {
     txb: Transaction
 }

@@ -122,11 +122,11 @@ export class RpcExecutorService {
         return RpcErrorType.Ignorable
     }
 
-    public async withSolanaRpc<TResponse = void>({
+    public async withSolanaRpc<TResult = void>({
         callback,
         accessType,
         options,
-    }: WithSolanaRpcParams<TResponse>): Promise<TResponse> {
+    }: WithSolanaRpcParams<TResult>): Promise<TResult> {
         return await this.retryService.retry(
             {
                 action: async () => {
@@ -163,7 +163,7 @@ export class RpcExecutorService {
                                 action: async () => {
                                 // resolve the tuple of response and error
                                     const [
-                                        response, 
+                                        result, 
                                         error
                                     ] = await this.asyncService.resolveTuple(
                                         callback(
@@ -175,8 +175,8 @@ export class RpcExecutorService {
                                         )
                                     )
                                     // if the response is not null, return the response
-                                    if (response !== null) {
-                                        return response
+                                    if (result !== null) {
+                                        return result
                                     }
                                     // if the error is a solana error, throw the error
                                     if (isSolanaError(error)) {
@@ -250,11 +250,11 @@ export class RpcExecutorService {
         return RpcErrorType.Ignorable
     }
 
-    public async withSuiClient<TResponse = void>({
+    public async withSuiClient<TResult = void>({
         callback,
         accessType,
         options,
-    }: WithSuiClientParams<TResponse>): Promise<TResponse> {  
+    }: WithSuiClientParams<TResult>): Promise<TResult> {  
         return await this.retryService.retry({
             action: async () => {
                 // take the url from the p2c balancer
@@ -273,12 +273,12 @@ export class RpcExecutorService {
                     return await this.retryService.retry({
                         action: async () => {
                             // resolve the tuple of response and error
-                            const [response, error] = await this.asyncService.resolveTuple(
+                            const [result, error] = await this.asyncService.resolveTuple(
                                 callback({ suiClient, rpcUrl })
                             )
                             // if the response is not null, return the response
-                            if (response !== null) {
-                                return response
+                            if (result !== null) {
+                                return result
                             }
                             if (error === null) {
                                 throw new AbortError(new SuiRpcIgnorableError("Unknown error"))
@@ -322,15 +322,15 @@ export class RpcExecutorService {
     }   
 }
 
-export type WithSolanaRpcParams<TResponse = void> = 
+export type WithSolanaRpcParams<TResult = void> = 
 ({
-    callback: (params: Omit<WithSolanaRpcCallbackParams, "rpcSubscriptions">) => Promise<TResponse>
+    callback: (params: Omit<WithSolanaRpcCallbackParams, "rpcSubscriptions">) => Promise<TResult>
     accessType: RpcAccessType.Http
 } | {
-    callback: (params: Omit<WithSolanaRpcCallbackParams, "rpc">) => Promise<TResponse>
+    callback: (params: Omit<WithSolanaRpcCallbackParams, "rpc">) => Promise<TResult>
     accessType: RpcAccessType.Ws
 } | {
-    callback: (params: WithSolanaRpcCallbackParams) => Promise<TResponse>
+    callback: (params: WithSolanaRpcCallbackParams) => Promise<TResult>
     accessType: RpcAccessType.Write
 }) & ({
     options?: RetryOptions
@@ -342,12 +342,12 @@ export interface WithSolanaRpcCallbackParams {
     rpcUrl: string 
 }
 
-export type WithSuiClientParams<TResponse = void> = 
+export type WithSuiClientParams<TResult = void> = 
 ({
-    callback: (params: WithSuiClientCallbackParams) => Promise<TResponse>
+    callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
     accessType: RpcAccessType.Http
 } | {
-    callback: (params: WithSuiClientCallbackParams) => Promise<TResponse>
+    callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
     accessType: RpcAccessType.Write
 }) & ({
     options?: RetryOptions

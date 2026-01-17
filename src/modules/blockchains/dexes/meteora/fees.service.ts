@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
 import { RpcExecutorService } from "../../clients"
-import { FeesParams, IFeesService, FeesResponse } from "../../interfaces"
+import { FeesParams, IFeesService, FeesResult } from "../../interfaces"
 import { 
     deriveBinArray, 
     getBinArrayIndexesCoverage, 
@@ -37,7 +37,7 @@ export class MeteoraFeesService implements IFeesService {
             bot,
             state,
         }: FeesParams,
-    ): Promise<FeesResponse> {
+    ): Promise<FeesResult> {
         // get the bin array indexes
         if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
         // get the bin array indexes

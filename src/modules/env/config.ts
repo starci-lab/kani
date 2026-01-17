@@ -191,7 +191,7 @@ export const envConfig = () => ({
             poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(), 10), // 1 day
             poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
             pythPrice: parseInt(process.env.CACHE_POOL_STATE_TTL || "0", 10), // never expire
-            oracleTokenPrice: parseInt(process.env.CACHE_ORACLE_TOKEN_PRICE_TTL || "0", 10), // never expire
+            AggregatedTokenPrice: parseInt(process.env.CACHE_ORACLE_TOKEN_PRICE_TTL || "0", 10), // never expire
             api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(), 10), // 60s
             responses: {
                 fees: parseInt(process.env.CACHE_RESPONSES_FEES_TTL || ms("5m").toString(), 10), // 5 minutes

@@ -4,7 +4,7 @@ import {
     IClosePositionActionService,
     DlmmLiquidityPoolState,
     PrepareClosePositionParams,
-    PrepareClosePositionResponse,
+    PrepareClosePositionResult,
 } from "../../interfaces"
 import { SignerService } from "../../signers"
 import { 
@@ -55,7 +55,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
-    ): Promise<PrepareClosePositionResponse> {
+    ): Promise<PrepareClosePositionResult> {
         const _state = state as DlmmLiquidityPoolState
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(

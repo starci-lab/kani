@@ -97,7 +97,7 @@ export class TickArrayService {
             bot,
             pdaOnly
         }: GetTickArrayPdaParams
-    ): Promise<GetTickArrayPdaResponse> {
+    ): Promise<GetTickArrayPdaResult> {
         const startIndex = getTickArrayStartTickIndex(tickIndex, tickSpacing)
         const { pda } = await this.getTickArrayPda({
             poolStateAddress,
@@ -180,7 +180,7 @@ export interface GetTickArrayPdaParams {
     pdaOnly?: boolean
 }
 
-export interface GetTickArrayPdaResponse {
+export interface GetTickArrayPdaResult {
     pda: Address
     instructions?: Array<Instruction>
 }

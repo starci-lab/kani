@@ -3,11 +3,11 @@ import {
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
     ConfirmOpenPositionParams,
-    ExecuteOpenPositionResponse,
-    ConfirmOpenPositionResponse,
+    ExecuteOpenPositionResult,
+    ConfirmOpenPositionResult,
 } from "../../interfaces"
 import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import { SignerService } from "../../signers"
@@ -71,7 +71,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             state,
             bot,
         }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState
         const slippage = new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
@@ -98,7 +98,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             bot,
         })
         const sqrtPriceCurrentX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            _state.dynamic.tickCurrent,
+            _state.dynamic.tickCurrent.toNumber(),
         )
         const sqrtPriceLowerX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
             tickLower.toNumber(),
@@ -213,7 +213,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         positionId,
         bot,
         state,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         if (!positionId) {
             throw new PositionIdNotSetException("Position id not set")
         }
@@ -249,7 +249,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     solanaTx, 
                     {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
+                        maxRetries: BigInt(envConfig().timeConfig.retry.retries),
                     }
                 )
                 this.logger.verbose(
@@ -270,7 +270,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         {
             positionId,
         }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {

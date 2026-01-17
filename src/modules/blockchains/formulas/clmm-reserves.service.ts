@@ -62,7 +62,7 @@ export class ClmmReservesFormulaService {
             liquidity,
             priceDiv = Q64,
         }: CalculateLiquidityTokenDeltasParams
-    ): CalculateLiquidityTokenDeltasResponse {
+    ): CalculateLiquidityTokenDeltasResult {
         // Case 1: below range
         if (tickCurrent.lessThan(tickLower)) {
             const deltaA = liquidity
@@ -140,7 +140,7 @@ export interface CalculateLiquidityTokenDeltasParams {
     priceDiv?: typeof Q64 | typeof Q128
 }
 
-export interface CalculateLiquidityTokenDeltasResponse {
+export interface CalculateLiquidityTokenDeltasResult {
     deltaA: BN
     deltaB: BN
 }

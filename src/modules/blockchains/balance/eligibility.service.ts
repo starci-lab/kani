@@ -7,7 +7,7 @@ import {
 import { TokenType } from "@typedefs"
 import { computeDenomination, createEnumType } from "@utils"
 import { AsyncService, DayjsService } from "@modules/mixin"
-import { GetPriceResponse, PythPriceService } from "@modules/blockchains"
+import { GetPriceResult, PythPriceService } from "@modules/blockchains"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
@@ -32,7 +32,7 @@ export class BalanceEligibilityService {
     /**
      * Check whether a price snapshot is stale
      */
-    public isStalePrice(price: GetPriceResponse): boolean {
+    public isStalePrice(price: GetPriceResult): boolean {
         const now = this.dayjsService.now()
         const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
         const ageMs = now.diff(price.snapshotAt, "millisecond")

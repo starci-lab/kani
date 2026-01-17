@@ -24,13 +24,13 @@ import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import { MeteoraOpenPositionActionService } from "./meteora"
 import {
     ConfirmOpenPositionParams,
-    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionResult,
     DlmmLiquidityPoolState,
     ExecuteOpenPositionParams,
-    ExecuteOpenPositionResponse,
+    ExecuteOpenPositionResult,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse
+    PrepareOpenPositionResult
 } from "../interfaces"
 import { BN } from "bn.js"
 import { QuoteRatioService } from "../math"
@@ -313,7 +313,7 @@ export class OpenPositionOrchestratorService {
         if (
             totalBalanceAmountInTarget.lt(
                 new Decimal(
-                    targetToken.minRequiredAmountInTotal || 0,
+                    0,
                 ),
             )
         ) {
@@ -339,7 +339,7 @@ export class OpenPositionOrchestratorService {
                             {
                                 liquidityPool: liquidityPool.id,
                                 bot: bot.id,
-                                executor: envConfig().botExecutor.executorId,
+                                executor: envConfig().executor.id,
                                 type: JobType.OpenPosition,
                                 status: JobStatus.Pending,
                                 leaseId,
@@ -392,7 +392,7 @@ export class OpenPositionOrchestratorService {
             state,
             bot,
         }: PrepareOpenPositionParams,
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
 
         const dex =
@@ -428,7 +428,7 @@ export class OpenPositionOrchestratorService {
      */
     async execute(
         params: ExecuteOpenPositionParams,
-    ): Promise<ExecuteOpenPositionResponse> {
+    ): Promise<ExecuteOpenPositionResult> {
         const _state = params.state as LiquidityPoolState | DlmmLiquidityPoolState
 
         const dex =
@@ -469,7 +469,7 @@ export class OpenPositionOrchestratorService {
      */
     async confirm(
         params: ConfirmOpenPositionParams,
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         const _state = params.state as LiquidityPoolState | DlmmLiquidityPoolState
 
         const dex =

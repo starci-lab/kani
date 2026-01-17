@@ -2,10 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { TokenType } from "@typedefs"
 import {
     FetchBalanceParams,
-    FetchBalanceResponse,
+    FetchBalanceResult,
     IBalanceService,
     PrepareSwapTransactionParams,
-    PrepareSwapTransactionResponse,
+    PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import { 
@@ -80,7 +80,7 @@ export class SolanaBalanceService implements IBalanceService {
             bot,
             tokenId,
         }: FetchBalanceParams
-    ): Promise<FetchBalanceResponse> {
+    ): Promise<FetchBalanceResult> {
         const token = this.primaryMemoryStorageService.tokens.find(
             (token) => token.displayId === tokenId.toString()
         )
@@ -148,8 +148,8 @@ export class SolanaBalanceService implements IBalanceService {
             amountIn,
             estimatedSwappedAmount,
         }: PrepareSwapTransactionParams
-    ): Promise<PrepareSwapTransactionResponse> {
-        const batchQuoteResponse = await this.solanaAggregatorSelectorService.batchQuote({
+    ): Promise<PrepareSwapTransactionResult> {
+        const batchQuoteResult = await this.solanaAggregatorSelectorService.batchQuote({
             tokenIn,
             tokenOut,
             amountIn: amountIn,
@@ -157,18 +157,18 @@ export class SolanaBalanceService implements IBalanceService {
         })
         this.ensureMathService.ensureActualNotAboveExpected({
             expected: estimatedSwappedAmount,
-            actual: batchQuoteResponse.response.amountOut,
+            actual: batchQuoteResult.response.amountOut,
             lowerBound: new Decimal(envConfig().slippage.swap),
         })
         // we fetch the serialized transaction from the aggregator
         const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
             base: {
-                payload: batchQuoteResponse.response.payload,
+                payload: batchQuoteResult.response.payload,
                 tokenIn,
                 tokenOut,
                 accountAddress: bot.accountAddress,
             },
-            aggregatorId: batchQuoteResponse.aggregatorId,
+            aggregatorId: batchQuoteResult.aggregatorId,
         })
         // we decode the serialized transaction
         const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)
@@ -289,7 +289,7 @@ export interface ComputeTargetToQuoteSwapParams {
     quoteBalanceAmount: BN
 }
 
-export interface ComputeTargetToQuoteSwapResponse {
+export interface ComputeTargetToQuoteSwapResult {
     inputAmount: BN
     estimatedOutputAmount: BN
     requiredSwap: boolean

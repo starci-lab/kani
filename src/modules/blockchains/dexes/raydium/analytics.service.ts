@@ -66,7 +66,7 @@ implements OnModuleInit, OnApplicationBootstrap
         const poolAddresses = liquidityPools
             .map((pool) => pool.poolAddress)
             .join(",")
-        const { data } = await this.axios.get<PoolResponse>(
+        const { data } = await this.axios.get<PoolResult>(
             `https://api-v3.raydium.io/pools/info/ids?ids=${poolAddresses}`,
         )
         const promises: Array<Promise<void>> = []
@@ -129,7 +129,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface PoolResponse {
+export interface PoolResult {
   id: string;
   success: boolean;
   data: Array<RaydiumPool>;

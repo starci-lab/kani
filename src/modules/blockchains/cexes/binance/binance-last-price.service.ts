@@ -134,7 +134,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 // update the token prices
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map(async (tokenPrice) => {
-                                        await this.cachePriceUtilsService.updateOracleTokenPrice(
+                                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
                                             {
                                                 tokenId: tokenPrice.tokenId,
                                                 price: tokenPrice.price,

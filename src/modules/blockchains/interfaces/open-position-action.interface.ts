@@ -9,7 +9,7 @@ import { DlmmLiquidityPoolState, LiquidityPoolState, PrepareOpenPositionParams }
 import { SignatureWithBytes } from "@mysten/sui/cryptography"
 import { Dayjs } from "dayjs"
 
-export interface PrepareOpenPositionResponse {
+export interface PrepareOpenPositionResult {
   txHash: string;
   signatureWithBytes?: SignatureWithBytes;
   solanaTx?: SolanaTx;
@@ -37,25 +37,25 @@ export interface ExecuteOpenPositionParams {
     positionId?: string;
 }
 
-export interface ExecuteOpenPositionResponse {
+export interface ExecuteOpenPositionResult {
   positionId: string;
 }
 
 export interface IOpenActionService {
   prepare(
     params: PrepareOpenPositionParams,
-  ): Promise<PrepareOpenPositionResponse>;
+  ): Promise<PrepareOpenPositionResult>;
   // open position
   execute(
     params: ExecuteOpenPositionParams,
-  ): Promise<ExecuteOpenPositionResponse>;
+  ): Promise<ExecuteOpenPositionResult>;
   // confirm open position
   confirm(
     params: ConfirmOpenPositionParams,
-  ): Promise<ConfirmOpenPositionResponse>;
+  ): Promise<ConfirmOpenPositionResult>;
 }
 
-export interface CreateExecuteResponse {
+export interface CreateExecuteResult {
   metadata?: unknown;
   // fee amount in target token
   feeAmountTarget: BN;
@@ -84,7 +84,7 @@ export interface ConfirmOpenPositionParams {
   state: LiquidityPoolState | DlmmLiquidityPoolState;
 }
 
-export interface ConfirmOpenPositionResponse {
+export interface ConfirmOpenPositionResult {
   liquidity?: BN;
 }
 
@@ -94,7 +94,7 @@ export interface FeesParams {
   state: LiquidityPoolState | DlmmLiquidityPoolState;
 }
 
-export interface FeesResponse {
+export interface FeesResult {
   tokenA: Decimal;
   tokenB: Decimal;
   snapshotAt: Dayjs;
@@ -103,7 +103,7 @@ export interface FeesResponse {
 export interface IFeesService {
   fees(
     params: FeesParams,
-  ): Promise<FeesResponse>;
+  ): Promise<FeesResult>;
 }
 
 export interface ReservesParams {
@@ -112,7 +112,7 @@ export interface ReservesParams {
   bot: BotSchema;
 }
 
-export interface ReservesResponse {
+export interface ReservesResult {
   tokenA: Decimal;
   tokenB: Decimal;
   snapshotAt: Dayjs;
@@ -121,5 +121,5 @@ export interface ReservesResponse {
 export interface IReservesService {
   reserves(
     params: ReservesParams,
-  ): Promise<ReservesResponse>;
+  ): Promise<ReservesResult>;
 }

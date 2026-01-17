@@ -16,7 +16,7 @@ import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import {
     DlmmLiquidityPoolState,
     LiquidityPoolState,
-    ReservesResponse,
+    ReservesResult,
 } from "../interfaces"
 import { OrcaReservesService } from "./orca"
 import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
@@ -52,7 +52,7 @@ export class ReservesOrchestratorService {
             bot,
             liquidityPoolId,
         }: OrchestrateReservesParams,
-    ): Promise<ReservesResponse> {
+    ): Promise<ReservesResult> {
         const liquidityPool = this.primaryMemoryStorageService
             .liquidityPools
             .find(liquidityPool => liquidityPool.displayId === liquidityPoolId)

@@ -23,7 +23,7 @@ export interface DexOptions {
     }
 }
 
-export interface ActionResponse {
+export interface ActionResult {
     // tx hash returned if the tx is excuted
     txHash?: string
     coinOut?: CoinArgument

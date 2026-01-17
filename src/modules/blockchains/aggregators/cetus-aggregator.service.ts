@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IAggregatorService, QuoteRequest, QuoteResponse, SwapRequest, SwapResponse } from "./aggregator.interface"
+import { IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult } from "./aggregator.interface"
 import { AggregatorClient, RouterDataV3 } from "@cetusprotocol/aggregator-sdk"
 import { PrimaryMemoryStorageService } from "@modules/databases"
 import { RpcExecutorService } from "@modules/blockchains"
@@ -37,8 +37,8 @@ export class CetusAggregatorService implements IAggregatorService {
             tokenIn,
             amountIn,
             tokenOut,
-        }: QuoteRequest
-    ): Promise<QuoteResponse> {
+        }: QuoteParams
+    ): Promise<QuoteResult> {
         const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
             token => token.displayId === tokenIn,
         )
@@ -77,7 +77,7 @@ export class CetusAggregatorService implements IAggregatorService {
         txb,
         inputCoin,
         accountAddress,
-    }: SwapRequest): Promise<SwapResponse> {
+    }: SwapParams): Promise<SwapResult> {
         const _payload = payload as unknown as RouterDataV3 
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,

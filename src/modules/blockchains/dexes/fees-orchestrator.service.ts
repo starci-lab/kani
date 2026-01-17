@@ -15,7 +15,7 @@ import {
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import {
     DlmmLiquidityPoolState,
-    FeesResponse,
+    FeesResult,
     LiquidityPoolState,
 } from "../interfaces"
 import { OrcaFeesService } from "./orca"
@@ -52,7 +52,7 @@ export class FeesOrchestratorService {
             bot,
             liquidityPoolId,
         }: OrchestrateFeesParams,
-    ): Promise<FeesResponse> {
+    ): Promise<FeesResult> {
         const liquidityPool = this.primaryMemoryStorageService
             .liquidityPools
             .find(liquidityPool => liquidityPool.displayId === liquidityPoolId)

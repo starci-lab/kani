@@ -3,11 +3,11 @@ import {
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
-    ExecuteOpenPositionResponse,
+    ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
-    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionResult,
 } from "../../interfaces"
 import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
 import { SignerService } from "../../signers"
@@ -71,7 +71,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             state,
             bot,
         }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
@@ -216,7 +216,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         txHash,
         solanaTx,
         positionId,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         if (!positionId) {
             throw new PositionIdNotSetException("Position id not set")
         }
@@ -271,7 +271,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         {
             positionId,
         }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {

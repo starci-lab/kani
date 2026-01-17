@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import {
     ConfirmOpenPositionParams,
-    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionResult,
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
 } from "../../interfaces"
 import { 
     ClmmPoolUtil,
@@ -36,7 +36,7 @@ import {
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
-import { ExecuteOpenPositionParams, ExecuteOpenPositionResponse } from "../../interfaces"
+import { ExecuteOpenPositionParams, ExecuteOpenPositionResult } from "../../interfaces"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -63,7 +63,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     private readonly privySignService: PrivySignService,
     ) {}
 
-    async confirm({ positionId }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResponse> {
+    async confirm({ positionId }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -89,7 +89,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
 
     private parseAddLiquidityEvent(
         events?: Array<SuiEvent>,
-    ): ParseAddLiquidityEventResponse {
+    ): ParseAddLiquidityEventResult {
         const event = events?.find(event =>
             event.type.includes("::pool::AddLiquidityV2Event"),
         )
@@ -109,7 +109,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             bot,
             state,
         }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState
         if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
             throw new SnapshotBalancesNotSetException("Snapshot balances not set")
@@ -236,7 +236,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         isRetry, // whether to retry the transaction
         txHash, // the tx hash of the open position transaction
         signatureWithBytes, // the signature with bytes of the open position transaction    
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         const _state = state as LiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -303,6 +303,6 @@ export interface AddLiquidityV2Event {
     position: string,
 }
 
-export interface ParseAddLiquidityEventResponse {
+export interface ParseAddLiquidityEventResult {
     positionId: string
 }

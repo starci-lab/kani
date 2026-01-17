@@ -3,11 +3,11 @@ import {
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
-    PrepareOpenPositionResponse,
+    PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
-    ExecuteOpenPositionResponse,
+    ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
-    ConfirmOpenPositionResponse,
+    ConfirmOpenPositionResult,
 } from "../../interfaces"
 import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
@@ -57,7 +57,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
     
     async confirm(
         { positionId }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResponse> {
+    ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -86,7 +86,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             bot,
             state,
         }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResponse> {
+    ): Promise<PrepareOpenPositionResult> {
         const _state = state as LiquidityPoolState
         const txb = new Transaction()
         if (
@@ -189,7 +189,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         isRetry,
         txHash,
         signatureWithBytes,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResponse> {
+    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         const _state = state as LiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -246,7 +246,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
 
     private parseIncreaseLiquidityEvent(
         events?: Array<SuiEvent>,
-    ): ParseIncreaseLiquidityEventResponse {
+    ): ParseIncreaseLiquidityEventResult {
         const event = events?.find((event) =>
             event.type.includes("::position_manager::IncreaseLiquidity"),
         )
@@ -271,6 +271,6 @@ interface IncreaseLiquidityEvent {
     sender: string
 }
 
-interface ParseIncreaseLiquidityEventResponse {
+interface ParseIncreaseLiquidityEventResult {
     positionId: string
 }

@@ -61,7 +61,7 @@ implements OnModuleInit, OnApplicationBootstrap
             return
         }
         const poolAddresses = liquidityPools.map((liquidityPool) => liquidityPool.poolAddress).join(",")
-        const { data } = await this.axios.get<WhirlpoolPoolResponse>(
+        const { data } = await this.axios.get<WhirlpoolPoolResult>(
             `https://api.orca.so/v2/solana/pools?addresses=${poolAddresses}`,
         )
         const promises: Array<Promise<void>> = []
@@ -126,7 +126,7 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface WhirlpoolPoolResponse {
+export interface WhirlpoolPoolResult {
     data: Array<WhirlpoolPool>
   }
   

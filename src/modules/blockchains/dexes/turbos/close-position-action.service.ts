@@ -4,7 +4,7 @@ import {
     IClosePositionActionService,
     LiquidityPoolState,
     PrepareClosePositionParams,
-    PrepareClosePositionResponse,
+    PrepareClosePositionResult,
 } from "../../interfaces"
 import { TransactionDataBuilder } from "@mysten/sui/transactions"
 import { SignerService } from "../../signers"
@@ -39,7 +39,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
-    ): Promise<PrepareClosePositionResponse> {
+    ): Promise<PrepareClosePositionResult> {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 bot.id, 
