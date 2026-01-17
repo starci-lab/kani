@@ -1,35 +1,87 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
-import { BotSchema, DexId, InjectPrimaryMongoose, JobSchema, JobStatus, JobType, LiquidityPoolId, LiquidityPoolType, PrimaryMemoryStorageService } from "@modules/databases"
-import { DexNotFoundException, DexNotImplementedException, LiquidityPoolNotFoundException } from "@exceptions"
-import { RaydiumClosePositionActionService } from "./raydium"
-import { OrcaClosePositionActionService } from "./orca"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
-import { MeteoraClosePositionActionService } from "./meteora"
-import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
-import { FlowXClosePositionActionService } from "./flowx"
-import { CetusClosePositionActionService } from "./cetus"
-import { TurbosClosePositionActionService } from "./turbos"
-import { MomentumClosePositionActionService } from "./momentum"
+import {
+    Inject, Injectable 
+} from "@nestjs/common"
+import {
+    LiquidityPoolStateService 
+} from "./liquidity-pool-state.service"
+import {
+    BotSchema, DexId, InjectPrimaryMongoose, JobSchema, JobStatus, JobType, LiquidityPoolId, LiquidityPoolType, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    DexNotFoundException, DexNotImplementedException, LiquidityPoolNotFoundException 
+} from "@exceptions"
+import {
+    RaydiumClosePositionActionService 
+} from "./raydium"
+import {
+    OrcaClosePositionActionService 
+} from "./orca"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./dexes.module-definition"
+import {
+    MeteoraClosePositionActionService 
+} from "./meteora"
+import {
+    DlmmLiquidityPoolState, ClmmLiquidityPoolState 
+} from "../interfaces"
+import {
+    FlowXClosePositionActionService 
+} from "./flowx"
+import {
+    CetusClosePositionActionService 
+} from "./cetus"
+import {
+    TurbosClosePositionActionService 
+} from "./turbos"
+import {
+    MomentumClosePositionActionService 
+} from "./momentum"
 import { 
     PrepareClosePositionParams, 
     PrepareClosePositionResult, 
     ExecuteClosePositionParams as ExecuteClosePositionParamsInterface 
 } from "../interfaces"
-import { createObjectId } from "@utils"
-import { InjectQueue } from "@nestjs/bullmq"
-import { bullData, BullQueueName } from "@modules/bullmq"
-import { Queue } from "bullmq"
-import { ClosePositionPayload } from "../types"
-import { v4 } from "uuid"
-import { Connection } from "mongoose"
-import { envConfig } from "@modules/env"
-import { ExitStrategyEngineOutputService } from "../exit-strategy-engine"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { InjectSuperJson } from "@modules/mixin"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    InjectQueue 
+} from "@nestjs/bullmq"
+import {
+    bullData, BullQueueName 
+} from "@modules/bullmq"
+import {
+    Queue 
+} from "bullmq"
+import {
+    ClosePositionPayload 
+} from "../types"
+import {
+    v4 
+} from "uuid"
+import {
+    Connection 
+} from "mongoose"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    ExitStrategyEngineOutputService 
+} from "../exit-strategy-engine"
+import {
+    InjectWinston, WinstonLog 
+} from "@modules/winston"
+import {
+    Logger as WinstonLogger 
+} from "winston"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
 import SuperJSON from "superjson"
-import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
+import {
+    LeaseKey, LeaseService, getLeaseKey 
+} from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -68,7 +120,8 @@ export class ClosePositionOrchestratorService {
          * Prevent concurrent actions on the same bot.
          */
         const lease = this.leaseService.lease(
-            getLeaseKey(LeaseKey.Action, bot.id),
+            getLeaseKey(LeaseKey.Action,
+                bot.id),
         )
         if (lease.isLocked()) {
             return
@@ -88,7 +141,7 @@ export class ClosePositionOrchestratorService {
         /**
          * Retrieve the liquidity pool
          */
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
             liquidityPool => liquidityPool.displayId === liquidityPoolId,
         )
         if (!liquidityPool) {
@@ -98,7 +151,7 @@ export class ClosePositionOrchestratorService {
          * Fetch latest liquidity pool state
          * (DLMM and non-DLMM pools have different state handlers)
          */
-        let state: LiquidityPoolState | DlmmLiquidityPoolState
+        let state: ClmmLiquidityPoolState | DlmmLiquidityPoolState
         if (liquidityPool.type === LiquidityPoolType.Dlmm) {
             state = await this.liquidityPoolStateService.getDlmmState(liquidityPoolId)
         } else {
@@ -126,7 +179,8 @@ export class ClosePositionOrchestratorService {
         })
         if (!willExit) {
             this.logger.debug(
-                WinstonLog.ClosePositionNotExitable, {
+                WinstonLog.ClosePositionNotExitable,
+                {
                     botId: bot.id,
                     liquidityPoolId,
                     reasons,
@@ -173,7 +227,8 @@ export class ClosePositionOrchestratorService {
             * Structured logging for observability.
             */
                 this.logger.verbose(
-                    WinstonLog.ClosePositionEnqueued, {
+                    WinstonLog.ClosePositionEnqueued,
+                    {
                         botId: bot.id,
                         jobId: jobRaw.toJSON().id,
                         liquidityPoolId,
@@ -185,7 +240,8 @@ export class ClosePositionOrchestratorService {
             lease.unlock(leaseId)
             // log the error
             this.logger.error(
-                WinstonLog.ClosePositionEnqueueFailed, {
+                WinstonLog.ClosePositionEnqueueFailed,
+                {
                     botId: bot.id,
                     error: error.message,
                 }

@@ -4,4 +4,5 @@ export enum ErrorSuiObjectName {
     TickLower = "tickLower",
     Position = "position",
     PositionInfo = "positionInfo",
+    PositionNFT = "positionNFT",
 }

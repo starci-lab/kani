@@ -34,6 +34,7 @@ import {
     ErrorSuiObjectName,
     EnsureCalculationException,
     EnsureRangeType,
+    SuiObjectNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import { RpcExecutorService } from "../../clients"
@@ -44,7 +45,7 @@ import { EnsureMathService } from "../../math"
 import { toScaledBN } from "@utils"
 import { AsyncService } from "@modules/mixin"
 import { SuiEvent } from "@mysten/sui/client"
-import { MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosPosition, TurbosSuiObjectPositionNFT } from "./struct"
+import { MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosSuiObjectPositionNFT } from "./struct"
 import { envConfig } from "@modules/env"
 import { PrivySignService } from "@modules/privy"
         
@@ -69,19 +70,29 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
-                const positionNft = await suiClient.getObject({
+                const positionNftObjectInfo = await suiClient.getObject({
                     id: positionId,
                     options: {
                         showContent: true,
                     }
                 })
-                if (!positionNft) {
-                    throw new PositionNotFoundException("Position not found")
+                if (!positionNftObjectInfo) {
+                    throw new SuiObjectNotFoundException({
+                        name: ErrorSuiObjectName.PositionNFT,
+                        id: positionId,
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 }
-                if (positionNft?.data?.content?.dataType !== "moveObject") {
-                    throw new PositionInvalidTypeException("Position is not a move object")
+                if (positionNftObjectInfo?.data?.content?.dataType !== "moveObject") {
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.PositionNFT,
+                        id: positionId,
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 }
-                const positionNftFields = positionNft.data.content.fields as unknown as TurbosSuiObjectPositionNFT
+                const positionNftFields = positionNftObjectInfo.data.content.fields as unknown as TurbosSuiObjectPositionNFT
                 const turbosPositionNFT = parseTurbosSuiObjectPositionNFT(positionNftFields)
                 const clmmPosition = await suiClient.getObject({
                     id: turbosPositionNFT.positionId,
