@@ -1,6 +1,5 @@
 export * from "./math.module"
 export * from "./tick.service"
-export * from "./zap.service"
 export * from "./pool.service"
 export * from "./ensure.service"
 export * from "./fee.service"
