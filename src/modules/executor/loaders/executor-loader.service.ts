@@ -64,8 +64,12 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                 .model<ExecutorSchema>(ExecutorSchema.name)
                 .findById(envConfig().executor.id)
             if (!executor) {
-                // exit the process if the executor is not found, turn off the bot
-                process.exit(1)
+                this.logger.error(
+                    WinstonLog.ExecutorNotFound, {
+                        id: envConfig().executor.id,
+                    }
+                )
+                return
             }
             // if the executor is the same as the cached executor, we check if the bots is created or deleted
             if (this.executor && this.executor.id === executor.id) {
@@ -136,6 +140,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                             {
                                 $match: {
                                     operationType: { $in: ["update"] },
+                                    "documentKey._id": new Types.ObjectId(envConfig().executor.id),
                                 },
                             },
                         ],
