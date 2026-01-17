@@ -11,6 +11,7 @@ import { MsService } from "./ms.service"
 import { DayjsService } from "./dayjs.service"
 import { createFakerServiceProvider } from "./faker.providers"
 import { TimeoutService } from "./timout.service"
+import { LokiJSService } from "./lokijs.service"
 
 @Module({})
 export class MixinModule extends ConfigurableModuleClass {
@@ -29,6 +30,7 @@ export class MixinModule extends ConfigurableModuleClass {
             AsyncService,
             MsService,
             TimeoutService,
+            LokiJSService,
         ]
         if (options.loadNextJsQueryService) {
             providers.push(NextJsQueryService)
