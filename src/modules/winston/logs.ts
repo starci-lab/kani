@@ -173,4 +173,12 @@ export enum WinstonLog {
     CleanupDeploymentsError = "Cleanup.Deployments.Error",
     CleanupServicesError = "Cleanup.Services.Error",
     RuntimeInitializationFailed = "Runtime.Initialization.Failed",
+    // Executor
+    ExecutorBotsCreated = "Executor.Bots.Created",
+    ExecutorBotsDeleted = "Executor.Bots.Deleted",
+    ExecutorBotsUpdated = "Executor.Bots.Updated",
+    ExecutorChangeStreamBotCreated = "Executor.Change.Stream.Bot.Created",
+    ExecutorChangeStreamBotDeleted = "Executor.Change.Stream.Bot.Deleted",
+    ExecutorChangeStreamBotUpdated = "Executor.Change.Stream.Bot.Updated",
+    ExecutorChangeStreamExecutorUpdated = "Executor.Change.Stream.Executor.Updated",
 }

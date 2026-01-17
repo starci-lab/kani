@@ -17,18 +17,22 @@ export interface EventMetadata {
 
 }
 export const eventMetadataMap: Record<EventName, EventMetadata> = {
-    [EventName.ExecutorCreated]: {},
+    [EventName.CoordinatorExecutorCreated]: {},
     [EventName.ExecutorLoaded]: {},
     [EventName.ReinitializeBalancers]: {
         kafka: {
             requiredInObserver: true
         }
     },
-    [EventName.ExecutorDeleted]: {},
+    [EventName.CoordinatorExecutorDeleted]: {},
+    [EventName.CoordinatorExecutorUpdated]: {},
     [EventName.UserCreated]: {},
     [EventName.UserDeleted]: {},
     [EventName.BotCreated]: {},
     [EventName.BotDeleted]: {},
+    [EventName.ExecutorBotCreated]: {},
+    [EventName.ExecutorBotDeleted]: {},
+    [EventName.ExecutorBotUpdated]: {},
     [EventName.CoinMarketCapPricesFetched]: {},
     [EventName.CoinGeckoPricesFetched]: {},
     [EventName.PoolsUpdated]: {},

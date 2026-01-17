@@ -16,6 +16,7 @@ import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { Sema } from "async-sema"
+import { WithId } from "@typedefs"
 
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
@@ -91,7 +92,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     const newSnapshot = _.pick(executor, ["version"])
                     return _.isEqual(oldSnapshot, newSnapshot) ? null : id
                 })
-                .filter(Boolean) as Array<string>
+                .filter((id): id is string => Boolean(id))
                 // check if there are created executors
             if (createdExecutorIds.length > 0) {
                 this.logger.verbose(
@@ -129,9 +130,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     .exec()
                 for (const raw of updatedRaws) {
                     const data = model.hydrate(raw).toJSON<ExecutorSchema>()
-                    const event: CoordinatorExecutorUpdatedEvent = {
-                        executor: data,
-                    }
+                    const event: CoordinatorExecutorUpdatedEvent = data
                     this.eventEmitter2.emit(
                         createEventName(
                             EventName.CoordinatorExecutorUpdated, { id: data.id }
@@ -143,8 +142,8 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             // update the executors map snapshot
             this.executors = new Map(
                 newExecutors
-                    .filter((e): e is Partial<ExecutorSchema> & { id: string } => Boolean(e.id))
-                    .map((e) => [e.id!, e]),
+                    .filter((executor): executor is WithId<Partial<ExecutorSchema>> => Boolean(executor.id))
+                    .map((executor) => [executor.id!, executor]),
             )
         } finally {
             if (token) {
@@ -153,12 +152,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         }
     }
 
-    private async observe() {
+    private observe() {
         const model = this.connection.model<ExecutorSchema>(ExecutorSchema.name)
         // default resume token, it will be updated when a change is detected
         let resumeToken: ResumeToken | null = null
         // run under semaphore
-        await this.retryService.retry(
+        this.retryService.retry(
             {
                 options: {
                     retries: Infinity,
@@ -262,22 +261,24 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                 break
                             }
                             case "update": {
-                                const data = model.hydrate(change.fullDocument).toJSON() as ExecutorSchema
+                                const data = model.hydrate(change.fullDocument).toJSON<ExecutorSchema>() 
                                 this.logger.verbose(
                                     WinstonLog.CoordinatorChangeStreamExecutorUpdated, {
                                         id: data.id,
                                     }
                                 )
-                                // keep local snapshot fresh for update detection in `load()`
-                                const prev = this.executors.get(data.id) ?? { id: data.id }
-                                this.executors.set(data.id, {
-                                    ...prev,
-                                    id: data.id,
-                                    version: data.version,
-                                })
-                                const event: CoordinatorExecutorUpdatedEvent = { executor: data }
+                                const oldSnapshot = _.pick(this.executors.get(data.id), ["version"])
+                                const newSnapshot = _.pick(data, ["version"])
+                                if (_.isEqual(oldSnapshot, newSnapshot)) {
+                                    break
+                                }
+                                this.executors.set(data.id, data)
+                                const event: CoordinatorExecutorUpdatedEvent = data
                                 this.eventEmitter2.emit(
-                                    createEventName(EventName.CoordinatorExecutorUpdated, { id: data.id }),
+                                    createEventName(
+                                        EventName.CoordinatorExecutorUpdated, 
+                                        { id: data.id }
+                                    ),
                                     event,
                                 )
                                 break

@@ -55,7 +55,7 @@ export class RuntimeContextService {
         event?: CoordinatorExecutorUpdatedEvent,
     ) {
         if (event) {
-            this.executor = event.executor
+            this.executor = event
         } else {
             const executor = await this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)

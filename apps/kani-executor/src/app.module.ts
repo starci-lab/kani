@@ -19,7 +19,7 @@ import {
 import { CacheModule } from "@modules/cache"
 import { CryptoModule } from "@modules/crypto"
 import { AggregatorsModule } from "@modules/blockchains"
-import { LeaseModule } from "@modules/lock"
+import { LeaseModule, SemaModule } from "@modules/lock"
 import { 
     TxBuilderModule, 
     ExitStrategyEngineModule, 
@@ -39,6 +39,7 @@ import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
 import { DerivedModule } from "@modules/derived"
 import { KafkaMode } from "@modules/event"
 import { PrivyModule } from "@modules/privy"
+import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
 
 @Module({
     imports: [
@@ -49,10 +50,16 @@ import { PrivyModule } from "@modules/privy"
         SentryModule.register({
             isGlobal: true,
         }),
+        SemaModule.register({
+            isGlobal: true,
+        }),
+        StreamAsyncIteratorModule.register({
+            isGlobal: true,
+        }),
         EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
-            appName: `kani-executor-${envConfig().botExecutor.executorId}`,
+            appName: `Kani Executor ${envConfig().executor.id}`,
             level: WinstonLevel.Verbose,
         }),
         FormulasModule.register({
@@ -129,11 +136,9 @@ import { PrivyModule } from "@modules/privy"
             kafka: {
                 modes: [KafkaMode.Consumer],
                 kafkaTopics: [
-                    EventName.LiquidityPoolsFetched,
+                    EventName.ReinitializeBalancers,
+                    EventName.ClmmLiquidityPoolsFetched,
                     EventName.DlmmLiquidityPoolsFetched,
-                    EventName.WsCexLastPricesUpdated,
-                    EventName.WsCexOrderBookUpdated,
-                    EventName.WsPythLastPricesUpdated,
                 ],
             },
             isGlobal: true,

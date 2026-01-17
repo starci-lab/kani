@@ -22,7 +22,7 @@ import { ScheduleModule } from "@nestjs/schedule"
         EventEmitterModule.forRoot(),
         WinstonModule.register({
             isGlobal: true,
-            appName: "kani-coordinator",
+            appName: "Kani Coordinator",
             level: WinstonLevel.Verbose,
         }),
         ScheduleModule.forRoot(),

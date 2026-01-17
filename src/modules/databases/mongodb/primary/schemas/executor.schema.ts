@@ -1,7 +1,7 @@
 import { Field, ObjectType } from "@nestjs/graphql"
 import { AbstractSchema } from "./abstract"
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { AssignedUserSchema, AssignedUserSchemaClass } from "./assigned-user.schema"
+import { AssignedBotSchema, AssignedBotSchemaClass } from "./assigned-user.schema"
 
 @ObjectType({
     description: "Represents an executor",
@@ -11,9 +11,9 @@ import { AssignedUserSchema, AssignedUserSchemaClass } from "./assigned-user.sch
     collection: "executors",
 })
 export class ExecutorSchema extends AbstractSchema {
-    @Field(() => [AssignedUserSchema], { description: "The assigned users" })
-    @Prop({ type: [AssignedUserSchemaClass], required: true })
-        assignedUsers: Array<AssignedUserSchema>
+    @Field(() => [AssignedBotSchema], { description: "The assigned bots" })
+    @Prop({ type: [AssignedBotSchemaClass], required: true })
+        assignedBots: Array<AssignedBotSchema>
 
     @Field(() => Number, { description: "The user count" })
     @Prop({ type: Number, required: true })

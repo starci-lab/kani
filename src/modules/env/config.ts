@@ -335,6 +335,10 @@ export const envConfig = () => ({
             rebalancing: parseInt(process.env.LOCK_COOLDOWN_REBALANCING || ms("5s").toString(), 10), // 5s
         },
         interval: {
+            executor: {
+                botsLoader: parseInt(process.env.INTERVAL_EXECUTOR_BOTS_LOADER || ms("1 minute").toString(), 10), // 1 minute
+                executorLoader: parseInt(process.env.INTERVAL_EXECUTOR_EXECUTOR_LOADER || ms("1 minute").toString(), 10), // 1 minute
+            },
             coordinator: {
                 executorsLoader: parseInt(process.env.INTERVAL_COORDINATOR_EXECUTORS_LOADER || ms("1 minute").toString(), 10), // 1 minute
                 resourceCleanup: parseInt(process.env.INTERVAL_COORDINATOR_RESOURCE_CLEANUP || ms("10s").toString(), 10), // 10s
@@ -411,8 +415,8 @@ export const envConfig = () => ({
             maxUsers: process.env.CAPACITY_EXECUTOR_MAX_USERS ? parseInt(process.env.CAPACITY_EXECUTOR_MAX_USERS, 10) : 1000,
         },
     },
-    botExecutor: {
-        executorId: process.env.BOT_EXECUTOR_ID || "6956717486b425cf9938c665",
+    executor: {
+        id: process.env.BOT_EXECUTOR_ID || "6956717486b425cf9938c665",
     },
     ports: {
         kaniInterface: process.env.KANI_INTERFACE_PORT ? parseInt(process.env.KANI_INTERFACE_PORT, 10) : 3001,

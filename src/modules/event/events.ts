@@ -1,6 +1,6 @@
 import { FetchedPool } from "@modules/blockchains"
 import { ChainId, Network } from "@typedefs"
-import { CexId, ExecutorSchema, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
+import { BotSchema, CexId, ExecutorSchema, LiquidityPoolId, RpcEjection, TokenId } from "@modules/databases"
 import crypto from "crypto"
 import { DynamicClmmLiquidityPoolInfoCacheResult, DynamicDlmmLiquidityPoolInfoCacheResult } from "@modules/cache"
 
@@ -14,6 +14,9 @@ export enum EventName {
     UserDeleted = "userDeleted",
     BotCreated = "botCreated",
     BotDeleted = "botDeleted",
+    ExecutorBotCreated = "executorBotCreated",
+    ExecutorBotDeleted = "executorBotDeleted",
+    ExecutorBotUpdated = "executorBotUpdated",
     CoinMarketCapPricesFetched = "coinMarketCapPricesFetched",
     CoinGeckoPricesFetched = "coinGeckoPricesFetched",
     PoolsUpdated = "poolsUpdated",
@@ -33,6 +36,7 @@ export enum EventName {
     UpdateActiveBot = "updateActiveBot",
     PositionClosed = "positionClosed",
     PositionOpened = "positionOpened",
+    ExecutorExecutorUpdated = "executorExecutorUpdated",
 }
 
 export const createEventName = (
@@ -111,6 +115,8 @@ export interface BotDeletedEvent {
     id: string
 }
 
+export type ExecutorBotUpdatedEvent = BotSchema
+
 export interface ReinitializeBalancersEvent {
     ejectedRpcs: Array<RpcEjection>
 }
@@ -127,6 +133,5 @@ export interface ExecutorCreatedEvent {
     id: string
 }
 
-export interface CoordinatorExecutorUpdatedEvent {
-    executor: ExecutorSchema
-}
+export type CoordinatorExecutorUpdatedEvent = ExecutorSchema
+export type ExecutorExecutorUpdatedEvent = ExecutorSchema

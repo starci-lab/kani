@@ -12,6 +12,7 @@ export class PythModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
+            createHermesClientProvider(),
             PythOraclePriceService,
             PythPriceService,
             PythUtilsService,
@@ -19,7 +20,6 @@ export class PythModule extends ConfigurableModuleClass {
         ]
         const utilities: Array<Provider> = []
         if (!options.utilitiesOnly) {
-            utilities.push(createHermesClientProvider())
             utilities.push(PythSubscriptionsService)
         }
         return {

@@ -3,15 +3,15 @@ import { AbstractSchema } from "./abstract"
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
 
 @ObjectType({
-    description: "Represents a user assigned to an executor",
+    description: "Represents a bot assigned to an executor",
 })
 @Schema({
     autoCreate: false,
 })
-export class AssignedUserSchema extends AbstractSchema {
-    @Field(() => String, { description: "The user id" })
+export class AssignedBotSchema extends AbstractSchema {
+    @Field(() => String, { description: "The bot id" })
     @Prop({ type: String, required: true })
-        userId: string
+        botId: string
 }
 
-export const AssignedUserSchemaClass = SchemaFactory.createForClass(AssignedUserSchema)
+export const AssignedBotSchemaClass = SchemaFactory.createForClass(AssignedBotSchema)

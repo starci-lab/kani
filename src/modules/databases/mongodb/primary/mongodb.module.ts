@@ -38,8 +38,8 @@ import {
     PositionSchemaClass,
     ExecutorSchema,
     ExecutorSchemaClass,
-    AssignedUserSchemaClass,
-    AssignedUserSchema,
+    AssignedBotSchemaClass,
+    AssignedBotSchema,
     JobSchema,
     JobSchemaClass,
     HistorySchema,
@@ -152,8 +152,8 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         useFactory: () => ExecutorSchemaClass,
                     },
                     {
-                        name: AssignedUserSchema.name,
-                        useFactory: () => AssignedUserSchemaClass,
+                        name: AssignedBotSchema.name,
+                        useFactory: () => AssignedBotSchemaClass,
                     },
                     {
                         name: UserWalletSchema.name,
