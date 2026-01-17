@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
+    ExecuteOpenPositionResult,
     IOpenActionService,
     LiquidityPoolState,
     PrepareOpenPositionParams,
@@ -36,7 +37,7 @@ import {
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
-import { ExecuteOpenPositionParams, ExecuteOpenPositionResult } from "../../interfaces"
+import { ExecuteOpenPositionParams } from "../../interfaces"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
 import { InjectWinston, WinstonLog } from "@modules/winston"
@@ -138,7 +139,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             true,
             false,
             0, // zero slippage
-            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent),
+            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent.toNumber()),
         )
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,

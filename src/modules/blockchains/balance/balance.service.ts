@@ -107,7 +107,7 @@ export class BalanceService implements IBalanceService {
                             bot: bot.id,
                             type: JobType.ReconcileBalance,
                             status: JobStatus.Pending,
-                            executor: envConfig().botExecutor.executorId,
+                            executor: envConfig().executor.id,
                             leaseId,
                         }
                     ])
@@ -220,13 +220,13 @@ export class BalanceService implements IBalanceService {
         const quoteBalanceAmountInTarget = computeDenomination(
             quoteBalanceAmount,
             quoteToken.decimals,
-        ).div(quoteRatioResult.oraclePrice)
+        ).div(quoteRatioResult.relativePrice)
         const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(
             quoteBalanceAmountInTarget,
         )
         if (
             totalBalanceAmountInTarget.lt(
-                new Decimal(targetToken.minRequiredAmount || 0),
+                new Decimal(targetToken.minSwapAmount || 0),
             )
         ) {
             // snapshot the balances and return, since the balance is not enough to swap

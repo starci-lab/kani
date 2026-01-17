@@ -1,5 +1,5 @@
 export enum WinstonLog {
-    ExecutorNotFound = "Executor.NotFound",
+    ExecutorNotFound = "Executor.Not.Found",
     // Coordinator
     EjectRpcFatalError = "Eject.RPC.Fatal.Error",
     ErrorDecryptingJwtSecretKey = "Error.Decrypting.JWT.Secret.Key",

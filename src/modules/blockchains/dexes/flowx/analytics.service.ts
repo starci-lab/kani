@@ -66,7 +66,7 @@ implements OnModuleInit, OnApplicationBootstrap
             return
         }
         const { data } =
-      await this.apolloClient.query<GetClmmPoolDetailRootResponse>({
+      await this.apolloClient.query<GetClmmPoolDetailRootResult>({
           query: gql`
           query GetClmmPoolsDetail($poolIds: String!) {
   getClmmPoolsDetail(poolIds: $poolIds) {

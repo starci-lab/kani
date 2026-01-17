@@ -5,7 +5,7 @@ import { TokenId } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
-import { DayjsService } from "@modules/mixin"
+import { AsyncService, DayjsService } from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException,
     TokenNotFoundException,
@@ -19,6 +19,7 @@ export class PriceService {
         private readonly cachePriceUtilsService: CachePriceUtilsService,
         private readonly dayjsService: DayjsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly asyncService: AsyncService 
     ) {}
 
     /**
@@ -137,8 +138,13 @@ export class PriceService {
     async resolveRelativePrice(
         { tokenAId, tokenBId }: ResolveRelativePriceParams,
     ): Promise<ResolveRelativePriceResult> {
-        const priceA = await this.resolvePrice({ tokenId: tokenAId })
-        const priceB = await this.resolvePrice({ tokenId: tokenBId })
+        const [
+            priceA, 
+            priceB
+        ] = await this.asyncService.allMustDone([
+            this.resolvePrice({ tokenId: tokenAId }),
+            this.resolvePrice({ tokenId: tokenBId }),
+        ])
         const relativePrice = priceA.price.div(priceB.price)
         return {
             price: relativePrice,

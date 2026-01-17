@@ -40,7 +40,6 @@ import {
     createNoopSigner,
     address
 } from "@solana/kit"
-import { envConfig } from "@modules/env"
 import { PrivySignService } from "@modules/privy"
 
 @Injectable()
@@ -156,7 +155,6 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 await sendAndConfirmTransaction(
                     solanaTx, {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
                 this.logger.verbose(
                     WinstonLog.ClosePositionExecuted, {

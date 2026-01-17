@@ -9,7 +9,6 @@ import {
     InvalidPoolTokensException, 
     ActivePositionNotFoundException 
 } from "@exceptions"
-import { PoolRewardInfo } from "../struct"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { LiquidityPoolState } from "../../../interfaces"
 
@@ -62,10 +61,10 @@ export class ClosePositionTxbService {
         })
         txb.transferObjects([coinAOut, coinBOut], txb.pure.address(bot.accountAddress))
 
-        const rewards = state.dynamic.rewards as Array<PoolRewardInfo>
+        const rewards = state.dynamic.rewards
         const rewardCoins: Array<TransactionResult> = []
         for (const reward of rewards) {
-            let rewardCoinType = `0x${reward.rewardCoinType}`
+            let rewardCoinType = reward.tokenAddress
             if (rewardCoinType === "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI") {
                 rewardCoinType = "0x2::sui::SUI"
             }

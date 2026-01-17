@@ -84,7 +84,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                                 action: async () => {
                                     const ids = chunk.join(",")
                                     console.log(ids)
-                                    const response = await this.axios.get<CoinMarketCapTokenPriceResponse>(
+                                    const response = await this.axios.get<CoinMarketCapTokenPriceResult>(
                                         "/v1/cryptocurrency/quotes/latest",
                                         {
                                             params: {
@@ -94,9 +94,6 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                                     )
                                     return response.data
                                 },
-                                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                                delay: envConfig().timeConfig.retry.delay,
-                                factor: envConfig().timeConfig.retry.factor,
                             }
                         )
                         return Object.entries(prices.data || {}).map(([symbol, data]) => ({

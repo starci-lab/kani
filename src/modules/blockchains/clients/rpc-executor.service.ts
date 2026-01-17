@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AsyncService, RetryOptions, RetryService } from "@modules/mixin"
+import { AsyncService, RetryService } from "@modules/mixin"
 import { 
     createSolanaRpc, 
     createSolanaRpcSubscriptions, 
@@ -19,7 +19,6 @@ import { P2CBalancerService } from "@modules/p2c-balancer"
 import { ChainId } from "@typedefs"
 import { RpcAccessType } from "@modules/filesystem"
 import { AbortError } from "p-retry"
-import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 
@@ -125,7 +124,6 @@ export class RpcExecutorService {
     public async withSolanaRpc<TResult = void>({
         callback,
         accessType,
-        options,
     }: WithSolanaRpcParams<TResult>): Promise<TResult> {
         return await this.retryService.retry(
             {
@@ -193,14 +191,6 @@ export class RpcExecutorService {
                                     // if the error is not a solana error, throw the error
                                     throw new AbortError(new SolanaRpcIgnorableError(error?.message))
                                 },
-                                options: {
-                                    ...options,
-                                    retries: options?.retries ?? envConfig().timeConfig.retry.retries,
-                                    minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.minTimeout,
-                                    maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.maxTimeout,
-                                    factor: options?.factor ?? envConfig().timeConfig.retry.factor,
-                                    randomize: options?.randomize ?? envConfig().timeConfig.retry.randomize,
-                                }
                             }
                         )
                     } catch (error) {
@@ -214,14 +204,6 @@ export class RpcExecutorService {
                         }
                         throw error
                     } 
-                },
-                options: {
-                    ...options,
-                    retries: options?.retries ?? envConfig().timeConfig.retry.retries,
-                    minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.minTimeout,
-                    maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.maxTimeout,
-                    factor: options?.factor ?? envConfig().timeConfig.retry.factor,
-                    randomize: options?.randomize ?? envConfig().timeConfig.retry.randomize,
                 }
             })
     }
@@ -253,7 +235,6 @@ export class RpcExecutorService {
     public async withSuiClient<TResult = void>({
         callback,
         accessType,
-        options,
     }: WithSuiClientParams<TResult>): Promise<TResult> {  
         return await this.retryService.retry({
             action: async () => {
@@ -293,13 +274,6 @@ export class RpcExecutorService {
                                 throw new AbortError(new SuiRpcIgnorableError(error?.message))
                             }
                         },
-                        options: options ?? {
-                            retries: envConfig().timeConfig.retry.retries,
-                            minTimeout: envConfig().timeConfig.retry.minTimeout,
-                            maxTimeout: envConfig().timeConfig.retry.maxTimeout,
-                            factor: envConfig().timeConfig.retry.factor,
-                            randomize: envConfig().timeConfig.retry.randomize,
-                        },
                     })
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
@@ -310,20 +284,13 @@ export class RpcExecutorService {
                     }
                     throw error
                 }
-            },
-            options: options ?? {
-                retries: envConfig().timeConfig.retry.retries,
-                minTimeout: envConfig().timeConfig.retry.minTimeout,
-                maxTimeout: envConfig().timeConfig.retry.maxTimeout,
-                factor: envConfig().timeConfig.retry.factor,
-                randomize: envConfig().timeConfig.retry.randomize,
-            },
+            }
         })  
     }   
 }
 
 export type WithSolanaRpcParams<TResult = void> = 
-({
+{
     callback: (params: Omit<WithSolanaRpcCallbackParams, "rpcSubscriptions">) => Promise<TResult>
     accessType: RpcAccessType.Http
 } | {
@@ -332,9 +299,7 @@ export type WithSolanaRpcParams<TResult = void> =
 } | {
     callback: (params: WithSolanaRpcCallbackParams) => Promise<TResult>
     accessType: RpcAccessType.Write
-}) & ({
-    options?: RetryOptions
-})
+}
 
 export interface WithSolanaRpcCallbackParams {
     rpc: Rpc<SolanaRpcApi>
@@ -343,15 +308,13 @@ export interface WithSolanaRpcCallbackParams {
 }
 
 export type WithSuiClientParams<TResult = void> = 
-({
+{
     callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
     accessType: RpcAccessType.Http
 } | {
     callback: (params: WithSuiClientCallbackParams) => Promise<TResult>
     accessType: RpcAccessType.Write
-}) & ({
-    options?: RetryOptions
-})
+}
 
 export interface WithSuiClientCallbackParams {
     suiClient: SuiClient

@@ -20,11 +20,11 @@ export class RetryService {
         return await pRetry(
             action, {
                 ...options,
-                retries: options?.retries ?? envConfig().timeConfig.retry.retries,
-                factor: options?.factor ?? envConfig().timeConfig.retry.factor, // exponential backoff factor
-                minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.minTimeout,
-                maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.maxTimeout,
-                randomize: options?.randomize ?? envConfig().timeConfig.retry.randomize,
+                retries: options?.retries ?? envConfig().timeConfig.retry.base.retries,
+                factor: options?.factor ?? envConfig().timeConfig.retry.base.factor, // exponential backoff factor
+                minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.base.minTimeout,
+                maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.base.maxTimeout,
+                randomize: options?.randomize ?? envConfig().timeConfig.retry.base.randomize,
             }
         )
     }

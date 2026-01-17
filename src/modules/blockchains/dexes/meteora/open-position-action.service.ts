@@ -45,7 +45,6 @@ import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { RpcExecutorService } from "../../clients"
 import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
 import { PrivySignService } from "@modules/privy"
 
 @Injectable()
@@ -205,7 +204,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 await sendAndConfirmTransaction(
                     solanaTx, {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
                 this.logger.verbose(
                     WinstonLog.OpenPositionExecuted, {

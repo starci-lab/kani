@@ -101,6 +101,7 @@ export class TurbosObserverService {
                 tokenAddress: reward.vaultCoinType,
                 emissionPerSecond: reward.emissionsPerSecond,
                 growthGlobal: reward.growthGlobal,
+                vaultAddress: reward.vault,
             })),
             feeGrowthGlobalA: state.feeGrowthGlobalA,
             feeGrowthGlobalB: state.feeGrowthGlobalB,

@@ -249,7 +249,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     solanaTx, 
                     {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.retries),
                     }
                 )
                 this.logger.verbose(

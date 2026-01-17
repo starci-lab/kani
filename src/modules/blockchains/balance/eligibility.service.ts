@@ -7,7 +7,7 @@ import {
 import { TokenType } from "@typedefs"
 import { computeDenomination, createEnumType } from "@utils"
 import { AsyncService, DayjsService } from "@modules/mixin"
-import { GetPriceResult, PythPriceService } from "@modules/blockchains"
+import { PriceService } from "../math"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
@@ -25,19 +25,9 @@ export class BalanceEligibilityService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-        private readonly pythPriceService: PythPriceService,
+        private readonly priceService: PriceService,
         private readonly dayjsService: DayjsService,
     ) { }
-
-    /**
-     * Check whether a price snapshot is stale
-     */
-    public isStalePrice(price: GetPriceResult): boolean {
-        const now = this.dayjsService.now()
-        const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
-        const ageMs = now.diff(price.snapshotAt, "millisecond")
-        return ageMs > maxAgeMs
-    }
 
     /**
      * Evaluate whether a bot has sufficient balance and gas to operate.
@@ -104,21 +94,21 @@ export class BalanceEligibilityService {
                 gasPrice
             ] =
                 await this.asyncService.allMustDone([
-                    this.pythPriceService.getPrice({
+                    this.priceService.resolvePrice({
                         tokenId: targetToken.displayId,
                     }),
-                    this.pythPriceService.getPrice({
+                    this.priceService.resolvePrice({
                         tokenId: quoteToken.displayId,
                     }),
-                    this.pythPriceService.getPrice({
+                    this.priceService.resolvePrice({
                         tokenId: gasToken.displayId,
                     }),
                 ]
                 )
             if (
-                this.isStalePrice(targetPrice) ||
-                this.isStalePrice(quotePrice) ||
-                this.isStalePrice(gasPrice)
+                targetPrice.isStale ||
+                quotePrice.isStale ||
+                gasPrice.isStale
             ) {
                 return {
                     isEligible: false,

@@ -73,7 +73,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                         const prices = await this.retryService.retry(
                             {
                                 action: async () => {
-                                    const response = await this.axios.get<CoingeckoTokenPriceResponse>(
+                                    const response = await this.axios.get<CoingeckoTokenPriceResult>(
                                         "https://api.coingecko.com/api/v3/simple/price",
                                         {
                                             params: {
@@ -84,9 +84,6 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                                     )
                                     return response.data
                                 },
-                                maxRetries: envConfig().timeConfig.retry.maxRetries,
-                                delay: envConfig().timeConfig.retry.delay,
-                                factor: envConfig().timeConfig.retry.factor,
                             }
                         )
                         return Object.entries(prices).map(([coinId, data]) => ({

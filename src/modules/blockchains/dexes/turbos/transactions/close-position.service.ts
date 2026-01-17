@@ -15,7 +15,6 @@ import {
 import { ChainId } from "@typedefs"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { MAX_UINT_64 } from "@utils"
-import { RewardInfo } from "../struct"
 import { deprecatedPoolRewards } from "turbos-clmm-sdk"
 
 @Injectable()
@@ -119,7 +118,7 @@ export class ClosePositionTxbService {
                 txb.object(versionObject),
             ],
         })
-        const rewards = state.dynamic.rewards as Array<RewardInfo>
+        const rewards = state.dynamic.rewards
         for (const [index, reward] of rewards.entries()) {
             if (
                 !deprecatedPoolRewards(state.static.poolAddress, index)
@@ -130,7 +129,7 @@ export class ClosePositionTxbService {
                         tokenA.tokenAddress, 
                         tokenB.tokenAddress, 
                         feeType,
-                        reward.vaultCoinType
+                        reward.tokenAddress
                     ],
                     arguments: [
                         // pool address
@@ -140,7 +139,7 @@ export class ClosePositionTxbService {
                         // position id
                         txb.object(bot.activePosition.positionId),
                         // vault
-                        txb.object(reward.vault),
+                        txb.object(reward.vaultAddress ?? ""),
                         // index
                         txb.pure.u64(index),
                         // amount max

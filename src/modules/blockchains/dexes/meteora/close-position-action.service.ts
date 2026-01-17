@@ -38,7 +38,6 @@ import {
     createNoopSigner,
     address,
 } from "@solana/kit"
-import { envConfig } from "@modules/env"
 import { PrivySignService } from "@modules/privy"
 
 @Injectable()
@@ -153,7 +152,6 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                 await sendAndConfirmTransaction(
                     solanaTx, {
                         commitment: "confirmed",
-                        maxRetries: BigInt(envConfig().timeConfig.retry.maxRetries),
                     })
                 this.logger.verbose(
                     WinstonLog.ClosePositionExecuted, {
