@@ -14,7 +14,7 @@ export class PythUtilsService {
      * @returns The Pyth ids without duplicates
      */
     getPythIds() {
-        const tokens = this.primaryMemoryStorageService.tokens
+        const tokens = this.primaryMemoryStorageService.tokenArray
             .filter(
                 token => !!token.marketListings.find(market => market.id === MarketId.Pyth)
             )
@@ -37,7 +37,7 @@ export class PythUtilsService {
      */
     getPythTokenPrices(tokenPriceData: Array<PythTokenPriceData>): Array<PythTokenPrice> {
         // retrieve the tokens from the primary memory storage service
-        const tokens = this.primaryMemoryStorageService.tokens
+        const tokens = this.primaryMemoryStorageService.tokenArray
         // map the token prices to the Pyth token prices
         return tokens.map(
             token => {

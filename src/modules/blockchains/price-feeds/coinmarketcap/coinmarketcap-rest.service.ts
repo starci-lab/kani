@@ -66,7 +66,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
      */
     async fetchPrices() {
         try {
-            const tokens = this.primaryMemoryStorageService.tokens
+            const tokens = this.primaryMemoryStorageService.tokenArray
                 .filter(
                     token => !!token.marketListings.find(market => market.id === MarketId.CoinMarketCap)
                 )

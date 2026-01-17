@@ -9,7 +9,6 @@ import {
     InvalidPoolTokensException, 
     ActivePositionNotFoundException 
 } from "@exceptions"
-import { Rewarder } from "../struct"
 import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
 import { LiquidityPoolState } from "../../../interfaces"
 
@@ -31,12 +30,8 @@ export class ClosePositionTxbService {
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException("Active position not found")
         }
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString()
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString()
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }
@@ -45,12 +40,12 @@ export class ClosePositionTxbService {
             globalConfigObject,
             rewarderGlobalVaultObject
         } = state.static.metadata as CetusLiquidityPoolMetadata
-        const rewarders = state.dynamic.rewards as Array<Rewarder>
+        const rewarders = state.dynamic.rewards
         for (const rewarder of rewarders) {
             const zeroCoinTxResult = txb.moveCall({
                 target: "0x2::coin::zero",
                 typeArguments: [
-                    rewarder.rewardCoinName
+                    rewarder.tokenAddress
                 ],
             })
             txb.moveCall({
@@ -58,7 +53,7 @@ export class ClosePositionTxbService {
                 typeArguments: [
                     tokenA.tokenAddress,
                     tokenB.tokenAddress,
-                    rewarder.rewardCoinName
+                    rewarder.tokenAddress
                 ],
                 arguments: [
                     txb.object(globalConfigObject),

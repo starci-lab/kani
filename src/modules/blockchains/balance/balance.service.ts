@@ -152,18 +152,14 @@ export class BalanceService implements IBalanceService {
         snapshotQuoteBalanceAmount,
         snapshotGasBalanceAmount,
     }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString(),
-        )
+        const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
         if (!targetToken) {
             throw new TokenNotFoundException("Target token not found")
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString(),
-        )
+        }   
+        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
         if (!quoteToken) {
             throw new TokenNotFoundException("Quote token not found")
-        }
+        }   
         // if you pass the snapshot balances, we will use them instead of fetching the balances from on-chain
         let targetBalanceAmount: BN
         let quoteBalanceAmount: BN

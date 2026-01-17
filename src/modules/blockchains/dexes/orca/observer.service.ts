@@ -50,7 +50,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval().then(() => {
             // observe
-            for (const liquidityPool of this.primaryMemoryStorageService.liquidityPools) {
+            for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolArray) {
                 if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
                 this.observeClmmPool(liquidityPool.displayId)
             }
@@ -60,7 +60,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.primaryMemoryStorageService.liquidityPools) {
+        for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolArray) {
             if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
             promises.push(
                 (
@@ -121,13 +121,12 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         liquidityPoolId: LiquidityPoolId
     ) {
         try {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-                (pool) => pool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool) 
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(createObjectId(liquidityPoolId).toString())
+            if (!liquidityPool) {
                 throw new LiquidityPoolNotFoundException(
                     `Liquidity pool ${liquidityPoolId} not found`
                 )
+            }
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {

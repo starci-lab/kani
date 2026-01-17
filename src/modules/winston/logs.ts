@@ -173,7 +173,8 @@ export enum WinstonLog {
     ServiceDeleted = "Service.Deleted",
     CleanupDeploymentsError = "Cleanup.Deployments.Error",
     CleanupServicesError = "Cleanup.Services.Error",
-    RuntimeInitializationFailed = "Runtime.Initialization.Failed",
+    CoordinatorRuntimeInitializationFailed = "Coordinator.Runtime.Initialization.Failed",
+    ExecutorRuntimeInitializationFailed = "Executor.Runtime.Initialization.Failed",
     // Executor
     ExecutorBotsCreated = "Executor.Bots.Created",
     ExecutorBotsDeleted = "Executor.Bots.Deleted",

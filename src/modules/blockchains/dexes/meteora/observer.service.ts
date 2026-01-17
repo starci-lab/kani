@@ -91,7 +91,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
             rewards: state.reward_infos
                 .filter((reward) => reward.mint.toString() !== "11111111111111111111111111111111") // Filter out empty rewards
                 .map((reward) => ({
-                    tokenAddress: reward.mint.toString(),
+                    tokenAddress: `0x${reward.mint.toString()}`,
                     vault: reward.vault.toString(),
                     funder: reward.funder.toString(),
                     rewardDuration: new BN(reward.reward_duration.toString()),
@@ -187,39 +187,40 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                 )
             }
             await this.retryService.retry({
+                options: {
+                    retries: Infinity,
+                },
                 action: async () => {
-                    await this.rpcExecutorService.withSolanaRpc({
-                        accessType: RpcAccessType.Ws,
-                        callback: async ({ rpcSubscriptions }) => {
-                            const controller = new AbortController()
-                            const accountNotifications = await rpcSubscriptions
-                                .accountNotifications(
-                                    address(liquidityPool.poolAddress),
-                                    {
-                                        commitment: "confirmed",
-                                        encoding: "base64",
-                                    }
-                                )
-                                .subscribe({
-                                    abortSignal: controller.signal,
-                                })
-                            for await (const accountNotification of accountNotifications) {
-                                const state = LbPair.struct.read(
-                                    Buffer.from(
-                                        accountNotification.value?.data.toString(),
-                                        "base64",
-                                    ),
-                                    8,
-                                )
-                                resetTimeout()
-                                await this.handlePoolStateUpdate(liquidityPoolId, state)
-                            }
-                        },
-                        options: {
-                            // retry forever if the rpc is not available
-                            retries: Infinity,
-                        },
-                    })
+                    await this.rpcExecutorService.withSolanaRpc(
+                        {
+                            accessType: RpcAccessType.Ws,
+                            callback: async ({ rpcSubscriptions }) => {
+                                const controller = new AbortController()
+                                const accountNotifications = await rpcSubscriptions
+                                    .accountNotifications(
+                                        address(liquidityPool.poolAddress),
+                                        {
+                                            commitment: "confirmed",
+                                            encoding: "base64",
+                                        }
+                                    )
+                                    .subscribe({
+                                        abortSignal: controller.signal,
+                                    })
+                                for await (const accountNotification of accountNotifications) {
+                                    const state = LbPair.struct.read(
+                                        Buffer.from(
+                                            accountNotification.value?.data.toString(),
+                                            "base64",
+                                        ),
+                                        8,
+                                    )
+                                    resetTimeout()
+                                    await this.handlePoolStateUpdate(liquidityPoolId, state)
+                                }
+                            },
+                        }
+                    )
                 }
             }
             )

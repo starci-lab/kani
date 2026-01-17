@@ -57,7 +57,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
      */
     async fetchPrices() {
         try {
-            const tokens = this.primaryMemoryStorageService.tokens
+            const tokens = this.primaryMemoryStorageService.tokenArray
                 .filter(
                     token => !!token.marketListings.find(market => market.id === MarketId.Coingecko)
                 )

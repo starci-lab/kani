@@ -54,13 +54,17 @@ implements OnModuleInit, OnApplicationBootstrap
 
     private async setBatchPoolAnalytics(liquidityPoolIds: Array<LiquidityPoolId>) {
         // Get the liquidity pool
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPools.filter(
-            (liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId),
-        )
+        const liquidityPools: Array<LiquidityPoolSchema> = []
+        for (const liquidityPoolId of liquidityPoolIds) {
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(createObjectId(liquidityPoolId).toString())
+            if (!liquidityPool) {
+                continue
+            }
+        }
         if (!liquidityPools.length) {
             return
-        }
-        const poolAddresses = liquidityPools.map((liquidityPool) => liquidityPool.poolAddress).join(",")
+        }   
+        const poolAddresses = liquidityPools.map(liquidityPool => liquidityPool.poolAddress).join(",")
         const { data } = await this.axios.get<WhirlpoolPoolResult>(
             `https://api.orca.so/v2/solana/pools?addresses=${poolAddresses}`,
         )

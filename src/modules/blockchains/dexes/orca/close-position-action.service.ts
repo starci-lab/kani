@@ -64,13 +64,11 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 "Active position not found"
             )
         }
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
-        }
+        }   
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,

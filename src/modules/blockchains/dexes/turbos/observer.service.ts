@@ -98,7 +98,7 @@ export class TurbosObserverService {
             liquidity: state.liquidity,
             sqrtPriceX64: state.sqrtPrice,
             rewards: state.rewardInfos.map((reward) => ({
-                tokenAddress: reward.vaultCoinType,
+                tokenAddress: `0x${reward.vaultCoinType}`,
                 emissionPerSecond: reward.emissionsPerSecond,
                 growthGlobal: reward.growthGlobal,
                 vaultAddress: reward.vault,

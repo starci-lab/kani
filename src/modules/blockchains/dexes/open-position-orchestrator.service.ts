@@ -297,7 +297,7 @@ export class OpenPositionOrchestratorService {
             computeDenomination(
                 new BN(bot.snapshotQuoteBalanceAmount || 0),
                 quoteToken.decimals,
-            ).div(quoteRatioResponse.oraclePrice)
+            ).div(quoteRatioResponse.oraclePrice.toNumber())
 
         /**
          * Total effective balance expressed in target token.

@@ -89,7 +89,7 @@ export class RuntimeContextService {
                     maxRetryTime: Infinity,
                     onFailedAttempt: (context) => {
                         this.logger.error(
-                            WinstonLog.RuntimeInitializationFailed, 
+                            WinstonLog.CoordinatorRuntimeInitializationFailed, 
                             { 
                                 error: context.error.message, 
                                 executorId: this.context.id 

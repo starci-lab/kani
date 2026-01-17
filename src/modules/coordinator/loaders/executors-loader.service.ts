@@ -16,14 +16,13 @@ import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
 import { Sema } from "async-sema"
-import { WithId } from "@typedefs"
 
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
     // mutex for loading executors
     private sema!: Sema
     // executors
-    public executors: Map<string, Partial<ExecutorSchema>> = new Map()
+    public executors: Map<string, ExecutorSchema> = new Map()
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -66,13 +65,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 .lean()
                 .exec()
                 // map the executors to a partial executor schema
-            const newExecutors: Array<Partial<ExecutorSchema>> =
-                    executorRaws?.map(
-                        executor => ({
-                            id: executor._id.toString(),
-                            // used for update detection
-                            version: executor.version,
-                        })) ?? []
+            const newExecutors: Array<ExecutorSchema> = executorRaws.map((executor) => executor.toJSON<ExecutorSchema>()) ?? []
             // get the old and new executor ids
             const oldExecutorIds = Array.from(this.executors.keys())
             const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
@@ -142,7 +135,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             // update the executors map snapshot
             this.executors = new Map(
                 newExecutors
-                    .filter((executor): executor is WithId<Partial<ExecutorSchema>> => Boolean(executor.id))
+                    .filter((executor) => Boolean(executor.id))
                     .map((executor) => [executor.id!, executor]),
             )
         } finally {
@@ -242,10 +235,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                     }
                                 )
                                 if (this.executors.has(data.id)) break
-                                this.executors.set(data.id, {
-                                    id: data.id,
-                                    version: data.version,
-                                })
+                                this.executors.set(data.id, data)
                                 this.eventEmitter2.emit(EventName.CoordinatorExecutorCreated, { id: data.id })
                                 break
                             }

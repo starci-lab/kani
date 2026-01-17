@@ -117,8 +117,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }
         const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
         const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === _state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenA.toString())
+        const tokenB = this.primaryMemoryStorageService.tokenMap.get(_state.static.tokenB.toString())
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
         }       

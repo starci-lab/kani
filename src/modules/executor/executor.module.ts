@@ -1,6 +1,8 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./executor.module-definition"
 import { LoadersModule } from "./loaders"
+import { RuntimesModule } from "./runtimes"
+import { BussinessModule } from "./bussiness"
 // import { SubscriptionsModule } from "./subscriptions"
 // import { ProcessorsModule } from "./processors"
 // import { WorkersModule } from "./workers"
@@ -20,6 +22,12 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 //     isGlobal: true,
                 // }),
                 LoadersModule.register({
+                    isGlobal: true,
+                }),
+                RuntimesModule.register({
+                    isGlobal: true,
+                }),
+                BussinessModule.register({
                     isGlobal: true,
                 }),
                 // SubscriptionsModule.register({

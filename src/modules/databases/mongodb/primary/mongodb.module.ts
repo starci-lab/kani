@@ -60,7 +60,6 @@ import { SeedersModule } from "./seeders"
 import { MemoryModule } from "./memory"
 import { CONNECTION_NAME } from "./constants"
 import { normalizeMongoose } from "../plugins"
-import { PrimaryMongooseObserverService } from "./observer.service"
 
 @Module({})
 export class PrimaryMongoDbModule extends ConfigurableModuleClass {
@@ -120,12 +119,8 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                 this.forFeature(),
                 ...extraModules,
             ],
-            providers: [
-                PrimaryMongooseObserverService
-            ],
             exports: [
                 ...extraModules, 
-                PrimaryMongooseObserverService
             ],
         }
     }
