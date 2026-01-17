@@ -213,8 +213,8 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                                     const deletedBots = await this.connection
                                         .model<BotSchema>(BotSchema.name)
                                         .find({ _id: { $in: deletedBotIds.map((id) => new Types.ObjectId(id)) } })
-                                    const jsonDeletedBots = deletedBots?.map((bot) => bot.toJSON<BotSchema>()) ?? []
-                                    const filteredDeletedBots = jsonDeletedBots
+                                    const flattenedDeletedBots = deletedBots?.map((bot) => bot.toJSON<BotSchema>()) ?? []
+                                    const filteredDeletedBots = flattenedDeletedBots
                                         .filter((bot) => Boolean(bot.id) && bot.version === AppVersion.V2)
                                         .map((bot) => ({ id: bot.id }))
                                     // log the deleted bots
