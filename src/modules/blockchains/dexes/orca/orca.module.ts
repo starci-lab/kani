@@ -1,17 +1,33 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orca.module-definition"
-import { OrcaObserverService } from "./observer.service"
-import { OrcaOpenPositionActionService } from "./open-position-action.service"
-import { OrcaClosePositionActionService } from "./close-position-action.service"
-import { OrcaFeesService } from "./fees.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./orca.module-definition"
+import {
+    OrcaObserverService 
+} from "./observer.service"
+import {
+    OrcaOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    OrcaClosePositionActionService 
+} from "./close-position-action.service"
+import {
+    OrcaFeesService 
+} from "./fees.service"
 import { 
     TickArrayService, 
     OpenPositionInstructionService, 
     ClosePositionInstructionService, 
     PositionService 
 } from "./transactions"
-import { OrcaAnalyticsService } from "./analytics.service"
-import { OrcaReservesService } from "./reserves.service"
+import {
+    OrcaAnalyticsService 
+} from "./analytics.service"
+import {
+    OrcaReservesService 
+} from "./reserves.service"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -50,7 +66,8 @@ export class OrcaModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
         ) {
-            providers.push(TickArrayService, OrcaFeesService)
+            providers.push(TickArrayService,
+                OrcaFeesService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

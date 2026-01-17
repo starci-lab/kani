@@ -8,9 +8,15 @@ import {
     u64,
     uniformFixedSizeArray
 } from "@metaplex-foundation/beet"
-import { publicKey } from "@metaplex-foundation/beet-solana"
-import { PublicKey } from "@solana/web3.js"
-import { WhirlpoolRewardInfo } from "./whirlpool-reward-info"
+import {
+    publicKey 
+} from "@metaplex-foundation/beet-solana"
+import {
+    PublicKey 
+} from "@solana/web3.js"
+import {
+    WhirlpoolRewardInfo 
+} from "./whirlpool-reward-info"
 
 export class Whirlpool {
     constructor(
@@ -37,25 +43,45 @@ export class Whirlpool {
 
     static readonly struct = new BeetStruct<Whirlpool>(
         [
-            ["whirlpoolsConfig", publicKey],
-            ["whirlpoolBump", fixedSizeUint8Array(1)],
-            ["tickSpacing", u16],
-            ["feeTierIndexSeed", fixedSizeUint8Array(2)],
-            ["feeRate", u16],
-            ["protocolFeeRate", u16],
-            ["liquidity", u128],
-            ["sqrtPrice", u128],
-            ["tickCurrentIndex", i32],
-            ["protocolFeeOwedA", u64],
-            ["protocolFeeOwedB", u64],
-            ["tokenMintA", publicKey],
-            ["tokenVaultA", publicKey],
-            ["feeGrowthGlobalA", u128],
-            ["tokenMintB", publicKey],
-            ["tokenVaultB", publicKey],
-            ["feeGrowthGlobalB", u128],
-            ["rewardLastUpdatedTimestamp", u64],
-            ["rewardInfos", uniformFixedSizeArray(WhirlpoolRewardInfo.struct, 3)],
+            ["whirlpoolsConfig",
+                publicKey],
+            ["whirlpoolBump",
+                fixedSizeUint8Array(1)],
+            ["tickSpacing",
+                u16],
+            ["feeTierIndexSeed",
+                fixedSizeUint8Array(2)],
+            ["feeRate",
+                u16],
+            ["protocolFeeRate",
+                u16],
+            ["liquidity",
+                u128],
+            ["sqrtPrice",
+                u128],
+            ["tickCurrentIndex",
+                i32],
+            ["protocolFeeOwedA",
+                u64],
+            ["protocolFeeOwedB",
+                u64],
+            ["tokenMintA",
+                publicKey],
+            ["tokenVaultA",
+                publicKey],
+            ["feeGrowthGlobalA",
+                u128],
+            ["tokenMintB",
+                publicKey],
+            ["tokenVaultB",
+                publicKey],
+            ["feeGrowthGlobalB",
+                u128],
+            ["rewardLastUpdatedTimestamp",
+                u64],
+            ["rewardInfos",
+                uniformFixedSizeArray(WhirlpoolRewardInfo.struct,
+                    3)],
         ],
         (args) => new Whirlpool(
             args.whirlpoolsConfig!,

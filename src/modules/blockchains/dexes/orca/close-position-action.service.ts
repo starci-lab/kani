@@ -1,12 +1,16 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
 } from "../../interfaces"
-import { SignerService } from "../../signers"
+import {
+    SignerService 
+} from "../../signers"
 import { 
     AppVersion,
     PrimaryMemoryStorageService
@@ -20,11 +24,16 @@ import {
     TransactionNotExecutedException,
     TransactionNotPreparedException,
 } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { 
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
     pipe,
     setTransactionMessageFeePayerSigner,
     setTransactionMessageLifetimeUsingBlockhash,
@@ -40,7 +49,9 @@ import {
     createNoopSigner,
     address
 } from "@solana/kit"
-import { PrivySignService } from "@modules/privy"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class OrcaClosePositionActionService implements IClosePositionActionService {
@@ -50,24 +61,28 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: winstonLogger,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
-            )
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
-        const tokenA = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokenMap.get(state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString()
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString()
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }   
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
@@ -78,17 +93,23 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                    (tx) => appendTransactionMessageInstructions(instructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    createTransactionMessage({
+                        version: 0 
+                    }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                        tx),
+                    (tx) => appendTransactionMessageInstructions(instructions,
+                        tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                        tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
-                            const signedTransaction = await signTransaction([signer.keyPair], transaction)
+                            const signedTransaction = await signTransaction([signer.keyPair],
+                                transaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
                             assertIsSendableTransaction(signedTransaction)
@@ -123,7 +144,11 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
     ): Promise<void> {
 
         if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: state.static.displayId,
+            })
         }
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
@@ -131,17 +156,27 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
-                        { commitment: "confirmed", encoding: "base58" }
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }
                     ).send()
                     if (transaction) {
                         return
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException({
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: state.static.displayId,
+                    })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: state.static.displayId,
+            })
         }
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
@@ -151,11 +186,13 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                     rpcSubscriptions,
                 })
                 await sendAndConfirmTransaction(
-                    solanaTx, {
+                    solanaTx,
+                    {
                         commitment: "confirmed",
                     })
-                this.logger.verbose(
-                    WinstonLog.ClosePositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.ClosePositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash,
                         liquidityPoolId: state.static.displayId,

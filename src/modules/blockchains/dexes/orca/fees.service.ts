@@ -40,7 +40,9 @@ export class OrcaFeesService implements IFeesService {
         const _state = state as ClmmLiquidityPoolState
 
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
 
         const positionId = bot.activePosition.positionId
@@ -134,7 +136,9 @@ export class OrcaFeesService implements IFeesService {
         })
 
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException()
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         // ----------------------------
@@ -180,7 +184,7 @@ export class OrcaFeesService implements IFeesService {
 
         const liquidity = new BN(bot.activePosition.liquidity)
 
-        const { amountA, amountB } = this.clmmFeesFormulaService.computeFees({
+        const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             // -------- Token A --------
             feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
             feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideA.toString()),
@@ -199,8 +203,8 @@ export class OrcaFeesService implements IFeesService {
         })
 
         return {
-            reserveA: computeDenomination(amountA, tokenA.decimals),
-            reserveB: computeDenomination(amountB, tokenB.decimals),
+            feeA: computeDenomination(feeA, tokenA.decimals),
+            feeB: computeDenomination(feeB, tokenB.decimals),
             rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }

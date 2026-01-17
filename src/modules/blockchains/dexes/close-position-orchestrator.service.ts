@@ -142,10 +142,14 @@ export class ClosePositionOrchestratorService {
          * Retrieve the liquidity pool
          */
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
+            {
+                displayId: liquidityPoolId,
+            }
         )
         if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+            throw new LiquidityPoolNotFoundException({
+                displayId: liquidityPoolId,
+            })
         }
         /**
          * Fetch latest liquidity pool state
@@ -160,7 +164,9 @@ export class ClosePositionOrchestratorService {
         /**
          * Validate that the pool's DEX exists
          */
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === state.static.dex.toString())
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
+            id: state.static.dex.toString(),
+        })
         if (!dex) {
             throw new DexNotFoundException("Dex not found")
         }   

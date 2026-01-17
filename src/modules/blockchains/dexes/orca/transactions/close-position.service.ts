@@ -1,27 +1,45 @@
-import { Injectable } from "@nestjs/common"
-import { AccountRole, address, Instruction } from "@solana/kit"
-import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    AccountRole, address, Instruction 
+} from "@solana/kit"
+import {
+    TOKEN_2022_PROGRAM_ADDRESS 
+} from "@solana-program/token-2022"
+import {
+    TOKEN_PROGRAM_ADDRESS 
+} from "@solana-program/token"
 import BN from "bn.js"
-import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
+import {
+    AnchorUtilsService, AtaInstructionService 
+} from "../../../tx-builder"
 import {
     BotSchema,
     PrimaryMemoryStorageService,
     RaydiumLiquidityPoolMetadata,
     OrcaPositionMetadata,
 } from "@modules/databases"
-import { LiquidityPoolState } from "../../../interfaces"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
 } from "@exceptions"
-import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
-import { PositionService } from "./position.service"
-import { TickArrayService } from "./tick-array.service"
+import {
+    u128, u64, BeetArgsStruct 
+} from "@metaplex-foundation/beet"
+import {
+    PositionService 
+} from "./position.service"
+import {
+    TickArrayService 
+} from "./tick-array.service"
 
 export interface CreateCloseInstructionsParams {
   bot: BotSchema;
-  state: LiquidityPoolState;
+  state: ClmmLiquidityPoolState;
 }
 
 @Injectable()
@@ -43,17 +61,21 @@ export class ClosePositionInstructionService {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
         const { ataAddress, nftMintAddress } = bot.activePosition.metadata as OrcaPositionMetadata
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString(),
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Invalid pool tokens")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const { programAddress, tokenVault0, tokenVault1 } = state.static
             .metadata as RaydiumLiquidityPoolMetadata 
@@ -249,18 +271,24 @@ export class ClosePositionInstructionService {
 
 export const ClosePositionArgs = new BeetArgsStruct(
     [
-        ["liquidity", u128],
-        ["amount0Max", u64],
-        ["amount1Max", u64],
+        ["liquidity",
+            u128],
+        ["amount0Max",
+            u64],
+        ["amount1Max",
+            u64],
     ],
     "ClosePositionArgs",
 )
 
 export const DecreaseLiquidityArgs = new BeetArgsStruct(
     [
-        ["liquidityAmount", u128],
-        ["tokenMinA", u64],
-        ["tokenMinB", u64],
+        ["liquidityAmount",
+            u128],
+        ["tokenMinA",
+            u64],
+        ["tokenMinB",
+            u64],
     ],
     "DecreaseLiquidityArgs",
 )

@@ -47,13 +47,6 @@ export class AtaAddressNotSetException extends AbstractException {
     }
 }
 
-/** Thrown when position ID is not set */
-export class PositionIdNotSetException extends AbstractException {
-    constructor(message?: string) {
-        super(message || "Position id not set", "POSITION_ID_NOT_SET_EXCEPTION")
-    }
-}
-
 /** Thrown when position cannot be found */
 export class PositionNotFoundException extends AbstractException {
     constructor(message?: string) {

@@ -1,7 +1,9 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IOpenActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
@@ -9,9 +11,15 @@ import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
 } from "../../interfaces"
-import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
-import { SignerService } from "../../signers"
-import { AppVersion, OrcaPositionMetadata, PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    LiquidityMath 
+} from "@raydium-io/raydium-sdk-v2"
+import {
+    SignerService 
+} from "../../signers"
+import {
+    AppVersion, OrcaPositionMetadata, PrimaryMemoryStorageService 
+} from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
@@ -20,7 +28,9 @@ import {
     PositionIdNotSetException,
     PositionNotFoundException,
 } from "@exceptions"
-import { TickMathService } from "../../math"
+import {
+    TickMathService 
+} from "../../math"
 import { 
     pipe,
     setTransactionMessageFeePayerSigner,
@@ -43,15 +53,28 @@ import BN from "bn.js"
 import { 
     OpenPositionInstructionService 
 } from "./transactions"
-import { adjustSlippage } from "@utils"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
+import {
+    adjustSlippage 
+} from "@utils"
+import {
+    WinstonService 
+} from "@modules/winston"
 import Decimal from "decimal.js"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { Position } from "./beets"
-import { PrivySignService } from "@modules/privy"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Position 
+} from "./beets"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class OrcaOpenPositionActionService implements IOpenActionService {
@@ -62,8 +85,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: winstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
 
     async prepare(
@@ -72,7 +94,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             bot,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const {
             snapshotTargetBalanceAmount,
@@ -80,14 +102,20 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             snapshotGasBalanceAmount,
         } = bot
         if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !snapshotGasBalanceAmount) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+            throw new SnapshotBalancesNotSetException({
+                botId: bot.id,
+            })
         }
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const { 
             tickLower, 
@@ -97,7 +125,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             bot,
         })
         const sqrtPriceCurrentX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            _state.dynamic.tickCurrent,
+            _state.dynamic.tickCurrent.toNumber(),
         )
         const sqrtPriceLowerX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
             tickLower.toNumber(),
@@ -116,7 +144,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 amountB,
             )
         // no slippage for orca
-        const liquidity = adjustSlippage(liquidityRaw, new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment))
+        const liquidity = adjustSlippage(liquidityRaw,
+            new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment))
         const {
             mintKeyPair,
             ataAddress,
@@ -138,10 +167,15 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                    (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    createTransactionMessage({
+                        version: 0 
+                    }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                        tx),
+                    (tx) => appendTransactionMessageInstructions(openPositionInstructions,
+                        tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                        tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
                 if (bot.version === AppVersion.V1) {
@@ -178,7 +212,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     })
                 } else {
                     // partial sign the transaction
-                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair], transaction)
+                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
+                        transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -218,23 +253,32 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         positionId,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         if (!positionId) {
-            throw new PositionIdNotSetException("Position id not set")
+            throw new PositionIdNotSetException({
+                botId: bot.id,
+                positionId: positionId.toString(),
+                liquidityPoolId: _state.static.displayId,
+            })
         }
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
-                        { commitment: "confirmed", encoding: "base58" }
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }
                     ).send()
                     if (transaction) {
                         return {
                             positionId: positionId.toString(),
                         }
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException({
+                        botId: bot.id,
+                        txHash: txHash.toString(),
+                    })
                 },
             })
         }
@@ -249,12 +293,14 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     rpcSubscriptions,
                 })
                 await sendAndConfirmTransaction(
-                    solanaTx, {
+                    solanaTx,
+                    {
                         commitment: "confirmed",
                     }
                 )
                 this.logger.info(
-                    WinstonLog.OpenPositionExecuted, {
+                    WinstonLog.OpenPositionExecuted,
+                    {
                         botId: bot.id,
                         txHash,
                         liquidityPoolId: _state.static.displayId,
@@ -277,13 +323,15 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 
-                    address(positionId), {
+                    address(positionId),
+                    {
                         commitment: "confirmed",
                     })
                 if (!positionInfo || !positionInfo.exists) {
                     throw new PositionNotFoundException("Position not found")
                 }
-                const [positionState] = Position.struct.deserialize(Buffer.from(positionInfo.data), 8)
+                const [positionState] = Position.struct.deserialize(Buffer.from(positionInfo.data),
+                    8)
                 return {
                     liquidity: new BN(positionState.liquidity.toString()),
                 }

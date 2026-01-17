@@ -1,4 +1,6 @@
-import { fixedSizeUint8Array, BeetStruct, u16 } from "@metaplex-foundation/beet"
+import {
+    fixedSizeUint8Array, BeetStruct, u16 
+} from "@metaplex-foundation/beet"
 
 export class WhirlpoolExtensionSegmentPrimary {
     constructor(
@@ -8,10 +10,13 @@ export class WhirlpoolExtensionSegmentPrimary {
 
     static readonly struct = new BeetStruct<WhirlpoolExtensionSegmentPrimary>(
         [
-            ["controlFlags", u16],
-            ["reserved", fixedSizeUint8Array(30)],
+            ["controlFlags",
+                u16],
+            ["reserved",
+                fixedSizeUint8Array(30)],
         ],
-        (args) => new WhirlpoolExtensionSegmentPrimary(args.controlFlags!, args.reserved!),
+        (args) => new WhirlpoolExtensionSegmentPrimary(args.controlFlags!,
+args.reserved!),
         "WhirlpoolExtensionSegmentPrimary"
     )
 }

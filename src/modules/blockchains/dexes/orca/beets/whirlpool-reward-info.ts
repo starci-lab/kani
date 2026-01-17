@@ -1,7 +1,15 @@
-import { bignum } from "@metaplex-foundation/beet"
-import { fixedSizeUint8Array, BeetStruct, u128 } from "@metaplex-foundation/beet"
-import { publicKey } from "@metaplex-foundation/beet-solana"
-import { PublicKey } from "@solana/web3.js"
+import {
+    bignum 
+} from "@metaplex-foundation/beet"
+import {
+    fixedSizeUint8Array, BeetStruct, u128 
+} from "@metaplex-foundation/beet"
+import {
+    publicKey 
+} from "@metaplex-foundation/beet-solana"
+import {
+    PublicKey 
+} from "@solana/web3.js"
 
 export class WhirlpoolRewardInfo {
     constructor(
@@ -14,11 +22,16 @@ export class WhirlpoolRewardInfo {
 
     static readonly struct = new BeetStruct<WhirlpoolRewardInfo>(
         [
-            ["mint", publicKey],
-            ["vault", publicKey],
-            ["extension", fixedSizeUint8Array(32)],
-            ["emissionsPerSecondX64", u128],
-            ["growthGlobalX64", u128],
+            ["mint",
+                publicKey],
+            ["vault",
+                publicKey],
+            ["extension",
+                fixedSizeUint8Array(32)],
+            ["emissionsPerSecondX64",
+                u128],
+            ["growthGlobalX64",
+                u128],
         ],
         (args) => new WhirlpoolRewardInfo(
             args.mint!,

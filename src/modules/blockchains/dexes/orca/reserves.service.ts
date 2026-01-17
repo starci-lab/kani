@@ -6,11 +6,11 @@ import {
     ReservesResult 
 } from "../../interfaces"
 import { PrimaryMemoryStorageService } from "@modules/databases"
-import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
+import { ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
 import { ClmmReservesFormulaService } from "../../formulas"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { Q64 } from "@utils"
+import { computeDenomination, Q64 } from "@utils"
 import { DayjsService } from "@modules/mixin"
 
 @Injectable()
@@ -26,7 +26,14 @@ export class OrcaReservesService implements IReservesService {
             state,
             bot,
         }: ReservesParams): Promise<ReservesResult> {
-
+        if (!bot.activePositionLiquidityPool ||
+            !bot.activePosition ||
+            !bot.activePositionLiquidityPoolType
+        ) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
         const _state = state as ClmmLiquidityPoolState
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
@@ -37,9 +44,9 @@ export class OrcaReservesService implements IReservesService {
         })
 
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException(
-                "Either token A or token B is not in the pool"
-            )
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         const liquidityPool =
@@ -48,12 +55,14 @@ export class OrcaReservesService implements IReservesService {
             })
 
         if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException()
+            throw new LiquidityPoolNotFoundException({
+                displayId: _state.static.displayId,
+            })
         }
 
         const {
-            tokenA: amountA,
-            tokenB: amountB,
+            reserveA,
+            reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
             tickLower: new Decimal(bot.activePosition?.tickLower ?? 0),
             tickUpper: new Decimal(bot.activePosition?.tickUpper ?? 0),
@@ -65,8 +74,8 @@ export class OrcaReservesService implements IReservesService {
         })
 
         return {
-            tokenA: amountA,
-            tokenB: amountB,
+            reserveA,
+            reserveB,
             snapshotAt: this.dayjsService.now(),
         }
     }

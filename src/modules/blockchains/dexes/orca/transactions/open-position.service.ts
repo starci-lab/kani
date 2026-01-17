@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { AnchorUtilsService, AtaInstructionService } from "../../../tx-builder"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    AnchorUtilsService, AtaInstructionService 
+} from "../../../tx-builder"
 import {
     BotSchema,
     OrcaLiquidityPoolMetadata,
@@ -14,14 +18,15 @@ import {
     Instruction,
     KeyPairSigner,
 } from "@solana/kit"
-import { LiquidityPoolState } from "@modules/blockchains"
 import {
-    InvalidPoolTokensException,
+    InvalidPoolTokensException 
 } from "@exceptions"
-import { TickArrayService } from "./tick-array.service"
-import { Decimal } from "decimal.js"
-import BN from "bn.js"
-import { PositionService } from "./position.service"
+import {
+    TickArrayService 
+} from "./tick-array.service"
+import {
+    PositionService 
+} from "./position.service"
 import {
     ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
     TOKEN_PROGRAM_ADDRESS,
@@ -41,11 +46,26 @@ import {
     getTransferInstruction as getTransferInstruction2022,
     TOKEN_2022_PROGRAM_ADDRESS,
 } from "@solana-program/token-2022"
-import { getTransferInstruction } from "@solana-program/token"
-import { TokenType } from "@typedefs"
-import { FeeService } from "../../../math"
-import { METADATA_UPDATE_AUTH_ADDRESS } from "./constants"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    getTransferInstruction 
+} from "@solana-program/token"
+import {
+    TokenType 
+} from "@typedefs"
+import {
+    FeeService 
+} from "../../../math"
+import {
+    METADATA_UPDATE_AUTH_ADDRESS 
+} from "./constants"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    ClmmLiquidityPoolState 
+} from "@modules/blockchains/interfaces"
+import BN from "bn.js"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class OpenPositionInstructionService {
@@ -71,14 +91,16 @@ export class OpenPositionInstructionService {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === state.static.tokenB.toString(),
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Invalid pool tokens")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
         const { feeAmount: feeAmountA, remainingAmount: remainingAmountA } =
@@ -365,7 +387,7 @@ export class OpenPositionInstructionService {
 
 export interface CreateOpenPositionInstructionsParams {
   bot: BotSchema;
-  state: LiquidityPoolState;
+  state: ClmmLiquidityPoolState;
   tickLower: Decimal;
   tickUpper: Decimal;
   liquidity: BN;
@@ -384,18 +406,24 @@ export interface CreateOpenPositionInstructionsResult {
 
 export const OpenPositionWithTokenMetadataExtensionArgs = new BeetArgsStruct(
     [
-        ["tickLowerIndex", i32],
-        ["tickUpperIndex", i32],
-        ["withTokenMetadataExtension", bool],
+        ["tickLowerIndex",
+            i32],
+        ["tickUpperIndex",
+            i32],
+        ["withTokenMetadataExtension",
+            bool],
     ],
     "OpenPositionWithTokenMetadataExtensionArgs",
 )
 
 export const IncreaseLiquidityArgs = new BeetArgsStruct(
     [
-        ["liquidityAmount", u128],
-        ["tokenMaxA", u64],
-        ["tokenMaxB", u64],
+        ["liquidityAmount",
+            u128],
+        ["tokenMaxA",
+            u64],
+        ["tokenMaxB",
+            u64],
     ],
     "IncreaseLiquidityArgs",
 )
