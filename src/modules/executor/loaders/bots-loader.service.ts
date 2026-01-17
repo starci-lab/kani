@@ -55,7 +55,7 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
             ExecutorLoaderService.name,
         )
         this.readinessWatcherFactoryService.createWatcher(BotsLoaderService.name)
-        // init mutex before any load/observe work uses it
+        // init semaphore before any load/observe work uses it
         this.sema = this.semaService.sema(BotsLoaderService.name, 1)
         // load bots
         await this.load()

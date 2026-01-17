@@ -38,7 +38,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
 
     async onModuleInit() {
         this.readinessWatcherFactoryService.createWatcher(ExecutorsLoaderService.name)
-        // init mutex before any load/observe work uses it
+        // init semaphore before any load/observe work uses it
         this.sema = this.semaService.sema(ExecutorsLoaderService.name, 1)
         // load executors
         await this.load()
