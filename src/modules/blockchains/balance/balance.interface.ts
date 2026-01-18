@@ -1,8 +1,14 @@
-import { BotSchema, TokenId, TokenSchema } from "@modules/databases"
+import {
+    BotSchema, TokenId, TokenSchema 
+} from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { SolanaTx } from "../interfaces"
-import { SignatureWithBytes } from "@mysten/sui/cryptography"
+import {
+    SolanaTx 
+} from "../interfaces"
+import {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).

@@ -1,6 +1,12 @@
-import { QuoteParams, QuoteResult, SwapParams, SwapResult } from "./aggregator.interface"
-import { AggregatorId } from "./types"
-import { TransactionObjectArgument, Transaction } from "@mysten/sui/transactions"
+import {
+    QuoteParams, QuoteResult, SwapParams 
+} from "./aggregator.interface"
+import {
+    AggregatorId 
+} from "./types"
+import {
+    TransactionObjectArgument, Transaction 
+} from "@mysten/sui/transactions"
 
 /**
  * Params for batch quote request.

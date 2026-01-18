@@ -68,7 +68,7 @@ export class SuiBalanceService implements IBalanceService {
             aggregatorId,
         })
         if (!txb) {
-            throw new TransactionNotFoundException("Transaction not prepared")
+            throw new TransactionNotFoundException({})
         }
         // transfer the output coin to the bot's account address
         if (outputCoin) {
@@ -133,7 +133,7 @@ export class SuiBalanceService implements IBalanceService {
             })
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotFoundException("Transaction not prepared")
+            throw new TransactionNotFoundException({})
         }
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,

@@ -1,19 +1,41 @@
-import { createJupiterApiClient, QuoteResponse as JupiterQuoteResponse, SwapApi } from "@jup-ag/api"
-import { Injectable, Logger } from "@nestjs/common"
-import { IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult } from "./aggregator.interface"
-import { PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenNotFoundException } from "@exceptions"
+import {
+    createJupiterApiClient, QuoteResponse as JupiterQuoteResponse, SwapApi 
+} from "@jup-ag/api"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult 
+} from "./aggregator.interface"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    AggregatorQuoteFailedException,
+    AggregatorSwapFailedException,
+    TokenNotFoundException 
+} from "@exceptions"
 import BN from "bn.js"
-import { RetryService } from "@modules/mixin"
-import { ChainId } from "@typedefs"
-import { address } from "@solana/kit"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    RetryService 
+} from "@modules/mixin"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    address 
+} from "@solana/kit"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    AggregatorId 
+} from "@typedefs"
 
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 
 @Injectable()
 export class JupiterService implements IAggregatorService {
-    private readonly logger = new Logger(JupiterService.name)
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         // Generic retry helper to re-run any async action with backoff
@@ -42,31 +64,37 @@ export class JupiterService implements IAggregatorService {
      * Reasons for retrying:
      * Jupiter's API may temporarily fail during high TPS windows or RPC congestion.
      */
-    async quote({
-        tokenIn,
-        tokenOut,
-        amountIn,
-    }: QuoteParams): Promise<QuoteResult> {
+    async quote(
+        {
+            tokenIn,
+            tokenOut,
+            amountIn,
+        }: QuoteParams
+    ): Promise<QuoteResult> {
         // We wrap the whole quote flow inside the retry service
-        return await this.retryService.retry({
-            action: async () => {
-                try {
-                    // Resolve token metadata from internal storage
-                    const tokenInInstance = this.primaryMemoryStorageService.tokens.find(
-                        token => token.displayId === tokenIn,
-                    )
+        try {
+            return await this.retryService.retry({
+                action: async () => {
+                // Resolve token metadata from internal storage
+                    const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
+                        displayId: {
+                            $eq: tokenIn,
+                        },
+                    })
                     if (!tokenInInstance) {
-                        throw new TokenNotFoundException(
-                            `Token not found with display id: ${tokenIn}`
-                        )
+                        throw new TokenNotFoundException({
+                            tokenId: tokenIn,
+                        })
                     }
-                    const tokenOutInstance = this.primaryMemoryStorageService.tokens.find(
-                        token => token.displayId === tokenOut,
-                    )
+                    const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
+                        displayId: {
+                            $eq: tokenOut,
+                        },
+                    })
                     if (!tokenOutInstance) {
-                        throw new TokenNotFoundException(
-                            `Token not found with display id: ${tokenOut}`
-                        )
+                        throw new TokenNotFoundException({
+                            tokenId: tokenOut,
+                        })
                     }
                     const client = this.createJupiterClient()
                     // Call Jupiter to fetch the best quote route
@@ -80,22 +108,31 @@ export class JupiterService implements IAggregatorService {
                         amountOut: new BN(quote.outAmount),
                         payload: quote,
                     }
-                } catch (error) {
-                    this.logger.debug(error)
-                    throw error
-                }
-            },
-        })
+                },
+            })
+        } catch (error) {
+            throw new AggregatorQuoteFailedException({
+                aggregatorId: AggregatorId.Jupiter,
+                originalError: error,
+            })
+        }
     }
 
+    /**
+     * Executes a swap transaction using Jupiter.
+     *
+     * This method:
+     * - Creates a Jupiter client
+     * - Builds swap transaction from quote response
+     * - Includes referral fee configuration
+     * - Wraps the request inside a retry mechanism
+     */
     async swap(
         {
             payload,
             accountAddress,
-        }: 
-    SwapParams): 
-    Promise<SwapResult> 
-    {
+        }: SwapParams
+    ): Promise<SwapResult> {
         try {
             const referralTokenAccount = this.jupiterReferralTokenAccountAddress()
             return await this.retryService.retry({
@@ -118,9 +155,10 @@ export class JupiterService implements IAggregatorService {
                 },
             })
         } catch (error) {
-            console.log(error)
-            this.logger.debug(error)
-            throw error
+            throw new AggregatorSwapFailedException({
+                aggregatorId: AggregatorId.Jupiter,
+                originalError: error,
+            })
         }
     }
 
@@ -128,3 +166,4 @@ export class JupiterService implements IAggregatorService {
         return [ChainId.Solana]
     }
 }
+

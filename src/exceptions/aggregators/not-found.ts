@@ -6,21 +6,41 @@
 import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
+import {
+    AggregatorId 
+} from "@typedefs"
 
 /** Thrown when an aggregator cannot be found */
-export interface AggregatorNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    id?: string
-    displayId?: string
+export interface AggregatorAllQuotesFailedExceptionMetadata extends AbstractExceptionMetadata {
+    aggregatorIds: Array<AggregatorId>
 }
-export class AggregatorNotFoundException extends AbstractException {
+export class AggregatorAllQuotesFailedException extends AbstractException {
     constructor(
-        { id, displayId, originalError }: AggregatorNotFoundExceptionMetadata
+        { aggregatorIds, originalError }: AggregatorAllQuotesFailedExceptionMetadata
     ) {
         super(
-            "Aggregator not found",
-            "AGGREGATOR_NOT_FOUND_EXCEPTION",
+            "Aggregator all quotes failed",
+            "AGGREGATOR_ALL_QUOTES_FAILED_EXCEPTION",
             {
-                id, displayId, originalError 
+                aggregatorIds,
+                originalError,
+            }
+        )
+    }
+}
+
+/** Thrown when an aggregator is not implemented */
+export interface AggregatorNotImplementedExceptionMetadata extends AbstractExceptionMetadata {
+    aggregatorId: AggregatorId
+}
+export class AggregatorNotImplementedException extends AbstractException {
+    constructor(
+        { aggregatorId }: AggregatorNotImplementedExceptionMetadata
+    ) {
+        super("Aggregator not implemented",
+            "AGGREGATOR_NOT_IMPLEMENTED_EXCEPTION",
+            {
+                aggregatorId,
             }
         )
     }

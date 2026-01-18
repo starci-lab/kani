@@ -1,9 +1,22 @@
-import { Injectable } from "@nestjs/common"
-import { JupiterService } from "./jupiter.service"
-import { AsyncService } from "@modules/mixin"
-import { AggregatorNotFoundException } from "@exceptions"
-import { ChainId } from "@typedefs"
-import { AggregatorId } from "./types"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    JupiterService 
+} from "./jupiter.service"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    AggregatorAllQuotesFailedException, 
+    AggregatorNotImplementedException
+} from "@exceptions"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    AggregatorId 
+} from "./types"
 import { 
     BatchQuoteParams, 
     BatchQuoteResult, 
@@ -38,7 +51,9 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
             (r): r is BatchQuoteResult => r != null
         )
         if (filteredResults.length === 0) {
-            throw new AggregatorNotFoundException("No aggregator found")
+            throw new AggregatorAllQuotesFailedException({
+                aggregatorIds: results.map((r): AggregatorId => r?.aggregatorId ?? AggregatorId.Jupiter),
+            })
         }
         // Pick the best (largest amountOut)
         const best = filteredResults.reduce((a, b) =>
@@ -50,9 +65,15 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
     async selectorSwap(
         params: SelectorSwapParams
     ): Promise<SelectorSwapResult> {
-        const { payload } = await this.jupiterService.swap(params.base)
-        return {
-            payload,
+        switch (params.aggregatorId) {
+        case AggregatorId.Jupiter: {
+            return await this.jupiterService.swap(params.base)
+        }
+        default: {
+            throw new AggregatorNotImplementedException({
+                aggregatorId: params.aggregatorId,
+            })
+        }
         }
     }
 }   

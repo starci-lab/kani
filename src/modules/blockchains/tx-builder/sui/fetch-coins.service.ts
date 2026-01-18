@@ -55,7 +55,7 @@ export class FetchCoinsService {
         Promise<ResolveCoinAssetResult> 
     {
         if (!coinAssets.length) {
-            throw new CoinAssetNotFoundException("No coin assets provided")
+            throw new CoinAssetNotFoundException({})
         }
         if (coinAssets.length === 1) {
             return {

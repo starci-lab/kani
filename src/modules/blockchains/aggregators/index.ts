@@ -1,6 +1,7 @@
 export * from "./aggregators.module"
 export * from "./aggregator.interface"
 export * from "./aggregator-selector.interface"
+export * from "./jupiter.service"
 export * from "./cetus-aggregator.service"
 export * from "./7k.service"
 export * from "./sui-aggregator-selector.service"

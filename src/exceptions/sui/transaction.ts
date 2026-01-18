@@ -6,106 +6,196 @@
  */
 
 import {
-    AbstractException 
+    AbstractException,
+    AbstractExceptionMetadata,
 } from "../abstract"
+import BN from "bn.js"
 
 /** Thrown when coin argument is not found in transaction */
+export interface CoinArgumentNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    message?: string
+}
+
 export class CoinArgumentNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            message,
+            originalError,
+        }: CoinArgumentNotFoundExceptionMetadata
+    ) {
         super(
-            message || "Coin argument not found",
+            "Coin argument not found",
             "COIN_ARGUMENT_NOT_FOUND_EXCEPTION",
+            {
+                message,
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when coin asset is not found */
 export class CoinAssetNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Coin asset not found",
+            "Coin asset not found",
             "COIN_ASSET_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when quote cannot be found */
+export interface QuoteNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    from: string
+    target: string
+    amount: BN
+}
+
 export class QuoteNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            from,
+            target,
+            amount,
+            originalError,
+        }: QuoteNotFoundExceptionMetadata
+    ) {
         super(
-            message || "Quote not found",
+            "Quote not found",
             "QUOTE_NOT_FOUND_EXCEPTION",
+            {
+                from,
+                target,
+                amount: amount?.toString(),
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when transaction object argument is not found */
 export class TransactionObjectArgumentNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Transaction object argument not found",
+            "Transaction object argument not found",
             "TRANSACTION_OBJECT_ARGUMENT_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when transaction cannot be found */
 export class TransactionNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Transaction not found",
+            "Transaction not found",
             "TRANSACTION_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when transaction simulation fails */
 export class TransactionStimulateFailedException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Transaction stimulate failed",
+            "Transaction stimulate failed",
             "TRANSACTION_STIMULATE_FAILED_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when Sui object data is not found */
 export class SuiObjectDataNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Sui object data not found",
+            "Sui object data not found",
             "SUI_OBJECT_DATA_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when Sui object tick lower is not found */
 export class SuiObjectTickLowerNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Sui object tick lower not found",
+            "Sui object tick lower not found",
             "SUI_OBJECT_TICK_LOWER_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when Sui object tick upper is not found */
 export class SuiObjectTickUpperNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata = {
+        }
+    ) {
         super(
-            message || "Sui object tick upper not found",
+            "Sui object tick upper not found",
             "SUI_OBJECT_TICK_UPPER_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
 
 /** Thrown when Sui object position is not found */
 export class SuiObjectPositionNotFoundException extends AbstractException {
-    constructor(message?: string) {
+    constructor(
+        {
+            originalError,
+        }: AbstractExceptionMetadata
+    ) {
         super(
-            message || "Sui object position not found",
+            "Sui object position not found",
             "SUI_OBJECT_POSITION_NOT_FOUND_EXCEPTION",
+            {
+                originalError,
+            }
         )
     }
 }
-

@@ -1,8 +1,18 @@
-import { ApolloClient, ApolloLink, InMemoryCache } from "@apollo/client"
-import { createRetryLink } from "./retry"
-import { createTimeoutLink } from "./timeout"
-import { createHttpLink } from "./http"
-import { defaultOptions } from "./options"
+import {
+    ApolloClient, ApolloLink, InMemoryCache 
+} from "@apollo/client"
+import {
+    createRetryLink 
+} from "./retry"
+import {
+    createTimeoutLink 
+} from "./timeout"
+import {
+    createHttpLink 
+} from "./http"
+import {
+    defaultOptions 
+} from "./options"
 
 export interface CreateClientParams {
   url: string;
@@ -22,9 +32,14 @@ export const createNoCacheClient = ({
     new ApolloClient({
         cache: new InMemoryCache(),
         link: ApolloLink.from([
-            createRetryLink({ initialRetryDelay, maxRetryDelay, maxRetry }),
+            createRetryLink({
+                initialRetryDelay, maxRetryDelay, maxRetry 
+            }),
             createTimeoutLink(timeoutMs),
-            createHttpLink({ url, withCredentials: false, headers: {} }),
+            createHttpLink({
+                url, withCredentials: false, headers: {
+                } 
+            }),
         ]),
         defaultOptions: defaultOptions,
     })
@@ -39,9 +54,14 @@ export const createNoCacheCredentialClient = ({
     new ApolloClient({
         cache: new InMemoryCache(),
         link: ApolloLink.from([
-            createRetryLink({ initialRetryDelay, maxRetryDelay, maxRetry }),
+            createRetryLink({
+                initialRetryDelay, maxRetryDelay, maxRetry 
+            }),
             createTimeoutLink(timeoutMs),
-            createHttpLink({ url, withCredentials: true, headers: {} }),
+            createHttpLink({
+                url, withCredentials: true, headers: {
+                } 
+            }),
         ]),
         defaultOptions: defaultOptions,
     })
@@ -57,9 +77,14 @@ export const createClient = ({
     new ApolloClient({
         cache: new InMemoryCache(),
         link: ApolloLink.from([
-            createRetryLink({ initialRetryDelay, maxRetryDelay, maxRetry }),
+            createRetryLink({
+                initialRetryDelay, maxRetryDelay, maxRetry 
+            }),
             createTimeoutLink(timeoutMs),
-            createHttpLink({ url, withCredentials: true, headers: {} }),
+            createHttpLink({
+                url, withCredentials: true, headers: {
+                } 
+            }),
         ]),
         defaultOptions: defaultOptions,
     })
