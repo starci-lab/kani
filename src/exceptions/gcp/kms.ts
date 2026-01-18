@@ -33,3 +33,37 @@ export class KmsDecryptionFailedException extends AbstractException {
             })
     }
 }
+
+/** Thrown when KMS encryption key not found */
+export interface KmsKeyNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    kmsKeyName?: string
+}
+export class KmsEncryptionKeyNotFoundException extends AbstractException {
+    constructor(
+        { kmsKeyName }: KmsKeyNotFoundExceptionMetadata
+    ) {
+        super("KMS encryption key not found",
+            "KMS_ENCRYPTION_KEY_NOT_FOUND_EXCEPTION",
+            {
+                kmsKeyName,
+            }
+        )
+    }
+}
+
+/** Thrown when KMS decryption key not found */
+export interface KmsCiphertextNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    kmsKeyName?: string
+}
+export class KmsCiphertextNotFoundException extends AbstractException {
+    constructor(
+        { kmsKeyName }: KmsCiphertextNotFoundExceptionMetadata
+    ) {
+        super("KMS ciphertext not found",
+            "KMS_CIPHERTEXT_NOT_FOUND_EXCEPTION",
+            {
+                kmsKeyName,
+            }
+        )
+    }
+}

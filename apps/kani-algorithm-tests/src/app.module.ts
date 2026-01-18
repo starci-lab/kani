@@ -1,28 +1,67 @@
-import { Module } from "@nestjs/common"
+import {
+    Module
+} from "@nestjs/common"
 //import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
-import { BalanceModule, CexesModule, ClientsModule, CoingeckoModule, CoinMarketCapModule, DexesModule, ExitStrategyEngineModule, FormulasModule, MathModule, SignersModule, SpotModule, TxBuilderModule } from "@modules/blockchains"
-import { EnvModule } from "@modules/env"
-import { FilesystemModule } from "@modules/filesystem"
-import { MixinModule } from "@modules/mixin"
-import { DexId, PrimaryMongoDbModule } from "@modules/databases"
-import { PythModule } from "@modules/blockchains"
-import { CacheModule } from "@modules/cache"
-import { EventModule } from "@modules/event"
-import { EventEmitterModule } from "@nestjs/event-emitter"
-import { WinstonModule, WinstonLevel } from "@modules/winston"
-import { AxiosModule } from "@modules/axios"
-import { RpcTestsService } from "./rpc-tests.service"
-import { P2CBalancerModule } from "@modules/p2c-balancer"
-import { BullModule } from "@modules/bullmq"
-import { LeaseModule } from "@modules/lock"
-import { CryptoModule } from "@modules/crypto"
-import { DerivedModule } from "@modules/derived"
-import { GcpModule } from "@modules/gcp"
-import { PrivyModule } from "@modules/privy"
-import { ApolloClientModule } from "@modules/apollo-client"
-import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
-import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
-import { FeesTestService } from "./fees-test.service"
+import {
+    BalanceModule, CexesModule, ClientsModule, DexesModule, ExitStrategyEngineModule, FormulasModule, MathModule, SignersModule, TxBuilderModule
+} from "@modules/blockchains"
+import {
+    EnvModule
+} from "@modules/env"
+import {
+    FilesystemModule
+} from "@modules/filesystem"
+import {
+    MixinModule
+} from "@modules/mixin"
+import {
+    DexId, PrimaryMongoDbModule
+} from "@modules/databases"
+import {
+    CacheModule
+} from "@modules/cache"
+import {
+    EventModule
+} from "@modules/event"
+import {
+    EventEmitterModule
+} from "@nestjs/event-emitter"
+import {
+    WinstonModule, WinstonLevel
+} from "@modules/winston"
+import {
+    AxiosModule
+} from "@modules/axios"
+import {
+    P2CBalancerModule
+} from "@modules/p2c-balancer"
+import {
+    BullModule
+} from "@modules/bullmq"
+import {
+    LeaseModule
+} from "@modules/lock"
+import {
+    CryptoModule
+} from "@modules/crypto"
+import {
+    DerivedModule
+} from "@modules/derived"
+import {
+    GcpModule
+} from "@modules/gcp"
+import {
+    PrivyModule
+} from "@modules/privy"
+import {
+    ApolloClientModule
+} from "@modules/apollo-client"
+import {
+    StreamAsyncIteratorModule
+} from "@modules/stream-async-iterator"
+import {
+    FeesTestService
+} from "./fees-test.service"
 
 @Module({
     imports: [
@@ -95,9 +134,6 @@ import { FeesTestService } from "./fees-test.service"
             isGlobal: true,
             utilitiesOnly: true,
         }),
-        PythModule.register({
-            isGlobal: true,      
-        }),
         BullModule.forRoot({
             isGlobal: true,
         }),
@@ -117,16 +153,7 @@ import { FeesTestService } from "./fees-test.service"
                 fees: true,
             },
         }),
-        CoingeckoModule.register({
-            isGlobal: true,
-        }),
-        CoinMarketCapModule.register({
-            isGlobal: true,
-        }),
         MixinModule.register({
-            isGlobal: true,
-        }),
-        SpotModule.register({
             isGlobal: true,
         }),
         FormulasModule.register({
@@ -142,4 +169,4 @@ import { FeesTestService } from "./fees-test.service"
         FeesTestService,
     ],
 })
-export class AppModule {}
+export class AppModule { }

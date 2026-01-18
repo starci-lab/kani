@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { Collection } from "lokijs"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Collection 
+} from "lokijs"
 
 @Injectable()
 export class LokiJSService {
@@ -33,8 +37,10 @@ export class LokiJSService {
             return this.getCollection<T>(name)
         }
         // Create and register a new collection
-        const collection = new Collection<T>(name, options)
-        this.collectionMap.set(name, collection)
+        const collection = new Collection<T>(name,
+            options)
+        this.collectionMap.set(name,
+            collection)
         // Return the new collection
         return collection
     }

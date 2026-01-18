@@ -1,6 +1,12 @@
-import { StreamConnection } from "./types"
-import { StreamConnectionAbortedException, StreamConnectionClosedException } from "@exceptions"
-import { Injectable } from "@nestjs/common"
+import {
+    StreamConnection 
+} from "./types"
+import {
+    StreamConnectionAbortedException, StreamConnectionClosedException 
+} from "@exceptions"
+import {
+    Injectable 
+} from "@nestjs/common"
 
 @Injectable()
 export class StreamAsyncIteratorService {
@@ -32,7 +38,9 @@ export class StreamAsyncIteratorService {
                     resolve = null
                 }
                 // define the abort error function
-                const abortError = () => new StreamConnectionAbortedException("Stream connection aborted")
+                const abortError = () => new StreamConnectionAbortedException({
+                    reason: "Stream connection aborted",
+                })
                 // define the onAbort handler
                 const onAbort = () => {
                     closed = true
@@ -46,7 +54,8 @@ export class StreamAsyncIteratorService {
                         onAbort()
                     } else {
                     // add the abort event listener to the signal
-                        signal.addEventListener("abort", onAbort)
+                        signal.addEventListener("abort",
+                            onAbort)
                     }
                 }
                 // on open handler
@@ -108,7 +117,9 @@ export class StreamAsyncIteratorService {
                             // if there is an error then throw it
                             if (error) throw error
                             // throw the connection closed exception
-                            throw new StreamConnectionClosedException("Stream connection closed")
+                            throw new StreamConnectionClosedException({
+                                originalError: new Error("Stream connection closed"),
+                            })
                         }
                         // wait for the next message
                         await new Promise<void>(
@@ -120,7 +131,8 @@ export class StreamAsyncIteratorService {
                     }
                 } finally {
                     // remove the abort event listener from the signal
-                    signal?.removeEventListener("abort", onAbort)
+                    signal?.removeEventListener("abort",
+                        onAbort)
                     // close the connection
                     connection.close()
                 }

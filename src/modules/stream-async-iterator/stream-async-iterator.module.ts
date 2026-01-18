@@ -1,6 +1,12 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./stream-async-iterator.module-definition"
-import { StreamAsyncIteratorService } from "./stream-async-iterator.service"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./stream-async-iterator.module-definition"
+import {
+    StreamAsyncIteratorService 
+} from "./stream-async-iterator.service"
 
 @Module({
     providers: [

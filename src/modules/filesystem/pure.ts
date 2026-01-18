@@ -1,6 +1,12 @@
-import { envConfig } from "@modules/env"
-import { readFileSync } from "fs"
-import { AppConfig, RpcAccessConfigs } from "./types"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    readFileSync 
+} from "fs"
+import {
+    AppConfig, RpcAccessConfigs 
+} from "./types"
 
 /**
  * Pure function to get the crypto key ed sa

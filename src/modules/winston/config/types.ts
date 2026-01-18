@@ -75,3 +75,26 @@ export interface SwapTransactionFailedMessage {
     tokenOut: TokenId
     error: string
 }
+
+/**
+ * Google Drive File Uploaded Message
+ */
+export interface GoogleDriveFileUploadedMessage {
+    fileId: string
+    folderId: string
+    filePath: string
+}
+
+/**
+ * Google Drive File Downloaded Message
+ */
+export interface GoogleDriveFileDownloadedMessage {
+    outputPath: string
+}
+
+/**
+ * Google Drive File Download Error Message
+ */
+export interface GoogleDriveFileDownloadErrorMessage {
+    error: string
+}

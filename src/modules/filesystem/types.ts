@@ -1,4 +1,6 @@
-import { ChainId } from "@typedefs"
+import {
+    ChainId 
+} from "@typedefs"
 
 export enum RpcAccessType {
     Http = "http",

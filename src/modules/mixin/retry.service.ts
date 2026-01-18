@@ -1,6 +1,12 @@
-import { Injectable } from "@nestjs/common"
-import pRetry, { Options } from "p-retry"
-import { envConfig } from "@modules/env"
+import {
+    Injectable 
+} from "@nestjs/common"
+import pRetry, {
+    Options 
+} from "p-retry"
+import {
+    envConfig 
+} from "@modules/env"
 
 export interface RetryParams<T> {
     action: () => Promise<T> | T;
@@ -18,13 +24,14 @@ export class RetryService {
             options,
         }: RetryParams<T>): Promise<T> {
         return await pRetry(
-            action, {
+            action,
+            {
                 ...options,
-                retries: options?.retries ?? envConfig().timeConfig.retry.base.retries,
-                factor: options?.factor ?? envConfig().timeConfig.retry.base.factor, // exponential backoff factor
-                minTimeout: options?.minTimeout ?? envConfig().timeConfig.retry.base.minTimeout,
-                maxTimeout: options?.maxTimeout ?? envConfig().timeConfig.retry.base.maxTimeout,
-                randomize: options?.randomize ?? envConfig().timeConfig.retry.base.randomize,
+                retries: options?.retries ?? envConfig().retry.base.retries,
+                factor: options?.factor ?? envConfig().retry.base.factor, // exponential backoff factor
+                minTimeout: options?.minTimeout ?? envConfig().retry.base.minTimeout,
+                maxTimeout: options?.maxTimeout ?? envConfig().retry.base.maxTimeout,
+                randomize: options?.randomize ?? envConfig().retry.base.randomize,
             }
         )
     }

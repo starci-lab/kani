@@ -31,3 +31,20 @@ export class SecretNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Thrown when secret cannot be created in Secret Manager */
+export interface SecretCreationFailedExceptionMetadata extends AbstractExceptionMetadata {
+    secretName?: string
+}
+export class SecretCreationFailedException extends AbstractException {
+    constructor(
+        { secretName, originalError }: SecretCreationFailedExceptionMetadata
+    ) {
+        super("Secret creation failed",
+            "SECRET_CREATION_FAILED_EXCEPTION",
+            {
+                secretName, originalError,
+            }
+        )
+    }
+}

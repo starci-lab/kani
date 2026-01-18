@@ -1,8 +1,24 @@
-import { Injectable } from "@nestjs/common"
-import { KeyManagementServiceClient } from "@google-cloud/kms"
-import { InjectGcpKmsClient } from "./gpc.decorators"
-import { KmsNotFoundException } from "@exceptions"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    KeyManagementServiceClient 
+} from "@google-cloud/kms"
+import {
+    InjectGcpKmsClient 
+} from "./gpc.decorators"
+import {
+    KmsEncryptionKeyNotFoundException,
+    KmsCiphertextNotFoundException,
+    KmsDecryptionFailedException,
+    KmsEncryptionFailedException
+} from "@exceptions"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    RetryService 
+} from "@modules/mixin"
 
 @Injectable()
 export class GcpKmsService {
@@ -10,32 +26,58 @@ export class GcpKmsService {
     @InjectGcpKmsClient()
     private readonly kmsClient: KeyManagementServiceClient,
     private readonly mountStorageService: MountStorageService,
+    private readonly retryService: RetryService
     ) {}
 
     async encrypt(
         plaintext: string
     ): Promise<Buffer<ArrayBufferLike>> {
-        const rawData = Buffer.from(plaintext, "utf8")
-        const [result] = await this.kmsClient.encrypt({
-            name: this.mountStorageService.appConfig.cryptoKeyName,
-            plaintext: rawData,
-        })
-        if (!result.ciphertext) {
-            throw new KmsNotFoundException("KMS encryption failed: ciphertext is empty")
+        try {
+            return await this.retryService.retry({
+                action: async () => {
+                    const rawData = Buffer.from(plaintext,
+                        "utf8")
+                    const [result] = await this.kmsClient.encrypt({
+                        name: this.mountStorageService.appConfig.cryptoKeyName,
+                        plaintext: rawData,
+                    })
+                    if (!result.ciphertext) {
+                        throw new KmsEncryptionKeyNotFoundException({
+                            kmsKeyName: this.mountStorageService.appConfig.cryptoKeyName,
+                        })
+                    }
+                    return Buffer.from(result.ciphertext)
+                }
+            })
+        } catch (error) {
+            throw new KmsEncryptionFailedException({
+                originalError: error,
+            })
         }
-        return Buffer.from(result.ciphertext)
     }
 
     async decrypt(
         ciphertext: Buffer<ArrayBufferLike>
     ): Promise<string> {
-        const [result] = await this.kmsClient.decrypt({
-            name: this.mountStorageService.appConfig.cryptoKeyName,
-            ciphertext,
-        })
-        if (!result.plaintext) {
-            throw new KmsNotFoundException("KMS decryption failed: plaintext is empty")
+        try {
+            return await this.retryService.retry({
+                action: async () => {
+                    const [result] = await this.kmsClient.decrypt({
+                        name: this.mountStorageService.appConfig.cryptoKeyName,
+                        ciphertext,
+                    })
+                    if (!result.plaintext) {
+                        throw new KmsCiphertextNotFoundException({
+                            kmsKeyName: this.mountStorageService.appConfig.cryptoKeyName,
+                        })
+                    }
+                    return Buffer.from(result.plaintext as Buffer).toString("utf8")
+                }
+            })
+        } catch (error) {
+            throw new KmsDecryptionFailedException({
+                originalError: error,
+            })
         }
-        return Buffer.from(result.plaintext as Buffer).toString("utf8")
     }
 }

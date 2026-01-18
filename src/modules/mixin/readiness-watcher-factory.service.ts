@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import pDefer, { DeferredPromise } from "p-defer"
+import {
+    Injectable 
+} from "@nestjs/common"
+import pDefer, {
+    DeferredPromise 
+} from "p-defer"
 import crypto from "crypto"
 
 export type WatcherState = "pending" | "ready" | "error"
@@ -12,14 +16,16 @@ export interface ReadinessWatcher {
 
 @Injectable()
 export class ReadinessWatcherFactoryService {
-    readonly watchers: Record<string, ReadinessWatcher> = {}
+    readonly watchers: Map<string, ReadinessWatcher> = new Map()
 
     createWatcher(name: string): ReadinessWatcher {
-        if (this.watchers[name]) {
+        if (this.watchers.has(name)) {
             throw new Error(`Watcher '${name}' already exists`)
         }
         const deferred = pDefer<void>()
-        const watcher: ReadinessWatcher = { name, deferred, state: "pending" }
+        const watcher: ReadinessWatcher = {
+            name, deferred, state: "pending" 
+        }
         this.watchers[name] = watcher
         return watcher
     }
@@ -46,11 +52,15 @@ export class ReadinessWatcherFactoryService {
 
     getStatus(): Record<string, WatcherState> {
         return Object.fromEntries(
-            Object.entries(this.watchers).map(([name, watcher]) => [name, watcher.state]),
+            Object.entries(this.watchers).map(([name,
+                watcher]) => [name,
+                watcher.state]),
         )
     }
 }
 
 export const createReadinessWatcherName = (name: string, params: Record<string, string>) => {
-    return crypto.createHash("sha256").update(JSON.stringify({ name, params })).digest("hex")
+    return crypto.createHash("sha256").update(JSON.stringify({
+        name, params 
+    })).digest("hex")
 }

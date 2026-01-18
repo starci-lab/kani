@@ -1,5 +1,9 @@
-import { StreamConnection } from "../types"
-import { EventSource } from "eventsource"
+import {
+    StreamConnection 
+} from "../types"
+import {
+    EventSource 
+} from "eventsource"
 /**
  * EventSourceStreamConnection
  *
@@ -54,7 +58,8 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * @param handler - Callback executed on "open" event
      */
     onOpen(handler: () => void): void {
-        this.eventSource.addEventListener("open", handler)
+        this.eventSource.addEventListener("open",
+            handler)
     }
 
     /**
@@ -66,7 +71,8 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * @param handler - Callback to process incoming SSE message
      */
     onData(handler: (data: MessageEvent) => void): void {
-        this.eventSource.addEventListener("message", handler)
+        this.eventSource.addEventListener("message",
+            handler)
     }
 
     /**
@@ -81,9 +87,10 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      */
     onError(
         handler: (error: Error) => void): void {
-        this.eventSource.addEventListener("error", (error: ErrorEvent) => {
-            handler(new Error(error.message))
-        })
+        this.eventSource.addEventListener("error",
+            (error: ErrorEvent) => {
+                handler(new Error(error.message))
+            })
     }
 
     /**
@@ -97,7 +104,8 @@ export class EventSourceStreamConnection implements StreamConnection<MessageEven
      * @param handler - Callback executed on "close" event
      */
     onClose(handler: () => void): void {
-        this.eventSource.addEventListener("close", handler)
+        this.eventSource.addEventListener("close",
+            handler)
     }
 
     /**

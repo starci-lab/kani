@@ -9,35 +9,22 @@ import {
 } from "../abstract"
 
 /** Thrown when stream connection is aborted */
-export type StreamConnectionAbortedExceptionMetadata = AbstractExceptionMetadata
+export interface StreamConnectionAbortedExceptionMetadata extends AbstractExceptionMetadata {
+    reason: string
+}
 
 export class StreamConnectionAbortedException extends AbstractException {
     constructor(
         {
+            reason,
             originalError,
-        }: AbstractExceptionMetadata = {
-        }
+        }: StreamConnectionAbortedExceptionMetadata
     ) {
         super(
             "Stream connection aborted",
             "STREAM_CONNECTION_ABORTED_EXCEPTION",
             {
-                originalError,
-            }
-        )
-    }
-}
-
-/** @deprecated Use StreamConnectionAbortedException instead */
-export class WsConnectionAbortedException extends StreamConnectionAbortedException {
-    constructor(
-        {
-            originalError,
-        }: AbstractExceptionMetadata = {
-        }
-    ) {
-        super(
-            {
+                reason,
                 originalError,
             }
         )

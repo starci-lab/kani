@@ -7,6 +7,9 @@ import {
 import {
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
+    GoogleDriveFileDownloadedMessage,
+    GoogleDriveFileDownloadErrorMessage,
+    GoogleDriveFileUploadedMessage,
     LiquidityPoolFetchedErrorMessage,
     LiquidityPoolWsErrorMessage,
     OpenPositionTransactionExecutedMessage,
@@ -120,5 +123,29 @@ export const configMap = {
         loki: true,
         messageType: {
         } as SwapTransactionFailedMessage,
+    },
+    // Google Drive File Uploaded
+    [WinstonLog.GoogleDriveFileUploaded]: {
+        name: WinstonLog.GoogleDriveFileUploaded,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as GoogleDriveFileUploadedMessage,
+    },
+    // Google Drive File Downloaded
+    [WinstonLog.GoogleDriveFileDownloaded]: {
+        name: WinstonLog.GoogleDriveFileDownloaded,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as GoogleDriveFileDownloadedMessage,
+    },
+    // Google Drive File Download Error
+    [WinstonLog.GoogleDriveFileDownloadError]: {
+        name: WinstonLog.GoogleDriveFileDownloadError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as GoogleDriveFileDownloadErrorMessage,
     },
 }

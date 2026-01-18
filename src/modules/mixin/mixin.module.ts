@@ -1,19 +1,39 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mixin.module-definition"
-import { RetryService } from "./retry.service"
-import { NextJsQueryService } from "./nextjs-query.serivce"
-import { ReadinessWatcherFactoryService } from "./readiness-watcher-factory.service"
-import { InstanceIdService } from "./instance-id.service"
-import { RandomDelayService } from "./random-delay.service"
-import { createSuperJsonServiceProvider } from "./superjson.providers"
-import { AsyncService } from "./async.service"
-import { MsService } from "./ms.service"
-import { DayjsService } from "./dayjs.service"
-import { createFakerServiceProvider } from "./faker.providers"
-import { TimeoutService } from "./timout.service"
-import { LokiJSService } from "./lokijs.service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./mixin.module-definition"
+import {
+    RetryService 
+} from "./retry.service"
+import {
+    NextJsQueryService 
+} from "./nextjs-query.serivce"
+import {
+    ReadinessWatcherFactoryService 
+} from "./readiness-watcher-factory.service"
+import {
+    InstanceIdService 
+} from "./instance-id.service"
+import {
+    createSuperJsonServiceProvider 
+} from "./superjson.providers"
+import {
+    AsyncService 
+} from "./async.service"
+import {
+    DayjsService 
+} from "./dayjs.service"
+import {
+    createFakerServiceProvider 
+} from "./faker.providers"
+import {
+    LokiJSService 
+} from "./lokijs.service"
 
-@Module({})
+@Module({
+})
 export class MixinModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -23,13 +43,10 @@ export class MixinModule extends ConfigurableModuleClass {
             RetryService,
             ReadinessWatcherFactoryService,
             InstanceIdService,
-            RandomDelayService,
             DayjsService,
             createSuperJsonServiceProvider(),
             createFakerServiceProvider(),
             AsyncService,
-            MsService,
-            TimeoutService,
             LokiJSService,
         ]
         if (options.loadNextJsQueryService) {
@@ -37,7 +54,8 @@ export class MixinModule extends ConfigurableModuleClass {
         }
         return {
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }

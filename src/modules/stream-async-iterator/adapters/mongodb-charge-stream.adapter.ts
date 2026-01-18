@@ -1,7 +1,15 @@
-import { StreamConnection } from "../types"
-import { ChangeStream, ChangeStreamDeleteDocument, ChangeStreamInsertDocument, ChangeStreamOptions, ChangeStreamReplaceDocument, ChangeStreamUpdateDocument } from "mongodb"
-import { AbstractSchema } from "@modules/databases/mongodb/primary/schemas"
-import { Model } from "mongoose"
+import {
+    StreamConnection 
+} from "../types"
+import {
+    ChangeStream, ChangeStreamDeleteDocument, ChangeStreamInsertDocument, ChangeStreamOptions, ChangeStreamReplaceDocument, ChangeStreamUpdateDocument 
+} from "mongodb"
+import {
+    AbstractSchema 
+} from "@modules/databases/mongodb/primary/schemas"
+import {
+    Model 
+} from "mongoose"
 
 type ChangeDoc<TSchema extends AbstractSchema> = ChangeStreamInsertDocument<TSchema> | ChangeStreamUpdateDocument<TSchema> | ChangeStreamDeleteDocument<TSchema> | ChangeStreamReplaceDocument<TSchema>
 /**
@@ -65,7 +73,8 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
             // Create ChangeStream from model
             this.changeStream = changeStream.model.watch(
                 changeStream.pipeline ?? [],
-                changeStream.options ?? {}
+                changeStream.options ?? {
+                }
             ) as ChangeStream<TSchema>
         } else {
             // Use provided ChangeStream
@@ -102,7 +111,8 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * @param handler - Callback to process incoming change data
      */
     onData(handler: (data: ChangeDoc<TSchema>) => void | Promise<void>): void {
-        this.changeStream.on("change", handler)
+        this.changeStream.on("change",
+            handler)
     }
     /**
      * Registers a handler for ChangeStream errors.
@@ -115,9 +125,10 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * @param handler - Callback to handle errors
      */
     onError(handler: (error: Error) => void): void {
-        this.changeStream.on("error", (error: Error) => {
-            handler(error)
-        })
+        this.changeStream.on("error",
+            (error: Error) => {
+                handler(error)
+            })
     }
 
     /**
@@ -132,7 +143,8 @@ export class MongoDBChangeStreamConnection<TSchema extends AbstractSchema> imple
      * @param handler - Callback executed on "close" event
      */
     onClose(handler: () => void): void {
-        this.changeStream.on("close", handler)
+        this.changeStream.on("close",
+            handler)
     }
 
     /**

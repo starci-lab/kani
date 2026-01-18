@@ -1,5 +1,9 @@
-import { StreamConnection } from "../types"
-import WebSocket, { MessageEvent } from "ws"
+import {
+    StreamConnection 
+} from "../types"
+import WebSocket, {
+    MessageEvent 
+} from "ws"
 
 /**
  * WebSocketStreamConnection
@@ -54,7 +58,8 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * @param handler - Callback executed on "open" event
      */
     onOpen(handler: () => void): void {
-        this.ws.on("open", handler)
+        this.ws.on("open",
+            handler)
     }
 
     /**
@@ -66,7 +71,8 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * @param handler - Callback to process incoming data
      */
     onData(handler: (data: MessageEvent) => void): void {
-        this.ws.on("message", handler)
+        this.ws.on("message",
+            handler)
     }
 
     /**
@@ -80,7 +86,8 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * @param handler - Callback to handle errors
      */
     onError(handler: (error: Error) => void): void {
-        this.ws.on("error", handler)
+        this.ws.on("error",
+            handler)
     }
 
     /**
@@ -94,7 +101,8 @@ export class WebSocketStreamConnection implements StreamConnection<MessageEvent>
      * @param handler - Callback executed on "close" event
      */
     onClose(handler: () => void): void {
-        this.ws.on("close", handler)
+        this.ws.on("close",
+            handler)
     }
 
     /**

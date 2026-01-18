@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import dayjs from "dayjs"
-import { MsService } from "./ms.service"
 import ms from "ms"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
@@ -13,16 +14,13 @@ dayjs.extend(isSameOrBefore)
 
 @Injectable()
 export class DayjsService {
-    constructor(
-        private readonly msService: MsService
-    ) {}
-
     now() {
         return dayjs().utc()
     } 
 
     fromMs(msString: ms.StringValue) {
-        return dayjs().utc().add(this.msService.fromString(msString), "millisecond")
+        return dayjs().utc().add(ms(msString),
+            "millisecond")
     }
 
     from(config: dayjs.ConfigType) {
@@ -39,12 +37,14 @@ export class DayjsService {
         // 2. calculate the bucket date according to the local time
         const utcOffset = local.utcOffset()
         // 3. calculate the nearest value of the minus offset
-        const nearestValueOfMinusOffset = new Decimal(local.add(utcOffset, "minute")
+        const nearestValueOfMinusOffset = new Decimal(local.add(utcOffset,
+            "minute")
             .valueOf())
             .div(intervalMs)
             .floor()
             .mul(intervalMs)
         // 4. return the nearest bucket date
-        return this.from(nearestValueOfMinusOffset.toNumber()).subtract(utcOffset, "minute")
+        return this.from(nearestValueOfMinusOffset.toNumber()).subtract(utcOffset,
+            "minute")
     }
 }

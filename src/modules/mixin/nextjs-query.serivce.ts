@@ -1,7 +1,11 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common"
+import {
+    Injectable, OnModuleInit, OnModuleDestroy 
+} from "@nestjs/common"
 import puppeteer from "puppeteer-extra"
 import StealthPlugin from "puppeteer-extra-plugin-stealth"
-import { Browser, Page } from "puppeteer"
+import {
+    Browser, Page 
+} from "puppeteer"
 puppeteer.use(StealthPlugin())
 
 // this is a special service for scraping data from websites that use Next.js
@@ -11,13 +15,15 @@ puppeteer.use(StealthPlugin())
 export class NextJsQueryService implements OnModuleInit, OnModuleDestroy {
     // Store the browser instance
     private browser: Browser
-    private pageMap: Record<string, Page> = {}
+    private pageMap: Record<string, Page> = {
+    }
 
     async onModuleInit() {
         // Initialize the browser
         this.browser = await puppeteer.launch({
             headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
+            args: ["--no-sandbox",
+                "--disable-setuid-sandbox"],
         })
     }
 
@@ -27,17 +33,23 @@ export class NextJsQueryService implements OnModuleInit, OnModuleDestroy {
 
     async addPage(url: string) {
         const page = await this.browser.newPage()
-        await page.goto(url, { waitUntil: "networkidle2" })
+        await page.goto(url,
+            {
+                waitUntil: "networkidle2" 
+            })
         this.pageMap[url] = page
     }
 
     async get<T>(
         baseUrl: string, 
         path: string,
-        params: Record<string, string | number | boolean> = {}
+        params: Record<string, string | number | boolean> = {
+        }
     ): Promise<T> {
         const stringParams = Object.fromEntries(
-            Object.entries(params).map(([key, value]) => [key, value.toString()])
+            Object.entries(params).map(([key,
+                value]) => [key,
+                value.toString()])
         )
         const page = this.pageMap[baseUrl]
         if (!page) throw new Error(`Page for URL "${baseUrl}" not found. Call addPage first.`)
@@ -50,10 +62,13 @@ export class NextJsQueryService implements OnModuleInit, OnModuleDestroy {
             ) => {
                 const res = await fetch(
                     fullPath, 
-                    { method: "GET" }
+                    {
+                        method: "GET" 
+                    }
                 )
                 return res.json()
-            }, fullPath)
+            },
+            fullPath)
         return data
     }
 }

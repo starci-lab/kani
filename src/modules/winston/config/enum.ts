@@ -1,4 +1,7 @@
 export enum WinstonLog {
+    GoogleDriveFileUploaded = "Google.Drive.File.Uploaded",
+    GoogleDriveFileDownloaded = "Google.Drive.File.Downloaded",
+    GoogleDriveFileDownloadError = "Google.Drive.File.Download.Error",
     KafkaConsumerTopicsSubscribed = "Kafka.Consumer.Topics.Subscribed",
     KafkaTopicsCreated = "Kafka.Topics.Created",
     KafkaTopicsDeleted = "Kafka.Topics.Deleted",

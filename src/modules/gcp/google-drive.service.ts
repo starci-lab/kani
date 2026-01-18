@@ -1,20 +1,46 @@
-import { Injectable } from "@nestjs/common"
-import { drive_v3 } from "googleapis/build/src/apis/drive"
-import { GoogleAuth } from "google-auth-library"
-import { GoogleDriveFolderId } from "./types"
-import { MountStorageService } from "@modules/filesystem"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { GoogleDriveFolderIdNotFoundException } from "@exceptions"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    drive_v3,
+    google,
+} from "googleapis"
+import {
+    GoogleAuth 
+} from "google-auth-library"
+import {
+    GoogleDriveFolderName 
+} from "./types"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    GoogleDriveFileDownloadFailedException,
+    GoogleDriveFolderIdNotFoundException,
+} from "@exceptions"
 import path from "path"
-import { Readable } from "stream"
+import {
+    Readable 
+} from "stream"
+import {
+    pipeline,
+} from "stream/promises"
+import {
+    WinstonService,
+    WinstonLog 
+} from "@modules/winston"
+import {
+    envConfig 
+} from "@modules/env"
+import fsPromises from "fs/promises"
 import fs from "fs"
-import { WinstonLog } from "@modules/winston"
-import { envConfig } from "@modules/env"
+import {
+    RetryService,
+} from "@modules/mixin"
 
 export interface UploadFilesParams {
     files: Array<Express.Multer.File>
-    folderEnum: GoogleDriveFolderId
+    folderName: GoogleDriveFolderName
 }
 
 @Injectable()
@@ -23,97 +49,118 @@ export class GoogleDriveService {
     public drive: drive_v3.Drive
     constructor(
         private readonly mountStorageService: MountStorageService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger
+        private readonly winstonService: WinstonService,
+        private readonly retryService: RetryService,
     ) {
         this.auth = new GoogleAuth({
             keyFile: envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
             scopes: ["https://www.googleapis.com/auth/drive"],
         })
-        this.drive = new drive_v3.Drive({ auth: this.auth })
+        this.drive = google.drive({
+            version: "v3",
+            auth: this.auth,
+        })
     }
 
-    private folderEnumToId(folderEnum: GoogleDriveFolderId): string {
-        switch (folderEnum) {
-        case GoogleDriveFolderId.Db:
+    private folderNameToId(folderName: GoogleDriveFolderName): string | undefined {
+        switch (folderName) {
+        case GoogleDriveFolderName.Db:
             return this.mountStorageService.appConfig.drive.folderIds.db
-        case GoogleDriveFolderId.Keys:
+        case GoogleDriveFolderName.Keys:
             return this.mountStorageService.appConfig.drive.folderIds.keys
+        default:
+            return undefined
         }
     }
 
     public async uploadFiles(
         {
             files,
-            folderEnum
+            folderName
         }: UploadFilesParams
     ): Promise<void> {
-        const folderId = this.folderEnumToId(folderEnum)
-        if (!folderId) {
-            throw new GoogleDriveFolderIdNotFoundException("Unknown folder enum", folderEnum)
-        }
-        for (const file of files) {
-            const response = await this.drive.files.create({
-                requestBody: {
-                    name: file.originalname ?? path.basename(file.path),
-                    parents: [folderId],
-                },
-                media: {
-                    mimeType: file.mimetype ?? "application/octet-stream",
-                    body: Readable.from(file.buffer),
-                },
-                supportsAllDrives: true,
-                fields: "id",
-            })
-            this.logger.info(
-                WinstonLog.GoogleDriveFileUploaded, 
-                {
-                    fileId: response.data.id,
-                    folderId,
-                    filePath: file.path,
+        return await this.retryService.retry({
+            action: async () => {
+                const folderId = this.folderNameToId(folderName)
+                if (!folderId) {
+                    throw new GoogleDriveFolderIdNotFoundException({
+                        folderName,
+                    })
                 }
-            )
-        }
+                for (const file of files) {
+                    const body = file.buffer
+                        ? Readable.from(file.buffer)
+                        : file.path
+                            ? fs.createReadStream(file.path)
+                            : undefined
+                    if (!body) {
+                        throw new Error("GoogleDriveService.uploadFiles: file has neither buffer nor path")
+                    }
+                    const response = await this.drive.files.create({
+                        requestBody: {
+                            name: file.originalname ?? path.basename(file.path),
+                            parents: [folderId],
+                        },
+                        media: {
+                            mimeType: file.mimetype ?? "application/octet-stream",
+                            body,
+                        },
+                        supportsAllDrives: true,
+                        fields: "id",
+                    })
+                    this.winstonService.log(
+                        WinstonLog.GoogleDriveFileUploaded, 
+                        {
+                            fileId: response.data.id ?? "",
+                            folderId,
+                            filePath: file.path,
+                        }
+                    )
+                }
+            }
+        })
     }
 
     public async downloadFile(
         id: string,
         outputPath: string
     ): Promise<void> {
-        // get the zipped file  
-        // Get the file content as a stream
-        const response = await this.drive.files.get({
-            fileId: id,
-            alt: "media"
-        }, { responseType: "stream" })
-        // Create the directory if it doesn't exist
-        await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
-        // Create a write stream to save the file
-        const dest = fs.createWriteStream(outputPath)
-        // Return a promise that resolves when download completes
-        return new Promise<void>((resolve, reject) => {
-            // Pipe the download stream to the file
-            (response.data as Readable)
-                .pipe(dest)
-                .on("finish", () => {
-                    this.logger.verbose(
-                        WinstonLog.GoogleDriveFileDownloaded, 
-                        { 
-                            outputPath 
-                        }
+        return await this.retryService.retry({
+            action: async () => {
+                try {
+                    const response = await this.drive.files.get(
+                        {
+                            fileId: id,
+                            alt: "media",
+                            supportsAllDrives: true,
+                        },
+                        {
+                            responseType: "stream",
+                        },
                     )
-                    resolve()
-                })
-                .on("error", (error) => {
-                    this.logger.error(
-                        WinstonLog.GoogleDriveFileDownloadError, 
-                        { 
-                            error: error.message 
-                        }
+                    await fsPromises.mkdir(path.dirname(outputPath),
+                        {
+                            recursive: true,
+                        })
+                    const dest = fs.createWriteStream(outputPath)
+                    await pipeline(
+                        response.data as unknown as NodeJS.ReadableStream,
+                        dest,
                     )
-                    fs.unlink(outputPath, () => {}) // Clean up partial download
-                    reject(error)
-                })
+                    this.winstonService.log(
+                        WinstonLog.GoogleDriveFileDownloaded,
+                        {
+                            outputPath,
+                        },
+                    )
+                } catch (error) {
+                    throw new GoogleDriveFileDownloadFailedException({
+                        fileId: id,
+                        outputPath,
+                        originalError: error,
+                    })
+                }
+            },
         })
     }
 }

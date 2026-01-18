@@ -1,5 +1,9 @@
-import { Inject, Provider } from "@nestjs/common"
-import { Faker, faker } from "@faker-js/faker"
+import {
+    Inject, Provider 
+} from "@nestjs/common"
+import {
+    Faker, faker 
+} from "@faker-js/faker"
 export const FAKER = "FAKER"
 
 export const InjectFaker = () => Inject(FAKER)

@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { RetryService } from "./retry.service"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    RetryService 
+} from "./retry.service"
 
 @Injectable()
 export class AsyncService {
@@ -34,9 +38,11 @@ export class AsyncService {
         promise: Promise<T>
     ): Promise<ResolveTupleResult<T>> {
         try {
-            return [await promise, null]
+            return [await promise,
+                null]
         } catch (error) {
-            return [null, error]
+            return [null,
+                error]
         }
     }
 }
