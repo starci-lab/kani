@@ -1,13 +1,10 @@
 import {
-    TokenId 
-} from "@modules/databases"
-import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 
 /** Thrown when oracle token price is not found */
 export interface AggregatedTokenPriceNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    tokenId: TokenId
+    tokenId: string
 }
 export class AggregatedTokenPriceNotFoundException extends AbstractException {
     constructor(

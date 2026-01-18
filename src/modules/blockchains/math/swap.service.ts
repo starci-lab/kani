@@ -2,9 +2,8 @@ import {
     TargetOperationalGasAmountNotFoundException, 
     TokenNotFoundException,
     MinOperationalGasAmountNotFoundException,
-    GasSwapThresholdAmountNotFoundException,
     AdditionalSwapAmountGasNotFoundException,
-    InsufficientMinGasBalanceAmountException,
+    SwapThresholdGasAmountNotFoundException,
 } from "@exceptions"
 import { 
     PrimaryMemoryStorageService, 
@@ -12,19 +11,28 @@ import {
     TokenId, 
     TokenSchema
 } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { Decimal } from "decimal.js"
-import { computeRaw, toScaledBN, toUnit } from "@utils"
-import { ChainId, TokenType } from "@typedefs"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    computeRaw, toScaledBN, toUnit 
+} from "@utils"
+import {
+    ChainId, TokenType 
+} from "@typedefs"
 import BN from "bn.js"
-import { QuoteRatioService } from "./quote-ratio.service"
-import { GasStatus } from "../types"
-import { 
-    SAFE_QUOTE_RATIO_BELOW, 
-    SAFE_QUOTE_RATIO_ABOVE, 
-    EXPECTED_QUOTE_RATIO_BELOW, 
-    EXPECTED_QUOTE_RATIO_ABOVE 
-} from "./constants"
+import {
+    QuoteRatioService 
+} from "./quote-ratio.service"
+import {
+    GasStatus 
+} from "../types"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class SwapMathService {
@@ -42,14 +50,26 @@ export class SwapMathService {
         }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResult> {
         const targetToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === targetTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: targetTokenId
+                }
+            })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                displayId: targetTokenId
+            })
         }
         const quoteToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === quoteTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: quoteTokenId
+                }
+            })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                displayId: quoteTokenId
+            })
         }
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
             quoteRatio: quoteRatioResult.quoteRatio,
@@ -65,7 +85,7 @@ export class SwapMathService {
         }
         case QuoteRatioStatus.TargetTooHigh: {
             // target is too much, we need to swap from target to quote
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(EXPECTED_QUOTE_RATIO_BELOW)
+            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.expected.below)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResult.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
                 computeRaw(
@@ -88,10 +108,11 @@ export class SwapMathService {
         }
         case QuoteRatioStatus.TargetTooLow: {
             // target is too little, we need to swap from quote to target
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(EXPECTED_QUOTE_RATIO_ABOVE)
+            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.expected.above)
             const excessQuoteInQuote = quoteRatioResult.quoteBalanceAmountInQuote.sub(idealQuoteBalanceInQuote)
             const excessQuoteInQuoteBN = new BN(
-                computeRaw(new Decimal(excessQuoteInQuote), quoteToken.decimals)
+                computeRaw(new Decimal(excessQuoteInQuote),
+                    quoteToken.decimals)
             )
             const estimatedSwappedTargetAmount = toScaledBN(
                 toUnit(targetToken.decimals),
@@ -118,14 +139,26 @@ export class SwapMathService {
         }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResult> {
         const targetToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === targetTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: targetTokenId
+                }
+            })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                displayId: targetTokenId
+            })
         }
         const quoteToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === quoteTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: quoteTokenId
+                }
+            })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                displayId: quoteTokenId
+            })
         }
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
             quoteRatio: quoteRatioResult.quoteRatio,
@@ -140,7 +173,7 @@ export class SwapMathService {
         }
         case QuoteRatioStatus.TargetTooLow: {
             // quote is too little, we need to swap from target to quote
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
+            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.safe.below)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResult.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
                 computeRaw(
@@ -162,10 +195,11 @@ export class SwapMathService {
             }
         }
         case QuoteRatioStatus.TargetTooHigh: {
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_ABOVE)
+            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.safe.above)
             const excessQuoteInQuote = quoteRatioResult.quoteBalanceAmountInQuote.sub(idealQuoteBalanceInQuote)
             const excessQuoteInQuoteBN = new BN(
-                computeRaw(new Decimal(excessQuoteInQuote), quoteToken.decimals)
+                computeRaw(new Decimal(excessQuoteInQuote),
+                    quoteToken.decimals)
             )
             const quoteToTargetSwapAmount = toScaledBN(
                 toUnit(quoteToken.decimals),
@@ -193,21 +227,43 @@ export class SwapMathService {
     ): Promise<ComputeSwapAmountsResult> {
         const chainId = ChainId.Solana
         const targetToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === targetTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: targetTokenId
+                }
+            })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                displayId: targetTokenId
+            })
         }
         const quoteToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === quoteTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: quoteTokenId
+                }
+            })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                displayId: quoteTokenId
+            })
         }
         const gasToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.type === TokenType.Native 
-                && token.chainId === chainId
-            )
+            .tokenCollection.findOne({
+                type: {
+                    $eq: TokenType.Native
+                },
+                chainId: {
+                    $eq: chainId
+                }
+            })
         if (!gasToken) {
-            throw new TokenNotFoundException("Gas token not found")
+            throw new TokenNotFoundException({
+                conditions: {
+                    type: TokenType.Native,
+                    chainId: chainId,
+                },
+            })
         }
         // check quote ratio status
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus(
@@ -221,40 +277,48 @@ export class SwapMathService {
             targetOperationalAmount: targetOperationalGasAmount,
             swapThresholdAmount: swapThresholdGasAmount,
             additionalSwapAmount: additionalSwapAmountGas,
-        } = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId] ?? {}
+        } = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId] ?? {
+        }
         // validate the gas config
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
-                chainId, 
-                "Min operational gas amount not found"
+                {
+                    chainId: chainId,
+                }
             )
         }
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                chainId, 
-                "Target operational gas amount not found"
+                {
+                    chainId: chainId,
+                }
             )
         }
         if (!swapThresholdGasAmount) {
-            throw new GasSwapThresholdAmountNotFoundException(
-                chainId, 
-                "Gas swap threshold amount not found"
+            throw new SwapThresholdGasAmountNotFoundException(
+                {
+                    chainId: chainId,
+                }
             )
         }
         if (!additionalSwapAmountGas) {
             throw new AdditionalSwapAmountGasNotFoundException(
-                chainId, 
-                "Additional swap amount gas not found"
+                {
+                    chainId: chainId,
+                }
             )
         }   
         const minOperationalGasAmountBN = computeRaw(
-            new Decimal(minOperationalGasAmount), gasToken.decimals
+            new Decimal(minOperationalGasAmount),
+            gasToken.decimals
         )
         const swapThresholdGasAmountBN = computeRaw(
-            new Decimal(swapThresholdGasAmount), gasToken.decimals
+            new Decimal(swapThresholdGasAmount),
+            gasToken.decimals
         )
         const additionalSwapAmountGasBN = computeRaw(
-            new Decimal(additionalSwapAmountGas), gasToken.decimals
+            new Decimal(additionalSwapAmountGas),
+            gasToken.decimals
         )
         // whether we need to swap from either quote or target to gas
         let needsGasSwap = false
@@ -264,10 +328,11 @@ export class SwapMathService {
             needsGasSwap = true
         } else if (gasBalanceAmount.lt(minOperationalGasAmountBN)) {
             // do nothing, since the gas amount is not enough
-            throw new InsufficientMinGasBalanceAmountException(
-                chainId,
-                "Insufficient min gas balance amount",
-            )
+            return {
+                processSwaps: false,
+                quoteRatioStatus,
+                quoteRatioResult,
+            }
         }
         switch (quoteRatioStatus) {
         case QuoteRatioStatus.Good: {
@@ -298,17 +363,16 @@ export class SwapMathService {
                         relativePrice: quoteRatioResult.relativePrice,
                     }
                 )
-                console.log("additionalSwapAmountGasBN", additionalSwapAmountGasBN.toString())
-                console.log("swapResult", swapResult.toString())
-                console.log("quoteToken.decimals", quoteToken.decimals)
-                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
-                console.log("targetToken.decimals", targetToken.decimals)
-                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
-                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
-                console.log("quoteRatioResult.relativePrice", quoteRatioResult.relativePrice.toString())
+                return {
+                    processSwaps: true,
+                    swapQuoteToGasAmount: swapResult,
+                    estimatedSwappedGasAmount: swapResult,
+                    quoteRatioStatus,
+                    quoteRatioResult,
+                }
             }
             // target too low mean, the quote is too much, we need to swap a partial of quote to the target and gas
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(SAFE_QUOTE_RATIO_BELOW)
+            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.safe.below)
             const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResult.quoteBalanceAmountInQuote)
             const quoteShortfallInQuoteBN = new BN(
                 computeRaw(
@@ -349,14 +413,26 @@ export class SwapMathService {
         }: ComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResult> {
         const targetToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === targetTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: targetTokenId
+                }
+            })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                displayId: targetTokenId
+            })
         }
         const quoteToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === quoteTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: quoteTokenId
+                }
+            })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                displayId: quoteTokenId
+            })
         }
         let gasStatus = GasStatus.IsGas
         if (targetToken.type === TokenType.Native) {

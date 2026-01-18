@@ -1,18 +1,32 @@
-import { AbstractSchema } from "./abstract"
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { ConfigId } from "../enums"
-import { Schema as MongooseSchema } from "mongoose"
-import { ChainId } from "@typedefs"
+import {
+    AbstractSchema 
+} from "./abstract"
+import {
+    Prop, Schema, SchemaFactory 
+} from "@nestjs/mongoose"
+import {
+    ConfigId 
+} from "../enums"
+import {
+    Schema as MongooseSchema 
+} from "mongoose"
+import {
+    ChainId 
+} from "@typedefs"
 
 @Schema({
     timestamps: true,
     collection: "configs",
 })
 export class ConfigSchema extends AbstractSchema {
-    @Prop({ type: String, required: true, enum: ConfigId })
+    @Prop({
+        type: String, required: true, enum: ConfigId 
+    })
         displayId: ConfigId
 
-    @Prop({ type: MongooseSchema.Types.Mixed, required: true })
+    @Prop({
+        type: MongooseSchema.Types.Mixed, required: true 
+    })
         value: Record<string, unknown>
 }
 

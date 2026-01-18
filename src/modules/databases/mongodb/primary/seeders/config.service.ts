@@ -1,11 +1,27 @@
-import { ConfigId } from "../enums"
-import { ChainId, DeepPartial } from "@typedefs"
-import { ConfigSchema } from "../schemas"
-import { Seeder } from "./seeder.interface"
-import { InjectPrimaryMongoose } from "../mongodb.decorators"
-import { Connection } from "mongoose"
-import { Injectable } from "@nestjs/common"
-import { createObjectId } from "@utils"
+import {
+    ConfigId 
+} from "../enums"
+import {
+    ChainId, DeepPartial 
+} from "@typedefs"
+import {
+    ConfigSchema 
+} from "../schemas"
+import {
+    Seeder 
+} from "./seeder.interface"
+import {
+    InjectPrimaryMongoose 
+} from "../mongodb.decorators"
+import {
+    Connection 
+} from "mongoose"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    createObjectId 
+} from "@utils"
 
 @Injectable()
 export class ConfigService implements Seeder {
@@ -19,7 +35,8 @@ export class ConfigService implements Seeder {
     }
 
     async drop(): Promise<void> {
-        await this.connection.model<ConfigSchema>(ConfigSchema.name).deleteMany({})
+        await this.connection.model<ConfigSchema>(ConfigSchema.name).deleteMany({
+        })
     }
 }   
 

@@ -10,12 +10,16 @@ import {
 import {
     LiquidityPoolId,
 } from "@modules/databases"
+import {
+    ErrorTransactionType,
+} from "./types"
 
 /** Thrown when transaction validation fails */
 export interface TransactionValidationFailedExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     txHash: string
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId?: LiquidityPoolId
+    type: ErrorTransactionType
 }
 
 export class TransactionValidationFailedException extends AbstractException {

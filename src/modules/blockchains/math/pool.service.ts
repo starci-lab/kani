@@ -1,10 +1,20 @@
-import { TokenNotFoundException } from "@exceptions"
-import { computeRatio, computeRaw, toUnit } from "@utils"
+import {
+    TokenNotFoundException 
+} from "@exceptions"
+import {
+    computeRatio, computeRaw, toUnit 
+} from "@utils"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { ClmmPoolUtil } from "@cetusprotocol/cetus-sui-clmm-sdk"
+import {
+    PrimaryMemoryStorageService, TokenId 
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    ClmmPoolUtil 
+} from "@cetusprotocol/cetus-sui-clmm-sdk"
 
 @Injectable()
 export class PoolMathService {
@@ -22,14 +32,28 @@ export class PoolMathService {
             tokenBId,
         }: GetRatioFromAmountAParams
     ): GetRatioFromAmountAResult {
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find(token => token.displayId === tokenAId)
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find(token => token.displayId === tokenBId)
-        if (!tokenA || !tokenB) {
-            throw new TokenNotFoundException("Token not found")
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: tokenAId
+            }
+        })
+        if (!tokenA) {
+            throw new TokenNotFoundException({
+                displayId: tokenAId
+            })
         }
-        const quoteAmountA = computeRaw(new Decimal(1), tokenA.decimals)
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: tokenBId
+            }
+        })
+        if (!tokenB) {
+            throw new TokenNotFoundException({
+                displayId: tokenBId
+            })
+        }
+        const quoteAmountA = computeRaw(new Decimal(1),
+            tokenA.decimals)
         // we use sui lib to calculate the amount out efficiently than using the formula
         const { coinAmountA: estCoinAmountA, coinAmountB: estCoinAmountB } =
         ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
@@ -45,7 +69,9 @@ export class PoolMathService {
             new BN(estCoinAmountB).mul(toUnit(tokenA.decimals)),
             new BN(estCoinAmountA).mul(toUnit(tokenB.decimals)),
         )
-        return { ratio }
+        return {
+            ratio,
+        }
     }
 }
 

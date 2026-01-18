@@ -1,7 +1,15 @@
-import { Field, ObjectType } from "@nestjs/graphql"
-import { AbstractSchema } from "./abstract"
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { AssignedBotSchema, AssignedBotSchemaClass } from "./assigned-bot.schema"
+import {
+    Field, ObjectType 
+} from "@nestjs/graphql"
+import {
+    AbstractSchema 
+} from "./abstract"
+import {
+    Prop, Schema, SchemaFactory 
+} from "@nestjs/mongoose"
+import {
+    AssignedBotSchema, AssignedBotSchemaClass 
+} from "./assigned-bot.schema"
 
 @ObjectType({
     description: "Represents an executor",
@@ -11,28 +19,49 @@ import { AssignedBotSchema, AssignedBotSchemaClass } from "./assigned-bot.schema
     collection: "executors",
 })
 export class ExecutorSchema extends AbstractSchema {
-    @Field(() => [AssignedBotSchema], { description: "The assigned bots" })
-    @Prop({ type: [AssignedBotSchemaClass], required: true })
+    @Field(() => [AssignedBotSchema],
+        {
+            description: "The assigned bots" 
+        })
+    @Prop({
+        type: [AssignedBotSchemaClass], required: true 
+    })
         assignedBots: Array<AssignedBotSchema>
 
-    @Field(() => Number, { description: "The user count" })
-    @Prop({ type: Number, required: true })
-        userCount: number
-
-    @Field(() => Date, {
-        description: "Timestamp when the resource was last refreshed",
+    @Field(() => Number,
+        {
+            description: "The bot count" 
+        })
+    @Prop({
+        type: Number, required: true 
     })
-    @Prop({ type: Date, required: true })
+        botCount: number
+
+    @Field(() => Date,
+        {
+            description: "Timestamp when the resource was last refreshed",
+        })
+    @Prop({
+        type: Date, required: true 
+    })
         lastRefreshedAt: Date
 
-    @Field(() => Number, {
-        description: "Total number of refresh executions",
+    @Field(() => Number,
+        {
+            description: "Total number of refresh executions",
+        })
+    @Prop({
+        type: Number, required: true, default: 0 
     })
-    @Prop({ type: Number, required: true, default: 0 })
         refreshCount: number
 
-    @Field(() => String, { description: "The executor version" })
-    @Prop({ type: String, required: true })
+    @Field(() => String,
+        {
+            description: "The executor version" 
+        })
+    @Prop({
+        type: String, required: true 
+    })
         version: string
 }
 

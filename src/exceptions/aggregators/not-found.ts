@@ -6,13 +6,10 @@
 import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
-import {
-    AggregatorId 
-} from "@typedefs"
 
 /** Thrown when an aggregator cannot be found */
 export interface AggregatorAllQuotesFailedExceptionMetadata extends AbstractExceptionMetadata {
-    aggregatorIds: Array<AggregatorId>
+    aggregatorIds: Array<string>
 }
 export class AggregatorAllQuotesFailedException extends AbstractException {
     constructor(
@@ -31,7 +28,7 @@ export class AggregatorAllQuotesFailedException extends AbstractException {
 
 /** Thrown when an aggregator is not implemented */
 export interface AggregatorNotImplementedExceptionMetadata extends AbstractExceptionMetadata {
-    aggregatorId: AggregatorId
+    aggregatorId: string
 }
 export class AggregatorNotImplementedException extends AbstractException {
     constructor(

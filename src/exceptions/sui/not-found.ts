@@ -4,18 +4,16 @@ import {
 import {
     ErrorSuiObjectName 
 } from "./types"
-import {
-    DexId, LiquidityPoolId 
-} from "@modules/databases"
 
 /** Thrown when Sui object is not found */
 export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSuiObjectName
     parentId?: string
     id?: string
-    dexId: DexId
-    liquidityPoolId: LiquidityPoolId
+    dexId: string
+    liquidityPoolId: string
 }
+
 export class SuiObjectNotFoundException extends AbstractException {
     constructor(
         { name, parentId, id, originalError }: SuiObjectNotFoundExceptionMetadata

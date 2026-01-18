@@ -1,13 +1,31 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { AbstractSchema } from "./abstract"
-import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
-import { LiquidityPoolSchema } from "./liquidity-pool.schema"
-import { Schema as MongooseSchema } from "mongoose"
-import { BotSchema } from "./bot.schema"
-import { JobType, GraphQLTypeJobType, GraphQLTypeJobStatus, JobStatus, TokenId } from "../enums"
-import { ExecutorSchema } from "./executor.schema"
+import {
+    Prop, Schema, SchemaFactory 
+} from "@nestjs/mongoose"
+import {
+    AbstractSchema 
+} from "./abstract"
+import {
+    Field, ID, Int, ObjectType 
+} from "@nestjs/graphql"
+import {
+    LiquidityPoolSchema 
+} from "./liquidity-pool.schema"
+import {
+    Schema as MongooseSchema 
+} from "mongoose"
+import {
+    BotSchema 
+} from "./bot.schema"
+import {
+    JobType, GraphQLTypeJobType, GraphQLTypeJobStatus, JobStatus, TokenId 
+} from "../enums"
+import {
+    ExecutorSchema 
+} from "./executor.schema"
 import GraphQLJSON from "graphql-type-json"
-import { Types } from "mongoose"
+import {
+    Types 
+} from "mongoose"
 
 @ObjectType({
     description: "Represents a job",
@@ -17,40 +35,85 @@ import { Types } from "mongoose"
     collection: "jobs",
 })
 export class JobSchema extends AbstractSchema {
-    @Field(() => ID, { description: "Reference to the liquidity pool associated with this job", nullable: true })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name, required: false })
+    @Field(() => ID,
+        {
+            description: "Reference to the liquidity pool associated with this job", nullable: true 
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name, required: false 
+    })
         liquidityPool?: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 
-    @Field(() => ID, { description: "Reference to the bot associated with this job" })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: BotSchema.name })
+    @Field(() => ID,
+        {
+            description: "Reference to the bot associated with this job" 
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: BotSchema.name 
+    })
         bot: BotSchema | MongooseSchema.Types.ObjectId
 
-    @Field(() => ID, { description: "Reference to the executor associated with this job", nullable: true })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: ExecutorSchema.name, required: false })
+    @Field(() => ID,
+        {
+            description: "Reference to the executor associated with this job", nullable: true 
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: ExecutorSchema.name, required: false 
+    })
         executor?: ExecutorSchema | Types.ObjectId
 
-    @Field(() => GraphQLTypeJobType, { description: "The type of the job" })
-    @Prop({ type: String, enum: JobType })
+    @Field(() => GraphQLTypeJobType,
+        {
+            description: "The type of the job" 
+        })
+    @Prop({
+        type: String, enum: JobType 
+    })
         type: JobType
 
-    @Field(() => GraphQLTypeJobStatus, { description: "The status of the job" })
-    @Prop({ type: String, enum: JobStatus })
+    @Field(() => GraphQLTypeJobStatus,
+        {
+            description: "The status of the job" 
+        })
+    @Prop({
+        type: String, enum: JobStatus 
+    })
         status: JobStatus
     
-    @Field(() => String, { description: "The lease id of the job" })
-    @Prop({ type: String, required: true })
+    @Field(() => String,
+        {
+            description: "The lease id of the job" 
+        })
+    @Prop({
+        type: String, required: true 
+    })
         leaseId: string
 
-    @Field(() => String, { description: "The transaction hash of the job" })
-    @Prop({ type: String, required: false })
+    @Field(() => String,
+        {
+            description: "The transaction hash of the job" 
+        })
+    @Prop({
+        type: String, required: false 
+    })
         txHash?: string
 
-    @Field(() => GraphQLJSON, { description: "The transaction hash of the job metadata" })
-    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+    @Field(() => GraphQLJSON,
+        {
+            description: "The transaction hash of the job metadata" 
+        })
+    @Prop({
+        type: MongooseSchema.Types.Mixed, required: false 
+    })
         metadata?: unknown
 
-    @Field(() => String, { description: "The additional data of the job" })
-    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
+    @Field(() => String,
+        {
+            description: "The additional data of the job" 
+        })
+    @Prop({
+        type: MongooseSchema.Types.Mixed, required: false 
+    })
         data?: unknown
 
     @Field(
@@ -60,7 +123,9 @@ export class JobSchema extends AbstractSchema {
             defaultValue: 0
         }
     )
-    @Prop({ type: Number, default: 0 })
+    @Prop({
+        type: Number, default: 0 
+    })
         retryCount: number
 
     @Field(
@@ -70,7 +135,9 @@ export class JobSchema extends AbstractSchema {
             nullable: true
         }
     )
-    @Prop({ type: Date, required: false })
+    @Prop({
+        type: Date, required: false 
+    })
         processedAt?: Date
 }
 

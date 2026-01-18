@@ -1,13 +1,10 @@
 import {
-    LiquidityPoolId 
-} from "@modules/databases"
-import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 
 /** Thrown when pool tokens are invalid */
 export interface InvalidPoolTokensExceptionMetadata extends AbstractExceptionMetadata {
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId: string
 }
 export class InvalidPoolTokensException extends AbstractException {
     constructor(

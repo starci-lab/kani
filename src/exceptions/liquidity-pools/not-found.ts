@@ -1,13 +1,10 @@
 import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
-import {
-    LiquidityPoolId 
-} from "@modules/databases"
 
 /** Thrown when liquidity pool cannot be found */
 export interface LiquidityPoolNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    displayId?: LiquidityPoolId
+    displayId?: string
     id?: string
 }
 export class LiquidityPoolNotFoundException extends AbstractException {
@@ -26,7 +23,7 @@ export class LiquidityPoolNotFoundException extends AbstractException {
 
 /** Thrown when liquidity pool no WS idle timeout */
 export interface LiquidityPoolNoWsIdleTimeoutExceptionMetadata extends AbstractExceptionMetadata {
-    displayId: LiquidityPoolId
+    displayId: string
 }
 export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
     constructor(

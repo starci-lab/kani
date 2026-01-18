@@ -1,11 +1,27 @@
-import { InjectPrimaryMongoose } from "../mongodb.decorators"
-import { DexId, LiquidityPoolId, LiquidityPoolType, TokenId } from "../enums"
-import { LiquidityPoolSchema } from "../schemas"
-import { DeepPartial, ChainId } from "@typedefs"
-import { createObjectId } from "@utils"
-import { Seeder } from "./seeder.interface"
-import { Connection } from "mongoose"
-import { Injectable } from "@nestjs/common"
+import {
+    InjectPrimaryMongoose 
+} from "../mongodb.decorators"
+import {
+    DexId, LiquidityPoolId, LiquidityPoolType, TokenId 
+} from "../enums"
+import {
+    LiquidityPoolSchema 
+} from "../schemas"
+import {
+    DeepPartial, ChainId 
+} from "@typedefs"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    Seeder 
+} from "./seeder.interface"
+import {
+    Connection 
+} from "mongoose"
+import {
+    Injectable 
+} from "@nestjs/common"
 import ms from "ms"
 
 @Injectable()
@@ -18,7 +34,8 @@ export class LiquidityPoolsService implements Seeder {
         await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).create(data)
     }
     async drop(): Promise<void> {
-        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({})
+        await this.connection.model<LiquidityPoolSchema>(LiquidityPoolSchema.name).deleteMany({
+        })
     }
 }
 export const data: Array<DeepPartial<LiquidityPoolSchema>> = [

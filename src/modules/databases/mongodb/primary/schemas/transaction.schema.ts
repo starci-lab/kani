@@ -1,10 +1,24 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { AbstractSchema } from "./abstract"
-import { Field, ID, ObjectType } from "@nestjs/graphql"
-import { Schema as MongooseSchema, Types } from "mongoose"
-import { BotSchema } from "./bot.schema"
-import { ChainId, GraphQLTypeChainId } from "@typedefs"
-import { GraphQLTypeTransactionType, TokenId, TransactionType } from "../enums"
+import {
+    Prop, Schema, SchemaFactory 
+} from "@nestjs/mongoose"
+import {
+    AbstractSchema 
+} from "./abstract"
+import {
+    Field, ID, ObjectType 
+} from "@nestjs/graphql"
+import {
+    Schema as MongooseSchema, Types 
+} from "mongoose"
+import {
+    BotSchema 
+} from "./bot.schema"
+import {
+    ChainId, GraphQLTypeChainId 
+} from "@typedefs"
+import {
+    GraphQLTypeTransactionType, TokenId, TransactionType 
+} from "../enums"
 import GraphQLJSON from "graphql-type-json"
 
 @ObjectType({
@@ -15,41 +29,59 @@ import GraphQLJSON from "graphql-type-json"
     collection: "transactions",
 })
 export class TransactionSchema extends AbstractSchema {
-    @Field(() => String, {
-        description: "The hash of the swap transaction",
+    @Field(() => String,
+        {
+            description: "The hash of the swap transaction",
+        })
+    @Prop({
+        type: String, required: true 
     })
-    @Prop({ type: String, required: true })
         txHash: string
 
-    @Field(() => ID, {
-        description: "The bot that the swap transaction is associated with",
+    @Field(() => ID,
+        {
+            description: "The bot that the swap transaction is associated with",
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: BotSchema.name 
     })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: BotSchema.name })
         bot: BotSchema | Types.ObjectId
 
-    @Field(() => GraphQLTypeChainId, {
-        description: "The chain id of the swap transaction",
+    @Field(() => GraphQLTypeChainId,
+        {
+            description: "The chain id of the swap transaction",
+        })
+    @Prop({
+        type: String, required: true 
     })
-    @Prop({ type: String, required: true })
         chainId: ChainId
 
-    @Field(() => GraphQLTypeTransactionType, {
-        description: "The type of the transaction",
+    @Field(() => GraphQLTypeTransactionType,
+        {
+            description: "The type of the transaction",
+        })
+    @Prop({
+        type: String, required: true, enum: TransactionType 
     })
-    @Prop({ type: String, required: true, enum: TransactionType })
         type: TransactionType
 
-    @Field(() => GraphQLJSON, { 
-        description: "Additional transaction-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
-        nullable: true 
+    @Field(() => GraphQLJSON,
+        { 
+            description: "Additional transaction-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
+            nullable: true 
+        })
+    @Prop({
+        type: MongooseSchema.Types.Mixed 
     })
-    @Prop({ type: MongooseSchema.Types.Mixed })
         metadata?: unknown 
 
-    @Field(() => Date, {
-        description: "The timestamp of the transaction",
+    @Field(() => Date,
+        {
+            description: "The timestamp of the transaction",
+        })
+    @Prop({
+        type: Date, required: true 
     })
-    @Prop({ type: Date, required: true })
         timestamp: Date
 }
 

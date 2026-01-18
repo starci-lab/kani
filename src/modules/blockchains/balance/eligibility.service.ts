@@ -1,17 +1,33 @@
-import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
+import {
+    BotSchema, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     MinOperationalGasAmountNotFoundException,
     TokenNotFoundException,
 } from "@exceptions"
-import { TokenType } from "@typedefs"
-import { computeDenomination, createEnumType } from "@utils"
-import { AsyncService, DayjsService } from "@modules/mixin"
-import { PriceService } from "../math"
+import {
+    TokenType 
+} from "@typedefs"
+import {
+    computeDenomination, createEnumType 
+} from "@utils"
+import {
+    AsyncService, DayjsService 
+} from "@modules/mixin"
+import {
+    PriceService 
+} from "../math"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { envConfig } from "@modules/env"
-import { registerEnumType } from "@nestjs/graphql"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    registerEnumType 
+} from "@nestjs/graphql"
 
 /**
  * Params for balance eligibility evaluation
@@ -52,10 +68,11 @@ export class BalanceEligibilityService {
             if (
                 !lastBalancesSnapshotAt ||
                 new Decimal(
-                    this.dayjsService.now().diff(lastBalancesSnapshotAt, "millisecond"),
+                    this.dayjsService.now().diff(lastBalancesSnapshotAt,
+                        "millisecond"),
                 ).gt(
                     new Decimal(
-                        envConfig().timeConfig.interval.balanceSnapshot,
+                        envConfig().time.stale.balanceSnapshot,
                     ),
                 )
             ) {
@@ -65,27 +82,42 @@ export class BalanceEligibilityService {
                 }
             }
             // --- 2. Resolve tokens ---
-            const targetToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === bot.targetToken.toString(),
-            )
+            const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: bot.targetToken
+                }
+            })
             if (!targetToken) {
-                throw new TokenNotFoundException("Target token not found")
+                throw new TokenNotFoundException({
+                    id: bot.targetToken.toString(),
+                })
             }
 
-            const quoteToken = this.primaryMemoryStorageService.tokens.find(
-                (token) => token.id === bot.quoteToken.toString(),
-            )
+            const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: bot.quoteToken
+                }
+            })
             if (!quoteToken) {
-                throw new TokenNotFoundException("Quote token not found")
+                throw new TokenNotFoundException({
+                    id: bot.quoteToken.toString(),
+                })
             }
-
-            const gasToken = this.primaryMemoryStorageService.tokens.find(
-                (token) =>
-                    token.type === TokenType.Native &&
-                    token.chainId === bot.chainId,
-            )
+            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                type: {
+                    $eq: TokenType.Native
+                },
+                chainId: {
+                    $eq: bot.chainId
+                }
+            })
             if (!gasToken) {
-                throw new TokenNotFoundException("Gas token not found")
+                throw new TokenNotFoundException({
+                    conditions: {
+                        chainId: bot.chainId,
+                        type: TokenType.Native,
+                    },
+                })
             }
             // --- 3. Fetch prices ---
             const [
@@ -160,8 +192,9 @@ export class BalanceEligibilityService {
 
             if (!minOperationalGasAmount) {
                 throw new MinOperationalGasAmountNotFoundException(
-                    bot.chainId,
-                    "Min operational gas amount not found",
+                    {
+                        chainId: bot.chainId,
+                    }
                 )
             }
             const minOperationalGasAmountDecimal = computeDenomination(
@@ -184,8 +217,7 @@ export class BalanceEligibilityService {
                 balanceExcludingGasInUsdc,
                 balanceIncludingGasInUsdc,
             }
-        } catch (error) {
-            console.error(error)
+        } catch {
             return {
                 isEligible: false,
                 status: BalanceEligibilityStatus.Error,
@@ -216,25 +248,26 @@ export enum BalanceEligibilityStatus {
 export const GraphQLTypeBalanceEligibilityStatus =
     createEnumType(BalanceEligibilityStatus)
 
-registerEnumType(GraphQLTypeBalanceEligibilityStatus, {
-    name: "BalanceEligibilityStatus",
-    description:
+registerEnumType(GraphQLTypeBalanceEligibilityStatus,
+    {
+        name: "BalanceEligibilityStatus",
+        description:
         "Eligibility status of the bot based on balance, gas, and price snapshot.",
-    valuesMap: {
-        [BalanceEligibilityStatus.Ok]: {
-            description: "The bot is eligible to operate.",
+        valuesMap: {
+            [BalanceEligibilityStatus.Ok]: {
+                description: "The bot is eligible to operate.",
+            },
+            [BalanceEligibilityStatus.StalePrice]: {
+                description: "One or more price snapshots are stale.",
+            },
+            [BalanceEligibilityStatus.NotEnoughGas]: {
+                description: "Gas balance is below the minimum operational requirement.",
+            },
+            [BalanceEligibilityStatus.InsufficientFunds]: {
+                description: "Total balance excluding gas is insufficient.",
+            },
+            [BalanceEligibilityStatus.Error]: {
+                description: "An unexpected error occurred during evaluation.",
+            },
         },
-        [BalanceEligibilityStatus.StalePrice]: {
-            description: "One or more price snapshots are stale.",
-        },
-        [BalanceEligibilityStatus.NotEnoughGas]: {
-            description: "Gas balance is below the minimum operational requirement.",
-        },
-        [BalanceEligibilityStatus.InsufficientFunds]: {
-            description: "Total balance excluding gas is insufficient.",
-        },
-        [BalanceEligibilityStatus.Error]: {
-            description: "An unexpected error occurred during evaluation.",
-        },
-    },
-})
+    })

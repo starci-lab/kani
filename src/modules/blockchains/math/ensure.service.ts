@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
 
@@ -33,7 +35,8 @@ export class EnsureMathService {
     public ensureActualNotBelowExpected(
         { expected, actual, lowerBound }: EnsureCalculationParams
     ): EnsureCalculationResult {
-        const ratio = this.computeRatio(expected, actual)
+        const ratio = this.computeRatio(expected,
+            actual)
         const bound = lowerBound ?? LOWER_BOUND_DEFAULT
 
         return {
@@ -41,7 +44,6 @@ export class EnsureMathService {
             isAcceptable: ratio.gte(bound),
         }
     }
-
     /**
      * actual should be <= upperBound * expected
      * default upperBound = 105%
@@ -49,7 +51,8 @@ export class EnsureMathService {
     public ensureActualNotAboveExpected(
         { expected, actual, upperBound }: EnsureCalculationParams
     ): EnsureCalculationResult {
-        const ratio = this.computeRatio(expected, actual)
+        const ratio = this.computeRatio(expected,
+            actual)
         const bound = upperBound ?? UPPER_BOUND_DEFAULT
 
         return {
@@ -64,7 +67,8 @@ export class EnsureMathService {
     public ensureBetween(
         { expected, actual, lowerBound, upperBound }: EnsureCalculationParams
     ): EnsureCalculationResult {
-        const ratio = this.computeRatio(expected, actual)
+        const ratio = this.computeRatio(expected,
+            actual)
 
         const lower = lowerBound ?? LOWER_BOUND_DEFAULT
         const upper = upperBound ?? UPPER_BOUND_DEFAULT

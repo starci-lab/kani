@@ -30,7 +30,7 @@ import {
 } from "@modules/filesystem"
 import {
     AggregatorId 
-} from "@typedefs"
+} from "./types"
 import {
     envConfig 
 } from "@modules/env"
@@ -87,7 +87,7 @@ export class JupiterService implements IAggregatorService {
                     })
                     if (!tokenInInstance) {
                         throw new TokenNotFoundException({
-                            tokenId: tokenIn,
+                            displayId: tokenIn,
                         })
                     }
                     const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -97,7 +97,7 @@ export class JupiterService implements IAggregatorService {
                     })
                     if (!tokenOutInstance) {
                         throw new TokenNotFoundException({
-                            tokenId: tokenOut,
+                            displayId: tokenOut,
                         })
                     }
                     const client = this.createJupiterClient()

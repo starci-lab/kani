@@ -1,23 +1,24 @@
 import {
-    TokenId 
-} from "@modules/databases"
-import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 
 /** Thrown when token cannot be found */
 export interface TokenNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    tokenId: TokenId
+    id?: string
+    displayId?: string
+    conditions?: unknown
 }
 export class TokenNotFoundException extends AbstractException {
     constructor(
-        { tokenId, originalError }: TokenNotFoundExceptionMetadata
+        { id, displayId, conditions, originalError }: TokenNotFoundExceptionMetadata
     ) {
         super(
             "Token not found",
             "TOKEN_NOT_FOUND_EXCEPTION",
             {
-                tokenId,
+                id,
+                displayId,
+                conditions,
                 originalError,
             }
         )

@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     FetchBalanceParams, 
     FetchBalanceResult, 
@@ -7,20 +9,40 @@ import {
     PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
-import { AppVersion, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenNotFoundException, TransactionNotExecutedException, TransactionNotFoundException, PrivyPublicKeyNotFoundException } from "@exceptions"
+import {
+    AppVersion, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    TokenNotFoundException, 
+    TransactionNotExecutedException, 
+    TransactionNotFoundException, 
+    PrivyPublicKeyNotFoundException, 
+    ErrorTransactionType,
+    MissingSuiMessageWithBytesParamException
+} from "@exceptions"
 import BN from "bn.js"
-import { SuiAggregatorSelectorService } from "../aggregators"
-import { EnsureMathService } from "../math"
-import Decimal from "decimal.js"
-import { SignerService } from "../signers"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { PrivySignService } from "@modules/privy"
+import {
+    SuiAggregatorSelectorService 
+} from "../aggregators"
+import {
+    SignerService 
+} from "../signers"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    PrivySignService 
+} from "@modules/privy"
+import {
+    WinstonLog,
+    WinstonService,
+} from "@modules/winston"
 
 @Injectable()
 export class SuiBalanceService implements IBalanceService {
@@ -28,11 +50,9 @@ export class SuiBalanceService implements IBalanceService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
-        private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: winstonLogger,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async prepareSwapTransaction(
@@ -41,7 +61,6 @@ export class SuiBalanceService implements IBalanceService {
             tokenIn,
             tokenOut,
             amountIn,
-            estimatedSwappedAmount,
         }: PrepareSwapTransactionParams
     ): Promise<PrepareSwapTransactionResult> {
         const { 
@@ -53,11 +72,6 @@ export class SuiBalanceService implements IBalanceService {
             amountIn: amountIn,
             senderAddress: bot.accountAddress,
         })
-        this.ensureMathService.ensureActualNotAboveExpected({
-            expected: estimatedSwappedAmount,
-            actual: response.amountOut,
-            lowerBound: new Decimal(envConfig().slippage.swap),
-        })
         const { outputCoin, txb } = await this.suiAggregatorSelectorService.selectorSwap({
             base: {
                 payload: response.payload,
@@ -68,11 +82,13 @@ export class SuiBalanceService implements IBalanceService {
             aggregatorId,
         })
         if (!txb) {
-            throw new TransactionNotFoundException({})
+            throw new TransactionNotFoundException({
+            })
         }
         // transfer the output coin to the bot's account address
         if (outputCoin) {
-            txb.transferObjects([outputCoin], bot.accountAddress)
+            txb.transferObjects([outputCoin],
+                bot.accountAddress)
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -94,7 +110,9 @@ export class SuiBalanceService implements IBalanceService {
                     }
                 } else {
                     if (!bot.privyMetadata.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException("Privy public key not found")
+                        throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
                     return await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -128,12 +146,19 @@ export class SuiBalanceService implements IBalanceService {
                     if (transaction) {
                         return
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException({
+                        botId: bot.id,
+                        txHash,
+                        type: ErrorTransactionType.Swap,
+                    })
                 },
             })
         }
         if (!signatureWithBytes) {
-            throw new TransactionNotFoundException({})
+            throw new MissingSuiMessageWithBytesParamException({
+                botId: bot.id,
+                type: ErrorTransactionType.Swap,
+            })
         }
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
@@ -148,8 +173,9 @@ export class SuiBalanceService implements IBalanceService {
                         digest,
                     }
                 )
-                this.logger.verbose(
-                    WinstonLog.SwapExecuted, {
+                this.winstonService.log(
+                    WinstonLog.SwapTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash,
                         tokenIn,
@@ -166,11 +192,15 @@ export class SuiBalanceService implements IBalanceService {
             tokenId,
         }: FetchBalanceParams
     ): Promise<FetchBalanceResult> {
-        const token = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.displayId === tokenId.toString()
-        )
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: tokenId
+            }
+        })
         if (!token) {
-            throw new TokenNotFoundException("Token not found")
+            throw new TokenNotFoundException({
+                displayId: tokenId,
+            })
         }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,

@@ -1,27 +1,15 @@
-import { DynamicModule, Module } from "@nestjs/common"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
 import {
     DexSchema,
     DexSchemaClass,
-    InstanceSchema,
-    InstanceSchemaClass,
     LiquidityPoolSchema,
     LiquidityPoolSchemaClass,
     TokenSchema,
     TokenSchemaClass,
-    UserAllocationSchema,
-    UserAllocationSchemaClass,
-    UserCummulativeSchema,
-    UserCummulativeSchemaClass,
-    UserDepositSchema,
-    UserDepositSchemaClass,
     UserSchema,
     UserSchemaClass,
-    UserWalletSchema,
-    UserWalletSchemaClass,
-    ChainConfigSchema,
-    ChainConfigSchemaClass,
-    WalletSchema,
-    WalletSchemaClass,
     SessionSchema,
     SessionSchemaClass,
     BotSchema,
@@ -30,8 +18,6 @@ import {
     ConfigSchemaClass,
     StateSchema,
     StateSchemaClass,
-    SwapTransactionSchema,
-    SwapTransactionSchemaClass,
     TransactionSchema,
     TransactionSchemaClass,
     PositionSchema,
@@ -48,22 +34,44 @@ import {
     HistorySerieSchemaClass,
     MarketListingSchema,
     MarketListingSchemaClass,
+    BotActivePositionSchemaClass,
+    BotActivePositionSchema,
+    PrivyMetadataSchemaClass,
+    PrivyMetadataSchema,
+    BotSnapshotsSchemaClass,
+    BotSnapshotsSchema,
 } from "./schemas"
-import { MongooseModule as NestMongooseModule } from "@nestjs/mongoose"
+import {
+    MongooseModule as NestMongooseModule 
+} from "@nestjs/mongoose"
 import {
     ConfigurableModuleClass,
     OPTIONS_TYPE,
 } from "./mongodb.module-definition"
-import { envConfig } from "@modules/env"
-import { Connection } from "mongoose"
-import { SeedersModule } from "./seeders"
-import { MemoryModule } from "./memory"
-import { CONNECTION_NAME } from "./constants"
-import { normalizeMongoose } from "../plugins"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Connection 
+} from "mongoose"
+import {
+    SeedersModule 
+} from "./seeders"
+import {
+    MemoryModule 
+} from "./memory"
+import {
+    CONNECTION_NAME 
+} from "./constants"
+import {
+    normalizeMongoose 
+} from "../plugins"
 
-@Module({})
+@Module({
+})
 export class PrimaryMongoDbModule extends ConfigurableModuleClass {
-    public static register(options: typeof OPTIONS_TYPE = {}): DynamicModule {
+    public static register(options: typeof OPTIONS_TYPE = {
+    }): DynamicModule {
         const dynamicModule = super.register(options)
 
         const { dbName, host, password, port, username } =
@@ -101,21 +109,23 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
         return {
             ...dynamicModule,
             imports: [
-                NestMongooseModule.forRoot(url, {
-                    retryWrites: true,
-                    retryReads: true,
-                    authSource: "admin",
-                    dbName,
-                    connectionName: CONNECTION_NAME,
-                    connectionFactory: async (connection: Connection) => {
-                        connection.plugin(normalizeMongoose)
-                        connection.set("writeConcern", {
-                            w: "majority",
-                            j: true,
-                        })
-                        return connection
-                    },
-                }),
+                NestMongooseModule.forRoot(url,
+                    {
+                        retryWrites: true,
+                        retryReads: true,
+                        authSource: "admin",
+                        dbName,
+                        connectionName: CONNECTION_NAME,
+                        connectionFactory: async (connection: Connection) => {
+                            connection.plugin(normalizeMongoose)
+                            connection.set("writeConcern",
+                                {
+                                    w: "majority",
+                                    j: true,
+                                })
+                            return connection
+                        },
+                    }),
                 this.forFeature(),
                 ...extraModules,
             ],
@@ -139,24 +149,12 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         useFactory: () => UserSchemaClass,
                     },
                     {
-                        name: WalletSchema.name,
-                        useFactory: () => WalletSchemaClass,
-                    },
-                    {
                         name: ExecutorSchema.name,
                         useFactory: () => ExecutorSchemaClass,
                     },
                     {
                         name: AssignedBotSchema.name,
                         useFactory: () => AssignedBotSchemaClass,
-                    },
-                    {
-                        name: UserWalletSchema.name,
-                        useFactory: () => UserWalletSchemaClass,
-                    },
-                    {
-                        name: ChainConfigSchema.name,
-                        useFactory: () => ChainConfigSchemaClass,
                     },
                     {
                         name: SessionSchema.name,
@@ -175,32 +173,12 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         useFactory: () => LiquidityPoolSchemaClass,
                     },
                     {
-                        name: InstanceSchema.name,
-                        useFactory: () => InstanceSchemaClass,
-                    },
-                    {
-                        name: UserAllocationSchema.name,
-                        useFactory: () => UserAllocationSchemaClass,
-                    },
-                    {
                         name: PositionSchema.name,
                         useFactory: () => PositionSchemaClass,
                     },
                     {
-                        name: UserDepositSchema.name,
-                        useFactory: () => UserDepositSchemaClass,
-                    },
-                    {
-                        name: UserCummulativeSchema.name,
-                        useFactory: () => UserCummulativeSchemaClass,
-                    },  
-                    {
                         name: ConfigSchema.name,
                         useFactory: () => ConfigSchemaClass,
-                    },
-                    {
-                        name: SwapTransactionSchema.name,
-                        useFactory: () => SwapTransactionSchemaClass,
                     },
                     {
                         name: TransactionSchema.name,
@@ -226,7 +204,20 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         name: MarketListingSchema.name,
                         useFactory: () => MarketListingSchemaClass,
                     },
-                ], CONNECTION_NAME),
+                    {
+                        name: PrivyMetadataSchema.name,
+                        useFactory: () => PrivyMetadataSchemaClass,
+                    },
+                    {
+                        name: BotActivePositionSchema.name,
+                        useFactory: () => BotActivePositionSchemaClass,
+                    },
+                    {
+                        name: BotSnapshotsSchema.name,
+                        useFactory: () => BotSnapshotsSchemaClass,
+                    },
+                ],
+                CONNECTION_NAME),
             ],
         }
     }

@@ -11,7 +11,7 @@ import {
     Connection 
 } from "mongoose"
 import {
-    AsyncService, LokiJSService, ReadinessWatcherFactoryService, RetryService 
+    AsyncService, LokiJSService, ReadinessWatcherFactoryService 
 } from "@modules/mixin"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
@@ -47,7 +47,6 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         private readonly options: typeof OPTIONS_TYPE,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly retryService: RetryService,
         private readonly asyncService: AsyncService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly lokiJSService: LokiJSService,
@@ -110,7 +109,8 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                     .model<ConfigSchema>(ConfigSchema.name)
                     .findById<ConfigRecord<GasConfig>>(createObjectId(ConfigId.Gas))
                 if (!gasConfig) {
-                    throw new GasConfigNotFoundException("Gas config not found")
+                    throw new GasConfigNotFoundException({
+                    })
                 }
                 this.gasConfig = gasConfig.value
             })(),
@@ -119,7 +119,8 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                     .model<ConfigSchema>(ConfigSchema.name)
                     .findById<ConfigRecord<BalanceConfig>>(createObjectId(ConfigId.Balance))
                 if (!balanceConfig) {
-                    throw new BalanceConfigNotFoundException("Balance config not found")
+                    throw new BalanceConfigNotFoundException({
+                    })
                 }
                 this.balanceConfig = balanceConfig.value
             })(),
@@ -128,7 +129,8 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                     .model<ConfigSchema>(ConfigSchema.name)
                     .findById<ConfigRecord<AccountLimitsConfig>>(createObjectId(ConfigId.AccountLimits))
                 if (!accountLimits) {
-                    throw new AccountLimitsConfigNotFoundException("Account limits config not found")
+                    throw new AccountLimitsConfigNotFoundException({
+                    })
                 }
                 this.accountLimits = accountLimits.value
             })(),

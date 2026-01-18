@@ -1,24 +1,36 @@
 import {
-    CachePriceUtilsService,
-} from "@modules/cache"
-import { TokenId } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
+    TokenId 
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
 import Decimal from "decimal.js"
-import { envConfig } from "@modules/env"
-import { AsyncService, DayjsService } from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    AsyncService, DayjsService 
+} from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException,
     TokenNotFoundException,
 } from "@exceptions"
-import { PrimaryMemoryStorageService } from "@modules/databases"
-import { median } from "simple-statistics"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    median 
+} from "simple-statistics"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
 
 @Injectable()
 export class PriceService {
     constructor(
-        private readonly cachePriceUtilsService: CachePriceUtilsService,
         private readonly dayjsService: DayjsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly asyncService: AsyncService 
     ) {}
 
@@ -36,13 +48,18 @@ export class PriceService {
         { tokenId }: ResolvePriceParams,
     ): Promise<ResolvePriceResult> {
         const aggregated =
-            await this.cachePriceUtilsService.getAggregatedTokenPrice(tokenId)
+            await this.aggregatedTokenPriceCacheService.get(tokenId)
 
-        const token = this.primaryMemoryStorageService.tokens
-            .find((token) => token.displayId === tokenId)
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: tokenId
+            }
+        })
 
         if (!token) {
-            throw new TokenNotFoundException(tokenId)
+            throw new TokenNotFoundException({
+                displayId: tokenId
+            })
         }
 
         const now = this.dayjsService.now()
@@ -69,7 +86,9 @@ export class PriceService {
 
         if (observedPrices.length === 0) {
             throw new AggregatedTokenPriceNotFoundException(
-                tokenId,
+                {
+                    tokenId: tokenId
+                }
             )
         }
 
@@ -124,7 +143,9 @@ export class PriceService {
         }
 
         throw new AggregatedTokenPriceNotFoundException(
-            tokenId,
+            {
+                tokenId
+            }
         )
     }
 
@@ -142,13 +163,18 @@ export class PriceService {
             priceA, 
             priceB
         ] = await this.asyncService.allMustDone([
-            this.resolvePrice({ tokenId: tokenAId }),
-            this.resolvePrice({ tokenId: tokenBId }),
+            this.resolvePrice({
+                tokenId: tokenAId 
+            }),
+            this.resolvePrice({
+                tokenId: tokenBId 
+            }),
         ])
         const relativePrice = priceA.price.div(priceB.price)
         return {
             price: relativePrice,
-            ageMs: Math.max(priceA.ageMs, priceB.ageMs),
+            ageMs: Math.max(priceA.ageMs,
+                priceB.ageMs),
             isStale: priceA.isStale || priceB.isStale,
         }
     }

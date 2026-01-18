@@ -10,7 +10,9 @@ import {
     LiquidityPoolFetchedErrorMessage,
     LiquidityPoolWsErrorMessage,
     OpenPositionTransactionExecutedMessage,
-    OpenPositionTransactionFailedMessage
+    OpenPositionTransactionFailedMessage,
+    SwapTransactionExecutedMessage,
+    SwapTransactionFailedMessage
 } from "./types"
 
 export const configMap = {
@@ -102,5 +104,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as LiquidityPoolWsErrorMessage,
+    },
+    // Swap Transaction Executed
+    [WinstonLog.SwapTransactionExecuted]: {
+        name: WinstonLog.SwapTransactionExecuted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as SwapTransactionExecutedMessage,
+    },
+    // Swap Transaction Failed
+    [WinstonLog.SwapTransactionFailed]: {
+        name: WinstonLog.SwapTransactionFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as SwapTransactionFailedMessage,
     },
 }

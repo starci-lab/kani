@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     FetchBalanceParams,
     FetchBalanceResult,
@@ -12,9 +14,15 @@ import {
     DetermineReconcileBalancePlanParams,
     DetermineReconcileBalancePlanResult,
 } from "./balance.interface"
-import { SolanaBalanceService } from "./solana.service"
-import { TokenType, ChainId } from "@typedefs"
-import { SuiBalanceService } from "./sui.service"
+import {
+    SolanaBalanceService 
+} from "./solana.service"
+import {
+    TokenType, ChainId 
+} from "@typedefs"
+import {
+    SuiBalanceService 
+} from "./sui.service"
 import { 
     JobType, 
     JobStatus, 
@@ -23,29 +31,52 @@ import {
     JobSchema, 
 } from "@modules/databases"
 import {
-    InsufficientMinGasBalanceAmountException,
     TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
     MinOperationalGasAmountNotFoundException,
-    EstimatedSwappedTargetAmountNotFoundException,
-    EstimatedSwappedQuoteAmountNotFoundException,
+    UnsupportedChainIdException,
 } from "@exceptions"
-import { GasStatusService } from "./gas-status.service"
-import { GasStatus } from "../types"
+import {
+    GasStatusService 
+} from "./gas-status.service"
+import {
+    GasStatus 
+} from "../types"
 import BN from "bn.js"
-import { SwapMathService } from "../math"
-import { computeDenomination } from "@utils"
+import {
+    SwapMathService 
+} from "../math"
+import {
+    computeDenomination 
+} from "@utils"
 import Decimal from "decimal.js"
-import { v4 } from "uuid"
-import { envConfig } from "@modules/env"
-import { Connection } from "mongoose"
-import { Queue } from "bullmq"
-import { bullData, BullQueueName } from "@modules/bullmq"
-import { ReconcileBalancePayload } from "../types"
-import { InjectQueue } from "@nestjs/bullmq"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
+import {
+    v4 
+} from "uuid"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Connection 
+} from "mongoose"
+import {
+    Queue 
+} from "bullmq"
+import {
+    bullData, BullQueueName 
+} from "@modules/bullmq"
+import {
+    ReconcileBalancePayload 
+} from "../types"
+import {
+    InjectQueue 
+} from "@nestjs/bullmq"
+import {
+    WinstonService, WinstonLog 
+} from "@modules/winston"
+import {
+    AsyncService,
+} from "@modules/mixin"
 
 
 @Injectable()
@@ -56,13 +87,12 @@ export class BalanceService implements IBalanceService {
     private readonly suiBalanceService: SuiBalanceService,
     private readonly gasStatusService: GasStatusService,
     private readonly swapMathService: SwapMathService,
-    private readonly leaseService: LeaseService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
     private readonly reconcileBalanceQueue: Queue<ReconcileBalancePayload>,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
+    private readonly winstonService: WinstonService,
+    private readonly asyncService: AsyncService,
     ) {}
 
     async enqueue(
@@ -74,7 +104,8 @@ export class BalanceService implements IBalanceService {
          * Retrieve sema to prevent concurrent actions on the same bot
          */
         const lease = this.leaseService.lease(
-            getLeaseKey(LeaseKey.Action, bot.id),
+            getLeaseKey(LeaseKey.Action,
+                bot.id),
         )
         // if the sema is locked, skip the execution
         if (lease.isLocked()) {
@@ -84,7 +115,10 @@ export class BalanceService implements IBalanceService {
         /**
          * Safety check, if the active position is set, return only
          */
-        if (bot.activePosition) {
+        if (bot.activePosition
+            || bot.activePositionLiquidityPool
+            || bot.activePositionLiquidityPoolType
+        ) {
             return
         }
         // try to lock the lease
@@ -138,7 +172,8 @@ export class BalanceService implements IBalanceService {
             lease.unlock(leaseId)
             // log the error
             this.logger.error(
-                WinstonLog.ReconcileBalanceEnqueueFailed, {
+                WinstonLog.ReconcileBalanceEnqueueFailed,
+                {
                     botId: bot.id,
                     error: error.message,
                 }
@@ -152,13 +187,25 @@ export class BalanceService implements IBalanceService {
         snapshotQuoteBalanceAmount,
         snapshotGasBalanceAmount,
     }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
-        const targetToken = this.primaryMemoryStorageService.tokenMap.get(bot.targetToken.toString())
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken
+            }
+        })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
         }   
-        const quoteToken = this.primaryMemoryStorageService.tokenMap.get(bot.quoteToken.toString())
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken
+            }
+        })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            })
         }   
         // if you pass the snapshot balances, we will use them instead of fetching the balances from on-chain
         let targetBalanceAmount: BN
@@ -296,17 +343,25 @@ export class BalanceService implements IBalanceService {
     public async fetchBalances({
         bot,
     }: FetchBalancesParams): Promise<FetchBalancesResult> {
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.targetToken.toString(),
-        )
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken
+            }
+        })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
         }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === bot.quoteToken.toString(),
-        )
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken
+            }
+        })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            })
         }
         const { balanceAmount: targetBalanceAmount } = await this.fetchBalance({
             bot,
@@ -325,8 +380,9 @@ export class BalanceService implements IBalanceService {
           ?.targetOperationalAmount
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
-                bot.chainId,
-                "Target operational gas amount not found",
+                {
+                    chainId: bot.chainId,
+                }
             )
         }
         const minOperationalGasAmount =
@@ -334,8 +390,9 @@ export class BalanceService implements IBalanceService {
           ?.minOperationalAmount
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
-                bot.chainId,
-                "Min operational gas amount not found",
+                {
+                    chainId: bot.chainId,
+                }
             )
         }
         const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
@@ -349,8 +406,9 @@ export class BalanceService implements IBalanceService {
             )
             if (effectiveGasAmountBN.lt(minOperationalGasAmountBN)) {
                 throw new InsufficientMinGasBalanceAmountException(
-                    bot.chainId,
-                    "Insufficient min gas balance amount",
+                    {
+                        chainId: bot.chainId,
+                    }
                 )
             }
             const targetBalanceAmountAfterDeductingGas =
@@ -372,12 +430,21 @@ export class BalanceService implements IBalanceService {
             }
         }
         default: {
-            const gasToken = this.primaryMemoryStorageService.tokens.find(
-                (token) =>
-                    token.type === TokenType.Native && token.chainId === bot.chainId,
-            )
+            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                type: {
+                    $eq: TokenType.Native
+                },
+                chainId: {
+                    $eq: bot.chainId
+                }
+            })
             if (!gasToken) {
-                throw new TokenNotFoundException("Gas token not found")
+                throw new TokenNotFoundException({
+                    conditions: {
+                        chainId: bot.chainId,
+                        type: TokenType.Native,
+                    },
+                })
             }
             const { balanceAmount: gasBalanceAmount } = await this.fetchBalance({
                 bot,
@@ -401,9 +468,9 @@ export class BalanceService implements IBalanceService {
         case ChainId.Sui:
             return this.suiBalanceService.fetchBalance(params)
         default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
+            throw new UnsupportedChainIdException(
+                params.bot.chainId,
+            )
         }
     }
-
-    
 }

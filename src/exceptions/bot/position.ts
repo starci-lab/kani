@@ -1,7 +1,4 @@
 import {
-    LiquidityPoolId 
-} from "@modules/databases"
-import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 
@@ -27,7 +24,7 @@ export class ActivePositionNotFoundException extends AbstractException {
 /** Thrown when position id is not set */
 export interface PositionIdNotSetExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId: string
 }
 
 export class PositionIdNotSetException extends AbstractException {

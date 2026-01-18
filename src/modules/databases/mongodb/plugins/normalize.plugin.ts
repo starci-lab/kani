@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Schema, Document } from "mongoose"
+import {
+    Schema, Document 
+} from "mongoose"
 
 // Define types for the schema options
 interface NormalizeMongooseOptions {
@@ -19,7 +21,8 @@ export const normalizeMongoose = (schema: SchemaType): void => {
         normalizeId,
         removeVersion,
         removePrivatePaths,
-        toJSON: { transform } = {},
+        toJSON: { transform } = {
+        },
     } = schema.options
 
     const json = {
@@ -52,10 +55,14 @@ export const normalizeMongoose = (schema: SchemaType): void => {
             }
 
             if (transform) {
-                return transform(doc, returnValue, options)
+                return transform(doc,
+                    returnValue,
+                    options)
             }
         },
     }
 
-    schema.options.toJSON = { ...toJSON, ...json }
+    schema.options.toJSON = {
+        ...toJSON, ...json 
+    }
 }

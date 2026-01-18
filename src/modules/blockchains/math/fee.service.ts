@@ -1,10 +1,20 @@
 
-import { ChainId } from "@typedefs"
-import { toScaledBN } from "@utils"
-import { Injectable } from "@nestjs/common"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    toScaledBN 
+} from "@utils"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
-import { Decimal } from "decimal.js"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class FeeService {
@@ -22,7 +32,8 @@ export class FeeService {
         if (!feeRate) {
             throw new Error("Fee rate not found")
         }
-        const feeAmount = toScaledBN(amount, new Decimal(feeRate))
+        const feeAmount = toScaledBN(amount,
+            new Decimal(feeRate))
         const remainingAmount = amount.sub(feeAmount)
         return {
             feeAmount,

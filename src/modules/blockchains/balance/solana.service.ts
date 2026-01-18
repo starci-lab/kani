@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { TokenType } from "@typedefs"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    TokenType 
+} from "@typedefs"
 import {
     FetchBalanceParams,
     FetchBalanceResult,
@@ -13,8 +17,10 @@ import {
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
+    ErrorTransactionType,
+    MissingSolanaTxParamException,
     TokenNotFoundException,
-    TransactionNotExecutedException,
+    TransactionNotExecutedException
 } from "@exceptions"
 import BN from "bn.js"
 import {
@@ -49,18 +55,34 @@ import {
     fetchToken as fetchToken2022,
     TOKEN_2022_PROGRAM_ADDRESS,
 } from "@solana-program/token-2022"
-import { fetchToken } from "@solana-program/token"
-import { SolanaAggregatorSelectorService } from "../aggregators"
-import { EnsureMathService } from "../math"
-import { SignerService } from "../signers"
-import { BotSchema, TokenSchema } from "@modules/databases"
-import Decimal from "decimal.js"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { PrivySignService } from "@modules/privy"
+import {
+    fetchToken 
+} from "@solana-program/token"
+import {
+    SolanaAggregatorSelectorService 
+} from "../aggregators"
+import {
+    EnsureMathService 
+} from "../math"
+import {
+    SignerService 
+} from "../signers"
+import {
+    BotSchema, TokenSchema 
+} from "@modules/databases"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    PrivySignService 
+} from "@modules/privy"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 @Injectable()
 export class SolanaBalanceService implements IBalanceService {
@@ -71,8 +93,7 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: winstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
 
     public async fetchBalance(
@@ -81,11 +102,15 @@ export class SolanaBalanceService implements IBalanceService {
             tokenId,
         }: FetchBalanceParams
     ): Promise<FetchBalanceResult> {
-        const token = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.displayId === tokenId.toString()
-        )
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: tokenId.toString()
+            }
+        })
         if (!token) {
-            throw new TokenNotFoundException("Token not found")
+            throw new TokenNotFoundException({
+                displayId: tokenId,
+            })
         }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
@@ -118,13 +143,15 @@ export class SolanaBalanceService implements IBalanceService {
                 // Token-2022 accounts are handled by the newer token-2022 program.
                 try {
                     if (token.is2022Token) {
-                        const token2022 = await fetchToken2022(rpc, ataAddress)
+                        const token2022 = await fetchToken2022(rpc,
+                            ataAddress)
                         return {
                             balanceAmount: new BN(token2022.data.amount.toString()),
                         }
                     } else {
                         // Standard SPL token account
-                        const tokenAccount = await fetchToken(rpc, ataAddress)
+                        const tokenAccount = await fetchToken(rpc,
+                            ataAddress)
                         return {
                             balanceAmount: new BN(tokenAccount.data.amount.toString()),
                         }
@@ -146,7 +173,6 @@ export class SolanaBalanceService implements IBalanceService {
             tokenIn,
             tokenOut,
             amountIn,
-            estimatedSwappedAmount,
         }: PrepareSwapTransactionParams
     ): Promise<PrepareSwapTransactionResult> {
         const batchQuoteResult = await this.solanaAggregatorSelectorService.batchQuote({
@@ -154,11 +180,6 @@ export class SolanaBalanceService implements IBalanceService {
             tokenOut,
             amountIn: amountIn,
             senderAddress: bot.accountAddress,
-        })
-        this.ensureMathService.ensureActualNotAboveExpected({
-            expected: estimatedSwappedAmount,
-            actual: batchQuoteResult.response.amountOut,
-            lowerBound: new Decimal(envConfig().slippage.swap),
         })
         // we fetch the serialized transaction from the aggregator
         const { payload: serializedTransaction } = await this.solanaAggregatorSelectorService.selectorSwap({
@@ -188,10 +209,15 @@ export class SolanaBalanceService implements IBalanceService {
                 // we get the latest blockhash
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-                    (tx) => appendTransactionMessageInstructions(swapInstructions, tx),
+                    createTransactionMessage({
+                        version: 0 
+                    }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                        tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                        tx),
+                    (tx) => appendTransactionMessageInstructions(swapInstructions,
+                        tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
                 if (bot.version === AppVersion.V1) {
@@ -246,16 +272,28 @@ export class SolanaBalanceService implements IBalanceService {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
-                    const transaction = await rpc.getTransaction(signature(txHash), { commitment: "confirmed", encoding: "base58" }).send()
+                    const transaction = await rpc.getTransaction(signature(txHash),
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }).send()
                     if (transaction) {
                         return
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException(
+                        {
+                            botId: bot.id,
+                            txHash,
+                            type: ErrorTransactionType.Swap,
+                        }
+                    )
                 },
             })
         }
         if (!solanaTx) {
-            throw new Error("Solana transaction not prepared")
+            throw new MissingSolanaTxParamException({
+                botId: bot.id,
+                type: ErrorTransactionType.Swap,
+            })
         }
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
@@ -266,13 +304,15 @@ export class SolanaBalanceService implements IBalanceService {
                 })
                 const transactionSignature = getSignatureFromTransaction(solanaTx)
                 await sendAndConfirmTransaction(
-                    solanaTx, {
+                    solanaTx,
+                    {
                         commitment: "confirmed",
                     })
-                this.logger.verbose(
-                    WinstonLog.SwapExecuted, {
+                this.winstonService.log(
+                    WinstonLog.SwapTransactionExecuted,
+                    {
+                        botId: bot.id,
                         txHash: transactionSignature.toString(),
-                        bot: bot.id,
                         tokenIn,
                         tokenOut,
                     }

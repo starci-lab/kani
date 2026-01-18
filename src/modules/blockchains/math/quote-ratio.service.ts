@@ -1,11 +1,27 @@
-import { PrimaryMemoryStorageService, QuoteRatioStatus } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { ComputeQuoteRatioParams, ComputeQuoteRatioResult } from "./swap.service"
-import { TokenNotFoundException } from "@exceptions"
-import { computeDenomination } from "@utils"
-import { SAFE_QUOTE_RATIO_ABOVE, SAFE_QUOTE_RATIO_BELOW } from "."
-import { Decimal } from "decimal.js"
-import { PriceService } from "./price.service"
+import {
+    PrimaryMemoryStorageService, QuoteRatioStatus 
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    ComputeQuoteRatioParams, ComputeQuoteRatioResult 
+} from "./swap.service"
+import {
+    TokenNotFoundException 
+} from "@exceptions"
+import {
+    computeDenomination 
+} from "@utils"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    PriceService 
+} from "./price.service"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class QuoteRatioService {
@@ -23,14 +39,26 @@ export class QuoteRatioService {
         }: ComputeQuoteRatioParams
     ): Promise<ComputeQuoteRatioResult> {
         const targetToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === targetTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: targetTokenId
+                }
+            })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                displayId: targetTokenId
+            })
         }
         const quoteToken = this.primaryMemoryStorageService
-            .tokens.find(token => token.displayId === quoteTokenId)
+            .tokenCollection.findOne({
+                displayId: {
+                    $eq: quoteTokenId
+                }
+            })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                displayId: quoteTokenId
+            })
         }
         const { price: relativePrice } = await this.priceService.resolveRelativePrice(
             {
@@ -62,10 +90,10 @@ export class QuoteRatioService {
             quoteRatio,
         }: CheckQuoteRatioStatusParams
     ): QuoteRatioStatus {
-        if (quoteRatio.gt(SAFE_QUOTE_RATIO_ABOVE)) {
+        if (quoteRatio.gt(envConfig().quote.ratio.safe.above)) {
             return QuoteRatioStatus.TargetTooLow
         }
-        if (quoteRatio.lt(SAFE_QUOTE_RATIO_BELOW)) {
+        if (quoteRatio.lt(envConfig().quote.ratio.safe.below)) {
             return QuoteRatioStatus.TargetTooHigh
         }
         return QuoteRatioStatus.Good

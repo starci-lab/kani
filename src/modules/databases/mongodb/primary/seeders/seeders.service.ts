@@ -1,10 +1,24 @@
-import { TokensService } from "./tokens.service"
-import { DexesService } from "./dexes.service"
-import { LiquidityPoolsService } from "./liquidity-pools.service"
-import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
-import { AsyncService, RetryService } from "@modules/mixin"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./seeders.module-definition"
-import { ConfigService } from "./config.service"
+import {
+    TokensService 
+} from "./tokens.service"
+import {
+    DexesService 
+} from "./dexes.service"
+import {
+    LiquidityPoolsService 
+} from "./liquidity-pools.service"
+import {
+    Inject, Injectable, OnModuleInit 
+} from "@nestjs/common"
+import {
+    AsyncService, RetryService 
+} from "@modules/mixin"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./seeders.module-definition"
+import {
+    ConfigService 
+} from "./config.service"
 
 @Injectable()
 export class SeedersService implements OnModuleInit {

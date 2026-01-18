@@ -29,7 +29,6 @@ import {
     Transaction 
 } from "@mysten/sui/transactions"
 import {
-    AggregatorId,
     ChainId 
 } from "@typedefs"
 import {
@@ -38,6 +37,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    AggregatorId 
+} from "./types"
 
 @Injectable()
 export class CetusAggregatorService implements IAggregatorService {
@@ -80,7 +82,7 @@ export class CetusAggregatorService implements IAggregatorService {
             })
             if (!tokenInInstance) {
                 throw new TokenNotFoundException({
-                    tokenId: tokenIn,
+                    displayId: tokenIn,
                 })
             }
             const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -90,7 +92,7 @@ export class CetusAggregatorService implements IAggregatorService {
             })
             if (!tokenOutInstance) {
                 throw new TokenNotFoundException({
-                    tokenId: tokenOut,
+                    displayId: tokenOut,
                 })
             }
             return await this.rpcExecutorService.withSuiClient({

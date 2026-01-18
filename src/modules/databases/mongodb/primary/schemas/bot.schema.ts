@@ -1,22 +1,44 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
-import { AbstractSchema } from "./abstract"
-import { Field, Float, ID, ObjectType } from "@nestjs/graphql"
-import { ChainId, EncryptedPayload, GraphQLTypeChainId } from "@typedefs"
-import { Schema as MongooseSchema, Types } from "mongoose"
-import { UserSchema } from "./user.schema"
-import { TokenSchema } from "./token.schema"
-import { LiquidityPoolSchema } from "./liquidity-pool.schema"
+import {
+    Prop, Schema, SchemaFactory 
+} from "@nestjs/mongoose"
+import {
+    AbstractSchema 
+} from "./abstract"
+import {
+    Field, Float, ID, ObjectType 
+} from "@nestjs/graphql"
+import {
+    ChainId, EncryptedPayload, GraphQLTypeChainId 
+} from "@typedefs"
+import {
+    Schema as MongooseSchema, Types 
+} from "mongoose"
+import {
+    UserSchema 
+} from "./user.schema"
+import {
+    TokenSchema 
+} from "./token.schema"
+import {
+    LiquidityPoolSchema 
+} from "./liquidity-pool.schema"
 import { 
     BotType,
     ExplorerId, 
     GraphQLTypeBotType, 
     GraphQLTypeExplorerId,
     AppVersion,
-    GraphQLTypeAppVersion,
-    LiquidityPoolType,
-    GraphQLTypeLiquidityPoolType
+    GraphQLTypeAppVersion,  
 } from "../enums"
-import { PositionSchema } from "./position.schema"
+import {
+    BotActivePositionSchema, BotActivePositionSchemaClass 
+} from "./bot-active-position.schema"
+import {
+    PrivyMetadataSchema, PrivyMetadataSchemaClass 
+} from "./privy-metadata.schema"
+import {
+    BotSnapshotsSchema, BotSnapshotsSchemaClass 
+} from "./bot-snapshots.schema"
 /**
  * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -34,231 +56,246 @@ export class BotSchema extends AbstractSchema {
      * The on-chain account address associated with this bot.
      * This address is used to manage liquidity positions and execute transactions.
      */
-    @Field(() => String, {
-        description: "The account address of the wallet",
-        nullable: true,
+    @Field(() => String,
+        {
+            description: "The account address of the wallet",
+            nullable: true,
+        })
+    @Prop({
+        type: String, required: false 
     })
-    @Prop({ type: String, required: false })
-        accountAddress: string
+        accountAddress?: string
  
     /**
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
-    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
-        encryptedPrivateKeyPayload: EncryptedPayload
+    @Prop({
+        type: MongooseSchema.Types.Mixed, required: false 
+    })
+        encryptedPrivateKeyPayload?: EncryptedPayload
 
     /**
      * The encrypted privy signer private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
-    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
-        encryptedPrivySignerPrivateKeyPayload: EncryptedPayload
+    @Prop({
+        type: MongooseSchema.Types.Mixed, required: false 
+    })
+        encryptedPrivySignerPrivateKeyPayload?: EncryptedPayload
     
     /**
      * The metadata of the privy wallet.
      */
-    @Prop({ type: MongooseSchema.Types.Mixed, required: false })
-        privyMetadata: PrivyMetadata
+    @Prop({
+        type: PrivyMetadataSchemaClass, required: false 
+    })
+        privyMetadata?: PrivyMetadataSchema
+
     /**
      * The blockchain network where this bot is operating (e.g., SUI, SOLANA).
      * This determines which on-chain protocol and RPC endpoints are used.
      */
     @Field(() => GraphQLTypeChainId)
-    @Prop({ type: String, required: true })
+    @Prop({
+        type: String, required: true 
+    })
         chainId: ChainId
 
-    @Field(() => ID, { description: "The user that the bot is provisioned to" })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: UserSchema.name })
+    @Field(() => ID,
+        {
+            description: "The user that the bot is provisioned to" 
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: UserSchema.name 
+    })
         user: UserSchema | Types.ObjectId
 
-    @Field(() => String, {
-        description:
+    @Field(() => String,
+        {
+            description:
             "Human-readable name of the bot, used for easy identification and management.",
-        nullable: true,
+            nullable: true,
+        })
+    @Prop({
+        type: String, required: false 
     })
-    @Prop({ type: String, required: false })
         name?: string
 
-    @Field(() => ID, {
-        description:
+    @Field(() => ID,
+        {
+            description:
             "Reference to the token that the bot will prioritize when managing liquidity positions.",
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name 
     })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
         priorityToken: TokenSchema | Types.ObjectId
 
-    @Field(() => [ID], {
-        description:
+    @Field(() => [ID],
+        {
+            description:
             "List of liquidity pools where this bot will actively manage positions.",
-    })
+        })
     @Prop({
         type: [MongooseSchema.Types.ObjectId],
         ref: LiquidityPoolSchema.name,
     })
         liquidityPools: Array<LiquidityPoolSchema | Types.ObjectId>
 
-    @Field(() => Boolean, {
-        description: "Whether the bot is initialized",
+    @Field(() => Boolean,
+        {
+            description: "Whether the bot is initialized",
+        })
+    @Prop({
+        type: Boolean, required: true, default: false 
     })
-    @Prop({ type: Boolean, required: true, default: false })
         initialized: boolean
 
-    @Field(() => [String], {
-        description: "The RPC URLs of the bot",
-        defaultValue: [],
+    @Field(() => [String],
+        {
+            description: "The RPC URLs of the bot",
+            defaultValue: [],
+        })
+    @Prop({
+        type: [String], default: [] 
     })
-    @Prop({ type: [String], default: [] })
         rpcUrls: Array<string>
 
-    @Field(() => GraphQLTypeExplorerId, {
-        description: "The explorer id of the bot",
-        nullable: true,
+    @Field(() => GraphQLTypeExplorerId,
+        {
+            description: "The explorer id of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: String, required: false, enum: ExplorerId 
     })
-    @Prop({ type: String, required: false, enum: ExplorerId })
-        explorerId: ExplorerId
+        explorerId?: ExplorerId
 
-    @Field(() => Boolean, {
-        description: "Whether the bot is running",
-        defaultValue: false,
+    @Field(() => Boolean,
+        {
+            description: "Whether the bot is running",
+            defaultValue: false,
+        })
+    @Prop({
+        type: Boolean, required: true, default: false 
     })
-    @Prop({ type: Boolean, required: true, default: false })
         running: boolean
 
-    @Field(() => Date, {
-        description: "The date and time the bot was last run",
-        nullable: true,
+    @Field(() => Date,
+        {
+            description: "The date and time the bot was last run",
+            nullable: true,
+        })
+    @Prop({
+        type: Date, required: false 
     })
-    @Prop({ type: Date, required: false })
-        lastRunAt: Date
+        lastRunAt?: Date
 
-    @Field(() => Date, {
-        description: "The date and time the bot was stopped",
-        nullable: true,
+    @Field(() => ID,
+        {
+            description: "Primary token the bot aims to accumulate through its liquidity strategy.",
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name 
     })
-    @Prop({ type: Date, required: false })
-        stoppedAt: Date
-
-    @Field(() => ID, {
-        description: "Primary token the bot aims to accumulate through its liquidity strategy.",
-    })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
         targetToken: TokenSchema | Types.ObjectId
 
-    @Field(() => ID, {
-        description: "The secondary token paired with the target token in the liquidity position.",
+    @Field(() => ID,
+        {
+            description: "The secondary token paired with the target token in the liquidity position.",
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name 
     })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name })
         quoteToken: TokenSchema | Types.ObjectId
 
-    // we use snapshot to reduce on-chain calls and improve performance
-    @Field(() => String, {
-        description: "The snapshot of the target balance amount",
+    @Field(() => BotSnapshotsSchema,
+        {
+            description: "The snapshots of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: BotSnapshotsSchemaClass, required: false 
     })
-    @Prop({ type: String, default: "0" })
-        snapshotTargetBalanceAmount: string
-    
-    @Field(() => String, {
-        description: "The snapshot of the quote balance amount",
-    })
-    @Prop({ type: String, default: "0" })
-        snapshotQuoteBalanceAmount: string
+        snapshots?: BotSnapshotsSchema
 
-    @Field(() => String, {
-        description: "The snapshot of the gas balance amount",
+    @Field(() => String,
+        {
+            description: "The privy wallet id of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: String, required: false 
     })
-    @Prop({ type: String, default: "0" })
-        snapshotGasBalanceAmount: string
-
-    @Field(() => Date, {
-        description: "The date and time the last snapshot was taken",
-        nullable: true,
-    })
-    @Prop({ type: Date, required: false })
-        lastBalancesSnapshotAt?: Date
-
-    @Field(() => String, {
-        description: "The privy wallet id of the bot",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false })
         privyWalletId?: string
     
-    @Field(() => GraphQLTypeBotType, {
-        description: "The privy wallet address of the bot",
-        nullable: true,
+    @Field(() => GraphQLTypeBotType,
+        {
+            description: "The bot type",
+        })
+    @Prop({
+        type: String, enum: BotType, required: true, default: BotType.Standard 
     })
-    @Prop({ type: String, enum: BotType, required: true, default: BotType.Standard })
         botType: BotType
 
-    @Field(() => Boolean, {
-        description: "Whether the bot is exiting to USDC",
-        defaultValue: false,
+    @Field(() => Boolean,
+        {
+            description: "Whether the bot is exiting to USDC",
+            defaultValue: false,
+        })
+    @Prop({
+        type: Boolean, required: true, default: false 
     })
-    @Prop({ type: Boolean, required: true, default: false })
         isExitToUsdc: boolean
 
-    @Field(() => Boolean, {
-        description: "Whether the bot backup private key is updated",
-        defaultValue: false,
+    @Field(() => Boolean,
+        {
+            description: "Whether the bot's backup private key has been updated",
+            defaultValue: false,
+        })
+    @Prop({
+        type: Boolean, required: true, default: false 
     })
-    @Prop({ type: Boolean, required: true, default: false })
         backupPrivateKey: boolean
-    
-    // active position
-    @Field(() => PositionSchema, {
-        description: "The active position of the bot",
-        nullable: true,
-    })
-        activePosition?: PositionSchema
 
-    @Field(() => Float, {
-        description: "The return on investment of the bot in the last 24 hours",
-        nullable: true,
-    })
+    @Field(() => Float,
+        {
+            description: "The return on investment of the bot in the last 24 hours",
+            nullable: true,
+        })
         roi24h?: number
 
-    @Field(() => Float, {
-        description: "The profit or loss of the bot in the last 24 hours",
-        nullable: true,
-    })
+    @Field(() => Float,
+        {
+            description: "The profit or loss of the bot in the last 24 hours",
+            nullable: true,
+        })
         pnl24h?: number
 
-    @Field(() => GraphQLTypeAppVersion, {
-        description: "The version of the bot",
-        defaultValue: AppVersion.V1,
+    @Field(() => GraphQLTypeAppVersion,
+        {
+            description: "The version of the bot",
+            defaultValue: AppVersion.V1,
+        })
+    @Prop({
+        type: String, enum: AppVersion, required: true, default: AppVersion.V1 
     })
-    @Prop({ type: String, enum: AppVersion, required: true, default: AppVersion.V1 })
         version: AppVersion
 
-    @Field(() => Boolean, {
-        description: "Whether trading is paused (no opening or closing positions)",
-        nullable: true,
+    @Field(() => BotActivePositionSchema,
+        {
+            description: "The active position of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: BotActivePositionSchemaClass, required: false 
     })
-    @Prop({ type: Boolean, required: false })
-        frozen?: boolean
+        activePosition?: BotActivePositionSchema
 
-    @Field(() => GraphQLTypeLiquidityPoolType, {
-        description: "The type of the active position liquidity pool that the bot is operating on, null if not operating on any liquidity pool",
-        nullable: true,
-    })
-    @Prop({ type: String, required: false, enum: LiquidityPoolType })
-        activePositionLiquidityPoolType?: LiquidityPoolType
-
-    @Field(() => ID, { 
-        description: "Reference to the active position liquidity pool associated with this bot, null if not operating on any liquidity pool", 
-        nullable: true,
-    })
-    @Prop({ type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name, required: false })
-        activePositionLiquidityPool?: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 }
 /**
  * The actual Mongoose schema generated from the class definition above.
  * This is what gets registered with the NestJS Mongoose module.
  */
 export const BotSchemaClass = SchemaFactory.createForClass(BotSchema)
-
-export interface PrivyMetadata {
-    walletId: string
-    signerPublicKey?: string
-    walletPublicKey?: string
-}

@@ -35,3 +35,17 @@ export class FeeRateNotFoundException extends AbstractException {
             })
     }
 }
+
+/** Thrown when fee to address is not found */
+export type FeeRateNotSetExceptionMetadata = AbstractExceptionMetadata
+export class FeeRateNotSetException extends AbstractException {
+    constructor(
+        { originalError }: FeeRateNotSetExceptionMetadata
+    ) {
+        super("Fee rate not set",
+            "FEE_RATE_NOT_SET_EXCEPTION",
+            {
+                originalError,
+            })
+    }
+}

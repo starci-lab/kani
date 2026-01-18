@@ -1,5 +1,6 @@
 import {
-    LiquidityPoolId 
+    LiquidityPoolId, 
+    TokenId
 } from "@modules/databases"
 
 /**
@@ -52,4 +53,25 @@ export interface OpenPositionTransactionFailedMessage {
     botId: string
     txHash: string
     liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Swap Transaction Executed Message
+ */
+export interface SwapTransactionExecutedMessage {
+    botId: string
+    txHash: string
+    tokenIn: TokenId
+    tokenOut: TokenId
+}
+
+/**
+ * Swap Transaction Failed Message
+ */
+export interface SwapTransactionFailedMessage {
+    botId: string
+    txHash: string
+    tokenIn: TokenId
+    tokenOut: TokenId
+    error: string
 }

@@ -1,11 +1,28 @@
-import { MarketId, TokenId } from "../enums"
-import { ChainId, DeepPartial, TokenType } from "@typedefs"
-import { TokenSchema } from "../schemas"
-import { Seeder } from "./seeder.interface"
-import { InjectPrimaryMongoose } from "../mongodb.decorators"
-import { Connection } from "mongoose"
-import { Injectable } from "@nestjs/common"
-import { createObjectId } from "@utils"
+import {
+    MarketListingId,
+    TokenId 
+} from "../enums"
+import {
+    ChainId, DeepPartial, TokenType 
+} from "@typedefs"
+import {
+    TokenSchema 
+} from "../schemas"
+import {
+    Seeder 
+} from "./seeder.interface"
+import {
+    InjectPrimaryMongoose 
+} from "../mongodb.decorators"
+import {
+    Connection 
+} from "mongoose"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    createObjectId 
+} from "@utils"
 
 @Injectable()
 export class TokensService implements Seeder {
@@ -19,7 +36,8 @@ export class TokensService implements Seeder {
     }
 
     async drop(): Promise<void> {
-        await this.connection.model<TokenSchema>(TokenSchema.name).deleteMany({})
+        await this.connection.model<TokenSchema>(TokenSchema.name).deleteMany({
+        })
     }
 }   
 
@@ -34,32 +52,32 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 6,
         marketListings: [
             {
-                id: MarketId.Binance,
+                id: MarketListingId.Binance,
                 symbol: "usdcusdt",
                 priority: 1,
             },
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "3408",
                 priority: 2,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "usd-coin",
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
+                id: MarketListingId.Bybit,
                 symbol: "USDCUSDT",
                 priority: 4,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "USDC_USDT",
                 priority: 5,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
                 priority: 6,
             },
@@ -80,27 +98,27 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 9,
         marketListings: [
             {
-                id: MarketId.Binance,
+                id: MarketListingId.Binance,
                 symbol: "cetususdt",
                 priority: 1,
             },
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "25114",
                 priority: 2,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "cetus-protocol",
                 priority: 3,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "CETUS_USDT",
                 priority: 4,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0xe5b274b2611143df055d6e7cd8d93fe1961716bcd4dca1cad87a83bc1e78c1ef",
                 priority: 5,
             },
@@ -121,32 +139,32 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 9,
         marketListings: [
             {
-                id: MarketId.Binance,
+                id: MarketListingId.Binance,
                 symbol: "suiusdt",
                 priority: 1,
             },
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "20947",
                 priority: 2,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "sui",
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
+                id: MarketListingId.Bybit,
                 symbol: "SUIUSDT",
                 priority: 4,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "SUI_USDT",
                 priority: 5,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0x23d7315113f5b1d3ba7a83604c44b94d79f4fd69af77f804fc7f920a6dc65744",
                 priority: 6,
             },
@@ -167,22 +185,22 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 9,
         marketListings: [
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "37454",
                 priority: 1,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "ika",
                 priority: 2,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "IKA_USDT",
                 priority: 3,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0x2b529621fa6e2c8429f623ba705572aa64175d7768365ef829df6a12c9f365f4",
                 priority: 4,
             },
@@ -203,22 +221,22 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 9,
         marketListings: [
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "38131",
                 priority: 1,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "alkimi",
                 priority: 2,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "ALKIMI_USDT",
                 priority: 3,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0x1b2deae525b02c52de4a411c4f37139931215d7cc754e57dd6c84387336ccc74",
                 priority: 4,
             },
@@ -239,22 +257,22 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 9,
         marketListings: [
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "36119",
                 priority: 1,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "walrus-2",
                 priority: 2,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "WAL_USDT",
                 priority: 3,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0xeba0732395fae9dec4bae12e52760b35fc1c5671e2da8b449c9af4efe5d54341",
                 priority: 4,
             },
@@ -275,22 +293,22 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 9,
         marketListings: [
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "33391",
                 priority: 1,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "deep",
                 priority: 2,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "DEEP_USDT",
                 priority: 3,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0x29bdd5248234e33bd93d3b81100b5fa32eaa5997843847e2c2cb16d7c6d9f7ff",
                 priority: 4,
             },
@@ -311,32 +329,32 @@ const data: Array<DeepPartial<TokenSchema>> = [
         decimals: 8,
         marketListings: [
             {
-                id: MarketId.Binance,
+                id: MarketListingId.Binance,
                 symbol: "ethusdt",
                 priority: 1,
             },
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "1027",
                 priority: 2,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "ethereum",
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
+                id: MarketListingId.Bybit,
                 symbol: "ETHUSDT",
                 priority: 4,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "ETH_USDT",
                 priority: 5,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
                 priority: 6,
             },
@@ -368,32 +386,32 @@ const data: Array<DeepPartial<TokenSchema>> = [
         chainId: ChainId.Solana,
         marketListings: [
             {
-                id: MarketId.Binance,
+                id: MarketListingId.Binance,
                 symbol: "solusdt",
                 priority: 1,
             },
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "5426",
                 priority: 2,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "solana",
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
+                id: MarketListingId.Bybit,
                 symbol: "SOLUSDT",
                 priority: 4,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "SOL_USDT",
                 priority: 5,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
                 priority: 6,
             },
@@ -413,32 +431,32 @@ const data: Array<DeepPartial<TokenSchema>> = [
         tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         marketListings: [
             {
-                id: MarketId.Binance,
+                id: MarketListingId.Binance,
                 symbol: "usdcusdt",
                 priority: 1,
             },
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "3408",
                 priority: 2,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "usd-coin",
                 priority: 3,
             },
             {
-                id: MarketId.Bybit,
+                id: MarketListingId.Bybit,
                 symbol: "USDCUSDT",
                 priority: 4,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "USDC_USDT",
                 priority: 5,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
                 priority: 6,
             },
@@ -458,17 +476,17 @@ const data: Array<DeepPartial<TokenSchema>> = [
         chainId: ChainId.Solana,
         marketListings: [
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "825",
                 priority: 1,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "tether",
                 priority: 2,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
                 priority: 4,
             },
@@ -490,22 +508,22 @@ const data: Array<DeepPartial<TokenSchema>> = [
         projectUrl: "https://raydium.io/",
         marketListings: [
             {
-                id: MarketId.CoinMarketCap,
+                id: MarketListingId.CoinMarketCap,
                 symbol: "8526",
                 priority: 1,
             },
             {
-                id: MarketId.Coingecko,
+                id: MarketListingId.Coingecko,
                 symbol: "raydium",
                 priority: 2,
             },
             {
-                id: MarketId.Gate,
+                id: MarketListingId.Gate,
                 symbol: "RAY_USDT",
                 priority: 3,
             },
             {
-                id: MarketId.Pyth,
+                id: MarketListingId.Pyth,
                 symbol: "0x91568baa8beb53db23eb3fb7f22c6e8bd303d103919e19733f2bb642d3e7987a",
                 priority: 4,
             },

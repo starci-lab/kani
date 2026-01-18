@@ -4,16 +4,13 @@ import {
 import {
     ErrorSolanaAccountName
 } from "./types"
-import {
-    DexId, LiquidityPoolId
-} from "@modules/databases"
 
 /** Thrown when Sui object is not found */
 export interface SolanaAccountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSolanaAccountName
     address: string
-    dexId: DexId
-    liquidityPoolId: LiquidityPoolId
+    dexId: string
+    liquidityPoolId: string
 }
 export class SolanaAccountNotFoundException extends AbstractException {
     constructor(

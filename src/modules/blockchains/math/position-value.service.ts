@@ -1,11 +1,23 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import Decimal from "decimal.js"
-import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
-import { TokenType } from "@typedefs"
-import { TokenNotFoundException } from "@exceptions"
-import { computeDenomination } from "@utils"
+import {
+    BotSchema, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    TokenType 
+} from "@typedefs"
+import {
+    TokenNotFoundException 
+} from "@exceptions"
+import {
+    computeDenomination 
+} from "@utils"
 import BN from "bn.js"
-import { PriceService } from "./price.service"
+import {
+    PriceService 
+} from "./price.service"
 
 @Injectable()
 export class PositionValueMathService {
@@ -22,19 +34,41 @@ export class PositionValueMathService {
             isOpen,
         }: CalculatePositionValueParams
     ): Promise<CalculatePositionValueResult> {
-        const targetToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.targetToken.toString())
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken.toString()
+            }
+        })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString()
+            })
         }
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(token => token.id === bot.quoteToken.toString())
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken.toString()
+            }
+        })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString()
+            })
         }
-        const gasToken = this.primaryMemoryStorageService.tokens.find(token => {
-            return token.type === TokenType.Native && token.chainId === bot.chainId
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            type: {
+                $eq: TokenType.Native
+            },
+            chainId: {
+                $eq: bot.chainId
+            }
         })
         if (!gasToken) {
-            throw new TokenNotFoundException("Gas token not found")
+            throw new TokenNotFoundException({
+                conditions: {
+                    type: TokenType.Native,
+                    chainId: bot.chainId,
+                },
+            })
         }
 
         const { price: beforeTargetPrice } = await this.priceService.resolvePrice(
