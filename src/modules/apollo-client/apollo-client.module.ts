@@ -1,9 +1,16 @@
 // app.module.ts
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./apollo-client.module-definition"   
-import { ApolloClientService } from "./apollo-client.service"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./apollo-client.module-definition"   
+import {
+    ApolloClientService 
+} from "./apollo-client.service"
 
-@Module({})
+@Module({
+})
 export class ApolloClientModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE

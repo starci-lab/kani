@@ -1,15 +1,18 @@
-import { HttpLink } from "@apollo/client"
+import {
+    HttpLink 
+} from "@apollo/client"
 
-export const createHttpLink = ({ url, withCredentials = false, headers = {} }: CreateHttpLinkParams) => {
+export const createHttpLink = ({ uri, withCredentials = false, headers = {
+} }: CreateHttpLinkParams) => {
     return new HttpLink({
-        uri: url,
+        uri,
         credentials: withCredentials ? "include" : "same-origin",
         headers,
     })
 }
 
 export interface CreateHttpLinkParams {
-    url: string
+    uri: string
     withCredentials?: boolean
     headers?: Record<string, string>
 }

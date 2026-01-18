@@ -1,9 +1,16 @@
 // app.module.ts
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./axios.module-definition"   
-import { AxiosService } from "./axios.service"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./axios.module-definition"   
+import {
+    AxiosService 
+} from "./axios.service"
 
-@Module({})
+@Module({
+})
 export class AxiosModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE

@@ -153,14 +153,14 @@ export class CetusAggregatorService implements IAggregatorService {
                             if (!inputCoin) {
                                 await cetusAggregatorClient.fastRouterSwap({
                                     router: _payload,
-                                    slippage: envConfig().slippage.swap,
+                                    slippage: envConfig().transaction.swap.slippage,
                                     txb: _txb,
                                 })
                                 return undefined
                             }
                             return await cetusAggregatorClient.routerSwap({
                                 router: _payload,
-                                slippage: envConfig().slippage.swap,
+                                slippage: envConfig().transaction.swap.slippage,
                                 txb: _txb,
                                 inputCoin,
                             })

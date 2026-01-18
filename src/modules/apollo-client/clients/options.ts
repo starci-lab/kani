@@ -1,4 +1,6 @@
-import { ApolloClient } from "@apollo/client"
+import {
+    ApolloClient 
+} from "@apollo/client"
 
 export const defaultOptions: ApolloClient.DefaultOptions = {
     watchQuery: {

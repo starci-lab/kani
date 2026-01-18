@@ -14,77 +14,34 @@ import {
     defaultOptions 
 } from "./options"
 
-export interface CreateClientParams {
-  url: string;
-  timeoutMs?: number;
-  initialRetryDelay?: number;
-  maxRetryDelay?: number;
-  maxRetry?: number;
+export interface CreateApolloClientParams {
+    uri: string;
+    withCredentials?: boolean;
+    enableCache?: boolean;
 }
-// no cache client
-export const createNoCacheClient = ({
-    url,
-    timeoutMs = 10000,
-    initialRetryDelay = 1000,
-    maxRetryDelay = 10000,
-    maxRetry = 3,
-}: CreateClientParams) =>
-    new ApolloClient({
-        cache: new InMemoryCache(),
-        link: ApolloLink.from([
-            createRetryLink({
-                initialRetryDelay, maxRetryDelay, maxRetry 
-            }),
-            createTimeoutLink(timeoutMs),
-            createHttpLink({
-                url, withCredentials: false, headers: {
-                } 
-            }),
-        ]),
-        defaultOptions: defaultOptions,
-    })
 
-export const createNoCacheCredentialClient = ({
-    url,
-    timeoutMs = 10000,
-    initialRetryDelay = 1000,
-    maxRetryDelay = 10000,
-    maxRetry = 3,
-}: CreateClientParams) =>
-    new ApolloClient({
+/**
+ * Create Apollo Client with configurable options
+ * Retry and timeout configs are loaded from env config
+ * Note: enableCache is reserved for future cache configuration
+ */
+export const createApolloClient = ({
+    uri,
+    withCredentials = false,
+    enableCache = true,
+}: CreateApolloClientParams) => {
+    return new ApolloClient({
         cache: new InMemoryCache(),
         link: ApolloLink.from([
-            createRetryLink({
-                initialRetryDelay, maxRetryDelay, maxRetry 
-            }),
-            createTimeoutLink(timeoutMs),
+            createRetryLink(),
+            createTimeoutLink(),
             createHttpLink({
-                url, withCredentials: true, headers: {
-                } 
+                uri,
+                withCredentials,
+                headers: {
+                },
             }),
         ]),
-        defaultOptions: defaultOptions,
+        defaultOptions: enableCache ? defaultOptions : undefined,
     })
-
-// create client
-export const createClient = ({
-    url,
-    timeoutMs = 10000,
-    initialRetryDelay = 1000,
-    maxRetryDelay = 10000,
-    maxRetry = 3,
-}: CreateClientParams) =>
-    new ApolloClient({
-        cache: new InMemoryCache(),
-        link: ApolloLink.from([
-            createRetryLink({
-                initialRetryDelay, maxRetryDelay, maxRetry 
-            }),
-            createTimeoutLink(timeoutMs),
-            createHttpLink({
-                url, withCredentials: true, headers: {
-                } 
-            }),
-        ]),
-        defaultOptions: defaultOptions,
-    })
+}

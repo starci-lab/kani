@@ -1,25 +1,24 @@
 
-import { RetryLink } from "@apollo/client/link/retry"
+import {
+    RetryLink 
+} from "@apollo/client/link/retry"
+import {
+    envConfig 
+} from "@modules/env"
 
 // retry link
-export const createRetryLink = ({ initialRetryDelay = 1000, maxRetryDelay = 10000, maxRetry = 3 }: CreateRetryLinkParams) => {
+export const createRetryLink = () => {
     return new RetryLink({
         delay: {
-            initial: initialRetryDelay,
-            max: maxRetryDelay,
-            jitter: true
+            initial: envConfig().client.apollo.retry.initial,
+            max: envConfig().client.apollo.retry.max,
+            jitter: envConfig().client.apollo.retry.jitter
         },
         attempts: {
-            max: maxRetry,
+            max: envConfig().client.apollo.retry.maxRetries,
             retryIf: (error) => {
                 return !!error
             }
         }
     })
-}
-
-export interface CreateRetryLinkParams {
-    initialRetryDelay?: number
-    maxRetryDelay?: number
-    maxRetry?: number
 }

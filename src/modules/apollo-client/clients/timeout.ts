@@ -1,15 +1,21 @@
-import { ApolloLink, Observable } from "@apollo/client"
+import {
+    ApolloLink, Observable 
+} from "@apollo/client"
+import {
+    envConfig 
+} from "@modules/env"
 
 // Custom timeout link
-export const createTimeoutLink = (timeoutMs: number) => {
+export const createTimeoutLink = () => {
+    const timeoutMs = envConfig().client.apollo.timeout.ms
     return new ApolloLink((operation, forward) => {
         return new Observable((observer) => {
             const timer = setTimeout(() => {
                 observer.error(
                     new Error(`GraphQL request timed out after ${timeoutMs}ms`)
                 )
-            }, timeoutMs)
-  
+            },
+            timeoutMs)
             const sub = forward(operation).subscribe({
                 next: (value) => observer.next(value),
                 error: (err) => {
@@ -21,7 +27,6 @@ export const createTimeoutLink = (timeoutMs: number) => {
                     observer.complete()
                 },
             })
-  
             return () => {
                 clearTimeout(timer)
                 sub.unsubscribe()

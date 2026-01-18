@@ -31,6 +31,10 @@ import {
 import {
     AggregatorId 
 } from "@typedefs"
+import {
+    envConfig 
+} from "@modules/env"
+import Decimal from "decimal.js"
 
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 
@@ -103,6 +107,7 @@ export class JupiterService implements IAggregatorService {
                         outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         amount: amountIn.toNumber(),
                         platformFeeBps: this.mountStorageService.appConfig.fees.swapReferral.solana.bps,
+                        slippageBps: new Decimal(envConfig().transaction.swap.slippage).mul(10000).toNumber(),
                     })
                     return {
                         amountOut: new BN(quote.outAmount),

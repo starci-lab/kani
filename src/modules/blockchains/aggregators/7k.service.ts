@@ -169,7 +169,7 @@ export class SevenKAggregatorService implements IAggregatorService {
                             const { coinOut, tx } = await SevenK.buildTx({
                                 quoteResponse: _payload,
                                 accountAddress,
-                                slippage: envConfig().slippage.swap,
+                                slippage: envConfig().transaction.swap.slippage,
                                 commission: {
                                     partner: this.mountStorageService.appConfig.fees.swapReferral.sui.feeToAddress,
                                     commissionBps: this.mountStorageService.appConfig.fees.swapReferral.sui.bps,
