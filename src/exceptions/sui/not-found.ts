@@ -1,5 +1,5 @@
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 import {
     ErrorSuiObjectName 
@@ -9,7 +9,7 @@ import {
 } from "@modules/databases"
 
 /** Thrown when Sui object is not found */
-export interface SuiObjectNotFoundExceptionMetadata {
+export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSuiObjectName
     parentId?: string
     id?: string
@@ -18,13 +18,13 @@ export interface SuiObjectNotFoundExceptionMetadata {
 }
 export class SuiObjectNotFoundException extends AbstractException {
     constructor(
-        { name, parentId, id }: SuiObjectNotFoundExceptionMetadata
+        { name, parentId, id, originalError }: SuiObjectNotFoundExceptionMetadata
     ) {
         super(
-            "SUI_OBJECT_NOT_FOUND_EXCEPTION", 
+            "Sui object not found", 
             "SUI_OBJECT_NOT_FOUND_EXCEPTION", 
             {
-                name, parentId, id 
+                name, parentId, id, originalError
             }
         )
     }

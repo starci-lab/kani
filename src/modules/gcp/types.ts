@@ -1,4 +1,4 @@
-export enum GoogleDriveFolderId {
+export enum GoogleDriveFolderName {
     Db = "db",
     Keys = "keys",
 }

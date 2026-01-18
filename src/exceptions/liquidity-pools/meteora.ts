@@ -1,25 +1,27 @@
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata
 } from "../abstract"
 import {
-    LiquidityPoolId 
+    LiquidityPoolId
 } from "@modules/databases"
 
 /** Thrown when multiple DLMM positions are not supported */
-export interface MeteoraMultipleDlmmPositionsNotSupportedExceptionMetadata {
-    positionCount: number
+export interface MeteoraMultipleDlmmPositionsNotSupportedExceptionMetadata extends AbstractExceptionMetadata {
     liquidityPoolId: LiquidityPoolId
+    positionCount: number
 }
+
 export class MeteoraMultipleDlmmPositionsNotSupportedException extends AbstractException {
     constructor(
-        { positionCount, liquidityPoolId }: MeteoraMultipleDlmmPositionsNotSupportedExceptionMetadata
+        { liquidityPoolId, positionCount, originalError }: MeteoraMultipleDlmmPositionsNotSupportedExceptionMetadata
     ) {
         super(
-            "MULTIPLE_DLMM_POSITIONS_NOT_SUPPORTED_EXCEPTION",
-            "MULTIPLE_DLMM_POSITIONS_NOT_SUPPORTED_EXCEPTION",
+            "Meteora multiple DLMM positions not supported",
+            "METEORA_MULTIPLE_DLMM_POSITIONS_NOT_SUPPORTED_EXCEPTION",
             {
                 positionCount,
                 liquidityPoolId,
+                originalError,
             }
         )
     }

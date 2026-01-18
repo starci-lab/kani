@@ -1,6 +1,8 @@
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { AbstractException } from "../abstract"
+import {
+    AbstractException, AbstractExceptionMetadata 
+} from "../abstract"
 
 /** Thrown when value is not in between expected */
 export enum EnsureRangeType {
@@ -8,7 +10,7 @@ export enum EnsureRangeType {
     UpperBound = "upperBound",
     Between = "between",
 }
-export interface EnsureCalculationExceptionMetadata  {
+export interface EnsureCalculationExceptionMetadata extends AbstractExceptionMetadata {
     expected: BN
     actual: BN
     lowerBound?: Decimal
@@ -18,10 +20,10 @@ export interface EnsureCalculationExceptionMetadata  {
 
 export class EnsureCalculationException extends AbstractException {
     constructor(
-        { expected, actual, lowerBound, upperBound, rangeType }: EnsureCalculationExceptionMetadata
+        { expected, actual, lowerBound, upperBound, rangeType, originalError }: EnsureCalculationExceptionMetadata
     ) {
         super(
-            "ENSURE_CALCULATION_EXCEPTION", 
+            "Ensure calculation exception", 
             "ENSURE_CALCULATION_EXCEPTION", 
             {
                 expected: expected.toString(),
@@ -29,6 +31,7 @@ export class EnsureCalculationException extends AbstractException {
                 lowerBound: lowerBound?.toString(),
                 upperBound: upperBound?.toString(),
                 rangeType,
+                originalError,
             }
         )
     }

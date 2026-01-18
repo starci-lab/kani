@@ -215,7 +215,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException(
                     {
-                        liquidityPoolId: liquidityPool.displayId,
+                        displayId: liquidityPool.displayId,
                     }
                 )
             }

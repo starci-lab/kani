@@ -1,41 +1,43 @@
 import {
-    ChainId 
+    ChainId
 } from "@typedefs"
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata
 } from "../abstract"
 
 /** Thrown when target operational gas amount config is not found */
-export interface TargetOperationalGasAmountNotFoundExceptionMetadata {
+export interface TargetOperationalGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
 export class TargetOperationalGasAmountNotFoundException extends AbstractException {
     constructor(
-        { chainId }: TargetOperationalGasAmountNotFoundExceptionMetadata
+        { chainId, originalError }: TargetOperationalGasAmountNotFoundExceptionMetadata
     ) {
         super(
-            "TARGET_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
-            "TARGET_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
+            "Target operational gas amount not found",
+            "TARGET_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION",
             {
                 chainId,
+                originalError,
             }
         )
     }
 }
 
 /** Thrown when minimum operational gas amount config is not found */
-export interface MinOperationalGasAmountNotFoundExceptionMetadata {
+export interface MinOperationalGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
 export class MinOperationalGasAmountNotFoundException extends AbstractException {
     constructor(
-        { chainId }: MinOperationalGasAmountNotFoundExceptionMetadata
+        { chainId, originalError }: MinOperationalGasAmountNotFoundExceptionMetadata
     ) {
         super(
-            "MIN_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
-            "MIN_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION", 
+            "Minimum operational gas amount not found",
+            "MIN_OPERATIONAL_GAS_AMOUNT_NOT_FOUND_EXCEPTION",
             {
                 chainId,
+                originalError,
             }
         )
     }

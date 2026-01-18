@@ -2,41 +2,45 @@ import {
     LiquidityPoolId 
 } from "@modules/databases"
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 
 /** Thrown when active position cannot be found for bot */
-export interface ActivePositionNotFoundExceptionMetadata {
+export interface ActivePositionNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
 }
 
 export class ActivePositionNotFoundException extends AbstractException {
     constructor(
-        { botId }: ActivePositionNotFoundExceptionMetadata
+        { botId, originalError }: ActivePositionNotFoundExceptionMetadata
     ) {
-        super("ACTIVE_POSITION_NOT_FOUND_EXCEPTION",
+        super("Active position not found",
             "ACTIVE_POSITION_NOT_FOUND_EXCEPTION",
             {
                 botId,
-            })
+                originalError,
+            }
+        )
     }
 }
 
 /** Thrown when position id is not set */
-export interface PositionIdNotSetExceptionMetadata {
+export interface PositionIdNotSetExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     liquidityPoolId: LiquidityPoolId
 }
 
 export class PositionIdNotSetException extends AbstractException {
     constructor(
-        { botId, liquidityPoolId }: PositionIdNotSetExceptionMetadata
+        { botId, liquidityPoolId, originalError }: PositionIdNotSetExceptionMetadata
     ) {
-        super("POSITION_ID_NOT_SET_EXCEPTION",
+        super("Position ID is not set",
             "POSITION_ID_NOT_SET_EXCEPTION",
             {
                 botId,
                 liquidityPoolId,
-            })
+                originalError,
+            }
+        )
     }
 }

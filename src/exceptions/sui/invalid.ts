@@ -1,5 +1,5 @@
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 import {
     ErrorSuiObjectName 
@@ -9,7 +9,7 @@ import {
 } from "@modules/databases"
 
 /** Thrown when Sui object is invalid type */
-export interface SuiObjectInvalidTypeExceptionMetadata {
+export interface SuiObjectInvalidTypeExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSuiObjectName
     id?: string
     dexId: DexId
@@ -17,13 +17,13 @@ export interface SuiObjectInvalidTypeExceptionMetadata {
 }
 export class SuiObjectInvalidTypeException extends AbstractException {
     constructor(
-        { name, id, dexId, liquidityPoolId }: SuiObjectInvalidTypeExceptionMetadata
+        { name, id, dexId, liquidityPoolId, originalError }: SuiObjectInvalidTypeExceptionMetadata
     ) {
         super(
-            "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
+            "Sui object invalid type exception", 
             "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
             {
-                name, id, dexId, liquidityPoolId 
+                name, id, dexId, liquidityPoolId, originalError
             }
         )
     }

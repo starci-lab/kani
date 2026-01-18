@@ -3,18 +3,24 @@
  * Errors related to Privy operations
  */
 
-import { AbstractException } from "../abstract"
+import {
+    AbstractException, AbstractExceptionMetadata 
+} from "../abstract"
 
 /** Thrown when Privy public key is not found */
-export interface PrivyPublicKeyNotFoundExceptionMetadata {
+export interface PrivyPublicKeyNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
 }
 export class PrivyPublicKeyNotFoundException extends AbstractException {
     constructor(
-        { botId }: PrivyPublicKeyNotFoundExceptionMetadata
+        { botId, originalError }: PrivyPublicKeyNotFoundExceptionMetadata
     ) {
         super(
+            "Privy public key not found", 
             "PRIVY_PUBLIC_KEY_NOT_FOUND_EXCEPTION", 
-            "PRIVY_PUBLIC_KEY_NOT_FOUND_EXCEPTION", { botId })
+            {
+                botId, originalError 
+            }
+        )
     }
 }

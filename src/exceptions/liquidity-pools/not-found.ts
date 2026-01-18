@@ -1,42 +1,42 @@
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 import {
     LiquidityPoolId 
 } from "@modules/databases"
 
 /** Thrown when liquidity pool cannot be found */
-export interface LiquidityPoolNotFoundExceptionMetadata {
+export interface LiquidityPoolNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     displayId?: LiquidityPoolId
     id?: string
 }
 export class LiquidityPoolNotFoundException extends AbstractException {
     constructor(
-        { displayId, id }: LiquidityPoolNotFoundExceptionMetadata
+        { displayId, id, originalError }: LiquidityPoolNotFoundExceptionMetadata
     ) {
         super(
-            "LIQUIDITY_POOL_NOT_FOUND_EXCEPTION", 
-            "LIQUIDITY_POOL_NOT_FOUND_EXCEPTION", 
+            "Liquidity pool not found", 
+            "LIQUIDITY_POOL_NOT_FOUND_EXCEPTION",
             {
-                displayId, id 
+                displayId, id, originalError 
             }
         )
     }
 }
 
 /** Thrown when liquidity pool no WS idle timeout */
-export interface LiquidityPoolNoWsIdleTimeoutExceptionMetadata {
-    liquidityPoolId: LiquidityPoolId
+export interface LiquidityPoolNoWsIdleTimeoutExceptionMetadata extends AbstractExceptionMetadata {
+    displayId: LiquidityPoolId
 }
 export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
     constructor(
-        { liquidityPoolId }: LiquidityPoolNoWsIdleTimeoutExceptionMetadata
+        { displayId, originalError }: LiquidityPoolNoWsIdleTimeoutExceptionMetadata
     ) {
         super(
-            "LIQUIDITY_POOL_NO_WS_IDLE_TIMEOUT_EXCEPTION", 
+            "Liquidity pool no WS idle timeout", 
             "LIQUIDITY_POOL_NO_WS_IDLE_TIMEOUT_EXCEPTION", 
             {
-                liquidityPoolId 
+                displayId, originalError 
             }
         )
     }

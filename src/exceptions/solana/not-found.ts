@@ -1,15 +1,15 @@
 import {
-    AbstractException 
+    AbstractException, AbstractExceptionMetadata
 } from "../abstract"
 import {
-    ErrorSolanaAccountName 
+    ErrorSolanaAccountName
 } from "./types"
 import {
-    DexId, LiquidityPoolId 
+    DexId, LiquidityPoolId
 } from "@modules/databases"
 
 /** Thrown when Sui object is not found */
-export interface SolanaAccountNotFoundExceptionMetadata {
+export interface SolanaAccountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSolanaAccountName
     address: string
     dexId: DexId
@@ -17,13 +17,13 @@ export interface SolanaAccountNotFoundExceptionMetadata {
 }
 export class SolanaAccountNotFoundException extends AbstractException {
     constructor(
-        { name, address, dexId, liquidityPoolId }: SolanaAccountNotFoundExceptionMetadata
+        { name, address, dexId, liquidityPoolId, originalError }: SolanaAccountNotFoundExceptionMetadata
     ) {
         super(
-            "SOLANA_OBJECT_NOT_FOUND_EXCEPTION", 
-            "SOLANA_OBJECT_NOT_FOUND_EXCEPTION", 
+            "Solana account not found",
+            "SOLANA_ACCOUNT_NOT_FOUND_EXCEPTION",
             {
-                name, address, dexId, liquidityPoolId 
+                name, address, dexId, liquidityPoolId, originalError
             }
         )
     }
