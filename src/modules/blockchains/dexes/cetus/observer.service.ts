@@ -1,26 +1,53 @@
-import { ErrorSuiObjectName, SuiObjectInvalidTypeException, SuiObjectNotFoundException } from "@exceptions"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { PrimaryMemoryStorageService, DexId } from "@modules/databases"
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
-import { AsyncService } from "@modules/mixin"
-import { Interval } from "@nestjs/schedule"
-import { createObjectId } from "@utils"
-import { parseCetusPool, CetusPool, CetusSuiObjectPoolFields } from "./struct"
+import {
+    ErrorSuiObjectName, SuiObjectInvalidTypeException, SuiObjectNotFoundException 
+} from "@exceptions"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    PrimaryMemoryStorageService, DexId 
+} from "@modules/databases"
+import {
+    Injectable, OnApplicationBootstrap, OnModuleInit 
+} from "@nestjs/common"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    parseCetusPool, CetusPool, CetusSuiObjectPoolFields 
+} from "./struct"
 import BN from "bn.js"
 import { 
     CacheKey, 
-    createCacheKey, 
     DynamicClmmLiquidityPoolInfoCacheResult, 
-    InjectRedisCache 
+    CacheService 
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { WinstonLog, WinstonService } from "@modules/winston"
-import { InjectSuperJson, DayjsService } from "@modules/mixin"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    InjectSuperJson, DayjsService 
+} from "@modules/mixin"
 import SuperJSON from "superjson"
-import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
-import { envConfig } from "@modules/env"
-import { LiquidityPoolSchema } from "@modules/databases"
+import {
+    EventEmitterService, 
+    EventName
+} from "@modules/event"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    LiquidityPoolSchema 
+} from "@modules/databases"
 
 @Injectable()
 export class CetusObserverService implements OnApplicationBootstrap, OnModuleInit {
@@ -29,8 +56,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
+        private readonly cacheService: CacheService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly winstonService: WinstonService,
@@ -107,7 +133,8 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             }
             const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
             const pool = parseCetusPool(fields)
-            return await this.handlePoolStateUpdate(liquidityPool, pool)
+            return await this.handlePoolStateUpdate(liquidityPool,
+                pool)
         } catch (error) {
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError, 
@@ -139,20 +166,21 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         await this.asyncService.allIgnoreError(
             [
                 // store in cache
-                this.cacheManager.set(
-                    createCacheKey(
-                        CacheKey.DynamicClmmLiquidityPoolInfo, 
-                        liquidityPool.displayId
-                    ),
-                    this.superjson.stringify(parsed),
+                this.cacheService.set(
+                    {
+                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                        args: [liquidityPool.id],
+                        cacheResult: parsed,
+                    }
                 ),
                 // emit event through event emitter
-                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>
-                (
-                    EventName.ClmmLiquidityPoolsFetched,
-                    { liquidityPoolId: liquidityPool.displayId, ...parsed },
-                    { withoutLocal: true },
-                ),
+                this.eventEmitterService.emit(
+                    EventName.ClmmLiquidityPoolsSynced,
+                    {
+                        id: liquidityPool.id,
+                        ...parsed,
+                    }
+                )
             ]
         )
         return parsed

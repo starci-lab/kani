@@ -4,8 +4,12 @@ import {
     u128,
     bignum,
 } from "@metaplex-foundation/beet"
-import { publicKey } from "@metaplex-foundation/beet-solana"
-import { PublicKey } from "@solana/web3.js"
+import {
+    publicKey 
+} from "@metaplex-foundation/beet-solana"
+import {
+    PublicKey 
+} from "@solana/web3.js"
   
 // ==================== RewardInfo ====================
 export class RewardInfo {
@@ -22,14 +26,22 @@ export class RewardInfo {
   
     static readonly struct = new BeetStruct<RewardInfo>(
         [
-            ["mint", publicKey],
-            ["vault", publicKey],
-            ["funder", publicKey],
-            ["reward_duration", u64],
-            ["reward_duration_end", u64],
-            ["reward_rate", u128],
-            ["last_update_time", u64],
-            ["cumulative_seconds_with_empty_liquidity_reward", u64],
+            ["mint",
+                publicKey],
+            ["vault",
+                publicKey],
+            ["funder",
+                publicKey],
+            ["reward_duration",
+                u64],
+            ["reward_duration_end",
+                u64],
+            ["reward_rate",
+                u128],
+            ["last_update_time",
+                u64],
+            ["cumulative_seconds_with_empty_liquidity_reward",
+                u64],
         ],
         (args) =>
             new RewardInfo(

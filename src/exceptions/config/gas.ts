@@ -1,5 +1,9 @@
-import { ChainId } from "@typedefs"
-import { AbstractException } from "../abstract"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    AbstractException 
+} from "../abstract"
 
 /** Thrown when target operational gas amount config is not found */
 export interface TargetOperationalGasAmountNotFoundExceptionMetadata {

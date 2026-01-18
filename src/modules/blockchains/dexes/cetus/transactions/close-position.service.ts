@@ -3,14 +3,22 @@ import {
     CetusLiquidityPoolMetadata, 
     PrimaryMemoryStorageService 
 } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { Transaction } from "@mysten/sui/transactions"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
 import { 
     InvalidPoolTokensException, 
     ActivePositionNotFoundException,
 } from "@exceptions"
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { ClmmLiquidityPoolState } from "../../../interfaces"
+import {
+    SUI_CLOCK_OBJECT_ID 
+} from "@mysten/sui/utils"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 
 @Injectable()
 export class ClosePositionTxbService {

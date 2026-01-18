@@ -1,6 +1,12 @@
-import { FeesParams, FeesResult, IFeesService } from "../../interfaces"
-import { Injectable } from "@nestjs/common"
-import { RpcExecutorService } from "../../clients"
+import {
+    FeesParams, FeesResult, IFeesService 
+} from "../../interfaces"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    RpcExecutorService 
+} from "../../clients"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
@@ -9,9 +15,15 @@ import {
     SuiObjectInvalidTypeException,
 } from "@exceptions"
 import BN from "bn.js"
-import { ClmmLiquidityPoolState } from "../../interfaces"
-import { computeDenomination, Q128, Q64 } from "@utils"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    ClmmLiquidityPoolState 
+} from "../../interfaces"
+import {
+    computeDenomination, Q128, Q64 
+} from "@utils"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 import Decimal from "decimal.js"
 import {
     FlowXSuiObjectPositionFields,
@@ -19,7 +31,9 @@ import {
     parseFlowXPosition,
     parseFlowXTickInfo
 } from "./struct"
-import { serializeSuiI32, SuiMoveObjectData, SuiObject } from "../../structs"
+import {
+    serializeSuiI32, SuiMoveObjectData, SuiObject 
+} from "../../structs"
 import {
     ClmmFeesFormulaService
 } from "../../formulas"
@@ -62,8 +76,10 @@ export class FlowxFeesService implements IFeesService {
         const tickLower = new Decimal(bot.activePosition.tickLower ?? 0)
         const tickUpper = new Decimal(bot.activePosition.tickUpper ?? 0)
         const { i32Type } = _state.static.metadata as FlowXLiquidityPoolMetadata
-        const tickLowerName = serializeSuiI32(new BN(tickLower.toString()), i32Type)
-        const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()), i32Type)
+        const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
+            i32Type)
+        const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
+            i32Type)
         const { ticksId } = _state.static.metadata as FlowXLiquidityPoolMetadata
         // get the tick lower data
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
@@ -177,8 +193,12 @@ export class FlowxFeesService implements IFeesService {
 
         return {
             snapshotAt: _state.dynamic.snapshotAt,
-            feeA: computeDenomination(feeA, tokenA.decimals, tokenB.decimals),
-            feeB: computeDenomination(feeB, tokenB.decimals, tokenA.decimals),
+            feeA: computeDenomination(feeA,
+                tokenA.decimals,
+                tokenB.decimals),
+            feeB: computeDenomination(feeB,
+                tokenB.decimals,
+                tokenA.decimals),
             rewards: [],
         }
     }

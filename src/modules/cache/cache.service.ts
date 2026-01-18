@@ -9,7 +9,7 @@ import {
     Cache
 } from "cache-manager"
 import {
-    CacheKey, configMap
+    configMap
 } from "./config"
 import {
     createHash
@@ -52,13 +52,13 @@ export class CacheService {
    *
    * @returns Parsed cache value, or `undefined` if the cache entry does not exist.
    */
-    async get(
+    async get<K extends keyof typeof configMap>(
         {
             key,
             args,
             cacheType = CacheType.Redis,
-        }: GetParams
-    ): Promise<typeof configMap[CacheKey]["cacheResult"] | undefined> {
+        }: GetParams<K>
+    ): Promise<typeof configMap[typeof key]["cacheResult"] | undefined> {
         const cacheKey = createHash(
             key,
             ...(args || [])
@@ -78,7 +78,7 @@ export class CacheService {
 
         // Deserialize using SuperJSON to restore complex types
         return this.superjson.parse<
-      typeof configMap[CacheKey]["cacheResult"]
+      typeof configMap[typeof key]["cacheResult"]
     >(serializedCachedResult)
     }
 
@@ -91,13 +91,13 @@ export class CacheService {
    * - Redis TTL is in seconds.
    * - Memory cache TTL is converted to milliseconds.
    */
-    async set(
+    async set<K extends keyof typeof configMap>(
         {
             key,
             args,
             cacheResult,
             cacheType = CacheType.Redis,
-        }: SetParams
+        }: SetParams<K>
     ): Promise<void> {
         const cacheKey = createHash(
             key,

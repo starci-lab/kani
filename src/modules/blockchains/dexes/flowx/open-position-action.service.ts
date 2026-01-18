@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IOpenActionService,
     PrepareOpenPositionParams,
@@ -9,8 +11,12 @@ import {
     ConfirmOpenPositionResult,
     ClmmLiquidityPoolState,
 } from "../../interfaces"
-import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
+import {
+    Transaction, TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SignerService 
+} from "../../signers"
 import BN from "bn.js"
 import {
     AppVersion, BotSchema, DexId, PrimaryMemoryStorageService,
@@ -33,13 +39,27 @@ import {
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
 } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { WinstonLog, WinstonService } from "@modules/winston"
-import { AsyncService } from "@modules/mixin"
-import { SuiEvent } from "@mysten/sui/client"
-import { FlowXClmmPosition } from "./struct"
-import { PrivySignService } from "@modules/privy"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    SuiEvent 
+} from "@mysten/sui/client"
+import {
+    FlowXClmmPosition 
+} from "./struct"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class FlowXOpenPositionActionService implements IOpenActionService {

@@ -1,4 +1,6 @@
-import { BeetStruct, bignum, u64 } from "@metaplex-foundation/beet"
+import {
+    BeetStruct, bignum, u64 
+} from "@metaplex-foundation/beet"
 
 // ==================== ProtocolFee ====================
 export class ProtocolFee {
@@ -9,8 +11,10 @@ export class ProtocolFee {
 
     static readonly struct = new BeetStruct<ProtocolFee>(
         [
-            ["amount_x", u64],
-            ["amount_y", u64],
+            ["amount_x",
+                u64],
+            ["amount_y",
+                u64],
         ],
         (args) =>
             new ProtocolFee(

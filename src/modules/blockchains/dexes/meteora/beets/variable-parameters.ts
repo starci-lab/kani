@@ -20,12 +20,18 @@ export class VariableParameters {
   
     static readonly struct = new BeetStruct<VariableParameters>(
         [
-            ["volatility_accumulator", u32],
-            ["volatility_reference", u32],
-            ["index_reference", i32],
-            ["_padding", fixedSizeUint8Array(4)],
-            ["last_update_timestamp", i64],
-            ["_padding_1", fixedSizeUint8Array(8)],
+            ["volatility_accumulator",
+                u32],
+            ["volatility_reference",
+                u32],
+            ["index_reference",
+                i32],
+            ["_padding",
+                fixedSizeUint8Array(4)],
+            ["last_update_timestamp",
+                i64],
+            ["_padding_1",
+                fixedSizeUint8Array(8)],
         ],
         (args) =>
             new VariableParameters(

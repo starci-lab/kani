@@ -24,6 +24,7 @@
  * - socketio: Socket.IO errors
  * - states: State management errors
  * - sui: SUI blockchain errors
+ * - solana: Solana blockchain errors
  * - swap: Swap operations errors
  * - tokens: Token-related errors
  * - transactions: Transaction errors
@@ -53,6 +54,7 @@ export * from "./rpc"
 export * from "./socketio"
 export * from "./states"
 export * from "./sui"
+export * from "./solana"
 export * from "./swap"
 export * from "./tokens"
 export * from "./transactions"

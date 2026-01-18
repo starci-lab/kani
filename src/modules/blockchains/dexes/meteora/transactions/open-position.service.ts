@@ -1,12 +1,20 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     AccountRole,
     address,
     Instruction,
 } from "@solana/kit"
-import { AtaInstructionService, AnchorUtilsService, KeypairGeneratorsService } from "../../../tx-builder"
-import { BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
-import { i32, BeetArgsStruct } from "@metaplex-foundation/beet"
+import {
+    AtaInstructionService, AnchorUtilsService, KeypairGeneratorsService 
+} from "../../../tx-builder"
+import {
+    BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    i32, BeetArgsStruct 
+} from "@metaplex-foundation/beet"
 import { 
     buildLiquidityStrategyParameters, 
     getBinCount, 
@@ -14,21 +22,47 @@ import {
     getPositionCountByBinCount, 
     StrategyType
 } from "@meteora-ag/dlmm"
-import { DlmmLiquidityPoolState } from "../../../interfaces"
+import {
+    DlmmLiquidityPoolState 
+} from "../../../interfaces"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { InvalidPoolTokensException, MultipleDlmmPositionsNotSupportedException } from "@exceptions"
-import { getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
-import { SYSVAR_RENT_ADDRESS } from "@solana/sysvars"
-import { EventAuthorityService } from "./event-authority.service"
-import { createNoopSigner, KeyPairSigner } from "@solana/signers"
-import { MeteoraSdkService } from "./sdk.service"
-import { FeeService } from "../../../math"
-import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
-import { getTransferInstruction } from "@solana-program/token"
-import { TokenType } from "@typedefs"
-import { MountStorageService } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
+import {
+    InvalidPoolTokensException, MeteoraMultipleDlmmPositionsNotSupportedException 
+} from "@exceptions"
+import {
+    getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS 
+} from "@solana-program/system"
+import {
+    SYSVAR_RENT_ADDRESS 
+} from "@solana/sysvars"
+import {
+    EventAuthorityService 
+} from "./event-authority.service"
+import {
+    createNoopSigner, KeyPairSigner 
+} from "@solana/signers"
+import {
+    MeteoraSdkService 
+} from "./sdk.service"
+import {
+    FeeService 
+} from "../../../math"
+import {
+    getTransferInstruction as getTransferInstruction2022 
+} from "@solana-program/token-2022"
+import {
+    getTransferInstruction 
+} from "@solana-program/token"
+import {
+    TokenType 
+} from "@typedefs"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
+import {
+    envConfig 
+} from "@modules/env"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
@@ -81,10 +115,16 @@ export class OpenPositionInstructionService {
             chainId: bot.chainId,
         })
         const metadata = state.static.metadata as MeteoraLiquidityPoolMetadata
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Invalid pool tokens")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         // transfer the fees to the fee address
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
@@ -109,10 +149,14 @@ export class OpenPositionInstructionService {
         const endInstructions: Array<Instruction> = []
         const minBinId = new Decimal(state.dynamic.activeId).sub(state.static.binOffset)
         const maxBinId = new Decimal(state.dynamic.activeId).add(state.static.binOffset)
-        const binCount = getBinCount(minBinId.toNumber(), maxBinId.toNumber())
+        const binCount = getBinCount(minBinId.toNumber(),
+            maxBinId.toNumber())
         const positionCount = getPositionCountByBinCount(binCount)
         if (positionCount > 1) {
-            throw new MultipleDlmmPositionsNotSupportedException(positionCount, "DLMM multiple positions are not supported")
+            throw new MeteoraMultipleDlmmPositionsNotSupportedException({
+                positionCount,
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const positionKeyPairs = await this.keypairGeneratorsService.generateKeypairs(positionCount)
         // we only support one position at a time
@@ -298,8 +342,10 @@ export class OpenPositionInstructionService {
 }
 export const OpenPositionArgs = new BeetArgsStruct(
     [
-        ["lowerBinId", i32],
-        ["width", i32],
+        ["lowerBinId",
+            i32],
+        ["width",
+            i32],
     ],
     "OpenPositionArgs"
 )

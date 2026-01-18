@@ -8,17 +8,17 @@ export enum CacheType {
     Memory = "memory",
 }
 // get parameters
-export interface GetParams {
-    key: CacheKey
+export interface GetParams<K extends CacheKey> {
+    key: K
     args?: Array<unknown>
     cacheType?: CacheType
 }
 
 // set parameters
-export interface SetParams {
-    key: CacheKey
+export interface SetParams<K extends CacheKey> {
+    key: K
     args?: Array<unknown>
-    cacheResult: typeof configMap[CacheKey]["cacheResult"]
+    cacheResult: typeof configMap[K]["cacheResult"]
     cacheType?: CacheType
 }
 

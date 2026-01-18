@@ -4,19 +4,45 @@ import {
     ReservesParams,
     ReservesResult,
 } from "../../interfaces"
-import { Decimal } from "decimal.js"
-import { Injectable } from "@nestjs/common"
-import { ActivePositionNotFoundException, BinArrayNotFoundException, InvalidPoolTokensException, PositionNotFoundException } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { address, fetchEncodedAccounts } from "@solana/kit"
-import { createProgram, PositionV2, decodeAccount, getBinArrayIndexesCoverage, deriveBinArray, BinArray, getBinArrayLowerUpperBinId } from "@meteora-ag/dlmm"
-import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js"
-import { DlmmBinFormulaService } from "../../formulas"
-import { MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
-import { computeDenomination, divBn, toScaledBN } from "@utils"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    BinArrayNotFoundException, InvalidPoolTokensException, SolanaAccountNotFoundException, ErrorSolanaAccountName, 
+    ActivePositionNotFoundException
+} from "@exceptions"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    address, fetchEncodedAccounts 
+} from "@solana/kit"
+import {
+    createProgram, PositionV2, decodeAccount, getBinArrayIndexesCoverage, deriveBinArray, BinArray, getBinArrayLowerUpperBinId 
+} from "@meteora-ag/dlmm"
+import {
+    clusterApiUrl, Connection, PublicKey 
+} from "@solana/web3.js"
+import {
+    DlmmBinFormulaService 
+} from "../../formulas"
+import {
+    DexId,
+    MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    computeDenomination, divBn, toScaledBN 
+} from "@utils"
 import BN from "bn.js"
-import { Q64 } from "@utils"
+import {
+    Q64 
+} from "@utils"
 
 @Injectable()
 export class MeteoraReservesService implements IReservesService {
@@ -30,7 +56,14 @@ export class MeteoraReservesService implements IReservesService {
         bot,
         state,
     }: ReservesParams): Promise<ReservesResult> {
-        if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
+        if (!bot.activePosition
+            || !bot.activePositionLiquidityPool
+            || !bot.activePositionLiquidityPoolType
+        ) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
         const _state = state as DlmmLiquidityPoolState
         const activeBinId = new Decimal(_state.dynamic.activeId)
         const positionId = bot.activePosition.positionId
@@ -63,12 +96,21 @@ export class MeteoraReservesService implements IReservesService {
                 callback: async ({ rpc }) => {
                     return await fetchEncodedAccounts(
                         rpc, 
-                        [address(positionId), ...binArrayPubkeys.map(pubkey => address(pubkey.toString()))]
+                        [address(positionId),
+                            ...binArrayPubkeys.map(pubkey => address(pubkey.toString()))]
                     )
                 }
             }
         )
-        if (!positionAccount || !positionAccount.exists) throw new PositionNotFoundException("Position not found")
+        if (!positionAccount || !positionAccount.exists) {
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.DLMMPosition,
+                address: positionId,
+                dexId: DexId.Meteora,
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
+
         for (const binArrayAccount of binArrayAccounts) {
             if (!binArrayAccount.exists) throw new BinArrayNotFoundException("Bin array not found")
         }
@@ -93,13 +135,21 @@ export class MeteoraReservesService implements IReservesService {
                 )
             }
         )
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === _state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === _state.static.tokenB.toString(),
-        )
-        if (!tokenA || !tokenB) throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
+        })
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const decimalsA = tokenA.decimals
         const decimalsB = tokenB.decimals
         // get the liquidity shares
@@ -120,7 +170,8 @@ export class MeteoraReservesService implements IReservesService {
             if (currentBinId.lessThan(activeBinId)) {
                 reserveBRaw = reserveBRaw.add(liquidityShare)
             } else if (currentBinId.greaterThan(activeBinId)) {
-                reserveARaw = reserveARaw.add(toScaledBN(liquidityShare, new Decimal(1).div(price)))
+                reserveARaw = reserveARaw.add(toScaledBN(liquidityShare,
+                    new Decimal(1).div(price)))
             } else {
                 // get the corresponding bin array
                 const correspondingBinArrayIndex = binLowerAndUpperBinIdsArray.findIndex(
@@ -137,16 +188,21 @@ export class MeteoraReservesService implements IReservesService {
                 const correspondingBinArray = binArrays[correspondingBinArrayIndex]
                 const indexInBinArray = new Decimal(currentBinId).sub(new Decimal(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0].toString()))
                 const globalBin = correspondingBinArray.bins[indexInBinArray.toNumber()]
-                const sharePercentage = divBn(liquidityShareRaw, globalBin.liquiditySupply)
-                const amountX = toScaledBN(new BN(globalBin.amountX), sharePercentage)
-                const amountY = toScaledBN(new BN(globalBin.amountY), sharePercentage)
+                const sharePercentage = divBn(liquidityShareRaw,
+                    globalBin.liquiditySupply)
+                const amountX = toScaledBN(new BN(globalBin.amountX),
+                    sharePercentage)
+                const amountY = toScaledBN(new BN(globalBin.amountY),
+                    sharePercentage)
                 reserveARaw = reserveARaw.add(amountX)
                 reserveBRaw = reserveBRaw.add(amountY)
             }
         }
         return {
-            tokenA: computeDenomination(reserveARaw, decimalsA),
-            tokenB: computeDenomination(reserveBRaw, decimalsB),
+            reserveA: computeDenomination(reserveARaw,
+                decimalsA),
+            reserveB: computeDenomination(reserveBRaw,
+                decimalsB),
             snapshotAt: state.dynamic.snapshotAt,
         }
     }

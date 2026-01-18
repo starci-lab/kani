@@ -1,26 +1,60 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     AccountRole,
     Instruction,
     address,
 } from "@solana/kit"
-import { AtaInstructionService, AnchorUtilsService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
-import { DlmmLiquidityPoolState } from "../../../interfaces"
-import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
-import { EventAuthorityService } from "./event-authority.service"
+import {
+    AtaInstructionService, AnchorUtilsService, WSOL_MINT_ADDRESS 
+} from "../../../tx-builder"
+import {
+    BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    DlmmLiquidityPoolState 
+} from "../../../interfaces"
+import {
+    ActivePositionNotFoundException, InvalidPoolTokensException 
+} from "@exceptions"
+import {
+    EventAuthorityService 
+} from "./event-authority.service"
 import BN from "bn.js"
-import { deriveBinArrayBitmapExtension, getBinArrayAccountMetasCoverage } from "@meteora-ag/dlmm"
-import { PublicKey } from "@solana/web3.js"
-import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
-import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
-import { bignum, FixableBeetArgsStruct, i32, u16, u64 } from "@metaplex-foundation/beet"
-import { RemainingAccountsInfoArgs, RemainingAccountsInfoType } from "./sdk.service"
-import { convertWeb3MetaToKitMeta } from "@utils"
-import { RewardInfo } from "../beets"
-import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
-import { ChainId } from "@typedefs"
+import {
+    deriveBinArrayBitmapExtension, getBinArrayAccountMetasCoverage 
+} from "@meteora-ag/dlmm"
+import {
+    PublicKey 
+} from "@solana/web3.js"
+import {
+    TOKEN_2022_PROGRAM_ADDRESS 
+} from "@solana-program/token-2022"
+import {
+    TOKEN_PROGRAM_ADDRESS 
+} from "@solana-program/token"
+import {
+    MEMO_PROGRAM_ADDRESS 
+} from "@solana-program/memo"
+import {
+    bignum, FixableBeetArgsStruct, i32, u16, u64 
+} from "@metaplex-foundation/beet"
+import {
+    RemainingAccountsInfoArgs, RemainingAccountsInfoType 
+} from "./sdk.service"
+import {
+    convertWeb3MetaToKitMeta 
+} from "@utils"
+import {
+    RewardInfo 
+} from "../beets"
+import {
+    SYSTEM_PROGRAM_ADDRESS 
+} from "@solana-program/system"
+import {
+    ChainId 
+} from "@typedefs"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
@@ -45,12 +79,20 @@ export class ClosePositionInstructionService {
     : Promise<Array<Instruction>>
     {
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Invalid pool tokens")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
@@ -177,7 +219,8 @@ export class ClosePositionInstructionService {
                 },
                 ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("remove_liquidity_by_range2", removeLiquidityByRange2Args),
+            data: this.anchorUtilsService.encodeAnchorIx("remove_liquidity_by_range2",
+                removeLiquidityByRange2Args),
         }
         instructions.push(removeLiquidityByRange2Instruction)
         const [claimFee2Args] = ClaimFee2Args.serialize({
@@ -248,7 +291,8 @@ export class ClosePositionInstructionService {
                 },
                 ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("claim_fee2", claimFee2Args),
+            data: this.anchorUtilsService.encodeAnchorIx("claim_fee2",
+                claimFee2Args),
         }
         instructions.push(claimFee2Instruction)
         for (let i = 0; i < 2; i++) {
@@ -278,10 +322,17 @@ export class ClosePositionInstructionService {
             if (closeAtaRewardInstructions?.length) {
                 endInstructions.push(...closeAtaRewardInstructions)
             }
-            const token = this.primaryMemoryStorageService.tokens.find((token) => 
-                token.tokenAddress === rewardInfo.mint.toString()
-                && token.chainId === ChainId.Solana
-            )
+            const tokenAddress = rewardInfo.mint.toString()
+            let is2022Token = false
+            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                tokenAddress: address(rewardInfo.mint.toString()),
+                chainId: ChainId.Solana,
+            })
+            if (token) {
+                is2022Token = token.is2022Token || false
+            } else {
+                is2022Token = false
+            }
             const claimReward2Instruction: Instruction = {
                 programAddress: address(programAddress),
                 accounts: [
@@ -302,7 +353,7 @@ export class ClosePositionInstructionService {
                         role: AccountRole.WRITABLE,
                     },
                     {
-                        address: token?.tokenAddress ? address(token.tokenAddress) : WSOL_MINT_ADDRESS,
+                        address: address(tokenAddress),
                         role: AccountRole.WRITABLE,
                     },
                     {
@@ -310,7 +361,7 @@ export class ClosePositionInstructionService {
                         role: AccountRole.WRITABLE,
                     },
                     {
-                        address: token?.is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
+                        address: is2022Token ? TOKEN_2022_PROGRAM_ADDRESS : TOKEN_PROGRAM_ADDRESS,
                         role: AccountRole.READONLY,
                     },
                     {
@@ -327,7 +378,8 @@ export class ClosePositionInstructionService {
                     },
                     ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
                 ],
-                data: this.anchorUtilsService.encodeAnchorIx("claim_reward2", claimReward2Args),
+                data: this.anchorUtilsService.encodeAnchorIx("claim_reward2",
+                    claimReward2Args),
             }
             instructions.push(claimReward2Instruction)
         }
@@ -359,7 +411,8 @@ export class ClosePositionInstructionService {
             ],
             data: this.anchorUtilsService.encodeAnchorIx("close_position_if_empty"),
         }
-        instructions.push(closePositionIfEmptyInstruction, ...endInstructions)
+        instructions.push(closePositionIfEmptyInstruction,
+            ...endInstructions)
         return instructions
     }
 }
@@ -372,10 +425,14 @@ export interface RemoveLiquidityByRange2ArgsType {
 }
 export const RemoveLiquidityByRange2Args = new FixableBeetArgsStruct<RemoveLiquidityByRange2ArgsType>(
     [
-        ["fromBinId", i32],
-        ["toBinId", i32],
-        ["bpsToRemove", u16],
-        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+        ["fromBinId",
+            i32],
+        ["toBinId",
+            i32],
+        ["bpsToRemove",
+            u16],
+        ["remainingAccountsInfo",
+            RemainingAccountsInfoArgs],
     ],
     "RemoveLiquidityByRange2Args"
 )
@@ -388,9 +445,12 @@ export interface ClaimFee2ArgsType {
 }
 export const ClaimFee2Args = new FixableBeetArgsStruct<ClaimFee2ArgsType>(
     [
-        ["minBinId", i32],
-        ["maxBinId", i32],
-        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+        ["minBinId",
+            i32],
+        ["maxBinId",
+            i32],
+        ["remainingAccountsInfo",
+            RemainingAccountsInfoArgs],
     ],
     "ClaimFee2Args"
 )
@@ -403,10 +463,14 @@ export interface ClaimReward2ArgsType {
 }
 export const ClaimReward2Args = new FixableBeetArgsStruct<ClaimReward2ArgsType>(
     [
-        ["rewardIndex", u64],
-        ["minBinId", i32],
-        ["maxBinId", i32],
-        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+        ["rewardIndex",
+            u64],
+        ["minBinId",
+            i32],
+        ["maxBinId",
+            i32],
+        ["remainingAccountsInfo",
+            RemainingAccountsInfoArgs],
     ],
     "ClaimReward2Args"
 )

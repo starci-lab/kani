@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { getProgramDerivedAddress, Address, address } from "@solana/kit"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    getProgramDerivedAddress, Address, address 
+} from "@solana/kit"
 
 @Injectable()
 export class EventAuthorityService {

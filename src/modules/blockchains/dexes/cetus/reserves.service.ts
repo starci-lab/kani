@@ -1,11 +1,15 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IReservesService,
     ClmmLiquidityPoolState,
     ReservesParams,
     ReservesResult
 } from "../../interfaces"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
 import {
     ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolNotFoundException
 } from "@exceptions"
@@ -14,8 +18,12 @@ import {
 } from "../../formulas"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { Q64 } from "@utils"
-import { DayjsService } from "@modules/mixin"
+import {
+    Q64 
+} from "@utils"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class CetusReservesService implements IReservesService {

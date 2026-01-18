@@ -10,18 +10,16 @@ import {
 } from "@nestjs/common"
 import {
     CacheKey,
-    createCacheKey,
-    InjectRedisCache,
-    PoolAnalyticsCacheResult,
+    CacheService,
 } from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
 import {
     Interval 
 } from "@nestjs/schedule"
 import {
     AsyncService, InjectSuperJson 
+} from "@modules/mixin"
+import {
+    DayjsService 
 } from "@modules/mixin"
 import {
     envConfig 
@@ -52,11 +50,11 @@ implements OnModuleInit, OnApplicationBootstrap
     constructor(
     private readonly apolloClientService: ApolloClientService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    @InjectRedisCache()
-    private readonly cacheManager: Cache,
+    private readonly cacheService: CacheService,
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     private readonly asyncService: AsyncService,
+    private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -152,19 +150,19 @@ implements OnModuleInit, OnApplicationBootstrap
                     if (!liquidityPool || !liquidityPool.displayId) {
                         return
                     }
-                    const poolAnalyticsCacheKey = createCacheKey(
-                        CacheKey.PoolAnalytics,
-                        liquidityPool.displayId
+                    await this.cacheService.set(
+                        {
+                            key: CacheKey.PoolAnalytics,
+                            args: [liquidityPool.id],
+                            cacheResult: {
+                                fee24H: new Decimal(item.stats.fee24H).toString(),
+                                volume24H: new Decimal(item.stats.volume24H).toString(),
+                                tvl: item.stats.totalLiquidityInUSD,
+                                apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
+                                snapshotAt: this.dayjsService.now(),
+                            },
+                        }
                     )
-                    const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: new Decimal(item.stats.fee24H).toString(),
-                        volume24H: new Decimal(item.stats.volume24H).toString(),
-                        tvl: item.stats.totalLiquidityInUSD,
-                        apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
-                    }
-                    await this.cacheManager.set(poolAnalyticsCacheKey,
-                        this.superjson.stringify(poolAnalyticsCacheResult),
-                        envConfig().cache.ttl.poolAnalytics)
                 })(),
             )
         }

@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
@@ -6,8 +8,12 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResult,
 } from "../../interfaces"
-import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
+import {
+    TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SignerService 
+} from "../../signers"
 import { 
     ClosePositionTxbService, 
 } from "./transactions"
@@ -18,12 +24,24 @@ import {
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
 } from "@exceptions"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { WinstonLog, WinstonService } from "@modules/winston"
-import { AsyncService } from "@modules/mixin"
-import { AppVersion } from "@modules/databases"
-import { PrivySignService } from "@modules/privy"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    AppVersion 
+} from "@modules/databases"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class CetusClosePositionActionService implements IClosePositionActionService {

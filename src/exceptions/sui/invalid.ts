@@ -1,6 +1,12 @@
-import { AbstractException } from "../abstract"
-import { ErrorSuiObjectName } from "./types"
-import { DexId, LiquidityPoolId } from "@modules/databases"
+import {
+    AbstractException 
+} from "../abstract"
+import {
+    ErrorSuiObjectName 
+} from "./types"
+import {
+    DexId, LiquidityPoolId 
+} from "@modules/databases"
 
 /** Thrown when Sui object is invalid type */
 export interface SuiObjectInvalidTypeExceptionMetadata {
@@ -16,7 +22,9 @@ export class SuiObjectInvalidTypeException extends AbstractException {
         super(
             "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
             "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
-            { name, id }
+            {
+                name, id 
+            }
         )
     }
 }

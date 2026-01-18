@@ -3,17 +3,37 @@ import {
     FlowXLiquidityPoolMetadata, 
     PrimaryMemoryStorageService
 } from "@modules/databases"
-import { DayjsService } from "@modules/mixin"
-import { Injectable } from "@nestjs/common"
-import { Transaction } from "@mysten/sui/transactions"
-import { InvalidPoolTokensException } from "@exceptions"
-import { ActivePositionNotFoundException } from "@exceptions"
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils"
-import { ClmmSqrtPriceMath, ClmmTickMath, MaxUint64 } from "@flowx-finance/sdk"
-import { Decimal } from "decimal.js"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
+import {
+    InvalidPoolTokensException 
+} from "@exceptions"
+import {
+    ActivePositionNotFoundException 
+} from "@exceptions"
+import {
+    SUI_CLOCK_OBJECT_ID 
+} from "@mysten/sui/utils"
+import {
+    ClmmSqrtPriceMath, ClmmTickMath, MaxUint64 
+} from "@flowx-finance/sdk"
+import {
+    Decimal 
+} from "decimal.js"
 import BN from "bn.js"
-import { ZERO_BN } from "@utils"
-import { ClmmLiquidityPoolState } from "../../../interfaces"
+import {
+    ZERO_BN 
+} from "@utils"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -53,7 +73,8 @@ export class ClosePositionTxbService {
             versionObject,
             positionRegistryObject
         } = state.static.metadata as FlowXLiquidityPoolMetadata
-        const deadline = this.dayjsService.now().add(5, "minute").utc().valueOf().toString()
+        const deadline = this.dayjsService.now().add(5,
+            "minute").utc().valueOf().toString()
         txb.moveCall({
             target: `${packageId}::position_manager::decrease_liquidity`,
             typeArguments: [
@@ -64,8 +85,10 @@ export class ClosePositionTxbService {
                 txb.object(poolRegistryObject),
                 txb.object(bot.activePosition.positionId),
                 txb.pure.u128(bot.activePosition.liquidity?.toString() || "0"),
-                txb.pure.u64(this.computeAmountX(bot, state).toString()),
-                txb.pure.u64(this.computeAmountY(bot, state).toString()),
+                txb.pure.u64(this.computeAmountX(bot,
+                    state).toString()),
+                txb.pure.u64(this.computeAmountY(bot,
+                    state).toString()),
                 txb.pure.u64(deadline),
                 txb.object(versionObject),
                 txb.object(SUI_CLOCK_OBJECT_ID),
@@ -110,7 +133,8 @@ export class ClosePositionTxbService {
                     txb.object(SUI_CLOCK_OBJECT_ID),
                 ],
             })
-            txb.transferObjects([rewardTxResult[0]], bot.accountAddress)
+            txb.transferObjects([rewardTxResult[0]],
+                bot.accountAddress)
         }
         txb.moveCall({
             target: `${packageId}::position_manager::close_position`,

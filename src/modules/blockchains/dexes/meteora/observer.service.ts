@@ -1,54 +1,86 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import {
+    Injectable, OnApplicationBootstrap, OnModuleInit
+} from "@nestjs/common"
+import {
+    CacheKey,
     DynamicDlmmLiquidityPoolInfoCacheResult,
-    InjectRedisCache,
 } from "@modules/cache"
 import {
-    LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
+    LiquidityPoolSchema,
 } from "@modules/databases"
-import { AsyncService, DayjsService, InjectSuperJson } from "@modules/mixin"
-import { LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException } from "@exceptions"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { DlmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
-import { Cache } from "cache-manager"
-import SuperJSON from "superjson"
-import { createObjectId } from "@utils"
-import { LbPair } from "./beets"
-import { createCacheKey } from "@modules/cache"
-import { CacheKey } from "@modules/cache"
-import { Interval } from "@nestjs/schedule"
-import { address, fetchEncodedAccount } from "@solana/kit"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
+import {
+    AsyncService, DayjsService,
+} from "@modules/mixin"
+import {
+    LiquidityPoolNoWsIdleTimeoutException, SolanaAccountNotFoundException, ErrorSolanaAccountName
+} from "@exceptions"
+import {
+    WinstonLog, WinstonService
+} from "@modules/winston"
+import {
+    EventEmitterService,
+    EventName
+} from "@modules/event"
+import {
+    createObjectId
+} from "@utils"
+import {
+    LbPair
+} from "./beets"
+import {
+    Interval
+} from "@nestjs/schedule"
+import {
+    address, fetchEncodedAccount
+} from "@solana/kit"
+import {
+    RpcExecutorService
+} from "@modules/blockchains"
+import {
+    RpcAccessType
+} from "@modules/filesystem"
+import {
+    envConfig
+} from "@modules/env"
 import BN from "bn.js"
-import { RetryService } from "@modules/mixin"
+import {
+    RetryService
+} from "@modules/mixin"
+import {
+    CacheService 
+} from "@modules/cache"
 
 @Injectable()
-export class MeteoraObserverService implements OnApplicationBootstrap {
+export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
+        private readonly winstonService: WinstonService,
         private readonly rpcExecutorService: RpcExecutorService,
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
+        private readonly cacheService: CacheService,
     ) { }
+
+    onModuleInit() {
+        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: {
+                    $eq: createObjectId(DexId.Meteora).toString(),
+                },
+            }
+        )
+    }
 
     // fetch the pool every 10s to ensure if no event from websocket
     @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+        for (const liquidityPool of this.liquidityPools) {
             if (
                 liquidityPool.dex.toString() !==
                 createObjectId(DexId.Meteora).toString()
@@ -56,7 +88,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                 continue
             promises.push(
                 (async () => {
-                    await this.fetchPoolInfo(liquidityPool.displayId)
+                    await this.fetchPoolInfo(liquidityPool)
                 })(),
             )
         }
@@ -67,13 +99,13 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
     // ============================================
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval().then(() => {
-            for (const liquidityPool of this.memoryStorageService.liquidityPools) {
+            for (const liquidityPool of this.liquidityPools) {
                 if (
                     liquidityPool.dex.toString() !==
                     createObjectId(DexId.Meteora).toString()
                 )
                     continue
-                this.observeDlmmPool(liquidityPool.displayId)
+                this.observeDlmmPool(liquidityPool)
             }
         })
     }
@@ -82,7 +114,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
     // Shared handler for new pool state
     // ============================================
     private async handlePoolStateUpdate(
-        liquidityPoolId: LiquidityPoolId,
+        liquidityPool: LiquidityPoolSchema,
         state: ReturnType<(typeof LbPair.struct)["read"]>,
     ) {
         const dynamicDlmmLiquidityPoolInfo: DynamicDlmmLiquidityPoolInfoCacheResult =
@@ -104,37 +136,30 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
         }
         await this.asyncService.allIgnoreError([
             // cache
-            this.cacheManager.set(
-                createCacheKey(CacheKey.DynamicDlmmLiquidityPoolInfo, liquidityPoolId),
-                this.superjson.stringify(dynamicDlmmLiquidityPoolInfo),
-                envConfig().cache.ttl.poolState,
+            this.cacheService.set(
+                {
+                    key: CacheKey.DynamicDlmmLiquidityPoolInfo,
+                    args: [liquidityPool.id],
+                    cacheResult: dynamicDlmmLiquidityPoolInfo,
+                }
             ),
             // event
-            this.eventEmitterService.emit<DlmmLiquidityPoolsFetchedEvent>(
-                EventName.DlmmLiquidityPoolsFetched,
-                { liquidityPoolId, ...dynamicDlmmLiquidityPoolInfo },
-                { withoutLocal: true },
+            this.eventEmitterService.emit(
+                EventName.DlmmLiquidityPoolsSynced,
+                {
+                    id: liquidityPool.id,
+                    ...dynamicDlmmLiquidityPoolInfo
+                }
             ),
         ])
-
-        // logging
-        this.winstonLogger.debug(WinstonLog.ObserveDlmmPool, {
-            liquidityPoolId,
-        })
         return state
     }
 
     // ============================================
     // Fetch once
     // ============================================
-    private async fetchPoolInfo(liquidityPoolId: LiquidityPoolId) {
+    private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema) {
         try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool)
-                throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
@@ -148,32 +173,38 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                 }
             })
             if (!accountInfo || !accountInfo.exists)
-                throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-            const state = LbPair.struct.read(Buffer.from(accountInfo.data), 8)
-            return await this.handlePoolStateUpdate(liquidityPoolId, state)
+                throw new SolanaAccountNotFoundException({
+                    name: ErrorSolanaAccountName.Pool,
+                    address: liquidityPool.poolAddress,
+                    dexId: DexId.Meteora,
+                    liquidityPoolId: liquidityPool.displayId,
+                })
+            const state = LbPair.struct.read(Buffer.from(accountInfo.data),
+                8)
+            return await this.handlePoolStateUpdate(
+                liquidityPool,
+                state
+            )
         } catch (error) {
-            this.winstonLogger.error(WinstonLog.FetchDlmmPoolError, {
-                liquidityPoolId,
-                error: error.message,
-            })
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolFetchedError,
+                {
+                    liquidityPoolId: liquidityPool.displayId,
+                    error: error.message,
+                }
+            )
         }
     }
 
     // ============================================
     // Observe (subscribe)
     // ============================================
-    private async observeDlmmPool(liquidityPoolId: LiquidityPoolId) {
+    private async observeDlmmPool(liquidityPool: LiquidityPoolSchema) {
         try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                (liquidityPool) => liquidityPool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool)
-                throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             if (!liquidityPool.wsIdleTimeoutMs) {
-                throw new LiquidityPoolNoWsIdleTimeoutException(
-                    liquidityPoolId,
-                    "Liquidity pool has no WS idle timeout"
-                )
+                throw new LiquidityPoolNoWsIdleTimeoutException({
+                    liquidityPoolId: liquidityPool.displayId,
+                })
             }
             // infinite loop to observe the pool
             const abortController = new AbortController()
@@ -216,7 +247,8 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
                                         8,
                                     )
                                     resetTimeout()
-                                    await this.handlePoolStateUpdate(liquidityPoolId, state)
+                                    await this.handlePoolStateUpdate(liquidityPool,
+                                        state)
                                 }
                             },
                         }
@@ -225,10 +257,11 @@ export class MeteoraObserverService implements OnApplicationBootstrap {
             }
             )
         } catch (error) {
-            this.winstonLogger.error(WinstonLog.ObserveDlmmPoolError, {
-                liquidityPoolId,
-                error: error.message,
-            })
+            this.winstonService.log(WinstonLog.LiquidityPoolWsError,
+                {
+                    liquidityPoolId: liquidityPool.displayId,
+                    error: error.message,
+                })
         }
     }
 }

@@ -1,7 +1,8 @@
-import { AxiosService } from "@modules/axios"
+import {
+    AxiosService 
+} from "@modules/axios"
 import {
     DexId,
-    LiquidityPoolId,
     LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -10,20 +11,29 @@ import {
     OnApplicationBootstrap,
     OnModuleInit,
 } from "@nestjs/common"
-import { AxiosInstance } from "axios"
+import {
+    AxiosInstance 
+} from "axios"
 import { 
     CacheKey, 
-    createCacheKey, 
-    InjectRedisCache, 
-    PoolAnalyticsCacheResult 
+    CacheService
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { Interval } from "@nestjs/schedule"
-import { createObjectId } from "@utils"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 import Decimal from "decimal.js"
-import SuperJSON from "superjson"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 // Implement analytics for Meteora DEX
 // We use the API provided by Meteora to get the analytics data
@@ -31,15 +41,15 @@ import SuperJSON from "superjson"
 export class MeteoraAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
+    private readonly url = "https://dlmm-api.meteora.ag/pair/all_by_groups"
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     private axios: AxiosInstance
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    @InjectRedisCache()
-    private readonly cacheManager: Cache,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
+    private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
+    private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -49,20 +59,22 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "meteora-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({ key })
+        this.axiosService.addRetry({
+            key 
+        })
+        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.Meteora),
+            }
+        )
     }
 
-    private async setBatchPoolAnalytics(liquidityPoolIds: Array<LiquidityPoolId>) {
+    private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
         // Get the liquidity pool
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPools.filter(
-            (liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId)
-        )
-        if (!liquidityPools.length) {
-            return
-        }
-        const baseURL = new URL("https://dlmm-api.meteora.ag/pair/all_by_groups")
+        const baseURL = new URL(this.url)
         for (const liquidityPool of liquidityPools) {
-            baseURL.searchParams.append("include_pool_token_pairs", liquidityPool.poolAddress)
+            baseURL.searchParams.append("include_pool_token_pairs",
+                liquidityPool.displayId)
         }
         const { data } = await this.axios.get<PoolAnalyticsResult>(baseURL.toString())
         const promises: Array<Promise<void>> = []
@@ -76,17 +88,19 @@ implements OnModuleInit, OnApplicationBootstrap
                         if (!liquidityPool || !liquidityPool.displayId) {
                             return
                         }
-                        const poolAnalyticsCacheKey = createCacheKey(
-                            CacheKey.PoolAnalytics,
-                            liquidityPool.displayId
+                        await this.cacheService.set(
+                            {
+                                key: CacheKey.PoolAnalytics,
+                                args: [liquidityPool.id],
+                                cacheResult: {
+                                    fee24H: new Decimal(pair.fees_24h).toString(),
+                                    volume24H: new Decimal(pair.trade_volume_24h).toString(),
+                                    tvl: pair.liquidity,
+                                    apr24H: new Decimal(pair.apr).div(100).toString(),
+                                    snapshotAt: this.dayjsService.now(),
+                                },
+                            }
                         )
-                        const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                            fee24H: new Decimal(pair.fees_24h).toString(),
-                            volume24H: new Decimal(pair.trade_volume_24h).toString(),
-                            tvl: pair.liquidity,
-                            apr24H: new Decimal(pair.apr).div(100).toString(),
-                        }
-                        await this.cacheManager.set(poolAnalyticsCacheKey, this.superjson.stringify(poolAnalyticsCacheResult), envConfig().cache.ttl.poolAnalytics)
                     })(),
                 )
             }
@@ -96,17 +110,12 @@ implements OnModuleInit, OnApplicationBootstrap
     
     @Interval(envConfig().timeConfig.interval.analytics)
     async handleAnalyticsUpdateInterval() {
-        const liquidityPools =
-        this.primaryMemoryStorageService.liquidityPools.filter(
-            (liquidityPool) =>
-                liquidityPool.dex.toString() ===
-            createObjectId(DexId.Meteora).toString(),
-        )
         // split into chunks of 10
-        const chunks = liquidityPools.reduce(
+        const chunks = this.liquidityPools.reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
-                acc[chunkIndex] = [...(acc[chunkIndex] || []), liquidityPool]
+                acc[chunkIndex] = [...(acc[chunkIndex] || []),
+                    liquidityPool]
                 return acc
             },
         [] as Array<Array<LiquidityPoolSchema>>,
@@ -115,7 +124,7 @@ implements OnModuleInit, OnApplicationBootstrap
         for (const chunk of chunks) {
             promises.push(
                 this.setBatchPoolAnalytics(
-                    chunk.map((liquidityPool) => liquidityPool.displayId),
+                    chunk,
                 ),
             )
         }

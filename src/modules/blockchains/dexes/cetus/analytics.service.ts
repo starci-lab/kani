@@ -1,4 +1,6 @@
-import { AxiosService } from "@modules/axios"
+import {
+    AxiosService 
+} from "@modules/axios"
 import {
     DexId,
     LiquidityPoolSchema,
@@ -9,20 +11,31 @@ import {
     OnApplicationBootstrap,
     OnModuleInit,
 } from "@nestjs/common"
-import { AxiosInstance } from "axios"
 import {
-    CacheKey,
-    createCacheKey,
-    InjectRedisCache,
+    AxiosInstance 
+} from "axios"
+import {
     PoolAnalyticsCacheResult,
+    CacheService,
+    CacheKey,
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { Interval } from "@nestjs/schedule"
-import { createObjectId } from "@utils"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    AsyncService, InjectSuperJson 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 import Decimal from "decimal.js"
 import SuperJSON from "superjson"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 // Implement analytics for Cetus DEX
 // We use the API provided by Cetus to get the analytics data
@@ -35,11 +48,11 @@ implements OnModuleInit, OnApplicationBootstrap
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    @InjectRedisCache()
-    private readonly cacheManager: Cache,
+    private readonly cacheService: CacheService,
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     private readonly asyncService: AsyncService,
+    private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -49,7 +62,9 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "cetus-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({ key })
+        this.axiosService.addRetry({
+            key 
+        })
         this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
                 dex: createObjectId(DexId.Cetus)
@@ -89,20 +104,19 @@ implements OnModuleInit, OnApplicationBootstrap
                     const tvl = item.tvl
                     const apr = item.totalApr
                     const { fee, vol } = item.stats[0]
-                    const poolAnalyticsCacheKey = createCacheKey(
-                        CacheKey.PoolAnalytics,
-                        liquidityPool.displayId
-                    )
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: fee,
                         volume24H: vol,
                         tvl,
-                        apr24H: new Decimal(apr).toString(),
+                        apr24H: apr,
+                        snapshotAt: this.dayjsService.now(),
                     }
-                    await this.cacheManager.set(
-                        poolAnalyticsCacheKey, 
-                        this.superjson.stringify(poolAnalyticsCacheResult), 
-                        envConfig().cache.ttl.poolAnalytics
+                    await this.cacheService.set(
+                        {
+                            key: CacheKey.PoolAnalytics,
+                            args: [liquidityPool.id],
+                            cacheResult: poolAnalyticsCacheResult,
+                        }
                     )
                 })(),
             )
@@ -123,9 +137,11 @@ implements OnModuleInit, OnApplicationBootstrap
         const chunks = liquidityPools.reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
-                acc[chunkIndex] = [...(acc[chunkIndex] || []), liquidityPool]
+                acc[chunkIndex] = [...(acc[chunkIndex] || []),
+                    liquidityPool]
                 return acc
-            }, [] as Array<Array<LiquidityPoolSchema>>,
+            },
+[] as Array<Array<LiquidityPoolSchema>>,
         )
         const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {

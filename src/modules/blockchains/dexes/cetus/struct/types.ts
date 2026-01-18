@@ -34,7 +34,9 @@
 //     }
 //   }
 
-import { SuiMoveObjectContentFields, SuiObject, SuiObjectOptionU64 } from "../../../structs"
+import {
+    SuiMoveObjectContentFields, SuiObject, SuiObjectOptionU64 
+} from "../../../structs"
 
 export interface CetusSuiSkipListNodeFields<Value, TypeName extends string = string> {
     nexts: Array<SuiObjectOptionU64<`${string}::option_u64::OptionU64`>>;

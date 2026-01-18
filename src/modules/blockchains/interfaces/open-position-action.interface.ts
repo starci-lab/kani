@@ -33,7 +33,7 @@ export interface ExecuteOpenPositionParams {
     txHash: string;
     feeAmountA: BN;
     feeAmountB: BN;
-    positionId?: string;
+    positionId: string;
 }
 
 export interface ExecuteOpenPositionResult {

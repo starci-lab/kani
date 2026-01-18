@@ -9,14 +9,26 @@ import {
     uniformFixedSizeArray,
     bignum,
 } from "@metaplex-foundation/beet"
-import { publicKey } from "@metaplex-foundation/beet-solana"
-import { PublicKey } from "@solana/web3.js"
+import {
+    publicKey 
+} from "@metaplex-foundation/beet-solana"
+import {
+    PublicKey 
+} from "@solana/web3.js"
 
 // Import nested structs
-import { StaticParameters } from "./static-parameters"
-import { VariableParameters } from "./variable-parameters"
-import { ProtocolFee } from "./protocol-fee"
-import { RewardInfo } from "./reward-info"
+import {
+    StaticParameters 
+} from "./static-parameters"
+import {
+    VariableParameters 
+} from "./variable-parameters"
+import {
+    ProtocolFee 
+} from "./protocol-fee"
+import {
+    RewardInfo 
+} from "./reward-info"
   
 // ==================== LbPair ====================
 export class LbPair {
@@ -58,39 +70,74 @@ export class LbPair {
   
     static readonly struct = new BeetStruct<LbPair>(
         [
-            ["parameters", StaticParameters.struct],
-            ["v_parameters", VariableParameters.struct],
-            ["bump_seed", fixedSizeUint8Array(1)],
-            ["bin_step_seed", fixedSizeUint8Array(2)],
-            ["pair_type", u8],
-            ["active_id", i32],
-            ["bin_step", u16],
-            ["status", u8],
-            ["require_base_factor_seed", u8],
-            ["base_factor_seed", fixedSizeUint8Array(2)],
-            ["activation_type", u8],
-            ["creator_pool_on_off_control", u8],
-            ["token_x_mint", publicKey],
-            ["token_y_mint", publicKey],
-            ["reserve_x", publicKey],
-            ["reserve_y", publicKey],
-            ["protocol_fee", ProtocolFee.struct],
-            ["_padding_1", fixedSizeUint8Array(32)],
-            ["reward_infos", uniformFixedSizeArray(RewardInfo.struct, 2)],
-            ["oracle", publicKey],
-            ["bin_array_bitmap", uniformFixedSizeArray(u64, 16)],
-            ["last_updated_at", i64],
-            ["_padding_2", fixedSizeUint8Array(32)],
-            ["pre_activation_swap_address", publicKey],
-            ["base_key", publicKey],
-            ["activation_point", u64],
-            ["pre_activation_duration", u64],
-            ["_padding_3", fixedSizeUint8Array(8)],
-            ["_padding_4", u64],
-            ["creator", publicKey],
-            ["token_mint_x_program_flag", u8],
-            ["token_mint_y_program_flag", u8],
-            ["_reserved", fixedSizeUint8Array(22)],
+            ["parameters",
+                StaticParameters.struct],
+            ["v_parameters",
+                VariableParameters.struct],
+            ["bump_seed",
+                fixedSizeUint8Array(1)],
+            ["bin_step_seed",
+                fixedSizeUint8Array(2)],
+            ["pair_type",
+                u8],
+            ["active_id",
+                i32],
+            ["bin_step",
+                u16],
+            ["status",
+                u8],
+            ["require_base_factor_seed",
+                u8],
+            ["base_factor_seed",
+                fixedSizeUint8Array(2)],
+            ["activation_type",
+                u8],
+            ["creator_pool_on_off_control",
+                u8],
+            ["token_x_mint",
+                publicKey],
+            ["token_y_mint",
+                publicKey],
+            ["reserve_x",
+                publicKey],
+            ["reserve_y",
+                publicKey],
+            ["protocol_fee",
+                ProtocolFee.struct],
+            ["_padding_1",
+                fixedSizeUint8Array(32)],
+            ["reward_infos",
+                uniformFixedSizeArray(RewardInfo.struct,
+                    2)],
+            ["oracle",
+                publicKey],
+            ["bin_array_bitmap",
+                uniformFixedSizeArray(u64,
+                    16)],
+            ["last_updated_at",
+                i64],
+            ["_padding_2",
+                fixedSizeUint8Array(32)],
+            ["pre_activation_swap_address",
+                publicKey],
+            ["base_key",
+                publicKey],
+            ["activation_point",
+                u64],
+            ["pre_activation_duration",
+                u64],
+            ["_padding_3",
+                fixedSizeUint8Array(8)],
+            ["_padding_4",
+                u64],
+            ["creator",
+                publicKey],
+            ["token_mint_x_program_flag",
+                u8],
+            ["token_mint_y_program_flag",
+                u8],
+            ["_reserved",
+                fixedSizeUint8Array(22)],
         ],
         (args) =>
             new LbPair(

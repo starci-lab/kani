@@ -1,5 +1,6 @@
 export * from "./invalid"
 export * from "./not-found"
+export * from "./meteora"
 /**
  * Liquidity Pool Exceptions
  * Errors related to liquidity pool operations (Cetus, FlowX, Turbos, etc.)
@@ -71,9 +72,3 @@ export class OnlyTwoTokenIdsAllowedException extends AbstractException {
     }
 }
 
-/** Thrown when liquidity pool has no WS idle timeout */
-export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
-    constructor(liquidityPoolId: LiquidityPoolId, message?: string) {
-        super(message || `Liquidity pool ${liquidityPoolId} has no WS idle timeout`, "LIQUIDITY_POOL_NO_WS_IDLE_TIMEOUT_EXCEPTION", { liquidityPoolId })
-    }
-}

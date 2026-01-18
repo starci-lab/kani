@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IOpenActionService,
     DlmmLiquidityPoolState,
@@ -9,15 +11,18 @@ import {
     ConfirmOpenPositionResult,
     ConfirmOpenPositionParams,
 } from "../../interfaces"
-import { SignerService } from "../../signers"
-import { AppVersion, PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    SignerService 
+} from "../../signers"
+import {
+    AppVersion, PrimaryMemoryStorageService 
+} from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionNotPreparedException,
     PositionNotFoundException,
     TransactionNotExecutedException,
-    PositionIdNotSetException,
 } from "@exceptions"
 import { 
     pipe,
@@ -41,11 +46,18 @@ import BN from "bn.js"
 import { 
     OpenPositionInstructionService 
 } from "./transactions"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { PrivySignService } from "@modules/privy"
+import {
+    WinstonService, WinstonLog 
+} from "@modules/winston"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class MeteoraOpenPositionActionService implements IOpenActionService {
@@ -55,8 +67,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         private readonly signerService: SignerService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
     
     async prepare({
@@ -75,14 +86,24 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 !snapshotQuoteBalanceAmount ||
                 !snapshotGasBalanceAmount
         ) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+            throw new SnapshotBalancesNotSetException({
+                botId: bot.id,
+            })
         }
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
@@ -104,17 +125,24 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                    (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    createTransactionMessage({
+                        version: 0 
+                    }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                        tx),
+                    (tx) => appendTransactionMessageInstructions(openPositionInstructions,
+                        tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                        tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
-                            const signedTransaction = await signTransaction([signer.keyPair, positionKeyPair.keyPair], transaction)
+                            const signedTransaction = await signTransaction([signer.keyPair,
+                                positionKeyPair.keyPair],
+                            transaction)
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
@@ -135,7 +163,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     })
                 } else {
                     // partial sign the transaction
-                    const partialSignedTransaction = await partiallySignTransaction([positionKeyPair.keyPair], transaction)
+                    const partialSignedTransaction = await partiallySignTransaction([positionKeyPair.keyPair],
+                        transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -170,9 +199,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         txHash,
         positionId,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
-        if (!positionId) {
-            throw new PositionIdNotSetException("Position id not set")
-        }
         const _state = state as DlmmLiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
@@ -180,19 +206,29 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
-                        { commitment: "confirmed", encoding: "base58" }
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }
                     ).send()
                     if (transaction) {
                         return {
                             positionId: positionId.toString(),
                         }
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException({
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
@@ -202,18 +238,20 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     rpcSubscriptions,
                 })
                 await sendAndConfirmTransaction(
-                    solanaTx, {
+                    solanaTx,
+                    {
                         commitment: "confirmed",
                     })
-                this.logger.verbose(
-                    WinstonLog.OpenPositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted,
+                    {
                         botId: bot.id,
-                        txHash,
+                        txHash: txHash.toString(),
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
                 return {
-                    positionId,
+                    positionId 
                 }
             },
         })
@@ -229,7 +267,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 
-                    address(positionId), {
+                    address(positionId),
+                    {
                         commitment: "confirmed",
                     })
                 if (!positionInfo || !positionInfo.exists) {

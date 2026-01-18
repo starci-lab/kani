@@ -1,29 +1,49 @@
-import { Injectable } from "@nestjs/common"
-import { MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService } from "@modules/databases"
-import { RpcExecutorService } from "../../clients"
-import { FeesParams, IFeesService, FeesResult } from "../../interfaces"
-import { 
-    deriveBinArray, 
-    getBinArrayIndexesCoverage, 
-    decodeAccount, 
-    createProgram, 
-    PositionV2, 
+import {
+    Injectable
+} from "@nestjs/common"
+import {
+    DexId,
+    MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService
+} from "@modules/databases"
+import {
+    RpcExecutorService
+} from "../../clients"
+import {
+    FeesParams, IFeesService, FeesResult
+} from "../../interfaces"
+import {
+    deriveBinArray,
+    getBinArrayIndexesCoverage,
+    decodeAccount,
+    createProgram,
+    PositionV2,
     BinArray,
     getBinArrayLowerUpperBinId
 } from "@meteora-ag/dlmm"
-import { 
-    ActivePositionNotFoundException, 
-    BinArrayNotFoundException, 
-    InvalidPoolTokensException, 
-    PositionNotFoundException 
+import {
+    ActivePositionNotFoundException,
+    InvalidPoolTokensException,
 } from "@exceptions"
 import BN from "bn.js"
-import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js"
-import { RpcAccessType } from "@modules/filesystem"
-import { address, fetchEncodedAccounts } from "@solana/kit"
-import { computeDenomination } from "@utils"
+import {
+    clusterApiUrl, Connection, PublicKey
+} from "@solana/web3.js"
+import {
+    RpcAccessType
+} from "@modules/filesystem"
+import {
+    address, fetchEncodedAccounts
+} from "@solana/kit"
+import {
+    computeDenomination
+} from "@utils"
 import Decimal from "decimal.js"
-import { Q128 } from "@utils"
+import {
+    Q128
+} from "@utils"
+import {
+    ErrorSolanaAccountName, SolanaAccountNotFoundException
+} from "@exceptions"
 
 @Injectable()
 export class MeteoraFeesService implements IFeesService {
@@ -39,10 +59,17 @@ export class MeteoraFeesService implements IFeesService {
         }: FeesParams,
     ): Promise<FeesResult> {
         // get the bin array indexes
-        if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
+        if (!bot.activePosition ||
+            !bot.activePositionLiquidityPool ||
+            !bot.activePositionLiquidityPoolType
+        ) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
         // get the bin array indexes
-        const positionMinBinId = bot.activePosition.minBinId ?? 0
-        const positionMaxBinId = bot.activePosition.maxBinId ?? 0
+        const positionMinBinId = bot.activePosition?.minBinId ?? 0
+        const positionMaxBinId = bot.activePosition?.maxBinId ?? 0
         const binArrayIndexes = getBinArrayIndexesCoverage(
             new BN(positionMinBinId),
             new BN(positionMaxBinId)
@@ -70,20 +97,31 @@ export class MeteoraFeesService implements IFeesService {
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await fetchEncodedAccounts(
-                        rpc, 
-                        [address(positionId), ...binArrayPubkeys.map(pubkey => address(pubkey.toString()))]
+                        rpc,
+                        [address(positionId),
+                            ...binArrayPubkeys.map(pubkey => address(pubkey.toString()))]
                     )
                 }
             }
         )
         // validate the position account
         if (!positionAccount || !positionAccount.exists) {
-            throw new PositionNotFoundException("Position not found")
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.PositionATA,
+                address: positionId,
+                dexId: DexId.Meteora,
+                liquidityPoolId: state.static.displayId,
+            })
         }
         // validate the bin array accounts
         for (const binArrayAccount of binArrayAccounts) {
             if (!binArrayAccount || !binArrayAccount.exists) {
-                throw new BinArrayNotFoundException("Bin array not found")
+                throw new SolanaAccountNotFoundException({
+                    name: ErrorSolanaAccountName.BinArray,
+                    address: binArrayAccount.address,
+                    dexId: DexId.Meteora,
+                    liquidityPoolId: state.static.displayId,
+                })
             }
         }
         // create the program
@@ -99,9 +137,13 @@ export class MeteoraFeesService implements IFeesService {
         )
         // decode the bin array accounts
         const binArrays = binArrayAccounts.map(
-            binArrayAccount => 
-            {
-                if (!binArrayAccount.exists) throw new BinArrayNotFoundException("Bin array not found")
+            binArrayAccount => {
+                if (!binArrayAccount.exists) throw new SolanaAccountNotFoundException({
+                    name: ErrorSolanaAccountName.BinArray,
+                    address: binArrayAccount.address,
+                    dexId: DexId.Meteora,
+                    liquidityPoolId: state.static.displayId,
+                })
                 return decodeAccount<BinArray>(
                     program,
                     "binArray",
@@ -129,13 +171,18 @@ export class MeteoraFeesService implements IFeesService {
                 (binLowerAndUpperBinIds) => new Decimal(currentBinId)
                     .greaterThanOrEqualTo(
                         new Decimal(binLowerAndUpperBinIds[0].toString())
-                    ) 
-                && new Decimal(currentBinId)
-                    .lessThanOrEqualTo(
-                        new Decimal(binLowerAndUpperBinIds[1].toString())
                     )
+                    && new Decimal(currentBinId)
+                        .lessThanOrEqualTo(
+                            new Decimal(binLowerAndUpperBinIds[1].toString())
+                        )
             )
-            if (correspondingBinArrayIndex === -1) throw new BinArrayNotFoundException("Bin array not found")
+            if (correspondingBinArrayIndex === -1) throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.BinArray,
+                address: binArrayAccounts[correspondingBinArrayIndex].address,
+                dexId: DexId.Meteora,
+                liquidityPoolId: state.static.displayId,
+            })
             const correspondingBinArray = binArrays[correspondingBinArrayIndex]
             const indexInBinArray = new Decimal(currentBinId).sub(new Decimal(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0].toString()))
             // get the delta x
@@ -146,12 +193,20 @@ export class MeteoraFeesService implements IFeesService {
             totalFeeX = totalFeeX.add(liquidity.mul(deltaX).div(Q128))
             totalFeeY = totalFeeY.add(liquidity.mul(deltaY).div(Q128))
         }
-        const tokenA = this.primaryMemoryStorageService.tokens.find(token => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find(token => token.id === state.static.tokenB.toString())
-        if (!tokenA || !tokenB) throw new InvalidPoolTokensException("Invalid pool tokens")
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: state.static.tokenB.toString(),
+        })
+        if (!tokenA || !tokenB) throw new InvalidPoolTokensException({
+            liquidityPoolId: state.static.displayId,
+        })
         return {
-            reserveA: computeDenomination(totalFeeX, tokenA.decimals),
-            reserveB: computeDenomination(totalFeeY, tokenB.decimals),
+            feeA: computeDenomination(totalFeeX,
+                tokenA.decimals),
+            feeB: computeDenomination(totalFeeY,
+                tokenB.decimals),
             rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }

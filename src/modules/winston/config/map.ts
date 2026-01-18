@@ -8,6 +8,7 @@ import {
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
     LiquidityPoolFetchedErrorMessage,
+    LiquidityPoolWsErrorMessage,
     OpenPositionTransactionExecutedMessage,
     OpenPositionTransactionFailedMessage
 } from "./types"
@@ -93,5 +94,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionTransactionFailedMessage,
+    },
+    // Liquidity Pool WS Error
+    [WinstonLog.LiquidityPoolWsError]: {
+        name: WinstonLog.LiquidityPoolWsError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as LiquidityPoolWsErrorMessage,
     },
 }

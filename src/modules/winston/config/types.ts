@@ -29,6 +29,14 @@ export interface LiquidityPoolFetchedErrorMessage {
 }
 
 /**
+ * Liquidity Pool WS Error Message
+ */
+export interface LiquidityPoolWsErrorMessage {
+    liquidityPoolId: LiquidityPoolId
+    error: string
+}
+
+/**
  * Open Position Executed Message
  */
 export interface OpenPositionTransactionExecutedMessage {

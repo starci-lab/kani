@@ -1,6 +1,12 @@
-import { FeesParams, FeesResult, IFeesService } from "../../interfaces"
-import { Injectable } from "@nestjs/common"
-import { RpcExecutorService } from "../../clients"
+import {
+    FeesParams, FeesResult, IFeesService 
+} from "../../interfaces"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    RpcExecutorService 
+} from "../../clients"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
@@ -9,9 +15,15 @@ import {
     InvalidTickScoreException,
 } from "@exceptions"
 import BN from "bn.js"
-import { ClmmLiquidityPoolState } from "../../interfaces"
-import { computeDenomination, Q128, Q64 } from "@utils"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    ClmmLiquidityPoolState 
+} from "../../interfaces"
+import {
+    computeDenomination, Q128, Q64 
+} from "@utils"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 import Decimal from "decimal.js"
 import { 
     CetusSuiObjectPositionInfoFields, 
@@ -20,7 +32,9 @@ import {
     parseCetusPositionInfo, 
     parseCetusTick
 } from "./struct"
-import { SuiMoveObjectData } from "../../structs"
+import {
+    SuiMoveObjectData 
+} from "../../structs"
 import { 
     ClmmFeesFormulaService
 } from "../../formulas"
@@ -179,8 +193,12 @@ export class CetusFeesService implements IFeesService {
 
         return {
             snapshotAt: _state.dynamic.snapshotAt,
-            feeA: computeDenomination(feeA, tokenA.decimals, tokenB.decimals),
-            feeB: computeDenomination(feeB, tokenB.decimals, tokenA.decimals),
+            feeA: computeDenomination(feeA,
+                tokenA.decimals,
+                tokenB.decimals),
+            feeB: computeDenomination(feeB,
+                tokenB.decimals,
+                tokenA.decimals),
             rewards: [],
         }
     }

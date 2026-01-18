@@ -232,26 +232,14 @@ export const envConfig = () => ({
     },
     cache: {
         ttl: {
-            spotPrice: parseInt(process.env.CACHE_SPOT_PRICE_TTL || ms("1m").toString(),
-                10), // 1 minute
-            sealedJwtSecretKey: parseInt(process.env.CACHE_SEALED_JWT_SECRET_KEY_TTL || ms("5m").toString(),
-                10), // 5 mins
-            sealedAesKey: parseInt(process.env.CACHE_SEALED_AES_KEY_TTL || ms("5m").toString(),
-                10), // 5 mins
-            poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || ms("1d").toString(),
-                10), // 1 day
-            poolState: parseInt(process.env.CACHE_POOL_STATE_TTL || "0",
-                10), // never expire
-            pythPrice: parseInt(process.env.CACHE_POOL_STATE_TTL || "0",
+            poolAnalytics: parseInt(process.env.CACHE_POOL_ANALYTICS_TTL || "0",
                 10), // never expire
             aggregatedTokenPrice: parseInt(process.env.CACHE_AGGREGATED_TOKEN_PRICE_TTL || "0",
                 10), // never expire
-            api: parseInt(process.env.CACHE_API_TTL || ms("1m").toString(),
-                10), // 60s
-            responses: {
-                fees: parseInt(process.env.CACHE_RESPONSES_FEES_TTL || ms("5m").toString(),
-                    10), // 5 minutes
-            }
+            dynamicClmmLiquidityPoolInfo: parseInt(process.env.CACHE_DYNAMIC_CLMM_LIQUIDITY_POOL_INFO_TTL || "0",
+                10), // never expire
+            dynamicDlmmLiquidityPoolInfo: parseInt(process.env.CACHE_DYNAMIC_DLMM_LIQUIDITY_POOL_INFO_TTL || "0",
+                10), // never expire
         },
         stale: {
             priceMaxAgeMs: parseInt(process.env.CACHE_STALE_PRICE_MAX_AGE_MS || ms("10s").toString(),

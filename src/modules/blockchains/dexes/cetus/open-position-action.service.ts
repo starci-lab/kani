@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
@@ -12,8 +14,12 @@ import {
     ClmmPoolUtil,
     TickMath,
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
+import {
+    TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SignerService 
+} from "../../signers"
 import BN from "bn.js"
 import { 
     AppVersion, BotSchema, DexId, PrimaryMemoryStorageService
@@ -39,16 +45,36 @@ import {
     SuiObjectInvalidTypeException,
 } from "@exceptions"
 import Decimal from "decimal.js"
-import { ExecuteOpenPositionParams } from "../../interfaces"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { WinstonService, WinstonLog } from "@modules/winston"
-import { toScaledBN } from "@utils"
-import { envConfig } from "@modules/env"
-import { AsyncService } from "@modules/mixin"
-import { SuiEvent } from "@mysten/sui/client"
-import { CetusLiquidityPosition } from "./struct"
-import { PrivySignService } from "@modules/privy"
+import {
+    ExecuteOpenPositionParams 
+} from "../../interfaces"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonService, WinstonLog 
+} from "@modules/winston"
+import {
+    toScaledBN 
+} from "@utils"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    SuiEvent 
+} from "@mysten/sui/client"
+import {
+    CetusLiquidityPosition 
+} from "./struct"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class CetusOpenPositionActionService implements IOpenActionService {
@@ -199,7 +225,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }
         if (ratio.gt(new Decimal(1))) {
             amountB = new BN(expectedAmountB)
-            amountA = toScaledBN(amountA, new Decimal(1).div(ratio))
+            amountA = toScaledBN(amountA,
+                new Decimal(1).div(ratio))
         }
         // create the open position txb
         const { 
@@ -344,7 +371,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     digest,
                 })
                 this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionExecuted, {
+                    WinstonLog.OpenPositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,

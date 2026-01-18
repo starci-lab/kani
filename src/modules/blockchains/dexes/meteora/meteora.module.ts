@@ -1,17 +1,33 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./meteora.module-definition"
-import { MeteoraObserverService } from "./observer.service"
-import { MeteoraOpenPositionActionService } from "./open-position-action.service"
-import { MeteoraClosePositionActionService } from "./close-position-action.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./meteora.module-definition"
+import {
+    MeteoraObserverService 
+} from "./observer.service"
+import {
+    MeteoraOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    MeteoraClosePositionActionService 
+} from "./close-position-action.service"
 import { 
     EventAuthorityService, 
     OpenPositionInstructionService, 
     MeteoraSdkService, 
     ClosePositionInstructionService 
 } from "./transactions"
-import { MeteoraAnalyticsService } from "./analytics.service"
-import { MeteoraFeesService } from "./fees.service"
-import { MeteoraReservesService } from "./reserves.service"
+import {
+    MeteoraAnalyticsService 
+} from "./analytics.service"
+import {
+    MeteoraFeesService 
+} from "./fees.service"
+import {
+    MeteoraReservesService 
+} from "./reserves.service"
 
 @Injectable()
 export class MeteoraModule extends ConfigurableModuleClass {

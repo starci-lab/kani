@@ -1,12 +1,9 @@
 import {
     DynamicClmmLiquidityPoolInfoCacheResult, DynamicDlmmLiquidityPoolInfoCacheResult 
 } from "@modules/cache"
-import {
-    LiquidityPoolId 
-} from "@modules/databases"
 
-export type WithLiquidityPoolId<T> = T & {
-    liquidityPoolId: LiquidityPoolId
+export type WithId<T> = T & {
+    id: string
 }
-export type ClmmLiquidityPoolsSyncedEventPayload = WithLiquidityPoolId<DynamicClmmLiquidityPoolInfoCacheResult>
-export type DlmmLiquidityPoolsSyncedEventPayload = WithLiquidityPoolId<DynamicDlmmLiquidityPoolInfoCacheResult>
+export type ClmmLiquidityPoolsSyncedEventPayload = WithId<DynamicClmmLiquidityPoolInfoCacheResult>
+export type DlmmLiquidityPoolsSyncedEventPayload = WithId<DynamicDlmmLiquidityPoolInfoCacheResult>

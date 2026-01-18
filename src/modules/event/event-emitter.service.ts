@@ -61,9 +61,9 @@ export class EventEmitterService implements OnModuleInit {
         )
     }
 
-    async emit(
-        event: EventName,
-        payload: typeof configMap[EventName]["eventPayload"],
+    async emit<T extends EventName>(
+        event: T,
+        payload: typeof configMap[T]["eventPayload"],
         options: EmitOptions = {
         },
     ): Promise<void> {
