@@ -1,4 +1,6 @@
-import { BeetStruct, bignum, u128, u64 } from "@metaplex-foundation/beet"
+import {
+    BeetStruct, bignum, u128, u64 
+} from "@metaplex-foundation/beet"
 
 export class PositionRewardInfo {
     constructor(
@@ -8,8 +10,10 @@ export class PositionRewardInfo {
 
     static readonly struct = new BeetStruct<PositionRewardInfo>(
         [
-            ["growthInsideLastX64", u128],
-            ["rewardAmountOwed", u64],
+            ["growthInsideLastX64",
+                u128],
+            ["rewardAmountOwed",
+                u64],
         ],
         (args) =>
             new PositionRewardInfo(

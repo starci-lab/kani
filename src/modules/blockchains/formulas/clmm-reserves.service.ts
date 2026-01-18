@@ -1,8 +1,14 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { computeDenomination, Q128, Q64, Q96 } from "@utils"
-import { ClmmTickFormulaService } from "./clmm-tick.service"
+import {
+    computeDenomination, Q128, Q64, Q96 
+} from "@utils"
+import {
+    ClmmTickFormulaService 
+} from "./clmm-tick.service"
 
 /**
  * CLMM Reserves Formula Service
@@ -102,7 +108,8 @@ export class ClmmReservesFormulaService {
                 .div(sqrtPriceUpper)
 
             return {
-                reserveA: computeDenomination(tokenA, decimalsA),
+                reserveA: computeDenomination(tokenA,
+                    decimalsA),
                 reserveB: new Decimal(0),
             }
         }
@@ -121,7 +128,8 @@ export class ClmmReservesFormulaService {
 
             return {
                 reserveA: new Decimal(0),
-                reserveB: computeDenomination(tokenB, decimalsB),
+                reserveB: computeDenomination(tokenB,
+                    decimalsB),
             }
         }
 
@@ -141,8 +149,10 @@ export class ClmmReservesFormulaService {
             .div(fixedPointScale)
 
         return {
-            reserveA: computeDenomination(tokenA, decimalsA),
-            reserveB: computeDenomination(tokenB, decimalsB),
+            reserveA: computeDenomination(tokenA,
+                decimalsA),
+            reserveB: computeDenomination(tokenB,
+                decimalsB),
         }
     }
 }

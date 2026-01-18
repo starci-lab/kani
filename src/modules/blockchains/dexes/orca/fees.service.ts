@@ -1,7 +1,15 @@
-import { FeesParams, FeesResult, IFeesService } from "../../interfaces"
-import { Injectable } from "@nestjs/common"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    FeesParams, FeesResult, IFeesService 
+} from "../../interfaces"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 import {
     address,
     fetchEncodedAccounts,
@@ -13,19 +21,35 @@ import {
     PositionNotFoundException,
     TickArrayNotFoundException,
 } from "@exceptions"
-import { Position } from "./beets"
-import { decodeTickArray } from "@orca-so/whirlpools-client"
+import {
+    Position 
+} from "./beets"
+import {
+    decodeTickArray 
+} from "@orca-so/whirlpools-client"
 import BN from "bn.js"
-import { ClmmLiquidityPoolState } from "../../interfaces"
-import { Q128, Q64 } from "@utils"
+import {
+    ClmmLiquidityPoolState 
+} from "../../interfaces"
+import {
+    Q128, Q64 
+} from "@utils"
 import {
     OrcaLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import { computeDenomination } from "@utils"
-import { TickArrayService } from "./transactions"
-import { Decimal } from "decimal.js"
-import { ClmmFeesFormulaService } from "../../formulas"
+import {
+    computeDenomination 
+} from "@utils"
+import {
+    TickArrayService 
+} from "./transactions"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    ClmmFeesFormulaService 
+} from "../../formulas"
 
 @Injectable()
 export class OrcaFeesService implements IFeesService {
@@ -85,11 +109,12 @@ export class OrcaFeesService implements IFeesService {
         ] = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                return fetchEncodedAccounts(rpc, [
-                    address(positionId),
-                    tickArrayLowerPda,
-                    tickArrayUpperPda,
-                ])
+                return fetchEncodedAccounts(rpc,
+                    [
+                        address(positionId),
+                        tickArrayLowerPda,
+                        tickArrayUpperPda,
+                    ])
             },
         })
 
@@ -203,8 +228,10 @@ export class OrcaFeesService implements IFeesService {
         })
 
         return {
-            feeA: computeDenomination(feeA, tokenA.decimals),
-            feeB: computeDenomination(feeB, tokenB.decimals),
+            feeA: computeDenomination(feeA,
+                tokenA.decimals),
+            feeB: computeDenomination(feeB,
+                tokenB.decimals),
             rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }

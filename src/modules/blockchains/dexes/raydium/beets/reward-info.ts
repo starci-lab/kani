@@ -1,6 +1,12 @@
-import { BeetStruct, bignum, u8, u64, u128 } from "@metaplex-foundation/beet"
-import { publicKey } from "@metaplex-foundation/beet-solana"
-import { PublicKey } from "@solana/web3.js"
+import {
+    BeetStruct, bignum, u8, u64, u128 
+} from "@metaplex-foundation/beet"
+import {
+    publicKey 
+} from "@metaplex-foundation/beet-solana"
+import {
+    PublicKey 
+} from "@solana/web3.js"
 
 export class RewardInfo {
     constructor(
@@ -19,17 +25,28 @@ export class RewardInfo {
   
     static readonly struct = new BeetStruct<RewardInfo>(
         [
-            ["rewardState", u8],
-            ["openTime", u64],
-            ["endTime", u64],
-            ["lastUpdateTime", u64],
-            ["emissionsPerSecondX64", u128],
-            ["rewardTotalEmissioned", u64],
-            ["rewardClaimed", u64],
-            ["tokenMint", publicKey],
-            ["tokenVault", publicKey],
-            ["authority", u128],
-            ["rewardGrowthGlobalX64", u128],
+            ["rewardState",
+                u8],
+            ["openTime",
+                u64],
+            ["endTime",
+                u64],
+            ["lastUpdateTime",
+                u64],
+            ["emissionsPerSecondX64",
+                u128],
+            ["rewardTotalEmissioned",
+                u64],
+            ["rewardClaimed",
+                u64],
+            ["tokenMint",
+                publicKey],
+            ["tokenVault",
+                publicKey],
+            ["authority",
+                u128],
+            ["rewardGrowthGlobalX64",
+                u128],
         ],
         (args) =>
             new RewardInfo(

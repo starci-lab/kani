@@ -1,48 +1,91 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import {
+    Injectable, OnApplicationBootstrap, OnModuleInit 
+} from "@nestjs/common"
 import { 
     CacheKey, 
-    InjectRedisCache, 
-    createCacheKey,
     DynamicClmmLiquidityPoolInfoCacheResult,
+    CacheService,
 } from "@modules/cache"
 import BN from "bn.js"
 import {
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
+    LiquidityPoolSchema,
 } from "@modules/databases"
-import { AsyncService, InjectSuperJson, RetryService } from "@modules/mixin"
-import { LiquidityPoolNoWsIdleTimeoutException, LiquidityPoolNotFoundException } from "@exceptions"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
-import { Cache } from "cache-manager"
+import {
+    AsyncService, InjectSuperJson, RetryService 
+} from "@modules/mixin"
+import {
+    LiquidityPoolNoWsIdleTimeoutException, LiquidityPoolNotFoundException 
+} from "@exceptions"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    EventEmitterService, EventName 
+} from "@modules/event"
 import SuperJSON from "superjson"
-import { createObjectId } from "@utils"
-import { Whirlpool } from "./beets"
-import { address, fetchEncodedAccount } from "@solana/kit"
-import { envConfig } from "@modules/env"
-import { Interval } from "@nestjs/schedule"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { DayjsService } from "@modules/mixin"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    Whirlpool 
+} from "./beets"
+import {
+    address, fetchEncodedAccount 
+} from "@solana/kit"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    DayjsService, LokiJSService 
+} from "@modules/mixin"
+import {
+    Collection 
+} from "lokijs"
 
 @Injectable()
-export class OrcaObserverService implements OnApplicationBootstrap {
+export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit {
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
-        @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
+        private readonly winstonService: WinstonService,
+        private readonly cacheManager: CacheService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly asyncService: AsyncService,
+        private readonly asyncService: AsyncService,    
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
+        private readonly lokiJSService: LokiJSService,
     ) {}
+
+    async onModuleInit() {
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: createObjectId(DexId.Orca),
+            }
+        )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "liquidity_pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
+    }
 
     // ============================================
     // Main bootstrap
@@ -50,7 +93,9 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval().then(() => {
             // observe
-            for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolArray) {
+            for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolCollection.find({
+                dex: createObjectId(DexId.Orca),
+            })) {
                 if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
                 this.observeClmmPool(liquidityPool.displayId)
             }
@@ -60,13 +105,11 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     @Interval(envConfig().timeConfig.interval.poolStateUpdate)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolArray) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
-                (
-                    async () => {
-                        await this.fetchPoolInfo(liquidityPool.displayId)
-                    })()
+                (async () => {
+                    await this.fetchPoolInfo(liquidityPool)
+                })()
             )
         }
         await this.asyncService.allIgnoreError(promises)
@@ -75,7 +118,7 @@ export class OrcaObserverService implements OnApplicationBootstrap {
     // Shared handler
     // ============================================
     private async handlePoolStateUpdate(
-        liquidityPoolId: LiquidityPoolId,
+        liquidityPool: LiquidityPoolSchema,
         state: ReturnType<typeof Whirlpool.struct["read"]>
     ) {
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
@@ -96,59 +139,59 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         await this.asyncService.allIgnoreError([
             // store in cache
             this.cacheManager.set(
-                createCacheKey(
-                    CacheKey.DynamicClmmLiquidityPoolInfo, 
-                    liquidityPoolId
-                ),
-                this.superjson.stringify(parsed),
-                envConfig().cache.ttl.poolState,
+                {
+                    key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                    args: [liquidityPool.id],
+                    cacheResult: parsed,
+                }
             ),
             // emit event through event emitter
-            this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
-                EventName.ClmmLiquidityPoolsFetched,
-                { liquidityPoolId, ...parsed },
-                { withoutLocal: true },
+            this.eventEmitterService.emit(
+                EventName.ClmmLiquidityPoolsSynced,
+                {
+                    id: liquidityPool.id,
+                    ...parsed,
+                },
             ),
         ])
-
-        return parsed
     }
 
     // ============================================
     // Fetch once
     // ============================================
     private async fetchPoolInfo(
-        liquidityPoolId: LiquidityPoolId
+        liquidityPool: LiquidityPoolSchema
     ) {
         try {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(createObjectId(liquidityPoolId).toString())
-            if (!liquidityPool) {
-                throw new LiquidityPoolNotFoundException(
-                    `Liquidity pool ${liquidityPoolId} not found`
-                )
-            }
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     return await fetchEncodedAccount(
                         rpc, 
-                        address(liquidityPool.poolAddress), {
+                        address(liquidityPool.poolAddress),
+                        {
                             commitment: "confirmed",
                         })
                 },
             })
             if (!accountInfo || !accountInfo.exists) 
                 throw new LiquidityPoolNotFoundException(
-                    `Liquidity pool ${liquidityPoolId} not found`
+                    {
+                        displayId: liquidityPool.displayId,
+                    }
                 )
-            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data), 8)
-            await this.handlePoolStateUpdate(liquidityPoolId, state)
+            const state = Whirlpool.struct.read(Buffer.from(accountInfo.data),
+                8)
+            await this.handlePoolStateUpdate(liquidityPool,
+                state)
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.FetchClmmPoolError, {
-                    liquidityPoolId,
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolFetchedError,
+                {
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
-                })
+                }
+            )
         }
     }
     // ============================================
@@ -158,17 +201,22 @@ export class OrcaObserverService implements OnApplicationBootstrap {
         liquidityPoolId: LiquidityPoolId
     ) {
         try {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-                (pool) => pool.displayId === liquidityPoolId,
+            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+                {
+                    id: liquidityPoolId,
+                }
             )
             if (!liquidityPool) 
                 throw new LiquidityPoolNotFoundException(
-                    `Liquidity pool ${liquidityPoolId} not found`
+                    {
+                        id: liquidityPoolId,
+                    }
                 )
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException(
-                    liquidityPoolId,
-                    "Liquidity pool has no WS idle timeout"
+                    {
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
                 )
             }
             // infinite loop to ensure the connection is alive
@@ -178,7 +226,8 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 if (timeout) {
                     clearTimeout(timeout)
                 }
-                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
+                timeout = setTimeout(() => abortController.abort(),
+                    liquidityPool.wsIdleTimeoutMs)
             }
             await this.retryService.retry({
                 action: async () => {
@@ -197,10 +246,13 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                             })
                             for await (const accountNotification of accountNotifications) {
                                 const state = Whirlpool.struct.read(
-                                    Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
+                                    Buffer.from(accountNotification.value?.data.toString(),
+                                        "base64"),
+                                    8
                                 )
                                 resetTimeout()
-                                await this.handlePoolStateUpdate(liquidityPoolId, state)
+                                await this.handlePoolStateUpdate(liquidityPool,
+                                    state)
                             }
                         },
                         options: {
@@ -210,8 +262,9 @@ export class OrcaObserverService implements OnApplicationBootstrap {
                 }
             })
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.ObserveClmmPoolError, {
+            this.winstonService.log(
+                WinstonLog.LiquidityPoolWsError,
+                {
                     liquidityPoolId,
                     error: error.message,
                 }

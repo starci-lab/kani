@@ -1,8 +1,14 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
-import { Q128, Q64 } from "@utils"
-import { ClmmUtilsService } from "./clmm-utils.service"
+import {
+    Q128, Q64 
+} from "@utils"
+import {
+    ClmmUtilsService 
+} from "./clmm-utils.service"
 
 /**
  * CLMM Fee Formula Service

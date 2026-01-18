@@ -16,13 +16,9 @@ import {
 } from "axios"
 import { 
     CacheKey, 
-    createCacheKey, 
-    InjectRedisCache, 
-    PoolAnalyticsCacheResult
+    PoolAnalyticsCacheResult,
+    CacheService,
 } from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
 import {
     Interval 
 } from "@nestjs/schedule"
@@ -30,13 +26,12 @@ import {
     createObjectId 
 } from "@utils"
 import {
-    AsyncService, InjectSuperJson 
+    AsyncService, DayjsService 
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
 import Decimal from "decimal.js"
-import SuperJSON from "superjson"
 
 // Implement analytics for Orca DEX
 // We use the API provided by Orca to get the analytics data
@@ -44,16 +39,15 @@ import SuperJSON from "superjson"
 export class OrcaAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
+    private readonly url = "https://api.orca.so/v2/solana/pools"
     private liquidityPools: Array<LiquidityPoolSchema> = []
     private axios: AxiosInstance
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    @InjectRedisCache()
-    private readonly cacheManager: Cache,
+    private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
+    private readonly dayjsService: DayjsService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -74,7 +68,7 @@ implements OnModuleInit, OnApplicationBootstrap
     private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
         const poolAddresses = liquidityPools.map(liquidityPool => liquidityPool.poolAddress).join(",")
         const { data } = await this.axios.get<WhirlpoolPoolResult>(
-            `https://api.orca.so/v2/solana/pools?addresses=${poolAddresses}`,
+            `${this.url}?addresses=${poolAddresses}`,
         )
         const promises: Array<Promise<void>> = []
         for (const item of data.data) {
@@ -88,20 +82,19 @@ implements OnModuleInit, OnApplicationBootstrap
                     }
                     const { stats, tvlUsdc } = item
                     const { fees, volume, yieldOverTvl } = stats["24h"]
-                    const poolAnalyticsCacheKey = createCacheKey(
-                        CacheKey.PoolAnalytics,
-                        liquidityPool.displayId
-                    )
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: new Decimal(fees).toString(),
                         volume24H: new Decimal(volume).toString(),
                         tvl: new Decimal(tvlUsdc).toString(),
                         apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
+                        snapshotAt: this.dayjsService.now(),
                     }
-                    await this.cacheManager.set(
-                        poolAnalyticsCacheKey, 
-                        this.superjson.stringify(poolAnalyticsCacheResult), 
-                        envConfig().cache.ttl.poolAnalytics
+                    await this.cacheService.set(
+                        {
+                            key: CacheKey.PoolAnalytics,
+                            args: [liquidityPool.id],
+                            cacheResult: poolAnalyticsCacheResult,
+                        }
                     )
                 })(),
             )

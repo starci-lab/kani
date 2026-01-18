@@ -23,7 +23,8 @@ import {
     OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService 
+    AsyncService, 
+    InjectSuperJson
 } from "@modules/mixin"
 import {
     Interval 
@@ -32,30 +33,26 @@ import {
     createObjectId 
 } from "@utils"
 import { 
-    CacheKey, 
-    createCacheKey, 
     DynamicClmmLiquidityPoolInfoCacheResult, 
-    InjectRedisCache 
+    CacheService, 
+    CacheKey 
 } from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
 import {
     WinstonService, WinstonLog 
 } from "@modules/winston"
 import {
-    InjectSuperJson, DayjsService 
+    DayjsService 
 } from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
-    ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName 
+    EventEmitterService, EventName 
 } from "@modules/event"
-import {
-    envConfig 
-} from "@modules/env"
 import {
     parseMomentumPool, MomentumPool, MomentumSuiObjectPoolFields 
 } from "./struct"
+import {
+    envConfig 
+} from "@modules/env"
+import SuperJSON from "superjson"
 
 @Injectable()
 export class MomentumObserverService implements OnApplicationBootstrap, OnModuleInit {
@@ -63,8 +60,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
+        private readonly cacheService: CacheService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly winstonService: WinstonService,
@@ -162,24 +158,21 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
         }
         await this.asyncService.allIgnoreError(
             [
-                // store in cache
-                this.cacheManager.set(
-                    createCacheKey(
-                        CacheKey.DynamicClmmLiquidityPoolInfo, 
-                        liquidityPool.displayId
-                    ),
-                    this.superjson.stringify(parsed),
+                // cache
+                this.cacheService.set(
+                    {
+                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                        args: [liquidityPool.id],
+                        cacheResult: parsed,
+                    }
                 ),
                 // emit event through event emitter
-                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
-                    EventName.ClmmLiquidityPoolsFetched,
+                this.eventEmitterService.emit(
+                    EventName.ClmmLiquidityPoolsSynced,
                     {
-                        liquidityPoolId: liquidityPool.displayId, 
-                        ...parsed 
-                    },
-                    {
-                        withoutLocal: true 
-                    },
+                        id: liquidityPool.id,
+                        ...parsed,
+                    }
                 ),
             ]
         )

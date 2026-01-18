@@ -17,13 +17,13 @@ export interface SuiObjectInvalidTypeExceptionMetadata {
 }
 export class SuiObjectInvalidTypeException extends AbstractException {
     constructor(
-        { name, id }: SuiObjectInvalidTypeExceptionMetadata
+        { name, id, dexId, liquidityPoolId }: SuiObjectInvalidTypeExceptionMetadata
     ) {
         super(
             "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
             "SUI_OBJECT_INVALID_TYPE_EXCEPTION", 
             {
-                name, id 
+                name, id, dexId, liquidityPoolId 
             }
         )
     }

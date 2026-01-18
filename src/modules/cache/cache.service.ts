@@ -9,6 +9,7 @@ import {
     Cache
 } from "cache-manager"
 import {
+    CacheKey,
     configMap
 } from "./config"
 import {
@@ -52,7 +53,7 @@ export class CacheService {
    *
    * @returns Parsed cache value, or `undefined` if the cache entry does not exist.
    */
-    async get<K extends keyof typeof configMap>(
+    async get<K extends CacheKey>(
         {
             key,
             args,

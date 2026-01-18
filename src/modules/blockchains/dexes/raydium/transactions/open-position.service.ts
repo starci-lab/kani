@@ -1,35 +1,67 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     AccountRole,
     address,
     Instruction,
     Address,
 } from "@solana/kit"
-import { getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
+import {
+    getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS 
+} from "@solana-program/system"
 import { 
     TOKEN_2022_PROGRAM_ADDRESS, 
     ASSOCIATED_TOKEN_PROGRAM_ADDRESS, 
     getTransferInstruction as getTransferInstruction2022 
 } from "@solana-program/token-2022" 
-import { AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata } from "@modules/databases"
-import { LiquidityPoolState } from "../../../interfaces"
-import { InvalidPoolTokensException } from "@exceptions"
-import { TickArrayService } from "./tick-array.service"
-import { PersonalPositionService } from "./personal-position.service"
-import { createNoopSigner, generateKeyPairSigner, KeyPairSigner } from "@solana/signers"
-import { SYSVAR_RENT_ADDRESS } from "@solana/sysvars"
-import { TOKEN_PROGRAM_ADDRESS, getTransferInstruction } from "@solana-program/token"
+import {
+    AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS 
+} from "../../../tx-builder"
+import {
+    BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata 
+} from "@modules/databases"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
+import {
+    InvalidPoolTokensException 
+} from "@exceptions"
+import {
+    TickArrayService 
+} from "./tick-array.service"
+import {
+    PersonalPositionService 
+} from "./personal-position.service"
+import {
+    createNoopSigner, generateKeyPairSigner, KeyPairSigner 
+} from "@solana/signers"
+import {
+    SYSVAR_RENT_ADDRESS 
+} from "@solana/sysvars"
+import {
+    TOKEN_PROGRAM_ADDRESS, getTransferInstruction 
+} from "@solana-program/token"
 import BN from "bn.js"
-import { Decimal } from "decimal.js"
-import { u128, u64, i32, bool, BeetArgsStruct, u8  } from "@metaplex-foundation/beet"
-import { FeeService } from "../../../math"
-import { TokenType } from "@typedefs"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    u128, u64, i32, bool, BeetArgsStruct, u8  
+} from "@metaplex-foundation/beet"
+import {
+    FeeService 
+} from "../../../math"
+import {
+    TokenType 
+} from "@typedefs"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
  
 export interface CreateOpenPositionInstructionsParams {
     bot: BotSchema
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
     liquidity: BN
     amountAMax: BN
     amountBMax: BN
@@ -65,10 +97,20 @@ export class OpenPositionInstructionService {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: state.static.tokenA.toString()
+            }
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: state.static.tokenB.toString()
+            }
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Invalid pool tokens")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
         const {
@@ -349,16 +391,26 @@ export interface CreateOpenPositionInstructionsResult {
 
 export const OpenPositionArgs = new BeetArgsStruct(
     [
-        ["tickLowerIndex", i32],
-        ["tickUpperIndex", i32],
-        ["tickArrayLowerStartIndex", i32],
-        ["tickArrayUpperStartIndex", i32],
-        ["liquidity", u128],
-        ["amount0Max", u64],
-        ["amount1Max", u64],
-        ["withMetadata", bool],
-        ["optionBaseFlag", u8],
-        ["baseFlag", bool],
+        ["tickLowerIndex",
+            i32],
+        ["tickUpperIndex",
+            i32],
+        ["tickArrayLowerStartIndex",
+            i32],
+        ["tickArrayUpperStartIndex",
+            i32],
+        ["liquidity",
+            u128],
+        ["amount0Max",
+            u64],
+        ["amount1Max",
+            u64],
+        ["withMetadata",
+            bool],
+        ["optionBaseFlag",
+            u8],
+        ["baseFlag",
+            bool],
     ],
     "OpenPositionArgs"
 )

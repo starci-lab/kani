@@ -1,13 +1,21 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     AccountMeta,
     AccountRole,
     address,
     Instruction,
 } from "@solana/kit"
-import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
-import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
+import {
+    SYSTEM_PROGRAM_ADDRESS 
+} from "@solana-program/system"
+import {
+    TOKEN_2022_PROGRAM_ADDRESS 
+} from "@solana-program/token-2022"
+import {
+    TOKEN_PROGRAM_ADDRESS 
+} from "@solana-program/token"
 import BN from "bn.js"
 import { 
     AnchorUtilsService, 
@@ -20,16 +28,25 @@ import {
     RaydiumLiquidityPoolMetadata, 
     RaydiumPositionMetadata
 } from "@modules/databases"
-import { LiquidityPoolState } from "../../../interfaces"
-import { ActivePositionNotFoundException, InvalidPoolTokensException } from "@exceptions"
-import { TickArrayService } from "./tick-array.service"
-import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
-import { u128, u64, BeetArgsStruct } from "@metaplex-foundation/beet"
-import { RaydiumRewardInfo } from "../observer.service"
+import {
+    ClmmLiquidityPoolState 
+} from "../../../interfaces"
+import {
+    ActivePositionNotFoundException, InvalidPoolTokensException 
+} from "@exceptions"
+import {
+    TickArrayService 
+} from "./tick-array.service"
+import {
+    MEMO_PROGRAM_ADDRESS 
+} from "@solana-program/memo"
+import {
+    u128, u64, BeetArgsStruct 
+} from "@metaplex-foundation/beet"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
 }
 
 @Injectable()
@@ -51,12 +68,24 @@ export class ClosePositionInstructionService {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
-        const tokenA = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: state.static.tokenA.toString()
+            }
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: state.static.tokenB.toString()
+            }
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Invalid pool tokens")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: state.static.displayId,
+            })
         }
         const {
             programAddress,
@@ -67,8 +96,6 @@ export class ClosePositionInstructionService {
             nftMintAddress,
             ataAddress
         } = bot.activePosition.metadata as RaydiumPositionMetadata
-        console.log("nftMintAddress", nftMintAddress)
-        console.log("ataAddress", ataAddress)
         const personalPositionPda = address(bot.activePosition.positionId)  
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
@@ -116,12 +143,11 @@ export class ClosePositionInstructionService {
         }
         const remainingAccounts: Array<AccountMeta<string>> = []
         for (const reward of state.dynamic.rewards) {
-            const _reward = reward as RaydiumRewardInfo
-            if (_reward.tokenMint.toString() === SYSTEM_PROGRAM_ADDRESS) {
+            if (reward.tokenAddress.toString() === SYSTEM_PROGRAM_ADDRESS) {
                 continue
             }
             remainingAccounts.push({
-                address: address(_reward.tokenVault.toString()),
+                address: address(reward.vaultAddress?.toString() ?? ""),
                 role: AccountRole.WRITABLE,
             })
             const {
@@ -129,7 +155,7 @@ export class ClosePositionInstructionService {
                 endInstructions: closeAtaRewardInstructions,
                 ataAddress: ataRewardAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                tokenMint: address(_reward.tokenMint.toString()),
+                tokenMint: address(reward.tokenAddress.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
             })
@@ -144,7 +170,7 @@ export class ClosePositionInstructionService {
                 role: AccountRole.WRITABLE,
             })
             remainingAccounts.push({
-                address: address(_reward.tokenMint.toString()),
+                address: address(reward.tokenAddress.toString()),
                 role: AccountRole.READONLY,
             })
         }
@@ -267,9 +293,12 @@ export class ClosePositionInstructionService {
 
 export const ClosePositionArgs = new BeetArgsStruct(
     [
-        ["liquidity", u128],
-        ["amount0Max", u64],
-        ["amount1Max", u64],
+        ["liquidity",
+            u128],
+        ["amount0Max",
+            u64],
+        ["amount1Max",
+            u64],
     ],
     "ClosePositionArgs"
 )

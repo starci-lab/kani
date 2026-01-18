@@ -1,7 +1,15 @@
-import { Injectable } from "@nestjs/common"
-import { BN, Decimal } from "turbos-clmm-sdk"
-import { Q128, Q64 } from "@utils"
-import { ClmmUtilsService } from "./clmm-utils.service"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    BN, Decimal 
+} from "turbos-clmm-sdk"
+import {
+    Q128, Q64 
+} from "@utils"
+import {
+    ClmmUtilsService 
+} from "./clmm-utils.service"
 
 /**
  * CLMM Reward Formula Service

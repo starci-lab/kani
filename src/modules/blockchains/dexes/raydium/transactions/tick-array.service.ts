@@ -1,6 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
-import { getProgramDerivedAddress, getAddressEncoder, Address, address } from "@solana/kit"
+import {
+    getProgramDerivedAddress, getAddressEncoder, Address, address 
+} from "@solana/kit"
 
 export const TICK_ARRAY_SIZE = 60
 
@@ -18,18 +22,22 @@ export class TickArrayService {
         poolStateAddress,
         startIndex,
         programAddress,
-    }: GetTickArrayPdaByStartIndexParams): Promise<GetTickArrayPdaResponse> {
+    }: GetTickArrayPdaByStartIndexParams): Promise<GetTickArrayPdaResult> {
 
         const [pda] = await getProgramDerivedAddress({
             programAddress,
             seeds: [
                 Buffer.from("tick_array"),
                 getAddressEncoder().encode(address(poolStateAddress)),
-                new BN(startIndex).toTwos(32).toArrayLike(Buffer, "be", 4),
+                new BN(startIndex).toTwos(32).toArrayLike(Buffer,
+                    "be",
+                    4),
             ],
         })
 
-        return { pda }
+        return {
+            pda 
+        }
     }
 
     /**
@@ -104,7 +112,8 @@ export class TickArrayService {
         tickSpacing,
         programAddress,
     }: GetTickArrayPdaParams): Promise<GetTickArrayPdaResult> {
-        const startIndex = this.getArrayStartIndex(tickIndex, tickSpacing)
+        const startIndex = this.getArrayStartIndex(tickIndex,
+            tickSpacing)
         return this.getTickArrayPda({
             poolStateAddress,
             startIndex,
@@ -131,7 +140,8 @@ export class TickArrayService {
      * Convenience helper that returns startIndex for any tickIndex.
      */
     getTickArrayStartIndexFromTick(tickIndex: number, tickSpacing: number): number {
-        return this.getArrayStartIndex(tickIndex, tickSpacing)
+        return this.getArrayStartIndex(tickIndex,
+            tickSpacing)
     }
 }
 

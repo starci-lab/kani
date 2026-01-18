@@ -1,12 +1,30 @@
-import { Inject, Injectable, OnModuleInit } from "@nestjs/common"
-import { DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema } from "../schemas"
-import { InjectPrimaryMongoose } from "../mongodb.decorators"
-import { Connection } from "mongoose"
-import { AsyncService, LokiJSService, ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./memory.module-definition"
-import { AccountLimitsConfig, BalanceConfig, ConfigRecord, ConfigSchema } from "../schemas"
-import { ConfigId } from "../enums"
-import { createObjectId } from "@utils"
+import {
+    Inject, Injectable, OnModuleInit 
+} from "@nestjs/common"
+import {
+    DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema 
+} from "../schemas"
+import {
+    InjectPrimaryMongoose 
+} from "../mongodb.decorators"
+import {
+    Connection 
+} from "mongoose"
+import {
+    AsyncService, LokiJSService, ReadinessWatcherFactoryService, RetryService 
+} from "@modules/mixin"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./memory.module-definition"
+import {
+    AccountLimitsConfig, BalanceConfig, ConfigRecord, ConfigSchema 
+} from "../schemas"
+import {
+    ConfigId 
+} from "../enums"
+import {
+    createObjectId 
+} from "@utils"
 import { 
     AccountLimitsConfigNotFoundException, 
     BalanceConfigNotFoundException, 
@@ -44,9 +62,12 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                 this.tokenCollection = await this.lokiJSService.createCollection<
                         TokenSchema
                         >(
-                            "tokens", {
+                            "tokens",
+                            {
                                 indices: 
-                                ["tokenAddress", "displayId", "id"]
+                                ["tokenAddress",
+                                    "displayId",
+                                    "id"]
                             }
                         )
                 this.tokenCollection.insert(tokens.map(token => token.toJSON()))
@@ -58,9 +79,12 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                 this.liquidityPoolCollection = await this.lokiJSService.createCollection<
                         LiquidityPoolSchema
                         >(
-                            "liquidity_pools", {
+                            "liquidity_pools",
+                            {
                                 indices: 
-                                ["poolAddress", "displayId", "id"]
+                                ["poolAddress",
+                                    "displayId",
+                                    "id"]
                             }
                         )
                 this.liquidityPoolCollection.insert(liquidityPools.map(liquidityPool => liquidityPool.toJSON()))
@@ -72,9 +96,11 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                 this.dexCollection = await this.lokiJSService.createCollection<
                         DexSchema
                         >(
-                            "dexes", {
+                            "dexes",
+                            {
                                 indices: 
-                                ["displayId", "id"]
+                                ["displayId",
+                                    "id"]
                             }
                         )
                 this.dexCollection.insert(dexes.map(dex => dex.toJSON()))

@@ -10,18 +10,14 @@ import {
 } from "@nestjs/common"
 import {
     CacheKey,
-    createCacheKey,
-    InjectRedisCache,
+    CacheService,
     PoolAnalyticsCacheResult,
 } from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
 import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    AsyncService, InjectSuperJson 
+    AsyncService, DayjsService 
 } from "@modules/mixin"
 import {
     envConfig 
@@ -33,7 +29,6 @@ import {
 import {
     AxiosInstance 
 } from "axios"
-import SuperJSON from "superjson"
 import {
     createObjectId 
 } from "@utils"
@@ -44,16 +39,15 @@ import {
 export class MomentumAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
+    private readonly url = "https://api.mmt.finance/pools/v3"
     private axios: AxiosInstance
     private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    @InjectRedisCache()
-    private readonly cacheManager: Cache,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
+    private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
+    private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -73,7 +67,7 @@ implements OnModuleInit, OnApplicationBootstrap
 
     private async setAllPoolAnalytics() {
         const { data } = await this.axios.get<LiquidityPoolsApiResult>(
-            "https://api.mmt.finance/pools/v3",
+            this.url,
         )
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPools) {
@@ -91,19 +85,20 @@ implements OnModuleInit, OnApplicationBootstrap
                         volume24h,
                         tvl,
                     } = pool
-                    const poolAnalyticsCacheKey = createCacheKey(
-                        CacheKey.PoolAnalytics,
-                        liquidityPool.displayId
-                    )
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: new Decimal(fees24h).toString(),
                         volume24H: new Decimal(volume24h).toString(),
                         tvl: new Decimal(tvl).toString(),
                         apr24H: new Decimal(total).div(365).div(100).toString(),
+                        snapshotAt: this.dayjsService.now(),
                     }
-                    await this.cacheManager.set(poolAnalyticsCacheKey,
-                        this.superjson.stringify(poolAnalyticsCacheResult),
-                        envConfig().cache.ttl.poolAnalytics)
+                    await this.cacheService.set(
+                        {
+                            key: CacheKey.PoolAnalytics,
+                            args: [liquidityPool.id],
+                            cacheResult: poolAnalyticsCacheResult,
+                        }
+                    )
                 })(),
             )
         }

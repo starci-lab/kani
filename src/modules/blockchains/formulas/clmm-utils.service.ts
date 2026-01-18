@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { Q128, Q64 } from "@utils"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Q128, Q64 
+} from "@utils"
 import BN from "bn.js"
 
 /**

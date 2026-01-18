@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { Address, address, getAddressEncoder, getProgramDerivedAddress } from "@solana/kit"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Address, address, getAddressEncoder, getProgramDerivedAddress 
+} from "@solana/kit"
 
 @Injectable()
 export class PersonalPositionService {

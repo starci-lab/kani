@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import Decimal from "decimal.js"
 
 /**
@@ -56,7 +58,9 @@ export class DlmmBinFormulaService {
             )
         )
 
-        return { price }
+        return {
+            price 
+        }
     }
 
     /**
@@ -83,7 +87,9 @@ export class DlmmBinFormulaService {
 
         const price = ratio.pow(activeId)
 
-        return { price }
+        return {
+            price 
+        }
     }
 }
 

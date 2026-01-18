@@ -12,9 +12,6 @@ import {
     ConfirmOpenPositionResult,
 } from "../../interfaces"
 import {
-    LiquidityMath 
-} from "@raydium-io/raydium-sdk-v2"
-import {
     SignerService 
 } from "../../signers"
 import {
@@ -57,7 +54,7 @@ import {
     adjustSlippage 
 } from "@utils"
 import {
-    WinstonService 
+    WinstonLog, WinstonService 
 } from "@modules/winston"
 import Decimal from "decimal.js"
 import {
@@ -75,6 +72,10 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    ClmmLiquidityFormulaService,
+    ClmmTickFormulaService 
+} from "@modules/blockchains"
 
 @Injectable()
 export class OrcaOpenPositionActionService implements IOpenActionService {
@@ -86,6 +87,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
+        private readonly clmmTickFormulaService: ClmmTickFormulaService,
+        private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) { }
 
     async prepare(
@@ -124,25 +127,15 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             state: _state,
             bot,
         })
-        const sqrtPriceCurrentX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            _state.dynamic.tickCurrent.toNumber(),
-        )
-        const sqrtPriceLowerX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            tickLower.toNumber(),
-        )
-        const sqrtPriceUpperX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            tickUpper.toNumber(),
-        )
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
-        const liquidityRaw = 
-            LiquidityMath.getLiquidityFromTokenAmounts(
-                sqrtPriceCurrentX64,
-                sqrtPriceLowerX64,
-                sqrtPriceUpperX64,
-                amountA,
-                amountB,
-            )
+        const liquidityRaw = this.clmmLiquidityFormulaService.computeLiquidity({
+            tickLower,
+            tickUpper,
+            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toString()),
+            amountA,
+            amountB,
+        })
         // no slippage for orca
         const liquidity = adjustSlippage(liquidityRaw,
             new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment))
@@ -255,8 +248,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         if (!positionId) {
             throw new PositionIdNotSetException({
                 botId: bot.id,
-                positionId: positionId.toString(),
-                liquidityPoolId: _state.static.displayId,
+                liquidityPoolId: state.static.displayId,
             })
         }
         const _state = state as ClmmLiquidityPoolState
@@ -278,12 +270,17 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     throw new TransactionNotExecutedException({
                         botId: bot.id,
                         txHash: txHash.toString(),
+                        liquidityPoolId: _state.static.displayId,
                     })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash: txHash.toString(),
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
@@ -298,11 +295,11 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         commitment: "confirmed",
                     }
                 )
-                this.logger.info(
-                    WinstonLog.OpenPositionExecuted,
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted,
                     {
                         botId: bot.id,
-                        txHash,
+                        txHash: txHash.toString(),
                         liquidityPoolId: _state.static.displayId,
                     }
                 )

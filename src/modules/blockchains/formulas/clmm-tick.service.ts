@@ -1,7 +1,15 @@
-import { Injectable } from "@nestjs/common"
-import { BN, Decimal } from "turbos-clmm-sdk"
-import { TickMath } from "@cetusprotocol/cetus-sui-clmm-sdk"
-import { Q128, Q64, Q96 } from "@utils"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    BN, Decimal 
+} from "turbos-clmm-sdk"
+import {
+    TickMath 
+} from "@cetusprotocol/cetus-sui-clmm-sdk"
+import {
+    Q128, Q64, Q96 
+} from "@utils"
 
 /**
  * CLMM Tick / Price formula service
@@ -79,7 +87,9 @@ export class ClmmTickFormulaService {
         }: SqrtPriceToPriceParams
     ): Decimal {
         const sqrtPriceX64 = sqrtPrice.mul(Q64).div(fixedPointScale)
-        return TickMath.sqrtPriceX64ToPrice(sqrtPriceX64, decimalsA, decimalsB)
+        return TickMath.sqrtPriceX64ToPrice(sqrtPriceX64,
+            decimalsA,
+            decimalsB)
     }
 
     /**

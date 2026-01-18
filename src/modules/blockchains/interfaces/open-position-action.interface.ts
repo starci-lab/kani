@@ -2,11 +2,21 @@ import BN from "bn.js"
 import {
     BotSchema,
 } from "@modules/databases"
-import { Decimal } from "decimal.js"
-import { SolanaTx } from "./types"
-import { DlmmLiquidityPoolState, ClmmLiquidityPoolState, PrepareOpenPositionParams } from "./types"
-import { SignatureWithBytes } from "@mysten/sui/cryptography"
-import { Dayjs } from "dayjs"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    SolanaTx 
+} from "./types"
+import {
+    DlmmLiquidityPoolState, ClmmLiquidityPoolState, PrepareOpenPositionParams 
+} from "./types"
+import {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
+import {
+    Dayjs 
+} from "dayjs"
 
 export interface PrepareOpenPositionResult {
   txHash: string;
@@ -33,7 +43,7 @@ export interface ExecuteOpenPositionParams {
     txHash: string;
     feeAmountA: BN;
     feeAmountB: BN;
-    positionId: string;
+    positionId?: string;
 }
 
 export interface ExecuteOpenPositionResult {
