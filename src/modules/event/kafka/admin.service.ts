@@ -1,16 +1,33 @@
-import { envConfig } from "@modules/env"
-import { eventMetadataMap } from "../map"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./kafka.module-definition"
-import { Injectable, OnModuleInit, Inject } from "@nestjs/common"
-import { Admin, ITopicConfig } from "kafkajs"
-import { InjectKafkaAdmin } from "./kafka.decorators"
-import { sleep } from "@utils"
-import { WinstonLog } from "@modules/winston"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { DayjsService } from "@modules/mixin"
-import { KafkaTimeoutException } from "@exceptions"
-import { ReadinessWatcherFactoryService } from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./kafka.module-definition"
+import {
+    Injectable, OnModuleInit, Inject 
+} from "@nestjs/common"
+import {
+    Admin, ITopicConfig 
+} from "kafkajs"
+import {
+    InjectKafkaAdmin 
+} from "./kafka.decorators"
+import {
+    WinstonLog 
+} from "@modules/winston"
+import {
+    WinstonService 
+} from "@modules/winston"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
+import {
+    configMap 
+} from "../config"
 
 @Injectable()
 export class KafkaAdminService implements OnModuleInit {
@@ -43,8 +60,7 @@ export class KafkaAdminService implements OnModuleInit {
         /**
          * Winston logger for structured logging.
          */
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
 
         /**
          * Dayjs wrapper service.
@@ -130,8 +146,8 @@ export class KafkaAdminService implements OnModuleInit {
         /**
          * Filter only events that explicitly opt in to Kafka.
          */
-        const topics = Object.entries(eventMetadataMap).filter(
-            ([, metadata]) => metadata.kafka,
+        const topics = Object.entries(configMap).filter(
+            ([, metadata]) => metadata.useKafka,
         )
         const listedTopics = await this.admin.listTopics()
         // get the topics that are not in the listedTopics
@@ -143,7 +159,8 @@ export class KafkaAdminService implements OnModuleInit {
          * Convert event metadata into Kafka topic definitions.
          */
         const topicConfigs: Array<ITopicConfig> = topicsToCreate.map(
-            ([eventName, metadata]) => ({
+            ([eventName,
+                metadata]) => ({
                 /**
                  * Topic name.
                  *
@@ -158,7 +175,7 @@ export class KafkaAdminService implements OnModuleInit {
                  * Controls parallelism within a consumer group.
                  */
                 numPartitions:
-                    metadata.kafka?.numPartitions ??
+                    metadata.config?.numPartitions ??
                     envConfig().kafka.numPartitions,
 
                 /**
@@ -168,7 +185,7 @@ export class KafkaAdminService implements OnModuleInit {
                  * - Multi-broker production: usually 3
                  */
                 replicationFactor:
-                    metadata.kafka?.replicationFactor ??
+                    metadata.config?.replicationFactor ??
                     envConfig().kafka.replicationFactor,
 
                 /**
@@ -189,7 +206,7 @@ export class KafkaAdminService implements OnModuleInit {
                     {
                         name: "retention.ms",
                         value: (
-                            metadata.kafka?.retentionMs ??
+                            metadata.config?.retentionMs ??
                             envConfig().kafka.retentionMs
                         ).toString(),
                     },
@@ -203,7 +220,7 @@ export class KafkaAdminService implements OnModuleInit {
                     {
                         name: "cleanup.policy",
                         value: (
-                            metadata.kafka?.cleanupPolicy ??
+                            metadata.config?.cleanupPolicy ??
                             envConfig().kafka.cleanupPolicy
                         ).toString(),
                     },
@@ -219,7 +236,7 @@ export class KafkaAdminService implements OnModuleInit {
                     {
                         name: "segment.ms",
                         value: (
-                            metadata.kafka?.segmentMs ??
+                            metadata.config?.segmentMs ??
                             envConfig().kafka.segmentMs
                         ).toString(),
                     },
@@ -232,7 +249,7 @@ export class KafkaAdminService implements OnModuleInit {
                     {
                         name: "segment.bytes",
                         value: (
-                            metadata.kafka?.segmentBytes ??
+                            metadata.config?.segmentBytes ??
                             envConfig().kafka.segmentBytes
                         ).toString(),
                     },
@@ -246,7 +263,7 @@ export class KafkaAdminService implements OnModuleInit {
                     {
                         name: "max.message.bytes",
                         value: (
-                            metadata.kafka?.maxMessageBytes ??
+                            metadata.config?.maxMessageBytes ??
                             envConfig().kafka.maxMessageBytes
                         ).toString(),
                     },
@@ -275,7 +292,7 @@ export class KafkaAdminService implements OnModuleInit {
                     {
                         name: "file.delete.delay.ms",
                         value: (
-                            metadata.kafka?.fileDeleteDelayMs ??
+                            metadata.config?.fileDeleteDelayMs ??
                             envConfig().kafka.fileDeleteDelayMs
                         ).toString(),
                     },
@@ -291,42 +308,11 @@ export class KafkaAdminService implements OnModuleInit {
         await this.admin.createTopics({
             topics: topicConfigs,
         })
-
-        /**
-         * Wait until all topics appear in Kafka metadata.
-         *
-         * Kafka metadata propagation is eventually consistent,
-         * so we poll until topics are visible or timeout.
-         */
-        const start = this.dayjsService.now()
-
-        while (true) {
-            const existingTopics = await this.admin.listTopics()
-
-            const allExist = topicsToCreate.every(([topic]) =>
-                existingTopics.includes(topic),
-            )
-
-            if (allExist) {
-                this.logger.debug(WinstonLog.KafkaTopicsCreated, {
-                    topics: topicsToCreate.map(([topic]) => topic),
-                })
-                return
+        this.winstonService.log(WinstonLog.KafkaTopicsCreated,
+            {
+                topics: topicsToCreate.map(([topic]) => topic),
             }
-
-            if (
-                this.dayjsService
-                    .now()
-                    .diff(start, "millisecond") >
-                envConfig().kafka.kafkaTopicPollTimeoutMs
-            ) {
-                throw new KafkaTimeoutException(
-                    topicsToCreate.map(([topic]) => topic),
-                )
-            }
-
-            await sleep(envConfig().kafka.kafkaTopicPollIntervalMs)
-        }
+        )
     }
 
     /**
@@ -335,53 +321,22 @@ export class KafkaAdminService implements OnModuleInit {
      * This is destructive and should only be used in development.
      */
     async deleteTopics(): Promise<void> {
-        const allEventTopics = Object.entries(eventMetadataMap)
-            .filter(([, metadata]) => metadata.kafka)
-            .map(([eventName]) => eventName)
-
-        const existingTopics = await this.admin.listTopics()
-
-        const topicsToDelete = allEventTopics.filter(topic =>
-            existingTopics.includes(topic),
-        )
-
+        const topics = Object.entries(configMap)
+            .filter(([, metadata]) => metadata.useKafka)
+            .map(([topic]) => topic)
+        const listedTopics = await this.admin.listTopics()
+        // get the topics that are not in the listedTopics
+        const topicsToDelete = topics.filter(topic => !listedTopics.includes(topic))
         if (!topicsToDelete.length) {
             return
         }
-
         await this.admin.deleteTopics({
             topics: topicsToDelete,
         })
-
-        /**
-         * Wait until topics are fully removed from metadata.
-         */
-        const start = this.dayjsService.now()
-
-        while (true) {
-            const remainingTopics = await this.admin.listTopics()
-
-            const allDeleted = topicsToDelete.every(
-                topic => !remainingTopics.includes(topic),
-            )
-
-            if (allDeleted) {
-                this.logger.debug(WinstonLog.KafkaTopicsDeleted, {
-                    topics: topicsToDelete,
-                })
-                return
+        this.winstonService.log(WinstonLog.KafkaTopicsDeleted,
+            {
+                topics: topicsToDelete,
             }
-
-            if (
-                this.dayjsService
-                    .now()
-                    .diff(start, "millisecond") >
-                envConfig().kafka.kafkaTopicPollTimeoutMs
-            ) {
-                throw new KafkaTimeoutException(topicsToDelete)
-            }
-
-            await sleep(envConfig().kafka.kafkaTopicPollIntervalMs)
-        }
+        )
     }
 }

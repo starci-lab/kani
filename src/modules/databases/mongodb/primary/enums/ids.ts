@@ -1,5 +1,9 @@
-import { createEnumType } from "@utils"
-import { registerEnumType } from "@nestjs/graphql"
+import {
+    createEnumType 
+} from "@utils"
+import {
+    registerEnumType 
+} from "@nestjs/graphql"
 
 export enum TokenId {
     // --- Sui ---
@@ -24,59 +28,60 @@ export enum TokenId {
 
 export const GraphQLTypeTokenId = createEnumType(TokenId)
 
-registerEnumType(GraphQLTypeTokenId, {
-    name: "TokenId",
-    description: "Supported token identifiers on Sui and Solana blockchains.",
-    valuesMap: {
+registerEnumType(GraphQLTypeTokenId,
+    {
+        name: "TokenId",
+        description: "Supported token identifiers on Sui and Solana blockchains.",
+        valuesMap: {
         // --- Sui ---
-        [TokenId.SuiUsdc]: {
-            description: "USD Coin stablecoin (USDC) on Sui.",
+            [TokenId.SuiUsdc]: {
+                description: "USD Coin stablecoin (USDC) on Sui.",
+            },
+            [TokenId.SuiIka]: {
+                description: "IKA token on Sui.",
+            },
+            [TokenId.SuiNative]: {
+                description: "Native SUI token.",
+            },
+            [TokenId.SuiWalrus]: {
+                description: "Walrus token on Sui.",
+            },
+            [TokenId.SuiCetus]: {
+                description: "Cetus token on Sui.",
+            },
+            [TokenId.SuiAlkimi]: {
+                description: "Alkimi token on Sui.",
+            },
+            [TokenId.SuiDeep]: {
+                description: "Deep token on Sui.",
+            },
+            [TokenId.SuiEth]: {
+                description: "ETH token on Sui.",
+            },
+            [TokenId.SuiXStakedSui]: {
+                description: "X Staked SUI token on Sui.",
+            },
+            // --- Solana ---
+            [TokenId.SolUsdc]: {
+                description: "USD Coin stablecoin (USDC) on Solana.",
+            },
+            [TokenId.SolNative]: {
+                description: "Native SOL token.",
+            },
+            [TokenId.SolMsol]: {
+                description: "Marinade staked SOL (mSOL).",
+            },
+            [TokenId.SolRay]: {
+                description: "Raydium (RAY) token.",
+            },
+            [TokenId.SolOrca]: {
+                description: "Orca (ORCA) token.",
+            },
+            [TokenId.SolUsdt]: {
+                description: "USD Tether stablecoin (USDT) on Solana.",
+            },
         },
-        [TokenId.SuiIka]: {
-            description: "IKA token on Sui.",
-        },
-        [TokenId.SuiNative]: {
-            description: "Native SUI token.",
-        },
-        [TokenId.SuiWalrus]: {
-            description: "Walrus token on Sui.",
-        },
-        [TokenId.SuiCetus]: {
-            description: "Cetus token on Sui.",
-        },
-        [TokenId.SuiAlkimi]: {
-            description: "Alkimi token on Sui.",
-        },
-        [TokenId.SuiDeep]: {
-            description: "Deep token on Sui.",
-        },
-        [TokenId.SuiEth]: {
-            description: "ETH token on Sui.",
-        },
-        [TokenId.SuiXStakedSui]: {
-            description: "X Staked SUI token on Sui.",
-        },
-        // --- Solana ---
-        [TokenId.SolUsdc]: {
-            description: "USD Coin stablecoin (USDC) on Solana.",
-        },
-        [TokenId.SolNative]: {
-            description: "Native SOL token.",
-        },
-        [TokenId.SolMsol]: {
-            description: "Marinade staked SOL (mSOL).",
-        },
-        [TokenId.SolRay]: {
-            description: "Raydium (RAY) token.",
-        },
-        [TokenId.SolOrca]: {
-            description: "Orca (ORCA) token.",
-        },
-        [TokenId.SolUsdt]: {
-            description: "USD Tether stablecoin (USDT) on Solana.",
-        },
-    },
-})
+    })
 
 export enum DexId {
     Cetus = "cetus",
@@ -91,36 +96,37 @@ export enum DexId {
 
 export const GraphQLTypeDexId = createEnumType(DexId)
 
-registerEnumType(GraphQLTypeDexId, {
-    name: "DexId",
-    description: "Identifier for supported decentralized exchanges (DEXs).",
-    valuesMap: {
-        [DexId.Cetus]: {
-            description: "Cetus DEX - a Solana-based automated market maker for fast swaps."
+registerEnumType(GraphQLTypeDexId,
+    {
+        name: "DexId",
+        description: "Identifier for supported decentralized exchanges (DEXs).",
+        valuesMap: {
+            [DexId.Cetus]: {
+                description: "Cetus DEX - a Solana-based automated market maker for fast swaps."
+            },
+            [DexId.Turbos]: {
+                description: "Turbos DEX - a high-performance trading platform for SPL tokens."
+            },
+            [DexId.Momentum]: {
+                description: "Momentum Finance DEX - focuses on liquidity and yield farming strategies."
+            },
+            [DexId.FlowX]: {
+                description: "FlowX DEX - optimized for low-latency swaps and high throughput."
+            },
+            [DexId.Raydium]: {
+                description: "Raydium DEX - integrates AMM with Serum orderbook for efficient trading."
+            },
+            [DexId.Orca]: {
+                description: "Orca DEX - user-friendly AMM on Solana with low fees."
+            },
+            [DexId.Meteora]: {
+                description: "Meteora DEX - advanced trading features for professional users."
+            },
+            [DexId.Saros]: {
+                description: "Saros DEX - optimized liquidity pools and yield farming opportunities."
+            },
         },
-        [DexId.Turbos]: {
-            description: "Turbos DEX - a high-performance trading platform for SPL tokens."
-        },
-        [DexId.Momentum]: {
-            description: "Momentum Finance DEX - focuses on liquidity and yield farming strategies."
-        },
-        [DexId.FlowX]: {
-            description: "FlowX DEX - optimized for low-latency swaps and high throughput."
-        },
-        [DexId.Raydium]: {
-            description: "Raydium DEX - integrates AMM with Serum orderbook for efficient trading."
-        },
-        [DexId.Orca]: {
-            description: "Orca DEX - user-friendly AMM on Solana with low fees."
-        },
-        [DexId.Meteora]: {
-            description: "Meteora DEX - advanced trading features for professional users."
-        },
-        [DexId.Saros]: {
-            description: "Saros DEX - optimized liquidity pools and yield farming opportunities."
-        },
-    },
-})
+    })
 
 export enum LiquidityPoolId {
     CetusSuiIka02 = "cetusSuiIka02",
@@ -140,51 +146,52 @@ export enum LiquidityPoolId {
 
 export const GraphQLTypeLiquidityPoolId = createEnumType(LiquidityPoolId)
 
-registerEnumType(GraphQLTypeLiquidityPoolId, {
-    name: "LiquidityPoolId",
-    description: "Identifiers for supported liquidity pools across various platforms.",
-    valuesMap: {
-        [LiquidityPoolId.CetusSuiIka02]: {
-            description: "Cetus SUI-IKA LP pool with a 0.2% fee tier.",
+registerEnumType(GraphQLTypeLiquidityPoolId,
+    {
+        name: "LiquidityPoolId",
+        description: "Identifiers for supported liquidity pools across various platforms.",
+        valuesMap: {
+            [LiquidityPoolId.CetusSuiIka02]: {
+                description: "Cetus SUI-IKA LP pool with a 0.2% fee tier.",
+            },
+            [LiquidityPoolId.CetusUsdcSui005]: {
+                description: "Cetus USDC-SUI LP pool with a 0.05% fee tier.",
+            },
+            [LiquidityPoolId.CetusUsdcEth025]: {
+                description: "Cetus USDC-ETH LP pool with a 0.25% fee tier.",
+            },
+            [LiquidityPoolId.TurbosIkaUsdc015]: {
+                description: "Turbos IKA-USDC LP pool with a 0.15% fee tier.",
+            },
+            [LiquidityPoolId.TurbosDeepUsdc015]: {
+                description: "Turbos DEEP-USDC LP pool with a 0.15% fee tier.",
+            },
+            [LiquidityPoolId.MomentumWalSui02]: {
+                description: "Momentum WAL-SUI LP pool with a 0.2% fee tier.",
+            },
+            [LiquidityPoolId.MomentumSuiUsdc0175]: {
+                description: "Momentum SUI-USDC LP pool with a 0.175% fee tier.",
+            },
+            [LiquidityPoolId.FlowXSuiUsdc03]: {
+                description: "FlowX SUI-USDC LP pool with a 0.3% fee tier.",
+            },
+            [LiquidityPoolId.RaydiumSolUsdc004]: {
+                description: "Raydium SOL-USDC LP pool with a 0.04% fee tier.",
+            },
+            [LiquidityPoolId.RaydiumSolUsdt001]: {
+                description: "Raydium SOL-USDT LP pool with a 0.01% fee tier.",
+            },
+            [LiquidityPoolId.OrcaSolUsdc004]: {
+                description: "Orca SOL-USDC LP pool with a 0.04% fee tier.",
+            },
+            [LiquidityPoolId.MeteoraSolUsdcBinStep4]: {
+                description: "Meteora SOL-USDC Bin Step 4 LP pool with a 0.04% fee tier.",
+            },
+            [LiquidityPoolId.TurbosSuiUsdc005]: {
+                description: "Turbos SUI-USDC LP pool with a 0.05% fee tier.",
+            },
         },
-        [LiquidityPoolId.CetusUsdcSui005]: {
-            description: "Cetus USDC-SUI LP pool with a 0.05% fee tier.",
-        },
-        [LiquidityPoolId.CetusUsdcEth025]: {
-            description: "Cetus USDC-ETH LP pool with a 0.25% fee tier.",
-        },
-        [LiquidityPoolId.TurbosIkaUsdc015]: {
-            description: "Turbos IKA-USDC LP pool with a 0.15% fee tier.",
-        },
-        [LiquidityPoolId.TurbosDeepUsdc015]: {
-            description: "Turbos DEEP-USDC LP pool with a 0.15% fee tier.",
-        },
-        [LiquidityPoolId.MomentumWalSui02]: {
-            description: "Momentum WAL-SUI LP pool with a 0.2% fee tier.",
-        },
-        [LiquidityPoolId.MomentumSuiUsdc0175]: {
-            description: "Momentum SUI-USDC LP pool with a 0.175% fee tier.",
-        },
-        [LiquidityPoolId.FlowXSuiUsdc03]: {
-            description: "FlowX SUI-USDC LP pool with a 0.3% fee tier.",
-        },
-        [LiquidityPoolId.RaydiumSolUsdc004]: {
-            description: "Raydium SOL-USDC LP pool with a 0.04% fee tier.",
-        },
-        [LiquidityPoolId.RaydiumSolUsdt001]: {
-            description: "Raydium SOL-USDT LP pool with a 0.01% fee tier.",
-        },
-        [LiquidityPoolId.OrcaSolUsdc004]: {
-            description: "Orca SOL-USDC LP pool with a 0.04% fee tier.",
-        },
-        [LiquidityPoolId.MeteoraSolUsdcBinStep4]: {
-            description: "Meteora SOL-USDC Bin Step 4 LP pool with a 0.04% fee tier.",
-        },
-        [LiquidityPoolId.TurbosSuiUsdc005]: {
-            description: "Turbos SUI-USDC LP pool with a 0.05% fee tier.",
-        },
-    },
-})
+    })
 
 export enum CexId {
     Binance = "binance",
@@ -193,21 +200,22 @@ export enum CexId {
 }
 export const GraphQLTypeCexId = createEnumType(CexId)
 
-registerEnumType(GraphQLTypeCexId, {
-    name: "CexId",
-    description: "The name of the cex",
-    valuesMap: {
-        [CexId.Binance]: {
-            description: "The binance cex",
+registerEnumType(GraphQLTypeCexId,
+    {
+        name: "CexId",
+        description: "The name of the cex",
+        valuesMap: {
+            [CexId.Binance]: {
+                description: "The binance cex",
+            },
+            [CexId.Gate]: {
+                description: "The gate cex",
+            },
+            [CexId.Bybit]: {
+                description: "The bybit cex",
+            },
         },
-        [CexId.Gate]: {
-            description: "The gate cex",
-        },
-        [CexId.Bybit]: {
-            description: "The bybit cex",
-        },
-    },
-})
+    })
 
 export enum ConfigId {
     Gas = "gas",
@@ -231,29 +239,30 @@ export enum ExplorerId {
 
 export const GraphQLTypeExplorerId = createEnumType(ExplorerId)
 
-registerEnumType(GraphQLTypeExplorerId, {
-    name: "ExplorerId",
-    description: "The name of the explorer",
-    valuesMap: {
-        [ExplorerId.SuiVision]: {
-            description: "The sui vision explorer",
+registerEnumType(GraphQLTypeExplorerId,
+    {
+        name: "ExplorerId",
+        description: "The name of the explorer",
+        valuesMap: {
+            [ExplorerId.SuiVision]: {
+                description: "The sui vision explorer",
+            },
+            [ExplorerId.SuiScan]: {
+                description: "The sui scan explorer",
+            },
+            [ExplorerId.Solscan]: {
+                description: "The solscan explorer",
+            },
+            [ExplorerId.SolanaFM]: {
+                description: "The solana fm explorer",
+            },
+            [ExplorerId.SolanaExplorer]: {
+                description: "The solana explorer",
+            },
         },
-        [ExplorerId.SuiScan]: {
-            description: "The sui scan explorer",
-        },
-        [ExplorerId.Solscan]: {
-            description: "The solscan explorer",
-        },
-        [ExplorerId.SolanaFM]: {
-            description: "The solana fm explorer",
-        },
-        [ExplorerId.SolanaExplorer]: {
-            description: "The solana explorer",
-        },
-    },
-})
+    })
 
-export enum MarketId {
+export enum MarketListingId {
     Binance = "binance",
     Gate = "gate",
     Bybit = "bybit",
@@ -262,29 +271,30 @@ export enum MarketId {
     CoinMarketCap = "coinmarketcap",
 }
 
-export const GraphQLTypeMarketId = createEnumType(MarketId)
+export const GraphQLTypeMarketListingId = createEnumType(MarketListingId)
 
-registerEnumType(GraphQLTypeMarketId, {
-    name: "MarketId",
-    description: "The name of the market",
-    valuesMap: {
-        [MarketId.Binance]: {
-            description: "The binance market",
+registerEnumType(GraphQLTypeMarketListingId,
+    {
+        name: "MarketListingId",
+        description: "The name of the market",
+        valuesMap: {
+            [MarketListingId.Binance]: {
+                description: "The binance market",
+            },
+            [MarketListingId.Gate]: {
+                description: "The gate market",
+            },
+            [MarketListingId.Bybit]: {
+                description: "The bybit market",
+            },
+            [MarketListingId.Pyth]: {
+                description: "The pyth market",
+            },
+            [MarketListingId.Coingecko]: {
+                description: "The coingecko market",
+            },
+            [MarketListingId.CoinMarketCap]: {
+                description: "The coinmarketcap market",
+            },
         },
-        [MarketId.Gate]: {
-            description: "The gate market",
-        },
-        [MarketId.Bybit]: {
-            description: "The bybit market",
-        },
-        [MarketId.Pyth]: {
-            description: "The pyth market",
-        },
-        [MarketId.Coingecko]: {
-            description: "The coingecko market",
-        },
-        [MarketId.CoinMarketCap]: {
-            description: "The coinmarketcap market",
-        },
-    },
-})
+    })

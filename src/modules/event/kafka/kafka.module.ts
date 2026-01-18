@@ -10,22 +10,37 @@
  * 4. KafkaBridgeService - Bridges Kafka events to EventEmitter
  */
 
-import { DynamicModule, Module, Provider } from "@nestjs/common"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
 import {
     ConfigurableModuleClass,
     OPTIONS_TYPE,
 } from "./kafka.module-definition"
-import { createKafkaProvider } from "./kafka.providers"
-import { createKafkaAdminProvider } from "./kafka.providers"
-import { KafkaBridgeService } from "./kafka-bridge.service"
-import { KafkaAdminService } from "./admin.service"
-import { KafkaProducerService } from "./producer.service"
-import { KafkaConsumerService } from "./consumer.service"
-import { KafkaMode } from "./types"
+import {
+    createKafkaProvider 
+} from "./kafka.providers"
+import {
+    createKafkaAdminProvider 
+} from "./kafka.providers"
+import {
+    KafkaBridgeService 
+} from "./kafka-bridge.service"
+import {
+    KafkaAdminService 
+} from "./admin.service"
+import {
+    KafkaProducerService 
+} from "./producer.service"
+import {
+    KafkaConsumerService 
+} from "./consumer.service"
 
-@Module({})
+@Module({
+})
 export class KafkaModule extends ConfigurableModuleClass {
-    public static register(options: typeof OPTIONS_TYPE = {}): DynamicModule {
+    public static register(options: typeof OPTIONS_TYPE = {
+    }): DynamicModule {
         const dynamicModule = super.register(options)   
         // Core providers
         const kafkaProvider = createKafkaProvider()
@@ -38,17 +53,18 @@ export class KafkaModule extends ConfigurableModuleClass {
             KafkaAdminService,
         ]
         // Producer
-        if (!options?.modes || options.modes.includes(KafkaMode.Producer)) {
+        if (options?.usePublish) {
             providers.push(KafkaProducerService)
         }
         // Consumer
-        if (!options?.modes || options.modes.includes(KafkaMode.Consumer)) {
+        if (options?.useConsume) {
             providers.push(KafkaConsumerService)
             providers.push(KafkaBridgeService)
         }
         return {
             ...dynamicModule,
-            providers: [...(dynamicModule.providers || []), ...providers],
+            providers: [...(dynamicModule.providers || []),
+                ...providers],
             exports: providers,
         }
     }

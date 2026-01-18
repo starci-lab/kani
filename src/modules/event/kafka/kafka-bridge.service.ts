@@ -1,26 +1,46 @@
-import { Injectable, OnApplicationBootstrap, OnModuleInit, OnApplicationShutdown } from "@nestjs/common"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { EachMessagePayload } from "kafkajs"
+import {
+    Injectable, 
+    OnApplicationBootstrap, 
+    OnModuleInit, 
+    OnApplicationShutdown 
+} from "@nestjs/common"
+import {
+    EventEmitter2 
+} from "@nestjs/event-emitter"
+import {
+    EachMessagePayload 
+} from "kafkajs"
 import { 
     InjectSuperJson, 
-    InstanceIdService, 
-    DayjsService
+    InstanceIdService
 } from "@modules/mixin"
-import { EventPayloadType } from "../types"
 import SuperJSON from "superjson"
-import { KafkaConsumerService } from "./consumer.service"
-import { eventMetadataMap } from "../map"
-import { WinstonLog } from "@modules/winston"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./kafka.module-definition"
-import { Inject } from "@nestjs/common"
+import {
+    KafkaConsumerService 
+} from "./consumer.service"
+import {
+    WinstonLog 
+} from "@modules/winston"
+import {
+    WinstonService 
+} from "@modules/winston"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./kafka.module-definition"
+import {
+    Inject 
+} from "@nestjs/common"
 import _ from "lodash"
+import {
+    configMap 
+} from "../config"
+import {
+    EventPayloadType 
+} from "../types"
 
 @Injectable()
 export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit, OnApplicationShutdown {
     private topics: Array<string> = []
-    private topicReceivedMessage: Record<string, boolean> = {}
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -29,9 +49,7 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
         private readonly instanceIdService: InstanceIdService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly dayjsService: DayjsService,
+        private readonly winstonService: WinstonService
     ) {}
 
     onApplicationBootstrap() {
@@ -41,14 +59,16 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
 
     onModuleInit() {
         // get all events with kafka metadata and get the topics
-        const allTopics = Object.entries(eventMetadataMap).filter(
-            ([, metadata]) => metadata.kafka
+        const topics = Object.entries(configMap).filter(
+            ([, metadata]) => metadata.useKafka
         ).map(([eventName]) => eventName)
         // if user provided topics, use the shared topics
-        if (this.options.kafkaTopics) {
-            this.topics = _.intersection(allTopics, this.options.kafkaTopics)
+        if (this.options.topics) {
+            this.topics = _.intersection(topics,
+                this.options.topics
+            )
         } else {
-            this.topics = allTopics
+            this.topics = topics
         }
     }
 
@@ -58,11 +78,12 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
             topics: this.topics,
             fromBeginning: false,   
         })    
-        this.logger.info(
-            WinstonLog.KafkaConsumerTopicsSubscribed, {
-                topics: this.topics,
-                instanceId: this.instanceIdService.getId(),
-            })
+        this.winstonService.log(
+            WinstonLog.KafkaConsumerTopicsSubscribed,
+            {
+                topics: this.topics
+            }
+        )
         await this.kafkaConsumerService.consumer.run({
             eachMessage: async (
                 payload: EachMessagePayload
@@ -71,28 +92,17 @@ export class KafkaBridgeService implements OnApplicationBootstrap, OnModuleInit,
                 const value = message.value?.toString() || "{}"
                 const data = this.superjson.parse(value) as EventPayloadType<unknown>
                 if (data.instanceId === this.instanceIdService.getId()) {
-                    this.logger.debug(`Received event ${topic} from this instance`)
                     return
                 }
-                if (!this.topicReceivedMessage[topic]) {
-                    this.topicReceivedMessage[topic] = true
-                    this.logger.verbose(
-                        WinstonLog.KafkaConsumerTopicListened, {
-                            topic,
-                            timestamp: this.dayjsService.now().toISOString(),
-                            listenedCount: Object.keys(this.topicReceivedMessage).length,
-                            totalTopics: this.topics.length,
-                        }
-                    )
-                }
-                this.eventEmitter.emit(topic, data.data)
+                this.eventEmitter.emit(
+                    topic,
+                    data.data
+                )
             }
         })
-        this.logger.debug(`Listening to ${this.topics.length} topics`)
     }
   
     onApplicationShutdown() {
-        console.log("onApplicationShutdown", this.topics)
         this.kafkaConsumerService.consumer.disconnect()
     }
 }

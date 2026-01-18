@@ -1,6 +1,12 @@
-import { Field, ObjectType } from "@nestjs/graphql"
-import { AbstractSchema } from "./abstract"
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
+import {
+    Field, ObjectType 
+} from "@nestjs/graphql"
+import {
+    AbstractSchema 
+} from "./abstract"
+import {
+    Prop, Schema, SchemaFactory 
+} from "@nestjs/mongoose"
 
 @ObjectType({
     description: "Represents a bot assigned to an executor",
@@ -9,8 +15,13 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose"
     autoCreate: false,
 })
 export class AssignedBotSchema extends AbstractSchema {
-    @Field(() => String, { description: "The bot id" })
-    @Prop({ type: String, required: true })
+    @Field(() => String,
+        {
+            description: "The bot id" 
+        })
+    @Prop({
+        type: String, required: true 
+    })
         botId: string
 }
 

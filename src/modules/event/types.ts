@@ -1,15 +1,20 @@
-import { OnOptions } from "eventemitter2"
-import { KafkaOptions } from "./kafka"
+import {
+    KafkaOptions 
+} from "./kafka"
 
-export enum EventType {
-    Internal = "internal",
-    Kafka = "kafka"
+// Kafka topic configuration
+export interface KafkaTopicConfig {
+    requiredInObserver?: boolean
+    numPartitions?: number
+    replicationFactor?: number
+    topicConfig?: Record<string, string>
+    segmentMs?: number
+    segmentBytes?: number
+    cleanupPolicy?: "delete" | "compact" | "compact,delete"
+    retentionMs?: number
+    maxMessageBytes?: number
+    fileDeleteDelayMs?: number
 }
-
-export type OnEventOptions = OnOptions & {
-    prependListener?: boolean;
-    suppressErrors?: boolean;
-};
 
 export interface EventPayloadType<T> {
     data: T
@@ -17,6 +22,5 @@ export interface EventPayloadType<T> {
 }
 
 export interface EventOptions {
-    isGlobal?: boolean
     kafka?: KafkaOptions
 }

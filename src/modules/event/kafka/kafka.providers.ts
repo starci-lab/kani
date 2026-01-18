@@ -1,9 +1,19 @@
 
-import { Provider } from "@nestjs/common"
-import { KAFKA, KAFKA_ADMIN } from "./constants"
-import { Kafka, logLevel } from "kafkajs"
-import { envConfig } from "@modules/env"
-import { InstanceIdService } from "@modules/mixin"
+import {
+    Provider 
+} from "@nestjs/common"
+import {
+    KAFKA, KAFKA_ADMIN 
+} from "./constants"
+import {
+    Kafka, logLevel 
+} from "kafkajs"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    InstanceIdService 
+} from "@modules/mixin"
 
 export const createKafkaProvider = (): Provider => ({
     provide: KAFKA,

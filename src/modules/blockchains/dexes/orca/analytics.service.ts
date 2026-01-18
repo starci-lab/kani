@@ -1,7 +1,8 @@
-import { AxiosService } from "@modules/axios"
+import {
+    AxiosService 
+} from "@modules/axios"
 import {
     DexId,
-    LiquidityPoolId,
     LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
@@ -10,18 +11,30 @@ import {
     OnApplicationBootstrap,
     OnModuleInit,
 } from "@nestjs/common"
-import { AxiosInstance } from "axios"
+import {
+    AxiosInstance 
+} from "axios"
 import { 
     CacheKey, 
     createCacheKey, 
     InjectRedisCache, 
     PoolAnalyticsCacheResult
 } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { Interval } from "@nestjs/schedule"
-import { createObjectId } from "@utils"
-import { AsyncService, InjectSuperJson } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import {
+    Cache 
+} from "cache-manager"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    AsyncService, InjectSuperJson 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 import Decimal from "decimal.js"
 import SuperJSON from "superjson"
 
@@ -31,6 +44,7 @@ import SuperJSON from "superjson"
 export class OrcaAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
+    private liquidityPools: Array<LiquidityPoolSchema> = []
     private axios: AxiosInstance
     constructor(
     private readonly axiosService: AxiosService,
@@ -49,21 +63,15 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "orca-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({ key })
+        this.axiosService.addRetry({
+            key 
+        })
+        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
+            dex: createObjectId(DexId.Orca),
+        })
     }
 
-    private async setBatchPoolAnalytics(liquidityPoolIds: Array<LiquidityPoolId>) {
-        // Get the liquidity pool
-        const liquidityPools: Array<LiquidityPoolSchema> = []
-        for (const liquidityPoolId of liquidityPoolIds) {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolMap.get(createObjectId(liquidityPoolId).toString())
-            if (!liquidityPool) {
-                continue
-            }
-        }
-        if (!liquidityPools.length) {
-            return
-        }   
+    private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
         const poolAddresses = liquidityPools.map(liquidityPool => liquidityPool.poolAddress).join(",")
         const { data } = await this.axios.get<WhirlpoolPoolResult>(
             `https://api.orca.so/v2/solana/pools?addresses=${poolAddresses}`,
@@ -103,17 +111,12 @@ implements OnModuleInit, OnApplicationBootstrap
 
   @Interval(envConfig().timeConfig.interval.analytics)
     async handleAnalyticsUpdateInterval() {
-        const liquidityPools =
-        this.primaryMemoryStorageService.liquidityPools.filter(
-            (liquidityPool) =>
-                liquidityPool.dex.toString() ===
-            createObjectId(DexId.Orca).toString(),
-        )
         // split into chunks of 10
-        const chunks = liquidityPools.reduce(
+        const chunks = this.liquidityPools.reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
-                acc[chunkIndex] = [...(acc[chunkIndex] || []), liquidityPool]
+                acc[chunkIndex] = [...(acc[chunkIndex] || []),
+                    liquidityPool]
                 return acc
             },
         [] as Array<Array<LiquidityPoolSchema>>,
@@ -122,7 +125,7 @@ implements OnModuleInit, OnApplicationBootstrap
         for (const chunk of chunks) {
             promises.push(
                 this.setBatchPoolAnalytics(
-                    chunk.map((liquidityPool) => liquidityPool.displayId),
+                    chunk,
                 ),
             )
         }

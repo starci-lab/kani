@@ -1,14 +1,36 @@
-import { Injectable } from "@nestjs/common"
-import { getProgramDerivedAddress, getAddressEncoder, Address, address, fetchEncodedAccount, Instruction, AccountRole } from "@solana/kit"
-import { Decimal } from "decimal.js"
-import { getTickArrayStartTickIndex } from "@orca-so/whirlpools-core"
-import { BotSchema } from "@modules/databases"
-import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
-import { BeetArgsStruct, i32 } from "@metaplex-foundation/beet"
-import { AnchorUtilsService } from "../../../tx-builder"
-import { BotMissingParametersException } from "@exceptions"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    getProgramDerivedAddress, getAddressEncoder, Address, address, fetchEncodedAccount, Instruction, AccountRole 
+} from "@solana/kit"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    getTickArrayStartTickIndex 
+} from "@orca-so/whirlpools-core"
+import {
+    BotSchema 
+} from "@modules/databases"
+import {
+    SYSTEM_PROGRAM_ADDRESS 
+} from "@solana-program/system"
+import {
+    BeetArgsStruct, i32 
+} from "@metaplex-foundation/beet"
+import {
+    AnchorUtilsService 
+} from "../../../tx-builder"
+import {
+    BotMissingParametersException 
+} from "@exceptions"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 
 @Injectable()
 export class TickArrayService {
@@ -27,7 +49,7 @@ export class TickArrayService {
         poolStateAddress,
         startIndex,
         programAddress,
-    }: GetTickArrayPdaByStartIndexParams): Promise<GetTickArrayPdaResponse> {
+    }: GetTickArrayPdaByStartIndexParams): Promise<GetTickArrayPdaResult> {
         
         const [pda] = await getProgramDerivedAddress({
             programAddress,
@@ -37,7 +59,9 @@ export class TickArrayService {
                 `${startIndex}`,
             ],
         })
-        return { pda }
+        return {
+            pda 
+        }
     }
 
     /**
@@ -98,14 +122,17 @@ export class TickArrayService {
             pdaOnly
         }: GetTickArrayPdaParams
     ): Promise<GetTickArrayPdaResult> {
-        const startIndex = getTickArrayStartTickIndex(tickIndex, tickSpacing)
+        const startIndex = getTickArrayStartTickIndex(tickIndex,
+            tickSpacing)
         const { pda } = await this.getTickArrayPda({
             poolStateAddress,
             startIndex,
             programAddress,
         })
         if (pdaOnly) {
-            return { pda }
+            return {
+                pda 
+            }
         }
         const [
             initializeTickArrayArgs
@@ -118,7 +145,8 @@ export class TickArrayService {
         const account = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                return await fetchEncodedAccount(rpc, pda)
+                return await fetchEncodedAccount(rpc,
+                    pda)
             },
         })
         if (account.exists) {
@@ -149,9 +177,13 @@ export class TickArrayService {
                 ),
             }
             instructions.push(initializeTickArrayInstruction)
-            return { pda, instructions }
+            return {
+                pda, instructions 
+            }
         }
-        return { pda }
+        return {
+            pda 
+        }
     }
 }
 
@@ -187,7 +219,8 @@ export interface GetTickArrayPdaResult {
 
 export const InitializeTickArrayArgs = new BeetArgsStruct(
     [
-        ["startTickIndex", i32],
+        ["startTickIndex",
+            i32],
     ],
     "InitializeTickArrayArgs"
 )

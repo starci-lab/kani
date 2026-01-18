@@ -1,5 +1,7 @@
 
-import { DynamicModule, Module, Provider } from "@nestjs/common"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
 import {
     ConfigurableModuleClass,
     OPTIONS_TYPE,
@@ -8,9 +10,11 @@ import {
     createRedisCacheManagerProvider, 
     createMemoryCacheManagerProvider 
 } from "./cache.providers"
-import { CacheService } from "./cache.service"
-import { CachePriceUtilsService } from "./price-utils.service"
-@Module({})
+import {
+    AggregatedTokenPriceCacheService 
+} from "./aggregated-token-price-cache.service"
+@Module({
+})
 export class CacheModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -19,13 +23,14 @@ export class CacheModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = [
             createRedisCacheManagerProvider(),
             createMemoryCacheManagerProvider(),
-            CacheService,
-            CachePriceUtilsService,
+            AggregatedTokenPriceCacheService,
         ]
         return {
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
-            exports: [...providers, CachePriceUtilsService],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
+            exports: [...providers,
+                AggregatedTokenPriceCacheService],
         }
     }
 }

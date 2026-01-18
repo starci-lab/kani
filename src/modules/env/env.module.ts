@@ -1,12 +1,22 @@
 
-import { Module } from "@nestjs/common"
-import { ConfigModule } from "@nestjs/config"
-import { envConfig } from "./config"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./env.module-definition"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigModule 
+} from "@nestjs/config"
+import {
+    envConfig 
+} from "./config"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./env.module-definition"
 
-@Module({})
+@Module({
+})
 export class EnvModule extends ConfigurableModuleClass {
-    static forRoot(options: typeof OPTIONS_TYPE = {}) {
+    static forRoot(options: typeof OPTIONS_TYPE = {
+    }) {
         const dynamicModule = super.forRoot(options)
         return {
             ...dynamicModule,

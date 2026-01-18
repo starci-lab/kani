@@ -1,16 +1,26 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./event.module-definition"
-import { KafkaModule } from "./kafka"
-import { EventEmitterService } from "./event-emitter.service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./event.module-definition"
+import {
+    KafkaModule 
+} from "./kafka"
+import {
+    EventEmitterService 
+} from "./event-emitter.service"
 
-@Module({})
+@Module({
+})
 export class EventModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const imports: Array<DynamicModule> = []
-        const kafkaOptions = options?.kafka || {}
+        const kafkaOptions = options?.kafka || {
+        }
         imports.push(
             KafkaModule.register({
                 isGlobal: options.isGlobal,
@@ -23,7 +33,8 @@ export class EventModule extends ConfigurableModuleClass {
         return {
             ...dynamicModule,
             imports,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }

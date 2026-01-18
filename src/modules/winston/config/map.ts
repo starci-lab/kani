@@ -13,6 +13,47 @@ import {
 } from "./types"
 
 export const configMap = {
+
+    // Kafka Producer Ready
+    [WinstonLog.KafkaProducerReady]: {
+        name: WinstonLog.KafkaProducerReady,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {  
+        },
+    },
+    // Kafka Topics Created
+    [WinstonLog.KafkaTopicsCreated]: {
+        name: WinstonLog.KafkaTopicsCreated,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        },
+    },
+    // Kafka Topics Deleted
+    [WinstonLog.KafkaTopicsDeleted]: {
+        name: WinstonLog.KafkaTopicsDeleted,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        },
+    },
+    // Kafka Consumer Ready
+    [WinstonLog.KafkaConsumerReady]: {
+        name: WinstonLog.KafkaConsumerReady,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        },
+    },
+    // Kafka Consumer Topics Subscribed
+    [WinstonLog.KafkaConsumerTopicsSubscribed]: {
+        name: WinstonLog.KafkaConsumerTopicsSubscribed,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        },
+    },
     // Close Position Transaction
     [WinstonLog.ClosePositionTransactionExecuted]: {
         name: WinstonLog.ClosePositionTransactionExecuted,
