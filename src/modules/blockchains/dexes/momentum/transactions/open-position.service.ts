@@ -195,13 +195,13 @@ export class OpenPositionTxbService {
                 txb.pure.u64(
                     adjustSlippage(
                         remainingAmountA, 
-                        new Decimal(envConfig().slippage.openPosition.amountBounds)
+                        new Decimal(envConfig().dexes.momentum.openPosition.slippage)
                     ).toString(),
                 ),
                 txb.pure.u64(
                     adjustSlippage(
                         remainingAmountB, 
-                        new Decimal(envConfig().slippage.openPosition.amountBounds)
+                        new Decimal(envConfig().dexes.momentum.openPosition.slippage)
                     ).toString(),
                 ),
                 txb.object(SUI_CLOCK_OBJECT_ID),

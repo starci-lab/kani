@@ -14,7 +14,7 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, InjectSuperJson, RetryService 
+    AsyncService, RetryService 
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException, LiquidityPoolNotFoundException 
@@ -25,7 +25,6 @@ import {
 import {
     EventEmitterService, EventName 
 } from "@modules/event"
-import SuperJSON from "superjson"
 import {
     createObjectId 
 } from "@utils"
@@ -60,8 +59,6 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     constructor(
         private readonly winstonService: WinstonService,
         private readonly cacheManager: CacheService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,    
@@ -78,7 +75,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             }
         )
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
-            "liquidity_pools", 
+            "orca-observer-liquidity-pools", 
             {
                 indices: ["poolAddress",
                     "displayId",
@@ -93,19 +90,16 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval().then(() => {
             // observe
-            for (const liquidityPool of this.primaryMemoryStorageService.liquidityPoolCollection.find({
-                dex: createObjectId(DexId.Orca),
-            })) {
-                if (liquidityPool.dex.toString() !== createObjectId(DexId.Orca).toString()) continue
+            for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
                 this.observeClmmPool(liquidityPool.displayId)
             }
         })
     }
 
-    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
+    @Interval(envConfig().dexes.orca.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)

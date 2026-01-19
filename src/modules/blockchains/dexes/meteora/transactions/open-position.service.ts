@@ -308,7 +308,7 @@ export class OpenPositionInstructionService {
             ),  
         }
         instructions.push(initializePositionInstruction)
-        const slippagePercentage = new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment)
+        const slippagePercentage = new Decimal(envConfig().dexes.meteora.openPosition.slippage)
         const depositWithRebalanceEndpointInstructions 
         = await this.meteoraSdkService.depositWithRebalanceEndpoint({
             bot,

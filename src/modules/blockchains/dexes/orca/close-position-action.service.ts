@@ -20,9 +20,13 @@ import {
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
     InvalidPoolTokensException, 
+    PrivyMetadataNotFoundException, 
     TransactionNotExecutedException,
     TransactionNotPreparedException,
+    ErrorTransactionType,
+    MissingSolanaTxParamException,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -68,16 +72,20 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString()
+            id: {
+                $eq: state.static.tokenA.toString(),
+            },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString()
+            id: {
+                $eq: state.static.tokenB.toString(),
+            },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
@@ -121,6 +129,16 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         },
                     })
                 } else {
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -148,6 +166,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         if (isRetry) {
@@ -167,15 +186,15 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         botId: bot.id,
                         txHash,
                         liquidityPoolId: state.static.displayId,
+                        type: ErrorTransactionType.ClosePosition,
                     })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException({
+            throw new MissingSolanaTxParamException({
                 botId: bot.id,
-                txHash,
-                liquidityPoolId: state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         await this.rpcExecutorService.withSolanaRpc({

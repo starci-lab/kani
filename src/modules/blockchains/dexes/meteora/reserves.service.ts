@@ -11,7 +11,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    BinArrayNotFoundException, InvalidPoolTokensException, SolanaAccountNotFoundException, ErrorSolanaAccountName, 
+    InvalidPoolTokensException, SolanaAccountNotFoundException, ErrorSolanaAccountName, 
     ActivePositionNotFoundException
 } from "@exceptions"
 import {
@@ -57,8 +57,7 @@ export class MeteoraReservesService implements IReservesService {
         state,
     }: ReservesParams): Promise<ReservesResult> {
         if (!bot.activePosition
-            || !bot.activePositionLiquidityPool
-            || !bot.activePositionLiquidityPoolType
+            || !bot.activePosition.associatedPosition
         ) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -66,9 +65,9 @@ export class MeteoraReservesService implements IReservesService {
         }
         const _state = state as DlmmLiquidityPoolState
         const activeBinId = new Decimal(_state.dynamic.activeId)
-        const positionId = bot.activePosition.positionId
-        const positionMinBinId = bot.activePosition.minBinId ?? 0
-        const positionMaxBinId = bot.activePosition.maxBinId ?? 0
+        const positionId = bot.activePosition.associatedPosition.positionId
+        const positionMinBinId = bot.activePosition.associatedPosition.minBinId ?? 0
+        const positionMaxBinId = bot.activePosition.associatedPosition.maxBinId ?? 0
         const binArrayIndexes = getBinArrayIndexesCoverage(
             new BN(positionMinBinId),
             new BN(positionMaxBinId)
@@ -112,7 +111,12 @@ export class MeteoraReservesService implements IReservesService {
         }
 
         for (const binArrayAccount of binArrayAccounts) {
-            if (!binArrayAccount.exists) throw new BinArrayNotFoundException("Bin array not found")
+            if (!binArrayAccount.exists) throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.BinArray,
+                address: binArrayAccount.address,
+                dexId: DexId.Meteora,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const program = createProgram(
             // dump params to retrieve the idl from the network
@@ -127,7 +131,12 @@ export class MeteoraReservesService implements IReservesService {
         // decode the bin array accounts
         const binArrays = binArrayAccounts.map(
             binArrayAccount => {
-                if (!binArrayAccount.exists) throw new BinArrayNotFoundException("Bin array not found")
+                if (!binArrayAccount.exists) throw new SolanaAccountNotFoundException({
+                    name: ErrorSolanaAccountName.BinArray,
+                    address: binArrayAccount.address,
+                    dexId: DexId.Meteora,
+                    liquidityPoolId: _state.static.displayId,
+                })
                 return decodeAccount<BinArray>(
                     program,
                     "binArray",
@@ -161,7 +170,7 @@ export class MeteoraReservesService implements IReservesService {
             const liquidityShareRaw = liquidityShares[i]
             const liquidityShare = liquidityShareRaw.div(Q64)
             if (liquidityShare.isZero()) continue
-            const currentBinId = new Decimal(bot.activePosition.minBinId ?? 0).add(new Decimal(i))
+            const currentBinId = new Decimal(bot.activePosition.associatedPosition.minBinId ?? 0).add(new Decimal(i))
             const { price } = this.dlmmBinFormulaService.activeIdToPriceRaw({
                 activeId: currentBinId.toNumber(),
                 binStep: binStep.toNumber(),
@@ -184,7 +193,12 @@ export class MeteoraReservesService implements IReservesService {
                             new Decimal(binLowerAndUpperBinIds[1].toString())
                         )
                 )
-                if (correspondingBinArrayIndex === -1) throw new BinArrayNotFoundException("Bin array not found")
+                if (correspondingBinArrayIndex === -1) throw new SolanaAccountNotFoundException({
+                    name: ErrorSolanaAccountName.BinArray,
+                    address: binArrayAccounts[correspondingBinArrayIndex].address,
+                    dexId: DexId.Meteora,
+                    liquidityPoolId: _state.static.displayId,
+                })
                 const correspondingBinArray = binArrays[correspondingBinArrayIndex]
                 const indexInBinArray = new Decimal(currentBinId).sub(new Decimal(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0].toString()))
                 const globalBin = correspondingBinArray.bins[indexInBinArray.toNumber()]

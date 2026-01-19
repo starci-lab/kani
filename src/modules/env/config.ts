@@ -70,30 +70,164 @@ export const envConfig = () => ({
         },
     },
     // time config
-    time: {
-        stream: {
-            pyth: {
-                idleTimeout: parseMs("TIME_STREAM_PYTH_IDLE_TIMEOUT",
+    priceFeeds: {
+        coingecko: {
+            interval: {
+                rest: parseMs("PRICE_FEEDS_COINGECKO_INTERVAL_REST",
                     "10s"),
-            }
+            },
         },
-        interval: {
-            coingecko: {
-                rest: parseMs("TIME_INTERVAL_COINGECKO_REST",
+        pyth: {
+            interval: {
+                rest: parseMs("PRICE_FEEDS_PYTH_INTERVAL_REST",
                     "10s"),
             },
-            pyth: {
-                rest: parseMs("TIME_INTERVAL_PYTH_REST",
-                    "10s"),
-            },
-            coinmarketcap: {
-                rest: parseMs("TIME_INTERVAL_COINMARKETCAP_REST",
+        },
+        coinmarketcap: {
+            interval: {
+                rest: parseMs("PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST",
                     "5m"),
             },
         },
-        stale: {
-            balanceSnapshot: parseMs("TIME_STALE_BALANCE_SNAPSHOT",
-                "30s"),
+    },
+    cexes: {
+        binance: {
+            slippage: parseFloat("CEXES_BINANCE_BINANCE_SLIPPAGE",
+                0.05),
+            interval: {
+                rest: parseMs("CEXES_BINANCE_INTERVAL_REST",
+                    "10s"),
+            },
+        },
+        gate: {
+            slippage: parseFloat("CEXES_GATE_SLIPPAGE",
+                0.05),
+            interval: {
+                rest: parseMs("CEXES_GATE_INTERVAL_REST",
+                    "10s"),
+            },
+        },
+        bybit: {
+            slippage: parseFloat("CEXES_BYBIT_SLIPPAGE",
+                0.05),
+            interval: {
+                rest: parseMs("CEXES_BYBIT_INTERVAL_REST",
+                    "10s"),
+            },
+        },
+    },
+    dexes: {
+        cetus: {
+            interval: {
+                analytics: parseMs("DEXES_CETUS_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_CETUS_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                }
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_CETUS_OPEN_POSITION_SLIPPAGE",
+                    0.05), 
+            },
+        },
+        flowx: {
+            interval: {
+                analytics: parseMs("DEXES_FLOWX_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_FLOWX_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_FLOWX_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
+        },
+        momentum: {
+            interval: {
+                analytics: parseMs("DEXES_MOMENTUM_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_MOMENTUM_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_MOMENTUM_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
+        },
+        turbos: {
+            interval: {
+                analytics: parseMs("DEXES_TURBOS_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_TURBOS_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_TURBOS_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
+        },
+        meteora: {
+            openPosition: {
+                slippage: parseFloat("DEXES_METEORA_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
+            interval: {
+                analytics: parseMs("DEXES_METEORA_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_METEORA_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+        },
+        raydium: {
+            interval: {
+                analytics: parseMs("DEXES_RAYDIUM_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_RAYDIUM_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
+        },
+        orca: {
+            interval: {
+                analytics: parseMs("DEXES_ORCA_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_ORCA_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_ORCA_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
+        },
+        saros: {
+            interval: {
+                analytics: parseMs("DEXES_SAROS_INTERVAL_ANALYTICS",
+                    "1m"),
+                observer: {
+                    fetch: parseMs("DEXES_SAROS_INTERVAL_OBSERVER_FETCH",
+                        "10s"),
+                },
+            },
+            openPosition: {
+                slippage: parseFloat("DEXES_SAROS_OPEN_POSITION_SLIPPAGE",
+                    0.05),
+            },
         },
     },
     // executor config

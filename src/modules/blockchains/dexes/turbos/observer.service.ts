@@ -26,23 +26,15 @@ import {
     createObjectId 
 } from "@utils"
 import { 
-    CacheKey, 
-    createCacheKey, 
+    CacheService,
     DynamicClmmLiquidityPoolInfoCacheResult, 
-    InjectRedisCache 
+    CacheKey,
 } from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    InjectSuperJson 
-} from "@modules/mixin"
-import SuperJSON from "superjson"
-import {
-    ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName 
+    EventEmitterService, EventName 
 } from "@modules/event"
 import {
     envConfig 
@@ -57,10 +49,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
+        private readonly cacheService: CacheService,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
@@ -70,7 +59,9 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     onModuleInit() {
         this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.Turbos)
+                dex: {
+                    $eq: createObjectId(DexId.Turbos).toString(),
+                },
             }
         )
     }
@@ -79,7 +70,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         this.handlePoolStateUpdateInterval()
     }
     
-    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
+    @Interval(envConfig().dexes.turbos.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPools) {
@@ -114,7 +105,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                     })
                 },
             })
-            if (!objectInfo) {
+            if (objectInfo.error || !objectInfo.data) {
                 throw new SuiObjectNotFoundException({
                     name: ErrorSuiObjectName.Pool,
                     id: liquidityPool.poolAddress,
@@ -122,7 +113,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                     liquidityPoolId: liquidityPoolId,
                 })
             }
-            if (objectInfo.data?.content?.dataType !== "moveObject") {
+            if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
                     name: ErrorSuiObjectName.Pool,
                     id: liquidityPool.poolAddress,
@@ -166,22 +157,20 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         await this.asyncService.allIgnoreError(
             [
                 // store in cache
-                this.cacheManager.set(
-                    createCacheKey(
-                        CacheKey.DynamicClmmLiquidityPoolInfo, 
-                        liquidityPool.displayId
-                    ),
-                    this.superjson.stringify(parsed),
+                this.cacheService.set(
+                    {
+                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                        args: [liquidityPool.displayId],
+                        cacheResult: parsed,
+                    }
                 ),
                 // emit event through event emitter
-                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
-                    EventName.ClmmLiquidityPoolsFetched,
+                this.eventEmitterService.emit(
+                    EventName.ClmmLiquidityPoolsSynced,
                     {
-                        liquidityPoolId: liquidityPool.displayId, ...parsed 
-                    },
-                    {
-                        withoutLocal: true 
-                    },
+                        id: liquidityPool.id,
+                        ...parsed,
+                    }
                 ),
             ]
         )

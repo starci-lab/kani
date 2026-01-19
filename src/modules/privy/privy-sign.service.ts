@@ -1,9 +1,21 @@
-import { Injectable } from "@nestjs/common"
-import { InjectPrivyClient } from "./privy.decorators"
-import { AuthorizationContext, PrivyClient } from "@privy-io/node"
-import { DerivedAesKeyService } from "@modules/derived"
-import { EncryptedPayload } from "@typedefs"
-import { FullySolanaTransaction, SolanaTransaction } from "./types"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    InjectPrivyClient 
+} from "./privy.decorators"
+import {
+    AuthorizationContext, PrivyClient 
+} from "@privy-io/node"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
+import {
+    EncryptedPayload 
+} from "@typedefs"
+import {
+    FullySolanaTransaction, SolanaTransaction 
+} from "./types"
 import { 
     assertIsFullySignedTransaction, 
     getBase64Encoder, 
@@ -12,15 +24,33 @@ import {
     getTransactionEncoder, 
     TransactionBlockhashLifetime 
 } from "@solana/kit"
-import { addLifetimeConstraint } from "./utils"
-import { assertIsSendableTransaction } from "@solana/kit"
-import { assertIsTransactionWithBlockhashLifetime } from "@solana/kit"
-import { Transaction, TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SuiClient } from "@mysten/sui/client"
-import { messageWithIntent, SignatureWithBytes, toSerializedSignature } from "@mysten/sui/cryptography"
-import { fromHex, toBase64 } from "@mysten/bcs"
-import { publicKeyFromRawBytes } from "@mysten/sui/verify"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    addLifetimeConstraint 
+} from "./utils"
+import {
+    assertIsSendableTransaction 
+} from "@solana/kit"
+import {
+    assertIsTransactionWithBlockhashLifetime 
+} from "@solana/kit"
+import {
+    Transaction, TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SuiClient 
+} from "@mysten/sui/client"
+import {
+    messageWithIntent, SignatureWithBytes, toSerializedSignature 
+} from "@mysten/sui/cryptography"
+import {
+    fromHex, toBase64 
+} from "@mysten/bcs"
+import {
+    publicKeyFromRawBytes 
+} from "@mysten/sui/verify"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class PrivySignService {
@@ -59,7 +89,8 @@ export class PrivySignService {
         const decodedTransaction = getTransactionDecoder().decode(
             getBase64Encoder().encode(signedTransaction.signed_transaction),
         )
-        addLifetimeConstraint(decodedTransaction, lifetimeConstraint)
+        addLifetimeConstraint(decodedTransaction,
+            lifetimeConstraint)
         assertIsFullySignedTransaction(decodedTransaction)
         assertIsSendableTransaction(decodedTransaction)
         assertIsTransactionWithBlockhashLifetime(decodedTransaction)
@@ -79,11 +110,15 @@ export class PrivySignService {
             encryptedPrivySignerPrivateKey,
         }: SignSuiTransactionParams
     ): Promise<SignSuiTransactionResult> {
-        const publicKey = publicKeyFromRawBytes("ED25519", fromHex(publicKeyHex.slice(2) ?? ""))
+        const publicKey = publicKeyFromRawBytes("ED25519",
+            fromHex(publicKeyHex.slice(2) ?? ""))
         const accountAddress = publicKey.toSuiAddress()
         transaction.setSender(accountAddress)
-        const rawBytes = await transaction.build({ client })
-        const intentMessage = messageWithIntent("TransactionData", rawBytes)
+        const rawBytes = await transaction.build({
+            client 
+        })
+        const intentMessage = messageWithIntent("TransactionData",
+            rawBytes)
         const bytes = Buffer.from(intentMessage).toString("hex")
         const txHash = TransactionDataBuilder.getDigestFromBytes(rawBytes)
         const privySignerPrivateKey = this.derivedAesKeyService.decrypt(encryptedPrivySignerPrivateKey)

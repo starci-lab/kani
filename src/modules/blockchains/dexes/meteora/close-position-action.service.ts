@@ -20,9 +20,12 @@ import {
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    PrivyMetadataNotFoundException,
     InvalidPoolTokensException,
     TransactionNotExecutedException,
-    TransactionNotPreparedException,
+    ErrorTransactionType,
+    MissingSolanaTxParamException,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -121,6 +124,16 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                         },
                     })
                 } else {
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -142,13 +155,6 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
     async execute(
         { bot, state, isRetry, solanaTx, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
-        if (!solanaTx) {
-            throw new TransactionNotPreparedException({
-                botId: bot.id,
-                txHash,
-                liquidityPoolId: state.static.displayId,
-            })
-        }
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
@@ -166,15 +172,15 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                         botId: bot.id,
                         txHash,
                         liquidityPoolId: state.static.displayId,
+                        type: ErrorTransactionType.ClosePosition,
                     })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException({
+            throw new MissingSolanaTxParamException({
                 botId: bot.id,
-                txHash,
-                liquidityPoolId: state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         await this.rpcExecutorService.withSolanaRpc({

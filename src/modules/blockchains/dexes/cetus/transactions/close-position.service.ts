@@ -35,11 +35,7 @@ export class ClosePositionTxbService {
     ): Promise<CreateClosePositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        if (
-            !bot.activePosition ||
-            !bot.activePositionLiquidityPool ||
-            !bot.activePositionLiquidityPoolType
-        ) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
                     botId: bot.id,
@@ -47,10 +43,14 @@ export class ClosePositionTxbService {
             )
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString()
+            id: {
+                $eq: state.static.tokenA.toString(),
+            },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString()
+            id: {
+                $eq: state.static.tokenB.toString(),
+            },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
@@ -80,7 +80,7 @@ export class ClosePositionTxbService {
                 arguments: [
                     txb.object(globalConfigObject),
                     txb.object(state.static.poolAddress),
-                    txb.object(bot.activePosition.positionId),
+                    txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                     txb.object(rewarderGlobalVaultObject),
                     txb.object(zeroCoinTxResult),
                     txb.object(SUI_CLOCK_OBJECT_ID),
@@ -96,7 +96,7 @@ export class ClosePositionTxbService {
             arguments: [
                 txb.object(globalConfigObject),
                 txb.object(state.static.poolAddress),
-                txb.object(bot.activePosition.positionId),
+                txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                 txb.pure.u64(0),
                 txb.pure.u64(0),
                 txb.object(SUI_CLOCK_OBJECT_ID),

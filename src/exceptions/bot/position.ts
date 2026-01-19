@@ -41,3 +41,20 @@ export class PositionIdNotSetException extends AbstractException {
         )
     }
 }
+
+/** Thrown when associated position is not set */
+export interface AssociatedPositionNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+}
+export class AssociatedPositionNotFoundException extends AbstractException {
+    constructor(
+        { botId, originalError }: AssociatedPositionNotFoundExceptionMetadata
+    ) {
+        super("Associated position not found",
+            "ASSOCIATED_POSITION_NOT_FOUND_EXCEPTION",
+            {
+                botId, originalError,
+            }
+        )
+    }
+}

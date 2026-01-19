@@ -60,17 +60,21 @@ export class ClosePositionInstructionService {
     }: CreateCloseInstructionsParams): Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-        const { ataAddress, nftMintAddress } = bot.activePosition.metadata as OrcaPositionMetadata
+        const { ataAddress, nftMintAddress } = bot.activePosition.associatedPosition.metadata as OrcaPositionMetadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: {
+                $eq: state.static.tokenA.toString(),
+            },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: {
+                $eq: state.static.tokenB.toString(),
+            },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
@@ -115,7 +119,7 @@ export class ClosePositionInstructionService {
         }
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.tickLower ?? 0,
+            tickIndex: bot.activePosition.associatedPosition.tickLower ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
             bot,
@@ -123,13 +127,13 @@ export class ClosePositionInstructionService {
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.tickUpper ?? 0,
+            tickIndex: bot.activePosition.associatedPosition.tickUpper ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
             pdaOnly: true,
         })
         const [decreaseLiquidityArgs] = DecreaseLiquidityArgs.serialize({
-            liquidityAmount: bot.activePosition.liquidity?.toString(),
+            liquidityAmount: bot.activePosition.associatedPosition.liquidity?.toString(),
             tokenMinA: new BN(0).toString(),
             tokenMinB: new BN(0).toString(),
         })

@@ -14,7 +14,8 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService 
+    AsyncService, 
+    LokiJSService
 } from "@modules/mixin"
 import {
     Interval 
@@ -35,9 +36,8 @@ import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    InjectSuperJson, DayjsService 
+    DayjsService 
 } from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
     EventEmitterService, 
     EventName
@@ -52,37 +52,45 @@ import {
 @Injectable()
 export class CetusObserverService implements OnApplicationBootstrap, OnModuleInit {
     // snapshot here to reduce the computational complexity
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
+        private readonly lokiJSService: LokiJSService,
     ) {}
 
     // snapshot here
-    onModuleInit() {
-        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
+    async onModuleInit() {
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.Cetus)
+                dex: {
+                    $eq: createObjectId(DexId.Cetus).toString(),
+                },
             }
         )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "cetus-observer-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
     }
     
-    @Interval(envConfig().timeConfig.interval.suiPoolStateUpdate)
+    @Interval(envConfig().dexes.cetus.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Cetus).toString()) continue
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
                 (
                     async () => {
@@ -111,7 +119,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                     },
                 }
             )
-            if (!objectInfo) {
+            if (objectInfo.error || !objectInfo.data) {
                 throw new SuiObjectNotFoundException(
                     {
                         name: ErrorSuiObjectName.Pool,
@@ -121,7 +129,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
                     }
                 )
             }
-            if (objectInfo.data?.content?.dataType !== "moveObject") {
+            if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException(
                     {
                         name: ErrorSuiObjectName.Pool,

@@ -1,10 +1,23 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./privy.module-definition"
-import { createPrivyClientProvider } from "./privy.providers"
-import { PrivySignService } from "./privy-sign.service"
-import { PrivyCoreService } from "./privy-core.service"
-import { JwtPrivyStrategy } from "./strategies"
-@Module({})
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./privy.module-definition"
+import {
+    createPrivyClientProvider 
+} from "./privy.providers"
+import {
+    PrivySignService 
+} from "./privy-sign.service"
+import {
+    PrivyCoreService 
+} from "./privy-core.service"
+import {
+    JwtPrivyStrategy 
+} from "./strategies"
+@Module({
+})
 export class PrivyModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
@@ -16,7 +29,8 @@ export class PrivyModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }

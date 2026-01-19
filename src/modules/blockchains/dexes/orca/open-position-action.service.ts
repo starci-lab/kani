@@ -15,15 +15,19 @@ import {
     SignerService 
 } from "../../signers"
 import {
-    AppVersion, OrcaPositionMetadata, PrimaryMemoryStorageService 
+    AppVersion, DexId, OrcaPositionMetadata, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
-    TransactionNotPreparedException,
     TransactionNotExecutedException,
-    PositionIdNotSetException,
-    PositionNotFoundException,
+    ErrorTransactionType,
+    SolanaAccountNotFoundException,
+    ErrorSolanaAccountName,
+    MissingSolanaTxParamException,
+    MissingPositionIdParamException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    PrivyMetadataNotFoundException,
 } from "@exceptions"
 import {
     TickMathService 
@@ -99,16 +103,13 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        const {
-            snapshotTargetBalanceAmount,
-            snapshotQuoteBalanceAmount,
-            snapshotGasBalanceAmount,
-        } = bot
-        if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !snapshotGasBalanceAmount) {
+        if (!bot.snapshots) {
             throw new SnapshotBalancesNotSetException({
                 botId: bot.id,
             })
         }
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -138,7 +139,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         })
         // no slippage for orca
         const liquidity = adjustSlippage(liquidityRaw,
-            new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment))
+            new Decimal(envConfig().dexes.orca.openPosition.slippage))
         const {
             mintKeyPair,
             ataAddress,
@@ -204,6 +205,16 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     // partial sign the transaction
                     const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
                         transaction)
@@ -246,7 +257,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         positionId,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         if (!positionId) {
-            throw new PositionIdNotSetException({
+            throw new MissingPositionIdParamException({
                 botId: bot.id,
                 liquidityPoolId: state.static.displayId,
             })
@@ -269,17 +280,17 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     }
                     throw new TransactionNotExecutedException({
                         botId: bot.id,
-                        txHash: txHash.toString(),
+                        txHash,
                         liquidityPoolId: _state.static.displayId,
+                        type: ErrorTransactionType.OpenPosition,
                     })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException({
+            throw new MissingSolanaTxParamException({
                 botId: bot.id,
-                txHash: txHash.toString(),
-                liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSolanaRpc({
@@ -299,7 +310,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                     WinstonLog.OpenPositionTransactionExecuted,
                     {
                         botId: bot.id,
-                        txHash: txHash.toString(),
+                        txHash,
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
@@ -312,6 +323,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
 
     async confirm(
         {
+            state,
             positionId,
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
@@ -325,7 +337,12 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         commitment: "confirmed",
                     })
                 if (!positionInfo || !positionInfo.exists) {
-                    throw new PositionNotFoundException("Position not found")
+                    throw new SolanaAccountNotFoundException({
+                        name: ErrorSolanaAccountName.PersonalPosition,
+                        address: positionId,
+                        dexId: DexId.Orca,
+                        liquidityPoolId: state.static.displayId,
+                    })
                 }
                 const [positionState] = Position.struct.deserialize(Buffer.from(positionInfo.data),
                     8)

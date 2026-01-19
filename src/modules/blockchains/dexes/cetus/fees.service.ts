@@ -19,7 +19,7 @@ import {
     ClmmLiquidityPoolState 
 } from "../../interfaces"
 import {
-    computeDenomination, Q128, Q64 
+    Q128, Q64 
 } from "@utils"
 import {
     RpcAccessType 
@@ -54,28 +54,30 @@ export class CetusFeesService implements IFeesService {
 
     async fees({ state, bot }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePositionLiquidityPool ||
-            !bot.activePosition ||
-            !bot.activePositionLiquidityPoolType
+        if (!bot.activePosition || !bot.activePosition.associatedPosition
         ) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const positionId = bot.activePosition.positionId
-        const tickLower = new Decimal(bot.activePosition.tickLower ?? 0)
-        const tickUpper = new Decimal(bot.activePosition.tickUpper ?? 0)
+        const positionId = bot.activePosition.associatedPosition.positionId
+        const tickLower = new Decimal(bot.activePosition.associatedPosition.tickLower ?? 0)
+        const tickUpper = new Decimal(bot.activePosition.associatedPosition.tickUpper ?? 0)
         const lowerScore = this.tickScore(tickLower)
         const upperScore = this.tickScore(tickUpper)
         const { tickManagerId, positionManagerId } = _state.static.metadata as CetusLiquidityPoolMetadata
@@ -189,16 +191,14 @@ export class CetusFeesService implements IFeesService {
             outsideDeltaWrapModulus: Q128,
             insideDeltaWrapModulus: Q128,
             resultDiv: Q64,
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
         })
 
         return {
             snapshotAt: _state.dynamic.snapshotAt,
-            feeA: computeDenomination(feeA,
-                tokenA.decimals,
-                tokenB.decimals),
-            feeB: computeDenomination(feeB,
-                tokenB.decimals,
-                tokenA.decimals),
+            feeA,
+            feeB,
             rewards: [],
         }
     }

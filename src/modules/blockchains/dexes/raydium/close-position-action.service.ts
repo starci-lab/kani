@@ -1,12 +1,16 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
 } from "../../interfaces"
-import { SignerService } from "../../signers"
+import {
+    SignerService 
+} from "../../signers"
 import { 
     AppVersion,
     PrimaryMemoryStorageService
@@ -16,14 +20,22 @@ import {
 } from "./transactions"
 import { 
     ActivePositionNotFoundException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    ErrorTransactionType,
     InvalidPoolTokensException, 
+    MissingSolanaTxParamException, 
+    PrivyMetadataNotFoundException, 
     TransactionNotExecutedException,
-    TransactionNotPreparedException,
 } from "@exceptions"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
 import { 
     pipe,
     setTransactionMessageFeePayerSigner,
@@ -40,8 +52,9 @@ import {
     createNoopSigner,
     address
 } from "@solana/kit"
-import { envConfig } from "@modules/env"
-import { PrivySignService } from "@modules/privy"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class RaydiumClosePositionActionService implements IClosePositionActionService {
@@ -51,26 +64,34 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         private readonly closePositionInstructionService: ClosePositionInstructionService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
-        const _state = state as LiquidityPoolState
-        if (!bot.activePosition) {
+        const _state = state as ClmmLiquidityPoolState
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
-                bot.id, 
-                "Active position not found"
+                {
+                    botId: bot.id,
+                }
             )
         }
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === state.static.tokenB.toString())
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: state.static.tokenA.toString(),
+            },
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: state.static.tokenB.toString(),
+            },
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
@@ -81,17 +102,23 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                    (tx) => appendTransactionMessageInstructions(instructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    createTransactionMessage({
+                        version: 0 
+                    }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                        tx),
+                    (tx) => appendTransactionMessageInstructions(instructions,
+                        tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                        tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
-                            const signedTransaction = await signTransaction([signer.keyPair], transaction)
+                            const signedTransaction = await signTransaction([signer.keyPair],
+                                transaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
                             assertIsSendableTransaction(signedTransaction)
@@ -103,6 +130,16 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                         },
                     })
                 } else {
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -124,26 +161,32 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
     async execute(
         { bot, state, isRetry, solanaTx, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
-        if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
-        }
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
-                        { commitment: "confirmed", encoding: "base58" }
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }
                     ).send()
                     if (transaction) {
                         return
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException({
+                        botId: bot.id,
+                        txHash,
+                        type: ErrorTransactionType.ClosePosition,
+                    })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new MissingSolanaTxParamException({
+                botId: bot.id,
+                type: ErrorTransactionType.ClosePosition,
+            })
         }
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
@@ -153,11 +196,13 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                     rpcSubscriptions,
                 })
                 await sendAndConfirmTransaction(
-                    solanaTx, {
+                    solanaTx,
+                    {
                         commitment: "confirmed",
                     })
-                this.logger.verbose(
-                    WinstonLog.ClosePositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.ClosePositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash,
                         liquidityPoolId: state.static.displayId,

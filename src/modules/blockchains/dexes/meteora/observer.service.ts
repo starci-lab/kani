@@ -11,7 +11,9 @@ import {
     LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, DayjsService,
+    AsyncService, 
+    DayjsService,
+    LokiJSService,
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException, SolanaAccountNotFoundException, ErrorSolanaAccountName
@@ -51,10 +53,13 @@ import {
 import {
     CacheService 
 } from "@modules/cache"
+import {
+    Collection 
+} from "lokijs"
 
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
         private readonly winstonService: WinstonService,
         private readonly rpcExecutorService: RpcExecutorService,
@@ -64,28 +69,33 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
         private readonly cacheService: CacheService,
+        private readonly lokiJSService: LokiJSService,
     ) { }
 
-    onModuleInit() {
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+    async onModuleInit() {
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
                 dex: {
                     $eq: createObjectId(DexId.Meteora).toString(),
                 },
             }
         )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "meteora-observer-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "dex"],
+            }
+        )
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     // fetch the pool every 10s to ensure if no event from websocket
-    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
+    @Interval(envConfig().dexes.meteora.interval.observer.fetch)
     async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPools) {
-            if (
-                liquidityPool.dex.toString() !==
-                createObjectId(DexId.Meteora).toString()
-            )
-                continue
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)
@@ -99,12 +109,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     // ============================================
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval().then(() => {
-            for (const liquidityPool of this.liquidityPools) {
-                if (
-                    liquidityPool.dex.toString() !==
-                    createObjectId(DexId.Meteora).toString()
-                )
-                    continue
+            for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
                 this.observeDlmmPool(liquidityPool)
             }
         })
@@ -203,7 +208,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         try {
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException({
-                    liquidityPoolId: liquidityPool.displayId,
+                    displayId: liquidityPool.displayId,
                 })
             }
             // infinite loop to observe the pool

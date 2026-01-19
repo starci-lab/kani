@@ -23,6 +23,8 @@ import {
     TransactionNotExecutedException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
+    ErrorTransactionType,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -58,7 +60,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
                     botId: bot.id,
@@ -86,6 +88,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                             if (devInspect.effects.status.status !== "success") {
                                 throw new TransactionValidationFailedException(
                                     {
+                                        type: ErrorTransactionType.ClosePosition,
                                         botId: bot.id,
                                         txHash: devInspect.effects.transactionDigest,
                                         liquidityPoolId: _state.static.displayId,
@@ -104,8 +107,15 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException(
+                            {
+                                botId: bot.id,
+                            }
+                        )
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException(
                             {
                                 botId: bot.id,
                             }
@@ -161,6 +171,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     botId: bot.id,
                     txHash,
                     liquidityPoolId: _state.static.displayId,
+                    type: ErrorTransactionType.ClosePosition,
                 }
             )
         }
@@ -170,6 +181,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     botId: bot.id,
                     txHash,
                     liquidityPoolId: _state.static.displayId,
+                    type: ErrorTransactionType.ClosePosition,
                 }
             )
         }

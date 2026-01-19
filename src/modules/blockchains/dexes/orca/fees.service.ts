@@ -15,11 +15,11 @@ import {
     fetchEncodedAccounts,
 } from "@solana/kit"
 import {
-    ActivePositionLiquidityNotSetException,
+    MissingActivePositionLiquidityException,
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-    PositionNotFoundException,
-    TickArrayNotFoundException,
+    ErrorSolanaAccountName,
+    SolanaAccountNotFoundException,
 } from "@exceptions"
 import {
     Position 
@@ -35,12 +35,10 @@ import {
     Q128, Q64 
 } from "@utils"
 import {
+    DexId,
     OrcaLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import {
-    computeDenomination 
-} from "@utils"
 import {
     TickArrayService 
 } from "./transactions"
@@ -63,15 +61,15 @@ export class OrcaFeesService implements IFeesService {
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
 
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
 
-        const positionId = bot.activePosition.positionId
-        const tickLower = bot.activePosition.tickLower ?? 0
-        const tickUpper = bot.activePosition.tickUpper ?? 0
+        const positionId = bot.activePosition.associatedPosition.positionId
+        const tickLower = bot.activePosition.associatedPosition.tickLower ?? 0
+        const tickUpper = bot.activePosition.associatedPosition.tickUpper ?? 0
 
         const { programAddress } =
       state.static.metadata as OrcaLiquidityPoolMetadata
@@ -122,21 +120,12 @@ export class OrcaFeesService implements IFeesService {
         // Validate accounts
         // ----------------------------
         if (!positionAccount || !positionAccount.exists) {
-            throw new PositionNotFoundException("Position not found")
-        }
-
-        if (!tickArrayLowerAccount || !tickArrayLowerAccount.exists) {
-            throw new TickArrayNotFoundException(
-                tickLower,
-                "Lower tick array not found",
-            )
-        }
-
-        if (!tickArrayUpperAccount || !tickArrayUpperAccount.exists) {
-            throw new TickArrayNotFoundException(
-                tickUpper,
-                "Upper tick array not found",
-            )
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.PersonalPosition,
+                address: positionId,
+                dexId: DexId.Orca,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         // ----------------------------
@@ -148,7 +137,23 @@ export class OrcaFeesService implements IFeesService {
         )
 
         const tickArrayLower = decodeTickArray(tickArrayLowerAccount)
+        if (!tickArrayLower.exists) {
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.TickArrayLower,
+                address: tickArrayLower.address,
+                dexId: DexId.Orca,
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const tickArrayUpper = decodeTickArray(tickArrayUpperAccount)
+        if (!tickArrayUpper.exists) {
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.TickArrayUpper,
+                address: tickArrayUpper.address,
+                dexId: DexId.Orca,
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
 
         // ----------------------------
         // Token validation
@@ -200,14 +205,15 @@ export class OrcaFeesService implements IFeesService {
         const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
         const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
 
-        if (!bot.activePosition.liquidity) {
-            throw new ActivePositionLiquidityNotSetException(
-                bot.id,
-                "Active position liquidity not set",
+        if (!bot.activePosition.associatedPosition.liquidity) {
+            throw new MissingActivePositionLiquidityException(
+                {
+                    botId: bot.id,
+                }
             )
         }
 
-        const liquidity = new BN(bot.activePosition.liquidity)
+        const liquidity = new BN(bot.activePosition.associatedPosition.liquidity?.toString() ?? "0")
 
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             // -------- Token A --------
@@ -225,13 +231,13 @@ export class OrcaFeesService implements IFeesService {
             outsideDeltaWrapModulus: Q128,
             insideDeltaWrapModulus: Q128,
             resultDiv: Q64,
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
         })
 
         return {
-            feeA: computeDenomination(feeA,
-                tokenA.decimals),
-            feeB: computeDenomination(feeB,
-                tokenB.decimals),
+            feeA,
+            feeB,
             rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }

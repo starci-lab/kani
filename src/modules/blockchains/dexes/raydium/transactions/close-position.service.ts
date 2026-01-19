@@ -67,7 +67,7 @@ export class ClosePositionInstructionService {
         : Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -95,17 +95,17 @@ export class ClosePositionInstructionService {
         const {
             nftMintAddress,
             ataAddress
-        } = bot.activePosition.metadata as RaydiumPositionMetadata
-        const personalPositionPda = address(bot.activePosition.positionId)  
+        } = bot.activePosition.associatedPosition?.metadata as RaydiumPositionMetadata
+        const personalPositionPda = address(bot.activePosition.associatedPosition?.positionId)  
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.tickLower ?? 0,
+            tickIndex: bot.activePosition.associatedPosition?.tickLower ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.tickUpper ?? 0,
+            tickIndex: bot.activePosition.associatedPosition?.tickUpper ?? 0,
             tickSpacing: state.static.tickSpacing,
             programAddress: address(programAddress),
         })
@@ -175,7 +175,7 @@ export class ClosePositionInstructionService {
             })
         }
         const [closePositionArgs] = ClosePositionArgs.serialize({
-            liquidity: bot.activePosition.liquidity?.toString(),
+            liquidity: bot.activePosition.associatedPosition?.liquidity?.toString(),
             amount0Max: new BN(0).toString(),
             amount1Max: new BN(0).toString(),
         })

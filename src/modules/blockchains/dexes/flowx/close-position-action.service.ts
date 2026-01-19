@@ -23,6 +23,8 @@ import {
     TransactionNotExecutedException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
+    ErrorTransactionType,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -40,10 +42,7 @@ import {
     AppVersion 
 } from "@modules/databases"
 import {
-    WinstonService 
-} from "@modules/winston"
-import {
-    WinstonLog 
+    WinstonService, WinstonLog
 } from "@modules/winston"
 
 @Injectable()
@@ -60,7 +59,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
                     botId: bot.id,
@@ -91,6 +90,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
                                     liquidityPoolId: _state.static.displayId,
+                                    type: ErrorTransactionType.ClosePosition,
                                 })
                             }
                             const bytes = await closePositionTxb.build({
@@ -105,10 +105,17 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
                             botId: bot.id,
                         })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException(
+                            {
+                                botId: bot.id,
+                            }
+                        )
                     }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
                         publicKeyHex: bot.privyMetadata.walletPublicKey,
@@ -137,7 +144,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         }: ExecuteClosePositionParams
     ): Promise<void> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
                     botId: bot.id,
@@ -160,6 +167,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             }
             throw new TransactionNotExecutedException(
                 {
+                    type: ErrorTransactionType.ClosePosition,
                     botId: bot.id,
                     txHash,
                     liquidityPoolId: _state.static.displayId,
@@ -169,6 +177,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException(
                 {
+                    type: ErrorTransactionType.ClosePosition,
                     botId: bot.id,
                     txHash,
                     liquidityPoolId: _state.static.displayId,

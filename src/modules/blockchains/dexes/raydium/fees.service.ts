@@ -1,30 +1,53 @@
-import { FeesParams, FeesResult, IFeesService } from "../../interfaces"
-import { Injectable } from "@nestjs/common"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    FeesParams, FeesResult, IFeesService 
+} from "../../interfaces"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 import {
     address,
     fetchEncodedAccounts,
 } from "@solana/kit"
 import {
-    ActivePositionLiquidityNotSetException,
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-    PositionNotFoundException,
-    TickArrayNotFoundException,
+    SolanaAccountNotFoundException,
+    ErrorSolanaAccountName,
+    MissingActivePositionLiquidityException,
 } from "@exceptions"
-import { TickArrayLayout } from "@raydium-io/raydium-sdk-v2"
-import BN from "bn.js"
-import { LiquidityPoolState } from "../../interfaces"
 import {
-    OrcaLiquidityPoolMetadata,
+    TickArrayLayout 
+} from "@raydium-io/raydium-sdk-v2"
+import BN from "bn.js"
+import {
+    ClmmLiquidityPoolState 
+} from "../../interfaces"
+import {
+    RaydiumLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
+    DexId,
 } from "@modules/databases"
-import { computeDenomination, Q128, Q64 } from "@utils"
-import { TickArrayService } from "./transactions"
-import { Decimal } from "decimal.js"
-import { PersonalPositionState } from "./beets"
-import { ClmmFeesFormulaService } from "../../formulas"
+import {
+    Q128, Q64 
+} from "@utils"
+import {
+    TickArrayService 
+} from "./transactions"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    PersonalPositionState 
+} from "./beets"
+import {
+    ClmmFeesFormulaService 
+} from "../../formulas"
 
 @Injectable()
 export class RaydiumFeesService implements IFeesService {
@@ -36,18 +59,20 @@ export class RaydiumFeesService implements IFeesService {
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
-        const _state = state as LiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState
 
-        if (!bot.activePosition) {
-            throw new ActivePositionNotFoundException("Active position not found")
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
         }
 
-        const positionId = bot.activePosition.positionId
-        const tickLower = bot.activePosition.tickLower ?? 0
-        const tickUpper = bot.activePosition.tickUpper ?? 0
+        const positionId = bot.activePosition.associatedPosition.positionId
+        const tickLower = bot.activePosition.associatedPosition?.tickLower ?? 0
+        const tickUpper = bot.activePosition.associatedPosition?.tickUpper ?? 0
 
         const { programAddress } =
-            state.static.metadata as OrcaLiquidityPoolMetadata
+            state.static.metadata as RaydiumLiquidityPoolMetadata
 
         // ----------------------------
         // PDA derivation
@@ -78,29 +103,39 @@ export class RaydiumFeesService implements IFeesService {
         ] = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) =>
-                fetchEncodedAccounts(rpc, [
-                    address(positionId),
-                    tickArrayLowerPda,
-                    tickArrayUpperPda,
-                ]),
+                fetchEncodedAccounts(rpc,
+                    [
+                        address(positionId),
+                        tickArrayLowerPda,
+                        tickArrayUpperPda,
+                    ]),
         })
 
         if (!positionAccount?.exists) {
-            throw new PositionNotFoundException("Position not found")
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.PersonalPosition,
+                address: positionId,
+                dexId: DexId.Raydium,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         if (!tickArrayLowerAccount?.exists) {
-            throw new TickArrayNotFoundException(
-                tickLower,
-                "Lower tick array not found",
-            )
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.TickArrayLower,
+                address: tickArrayLowerPda,
+                dexId: DexId.Raydium,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         if (!tickArrayUpperAccount?.exists) {
-            throw new TickArrayNotFoundException(
-                tickUpper,
-                "Upper tick array not found",
-            )
+            throw new SolanaAccountNotFoundException({
+                name: ErrorSolanaAccountName.TickArrayUpper,
+                address: tickArrayUpperPda,
+                dexId: DexId.Raydium,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         // ----------------------------
@@ -121,17 +156,21 @@ export class RaydiumFeesService implements IFeesService {
         // ----------------------------
         // Token validation
         // ----------------------------
-        const tokenA = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === _state.static.tokenA.toString(),
-        )
-        const tokenB = this.primaryMemoryStorageService.tokens.find(
-            (token) => token.id === _state.static.tokenB.toString(),
-        )
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
+        })
 
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException(
-                "Either token A or token B is not in the pool",
-            )
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         // ----------------------------
@@ -169,19 +208,18 @@ export class RaydiumFeesService implements IFeesService {
             tickArrayUpper.ticks[tickUpperIndex.toNumber()]
 
         if (!positionState.liquidity) {
-            throw new ActivePositionLiquidityNotSetException(
-                bot.id,
-                "Position liquidity not set",
-            )
+            throw new MissingActivePositionLiquidityException({
+                botId: bot.id,
+            })
         }
 
         const liquidity = new BN(positionState.liquidity.toString())
 
-        const { amountA, amountB } = this.clmmFeesFormulaService.computeFees({
+        const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
             feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
             feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
-            currentTick: new Decimal(_state.dynamic.tickCurrent.toString()),
+            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toNumber()),
             tickLower: new Decimal(tickLower),
             tickUpper: new Decimal(tickUpper),
             feeGrowthInsideLastA: new BN(positionState.feeGrowthInside0LastX64.toString()),
@@ -192,11 +230,13 @@ export class RaydiumFeesService implements IFeesService {
             outsideDeltaWrapModulus: Q128,
             insideDeltaWrapModulus: Q128,
             resultDiv: Q64,
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
         })
 
         return {
-            reserveA: computeDenomination(amountA, tokenA.decimals),
-            reserveB: computeDenomination(amountB, tokenB.decimals),
+            feeA,
+            feeB,
             rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }

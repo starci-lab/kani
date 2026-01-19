@@ -59,24 +59,24 @@ export class OpenPositionTxbService {
     ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        if (
-            !bot.activePosition ||
-            !bot.activePositionLiquidityPool ||
-            !bot.activePositionLiquidityPoolType
-        ) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
-                id: state.static.tokenA.toString()
+                id: {
+                    $eq: state.static.tokenA.toString(),
+                },
             }
 
         )
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
-                id: state.static.tokenB.toString()
+                id: {
+                    $eq: state.static.tokenB.toString(),
+                },
             }
         )
         if (!tokenA || !tokenB) {

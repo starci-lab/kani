@@ -19,7 +19,7 @@ import {
     ClmmLiquidityPoolState 
 } from "../../interfaces"
 import {
-    computeDenomination, Q128, Q64 
+    Q128, Q64 
 } from "@utils"
 import {
     RpcAccessType 
@@ -53,10 +53,7 @@ export class MomentumFeesService implements IFeesService {
 
     async fees({ state, bot }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePositionLiquidityPool ||
-            !bot.activePosition ||
-            !bot.activePositionLiquidityPoolType
-        ) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -72,9 +69,9 @@ export class MomentumFeesService implements IFeesService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const positionId = bot.activePosition.positionId
-        const tickLower = new Decimal(bot.activePosition.tickLower ?? 0)
-        const tickUpper = new Decimal(bot.activePosition.tickUpper ?? 0)
+        const positionId = bot.activePosition.associatedPosition.positionId
+        const tickLower = new Decimal(bot.activePosition.associatedPosition.tickLower ?? 0)
+        const tickUpper = new Decimal(bot.activePosition.associatedPosition.tickUpper ?? 0)
         const { i32Type } = _state.static.metadata as MomentumLiquidityPoolMetadata
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
             i32Type)
@@ -99,7 +96,7 @@ export class MomentumFeesService implements IFeesService {
                 {
                     name: ErrorSuiObjectName.TickLower,
                     parentId: ticksId,
-                    dexId: DexId.FlowX,
+                    dexId: DexId.Momentum,
                     liquidityPoolId: _state.static.displayId,
                 }
             )
@@ -126,7 +123,7 @@ export class MomentumFeesService implements IFeesService {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.TickUpper,
                 parentId: ticksId,
-                dexId: DexId.FlowX,
+                dexId: DexId.Momentum,
                 liquidityPoolId: _state.static.displayId,
             })
         }
@@ -154,7 +151,7 @@ export class MomentumFeesService implements IFeesService {
                 },
             }
         )
-        if (!objectInfo) {
+        if (objectInfo.error || !objectInfo.data) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.Position,
                 id: positionId,
@@ -162,7 +159,7 @@ export class MomentumFeesService implements IFeesService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        if (objectInfo.data?.content?.dataType !== "moveObject") {
+        if (objectInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException(
                 {
                     name: ErrorSuiObjectName.Position,
@@ -189,16 +186,14 @@ export class MomentumFeesService implements IFeesService {
             outsideDeltaWrapModulus: Q128,
             insideDeltaWrapModulus: Q128,
             resultDiv: Q64,
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
         })
 
         return {
             snapshotAt: _state.dynamic.snapshotAt,
-            feeA: computeDenomination(feeA,
-                tokenA.decimals,
-                tokenB.decimals),
-            feeB: computeDenomination(feeB,
-                tokenB.decimals,
-                tokenA.decimals),
+            feeA,
+            feeB,
             rewards: [],
         }
     }

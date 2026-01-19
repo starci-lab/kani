@@ -11,7 +11,9 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolNotFoundException 
+    InvalidPoolTokensException, 
+    LiquidityPoolNotFoundException, 
+    MissingActivePositionLiquidityException
 } from "@exceptions"
 import {
     ClmmReservesFormulaService 
@@ -38,11 +40,8 @@ export class OrcaReservesService implements IReservesService {
             state,
             bot,
         }: ReservesParams): Promise<ReservesResult> {
-        if (!bot.activePositionLiquidityPool ||
-            !bot.activePosition ||
-            !bot.activePositionLiquidityPoolType
-        ) {
-            throw new ActivePositionNotFoundException({
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
+            throw new MissingActivePositionLiquidityException({
                 botId: bot.id,
             })
         }
@@ -63,7 +62,9 @@ export class OrcaReservesService implements IReservesService {
 
         const liquidityPool =
             this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                id: bot.activePositionLiquidityPool.toString(),
+                id: {
+                    $eq: bot.activePosition.liquidityPool.toString(),
+                },
             })
 
         if (!liquidityPool) {
@@ -76,12 +77,12 @@ export class OrcaReservesService implements IReservesService {
             reserveA,
             reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
-            tickLower: new Decimal(bot.activePosition?.tickLower ?? 0),
-            tickUpper: new Decimal(bot.activePosition?.tickUpper ?? 0),
+            tickLower: new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0),
+            tickUpper: new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0),
             tickCurrent: new Decimal(_state.dynamic.tickCurrent.toNumber()),
-            liquidity: new BN(bot.activePosition?.liquidity ?? 0),
-            decimalsA: tokenA.decimals,
-            decimalsB: tokenB.decimals,
+            liquidity: new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
             fixedPointScale: Q64,
         })
 

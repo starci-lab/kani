@@ -1,8 +1,18 @@
-import { Injectable } from "@nestjs/common"
-import { P256KeyPair, PrivyClient, generateP256KeyPair } from "@privy-io/node"
-import { InjectPrivyClient } from "./privy.decorators"
-import { ChainId } from "@typedefs"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    P256KeyPair, PrivyClient, generateP256KeyPair 
+} from "@privy-io/node"
+import {
+    InjectPrivyClient 
+} from "./privy.decorators"
+import {
+    ChainId 
+} from "@typedefs"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 import { 
     KeyQuorum,
     WalletCreateParams,

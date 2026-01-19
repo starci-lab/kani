@@ -33,7 +33,7 @@ export class ClosePositionTxbService {
             state,
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -64,8 +64,8 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 txb.object(state.static.poolAddress),
-                txb.object(bot.activePosition.positionId),
-                txb.pure.u128(bot.activePosition.liquidity?.toString() || 0),
+                txb.object(bot.activePosition.associatedPosition.positionId),
+                txb.pure.u128(bot.activePosition.associatedPosition.liquidity ?? 0),
                 txb.pure.u64(0),
                 txb.pure.u64(0),
                 txb.object(SUI_CLOCK_OBJECT_ID),
@@ -87,7 +87,7 @@ export class ClosePositionTxbService {
                 target: `${packageId}::collect::reward`,
                 arguments: [
                     txb.object(state.static.poolAddress),
-                    txb.object(bot.activePosition.positionId),
+                    txb.object(bot.activePosition.associatedPosition.positionId),
                     txb.object(SUI_CLOCK_OBJECT_ID),
                     txb.object(versionObject),
                 ],

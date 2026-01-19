@@ -17,7 +17,7 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    AsyncService, DayjsService 
+    AsyncService, DayjsService, LokiJSService 
 } from "@modules/mixin"
 import {
     envConfig 
@@ -32,6 +32,9 @@ import {
 import {
     createObjectId 
 } from "@utils"
+import {
+    Collection 
+} from "lokijs"
 
 // Implement analytics for Momentum DEX
 // We use the API provided by Momentum to get the analytics data
@@ -41,13 +44,14 @@ implements OnModuleInit, OnApplicationBootstrap
 {
     private readonly url = "https://api.mmt.finance/pools/v3"
     private axios: AxiosInstance
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
+    private readonly lokiJSService: LokiJSService,
     ) {}
 
     onApplicationBootstrap() {
@@ -57,12 +61,21 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "momentum-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({
-            key 
-        })
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
-            dex: createObjectId(DexId.Momentum),
-        })
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: {
+                    $eq: createObjectId(DexId.Momentum).toString(),
+                },
+            }
+        )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "momentum-analytics-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     private async setAllPoolAnalytics() {
@@ -70,7 +83,7 @@ implements OnModuleInit, OnApplicationBootstrap
             this.url,
         )
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPools) {
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
                 (async () => {
                     const pool = data.data.find(
@@ -105,7 +118,7 @@ implements OnModuleInit, OnApplicationBootstrap
         await this.asyncService.allIgnoreError(promises)
     }
 
-  @Interval(envConfig().timeConfig.interval.analytics)
+  @Interval(envConfig().dexes.momentum.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         const promises: Array<Promise<void>> = []
         promises.push(this.setAllPoolAnalytics())

@@ -47,7 +47,7 @@ export class ClosePositionTxbService {
             bot,     
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -102,9 +102,9 @@ export class ClosePositionTxbService {
                 // positions object
                 txb.object(positionsObject),
                 // position id
-                txb.object(bot.activePosition.positionId),
+                txb.object(bot.activePosition.associatedPosition.positionId),
                 // liquidity
-                txb.pure.u128(bot.activePosition.liquidity?.toString() || "0"),
+                txb.pure.u128(bot.activePosition.associatedPosition.liquidity?.toString() || "0"),
                 // minimum amount A
                 txb.pure.u64(0),
                 // minimum amount B
@@ -130,7 +130,7 @@ export class ClosePositionTxbService {
                 // positions object
                 txb.object(positionsObject),
                 // position id
-                txb.object(bot.activePosition.positionId),
+                txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                 // amount A max
                 txb.pure.u64(MAX_UINT_64.toString()),
                 // amount B max
@@ -166,7 +166,7 @@ export class ClosePositionTxbService {
                         // positions object
                         txb.object(positionsObject),
                         // position id
-                        txb.object(bot.activePosition.positionId),
+                        txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                         // vault
                         txb.object(reward.vaultAddress ?? ""),
                         // index
@@ -194,7 +194,7 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 txb.object(positionsObject),
-                txb.object(bot.activePosition.positionId),
+                txb.object(bot.activePosition.associatedPosition?.positionId ?? ""),
                 txb.object(versionObject),
             ],
         })

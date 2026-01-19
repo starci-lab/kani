@@ -24,7 +24,7 @@ import {
 } from "@nestjs/common"
 import {
     AsyncService, 
-    InjectSuperJson
+    LokiJSService,
 } from "@modules/mixin"
 import {
     Interval 
@@ -52,37 +52,46 @@ import {
 import {
     envConfig 
 } from "@modules/env"
-import SuperJSON from "superjson"
+import {
+    Collection 
+} from "lokijs"
 
 @Injectable()
 export class MomentumObserverService implements OnApplicationBootstrap, OnModuleInit {
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly winstonService: WinstonService,
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
+        private readonly lokiJSService: LokiJSService,
     ) {}
 
-    onModuleInit() {
-        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find({
+    async onModuleInit() {
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find({
             dex: createObjectId(DexId.Momentum),
         })
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "momentum-observer-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
     }
     
-    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
+    @Interval(envConfig().dexes.momentum.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPools) {
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
                 (
                     async () => {
@@ -108,7 +117,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     })
                 },
             })
-            if (!objectInfo) { 
+            if (objectInfo.error || !objectInfo.data) { 
                 throw new SuiObjectNotFoundException({
                     name: ErrorSuiObjectName.Pool,
                     id: liquidityPool.poolAddress,
@@ -116,7 +125,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     liquidityPoolId: liquidityPool.displayId,
                 })
             }
-            if (objectInfo.data?.content?.dataType !== "moveObject") {
+            if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
                     name: ErrorSuiObjectName.Pool,
                     id: liquidityPool.poolAddress,

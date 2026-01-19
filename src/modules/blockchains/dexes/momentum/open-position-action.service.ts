@@ -18,7 +18,7 @@ import {
 } from "../../signers"
 import BN from "bn.js"
 import { 
-    AppVersion, BotSchema, PrimaryMemoryStorageService
+    AppVersion, BotSchema, DexId, PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -32,10 +32,13 @@ import {
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
-    PositionInvalidTypeException,
-    PositionNotFoundException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
+    SuiObjectNotFoundException,
+    ErrorSuiObjectName,
+    SuiObjectInvalidTypeException,
+    ErrorTransactionType,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -77,8 +80,9 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     ) {}
     
     async confirm(
-        { positionId }: ConfirmOpenPositionParams
+        { positionId, state }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
+        const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -88,11 +92,21 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
-                if (!objectInfo) {
-                    throw new PositionNotFoundException("Position not found")
+                if (objectInfo.error || !objectInfo.data) {
+                    throw new SuiObjectNotFoundException({
+                        name: ErrorSuiObjectName.Position,
+                        id: positionId,
+                        dexId: DexId.Momentum,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 }
-                if (objectInfo?.data?.content?.dataType !== "moveObject") {
-                    throw new PositionInvalidTypeException("Position is not a move object")
+                if (objectInfo.data.content?.dataType !== "moveObject") {
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.Position,
+                        id: positionId,
+                        dexId: DexId.Momentum,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 }
                 const fields = objectInfo.data.content.fields as unknown as MomentumClmmPosition
                 return {
@@ -110,13 +124,13 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
-        if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
+        if (!bot.snapshots) {
             throw new SnapshotBalancesNotSetException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -136,8 +150,8 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
             state: _state,
             bot,
         })
-        const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        const amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        const amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         const { 
             txb: openPositionTxb,
             feeAmountA,
@@ -169,6 +183,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                         botId: bot.id,
                                         txHash: devInspect.effects.transactionDigest,
                                         liquidityPoolId: _state.static.displayId,
+                                        type: ErrorTransactionType.OpenPosition,
                                     }
                                 )
                             }
@@ -190,8 +205,13 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
                             botId: bot.id,
                         })
                     }
@@ -254,6 +274,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         if (!signatureWithBytes) {
@@ -261,6 +282,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSuiClient({

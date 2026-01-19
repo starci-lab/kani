@@ -23,7 +23,7 @@ import {
     AnchorUtilsService 
 } from "../../../tx-builder"
 import {
-    BotMissingParametersException 
+    MissingBotParametersException 
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -140,7 +140,8 @@ export class TickArrayService {
             startTickIndex: startIndex,
         })
         if (!bot) {
-            throw new BotMissingParametersException("Bot is required")
+            throw new MissingBotParametersException({
+            })
         }
         const account = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,

@@ -1,7 +1,7 @@
 export enum ErrorSolanaAccountName {
     Pool = "pool",
-    TickUpper = "tickUpper",
-    TickLower = "tickLower",
+    TickArrayLower = "tickArrayLower",
+    TickArrayUpper = "tickArrayUpper",
     PositionATA = "positionATA",
     DLMMPosition = "dlmmPosition",
     PersonalPosition = "personalPosition",

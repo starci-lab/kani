@@ -98,7 +98,7 @@ export class TurbosFeesService implements IFeesService {
                 {
                     name: ErrorSuiObjectName.TickLower,
                     parentId: _state.static.poolAddress,
-                    dexId: DexId.FlowX,
+                    dexId: DexId.Turbos,
                     liquidityPoolId: _state.static.displayId,
                 }
             )
@@ -125,7 +125,7 @@ export class TurbosFeesService implements IFeesService {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.TickUpper,
                 parentId: _state.static.poolAddress,
-                dexId: DexId.FlowX,
+                dexId: DexId.Turbos,
                 liquidityPoolId: _state.static.displayId,
             })
         }
@@ -153,21 +153,21 @@ export class TurbosFeesService implements IFeesService {
                 },
             }
         )
-        if (!objectInfo) {
+        if (objectInfo.error || !objectInfo.data) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.Position,
                 id: positionId,
-                dexId: DexId.FlowX,
+                dexId: DexId.Turbos,
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        if (objectInfo.data?.content?.dataType !== "moveObject") {
+        if (objectInfo.data.content?.dataType !== "moveObject") {
             throw new SuiObjectInvalidTypeException(
                 {
                     name: ErrorSuiObjectName.Position,
                     id: positionId,
                     liquidityPoolId: _state.static.displayId,
-                    dexId: DexId.FlowX,
+                    dexId: DexId.Turbos,
                 }
             )
         }

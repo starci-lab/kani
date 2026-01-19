@@ -15,14 +15,19 @@ import {
     SignerService 
 } from "../../signers"
 import {
-    AppVersion, PrimaryMemoryStorageService 
+    AppVersion, DexId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import { 
+    EncryptedPrivySignerPrivateKeyNotFoundException,
     InvalidPoolTokensException, 
+    MissingPositionIdParamException, 
+    PrivyMetadataNotFoundException, 
     SnapshotBalancesNotSetException,
-    TransactionNotPreparedException,
-    PositionNotFoundException,
     TransactionNotExecutedException,
+    ErrorTransactionType,
+    MissingSolanaTxParamException,
+    SolanaAccountNotFoundException,
+    ErrorSolanaAccountName,
 } from "@exceptions"
 import { 
     pipe,
@@ -76,20 +81,13 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        const {
-            snapshotTargetBalanceAmount,
-            snapshotQuoteBalanceAmount,
-            snapshotGasBalanceAmount,
-        } = bot
-        if (
-            !snapshotTargetBalanceAmount ||
-                !snapshotQuoteBalanceAmount ||
-                !snapshotGasBalanceAmount
-        ) {
+        if (!bot.snapshots) {
             throw new SnapshotBalancesNotSetException({
                 botId: bot.id,
             })
         }
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -162,6 +160,16 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     // partial sign the transaction
                     const partialSignedTransaction = await partiallySignTransaction([positionKeyPair.keyPair],
                         transaction)
@@ -199,6 +207,12 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         txHash,
         positionId,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        if (!positionId) {
+            throw new MissingPositionIdParamException({
+                botId: bot.id,
+                liquidityPoolId: state.static.displayId,
+            })
+        }
         const _state = state as DlmmLiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
@@ -219,15 +233,15 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         botId: bot.id,
                         txHash,
                         liquidityPoolId: _state.static.displayId,
+                        type: ErrorTransactionType.OpenPosition,
                     })
                 },
             })
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException({
+            throw new MissingSolanaTxParamException({
                 botId: bot.id,
-                txHash,
-                liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSolanaRpc({
@@ -258,7 +272,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     }
 
     async confirm(
-        {
+        {   
+            state,
             positionId,
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
@@ -272,7 +287,12 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         commitment: "confirmed",
                     })
                 if (!positionInfo || !positionInfo.exists) {
-                    throw new PositionNotFoundException("Position not found")
+                    throw new SolanaAccountNotFoundException({
+                        name: ErrorSolanaAccountName.PersonalPosition,
+                        address: positionId,
+                        dexId: DexId.Meteora,
+                        liquidityPoolId: state.static.displayId,    
+                    })
                 }
                 return {
                     // temporary empty, will need other logic to get liquidity

@@ -26,12 +26,15 @@ import {
     createObjectId 
 } from "@utils"
 import {
-    AsyncService, DayjsService 
+    AsyncService, DayjsService, LokiJSService 
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
 import Decimal from "decimal.js"
+import {
+    Collection 
+} from "lokijs"
 
 // Implement analytics for Raydium DEX
 // We use the API provided by Raydium to get the analytics data
@@ -41,13 +44,14 @@ implements OnModuleInit, OnApplicationBootstrap
 {
     private url = "https://api-v3.raydium.io/pools/info/ids"
     private axios: AxiosInstance
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
+    private readonly lokiJSService: LokiJSService,
     ) {}
 
     onApplicationBootstrap() {
@@ -57,14 +61,19 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "raydium-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({
-            key 
-        })
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
             dex: {
                 $eq: createObjectId(DexId.Raydium).toString(),
-            }
+            },
         })
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "raydium-analytics-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     private async setBatchPoolAnalytics(
@@ -106,10 +115,10 @@ implements OnModuleInit, OnApplicationBootstrap
             await this.asyncService.allIgnoreError(promises)
         }
     }
-  @Interval(envConfig().timeConfig.interval.analytics)
+  @Interval(envConfig().dexes.raydium.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPools.reduce(
+        const chunks = this.liquidityPoolCollection.chain().data().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),

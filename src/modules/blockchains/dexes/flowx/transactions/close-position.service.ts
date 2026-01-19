@@ -49,7 +49,7 @@ export class ClosePositionTxbService {
             state,
         }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -83,8 +83,8 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 txb.object(poolRegistryObject),
-                txb.object(bot.activePosition.positionId),
-                txb.pure.u128(bot.activePosition.liquidity?.toString() || "0"),
+                txb.object(bot.activePosition.associatedPosition.positionId),
+                txb.pure.u128(bot.activePosition.associatedPosition?.liquidity?.toString() || "0"),
                 txb.pure.u64(this.computeAmountX(bot,
                     state).toString()),
                 txb.pure.u64(this.computeAmountY(bot,
@@ -102,7 +102,7 @@ export class ClosePositionTxbService {
             ],
             arguments: [
                 txb.object(poolRegistryObject),
-                txb.object(bot.activePosition.positionId),
+                txb.object(bot.activePosition.associatedPosition.positionId),
                 txb.pure.u64(MaxUint64.toString()),
                 txb.pure.u64(MaxUint64.toString()),
                 txb.object(versionObject),
@@ -127,7 +127,7 @@ export class ClosePositionTxbService {
                 ],
                 arguments: [
                     txb.object(poolRegistryObject),
-                    txb.object(bot.activePosition.positionId),
+                    txb.object(bot.activePosition.associatedPosition.positionId),
                     txb.pure.u64(MaxUint64.toString()),
                     txb.object(versionObject),
                     txb.object(SUI_CLOCK_OBJECT_ID),
@@ -140,7 +140,7 @@ export class ClosePositionTxbService {
             target: `${packageId}::position_manager::close_position`,
             arguments: [
                 txb.object(positionRegistryObject),
-                txb.object(bot.activePosition.positionId),
+                txb.object(bot.activePosition.associatedPosition.positionId),
                 txb.object(versionObject),
             ],
         })
@@ -153,26 +153,25 @@ export class ClosePositionTxbService {
         bot: BotSchema, 
         state: ClmmLiquidityPoolState
     ): BN {
-        const activePosition = bot.activePosition
-        if (!activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickLower || 0))) {
+        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0))) {
             return ClmmSqrtPriceMath.getAmountXDelta(
-                ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickLower || 0),
-                ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickUpper || 0),
-                new BN(activePosition.liquidity || 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickLower ?? 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickUpper ?? 0),
+                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
                 false
             )
         } else if (
-            new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickUpper || 0))
+            new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0))
         ) {
             return ClmmSqrtPriceMath.getAmountXDelta(
                 state.dynamic.sqrtPriceX64,
-                ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickUpper || 0),
-                new BN(activePosition.liquidity || 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickUpper ?? 0),
+                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
                 false
             )
         } else {
@@ -184,26 +183,25 @@ export class ClosePositionTxbService {
         bot: BotSchema, 
         state: ClmmLiquidityPoolState
     ): BN {
-        const activePosition = bot.activePosition
-        if (!activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickLower || 0))) {
+        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0))) {
             return ZERO_BN
-        } else if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(activePosition.tickUpper || 0))) {
+        } else if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0))) {
             return ClmmSqrtPriceMath.getAmountYDelta(
-                ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickLower || 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickLower ?? 0),
                 state.dynamic.sqrtPriceX64,
-                new BN(activePosition.liquidity || 0),
+                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
                 false
             )
         } else {
             return ClmmSqrtPriceMath.getAmountYDelta(
-                ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickLower || 0),
-                ClmmTickMath.tickIndexToSqrtPriceX64(activePosition.tickUpper || 0),
-                new BN(activePosition.liquidity || 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickLower ?? 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickUpper ?? 0),
+                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
                 false
             )
         }

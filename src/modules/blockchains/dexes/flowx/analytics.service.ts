@@ -16,7 +16,8 @@ import {
     Interval 
 } from "@nestjs/schedule"
 import {
-    AsyncService, InjectSuperJson 
+    AsyncService, 
+    LokiJSService,
 } from "@modules/mixin"
 import {
     DayjsService 
@@ -34,27 +35,28 @@ import {
 import {
     createObjectId 
 } from "@utils"
-import SuperJSON from "superjson"
 import {
     GraphQLDataNotFoundException 
 } from "@exceptions"
+import {
+    Collection 
+} from "lokijs"
 // Implement analytics for FlowX DEX
 // We use the API provided by FlowX to get the analytics data
 @Injectable()
 export class FlowXAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
-    private readonly graphqlUrl = "https://api.flowx.finance/flowx-be/graphql"
+    private readonly uri = "https://api.flowx.finance/flowx-be/graphql"
     private apolloClient: ApolloClient
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
     private readonly apolloClientService: ApolloClientService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly cacheService: CacheService,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
+    private readonly lokiJSService: LokiJSService,
     ) {}
 
     onApplicationBootstrap() {
@@ -63,15 +65,25 @@ implements OnModuleInit, OnApplicationBootstrap
 
     async onModuleInit() {
         const key = "flowx-analytics"
-        this.apolloClient = this.apolloClientService.createNoCacheClient({
+        this.apolloClient = this.apolloClientService.createClient({
             key,
-            url: this.graphqlUrl,
+            uri: this.uri,
         })
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.FlowX),
+                dex: {
+                    $eq: createObjectId(DexId.FlowX),
+                },
             }
         )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "flowx-analytics-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     private async setBatchPoolAnalytics(
@@ -133,7 +145,7 @@ implements OnModuleInit, OnApplicationBootstrap
                 {
                     query: rawQuery,
                     variables,
-                    url: this.graphqlUrl,
+                    url: this.uri,
                 }
             )
         }
@@ -169,17 +181,17 @@ implements OnModuleInit, OnApplicationBootstrap
         await this.asyncService.allIgnoreError(promises)
     }
 
-    @Interval(envConfig().timeConfig.interval.analytics)
+    @Interval(envConfig().dexes.flowx.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPools.reduce(
+        const chunks = this.liquidityPoolCollection.chain().data().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),
                     liquidityPool]
                 return acc
-            },
-      [] as Array<Array<LiquidityPoolSchema>>,
+            }, 
+            [],
         )
         const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {

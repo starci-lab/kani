@@ -22,6 +22,8 @@ import {
     TransactionNotPreparedException,
     TransactionNotExecutedException,
     PrivyPublicKeyNotFoundException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    ErrorTransactionType,
 } from "@exceptions"
 import {
     RpcExecutorService
@@ -56,7 +58,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -87,17 +89,22 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
                             botId: bot.id,
                         })
                     }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey,
+                        publicKeyHex: bot.privyMetadata.walletPublicKey!,
                         client: suiClient,
-                        walletId: bot.privyMetadata.walletId,
+                        walletId: bot.privyMetadata.walletId!,
                         transaction: closePositionTxb,
-                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload!,
                     })
                     return {
                         txHash,
@@ -112,7 +119,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         { bot, state, isRetry, signatureWithBytes, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
                     botId: bot.id,
@@ -137,6 +144,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         if (!signatureWithBytes) {
@@ -144,6 +152,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         await this.rpcExecutorService.withSuiClient({

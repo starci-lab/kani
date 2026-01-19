@@ -22,6 +22,8 @@ import {
     TransactionNotPreparedException,
     TransactionNotExecutedException,
     PrivyPublicKeyNotFoundException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    ErrorTransactionType,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -89,8 +91,13 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
                             botId: bot.id,
                         })
                     }
@@ -139,6 +146,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         if (!signatureWithBytes) {
@@ -146,6 +154,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
             })
         }
         await this.rpcExecutorService.withSuiClient({

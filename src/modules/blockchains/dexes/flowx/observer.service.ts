@@ -18,7 +18,8 @@ import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
-    AsyncService 
+    AsyncService, 
+    LokiJSService
 } from "@modules/mixin"
 import {
     Interval 
@@ -46,11 +47,14 @@ import {
 import {
     parseFlowxPool, FlowxPool, FlowxSuiObjectPoolFields 
 } from "./struct"
+import {
+    Collection 
+} from "lokijs"
 
 @Injectable()
 export class FlowXObserverService implements OnApplicationBootstrap, OnModuleInit {
     // snapshot here to reduce the computational complexity
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -59,25 +63,35 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly eventEmitterService: EventEmitterService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly dayjsService: DayjsService,
+        private readonly lokiJSService: LokiJSService,
     ) { }
 
-    onModuleInit() {
-        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
+    async onModuleInit() {
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.FlowX),
+                dex: {
+                    $eq: createObjectId(DexId.FlowX),
+                },
             }
         )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "flowx-observer-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
     }
 
-    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
+    @Interval(envConfig().dexes.flowx.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.FlowX).toString()) continue
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
                 (
                     async () => {
@@ -103,7 +117,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                     })
                 },
             })
-            if (!objectInfo) {
+            if (objectInfo.error || !objectInfo.data) {
                 throw new SuiObjectNotFoundException({
                     name: ErrorSuiObjectName.Pool,
                     id: liquidityPool.poolAddress,
@@ -111,7 +125,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                     liquidityPoolId: liquidityPool.displayId,
                 })
             }
-            if (objectInfo.data?.content?.dataType !== "moveObject") {
+            if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
                     name: ErrorSuiObjectName.Pool,
                     id: liquidityPool.poolAddress,

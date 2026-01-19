@@ -78,7 +78,7 @@ export class ClosePositionInstructionService {
     }: CreateCloseInstructionsParams)
     : Promise<Array<Instruction>>
     {
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
@@ -141,16 +141,16 @@ export class ClosePositionInstructionService {
             new PublicKey(programAddress),
         )
         const [removeLiquidityByRange2Args] = RemoveLiquidityByRange2Args.serialize({
-            fromBinId: bot.activePosition.minBinId || 0,
-            toBinId: bot.activePosition.maxBinId || 0,
+            fromBinId: bot.activePosition.associatedPosition.minBinId || 0,
+            toBinId: bot.activePosition.associatedPosition.maxBinId || 0,
             bpsToRemove: 10000,
             remainingAccountsInfo: {
                 slices: [],
             },
         })
         const binArrayAccountsMeta = getBinArrayAccountMetasCoverage(
-            new BN(bot.activePosition.minBinId || 0),
-            new BN(bot.activePosition.maxBinId || 0),
+            new BN(bot.activePosition.associatedPosition.minBinId || 0),
+            new BN(bot.activePosition.associatedPosition.maxBinId || 0),
             new PublicKey(state.static.poolAddress),
             new PublicKey(programAddress)
         )
@@ -158,7 +158,7 @@ export class ClosePositionInstructionService {
             programAddress: address(programAddress),
             accounts: [
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(bot.activePosition.associatedPosition.positionId),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -224,8 +224,8 @@ export class ClosePositionInstructionService {
         }
         instructions.push(removeLiquidityByRange2Instruction)
         const [claimFee2Args] = ClaimFee2Args.serialize({
-            minBinId: bot.activePosition.minBinId || 0,
-            maxBinId: bot.activePosition.maxBinId || 0,
+            minBinId: bot.activePosition.associatedPosition.minBinId || 0,
+            maxBinId: bot.activePosition.associatedPosition.maxBinId || 0,
             remainingAccountsInfo: {
                 slices: [],
             },
@@ -238,7 +238,7 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(bot.activePosition.associatedPosition.positionId),
                     role: AccountRole.WRITABLE,
                 },
                 {
@@ -298,8 +298,8 @@ export class ClosePositionInstructionService {
         for (let i = 0; i < 2; i++) {
             const [claimReward2Args] = ClaimReward2Args.serialize({
                 rewardIndex: new BN(i),
-                minBinId: bot.activePosition.minBinId || 0,
-                maxBinId: bot.activePosition.maxBinId || 0,
+                minBinId: bot.activePosition.associatedPosition.minBinId || 0,
+                maxBinId: bot.activePosition.associatedPosition.maxBinId || 0,
                 remainingAccountsInfo: {
                     slices: [],
                 },
@@ -341,7 +341,7 @@ export class ClosePositionInstructionService {
                         role: AccountRole.WRITABLE,
                     },
                     {
-                        address: address(bot.activePosition.positionId),
+                        address: address(bot.activePosition.associatedPosition.positionId),
                         role: AccountRole.WRITABLE,
                     },
                     {
@@ -387,7 +387,7 @@ export class ClosePositionInstructionService {
             programAddress: address(programAddress),
             accounts: [
                 {
-                    address: address(bot.activePosition.positionId),
+                    address: address(bot.activePosition.associatedPosition.positionId),
                     role: AccountRole.WRITABLE,
                 },
                 // account address

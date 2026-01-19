@@ -26,12 +26,15 @@ import {
     createObjectId 
 } from "@utils"
 import {
-    AsyncService, DayjsService 
+    AsyncService, DayjsService, LokiJSService 
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
 import Decimal from "decimal.js"
+import {
+    Collection 
+} from "lokijs"
 
 // Implement analytics for Orca DEX
 // We use the API provided by Orca to get the analytics data
@@ -40,7 +43,7 @@ export class OrcaAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
     private readonly url = "https://api.orca.so/v2/solana/pools"
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     private axios: AxiosInstance
     constructor(
     private readonly axiosService: AxiosService,
@@ -48,6 +51,7 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
+    private readonly lokiJSService: LokiJSService,
     ) {}
 
     async onApplicationBootstrap() {
@@ -57,12 +61,21 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "orca-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({
-            key 
-        })
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find({
-            dex: createObjectId(DexId.Orca),
-        })
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: {
+                    $eq: createObjectId(DexId.Orca),
+                },
+            }
+        )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "orca-analytics-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
@@ -102,10 +115,10 @@ implements OnModuleInit, OnApplicationBootstrap
         await this.asyncService.allIgnoreError(promises)
     }
 
-  @Interval(envConfig().timeConfig.interval.analytics)
+    @Interval(envConfig().dexes.orca.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPools.reduce(
+        const chunks = this.liquidityPoolCollection.chain().data().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),

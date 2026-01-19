@@ -26,33 +26,34 @@ import {
     createObjectId 
 } from "@utils"
 import {
-    AsyncService, InjectSuperJson 
+    AsyncService,
+    DayjsService,
+    LokiJSService
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
 import Decimal from "decimal.js"
-import SuperJSON from "superjson"
 import {
-    DayjsService 
-} from "@modules/mixin"
-
+    Collection 
+} from "lokijs"
 // Implement analytics for Cetus DEX
 // We use the API provided by Cetus to get the analytics data
 @Injectable()
 export class CetusAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
+    private readonly uri = "https://api-sui.cetus.zone/v3/sui/clmm/stats_pools"
     private axios: AxiosInstance
-    private liquidityPools: Array<LiquidityPoolSchema>
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
     private readonly axiosService: AxiosService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly cacheService: CacheService,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
+
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
+    private readonly lokiJSService: LokiJSService,
     ) {}
 
     onApplicationBootstrap() {
@@ -62,14 +63,21 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "cetus-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({
-            key 
-        })
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.Cetus)
+                dex: {
+                    $eq: createObjectId(DexId.Cetus).toString(),
+                },
             }
         )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "cetus-analytics-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
+            })
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     private async setBatchPoolAnalytics(
@@ -80,7 +88,7 @@ implements OnModuleInit, OnApplicationBootstrap
             return
         }
         const { data: { data: { list } } } = await this.axios.post<CetusPoolListResult>(
-            "https://api-sui.cetus.zone/v3/sui/clmm/stats_pools",
+            this.uri,
             {
                 filter: "all",
                 sortBy: "vol",
@@ -124,24 +132,17 @@ implements OnModuleInit, OnApplicationBootstrap
         await this.asyncService.allIgnoreError(promises)
     }
 
-  @Interval(envConfig().timeConfig.interval.analytics)
+  @Interval(envConfig().dexes.cetus.interval.analytics)
     async handleAnalyticsUpdateInterval() {
-        const liquidityPools: Array<LiquidityPoolSchema> = []
-        for (const liquidityPool of this.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Cetus).toString()) {
-                continue
-            }
-            liquidityPools.push(liquidityPool)
-        }
         // split into chunks of 10
-        const chunks = liquidityPools.reduce(
+        const chunks = this.liquidityPoolCollection.chain().data().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),
                     liquidityPool]
                 return acc
-            },
-[] as Array<Array<LiquidityPoolSchema>>,
+            }, 
+            [],
         )
         const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {

@@ -32,8 +32,12 @@ import {
 } from "@modules/env"
 import Decimal from "decimal.js"
 import {
-    DayjsService 
+    DayjsService, 
+    LokiJSService
 } from "@modules/mixin"
+import {
+    Collection 
+} from "lokijs"
 
 // Implement analytics for Meteora DEX
 // We use the API provided by Meteora to get the analytics data
@@ -42,7 +46,7 @@ export class MeteoraAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap
 {
     private readonly url = "https://dlmm-api.meteora.ag/pair/all_by_groups"
-    private liquidityPools: Array<LiquidityPoolSchema> = []
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     private axios: AxiosInstance
     constructor(
     private readonly axiosService: AxiosService,
@@ -50,6 +54,7 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly cacheService: CacheService,
     private readonly asyncService: AsyncService,
     private readonly dayjsService: DayjsService,
+    private readonly lokiJSService: LokiJSService,
     ) {}
 
     onApplicationBootstrap() {
@@ -59,14 +64,22 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "meteora-analytics"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({
-            key 
-        })
-        this.liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.Meteora),
+                dex: {
+                    $eq: createObjectId(DexId.Meteora).toString(),
+                },
             }
         )
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "meteora-analytics-liquidity-pools", 
+            {
+                indices: ["poolAddress",
+                    "displayId",
+                    "dex"],
+            }
+        )
+        this.liquidityPoolCollection.insert(liquidityPools)
     }
 
     private async setBatchPoolAnalytics(liquidityPools: Array<LiquidityPoolSchema>) {
@@ -108,10 +121,10 @@ implements OnModuleInit, OnApplicationBootstrap
         await this.asyncService.allIgnoreError(promises)
     }
     
-    @Interval(envConfig().timeConfig.interval.analytics)
+    @Interval(envConfig().dexes.meteora.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPools.reduce(
+        const chunks = this.liquidityPoolCollection.chain().data().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),

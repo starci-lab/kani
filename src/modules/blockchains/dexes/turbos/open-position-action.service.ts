@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IOpenActionService,
     ClmmLiquidityPoolState,
@@ -9,8 +11,12 @@ import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
 } from "../../interfaces"
-import { TransactionDataBuilder } from "@mysten/sui/transactions"
-import { SignerService } from "../../signers"
+import {
+    TransactionDataBuilder 
+} from "@mysten/sui/transactions"
+import {
+    SignerService 
+} from "../../signers"
 import BN from "bn.js"
 import { 
     AppVersion,
@@ -18,36 +24,62 @@ import {
     DexId,
     PrimaryMemoryStorageService
 } from "@modules/databases"
-import { OpenPositionTxbService } from "./transactions"
-import { TickMathService } from "../../math"
+import {
+    OpenPositionTxbService 
+} from "./transactions"
+import {
+    TickMathService 
+} from "../../math"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
-    PositionNotFoundException,
-    PositionInvalidTypeException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectInvalidTypeException,
     ErrorSuiObjectName,
     EnsureCalculationException,
     EnsureRangeType,
+    ErrorTransactionType,
     SuiObjectNotFoundException,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { WinstonLog, WinstonService } from "@modules/winston"
-import { Network, TurbosSdk } from "turbos-clmm-sdk"
-import { EnsureMathService } from "../../math"
-import { toScaledBN } from "@utils"
-import { AsyncService } from "@modules/mixin"
-import { SuiEvent } from "@mysten/sui/client"
-import { MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosSuiObjectPositionNFT } from "./struct"
-import { envConfig } from "@modules/env"
-import { PrivySignService } from "@modules/privy"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    Network, TurbosSdk 
+} from "turbos-clmm-sdk"
+import {
+    EnsureMathService 
+} from "../../math"
+import {
+    toScaledBN 
+} from "@utils"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    SuiEvent 
+} from "@mysten/sui/client"
+import {
+    MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosSuiObjectPositionNFT 
+} from "./struct"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    PrivySignService 
+} from "@modules/privy"
         
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -76,7 +108,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
-                if (!positionNftObjectInfo) {
+                if (positionNftObjectInfo.error || !positionNftObjectInfo.data) {
                     throw new SuiObjectNotFoundException({
                         name: ErrorSuiObjectName.PositionNFT,
                         id: positionId,
@@ -84,7 +116,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: _state.static.displayId,
                     })
                 }
-                if (positionNftObjectInfo?.data?.content?.dataType !== "moveObject") {
+                if (positionNftObjectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
                         name: ErrorSuiObjectName.PositionNFT,
                         id: positionId,
@@ -100,12 +132,17 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
-                if (!clmmPosition) {
-                    throw new PositionNotFoundException("CLMM position not found")
-                }
-                if (clmmPosition?.data?.content?.dataType !== "moveObject") {
-                    throw new SuiObjectInvalidTypeException({
+                if (clmmPosition.error || !clmmPosition.data) {
+                    throw new SuiObjectNotFoundException({
                         name: ErrorSuiObjectName.Position,
+                        id: turbosPositionNFT.positionId,
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
+                if (clmmPosition.data.content?.dataType !== "moveObject") {
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.PositionNFT,
                         id: turbosPositionNFT.positionId,
                         dexId: DexId.Turbos,
                         liquidityPoolId: _state.static.displayId,
@@ -126,17 +163,13 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (
-            !bot.snapshotTargetBalanceAmount 
-            || !bot.snapshotQuoteBalanceAmount 
-            || !bot.snapshotGasBalanceAmount
-        ) {
+        if (!bot.snapshots) {
             throw new SnapshotBalancesNotSetException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -156,8 +189,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             state: _state,
             bot,
         })
-        let amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        let amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        let amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        let amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         const sdk = new TurbosSdk(Network.mainnet)
         const [, actualAmountB] = sdk.pool.estimateAmountsFromOneAmount({
             isAmountA: true,
@@ -166,8 +199,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             tickLower: tickLower.toNumber(),
             tickUpper: tickUpper.toNumber(),
         })
-        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds))
-        const upperBound = new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds))
+        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().dexes.turbos.openPosition.slippage))
+        const upperBound = new Decimal(1).add(new Decimal(envConfig().dexes.turbos.openPosition.slippage))
         const actual = new BN(actualAmountB)
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
             expected: amountB,
@@ -188,7 +221,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }
         if (ratio.gt(new Decimal(1))) {
             amountB = new BN(actualAmountB)
-            amountA = toScaledBN(amountA, new Decimal(1).div(ratio))
+            amountA = toScaledBN(amountA,
+                new Decimal(1).div(ratio))
         }
         const { 
             txb: openPositionTxb,
@@ -219,6 +253,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
                                     liquidityPoolId: _state.static.displayId,
+                                    type: ErrorTransactionType.OpenPosition,
                                 })
                             }
                             const bytes = await openPositionTxb.build({
@@ -239,15 +274,20 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
                             botId: bot.id,
                         })
                     }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey,
+                        publicKeyHex: bot.privyMetadata?.walletPublicKey,
                         client: suiClient,
-                        walletId: bot.privyMetadata.walletId,
+                        walletId: bot.privyMetadata?.walletId,
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
@@ -303,6 +343,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         if (!signatureWithBytes) {
@@ -310,6 +351,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSuiClient({
@@ -326,7 +368,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     digest,
                 })
                 this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionExecuted, {
+                    WinstonLog.OpenPositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash: digest,
                         liquidityPoolId: _state.static.displayId,

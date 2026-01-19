@@ -1,5 +1,9 @@
-import { createParamDecorator, ExecutionContext } from "@nestjs/common"
-import { GqlExecutionContext } from "@nestjs/graphql"
+import {
+    createParamDecorator, ExecutionContext 
+} from "@nestjs/common"
+import {
+    GqlExecutionContext 
+} from "@nestjs/graphql"
 
 export const PrivyResponse = createParamDecorator(
     (_: unknown, context: ExecutionContext) => {

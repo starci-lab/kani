@@ -38,6 +38,8 @@ import {
     SuiObjectNotFoundException,
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
+    ErrorTransactionType,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
 } from "@exceptions"
 import {
     RpcExecutorService 
@@ -87,7 +89,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
-                if (!objectInfo) {
+                if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException(
                         {
                             name: ErrorSuiObjectName.Position,
@@ -97,7 +99,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         }
                     )
                 }
-                if (objectInfo?.data?.content?.dataType !== "moveObject") {
+                if (objectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException(
                         {
                             name: ErrorSuiObjectName.Position,
@@ -124,18 +126,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
         if (
-            !bot.snapshotTargetBalanceAmount ||
-            !bot.snapshotQuoteBalanceAmount ||
-            !bot.snapshotGasBalanceAmount
+            !bot.snapshots
         ) {
             throw new SnapshotBalancesNotSetException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmountBN = new BN(
-            bot.snapshotTargetBalanceAmount,
-        )
-        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -160,8 +158,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             txb,
             bot,
-            amountA: snapshotTargetBalanceAmountBN,
-            amountB: snapshotQuoteBalanceAmountBN,
+            amountA: snapshotTargetBalanceAmount,
+            amountB: snapshotQuoteBalanceAmount,
             liquidity: new BN(0),
             tickLower,
             state: _state,
@@ -184,6 +182,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                                     botId: bot.id,
                                     txHash: devInspect.effects.transactionDigest,
                                     liquidityPoolId: _state.static.displayId,
+                                    type: ErrorTransactionType.OpenPosition,
                                 })
                             }
                             const bytes = await openPositionTxb.build({
@@ -202,15 +201,20 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
                             botId: bot.id,
                         })
                     }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey,
+                        publicKeyHex: bot.privyMetadata?.walletPublicKey,
                         client: suiClient,
-                        walletId: bot.privyMetadata.walletId,
+                        walletId: bot.privyMetadata?.walletId,
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
@@ -264,6 +268,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         if (!signatureWithBytes) {
@@ -271,6 +276,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
             })
         }
         return await this.rpcExecutorService.withSuiClient({

@@ -60,16 +60,15 @@ export class MeteoraFeesService implements IFeesService {
     ): Promise<FeesResult> {
         // get the bin array indexes
         if (!bot.activePosition ||
-            !bot.activePositionLiquidityPool ||
-            !bot.activePositionLiquidityPoolType
+            !bot.activePosition.associatedPosition
         ) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         // get the bin array indexes
-        const positionMinBinId = bot.activePosition?.minBinId ?? 0
-        const positionMaxBinId = bot.activePosition?.maxBinId ?? 0
+        const positionMinBinId = bot.activePosition.associatedPosition.minBinId ?? 0
+        const positionMaxBinId = bot.activePosition.associatedPosition.maxBinId ?? 0
         const binArrayIndexes = getBinArrayIndexesCoverage(
             new BN(positionMinBinId),
             new BN(positionMaxBinId)
@@ -87,7 +86,7 @@ export class MeteoraFeesService implements IFeesService {
                     new PublicKey(programAddress)
                 )[0]
         )
-        const positionId = bot.activePosition.positionId
+        const positionId = bot.activePosition.associatedPosition.positionId
         // fetch the bin array accounts
         const [
             positionAccount,
@@ -160,7 +159,7 @@ export class MeteoraFeesService implements IFeesService {
         // iterate over the liquidity shares
         for (let i = 0; i < position.liquidityShares.length; i++) {
             // get the current bin id
-            const currentBinId = new Decimal(bot.activePosition.minBinId ?? 0).add(new Decimal(i)).toNumber()
+            const currentBinId = new Decimal(bot.activePosition.associatedPosition.minBinId ?? 0).add(new Decimal(i)).toNumber()
             // get the liquidity
             const liquidity = new BN(position.liquidityShares[i])
             if (liquidity.isZero()) continue

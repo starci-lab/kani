@@ -43,6 +43,8 @@ import {
     SuiObjectNotFoundException,
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
+    ErrorTransactionType,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
 } from "@exceptions"
 import Decimal from "decimal.js"
 import {
@@ -90,7 +92,10 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     private readonly privySignService: PrivySignService,
     ) {}
 
-    async confirm({ positionId, state }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
+    async confirm(
+        { positionId, state }: 
+        ConfirmOpenPositionParams
+    ): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -101,7 +106,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
-                if (!objectInfo) {
+                if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException(
                         {
                             name: ErrorSuiObjectName.Position,
@@ -111,7 +116,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         }
                     )
                 }
-                if (objectInfo?.data?.content?.dataType !== "moveObject") {
+                if (objectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException(
                         {
                             name: ErrorSuiObjectName.Position,
@@ -164,13 +169,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.snapshotTargetBalanceAmount || !bot.snapshotQuoteBalanceAmount || !bot.snapshotGasBalanceAmount) {
+        if (!bot.snapshots) {
             throw new SnapshotBalancesNotSetException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmountBN = new BN(bot.snapshotTargetBalanceAmount)
-        const snapshotQuoteBalanceAmountBN = new BN(bot.snapshotQuoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString()
         })
@@ -190,8 +195,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             state: _state,
             bot,
         })
-        let amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
-        let amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+        let amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        let amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         const { coinAmountB: expectedAmountB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
             tickLower.toNumber(),
             tickUpper.toNumber(),
@@ -201,8 +206,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             0, // zero slippage
             TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent.toNumber()),
         )
-        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().slippage.openPosition.amountBounds))
-        const upperBound = new Decimal(1).add(new Decimal(envConfig().slippage.openPosition.amountBounds))
+        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().dexes.cetus.openPosition.slippage))
+        const upperBound = new Decimal(1).add(new Decimal(envConfig().dexes.cetus.openPosition.slippage))
         const { isAcceptable, ratio } = this.ensureMathService.ensureBetween(
             {
                 expected: amountB,
@@ -258,6 +263,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             if (devInspect.effects.status.status !== "success") {
                                 throw new TransactionValidationFailedException(
                                     {
+                                        type: ErrorTransactionType.OpenPosition,
                                         botId: bot.id,
                                         txHash: devInspect.effects.transactionDigest,
                                         liquidityPoolId: _state.static.displayId,
@@ -282,17 +288,24 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException(
                             {
                                 botId: bot.id,
                             }
                         )
                     }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException(
+                            {
+                                botId: bot.id,
+                            }
+                        )
+                    }
                     const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
-                        publicKeyHex: bot.privyMetadata.walletPublicKey,
+                        publicKeyHex: bot.privyMetadata?.walletPublicKey,
                         client: suiClient,
-                        walletId: bot.privyMetadata.walletId,
+                        walletId: bot.privyMetadata?.walletId,
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
@@ -345,13 +358,15 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 }
             }
             throw new TransactionNotExecutedException({
-                botId: bot.id,
+                type: ErrorTransactionType.OpenPosition,
+                botId: bot.id,  
                 txHash,
                 liquidityPoolId: _state.static.displayId,
             })
         }
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException({
+                type: ErrorTransactionType.OpenPosition,
                 botId: bot.id,
                 txHash,
                 liquidityPoolId: _state.static.displayId,

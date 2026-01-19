@@ -1,7 +1,15 @@
-import { Provider } from "@nestjs/common"
-import { PRIVY_CLIENT } from "./constants"
-import { PrivyClient } from "@privy-io/node"
-import { getAppConfig, getPrivyAppSecretKey } from "@modules/filesystem"
+import {
+    Provider 
+} from "@nestjs/common"
+import {
+    PRIVY_CLIENT 
+} from "./constants"
+import {
+    PrivyClient 
+} from "@privy-io/node"
+import {
+    getAppConfig, getPrivyAppSecretKey 
+} from "@modules/filesystem"
 
 export const createPrivyClientProvider = (): Provider => ({
     provide: PRIVY_CLIENT,

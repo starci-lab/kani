@@ -1,9 +1,10 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
 import {
     CacheKey,
     DynamicClmmLiquidityPoolInfoCacheResult,
-    InjectRedisCache,
-    createCacheKey
+    CacheService,
 } from "@modules/cache"
 import BN from "bn.js"
 import {
@@ -11,31 +12,48 @@ import {
     PrimaryMemoryStorageService,
     DexId,
 } from "@modules/databases"
-import { AsyncService, DayjsService, InjectSuperJson, RetryService } from "@modules/mixin"
-import { LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException } from "@exceptions"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as winstonLogger } from "winston"
-import { ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName } from "@modules/event"
-import { Cache } from "cache-manager"
-import SuperJSON from "superjson"
-import { createObjectId } from "@utils"
-import { Interval } from "@nestjs/schedule"
-import { address, fetchEncodedAccount } from "@solana/kit"
-import { PublicKey } from "@solana/web3.js"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { PoolState } from "./beets"
+import {
+    AsyncService, DayjsService, RetryService 
+} from "@modules/mixin"
+import {
+    LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException 
+} from "@exceptions"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName 
+} from "@modules/event"
+import {
+    createObjectId 
+} from "@utils"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    address, fetchEncodedAccount 
+} from "@solana/kit"
+import {
+    PublicKey 
+} from "@solana/web3.js"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    PoolState 
+} from "./beets"
 
 @Injectable()
 export class RaydiumObserverService implements OnApplicationBootstrap {
     constructor(
-        @InjectWinston()
-        private readonly winstonLogger: winstonLogger,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
+        private readonly winstonService: WinstonService,
+        private readonly cacheManager: CacheService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -97,18 +115,21 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
             [
                 // store in cache
                 this.cacheManager.set(
-                    createCacheKey(
-                        CacheKey.DynamicClmmLiquidityPoolInfo, 
-                        liquidityPoolId
-                    ),
-                    this.superjson.stringify(parsed),
-                    envConfig().cache.ttl.poolState,
+                    {
+                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                        args: [liquidityPoolId],
+                        cacheResult: parsed,
+                    }
                 ),
                 // emit event through event emitter
                 this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
                     EventName.ClmmLiquidityPoolsFetched,
-                    { liquidityPoolId, ...parsed },
-                    { withoutLocal: true },
+                    {
+                        liquidityPoolId, ...parsed 
+                    },
+                    {
+                        withoutLocal: true 
+                    },
                 ),
             ]
         )
@@ -122,29 +143,26 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                liquidityPool => liquidityPool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-            await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    const accountInfo = await fetchEncodedAccount(rpc, address(liquidityPool.poolAddress), {
+        const liquidityPool = this.memoryStorageService.liquidityPools.find(
+            liquidityPool => liquidityPool.displayId === liquidityPoolId,
+        )
+        if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+        await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Http,
+            callback: async ({ rpc }) => {
+                const accountInfo = await fetchEncodedAccount(rpc,
+                    address(liquidityPool.poolAddress),
+                    {
                         commitment: "confirmed",
                     })
-                    if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-                    const [state] = PoolState.struct.deserialize(Buffer.from(accountInfo.data), 8)
-                    return await this.handlePoolStateUpdate(liquidityPoolId, state)
-                },
-            })
-        } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.FetchClmmPoolError, {
-                    liquidityPoolId,
-                    error: error.message,
-                })
-        }
+                if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+                const [state] = PoolState.struct.deserialize(Buffer.from(accountInfo.data),
+                    8)
+                return await this.handlePoolStateUpdate(liquidityPoolId,
+                    state)
+            },
+        })
+
     }
 
     // ============================================
@@ -171,7 +189,8 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 if (timeout) {
                     clearTimeout(timeout)
                 }
-                timeout = setTimeout(() => abortController.abort(), liquidityPool.wsIdleTimeoutMs)
+                timeout = setTimeout(() => abortController.abort(),
+                    liquidityPool.wsIdleTimeoutMs)
             }
             await this.retryService.retry({
                 action: async () => {
@@ -190,10 +209,13 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                             })
                             for await (const accountNotification of accountNotifications) {
                                 const [state] = PoolState.struct.deserialize(
-                                    Buffer.from(accountNotification.value?.data.toString(), "base64"), 8
+                                    Buffer.from(accountNotification.value?.data.toString(),
+                                        "base64"),
+                                    8
                                 )
                                 resetTimeout()
-                                await this.handlePoolStateUpdate(liquidityPoolId, state)
+                                await this.handlePoolStateUpdate(liquidityPoolId,
+                                    state)
                             }
                         },
                         options: {
@@ -204,8 +226,9 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 }
             })
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.ObserveClmmPoolError, {
+            this.winstonService.error(
+                WinstonLog.LiquidityPoolWsError,
+                {
                     liquidityPoolId,
                     error: error.message,
                 })
