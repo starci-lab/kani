@@ -1,13 +1,10 @@
 import {
-    Decimal 
-} from "decimal.js"
-import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
 
 /** Thrown when tick is invalid */
 export interface InvalidTickScoreExceptionMetadata extends AbstractExceptionMetadata {
-    tickScore: Decimal
+    tickScore: number
 }
 export class InvalidTickScoreException extends AbstractException {
     constructor(
@@ -17,7 +14,7 @@ export class InvalidTickScoreException extends AbstractException {
             "Invalid tick score exception", 
             "INVALID_TICK_SCORE_EXCEPTION", 
             {
-                tickScore: tickScore.toString(),
+                tickScore,
                 originalError,
             }
         )

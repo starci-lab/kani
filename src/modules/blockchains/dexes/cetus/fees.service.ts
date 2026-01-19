@@ -76,8 +76,8 @@ export class CetusFeesService implements IFeesService {
             })
         }
         const positionId = bot.activePosition.associatedPosition.positionId
-        const tickLower = new Decimal(bot.activePosition.associatedPosition.tickLower ?? 0)
-        const tickUpper = new Decimal(bot.activePosition.associatedPosition.tickUpper ?? 0)
+        const tickLower = new BN(bot.activePosition.associatedPosition.tickLower ?? 0)
+        const tickUpper = new BN(bot.activePosition.associatedPosition.tickUpper ?? 0)
         const lowerScore = this.tickScore(tickLower)
         const upperScore = this.tickScore(tickUpper)
         const { tickManagerId, positionManagerId } = _state.static.metadata as CetusLiquidityPoolMetadata
@@ -180,9 +180,9 @@ export class CetusFeesService implements IFeesService {
             feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
             feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideA.toString()),
-            tickCurrent: new Decimal(new BN(_state.dynamic.tickCurrent).toString()),
-            tickLower,
-            tickUpper,
+            tickCurrent: _state.dynamic.tickCurrent,
+            tickLower: new BN(tickLower.toNumber()),
+            tickUpper: new BN(tickUpper.toNumber()),
             feeGrowthInsideLastA: positionInfoData.feeGrowthInsideA,
             feeGrowthInsideLastB: positionInfoData.feeGrowthInsideB,
             liquidity: positionInfoData.liquidity,
@@ -203,17 +203,17 @@ export class CetusFeesService implements IFeesService {
         }
     }
 
-    private tickScore(tick: Decimal): Decimal {
-        const tickScore = new Decimal(tick).add(this.tickBound())
-        if (tickScore.lessThan(0) || tickScore.greaterThan(this.tickBound().mul(2))) {
+    private tickScore(tick: BN): BN {
+        const tickScore = tick.add(this.tickBound())
+        if (tickScore.lt(new BN(0)) || tickScore.gt(this.tickBound().mul(new BN(2)))) {
             throw new InvalidTickScoreException({
-                tickScore,
+                tickScore: tickScore.toNumber(),
             })
         }
         return tickScore
     }
 
-    private tickBound(): Decimal {
-        return new Decimal(443636)
+    private tickBound(): BN {
+        return new BN(443636)
     }
 }

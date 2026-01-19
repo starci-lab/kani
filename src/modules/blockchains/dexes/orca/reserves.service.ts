@@ -77,9 +77,9 @@ export class OrcaReservesService implements IReservesService {
             reserveA,
             reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
-            tickLower: new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0),
-            tickUpper: new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0),
-            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toNumber()),
+            tickLower: new BN(bot.activePosition.associatedPosition?.tickLower ?? 0),
+            tickUpper: new BN(bot.activePosition.associatedPosition?.tickUpper ?? 0),
+            tickCurrent: _state.dynamic.tickCurrent,
             liquidity: new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),

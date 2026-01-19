@@ -1,6 +1,7 @@
 import {
     Injectable 
 } from "@nestjs/common"
+import BN from "bn.js"
 import Decimal from "decimal.js"
 
 /**
@@ -85,7 +86,7 @@ export class DlmmBinFormulaService {
         const ratio = new Decimal(1)
             .add(new Decimal(binStep).div(basisPointMax))
 
-        const price = ratio.pow(activeId)
+        const price = ratio.pow(activeId.toNumber())
 
         return {
             price 
@@ -101,17 +102,17 @@ export interface ActiveIdToPriceParams {
     /**
      * Active bin index (DLMM discrete price level)
      */
-    activeId: number
+    activeId: BN
 
     /**
      * Decimals of token A
      */
-    decimalsA: number
+    decimalsA: Decimal
 
     /**
      * Decimals of token B
      */
-    decimalsB: number
+    decimalsB: Decimal
 
     /**
      * Basis points denominator (default: 10_000)
@@ -134,7 +135,7 @@ export interface ActiveIdToPriceRawParams {
     /**
      * Active bin index
      */
-    activeId: number
+    activeId: BN
 
     /**
      * Bin step in basis points

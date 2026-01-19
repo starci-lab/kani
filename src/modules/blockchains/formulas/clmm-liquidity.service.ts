@@ -2,7 +2,6 @@ import {
     Injectable 
 } from "@nestjs/common"
 import BN from "bn.js"
-import Decimal from "decimal.js"
 import {
     Q64, Q96, Q128 
 } from "@modules/utils"
@@ -165,17 +164,17 @@ export interface ComputeLiquidityParams {
     /**
      * Lower tick boundary
      */
-    tickLower: Decimal
+    tickLower: BN
 
     /**
      * Upper tick boundary
      */
-    tickUpper: Decimal
+    tickUpper: BN
 
     /**
      * Current pool tick
      */
-    tickCurrent: Decimal
+    tickCurrent: BN
 
     /**
      * Amount of token A (raw BN, before decimals)

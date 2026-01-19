@@ -38,7 +38,7 @@ export class ClmmFeesFormulaService {
         tickUpper,
         outsideDeltaWrapModulus = Q128,
     }: ComputeFeeGrowthInsideParams): BN {
-        if (tickCurrent.lessThan(tickLower)) {
+        if (tickCurrent.lt(tickLower)) {
             return this.clmmUtilsService.wrapSub(
                 feeGrowthOutsideLower,
                 feeGrowthOutsideUpper,
@@ -46,7 +46,7 @@ export class ClmmFeesFormulaService {
             )
         }
 
-        if (tickCurrent.greaterThanOrEqualTo(tickUpper)) {
+        if (tickCurrent.gte(tickUpper)) {
             return this.clmmUtilsService.wrapSub(
                 feeGrowthOutsideUpper,
                 feeGrowthOutsideLower,
@@ -186,17 +186,17 @@ export interface ComputeFeesParams {
      *
      * Determines whether the position is below, inside, or above its range.
      */
-    tickCurrent: Decimal
+    tickCurrent: BN
 
     /**
      * Lower tick boundary of the liquidity position.
      */
-    tickLower: Decimal
+    tickLower: BN
 
     /**
      * Upper tick boundary of the liquidity position.
      */
-    tickUpper: Decimal
+    tickUpper: BN
 
     /**
      * Fee growth inside the position range at the last checkpoint (token A).
@@ -289,9 +289,9 @@ export interface ComputeFeeGrowthInsideParams {
     feeGrowthGlobal: BN
     feeGrowthOutsideLower: BN
     feeGrowthOutsideUpper: BN
-    tickCurrent: Decimal
-    tickLower: Decimal
-    tickUpper: Decimal
+    tickCurrent: BN
+    tickLower: BN
+    tickUpper: BN
     outsideDeltaWrapModulus?: typeof Q128 | typeof Q64
 }
 

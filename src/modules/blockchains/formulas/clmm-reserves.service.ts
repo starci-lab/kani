@@ -174,15 +174,15 @@ export interface CalculateReservesParams {
     /**
      * Lower tick of the position
      */
-    tickLower: Decimal
+    tickLower: BN
     /**
      * Upper tick of the position
      */
-    tickUpper: Decimal
+    tickUpper: BN
     /**
      * Current sqrt price
      */
-    tickCurrent: Decimal
+    tickCurrent: BN
     /**
      * Liquidity amount (unsigned)
      */

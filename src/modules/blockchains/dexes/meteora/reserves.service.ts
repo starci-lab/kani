@@ -11,7 +11,9 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    InvalidPoolTokensException, SolanaAccountNotFoundException, ErrorSolanaAccountName, 
+    InvalidPoolTokensException, 
+    SolanaAccountNotFoundException, 
+    ErrorSolanaAccountName, 
     ActivePositionNotFoundException
 } from "@modules/exceptions"
 import {
@@ -24,7 +26,13 @@ import {
     address, fetchEncodedAccounts 
 } from "@solana/kit"
 import {
-    createProgram, PositionV2, decodeAccount, getBinArrayIndexesCoverage, deriveBinArray, BinArray, getBinArrayLowerUpperBinId 
+    createProgram, 
+    PositionV2, 
+    decodeAccount, 
+    getBinArrayIndexesCoverage,
+    deriveBinArray, 
+    BinArray, 
+    getBinArrayLowerUpperBinId 
 } from "@meteora-ag/dlmm"
 import {
     clusterApiUrl, Connection, PublicKey 
@@ -64,7 +72,7 @@ export class MeteoraReservesService implements IReservesService {
             })
         }
         const _state = state as DlmmLiquidityPoolState
-        const activeBinId = new Decimal(_state.dynamic.activeId)
+        const activeBinId = _state.dynamic.activeId
         const positionId = bot.activePosition.associatedPosition.positionId
         const positionMinBinId = bot.activePosition.associatedPosition.minBinId ?? 0
         const positionMaxBinId = bot.activePosition.associatedPosition.maxBinId ?? 0
@@ -170,27 +178,27 @@ export class MeteoraReservesService implements IReservesService {
             const liquidityShareRaw = liquidityShares[i]
             const liquidityShare = liquidityShareRaw.div(Q64)
             if (liquidityShare.isZero()) continue
-            const currentBinId = new Decimal(bot.activePosition.associatedPosition.minBinId ?? 0).add(new Decimal(i))
+            const binIdCurrent = new BN(bot.activePosition.associatedPosition.minBinId ?? 0).add(new BN(i))
             const { price } = this.dlmmBinFormulaService.activeIdToPriceRaw({
-                activeId: currentBinId.toNumber(),
+                activeId: binIdCurrent,
                 binStep: binStep.toNumber(),
                 basisPointMax: _state.static.basisPointMax,
             })
-            if (currentBinId.lessThan(activeBinId)) {
+            if (binIdCurrent.lt(activeBinId)) {
                 reserveBRaw = reserveBRaw.add(liquidityShare)
-            } else if (currentBinId.greaterThan(activeBinId)) {
+            } else if (binIdCurrent.gt(activeBinId)) {
                 reserveARaw = reserveARaw.add(toScaledBN(liquidityShare,
                     new Decimal(1).div(price)))
             } else {
                 // get the corresponding bin array
                 const correspondingBinArrayIndex = binLowerAndUpperBinIdsArray.findIndex(
-                    (binLowerAndUpperBinIds) => new Decimal(currentBinId)
-                        .greaterThanOrEqualTo(
-                            new Decimal(binLowerAndUpperBinIds[0].toString())
+                    (binLowerAndUpperBinIds) => binIdCurrent
+                        .gte(
+                            binLowerAndUpperBinIds[0]
                         ) 
-                    && new Decimal(currentBinId)
-                        .lessThanOrEqualTo(
-                            new Decimal(binLowerAndUpperBinIds[1].toString())
+                    && binIdCurrent
+                        .lte(
+                            binLowerAndUpperBinIds[1]
                         )
                 )
                 if (correspondingBinArrayIndex === -1) throw new SolanaAccountNotFoundException({
@@ -200,7 +208,7 @@ export class MeteoraReservesService implements IReservesService {
                     liquidityPoolId: _state.static.displayId,
                 })
                 const correspondingBinArray = binArrays[correspondingBinArrayIndex]
-                const indexInBinArray = new Decimal(currentBinId).sub(new Decimal(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0].toString()))
+                const indexInBinArray = binIdCurrent.sub(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0])
                 const globalBin = correspondingBinArray.bins[indexInBinArray.toNumber()]
                 const sharePercentage = divBn(liquidityShareRaw,
                     globalBin.liquiditySupply)

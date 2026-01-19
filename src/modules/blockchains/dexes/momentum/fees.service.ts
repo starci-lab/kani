@@ -59,10 +59,14 @@ export class MomentumFeesService implements IFeesService {
             })
         }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
@@ -70,8 +74,8 @@ export class MomentumFeesService implements IFeesService {
             })
         }
         const positionId = bot.activePosition.associatedPosition.positionId
-        const tickLower = new Decimal(bot.activePosition.associatedPosition.tickLower ?? 0)
-        const tickUpper = new Decimal(bot.activePosition.associatedPosition.tickUpper ?? 0)
+        const tickLower = new BN(bot.activePosition.associatedPosition.tickLower ?? 0)
+        const tickUpper = new BN(bot.activePosition.associatedPosition.tickUpper ?? 0)
         const { i32Type } = _state.static.metadata as MomentumLiquidityPoolMetadata
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
             i32Type)
@@ -175,7 +179,7 @@ export class MomentumFeesService implements IFeesService {
             feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
             feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideX.toString()),
             feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideX.toString()),
-            tickCurrent: new Decimal(new BN(_state.dynamic.tickCurrent).toString()),
+            tickCurrent: _state.dynamic.tickCurrent,
             tickLower,
             tickUpper,
             feeGrowthInsideLastA: position.feeGrowthInsideXLast,

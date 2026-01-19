@@ -61,7 +61,7 @@ export class ClmmRewardsFormulaService {
     ): BN {
 
         // current < lower
-        if (currentTick.lessThan(tickLower)) {
+        if (currentTick.lt(tickLower)) {
             return this.clmmUtilsService.wrapSub(
                 rewardGrowthOutsideLower,
                 rewardGrowthOutsideUpper,
@@ -70,7 +70,7 @@ export class ClmmRewardsFormulaService {
         }
 
         // current >= upper
-        if (currentTick.greaterThanOrEqualTo(tickUpper)) {
+        if (currentTick.gt(tickUpper)) {
             return this.clmmUtilsService.wrapSub(
                 rewardGrowthOutsideUpper,
                 rewardGrowthOutsideLower,
@@ -182,9 +182,9 @@ export interface ComputeRewardGrowthInsideParams {
     rewardGrowthGlobal: BN
     rewardGrowthOutsideLower: BN
     rewardGrowthOutsideUpper: BN
-    currentTick: Decimal
-    tickLower: Decimal
-    tickUpper: Decimal
+    currentTick: BN
+    tickLower: BN
+    tickUpper: BN
 
     /**
      * Wrapping modulus for outside delta calculation
@@ -215,9 +215,9 @@ export interface ComputeRewardParams {
     rewardGrowthGlobal: BN
     rewardGrowthOutsideLower: BN
     rewardGrowthOutsideUpper: BN
-    currentTick: Decimal
-    tickLower: Decimal
-    tickUpper: Decimal
+    currentTick: BN
+    tickLower: BN
+    tickUpper: BN
     rewardGrowthInsideLast: BN
     liquidity: BN
     rewardOwned?: BN

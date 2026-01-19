@@ -37,7 +37,6 @@ import {
 import {
     computeDenomination
 } from "@modules/utils"
-import Decimal from "decimal.js"
 import {
     Q128
 } from "@modules/utils"
@@ -159,7 +158,7 @@ export class MeteoraFeesService implements IFeesService {
         // iterate over the liquidity shares
         for (let i = 0; i < position.liquidityShares.length; i++) {
             // get the current bin id
-            const currentBinId = new Decimal(bot.activePosition.associatedPosition.minBinId ?? 0).add(new Decimal(i)).toNumber()
+            const binIdCurrent = new BN(bot.activePosition.associatedPosition.minBinId ?? 0).add(new BN(i))
             // get the liquidity
             const liquidity = new BN(position.liquidityShares[i])
             if (liquidity.isZero()) continue
@@ -167,13 +166,13 @@ export class MeteoraFeesService implements IFeesService {
             const feeInfo = position.feeInfos[i]
             // get the corresponding bin array
             const correspondingBinArrayIndex = binLowerAndUpperBinIdsArray.findIndex(
-                (binLowerAndUpperBinIds) => new Decimal(currentBinId)
-                    .greaterThanOrEqualTo(
-                        new Decimal(binLowerAndUpperBinIds[0].toString())
+                (binLowerAndUpperBinIds) => binIdCurrent
+                    .gte(
+                        binLowerAndUpperBinIds[0]
                     )
-                    && new Decimal(currentBinId)
-                        .lessThanOrEqualTo(
-                            new Decimal(binLowerAndUpperBinIds[1].toString())
+                    && binIdCurrent
+                        .lte(
+                            binLowerAndUpperBinIds[1]
                         )
             )
             if (correspondingBinArrayIndex === -1) throw new SolanaAccountNotFoundException({
@@ -183,12 +182,12 @@ export class MeteoraFeesService implements IFeesService {
                 liquidityPoolId: state.static.displayId,
             })
             const correspondingBinArray = binArrays[correspondingBinArrayIndex]
-            const indexInBinArray = new Decimal(currentBinId).sub(new Decimal(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0].toString()))
+            const indexInBinArray = binIdCurrent.sub(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0])
             // get the delta x
-            const deltaX = new BN(correspondingBinArray.bins[indexInBinArray.toNumber()].feeAmountXPerTokenStored)
-                .sub(new BN(feeInfo.feeXPerTokenComplete))
-            const deltaY = new BN(correspondingBinArray.bins[indexInBinArray.toNumber()].feeAmountYPerTokenStored)
-                .sub(new BN(feeInfo.feeYPerTokenComplete))
+            const deltaX = correspondingBinArray.bins[indexInBinArray.toNumber()].feeAmountXPerTokenStored
+                .sub(feeInfo.feeXPerTokenComplete)
+            const deltaY = correspondingBinArray.bins[indexInBinArray.toNumber()].feeAmountYPerTokenStored
+                .sub(feeInfo.feeYPerTokenComplete)
             totalFeeX = totalFeeX.add(liquidity.mul(deltaX).div(Q128))
             totalFeeY = totalFeeY.add(liquidity.mul(deltaY).div(Q128))
         }

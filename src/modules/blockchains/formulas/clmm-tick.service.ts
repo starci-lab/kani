@@ -26,18 +26,6 @@ import {
  */
 @Injectable()
 export class ClmmTickFormulaService {
-    private assertValidTickIndex(tickIndex: Decimal): number {
-        // Tick index must be an integer (CLMM discrete ticks).
-        if (!tickIndex.isInteger()) {
-            throw new Error(`Invalid tickIndex (must be integer): ${tickIndex.toString()}`)
-        }
-        const asNumber = tickIndex.toNumber()
-        if (!Number.isSafeInteger(asNumber)) {
-            throw new Error(`Invalid tickIndex (unsafe integer): ${tickIndex.toString()}`)
-        }
-        return asNumber
-    }
-
     /**
      * Convert tick index to sqrt price (Q64 fixed point)
      *
@@ -60,8 +48,7 @@ export class ClmmTickFormulaService {
         }: TickToSqrtPriceParams
     ): BN {
         // Use TickMath implementation to compute sqrtPrice
-        const tick = this.assertValidTickIndex(tickIndex)
-        const tickIndexX64 = TickMath.tickIndexToSqrtPriceX64(tick)
+        const tickIndexX64 = TickMath.tickIndexToSqrtPriceX64(tickIndex.toNumber())
         return tickIndexX64.mul(fixedPointScale).div(Q64)
     }
 
@@ -134,7 +121,7 @@ export interface TickToSqrtPriceParams {
     /**
      * CLMM tick index (discrete price step)
      */
-    tickIndex: Decimal
+    tickIndex: BN
     /**
      * Divisor for price calculations (default: Q64)
      * Controls fixed-point scaling for sqrt price arithmetic
@@ -175,7 +162,7 @@ export interface TickToPriceParams {
     /**
      * CLMM tick index
      */
-    tickIndex: Decimal
+    tickIndex: BN
 
     /**
      * Decimals of token A

@@ -124,7 +124,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     ) {
         const dynamicDlmmLiquidityPoolInfo: DynamicDlmmLiquidityPoolInfoCacheResult =
         {
-            activeId: state.active_id,
+            activeId: new BN(state.active_id),
             rewards: state.reward_infos
                 .filter((reward) => reward.mint.toString() !== "11111111111111111111111111111111") // Filter out empty rewards
                 .map((reward) => ({

@@ -159,10 +159,14 @@ export class OrcaFeesService implements IFeesService {
         // Token validation
         // ----------------------------
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
         })
 
         if (!tokenA || !tokenB) {
@@ -174,34 +178,17 @@ export class OrcaFeesService implements IFeesService {
         // ----------------------------
         // Tick index resolution
         // ----------------------------
-        const lowerStart = tickArrayLower.data.startTickIndex
-        const upperStart = tickArrayUpper.data.startTickIndex
+        const lowerStart = new BN(tickArrayLower.data.startTickIndex)
+        const upperStart = new BN(tickArrayUpper.data.startTickIndex)
 
-        const tickLowerIndex = new Decimal(tickLower)
+        const tickLowerIndex = new BN(tickLower)
             .sub(lowerStart)
-            .div(state.static.tickSpacing)
+            .div(new BN(state.static.tickSpacing))
 
-        const tickUpperIndex = new Decimal(tickUpper)
+        const tickUpperIndex = new BN(tickUpper)
             .sub(upperStart)
-            .div(state.static.tickSpacing)
+            .div(new BN(state.static.tickSpacing))
 
-        if (
-            tickLowerIndex.lessThan(0) ||
-      tickLowerIndex.greaterThanOrEqualTo(
-          tickArrayLower.data.ticks.length,
-      )
-        ) {
-            throw new Error("Lower tick index out of range")
-        }
-
-        if (
-            tickUpperIndex.lessThan(0) ||
-      tickUpperIndex.greaterThanOrEqualTo(
-          tickArrayUpper.data.ticks.length,
-      )
-        ) {
-            throw new Error("Upper tick index out of range")
-        }
         const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
         const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
 
@@ -220,9 +207,9 @@ export class OrcaFeesService implements IFeesService {
             feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
             feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideA.toString()),
             feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideA.toString()),
-            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toString()),
-            tickLower: new Decimal(tickLower),
-            tickUpper: new Decimal(tickUpper),
+            tickCurrent: _state.dynamic.tickCurrent,
+            tickLower: new BN(tickLower),
+            tickUpper: new BN(tickUpper),
             feeGrowthInsideLastA: new BN(positionState.feeGrowthCheckpointA.toString()),
             feeGrowthInsideLastB: new BN(positionState.feeGrowthCheckpointB.toString()),
             liquidity,
