@@ -1,17 +1,28 @@
-import { Module } from "@nestjs/common"
+import {
+    Module 
+} from "@nestjs/common"
 import {
     JwtAccessTokenStrategy,
     JwtAccessTokenOnlyMFAEnabledStrategy,
     JwtRefreshTokenStrategy,
 } from "./strategies"
-import { PassportModule as NestPassportModule } from "@nestjs/passport"
-import { ConfigurableModuleClass } from "./passport.module-definition"
-import { JwtModule } from "@nestjs/jwt"
-import { JwtAuthService } from "./jwt"
+import {
+    PassportModule as NestPassportModule 
+} from "@nestjs/passport"
+import {
+    ConfigurableModuleClass 
+} from "./passport.module-definition"
+import {
+    JwtModule 
+} from "@nestjs/jwt"
+import {
+    JwtAuthService 
+} from "./jwt"
 
 @Module({
     imports: [
-        NestPassportModule.register({}), 
+        NestPassportModule.register({
+        }), 
         JwtModule
     ],
     providers: [

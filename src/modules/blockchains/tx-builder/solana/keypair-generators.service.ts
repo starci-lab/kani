@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { generateKeyPairSigner, KeyPairSigner } from "@solana/kit"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    generateKeyPairSigner, KeyPairSigner 
+} from "@solana/kit"
 
 @Injectable()
 export class KeypairGeneratorsService {
@@ -9,8 +13,10 @@ export class KeypairGeneratorsService {
         count: number,
     ): Promise<Array<KeyPairSigner>> {
         return Promise.all(
-            Array.from({ length: count }, 
-                async () => await generateKeyPairSigner())
+            Array.from({
+                length: count 
+            }, 
+            async () => await generateKeyPairSigner())
         )
     }
 }   

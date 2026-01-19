@@ -40,6 +40,8 @@ import {
     PrivyMetadataSchema,
     BotSnapshotsSchemaClass,
     BotSnapshotsSchema,
+    PositionSettlementSchema,
+    PositionSettlementSchemaClass,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -175,6 +177,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: PositionSchema.name,
                         useFactory: () => PositionSchemaClass,
+                    },
+                    {
+                        name: PositionSettlementSchema.name,
+                        useFactory: () => PositionSettlementSchemaClass,
                     },
                     {
                         name: ConfigSchema.name,

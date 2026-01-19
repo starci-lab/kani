@@ -1,27 +1,47 @@
-import { Inject, Injectable } from "@nestjs/common"
+import {
+    Inject, Injectable 
+} from "@nestjs/common"
 import {
     BotSchema,
     DexId,
-    LiquidityPoolId,
-    LiquidityPoolType,
+    LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     DexNotFoundException,
     DexNotImplementedException,
-    LiquidityPoolNotFoundException,
     ActivePositionNotFoundException,
 } from "@modules/exceptions"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import {
-    DlmmLiquidityPoolState,
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./dexes.module-definition"
+import {
     FeesResult,
-    LiquidityPoolState,
 } from "../interfaces"
-import { OrcaFeesService } from "./orca"
-import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
-import { MeteoraFeesService } from "./meteora"
-import { RaydiumFeesService } from "./raydium"
+import {
+    OrcaFeesService 
+} from "./orca"
+import {
+    MeteoraFeesService 
+} from "./meteora"
+import {
+    RaydiumFeesService 
+} from "./raydium"
+import {
+    FlowXFeesService 
+} from "./flowx"
+import {
+    CetusFeesService 
+} from "./cetus"
+import {
+    TurbosFeesService 
+} from "./turbos"
+import {
+    MomentumFeesService 
+} from "./momentum"
+import {
+    LiquidityPoolStateService 
+} from "./liquidity-pool-state.service"
 
 /**
  * FeesOrchestratorService
@@ -38,9 +58,13 @@ export class FeesOrchestratorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly orcaFeesService: OrcaFeesService,
-        private readonly liquidityPoolStateService: LiquidityPoolStateService,
+        private readonly flowxFeesService: FlowXFeesService,
+        private readonly cetusFeesService: CetusFeesService,
+        private readonly turbosFeesService: TurbosFeesService,
+        private readonly momentumFeesService: MomentumFeesService,
         private readonly meteoraFeesService: MeteoraFeesService,
         private readonly raydiumFeesService: RaydiumFeesService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -50,44 +74,64 @@ export class FeesOrchestratorService {
     async fees(
         {
             bot,
-            liquidityPoolId,
+            liquidityPool,
         }: OrchestrateFeesParams,
     ): Promise<FeesResult> {
-        const liquidityPool = this.primaryMemoryStorageService
-            .liquidityPools
-            .find(liquidityPool => liquidityPool.displayId === liquidityPoolId)
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException("Liquidity pool not found")
-        let state: LiquidityPoolState | DlmmLiquidityPoolState
-        if (liquidityPool.type === LiquidityPoolType.Dlmm) {
-            state = await this.liquidityPoolStateService.getDlmmState(liquidityPoolId)
-        } else {
-            state = await this.liquidityPoolStateService.getState(liquidityPoolId)
-        }
+        const state = await this.liquidityPoolStateService.getState(liquidityPool)
         const dex =
-            this.primaryMemoryStorageService.dexes.find(
-                dex => dex.id === state.static.dex.toString(),
+            this.primaryMemoryStorageService.dexCollection.findOne(
+                {
+                    id: {
+                        $eq: state.static.dex.toString(),
+                    },
+                }
             )
-        if (!dex) throw new DexNotFoundException("Dex not found")
+        if (!dex) throw new DexNotFoundException({
+            id: state.static.dex.toString(),
+        })
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
-                `Dex ${state.static.dex.toString()} not supported`,
+                {
+                    id: state.static.dex.toString(),
+                }
             )
         }
-        if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
+        if (!bot.activePosition) throw new ActivePositionNotFoundException({
+            botId: bot.id,
+        })
         switch (dex.displayId) {
         case DexId.FlowX:
-            throw new DexNotImplementedException("FlowX fees not implemented")
+            return await this.flowxFeesService.fees(
+                { 
+                    bot, 
+                    state 
+                }
+            )
         case DexId.Cetus:
-            throw new DexNotImplementedException("Cetus fees not implemented")
+            return await this.cetusFeesService.fees(
+                { 
+                    bot, 
+                    state 
+                }
+            )
         case DexId.Turbos:
-            throw new DexNotImplementedException("Turbos fees not implemented")
+            return await this.turbosFeesService.fees(
+                { 
+                    bot, 
+                    state 
+                }
+            )
         case DexId.Momentum:
-            throw new DexNotImplementedException("Momentum fees not implemented")
+            return await this.momentumFeesService.fees(
+                { 
+                    bot, 
+                    state 
+                }
+            )
         case DexId.Raydium: {
             return await this.raydiumFeesService.fees(
                 { 
                     bot, 
-                    liquidityPoolId, 
                     state 
                 }
             )
@@ -96,7 +140,6 @@ export class FeesOrchestratorService {
             return await this.orcaFeesService.fees(
                 { 
                     bot, 
-                    liquidityPoolId, 
                     state 
                 }
             )
@@ -105,18 +148,19 @@ export class FeesOrchestratorService {
             return await this.meteoraFeesService.fees(
                 { 
                     bot, 
-                    liquidityPoolId, 
                     state 
                 }
             )
         }
         default:
-            throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for execute`)
+            throw new DexNotImplementedException({
+                id: state.static.dex.toString(),
+            })
         }
     }   
 }
 
 export interface OrchestrateFeesParams {
     bot: BotSchema
-    liquidityPoolId: LiquidityPoolId
+    liquidityPool: LiquidityPoolSchema
 }

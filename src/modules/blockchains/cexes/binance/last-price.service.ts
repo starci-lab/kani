@@ -2,40 +2,48 @@ import {
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
-import { BINANCE_WS_URL } from "./constants"
-import { MarketId, PrimaryMemoryStorageService } from "@modules/databases"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { CachePriceUtilsService } from "@modules/cache"
-import { BinanceUtilsService } from "./binance-utils.service"
+import {
+    BINANCE_WS_URL 
+} from "./constants"
+import {
+    MarketListingId 
+} from "@modules/databases"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    BinanceTokenRegistryService 
+} from "./token-registry.service"
 import _ from "lodash"
-import { AsyncService, RetryService } from "@modules/mixin"
-import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
+import {
+    AsyncService, RetryService 
+} from "@modules/mixin"
+import {
+    WebSocketStreamConnection, StreamAsyncIteratorService 
+} from "@modules/stream-async-iterator"
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly retryService: RetryService,
-        private readonly binanceUtilsService: BinanceUtilsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly cachePriceUtilsService: CachePriceUtilsService,
-        private readonly asyncService: AsyncService,
+        private readonly binanceTokenRegistryService: BinanceTokenRegistryService,
+        private readonly winstonService: WinstonService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
+        private readonly asyncService: AsyncService,
     ) {
     }
 
     onApplicationBootstrap() {
-        const tokens = this.primaryMemoryStorageService.tokens
-            .filter(
-                token => !!token.marketListings.find(market => market.id === MarketId.Binance)
-            )
-        if (!tokens.length) {
-            return
-        }
-        const symbols = this.binanceUtilsService.getBinanceSymbols()
-        const batches = _.chunk(symbols, envConfig().chunks.binanceLastPrice.subscriptions)
+        const symbols = this.binanceTokenRegistryService.getBinanceSymbols()
+        const batches = _.chunk(
+            symbols,
+            envConfig().cexes.binance.chunks.lastPrice)
         for (const batch of batches) {
             this.retryService.retry(
                 {
@@ -59,7 +67,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                             }
                             timeout = setTimeout(
                                 () => abortController.abort(), 
-                                envConfig().timeConfig.ws.idleTimeout.binance.lastPrice,
+                                envConfig().cexes.binance.interval.rest,
                             )
                         }
                         // create the stream
@@ -70,8 +78,9 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 onOpen: (
                                     connection: WebSocketStreamConnection
                                 ) => {
-                                    this.logger.info(
-                                        WinstonLog.WebsocketConnected, {
+                                    this.winstonService.log(
+                                        WinstonLog.WebsocketSubscriptionOpened,
+                                        {
                                             streamName: "binance-last-price",
                                             symbols: batch,
                                         }
@@ -87,8 +96,9 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     )
                                 },
                                 onError: (error: Error) => {
-                                    this.logger.error(
-                                        WinstonLog.WebsocketCloseError, {
+                                    this.winstonService.log(
+                                        WinstonLog.WebsocketSubscriptionError,
+                                        {
                                             error: error.message,
                                             streamName: "binance-last-price",
                                             symbols: batch,
@@ -96,8 +106,9 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     )
                                 },
                                 onClose: () => {
-                                    this.logger.error(
-                                        WinstonLog.WebsocketClosed, {
+                                    this.winstonService.log(
+                                        WinstonLog.WebsocketSubscriptionClosed,
+                                        {
                                             streamName: "binance-last-price",
                                             symbols: batch,
                                         }
@@ -119,7 +130,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 // get the stream symbol
                                 const streamSymbol = parsed.stream.split("@")[0]
                                 // get the token prices
-                                const tokenPrices = this.binanceUtilsService.getBinanceTokenPrices(
+                                const tokenPrices = this.binanceTokenRegistryService.getBinanceTokenPrices(
                                     [
                                         {
                                             price: parseFloat(parsed.data.c),
@@ -134,19 +145,20 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 // update the token prices
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map(async (tokenPrice) => {
-                                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
+                                        await this.aggregatedTokenPriceCacheService.set(
                                             {
                                                 tokenId: tokenPrice.tokenId,
                                                 price: tokenPrice.price,
-                                                marketId: MarketId.Binance,
+                                                marketListingId: MarketListingId.Binance,
                                             }
                                         )
                                     })
                                 )
                             } catch (error) {
                             // log the error
-                                this.logger.error(
-                                    WinstonLog.WebsocketMessageError, {
+                                this.winstonService.log(
+                                    WinstonLog.WebsocketSubscriptionError,
+                                    {
                                         error: error.message,
                                         streamName: "binance-last-price",
                                         symbols: batch,

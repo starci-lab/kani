@@ -1,14 +1,36 @@
-import { Injectable } from "@nestjs/common"
-import { TokenType } from "@modules/typedefs"
-import { address, Address, Instruction } from "@solana/kit"
-import { BN } from "turbos-clmm-sdk"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { TokenNotFoundException } from "@modules/exceptions"
-import { getTransferSolInstruction } from "@solana-program/system"
-import { createNoopSigner } from "@solana/signers"
-import { getTransferInstruction as getTransferInstruction2022 } from "@solana-program/token-2022"
-import { getTransferInstruction } from "@solana-program/token"
-import { AtaInstructionService } from "./ata-instruction.service"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    TokenType 
+} from "@modules/typedefs"
+import {
+    address, Address, Instruction 
+} from "@solana/kit"
+import {
+    BN 
+} from "turbos-clmm-sdk"
+import {
+    PrimaryMemoryStorageService, TokenId 
+} from "@modules/databases"
+import {
+    TokenNotFoundException 
+} from "@modules/exceptions"
+import {
+    getTransferSolInstruction 
+} from "@solana-program/system"
+import {
+    createNoopSigner 
+} from "@solana/signers"
+import {
+    getTransferInstruction as getTransferInstruction2022 
+} from "@solana-program/token-2022"
+import {
+    getTransferInstruction 
+} from "@solana-program/token"
+import {
+    AtaInstructionService 
+} from "./ata-instruction.service"
 
 @Injectable()
 export class TransferInstructionService {
@@ -25,9 +47,15 @@ export class TransferInstructionService {
             tokenId,
         }: CreateTransferInstructionsParams
     ): Promise<CreateTransferInstructionsResult> {
-        const token = this.primaryMemoryStorageService.tokens.find(token => token.displayId === tokenId.toString())
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: tokenId,
+            }
+        })
         if (!token) {
-            throw new TokenNotFoundException("From token not found")
+            throw new TokenNotFoundException({
+                displayId: tokenId,
+            })
         }
         if (token.type === TokenType.Native) {
             return {

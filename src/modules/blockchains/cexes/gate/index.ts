@@ -1,4 +1,4 @@
 export * from "./gate.module"
-export * from "./gate-utils.service"
+export * from "./token-registry.service"
 
 

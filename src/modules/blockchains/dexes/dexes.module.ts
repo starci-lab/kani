@@ -1,20 +1,51 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./dexes.module-definition"
-import { CetusModule } from "./cetus"
-import { DexId } from "@modules/databases"
-import { TurbosModule } from "./turbos"
-import { MomentumModule } from "./momentum"
-import { FlowXModule } from "./flowx"
-import { RaydiumModule } from "./raydium"
-import { OrcaModule } from "./orca"
-import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
-import { OpenPositionOrchestratorService } from "./open-position-orchestrator.service"
-import { ClosePositionOrchestratorService } from "./close-position-orchestrator.service"
-import { FeesOrchestratorService } from "./fees-orchestrator.service"
-import { ReservesOrchestratorService } from "./reserves-orchestrator.service"
-import { MeteoraModule } from "./meteora"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./dexes.module-definition"
+import {
+    CetusModule 
+} from "./cetus"
+import {
+    DexId 
+} from "@modules/databases"
+import {
+    TurbosModule 
+} from "./turbos"
+import {
+    MomentumModule 
+} from "./momentum"
+import {
+    FlowXModule 
+} from "./flowx"
+import {
+    RaydiumModule 
+} from "./raydium"
+import {
+    OrcaModule 
+} from "./orca"
+import {
+    LiquidityPoolStateService 
+} from "./liquidity-pool-state.service"
+import {
+    OpenPositionOrchestratorService 
+} from "./open-position-orchestrator.service"
+import {
+    ClosePositionOrchestratorService 
+} from "./close-position-orchestrator.service"
+import {
+    FeesOrchestratorService 
+} from "./fees-orchestrator.service"
+import {
+    ReservesOrchestratorService 
+} from "./reserves-orchestrator.service"
+import {
+    MeteoraModule 
+} from "./meteora"
 
-@Module({})
+@Module({
+})
 export class DexesModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE

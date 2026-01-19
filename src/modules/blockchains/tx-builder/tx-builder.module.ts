@@ -1,13 +1,21 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./tx-builder.module-definition"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./tx-builder.module-definition"
 import { 
     AnchorUtilsService, 
     AtaInstructionService, 
     KeypairGeneratorsService, 
     MintInstructionService
 } from "./solana"
-import { TransferInstructionService } from "./solana"
-import { FetchCoinsService, SelectCoinsService } from "./sui"
+import {
+    TransferInstructionService 
+} from "./solana"
+import {
+    FetchCoinsService, SelectCoinsService 
+} from "./sui"
 
 @Module({
     providers: [

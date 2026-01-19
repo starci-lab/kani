@@ -3,4 +3,5 @@ export enum CacheKey {
     DynamicClmmLiquidityPoolInfo = "dynamic.clmm.liquidity.pool.info",
     DynamicDlmmLiquidityPoolInfo = "dynamic.dlmm.liquidity.pool.info",
     PoolAnalytics = "pool.analytics",
+    SessionId = "session.id",
 }

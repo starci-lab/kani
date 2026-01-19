@@ -1,27 +1,47 @@
-import { Inject, Injectable } from "@nestjs/common"
+import {
+    Inject, Injectable 
+} from "@nestjs/common"
 import {
     BotSchema,
     DexId,
-    LiquidityPoolId,
-    LiquidityPoolType,
+    LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     DexNotFoundException,
     DexNotImplementedException,
-    LiquidityPoolNotFoundException,
     ActivePositionNotFoundException,
 } from "@modules/exceptions"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import {
-    DlmmLiquidityPoolState,
-    LiquidityPoolState,
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./dexes.module-definition"
+import {
     ReservesResult,
 } from "../interfaces"
-import { OrcaReservesService } from "./orca"
-import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
-import { MeteoraReservesService } from "./meteora"
-import { RaydiumReservesService } from "./raydium"
+import {
+    OrcaReservesService 
+} from "./orca"
+import {
+    MeteoraReservesService 
+} from "./meteora"
+import {
+    RaydiumReservesService 
+} from "./raydium"
+import {
+    FlowXReservesService 
+} from "./flowx"
+import {
+    LiquidityPoolStateService 
+} from "./liquidity-pool-state.service"
+import {
+    CetusReservesService 
+} from "./cetus"
+import {
+    TurbosReservesService 
+} from "./turbos"
+import {
+    MomentumReservesService 
+} from "./momentum"
 
 /**
  * ReservesOrchestratorService
@@ -38,9 +58,13 @@ export class ReservesOrchestratorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly orcaReservesService: OrcaReservesService,
-        private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly meteoraReservesService: MeteoraReservesService,
         private readonly raydiumReservesService: RaydiumReservesService,
+        private readonly flowxReservesService: FlowXReservesService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
+        private readonly cetusReservesService: CetusReservesService,
+        private readonly turbosReservesService: TurbosReservesService,
+        private readonly momentumReservesService: MomentumReservesService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
@@ -50,44 +74,72 @@ export class ReservesOrchestratorService {
     async reserves(
         {
             bot,
-            liquidityPoolId,
+            liquidityPool,
         }: OrchestrateReservesParams,
     ): Promise<ReservesResult> {
-        const liquidityPool = this.primaryMemoryStorageService
-            .liquidityPools
-            .find(liquidityPool => liquidityPool.displayId === liquidityPoolId)
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException("Liquidity pool not found")
-        let state: LiquidityPoolState | DlmmLiquidityPoolState
-        if (liquidityPool.type === LiquidityPoolType.Dlmm) {
-            state = await this.liquidityPoolStateService.getDlmmState(liquidityPoolId)
-        } else {
-            state = await this.liquidityPoolStateService.getState(liquidityPoolId)
-        }
         const dex =
-            this.primaryMemoryStorageService.dexes.find(
-                dex => dex.id === state.static.dex.toString(),
+            this.primaryMemoryStorageService.dexCollection.findOne(
+                {
+                    id: {
+                        $eq: liquidityPool.dex.toString(),
+                    },
+                }
             )
-        if (!dex) throw new DexNotFoundException("Dex not found")
+        if (!dex) throw new DexNotFoundException({
+            id: liquidityPool.dex.toString(),
+        })
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
-                `Dex ${state.static.dex.toString()} not supported`,
+                {
+                    id: liquidityPool.dex.toString(),
+                }
             )
         }
-        if (!bot.activePosition) throw new ActivePositionNotFoundException("Active position not found")
+        if (!bot.activePosition) throw new ActivePositionNotFoundException({
+            botId: bot.id,
+        })
+        const state = await this.liquidityPoolStateService.getState(liquidityPool)
         switch (dex.displayId) {
         case DexId.FlowX:
-            throw new DexNotImplementedException("FlowX reserves not implemented")
+        {
+            return await this.flowxReservesService.reserves(
+                { 
+                    bot, 
+                    state 
+                }
+            )
+        }
         case DexId.Cetus:
-            throw new DexNotImplementedException("Cetus reserves not implemented")
+        {
+            return await this.cetusReservesService.reserves(
+                { 
+                    bot, 
+                    state 
+                }
+            )
+        }
         case DexId.Turbos:
-            throw new DexNotImplementedException("Turbos reserves not implemented")
+        {
+            return await this.turbosReservesService.reserves(
+                { 
+                    bot, 
+                    state 
+                }
+            )
+        }
         case DexId.Momentum:
-            throw new DexNotImplementedException("Momentum reserves not implemented")
+        {
+            return await this.momentumReservesService.reserves(
+                { 
+                    bot, 
+                    state 
+                }
+            )
+        }
         case DexId.Raydium: {
             return await this.raydiumReservesService.reserves(
                 { 
                     bot, 
-                    liquidityPoolId, 
                     state 
                 }
             )
@@ -96,7 +148,6 @@ export class ReservesOrchestratorService {
             return await this.orcaReservesService.reserves(
                 { 
                     bot, 
-                    liquidityPoolId, 
                     state 
                 }
             )
@@ -105,18 +156,19 @@ export class ReservesOrchestratorService {
             return await this.meteoraReservesService.reserves(
                 { 
                     bot, 
-                    liquidityPoolId, 
                     state 
                 }
             )
         }
         default:
-            throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for execute`)
+            throw new DexNotImplementedException({
+                id: state.static.dex.toString(),
+            })
         }
     }   
 }
 
 export interface OrchestrateReservesParams {
     bot: BotSchema
-    liquidityPoolId: LiquidityPoolId
+    liquidityPool: LiquidityPoolSchema
 }

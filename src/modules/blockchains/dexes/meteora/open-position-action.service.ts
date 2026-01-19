@@ -22,7 +22,7 @@ import {
     InvalidPoolTokensException, 
     MissingPositionIdParamException, 
     PrivyMetadataNotFoundException, 
-    SnapshotBalancesNotSetException,
+    SnapshotBalancesNotFoundException,
     TransactionNotExecutedException,
     ErrorTransactionType,
     MissingSolanaTxParamException,
@@ -82,7 +82,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotSetException({
+            throw new SnapshotBalancesNotFoundException({
                 botId: bot.id,
             })
         }

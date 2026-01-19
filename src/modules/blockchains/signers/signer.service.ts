@@ -1,15 +1,30 @@
-import { Injectable } from "@nestjs/common"
-import { PlatformId } from "@modules/typedefs"
-import { BotSchema } from "@modules/databases"
-import { Ed25519Keypair as SuiEd25519Keypair } from "@mysten/sui/keypairs/ed25519"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    PlatformId 
+} from "@modules/typedefs"
+import {
+    BotSchema 
+} from "@modules/databases"
+import {
+    Ed25519Keypair as SuiEd25519Keypair 
+} from "@mysten/sui/keypairs/ed25519"
 import {
     createKeyPairFromBytes,
     createSignerFromKeyPair,
     KeyPairSigner,
 } from "@solana/kit"
-import { ethers } from "ethers"
+import {
+    ethers 
+} from "ethers"
 import bs58 from "bs58"
-import { DerivedAesKeyService } from "@modules/derived"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
+import {
+    BotEncryptedPrivateKeyNotFoundException 
+} from "@exceptions"
 
 export interface WithSignerParams<TSigner, TResponse = void> {
   bot: BotSchema;
@@ -31,6 +46,11 @@ export class SignerService {
         factory,
     }: WithSignerParams<TSigner, TResponse>): Promise<TResponse> {
         let privateKey: string | null = null
+        if (!bot.encryptedPrivateKeyPayload) {
+            throw new BotEncryptedPrivateKeyNotFoundException({
+                botId: bot.id,
+            })
+        }
         try {
             switch (platformId) {
             case PlatformId.Solana:

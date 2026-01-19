@@ -1,11 +1,22 @@
 // app.module.ts
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./binance.module-definition"   
-import { BinanceLastPriceService } from "./binance-last-price.service"
-import { BinanceOrderBookService } from "./binance-order-book.service"
-import { BinanceUtilsService } from "./binance-utils.service"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./binance.module-definition"   
+import {
+    BinanceLastPriceService 
+} from "./last-price.service"
+import {
+    BinanceOrderBookService 
+} from "./order-book.service"
+import {
+    BinanceTokenRegistryService 
+} from "./token-registry.service"
 
-@Module({})
+@Module({
+})
 export class BinanceModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -14,7 +25,7 @@ export class BinanceModule extends ConfigurableModuleClass {
         const providers = [
             BinanceLastPriceService,
             BinanceOrderBookService,
-            BinanceUtilsService,
+            BinanceTokenRegistryService,
         ]
         return {
             ...dynamicModule,

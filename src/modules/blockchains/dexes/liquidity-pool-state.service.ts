@@ -1,65 +1,74 @@
-import { LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
-import { CacheKey, createCacheKey, DynamicDlmmLiquidityPoolInfoCacheResult, DynamicClmmLiquidityPoolInfoCacheResult, InjectRedisCache } from "@modules/cache"
-import { Injectable } from "@nestjs/common"
-import { Cache } from "cache-manager"
-import { DlmmLiquidityPoolState, LiquidityPoolState } from "../interfaces"
+import {
+    LiquidityPoolSchema, LiquidityPoolType 
+} from "@modules/databases"
+import {
+    CacheService, 
+    CacheKey
+} from "@modules/cache"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    DlmmLiquidityPoolState, ClmmLiquidityPoolState 
+} from "../interfaces"
 import { 
-    DynamicDlmmLiquidityPoolInfoNotFoundException, 
-    DynamicClmmLiquidityPoolInfoNotFoundException, 
-    LiquidityPoolNotFoundException 
+    CacheNotFoundException,
 } from "@modules/exceptions"
-import { InjectSuperJson } from "@modules/mixin"
-import SuperJSON from "superjson"
 
 @Injectable()
 export class LiquidityPoolStateService {
     constructor(
-        private readonly memoryStorageService: PrimaryMemoryStorageService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
+        private readonly cacheService: CacheService,
     ) {}
 
-    async getState(
-        liquidityPoolId: LiquidityPoolId,
-    ): Promise<LiquidityPoolState> {
-        const staticLiquidityPool = this.memoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
+    private async getClmmState(
+        liquidityPool: LiquidityPoolSchema,
+    ): Promise<ClmmLiquidityPoolState> {
+        const dynamicLiquidityPoolInfoCacheResult = await this.cacheService.get(
+            {
+                key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                args: [liquidityPool.id.toString()],
+            }
         )
-        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-        const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
-            createCacheKey(
-                CacheKey.DynamicClmmLiquidityPoolInfo, 
-                liquidityPoolId 
-            ))
-        const dynamicLiquidityPoolInfo = this.superjson
-            .parse<DynamicClmmLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfoCacheResult as string)
-        if (!dynamicLiquidityPoolInfo) throw new DynamicClmmLiquidityPoolInfoNotFoundException(liquidityPoolId)
+        if (!dynamicLiquidityPoolInfoCacheResult) throw new CacheNotFoundException({
+            key: CacheKey.DynamicClmmLiquidityPoolInfo,
+            args: [liquidityPool.id.toString()],
+        })
         return {
-            static: staticLiquidityPool,
-            dynamic: dynamicLiquidityPoolInfo,
+            static: liquidityPool,
+            dynamic: dynamicLiquidityPoolInfoCacheResult,
         }
     }
 
-    async getDlmmState(
-        liquidityPoolId: LiquidityPoolId,
+    private async getDlmmState(
+        liquidityPool: LiquidityPoolSchema,
     ): Promise<DlmmLiquidityPoolState> {
-        const staticLiquidityPool = this.memoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
+        const dynamicLiquidityPoolInfoCacheResult = await this.cacheService.get(
+            {
+                key: CacheKey.DynamicDlmmLiquidityPoolInfo,
+                args: [liquidityPool.id],
+            }
         )
-        if (!staticLiquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
-        const dynamicLiquidityPoolInfoCacheResult = await this.cacheManager.get<string>(
-            createCacheKey(
-                CacheKey.DynamicDlmmLiquidityPoolInfo,
-                liquidityPoolId
-            ))
-        const dynamicLiquidityPoolInfo = this.superjson
-            .parse<DynamicDlmmLiquidityPoolInfoCacheResult>(dynamicLiquidityPoolInfoCacheResult as string)
-        if (!dynamicLiquidityPoolInfo) throw new DynamicDlmmLiquidityPoolInfoNotFoundException(liquidityPoolId)
+        if (!dynamicLiquidityPoolInfoCacheResult) throw new CacheNotFoundException({
+            key: CacheKey.DynamicDlmmLiquidityPoolInfo,
+            args: [liquidityPool.id.toString()],
+        })
         return {
-            static: staticLiquidityPool,
-            dynamic: dynamicLiquidityPoolInfo,
+            static: liquidityPool,
+            dynamic: dynamicLiquidityPoolInfoCacheResult,
         }
     }   
+
+    async getState(
+        liquidityPool: LiquidityPoolSchema,
+    ): Promise<
+    ClmmLiquidityPoolState | DlmmLiquidityPoolState
+    > {
+        switch (liquidityPool.type) {
+        case LiquidityPoolType.Clmm:
+            return await this.getClmmState(liquidityPool)
+        case LiquidityPoolType.Dlmm:
+            return await this.getDlmmState(liquidityPool)
+        }
+    }
 }

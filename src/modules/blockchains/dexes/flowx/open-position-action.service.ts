@@ -29,7 +29,7 @@ import {
 } from "../../math"
 import {
     InvalidPoolTokensException,
-    SnapshotBalancesNotSetException,
+    SnapshotBalancesNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
@@ -128,7 +128,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         if (
             !bot.snapshots
         ) {
-            throw new SnapshotBalancesNotSetException({
+            throw new SnapshotBalancesNotFoundException({
                 botId: bot.id,
             })
         }

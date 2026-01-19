@@ -60,7 +60,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
     /**
      * Fetch the prices interval
      */
-    @Interval(envConfig().time.interval.coingecko.rest)
+    @Interval(envConfig().priceFeeds.coingecko.interval.rest)
     async fetchPricesInterval() {
         await this.fetchPrices()
     }
@@ -74,7 +74,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         try {  
             // we split the coin ids into chunks
             const chunks = _.chunk(symbols,
-                envConfig().chunks.coingecko.rest)
+                envConfig().priceFeeds.coingecko.chunks.rest)
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {

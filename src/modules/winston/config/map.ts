@@ -16,6 +16,11 @@ import {
     GoogleDriveFileUploadedMessage,
     LiquidityPoolFetchedErrorMessage,
     LiquidityPoolWsErrorMessage,
+    NoAvailableRpcMessage,
+    OpenPositionEnqueueFailedMessage,
+    OpenPositionEnqueuedMessage,
+    ClosePositionEnqueuedMessage,
+    ClosePositionEnqueueFailedMessage,
     OpenPositionTransactionExecutedMessage,
     OpenPositionTransactionFailedMessage,
     PythPricesFetchedMessage,
@@ -25,7 +30,13 @@ import {
     PythSubscriptionsClosedMessage,
     PythSubscriptionsOpenedMessage,
     SwapTransactionExecutedMessage,
-    SwapTransactionFailedMessage
+    SwapTransactionFailedMessage,
+    ErrorDecryptingJwtSecretKeyMessage,
+    ErrorDecryptingAesKeyMessage,
+    WebsocketSubscriptionResolvedMessage,
+    WebsocketSubscriptionErrorMessage,
+    WebsocketSubscriptionClosedMessage,
+    WebsocketSubscriptionOpenedMessage
 } from "./types"
 
 export const configMap = {
@@ -237,5 +248,93 @@ export const configMap = {
         loki: true,
         messageType: {
         } as CoingeckoPricesFetchFailedMessage,
+    },
+    // No Available RPCs
+    [WinstonLog.NoAvailableRpc]: {
+        name: WinstonLog.NoAvailableRpc,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as NoAvailableRpcMessage,
+    },
+    // Open Position Enqueued
+    [WinstonLog.OpenPositionEnqueued]: {
+        name: WinstonLog.OpenPositionEnqueued,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as OpenPositionEnqueuedMessage,
+    },
+    // Open Position Enqueue Failed
+    [WinstonLog.OpenPositionEnqueueFailed]: {
+        name: WinstonLog.OpenPositionEnqueueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionEnqueueFailedMessage,
+    },
+    // Close Position Enqueued
+    [WinstonLog.ClosePositionEnqueued]: {
+        name: WinstonLog.ClosePositionEnqueued,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {  
+        } as ClosePositionEnqueuedMessage,
+    },
+    // Close Position Enqueue Failed
+    [WinstonLog.ClosePositionEnqueueFailed]: {
+        name: WinstonLog.ClosePositionEnqueueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionEnqueueFailedMessage,
+    },
+    // Error Decrypting JWT Secret Key
+    [WinstonLog.ErrorDecryptingJwtSecretKey]: {
+        name: WinstonLog.ErrorDecryptingJwtSecretKey,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ErrorDecryptingJwtSecretKeyMessage,
+    },
+    // Error Decrypting AES Key
+    [WinstonLog.ErrorDecryptingAesKey]: {
+        name: WinstonLog.ErrorDecryptingAesKey,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ErrorDecryptingAesKeyMessage,
+    },
+    // Websocket Subscription Opened
+    [WinstonLog.WebsocketSubscriptionOpened]: {
+        name: WinstonLog.WebsocketSubscriptionOpened,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as WebsocketSubscriptionOpenedMessage,
+    },
+    // Websocket Subscription Closed
+    [WinstonLog.WebsocketSubscriptionClosed]: {
+        name: WinstonLog.WebsocketSubscriptionClosed,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as WebsocketSubscriptionClosedMessage,
+    },
+    // Websocket Subscription Error
+    [WinstonLog.WebsocketSubscriptionError]: {
+        name: WinstonLog.WebsocketSubscriptionError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as WebsocketSubscriptionErrorMessage,
+    },
+    // Websocket Subscription Resolved
+    [WinstonLog.WebsocketSubscriptionResolved]: {
+        name: WinstonLog.WebsocketSubscriptionResolved,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as WebsocketSubscriptionResolvedMessage,
     },
 }

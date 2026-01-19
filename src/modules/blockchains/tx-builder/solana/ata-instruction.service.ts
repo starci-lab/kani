@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     Address,
     Instruction,
@@ -24,12 +26,22 @@ import {
     getInitializeAccountInstruction,
     getCloseAccountInstruction,
 } from "@solana-program/token"
-import { getCreateAccountWithSeedInstruction } from "@solana-program/system"
+import {
+    getCreateAccountWithSeedInstruction 
+} from "@solana-program/system"
 import BN from "bn.js"
-import { sha256 } from "@noble/hashes/sha2"
-import { PublicKey } from "@solana/web3.js"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    sha256 
+} from "@noble/hashes/sha2"
+import {
+    PublicKey 
+} from "@solana/web3.js"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 
 export const WSOL_MINT_ADDRESS = address(
     "So11111111111111111111111111111111111111112",
@@ -76,7 +88,8 @@ export class AtaInstructionService {
         const encodedAccount = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                return await fetchEncodedAccount(rpc, ataAddress)
+                return await fetchEncodedAccount(rpc,
+                    ataAddress)
             },
         })
         if (encodedAccount.exists) {
@@ -169,10 +182,16 @@ export class AtaInstructionService {
     }: GeneratePubKeyParams): Promise<GeneratePubKeyResult> {
         const { address } = await generateKeyPairSigner()
         const seed = assignSeed
-            ? btoa(assignSeed).slice(0, 32)
-            : address.slice(0, 32)
-        const publicKey = this.createWithSeed(fromAddress, seed, programAddress)
-        return { publicKey, seed }
+            ? btoa(assignSeed).slice(0,
+                32)
+            : address.slice(0,
+                32)
+        const publicKey = this.createWithSeed(fromAddress,
+            seed,
+            programAddress)
+        return {
+            publicKey, seed 
+        }
     }
 
     private createWithSeed(

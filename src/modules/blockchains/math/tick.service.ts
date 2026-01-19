@@ -3,7 +3,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    computeDenomination 
+    toDecimalAmount 
 } from "@modules/utils"
 import BN from "bn.js"
 import {
@@ -13,8 +13,8 @@ import {
     ClmmLiquidityPoolState 
 } from "../interfaces"
 import {
-    ,
-    SnapshotBalancesNotSetException, 
+    CacheStaleException,
+    SnapshotBalancesNotFoundException, 
     TokenNotFoundException
 } from "@modules/exceptions"
 import {
@@ -24,9 +24,12 @@ import {
     LiquidityMath 
 } from "@raydium-io/raydium-sdk-v2"
 import {
-    ClmmTickFormulaService 
+    ClmmTickFormulaService,
+    ClmmLiquidityFormulaService
 } from "../formulas"
-// import assert from "assert"
+import {
+    CacheKey 
+} from "@modules/cache"
 
 @Injectable()
 export class TickMathService {
@@ -34,6 +37,7 @@ export class TickMathService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly priceService: PriceService,
         private readonly clmmTickFormulaService: ClmmTickFormulaService,
+        private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) {}
 
     public async getTickBounds(
@@ -42,19 +46,11 @@ export class TickMathService {
             bot
         }: GetTickBoundsParams
     ) {
-        const {
-            snapshotTargetBalanceAmount,
-            snapshotQuoteBalanceAmount,
-            targetToken,
-            quoteToken
-        } = bot
-        if (
-            !snapshotTargetBalanceAmount ||
-            !snapshotQuoteBalanceAmount ||
-            !targetToken ||
-            !quoteToken
-        ) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+        // check if the bot has snapshots
+        if (!bot.snapshots) {
+            throw new SnapshotBalancesNotFoundException({
+                botId: bot.id,
+            })
         }
     
         const {
@@ -63,49 +59,56 @@ export class TickMathService {
         } = state
     
         const targetIsA =
-            targetToken.toString() === state.static.tokenA.toString()
+            bot.targetToken.toString() === state.static.tokenA.toString()
     
-        const targetTokenEntity = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === targetToken.toString()
-        )
+        const targetTokenEntity = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken.toString()
+            }
+        })
         if (!targetTokenEntity) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
         }
-    
-        const quoteTokenEntity = this.primaryMemoryStorageService.tokens.find(
-            token => token.id === quoteToken.toString()
-        )
+        const quoteTokenEntity = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken.toString()
+            }
+        })
         if (!quoteTokenEntity) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            })
         }
-    
         const tokenAEntity = targetIsA ? targetTokenEntity : quoteTokenEntity
         const tokenBEntity = targetIsA ? quoteTokenEntity : targetTokenEntity
-    
-        const snapshotTokenAAmount = targetIsA
-            ? snapshotTargetBalanceAmount
-            : snapshotQuoteBalanceAmount
-    
-        const snapshotTokenBAmount = targetIsA
-            ? snapshotQuoteBalanceAmount
-            : snapshotTargetBalanceAmount
     
         // we get the price from the oracle or the spot price
         const { isStale, price } = await this.priceService.resolvePrice({
             tokenId: tokenAEntity.displayId,
         })
         if (isStale) {
-            throw new PriceStaleException("Price is stale")
+            throw new CacheStaleException({
+                key: CacheKey.AggregatedTokenPrice,
+                args: {
+                    tokenId: tokenAEntity.id,
+                },
+            })
         }
         // token amounts in B denomination
-        const tokenAAmountInB = computeDenomination(
-            new BN(snapshotTokenAAmount),
-            tokenAEntity.decimals
+        const tokenAAmountInB = toDecimalAmount(
+            {
+                amount: new BN(bot.snapshots.targetBalanceAmount),
+                decimals: new Decimal(tokenAEntity.decimals),
+            }
         ).mul(price)
     
-        const tokenBAmountInB = computeDenomination(
-            new BN(snapshotTokenBAmount),
-            tokenBEntity.decimals
+        const tokenBAmountInB = toDecimalAmount(
+            {
+                amount: new BN(bot.snapshots.quoteBalanceAmount),
+                decimals: new Decimal(tokenBEntity.decimals),
+            }
         )
     
         // S = tickUpper - tickLower
@@ -118,41 +121,40 @@ export class TickMathService {
         // we define a function to compute the R value
         const computeR = (tickLower: Decimal, tickUpper: Decimal): Decimal => {
             const amountA = new BN(1_000_000_000)
-    
-            const liquidity = LiquidityMath.getLiquidityFromTokenAmountA(
-                this.clmmTickFormulaService.tickToSqrtPriceX64({
-                    tickIndex: tickLower,
-                }),
-                this.clmmTickFormulaService.tickToSqrtPriceX64({
-                    tickIndex: tickUpper,
-                }),
+            const liquidity = this.clmmLiquidityFormulaService.computeLiquidity({
+                tickLower,
+                tickUpper,
+                tickCurrent: new Decimal(tickCurrent.toString()),
                 amountA,
-                false
-            )
-    
+                amountB: new BN(0),
+            })
             const { amountA: amountAOut, amountB: amountBOut } =
                 LiquidityMath.getAmountsFromLiquidity(
-                    this.clmmTickFormulaService.tickToSqrtPriceX64({
+                    this.clmmTickFormulaService.tickToSqrtPrice({
                         tickIndex: new Decimal(tickCurrent.toString()),
                     }),
-                    this.clmmTickFormulaService.tickToSqrtPriceX64({
+                    this.clmmTickFormulaService.tickToSqrtPrice({
                         tickIndex: tickLower,
                     }),
-                    this.clmmTickFormulaService.tickToSqrtPriceX64({
+                    this.clmmTickFormulaService.tickToSqrtPrice({
                         tickIndex: tickUpper,
                     }),
                     liquidity,
                     false
                 )
     
-            const amountAOutInB = computeDenomination(
-                new BN(amountAOut),
-                tokenAEntity.decimals
+            const amountAOutInB = toDecimalAmount(
+                {
+                    amount: new BN(amountAOut),
+                    decimals: new Decimal(tokenAEntity.decimals),
+                }
             ).mul(price)
     
-            const amountBOutInB = computeDenomination(
-                new BN(amountBOut),
-                tokenBEntity.decimals
+            const amountBOutInB = toDecimalAmount(
+                {
+                    amount: new BN(amountBOut),
+                    decimals: new Decimal(tokenBEntity.decimals),
+                }
             )
     
             return new Decimal(
@@ -223,7 +225,7 @@ export class TickMathService {
     //         quoteToken
     //     } = bot
     //     if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !targetToken || !quoteToken) {
-    //         throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+    //         throw new SnapshotBalancesNotFoundException("Snapshot balances not set")
     //     }
     //     const {
     //         dynamic: { tickCurrent },
@@ -334,7 +336,7 @@ export class TickMathService {
 }
 
 export interface GetTickBoundsParams {
-    state: LiquidityPoolState
+    state: ClmmLiquidityPoolState
     bot: BotSchema
 }
 

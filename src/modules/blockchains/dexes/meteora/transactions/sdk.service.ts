@@ -13,14 +13,28 @@ import {
     StrategyParameters,
     toAmountIntoBins,
 } from "@meteora-ag/dlmm"
-import { BotSchema, PrimaryMemoryStorageService, MeteoraLiquidityPoolMetadata} from "@modules/databases"
-import { Injectable } from "@nestjs/common"     
-import { AccountMeta, AccountRole, address, Address, Instruction } from "@solana/kit"
-import { DLMMOverflowDefaultBinArrayBitmapException, InvalidPoolTokensException } from "@modules/exceptions"
+import {
+    BotSchema, PrimaryMemoryStorageService, MeteoraLiquidityPoolMetadata
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"     
+import {
+    AccountMeta, AccountRole, address, Address, Instruction 
+} from "@solana/kit"
+import {
+    InvalidPoolTokensException, DLMMOverflowDefaultBinArrayBitmapException 
+} from "@modules/exceptions"
 import BN from "bn.js"
-import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
-import { AnchorUtilsService, WSOL_MINT_ADDRESS } from "../../../tx-builder"
-import { PublicKey } from "@solana/web3.js"
+import {
+    SYSTEM_PROGRAM_ADDRESS 
+} from "@solana-program/system"
+import {
+    AnchorUtilsService, WSOL_MINT_ADDRESS 
+} from "../../../tx-builder"
+import {
+    PublicKey 
+} from "@solana/web3.js"
 import { 
     array, 
     BeetArgsStruct, 
@@ -35,11 +49,21 @@ import {
     bool,
     coption
 } from "@metaplex-foundation/beet"
-import { DlmmLiquidityPoolState } from "../../../interfaces"
-import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token"
-import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
-import { EventAuthorityService } from "./event-authority.service"
+import {
+    DlmmLiquidityPoolState 
+} from "../../../interfaces"
+import {
+    TOKEN_2022_PROGRAM_ADDRESS 
+} from "@solana-program/token-2022"
+import {
+    TOKEN_PROGRAM_ADDRESS 
+} from "@solana-program/token"
+import {
+    MEMO_PROGRAM_ADDRESS 
+} from "@solana-program/memo"
+import {
+    EventAuthorityService 
+} from "./event-authority.service"
 
 export const DEFAULT_INIT_BIN_ARRAY_CU = 350_000
 export const DEFAULT_ADD_LIQUIDITY_CU = 1_000_000
@@ -67,10 +91,19 @@ export class MeteoraSdkService {
         ataAddressB,
     }: DepositWithRebalanceEndpointParams): Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
-        const tokenA = this.primaryMemoryStorageService.tokens.find((t) => t.id === bot.targetToken.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens.find((t) => t.id === bot.quoteToken.toString())
-        if (!tokenA || !tokenB) throw new InvalidPoolTokensException("Invalid pool tokens")
-    
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken.toString(),
+            },
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken.toString(),
+            },
+        })
+        if (!tokenA || !tokenB) throw new InvalidPoolTokensException({
+            liquidityPoolId: state.static.displayId,
+        })
         const {
             programAddress,
             reserveXAddress,
@@ -90,7 +123,8 @@ export class MeteoraSdkService {
         const initTracking = new Set<Address>()
         // need to init bitmap?
         if (overflowDefaultBinArrayBitmap) {
-            throw new DLMMOverflowDefaultBinArrayBitmapException("DLMM overflow default bin array bitmap")
+            throw new DLMMOverflowDefaultBinArrayBitmapException({
+            })
         }
         // derive bin array PDAs
         const binArrayPubkeys = binArrayIndexes.map(
@@ -102,16 +136,25 @@ export class MeteoraSdkService {
                 )[0]
         )
         // init bin arrays
-        for (const [idx, binArrayPubkey] of binArrayPubkeys.entries()) {
+        for (const [idx,
+            binArrayPubkey] of binArrayPubkeys.entries()) {
             if (initTracking.has(address(binArrayPubkey.toString()))) continue
             initTracking.add(address(binArrayPubkey.toString()))
             const initBinArrayIx: Instruction = {
                 programAddress: address(programAddress),
                 accounts: [
-                    { address: address(state.static.poolAddress), role: AccountRole.READONLY },
-                    { address: address(binArrayPubkey.toString()), role: AccountRole.WRITABLE },
-                    { address: address(bot.accountAddress), role: AccountRole.WRITABLE_SIGNER },
-                    { address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY },
+                    {
+                        address: address(state.static.poolAddress), role: AccountRole.READONLY 
+                    },
+                    {
+                        address: address(binArrayPubkey.toString()), role: AccountRole.WRITABLE 
+                    },
+                    {
+                        address: address(bot.accountAddress), role: AccountRole.WRITABLE_SIGNER 
+                    },
+                    {
+                        address: SYSTEM_PROGRAM_ADDRESS, role: AccountRole.READONLY 
+                    },
                 ],
                 data: this.anchorUtilsService.encodeAnchorIx(
                     "initialize_bin_array",
@@ -135,7 +178,10 @@ export class MeteoraSdkService {
             }
         )
 
-        const { bitFlag, ...baseAndDelta } = buildBitFlagAndNegateStrategyParameters(x0, y0, deltaX, deltaY)
+        const { bitFlag, ...baseAndDelta } = buildBitFlagAndNegateStrategyParameters(x0,
+            y0,
+            deltaX,
+            deltaY)
     
     
         const addParam: AddLiquidityParamsType = {
@@ -165,11 +211,15 @@ export class MeteoraSdkService {
                 totalAAmount: acc.totalAAmount.add(bin.amountX),
                 totalBAmount: acc.totalBAmount.add(bin.amountY),
             }),
-            { totalAAmount: new BN(0), totalBAmount: new BN(0) }
+            {
+                totalAAmount: new BN(0), totalBAmount: new BN(0) 
+            }
         )
     
-        const maxDepositAAmount = getSlippageMaxAmount(totalAAmount, slippagePercentage)
-        const maxDepositBAmount = getSlippageMaxAmount(totalBAmount, slippagePercentage)
+        const maxDepositAAmount = getSlippageMaxAmount(totalAAmount,
+            slippagePercentage)
+        const maxDepositBAmount = getSlippageMaxAmount(totalBAmount,
+            slippagePercentage)
         // shrink mode: ALWAYS ShrinkBoth when not parallel
         const shrinkMode = ShrinkMode.ShrinkBoth
     
@@ -258,7 +308,7 @@ export class MeteoraSdkService {
                 "rebalance_liquidity",
                 RebalanceLiquidityArgs.serialize({
                     params: {
-                        activeId: state.dynamic.activeId,
+                        activeId: state.dynamic.activeId.toNumber(),
                         maxActiveBinSlippage,
                         shouldClaimFee: false,
                         shouldClaimReward: false,
@@ -308,7 +358,8 @@ export interface DepositWithRebalanceEndpointParams {
 
 export const InitializeBinArrayArgs = new BeetArgsStruct(
     [
-        ["binArrayIndex", i64],
+        ["binArrayIndex",
+            i64],
     ],
     "InitializeBinArrayArgs"
 )
@@ -328,15 +379,25 @@ export interface AddLiquidityParamsType {
 export const AddLiquidityParams =
     new FixableBeetArgsStruct<AddLiquidityParamsType>(
         [
-            ["minDeltaId", i32],
-            ["maxDeltaId", i32],
-            ["x0", u64],
-            ["y0", u64],
-            ["deltaX", u64],
-            ["deltaY", u64],
-            ["bitFlag", u8],
-            ["favorXInActiveId", bool],
-            ["padding", uniformFixedSizeArray(u8, 16)],
+            ["minDeltaId",
+                i32],
+            ["maxDeltaId",
+                i32],
+            ["x0",
+                u64],
+            ["y0",
+                u64],
+            ["deltaX",
+                u64],
+            ["deltaY",
+                u64],
+            ["bitFlag",
+                u8],
+            ["favorXInActiveId",
+                bool],
+            ["padding",
+                uniformFixedSizeArray(u8,
+                    16)],
         ],
         "addLiquidityParams"
     )
@@ -350,10 +411,15 @@ export interface RemoveLiquidityParamsType {
 
 export const RemoveLiquidityParams = new FixableBeetArgsStruct<RemoveLiquidityParamsType>(
     [
-        ["minBinId", coption(i32)],
-        ["maxBinId", coption(i32)],
-        ["bps", u16],
-        ["padding", uniformFixedSizeArray(u8, 16)],
+        ["minBinId",
+            coption(i32)],
+        ["maxBinId",
+            coption(i32)],
+        ["bps",
+            u16],
+        ["padding",
+            uniformFixedSizeArray(u8,
+                16)],
     ],
     "removeLiquidityParams"
 )
@@ -379,18 +445,31 @@ export interface RebalanceLiquidityParamsType {
 export const RebalanceLiquidityParams =
     new FixableBeetArgsStruct<RebalanceLiquidityParamsType>(
         [
-            ["activeId", i32],
-            ["maxActiveBinSlippage", u16],
-            ["shouldClaimFee", bool],
-            ["shouldClaimReward", bool],
-            ["minWithdrawXAmount", u64],
-            ["maxDepositXAmount", u64],
-            ["minWithdrawYAmount", u64],
-            ["maxDepositYAmount", u64],
-            ["shrinkMode", u8],
-            ["padding", uniformFixedSizeArray(u8, 31)],
-            ["removes", array(RemoveLiquidityParams)],
-            ["adds", array(AddLiquidityParams)],
+            ["activeId",
+                i32],
+            ["maxActiveBinSlippage",
+                u16],
+            ["shouldClaimFee",
+                bool],
+            ["shouldClaimReward",
+                bool],
+            ["minWithdrawXAmount",
+                u64],
+            ["maxDepositXAmount",
+                u64],
+            ["minWithdrawYAmount",
+                u64],
+            ["maxDepositYAmount",
+                u64],
+            ["shrinkMode",
+                u8],
+            ["padding",
+                uniformFixedSizeArray(u8,
+                    31)],
+            ["removes",
+                array(RemoveLiquidityParams)],
+            ["adds",
+                array(AddLiquidityParams)],
         ],
         "rebalanceLiquidityParams"
     )
@@ -405,7 +484,8 @@ export interface RemainingAccountsInfoType {
   
 export const RemainingAccountsInfoArgs =
     new FixableBeetArgsStruct<RemainingAccountsInfoType>(
-        [["slices", array(u8)]],
+        [["slices",
+            array(u8)]],
         "remainingAccountsInfo"
     )
   
@@ -421,8 +501,10 @@ export interface RebalanceLiquidityArgsType {
 export const RebalanceLiquidityArgs =
     new FixableBeetArgsStruct<RebalanceLiquidityArgsType>(
         [
-            ["params", RebalanceLiquidityParams],
-            ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+            ["params",
+                RebalanceLiquidityParams],
+            ["remainingAccountsInfo",
+                RemainingAccountsInfoArgs],
         ],
         "rebalanceLiquidityArgs"
     )

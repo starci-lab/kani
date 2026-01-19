@@ -1,22 +1,37 @@
-import { Injectable } from "@nestjs/common"
-import { JwtService as NestJwtService } from "@nestjs/jwt"
-import { v4 as uuidv4 } from "uuid"
-import { envConfig } from "@modules/env"
-import { AuthCredentials, JwtRefreshTokenPayload, JwtAccessTokenPayload } from "../types"
-import { AsyncService, DayjsService } from "@modules/mixin"
-import { InjectPrimaryMongoose, SessionSchema } from "@modules/databases"
-import { ClientSession, Connection } from "mongoose"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { MsService } from "@modules/mixin"
-import { UserIdRequiredToGenerateAccessTokenException } from "@modules/exceptions"
-import { Cache } from "cache-manager"
-import { EncryptedPayload } from "@modules/typedefs"
-import { DerivedJwtSecretService } from "@modules/derived"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    JwtService as NestJwtService 
+} from "@nestjs/jwt"
+import {
+    v4 as uuidv4 
+} from "uuid"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    AuthCredentials, JwtRefreshTokenPayload, JwtAccessTokenPayload 
+} from "../types"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    UserIdRequiredToGenerateAccessTokenException 
+} from "@modules/exceptions"
+import {
+    EncryptedPayload 
+} from "@modules/typedefs"
+import {
+    DerivedJwtSecretService 
+} from "@modules/derived"
+import {
+    CacheService, CacheKey
+} from "@modules/cache"
 
 export interface GenerateParams {
     id: string
     mfaEnabled: boolean
-    session?: ClientSession
     encryptedTotpSecretPayload?: EncryptedPayload
 }
 
@@ -24,12 +39,7 @@ export interface GenerateParams {
 export class JwtAuthService {
     constructor(
         private readonly jwtService: NestJwtService,
-        private readonly dayjsService: DayjsService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        private readonly msService: MsService,
+        private readonly cacheService: CacheService,
         private readonly asyncService: AsyncService,
         private readonly derivedJwtSecretService: DerivedJwtSecretService
     ) { }
@@ -43,13 +53,13 @@ export class JwtAuthService {
         {
             id,
             mfaEnabled,
-            session,
             encryptedTotpSecretPayload,
         }: GenerateParams,
     ): Promise<AuthCredentials> {
         if (!id) {
             throw new UserIdRequiredToGenerateAccessTokenException(
-                "User ID is required to generate access token and refresh token"
+                {
+                }
             )
         }
         // generate sessionId
@@ -62,7 +72,8 @@ export class JwtAuthService {
             mfaEnabled, 
             // encrypted TOTP secret for 2FA if user has enabled two-factor authentication
             encryptedTotpSecretPayload,
-        }, {
+        },
+        {
             secret: this.derivedJwtSecretService.key,
             expiresIn: envConfig().jwt.accessToken.expiration
         })
@@ -84,39 +95,17 @@ export class JwtAuthService {
                 }
             )
         }
-        // Persist sessionId and refreshToken in DB and/or cache here
+        // Persist sessionId and refreshToken in cache here
         await this.asyncService.allIgnoreError([
-            // Persist sessionId in DB or cache here
+            // Persist sessionId in cache here
             (async () => {
-                await this.cacheManager.set(
-                    createCacheKey(
-                        CacheKey.SessionId,
-                        sessionId
-                    ),
-                    sessionId,
-                    this.msService.fromString(
-                        envConfig().jwt.refreshToken.expiration
-                    )
-                )
+                await this.cacheService.set(
+                    {
+                        key: CacheKey.SessionId,
+                        args: [sessionId],
+                        cacheResult: true,
+                    })
             })(),
-            // Persist refreshToken in DB or cache here
-            (async () => {
-                await this.connection.model(
-                    SessionSchema.name
-                ).insertOne(
-                    {
-                        sessionId,
-                        user: id,
-                        // expiresAt is the date and time when the session will expire
-                        expiresAt: this.dayjsService.fromMs(
-                            envConfig().jwt.refreshToken.expiration
-                        ).toDate()
-                    },
-                    {
-                        session
-                    }
-                )
-            })()
         ])
         return {
             accessToken,
@@ -127,9 +116,10 @@ export class JwtAuthService {
     // verify access token
     public async verifyAccessToken(token: string): Promise<JwtAccessTokenPayload | null> {
         try {
-            return await this.jwtService.verifyAsync<JwtAccessTokenPayload>(token, {
-                secret: this.derivedJwtSecretService.key,
-            })
+            return await this.jwtService.verifyAsync<JwtAccessTokenPayload>(token,
+                {
+                    secret: this.derivedJwtSecretService.key,
+                })
         } catch {
             return null
         }
@@ -140,9 +130,10 @@ export class JwtAuthService {
         token: string
     ): Promise<JwtRefreshTokenPayload | null> {
         try {
-            const decoded = await this.jwtService.verifyAsync<JwtRefreshTokenPayload>(token, {
-                secret: this.derivedJwtSecretService.key,
-            })
+            const decoded = await this.jwtService.verifyAsync<JwtRefreshTokenPayload>(token,
+                {
+                    secret: this.derivedJwtSecretService.key,
+                })
             return {
                 sessionId: decoded.sessionId,
                 id: decoded.id,

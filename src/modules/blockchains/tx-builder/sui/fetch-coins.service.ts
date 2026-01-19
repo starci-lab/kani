@@ -1,10 +1,22 @@
-import { CoinAsset } from "../../types"
-import { Injectable } from "@nestjs/common"
+import {
+    CoinAsset 
+} from "../../types"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
-import { Transaction, TransactionResult } from "@mysten/sui/transactions"
-import { CoinAssetNotFoundException } from "@modules/exceptions"
-import { RpcExecutorService } from "@modules/blockchains"
-import { RpcAccessType } from "@modules/filesystem"
+import {
+    Transaction, TransactionResult 
+} from "@mysten/sui/transactions"
+import {
+    CoinAssetNotFoundException 
+} from "@modules/exceptions"
+import {
+    RpcExecutorService 
+} from "@modules/blockchains"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
 
 @Injectable()
 export class FetchCoinsService {
@@ -40,7 +52,8 @@ export class FetchCoinsService {
                 })))
             cursor = result.nextCursor
         } while (cursor)
-        const totalBalance = coinAssets.reduce((acc, coin) => acc.add(coin.coinAmount), new BN(0))
+        const totalBalance = coinAssets.reduce((acc, coin) => acc.add(coin.coinAmount),
+            new BN(0))
         return {
             coinAssets,
             totalBalance: new BN(totalBalance),
@@ -55,14 +68,16 @@ export class FetchCoinsService {
         Promise<ResolveCoinAssetResult> 
     {
         if (!coinAssets.length) {
-            throw new CoinAssetNotFoundException({})
+            throw new CoinAssetNotFoundException({
+            })
         }
         if (coinAssets.length === 1) {
             return {
                 coinAsset: coinAssets[0],
             }
         }
-        const [primaryCoinAsset, ...restCoinAssets] = coinAssets
+        const [primaryCoinAsset,
+            ...restCoinAssets] = coinAssets
         const mergedCoinAssetTxResult = txb.mergeCoins(
             primaryCoinAsset.coinRef.objectId, 
             restCoinAssets.map((coin) => coin.coinRef.objectId)

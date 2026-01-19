@@ -1,9 +1,18 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./coingecko.module-definition"
-import { CoingeckoTokenRegistryService } from "./token-registry.service"
-import { CoingeckoRestService } from "./rest.service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./coingecko.module-definition"
+import {
+    CoingeckoTokenRegistryService 
+} from "./token-registry.service"
+import {
+    CoingeckoRestService 
+} from "./rest.service"
 
-@Module({})
+@Module({
+})
 export class CoingeckoModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)

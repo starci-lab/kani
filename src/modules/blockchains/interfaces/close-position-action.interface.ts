@@ -1,21 +1,25 @@
-import { BotSchema } from "@modules/databases"
+import {
+    BotSchema 
+} from "@modules/databases"
 import { 
     LiquidityPoolState, 
-    DlmmLiquidityPoolState, 
     SolanaTx
 } from "./types"
-import { SignatureWithBytes } from "@mysten/sui/cryptography"
-import { PrepareClosePositionParams, PrepareClosePositionResult } from "./types"
+import {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
+import {
+    PrepareClosePositionParams, PrepareClosePositionResult 
+} from "./types"
 
 export interface ExecuteClosePositionParams {
   bot: BotSchema;
-  state: LiquidityPoolState | DlmmLiquidityPoolState;
+  state: LiquidityPoolState;
   isRetry: boolean;
   signatureWithBytes?: SignatureWithBytes;
   solanaTx?: SolanaTx;
   txHash: string;
 }
-
 
 export interface IClosePositionActionService {
   prepare(

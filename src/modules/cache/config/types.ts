@@ -46,7 +46,7 @@ export interface DynamicDlmmRewardInfo {
 }
 
 export interface DynamicDlmmLiquidityPoolInfoCacheResult extends SnapshotCacheResult {
-    activeId: number
+    activeId: BN
     rewards: Array<DynamicDlmmRewardInfo>
 }
 
@@ -56,3 +56,5 @@ export interface PoolAnalyticsCacheResult extends SnapshotCacheResult {
     tvl: string
     apr24H: string
 }
+
+export type SessionIdCacheResult = boolean

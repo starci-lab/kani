@@ -1,8 +1,18 @@
-import { Injectable } from "@nestjs/common"
-import { getInitializeMint2Instruction, getMintSize, TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022"
-import { Address, createSolanaRpc, Instruction } from "@solana/kit"
-import { createNoopSigner, generateKeyPairSigner, KeyPairSigner } from "@solana/signers"
-import { getCreateAccountInstruction } from "@solana-program/system"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    getInitializeMint2Instruction, getMintSize, TOKEN_2022_PROGRAM_ADDRESS 
+} from "@solana-program/token-2022"
+import {
+    Address, createSolanaRpc, Instruction 
+} from "@solana/kit"
+import {
+    createNoopSigner, generateKeyPairSigner, KeyPairSigner 
+} from "@solana/signers"
+import {
+    getCreateAccountInstruction 
+} from "@solana-program/system"
 import BN from "bn.js"
 
 @Injectable()
@@ -23,7 +33,8 @@ export class MintInstructionService {
         const balanceNeeded = await rpc.getMinimumBalanceForRentExemption(
             BigInt(
                 space 
-            ), {
+            ),
+            {
                 commitment: "confirmed"
             }).send()
         const lamports = new BN(balanceNeeded)

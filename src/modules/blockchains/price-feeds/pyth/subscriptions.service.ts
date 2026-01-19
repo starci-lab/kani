@@ -62,7 +62,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         if (!symbols.length) return
         // seperate into batches of 5
         const batches = _.chunk(symbols,
-            envConfig().chunks.pyth.rest)
+            envConfig().priceFeeds.pyth.chunks.subscription)
         for (const batch of batches) {
             this.retryService.retry({
                 action: async () => {
@@ -78,7 +78,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().time.stream.pyth.idleTimeout,
+                            envConfig().priceFeeds.pyth.interval.rest,
                         )
                     }
                     const stream = await this.streamAsyncIteratorService.createStream({
@@ -87,8 +87,8 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             this.winstonService.log(
                                 WinstonLog.PythSubscriptionOpened,
                                 {
-                                    fetchedCount: batch.length,
-                                    expectedCount: symbols.length
+                                    streamName: STREAM_NAME,
+                                    symbols: batch,
                                 }
                             )
                         },
@@ -98,6 +98,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                 {
                                     streamName: STREAM_NAME,
                                     error: "Connection closed",
+                                    symbols: batch,
                                 }
                             )
                         },
@@ -141,7 +142,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                 {
                                     error: error.message,
                                     streamName: STREAM_NAME,
-                                    expectedCount: symbols.length
+                                    symbols: batch,
                                 }
                             )
                         

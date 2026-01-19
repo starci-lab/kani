@@ -44,7 +44,7 @@ import {
 } from "@modules/databases"
 
 @Injectable()
-export class FlowxFeesService implements IFeesService {
+export class FlowXFeesService implements IFeesService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly clmmFeesFormulaService: ClmmFeesFormulaService,

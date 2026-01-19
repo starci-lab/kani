@@ -32,7 +32,7 @@ import {
 } from "../../math"
 import { 
     InvalidPoolTokensException, 
-    SnapshotBalancesNotSetException,
+    SnapshotBalancesNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
@@ -170,7 +170,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotSetException({
+            throw new SnapshotBalancesNotFoundException({
                 botId: bot.id,
             })
         }

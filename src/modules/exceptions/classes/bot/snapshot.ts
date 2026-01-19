@@ -3,16 +3,16 @@ import {
 } from "../abstract"
 
 /** Thrown when snapshot balances have not been set */
-export interface SnapshotBalancesNotSetExceptionMetadata extends AbstractExceptionMetadata {
+export interface SnapshotBalancesNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
 }
-export class SnapshotBalancesNotSetException extends AbstractException {
+export class SnapshotBalancesNotFoundException extends AbstractException {
     constructor(
-        { botId, originalError }: SnapshotBalancesNotSetExceptionMetadata
+        { botId, originalError }: SnapshotBalancesNotFoundExceptionMetadata
     ) {
         super(
-            "Snapshot balances have not been set", 
-            "SNAPSHOT_BALANCES_NOT_SET_EXCEPTION", 
+            "Snapshot balances have not been found", 
+            "SNAPSHOT_BALANCES_NOT_FOUND_EXCEPTION", 
             {
                 botId, originalError 
             }

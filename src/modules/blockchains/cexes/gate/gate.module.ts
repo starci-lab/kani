@@ -1,10 +1,21 @@
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./gate.module-definition"
-import { GateLastPriceService } from "./gate-last-price.service"
-import { GateOrderBookService } from "./gate-order-book.service"
-import { GateUtilsService } from "./gate-utils.service"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./gate.module-definition"
+import {
+    GateLastPriceService 
+} from "./last-price.service"
+import {
+    GateOrderBookService 
+} from "./order-book.service"
+import {
+    GateTokenRegistryService 
+} from "./token-registry.service"
 
-@Module({})
+@Module({
+})
 export class GateModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -13,7 +24,7 @@ export class GateModule extends ConfigurableModuleClass {
         const providers = [
             GateLastPriceService,
             GateOrderBookService,
-            GateUtilsService,
+            GateTokenRegistryService,
         ]
         return {
             ...dynamicModule,

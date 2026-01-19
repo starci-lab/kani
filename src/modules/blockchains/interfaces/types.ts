@@ -1,11 +1,23 @@
-import { Rewarder } from "@mmt-finance/clmm-sdk/dist/types"
-import { ClmmPool } from "@flowx-finance/sdk"
-import { BotSchema, LiquidityPoolId, LiquidityPoolSchema, TokenSchema } from "@modules/databases"
+import {
+    Rewarder 
+} from "@mmt-finance/clmm-sdk/dist/types"
+import {
+    ClmmPool 
+} from "@flowx-finance/sdk"
+import {
+    BotSchema, LiquidityPoolId, LiquidityPoolSchema, TokenSchema 
+} from "@modules/databases"
 import BN from "bn.js"
-import { DynamicDlmmLiquidityPoolInfo } from "../types"
-import { SignatureWithBytes } from "@mysten/sui/cryptography"
-import { FullySignedTransaction, TransactionWithinSizeLimit, TransactionWithBlockhashLifetime, TransactionMessageBytes, SignaturesMap } from "@solana/kit"
-import { DynamicClmmLiquidityPoolInfoCacheResult } from "@modules/cache"
+import {
+    SignatureWithBytes 
+} from "@mysten/sui/cryptography"
+import {
+    FullySignedTransaction, TransactionWithinSizeLimit, TransactionWithBlockhashLifetime, TransactionMessageBytes, SignaturesMap 
+} from "@solana/kit"
+import {
+    DynamicClmmLiquidityPoolInfoCacheResult, 
+    DynamicDlmmLiquidityPoolInfoCacheResult
+} from "@modules/cache"
 
 export interface FetchedPool {
     poolAddress: string
@@ -40,8 +52,10 @@ export interface ClmmLiquidityPoolState {
 
 export interface DlmmLiquidityPoolState {
     static: LiquidityPoolSchema;
-    dynamic: DynamicDlmmLiquidityPoolInfo;
+    dynamic: DynamicDlmmLiquidityPoolInfoCacheResult;
 }
+
+export type LiquidityPoolState = ClmmLiquidityPoolState | DlmmLiquidityPoolState;
 
 export interface PrepareOpenPositionParams {
     bot: BotSchema;

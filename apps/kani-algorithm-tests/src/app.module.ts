@@ -3,9 +3,6 @@ import {
 } from "@nestjs/common"
 //import { ComputeSwapAmountsService } from "./compute-swap-amounts.service"
 import {
-    BalanceModule, CexesModule, ClientsModule, DexesModule, ExitStrategyEngineModule, FormulasModule, MathModule, SignersModule, TxBuilderModule
-} from "@modules/blockchains"
-import {
     EnvModule
 } from "@modules/env"
 import {
@@ -15,7 +12,7 @@ import {
     MixinModule
 } from "@modules/mixin"
 import {
-    DexId, PrimaryMongoDbModule
+    PrimaryMongoDbModule
 } from "@modules/databases"
 import {
     CacheModule
@@ -63,6 +60,9 @@ import {
 @Module({
     imports: [
         EnvModule.forRoot(),
+        MixinModule.register({
+            isGlobal: true,
+        }),
         FilesystemModule.register({
             isGlobal: true,
         }),
@@ -70,70 +70,70 @@ import {
             isGlobal: true,
             memoryStorage: true,
         }),
-        WinstonModule.register({
-            isGlobal: true,
-            appName: "kani-algorithm-tests",
-            level: WinstonLevel.Info,
-        }),
-        CacheModule.register({
-            isGlobal: true,
-        }),
-        StreamAsyncIteratorModule.register({
-            isGlobal: true,
-        }),
-        CexesModule.register({
-            isGlobal: true,
-        }),
-        AxiosModule.register({
-            isGlobal: true,
-        }),
-        EventEmitterModule.forRoot(),
-        EventModule.register({
-            isGlobal: true,
-        }),
-        P2CBalancerModule.register({
-            isGlobal: true,
-        }),
-        ClientsModule.register({
-            isGlobal: true,
-        }),
-        GcpModule.register({
-            isGlobal: true,
-        }),
-        CryptoModule.register({
-            isGlobal: true,
-        }),
-        DerivedModule.register({
-            isGlobal: true,
-        }),
-        PrivyModule.register({
-            isGlobal: true,
-        }),
-        AxiosModule.register({
-            isGlobal: true,
-        }),
-        ApolloClientModule.register({
-            isGlobal: true,
-        }),
-        SignersModule.register({
-            isGlobal: true,
-        }),
-        TxBuilderModule.register({
-            isGlobal: true,
-        }),
-        LeaseModule.register({
-            isGlobal: true,
-        }),
-        ExitStrategyEngineModule.register({
-            isGlobal: true,
-        }),
-        BalanceModule.register({
-            isGlobal: true,
-            utilitiesOnly: true,
-        }),
-        BullModule.forRoot({
-            isGlobal: true,
-        }),
+        // WinstonModule.register({
+        //     isGlobal: true,
+        //     appName: "kani-algorithm-tests",
+        //     level: WinstonLevel.Info,
+        // }),
+        // CacheModule.register({
+        //     isGlobal: true,
+        // }),
+        // StreamAsyncIteratorModule.register({
+        //     isGlobal: true,
+        // }),
+        // CexesModule.register({
+        //     isGlobal: true,
+        // }),
+        // AxiosModule.register({
+        //     isGlobal: true,
+        // }),
+        // EventEmitterModule.forRoot(),
+        // EventModule.register({
+        //     isGlobal: true,
+        // }),
+        // P2CBalancerModule.register({
+        //     isGlobal: true,
+        // }),
+        // ClientsModule.register({
+        //     isGlobal: true,
+        // }),
+        // GcpModule.register({
+        //     isGlobal: true,
+        // }),
+        // CryptoModule.register({
+        //     isGlobal: true,
+        // }),
+        // DerivedModule.register({
+        //     isGlobal: true,
+        // }),
+        // PrivyModule.register({
+        //     isGlobal: true,
+        // }),
+        // AxiosModule.register({
+        //     isGlobal: true,
+        // }),
+        // ApolloClientModule.register({
+        //     isGlobal: true,
+        // }),
+        // SignersModule.register({
+        //     isGlobal: true,
+        // }),
+        // TxBuilderModule.register({
+        //     isGlobal: true,
+        // }),
+        // LeaseModule.register({
+        //     isGlobal: true,
+        // }),
+        // ExitStrategyEngineModule.register({
+        //     isGlobal: true,
+        // }),
+        // BalanceModule.register({
+        //     isGlobal: true,
+        //     utilitiesOnly: true,
+        // }),
+        // BullModule.forRoot({
+        //     isGlobal: true,
+        // }),
         // DexesModule.register({
         //     isGlobal: true,
         //     dexIds: [
@@ -150,15 +150,15 @@ import {
         //         fees: true,
         //     },
         // }),
-        MixinModule.register({
-            isGlobal: true,
-        }),
-        FormulasModule.register({
-            isGlobal: true,
-        }),
-        MathModule.register({
-            isGlobal: true,
-        }),
+        // MixinModule.register({
+        //     isGlobal: true,
+        // }),
+        // FormulasModule.register({
+        //     isGlobal: true,
+        // }),
+        // MathModule.register({
+        //     isGlobal: true,
+        // }),
     ],
     providers: [
         //ComputeSwapAmountsService,

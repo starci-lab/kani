@@ -1,5 +1,9 @@
-import { BullQueueData, BullQueueName } from "./types"
-import { formatWithBraces } from "./utils"
+import {
+    BullQueueData, BullQueueName 
+} from "./types"
+import {
+    formatWithBraces 
+} from "./utils"
 
 /**
  * Centralized configuration for all BullMQ queues.

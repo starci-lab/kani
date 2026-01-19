@@ -1,10 +1,22 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
-import { CoinAsset, CoinArgument } from "../../types"
-import { Transaction } from "@mysten/sui/transactions"
-import { FetchCoinsService } from "./fetch-coins.service"
-import { isSuiCoin, ZERO_BN } from "@modules/utils"
-import { toCoinArgument } from "../../utils"
+import {
+    CoinAsset, CoinArgument 
+} from "../../types"
+import {
+    Transaction 
+} from "@mysten/sui/transactions"
+import {
+    FetchCoinsService 
+} from "./fetch-coins.service"
+import {
+    isSuiCoin, ZERO_BN 
+} from "@modules/utils"
+import {
+    toCoinArgument 
+} from "../../utils"
 
 @Injectable()
 export class SelectCoinsService {
@@ -59,7 +71,9 @@ export class SelectCoinsService {
             new BN(0)
         )
         if (total.lt(amount)) {
-            return { selectedCoins: [], remainingCoins: sorted }
+            return {
+                selectedCoins: [], remainingCoins: sorted 
+            }
         }
 
         let sum = new BN(0)
@@ -93,7 +107,8 @@ export class SelectCoinsService {
         if (!coins.length) throw new Error("No coins provided to merge")
         if (coins.length === 1) return coins[0]
 
-        const [target, ...rest] = coins
+        const [target,
+            ...rest] = coins
         txb.mergeCoins(
             target.coinArg,
             rest.map((c) => c.coinArg)
@@ -103,7 +118,9 @@ export class SelectCoinsService {
             (acc, c) => acc.add(c.coinAmount),
             new BN(0)
         )
-        return { coinAmount: totalAmount, coinArg: target.coinArg }
+        return {
+            coinAmount: totalAmount, coinArg: target.coinArg 
+        }
     }
 
     /**
@@ -118,7 +135,9 @@ export class SelectCoinsService {
         requiredAmount,
     }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResult> {
         txb = txb ?? new Transaction()
-        const fetchedCoins = await this.fetchCoinsService.fetchCoins({ owner, coinType })
+        const fetchedCoins = await this.fetchCoinsService.fetchCoins({
+            owner, coinType 
+        })
         if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
         const coinAssets = fetchedCoins.coinAssets.map((coin) => ({
             coinAmount: coin.coinAmount,
@@ -138,9 +157,10 @@ export class SelectCoinsService {
                 requiredAmount || userBalance
             )
             txb.setGasPayment(coinAssets.map((coin) => coin.coinRef))
-            const [sourceCoin] = txb.splitCoins(txb.gas, [
-                txb.pure.u64(coinAmount.toString()),
-            ])
+            const [sourceCoin] = txb.splitCoins(txb.gas,
+                [
+                    txb.pure.u64(coinAmount.toString()),
+                ])
             return {
                 sourceCoin: {
                     coinAmount: coinAmount,
@@ -151,13 +171,15 @@ export class SelectCoinsService {
         }
         // If only one coin exists, return it directly
         // Select coins to cover the required amount
-        const coinAmount = requiredAmount ? BN.min(userBalance, requiredAmount) : userBalance
+        const coinAmount = requiredAmount ? BN.min(userBalance,
+            requiredAmount) : userBalance
 
         if (coinAssets.length === 1) {
             const [ coin ] = coinAssets
-            const spendCoin = txb.splitCoins(txb.object(coin.coinRef.objectId), [
-                txb.pure.u64(coinAmount.toString()),
-            ])
+            const spendCoin = txb.splitCoins(txb.object(coin.coinRef.objectId),
+                [
+                    txb.pure.u64(coinAmount.toString()),
+                ])
             return {
                 sourceCoin: {
                     coinAmount,
@@ -167,14 +189,18 @@ export class SelectCoinsService {
             }
         }
         // Merge into a single coin
-        const mergedCoin = this.mergeCoins(txb, coinAssets.map((coin) => toCoinArgument(coin, txb)))
+        const mergedCoin = this.mergeCoins(txb,
+            coinAssets.map((coin) => toCoinArgument(coin,
+                txb)))
         // Split out exactly the required amount
         const { spendCoin } = this.splitCoin({
             sourceCoin: mergedCoin,
             requiredAmount: coinAmount,
             txb,
         })
-        return { sourceCoin: spendCoin, balance: userBalance }
+        return {
+            sourceCoin: spendCoin, balance: userBalance 
+        }
     }
 }
 

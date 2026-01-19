@@ -2,35 +2,50 @@ import {
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
-import { MarketId } from "@modules/databases"
-import { CachePriceUtilsService } from "@modules/cache"
-import { AsyncService, RetryService } from "@modules/mixin"
-import { BYBIT_WS_URL } from "./constants"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { BybitUtilsService } from "./bybit-utils.service"
+import {
+    MarketListingId 
+} from "@modules/databases"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
+import {
+    AsyncService, RetryService 
+} from "@modules/mixin"
+import {
+    BYBIT_WS_URL 
+} from "./constants"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    BybitTokenRegistryService 
+} from "./token-registry.service"
 import _ from "lodash"
-import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
+import {
+    WebSocketStreamConnection, StreamAsyncIteratorService 
+} from "@modules/stream-async-iterator"
   
 @Injectable()
 export class BybitLastPriceService implements OnApplicationBootstrap {
     constructor(
       private readonly retryService: RetryService,
-      private readonly bybitUtilsService: BybitUtilsService,
-      @InjectWinston()
-      private readonly logger: WinstonLogger,
-      private readonly cachePriceUtilsService: CachePriceUtilsService,
+      private readonly bybitTokenRegistryService: BybitTokenRegistryService,
+      private readonly winstonService: WinstonService,
+      private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
       private readonly asyncService: AsyncService,
       private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) {}
   
     onApplicationBootstrap() {
-        const symbols = this.bybitUtilsService.getBybitSymbols()
+        const symbols = this.bybitTokenRegistryService.getSymbols()
         if (!symbols.length) return
     
-        // Split symbols into chunks of maximum 10, due to Bybit API limit
-        const batches = _.chunk(symbols, envConfig().chunks.bybitLastPrice.subscriptions)
+        // Split symbols into chunks (Bybit has a limit on subscription args)
+        const batches = _.chunk(symbols,
+            envConfig().cexes.bybit.chunks.lastPrice)
         for (const batch of batches) {
             this.retryService.retry({
                 options: {
@@ -47,7 +62,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout.bybit.lastPrice,
+                            envConfig().cexes.ws.idleTimeout,
                         )
                     }
 
@@ -55,10 +70,11 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         connection,
                         signal: abortController.signal,
                         onOpen: (connection: WebSocketStreamConnection) => {
-                            this.logger.info(WinstonLog.WebsocketConnected, {
-                                streamName: "bybit-last-price",
-                                symbols: batch,
-                            })
+                            this.winstonService.log(WinstonLog.WebsocketSubscriptionOpened,
+                                {
+                                    streamName: "bybit-last-price",
+                                    symbols: batch,
+                                })
                             resetTimeout()
                             connection.ws.send(JSON.stringify({
                                 op: "subscribe",
@@ -66,16 +82,18 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                             }))
                         },
                         onError: (error: Error) => {
-                            this.logger.error(
-                                WinstonLog.WebsocketCloseError, {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionError,
+                                {
                                     error: error.message,
                                     streamName: "bybit-last-price",
                                     symbols: batch,
                                 })
                         },
                         onClose: () => {
-                            this.logger.error(
-                                WinstonLog.WebsocketClosed, {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionClosed,
+                                {
                                     streamName: "bybit-last-price",
                                     symbols: batch,
                                 }
@@ -100,7 +118,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                     continue
                                 }
 
-                                const tokenPrices = this.bybitUtilsService.getBybitTokenPrices([
+                                const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices([
                                     {
                                         symbol: parsed.data.symbol,
                                         price: parseFloat(parsed.data.lastPrice),
@@ -113,19 +131,20 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 resetTimeout()
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map((tokenPrice) =>
-                                        this.cachePriceUtilsService.updateAggregatedTokenPrice({
+                                        this.aggregatedTokenPriceCacheService.set({
                                             tokenId: tokenPrice.tokenId,
                                             price: tokenPrice.price,
-                                            marketId: MarketId.Bybit,
+                                            marketListingId: MarketListingId.Bybit,
                                         })
                                     )
                                 )
                             } catch (error) {
-                                this.logger.error(WinstonLog.WebsocketMessageError, {
-                                    error: error.message,
-                                    streamName: "bybit-last-price",
-                                    symbols: batch,
-                                })
+                                this.winstonService.log(WinstonLog.WebsocketSubscriptionError,
+                                    {
+                                        error: error.message,
+                                        streamName: "bybit-last-price",
+                                        symbols: batch,
+                                    })
                             }
                         }
                     } finally {
@@ -139,7 +158,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
     }
 }
   
-// Interface theo docs Bybit v5
+// Bybit WS v5: ticker update payload
 export interface BybitTickerUpdate {
     topic: string;         // e.g., "tickers.BTCUSDT"
     type: string;          // e.g., "snapshot" or "delta" :contentReference[oaicite:1]{index=1}

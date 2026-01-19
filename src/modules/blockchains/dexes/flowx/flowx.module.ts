@@ -22,6 +22,9 @@ import {
 import {
     FlowXReservesService 
 } from "./reserves.service"
+import {
+    FlowXFeesService 
+} from "./fees.service"
 
 @Injectable()
 export class FlowXModule extends ConfigurableModuleClass {
@@ -58,7 +61,7 @@ export class FlowXModule extends ConfigurableModuleClass {
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
         ) {
-            providers.push(FlowXReservesService)
+            providers.push(FlowXFeesService)
         }
         if (typeof options.enabled === "boolean" 
             ? options.enabled

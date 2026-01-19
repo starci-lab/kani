@@ -1,2 +1,2 @@
 export * from "./bybit.module"
-export * from "./bybit-utils.service"
+export * from "./token-registry.service"

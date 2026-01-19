@@ -25,3 +25,20 @@ export class MeteoraMultipleDlmmPositionsNotSupportedException extends AbstractE
         )
     }
 }
+
+/** Thrown when the default bin array bitmap is overflowed */
+export type DLMMOverflowDefaultBinArrayBitmapExceptionMetadata = AbstractExceptionMetadata
+export class DLMMOverflowDefaultBinArrayBitmapException extends AbstractException {
+    constructor(
+        { originalError }: DLMMOverflowDefaultBinArrayBitmapExceptionMetadata
+    ) {
+        super(
+            "DLMM overflow default bin array bitmap",
+            "DLMM_OVERFLOW_DEFAULT_BIN_ARRAY_BITMAP_EXCEPTION",
+            {
+                originalError,
+            }
+        )
+    }
+}
+

@@ -28,7 +28,7 @@ import {
 } from "../../math"
 import { 
     InvalidPoolTokensException, 
-    SnapshotBalancesNotSetException,
+    SnapshotBalancesNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
@@ -125,7 +125,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotSetException({
+            throw new SnapshotBalancesNotFoundException({
                 botId: bot.id,
             })
         }

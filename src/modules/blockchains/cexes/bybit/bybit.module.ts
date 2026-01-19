@@ -1,10 +1,21 @@
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bybit.module-definition"   
-import { BybitLastPriceService } from "./bybit-last-price.service"
-import { BybitOrderBookService } from "./bybit-order-book.service"
-import { BybitUtilsService } from "./bybit-utils.service"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./bybit.module-definition"   
+import {
+    BybitLastPriceService 
+} from "./last-price.service"
+import {
+    BybitOrderBookService 
+} from "./order-book.service"
+import {
+    BybitTokenRegistryService 
+} from "./token-registry.service"
 
-@Module({})
+@Module({
+})
 export class BybitModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -13,7 +24,7 @@ export class BybitModule extends ConfigurableModuleClass {
         const providers = [
             BybitLastPriceService,
             BybitOrderBookService,
-            BybitUtilsService,
+            BybitTokenRegistryService,
         ]
         return {
             ...dynamicModule,

@@ -1,2 +1,2 @@
 export * from "./binance.module"
-export * from "./binance-last-price.service"
+export * from "./last-price.service"

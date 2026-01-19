@@ -22,7 +22,7 @@ import {
 } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
-    SnapshotBalancesNotSetException,
+    SnapshotBalancesNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
     MissingPositionIdParamException,
@@ -102,7 +102,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         const slippage = new Decimal(envConfig().dexes.raydium.openPosition.slippage)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotSetException({
+            throw new SnapshotBalancesNotFoundException({
                 botId: bot.id,
             })
         }

@@ -1,19 +1,35 @@
 
-import { BullModule as NestBullModule } from "@nestjs/bullmq"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bullmq.module-definition"
-import { DynamicModule, Module } from "@nestjs/common"
-import { BullQueueName, RegisterQueueOptions } from "./types"
-import { bullData } from "./queue"
-import { envConfig } from "@modules/env/config"
-import { createIoRedisKey, IoRedisModule } from "@modules/native"
+import {
+    BullModule as NestBullModule 
+} from "@nestjs/bullmq"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./bullmq.module-definition"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    BullQueueName, RegisterQueueOptions 
+} from "./types"
+import {
+    bullData 
+} from "./queue"
+import {
+    envConfig 
+} from "@modules/env/config"
+import {
+    createIoRedisKey, IoRedisModule 
+} from "@modules/native"
 import Redis from "ioredis"
 
 export const BULLMQ_KEY = "BullMQ"
 
-@Module({})
+@Module({
+})
 export class BullModule extends ConfigurableModuleClass {
     // register the queue
-    public static registerQueue(options: RegisterQueueOptions = {}): DynamicModule {
+    public static registerQueue(options: RegisterQueueOptions = {
+    }): DynamicModule {
         const queueName = options.queueName || BullQueueName.ReconcileBalance
         // register the queue
         const registerQueueDynamicModule = NestBullModule.registerQueue({
@@ -39,7 +55,8 @@ export class BullModule extends ConfigurableModuleClass {
     }
 
     // for root
-    public static forRoot(options: typeof OPTIONS_TYPE = {}) {
+    public static forRoot(options: typeof OPTIONS_TYPE = {
+    }) {
         const dynamicModule = super.forRoot(options)
         return {
             ...dynamicModule,

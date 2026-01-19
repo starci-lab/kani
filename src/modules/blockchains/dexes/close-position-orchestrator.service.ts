@@ -5,7 +5,7 @@ import {
     LiquidityPoolStateService 
 } from "./liquidity-pool-state.service"
 import {
-    BotSchema, DexId, InjectPrimaryMongoose, JobSchema, JobStatus, JobType, LiquidityPoolId, LiquidityPoolType, PrimaryMemoryStorageService 
+    BotSchema, DexId, InjectPrimaryMongoose, JobSchema, JobStatus, JobType, LiquidityPoolSchema, LiquidityPoolType, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     DexNotFoundException, DexNotImplementedException, LiquidityPoolNotFoundException 
@@ -68,20 +68,10 @@ import {
 } from "@modules/env"
 import {
     ExitStrategyEngineOutputService 
-} from "../exit-strategy-engine"
+} from "../settlement"
 import {
-    InjectWinston, WinstonLog 
+    WinstonLevel, WinstonService 
 } from "@modules/winston"
-import {
-    Logger as WinstonLogger 
-} from "winston"
-import {
-    InjectSuperJson 
-} from "@modules/mixin"
-import SuperJSON from "superjson"
-import {
-    LeaseKey, LeaseService, getLeaseKey 
-} from "@modules/lock"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -95,37 +85,22 @@ export class ClosePositionOrchestratorService {
         private readonly cetusClosePositionActionService: CetusClosePositionActionService,
         private readonly turbosClosePositionActionService: TurbosClosePositionActionService,
         private readonly momentumClosePositionActionService: MomentumClosePositionActionService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
-        private readonly leaseService: LeaseService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async enqueue(
         {
-            liquidityPoolId,
+            liquidityPool,
             bot,
         }: EnqueueClosePositionParams,
     ) {
-        /**
-         * Atomic lock guard:
-         * Prevent concurrent actions on the same bot.
-         */
-        const lease = this.leaseService.lease(
-            getLeaseKey(LeaseKey.Action,
-                bot.id),
-        )
-        if (lease.isLocked()) {
-            return
-        }
         /**
          * Safety check, if the active position is not set, return and remind user to open a position first
          */
@@ -261,10 +236,18 @@ export class ClosePositionOrchestratorService {
             state,
         }: PrepareClosePositionParams,
     ): Promise<PrepareClosePositionResult> {
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === state.static.dex.toString())
-        if (!dex) throw new DexNotFoundException("Dex not found")
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
+            id: {
+                $eq: state.static.dex.toString(),
+            },
+        })
+        if (!dex) throw new DexNotFoundException({
+            id: state.static.dex.toString(),
+        })
         if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException({
+                id: state.static.dex.toString(),
+            })
         }
         switch (dex.displayId) {
         case DexId.FlowX: {
@@ -310,7 +293,9 @@ export class ClosePositionOrchestratorService {
             })
         }
         default: {
-            throw new DexNotImplementedException(`DEX ${state.static.dex.toString()} not supported for prepare`)
+            throw new DexNotImplementedException({
+                id: state.static.dex.toString(),
+            })
         }
         }
     }
@@ -348,7 +333,9 @@ export class ClosePositionOrchestratorService {
             return await this.momentumClosePositionActionService.execute(params)
         }
         default: {
-            throw new DexNotImplementedException(`DEX ${_state.static.dex.toString()} not supported`)
+            throw new DexNotImplementedException({
+                id: _state.static.dex.toString(),
+            })
         }
         }
     }
@@ -356,10 +343,10 @@ export class ClosePositionOrchestratorService {
 
 export interface EnqueueClosePositionParams {
     bot: BotSchema
-    liquidityPoolId: LiquidityPoolId
+    liquidityPool: LiquidityPoolSchema
 }
 
 export interface ExecuteClosePositionOrchestratorParams {
-    liquidityPoolId: LiquidityPoolId
+    liquidityPool: LiquidityPoolSchema
     bot: BotSchema
 }

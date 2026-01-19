@@ -2,6 +2,12 @@ import {
     LiquidityPoolId, 
     TokenId
 } from "@modules/databases"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    ChainId 
+} from "@modules/typedefs"
 
 /**
  * Close Position Transaction Executed Message
@@ -119,8 +125,8 @@ export interface PythPricesFetchFailedMessage {
  * Pyth Subscriptions Opened Message
  */
 export interface PythSubscriptionsOpenedMessage {
-    fetchedCount: number
-    expectedCount: number
+    streamName: string
+    symbols: Array<string>
 }
 
 /**
@@ -129,6 +135,7 @@ export interface PythSubscriptionsOpenedMessage {
 export interface PythSubscriptionsClosedMessage {
     streamName: string
     error: string
+    symbols: Array<string>
 }
 
 /**
@@ -145,7 +152,7 @@ export interface PythSubscriptionResolvedMessage {
 export interface PythSubscriptionErrorMessage {
     streamName: string
     error: string
-    expectedCount: number
+    symbols: Array<string>
 }
 
 /**
@@ -178,4 +185,93 @@ export interface CoingeckoPricesFetchedMessage {
 export interface CoingeckoPricesFetchFailedMessage {
     error: string
     expectedCount: number
+}
+
+/**
+ * No Available RPCs Message
+ */
+export interface NoAvailableRpcMessage {
+    chainId: ChainId
+    accessType: RpcAccessType
+}
+
+/**
+ * Open Position Enqueued Message
+ */
+export interface OpenPositionEnqueuedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Enqueue Failed Message
+ */
+export interface OpenPositionEnqueueFailedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    error: string
+}
+
+/**
+ * Close Position Enqueued Message
+ */
+export interface ClosePositionEnqueuedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Enqueue Failed Message
+ */
+export interface ClosePositionEnqueueFailedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    error: string
+}
+
+/**
+ * Error Decrypting JWT Secret Key Message
+ */
+export interface ErrorDecryptingJwtSecretKeyMessage {
+    error: string
+}
+
+/**
+ * Error Decrypting AES Key Message
+ */
+export interface ErrorDecryptingAesKeyMessage {
+    error: string
+}
+
+/**
+ * Websocket Subscription Opened Message
+ */
+export interface WebsocketSubscriptionOpenedMessage {
+    streamName: string
+    symbols: Array<string>
+}
+
+/**
+ * Websocket Subscription Closed Message
+ */
+export interface WebsocketSubscriptionClosedMessage {
+    streamName: string
+    symbols: Array<string>
+}
+
+/**
+ * Websocket Subscription Error Message
+ */
+export interface WebsocketSubscriptionErrorMessage {
+    streamName: string
+    error: string
+    symbols: Array<string>
+}
+
+/**
+ * Websocket Subscription Resolved Message
+ */
+export interface WebsocketSubscriptionResolvedMessage {
+    streamName: string
+    symbols: Array<string>
 }

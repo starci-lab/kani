@@ -1,7 +1,11 @@
 // libs/anchor-utils/src/anchor-utils.service.ts
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import BN from "bn.js"
-import { sha256 } from "@noble/hashes/sha2"
+import {
+    sha256 
+} from "@noble/hashes/sha2"
 import { 
     TransactionMessage, 
     Instruction, 
@@ -18,7 +22,8 @@ export class AnchorUtilsService {
     anchorDiscriminator(instructionName: string): Uint8Array {
         const preimage = `global:${instructionName}`
         const hash = sha256(new TextEncoder().encode(preimage))
-        return hash.slice(0, 8)
+        return hash.slice(0,
+            8)
     }
 
     /* ----------------------------------------
@@ -26,17 +31,23 @@ export class AnchorUtilsService {
    * ---------------------------------------- */
     u64LE(n: BN | number | string): Uint8Array {
         const bn = BN.isBN(n) ? n : new BN(n)
-        return bn.toArrayLike(Buffer, "le", 8)
+        return bn.toArrayLike(Buffer,
+            "le",
+            8)
     }
 
     u128LE(n: BN | number | string): Uint8Array {
         const bn = BN.isBN(n) ? n : new BN(n)
-        return bn.toArrayLike(Buffer, "le", 16)
+        return bn.toArrayLike(Buffer,
+            "le",
+            16)
     }
 
     i32LE(n: number | BN | string): Uint8Array {
         const bn = BN.isBN(n) ? n : new BN(n)
-        return bn.toTwos(32).toArrayLike(Buffer, "le", 4)
+        return bn.toTwos(32).toArrayLike(Buffer,
+            "le",
+            4)
     }
     bool(n: boolean): Uint8Array {
         return Uint8Array.from([n ? 1 : 0])
@@ -54,7 +65,8 @@ export class AnchorUtilsService {
         const out = new Uint8Array(totalLength)
         out.set(disc)
         if (data) {
-            out.set(data, disc.length)
+            out.set(data,
+                disc.length)
         }
         return out
     }
@@ -73,7 +85,8 @@ export class AnchorUtilsService {
             accounts,
             data,
         }
-        appendTransactionMessageInstructions([ix], tx)
+        appendTransactionMessageInstructions([ix],
+            tx)
         return tx
     }
 }

@@ -2,40 +2,40 @@ import {
     join 
 } from "path"
 import {
-    parseMs,
-    parseString,
-    parseBoolean,
-    parseFloat,
-    parseInt
+    parseEnvMs,
+    parseEnvString,
+    parseEnvBoolean,
+    parseEnvFloat,
+    parseEnvInt
 } from "./utils"
 
 export const envConfig = () => ({
     // is production
-    isProduction: parseString("NODE_ENV",
+    isProduction: parseEnvString("NODE_ENV",
         "development") === "production",
     // client config
     client: {
         axios: {
             retry: {
-                delay: parseMs("CLIENT_AXIOS_RETRY_DELAY",
+                delay: parseEnvMs("CLIENT_AXIOS_RETRY_DELAY",
                     "1s"),
-                maxRetries: parseInt("CLIENT_AXIOS_RETRY_MAX_RETRIES",
+                maxRetries: parseEnvInt("CLIENT_AXIOS_RETRY_MAX_RETRIES",
                     3),
             },
         },
         apollo: {
             timeout: {
-                ms: parseMs("CLIENT_APOLLO_TIMEOUT_MS",
+                ms: parseEnvMs("CLIENT_APOLLO_TIMEOUT_MS",
                     "10s"),
             },
             retry: {
-                jitter: parseBoolean("CLIENT_APOLLO_RETRY_JITTER",
+                jitter: parseEnvBoolean("CLIENT_APOLLO_RETRY_JITTER",
                     true),
-                initial: parseMs("CLIENT_APOLLO_RETRY_INITIAL",
+                initial: parseEnvMs("CLIENT_APOLLO_RETRY_INITIAL",
                     "1s"),
-                max: parseMs("CLIENT_APOLLO_RETRY_MAX",
+                max: parseEnvMs("CLIENT_APOLLO_RETRY_MAX",
                     "10s"),
-                maxRetries: parseInt("CLIENT_APOLLO_RETRY_MAX_RETRIES",
+                maxRetries: parseEnvInt("CLIENT_APOLLO_RETRY_MAX_RETRIES",
                     3),
             },
         },
@@ -43,29 +43,29 @@ export const envConfig = () => ({
     // retry config
     retry: {
         base: {
-            retries: parseInt("RETRY_BASE_RETRIES",
+            retries: parseEnvInt("RETRY_BASE_RETRIES",
                 3),
-            factor: parseFloat("RETRY_BASE_FACTOR",
+            factor: parseEnvFloat("RETRY_BASE_FACTOR",
                 2),
-            minTimeout: parseMs("RETRY_BASE_MIN_TIMEOUT",
+            minTimeout: parseEnvMs("RETRY_BASE_MIN_TIMEOUT",
                 "1s"),
-            maxTimeout: parseMs("RETRY_BASE_MAX_TIMEOUT",
+            maxTimeout: parseEnvMs("RETRY_BASE_MAX_TIMEOUT",
                 "10s"),
-            randomize: parseBoolean("RETRY_BASE_RANDOMIZE",
+            randomize: parseEnvBoolean("RETRY_BASE_RANDOMIZE",
                 true),
         },
     },
     // transaction config
     transaction: {
         swap: {
-            slippage: parseFloat("TRANSACTION_SWAP_SLIPPAGE",
+            slippage: parseEnvFloat("TRANSACTION_SWAP_SLIPPAGE",
                 0.005),
         },
     },
     // computation config
     computation: {
         amount: {
-            fractionDigits: parseInt("COMPUTATION_AMOUNT_FRACTION_DIGITS",
+            fractionDigits: parseEnvInt("COMPUTATION_AMOUNT_FRACTION_DIGITS",
                 10),
         },
     },
@@ -73,166 +73,210 @@ export const envConfig = () => ({
     priceFeeds: {
         coingecko: {
             interval: {
-                rest: parseMs("PRICE_FEEDS_COINGECKO_INTERVAL_REST",
+                rest: parseEnvMs("PRICE_FEEDS_COINGECKO_INTERVAL_REST",
                     "10s"),
+            },
+            chunks: {
+                rest: parseEnvInt("PRICE_FEEDS_COINGECKO_CHUNKS_REST",
+                    10),
             },
         },
         pyth: {
             interval: {
-                rest: parseMs("PRICE_FEEDS_PYTH_INTERVAL_REST",
+                rest: parseEnvMs("PRICE_FEEDS_PYTH_INTERVAL_REST",
                     "10s"),
+            },
+            chunks: {
+                rest: parseEnvInt("PRICE_FEEDS_PYTH_CHUNKS_REST",
+                    10),
+                subscription: parseEnvInt("PRICE_FEEDS_PYTH_CHUNKS_SUBSCRIPTION",
+                    10),
             },
         },
         coinmarketcap: {
             interval: {
-                rest: parseMs("PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST",
+                rest: parseEnvMs("PRICE_FEEDS_COINMARKETCAP_INTERVAL_REST",
                     "5m"),
+            },
+            chunks: {
+                rest: parseEnvInt("PRICE_FEEDS_COINMARKETCAP_CHUNKS_REST",
+                    10),
             },
         },
     },
     cexes: {
         binance: {
-            slippage: parseFloat("CEXES_BINANCE_BINANCE_SLIPPAGE",
+            slippage: parseEnvFloat("CEXES_BINANCE_BINANCE_SLIPPAGE",
                 0.05),
             interval: {
-                rest: parseMs("CEXES_BINANCE_INTERVAL_REST",
+                rest: parseEnvMs("CEXES_BINANCE_INTERVAL_REST",
+                    "10s"),
+            },
+            chunks: {
+                lastPrice: parseEnvInt("CEXES_BINANCE_CHUNKS_LAST_PRICE",
+                    10),
+                orderBook: parseEnvInt("CEXES_BINANCE_CHUNKS_ORDER_BOOK",
+                    10),
+            },
+            ws: {
+                idleTimeout: parseEnvMs("CEXES_BINANCE_WS_IDLE_TIMEOUT",
                     "10s"),
             },
         },
         gate: {
-            slippage: parseFloat("CEXES_GATE_SLIPPAGE",
+            slippage: parseEnvFloat("CEXES_GATE_SLIPPAGE",
                 0.05),
             interval: {
-                rest: parseMs("CEXES_GATE_INTERVAL_REST",
+                rest: parseEnvMs("CEXES_GATE_INTERVAL_REST",
+                    "10s"),
+            },
+            chunks: {
+                lastPrice: parseEnvInt("CEXES_GATE_CHUNKS_LAST_PRICE",
+                    10),    
+                orderBook: parseEnvInt("CEXES_GATE_CHUNKS_ORDER_BOOK",
+                    10),
+            },
+            ws: {
+                idleTimeout: parseEnvMs("CEXES_GATE_WS_IDLE_TIMEOUT",
                     "10s"),
             },
         },
         bybit: {
-            slippage: parseFloat("CEXES_BYBIT_SLIPPAGE",
+            slippage: parseEnvFloat("CEXES_BYBIT_SLIPPAGE",
                 0.05),
             interval: {
-                rest: parseMs("CEXES_BYBIT_INTERVAL_REST",
+                rest: parseEnvMs("CEXES_BYBIT_INTERVAL_REST",
                     "10s"),
             },
+            chunks: {
+                lastPrice: parseEnvInt("CEXES_BYBIT_CHUNKS_LAST_PRICE",
+                    10),
+                orderBook: parseEnvInt("CEXES_BYBIT_CHUNKS_ORDER_BOOK",
+                    10),
+            },
+        },
+        ws: {
+            idleTimeout: parseEnvMs("CEXES_WS_IDLE_TIMEOUT",
+                "10s"),
         },
     },
     dexes: {
         cetus: {
             interval: {
-                analytics: parseMs("DEXES_CETUS_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_CETUS_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_CETUS_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_CETUS_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 }
             },
             openPosition: {
-                slippage: parseFloat("DEXES_CETUS_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_CETUS_OPEN_POSITION_SLIPPAGE",
                     0.05), 
             },
         },
         flowx: {
             interval: {
-                analytics: parseMs("DEXES_FLOWX_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_FLOWX_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_FLOWX_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_FLOWX_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
             openPosition: {
-                slippage: parseFloat("DEXES_FLOWX_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_FLOWX_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
         },
         momentum: {
             interval: {
-                analytics: parseMs("DEXES_MOMENTUM_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_MOMENTUM_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_MOMENTUM_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_MOMENTUM_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
             openPosition: {
-                slippage: parseFloat("DEXES_MOMENTUM_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_MOMENTUM_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
         },
         turbos: {
             interval: {
-                analytics: parseMs("DEXES_TURBOS_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_TURBOS_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_TURBOS_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_TURBOS_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
             openPosition: {
-                slippage: parseFloat("DEXES_TURBOS_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_TURBOS_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
         },
         meteora: {
             openPosition: {
-                slippage: parseFloat("DEXES_METEORA_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_METEORA_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
             interval: {
-                analytics: parseMs("DEXES_METEORA_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_METEORA_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_METEORA_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_METEORA_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
         },
         raydium: {
             interval: {
-                analytics: parseMs("DEXES_RAYDIUM_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_RAYDIUM_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_RAYDIUM_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_RAYDIUM_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
             openPosition: {
-                slippage: parseFloat("DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_RAYDIUM_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
         },
         orca: {
             interval: {
-                analytics: parseMs("DEXES_ORCA_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_ORCA_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_ORCA_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_ORCA_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
             openPosition: {
-                slippage: parseFloat("DEXES_ORCA_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_ORCA_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
         },
         saros: {
             interval: {
-                analytics: parseMs("DEXES_SAROS_INTERVAL_ANALYTICS",
+                analytics: parseEnvMs("DEXES_SAROS_INTERVAL_ANALYTICS",
                     "1m"),
                 observer: {
-                    fetch: parseMs("DEXES_SAROS_INTERVAL_OBSERVER_FETCH",
+                    fetch: parseEnvMs("DEXES_SAROS_INTERVAL_OBSERVER_FETCH",
                         "10s"),
                 },
             },
             openPosition: {
-                slippage: parseFloat("DEXES_SAROS_OPEN_POSITION_SLIPPAGE",
+                slippage: parseEnvFloat("DEXES_SAROS_OPEN_POSITION_SLIPPAGE",
                     0.05),
             },
         },
     },
     // executor config
     executor: {
-        id: parseString("EXECUTOR_ID",
+        id: parseEnvString("EXECUTOR_ID",
             "6956717486b425cf9938c665"),
     },
     // quote config
@@ -244,9 +288,9 @@ export const envConfig = () => ({
             * Falling outside this range means the position is becoming unbalanced → a swap may be required.
             */
             safe: {
-                above: parseFloat("QUOTE_RATIO_SAFE_ABOVE",
+                above: parseEnvFloat("QUOTE_RATIO_SAFE_ABOVE",
                     0.85),
-                below: parseFloat("QUOTE_RATIO_SAFE_BELOW",
+                below: parseEnvFloat("QUOTE_RATIO_SAFE_BELOW",
                     0.15),
             },
             /**
@@ -255,88 +299,106 @@ export const envConfig = () => ({
             * so the system avoids slippage and doesn't keep re-swapping immediately.
             */
             expected: {
-                above: parseFloat("QUOTE_RATIO_EXPECTED_ABOVE",
+                above: parseEnvFloat("QUOTE_RATIO_EXPECTED_ABOVE",
                     0.8),
-                below: parseFloat("QUOTE_RATIO_EXPECTED_BELOW",
+                below: parseEnvFloat("QUOTE_RATIO_EXPECTED_BELOW",
                     0.2),
             },
         },
     },
     // cache config
     cache: {
+        ttl: {
+            sessionId: parseEnvMs(
+                "CACHE_TTL_SESSION_ID",
+                "15m"),
+            aggregatedTokenPrice: parseEnvInt(
+                "CACHE_TTL_AGGREGATED_TOKEN_PRICE",
+                0),
+            dynamicClmmLiquidityPoolInfo: parseEnvInt(
+                "CACHE_TTL_DYNAMIC_CLMM_LIQUIDITY_POOL_INFO",
+                0),
+            dynamicDlmmLiquidityPoolInfo: parseEnvInt(
+                "CACHE_TTL_DYNAMIC_DLMM_LIQUIDITY_POOL_INFO",
+                0),
+            poolAnalytics: parseEnvInt(
+                "CACHE_TTL_POOL_ANALYTICS",
+                0),
+        },
         stale: {
-            priceMaxAgeMs: parseMs("CACHE_STALE_PRICE_MAX_AGE_MS",
+            priceMaxAgeMs: parseEnvMs(
+                "CACHE_STALE_PRICE_MAX_AGE_MS",
                 "10s"),
         },
     },
     // price config
     price: {
-        deviationMaxRatio: parseFloat("PRICE_DEVIATION_MAX_RATIO",
+        deviationMaxRatio: parseEnvFloat("PRICE_DEVIATION_MAX_RATIO",
             0.01),
     },
     // pagination config
     pagination: {
         bots: {
             limit: {
-                default: parseInt("PAGINATION_BOTS_LIMIT_DEFAULT",
+                default: parseEnvInt("PAGINATION_BOTS_LIMIT_DEFAULT",
                     20),
-                min: parseInt("PAGINATION_BOTS_LIMIT_MIN",
+                min: parseEnvInt("PAGINATION_BOTS_LIMIT_MIN",
                     1),
-                max: parseInt("PAGINATION_BOTS_LIMIT_MAX",
+                max: parseEnvInt("PAGINATION_BOTS_LIMIT_MAX",
                     20),
             },
             pageNumber: {
-                default: parseInt("PAGINATION_BOTS_PAGE_NUMBER_DEFAULT",
+                default: parseEnvInt("PAGINATION_BOTS_PAGE_NUMBER_DEFAULT",
                     1),
-                max: parseInt("PAGINATION_BOTS_PAGE_NUMBER_MAX",
+                max: parseEnvInt("PAGINATION_BOTS_PAGE_NUMBER_MAX",
                     100),
             },
         },
         positions: {
             limit: {
-                default: parseInt("PAGINATION_POSITIONS_LIMIT_DEFAULT",
+                default: parseEnvInt("PAGINATION_POSITIONS_LIMIT_DEFAULT",
                     10),
-                min: parseInt("PAGINATION_POSITIONS_LIMIT_MIN",
+                min: parseEnvInt("PAGINATION_POSITIONS_LIMIT_MIN",
                     10),
-                max: parseInt("PAGINATION_POSITIONS_LIMIT_MAX",
+                max: parseEnvInt("PAGINATION_POSITIONS_LIMIT_MAX",
                     10),
             },
             pageNumber: {
-                default: parseInt("PAGINATION_POSITIONS_PAGE_NUMBER_DEFAULT",
+                default: parseEnvInt("PAGINATION_POSITIONS_PAGE_NUMBER_DEFAULT",
                     10),
-                max: parseInt("PAGINATION_POSITIONS_PAGE_NUMBER_MAX",
+                max: parseEnvInt("PAGINATION_POSITIONS_PAGE_NUMBER_MAX",
                     100),
             },
         },
         transactions: {
             limit: {
-                default: parseInt("PAGINATION_TRANSACTIONS_LIMIT_DEFAULT",
+                default: parseEnvInt("PAGINATION_TRANSACTIONS_LIMIT_DEFAULT",
                     10),
-                min: parseInt("PAGINATION_TRANSACTIONS_LIMIT_MIN",
+                min: parseEnvInt("PAGINATION_TRANSACTIONS_LIMIT_MIN",
                     10),
-                max: parseInt("PAGINATION_TRANSACTIONS_LIMIT_MAX",
+                max: parseEnvInt("PAGINATION_TRANSACTIONS_LIMIT_MAX",
                     10),
             },
             pageNumber: {
-                default: parseInt("PAGINATION_TRANSACTIONS_PAGE_NUMBER_DEFAULT",
+                default: parseEnvInt("PAGINATION_TRANSACTIONS_PAGE_NUMBER_DEFAULT",
                     10),
-                max: parseInt("PAGINATION_TRANSACTIONS_PAGE_NUMBER_MAX",
+                max: parseEnvInt("PAGINATION_TRANSACTIONS_PAGE_NUMBER_MAX",
                     100),
             },
         },
         liquidityPools: {
             limit: {
-                default: parseInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_DEFAULT",
+                default: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_DEFAULT",
                     10),
-                min: parseInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_MIN",
+                min: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_MIN",
                     10),
-                max: parseInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_MAX",
+                max: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_MAX",
                     10),
             },
             pageNumber: {
-                default: parseInt("PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_DEFAULT",
+                default: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_DEFAULT",
                     10),
-                max: parseInt("PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_MAX",
+                max: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_MAX",
                     100),
             },
         },
@@ -344,33 +406,33 @@ export const envConfig = () => ({
     // redis config
     redis: {
         cache: {
-            host: parseString("REDIS_CACHE_HOST",
+            host: parseEnvString("REDIS_CACHE_HOST",
                 "localhost"),
-            port: parseInt("REDIS_CACHE_PORT",
+            port: parseEnvInt("REDIS_CACHE_PORT",
                 6379),
-            password: parseString("REDIS_CACHE_PASSWORD",
+            password: parseEnvString("REDIS_CACHE_PASSWORD",
                 "Cuong123_A"),
-            useCluster: parseBoolean("REDIS_CACHE_USE_CLUSTER",
+            useCluster: parseEnvBoolean("REDIS_CACHE_USE_CLUSTER",
                 false),
         },
         bullmq: {
-            host: parseString("REDIS_BULLMQ_HOST",
+            host: parseEnvString("REDIS_BULLMQ_HOST",
                 "localhost"),
-            port: parseInt("REDIS_BULLMQ_PORT",
+            port: parseEnvInt("REDIS_BULLMQ_PORT",
                 6379),
-            password: parseString("REDIS_BULLMQ_PASSWORD",
+            password: parseEnvString("REDIS_BULLMQ_PASSWORD",
                 "Cuong123_A"),
-            useCluster: parseBoolean("REDIS_BULLMQ_USE_CLUSTER",
+            useCluster: parseEnvBoolean("REDIS_BULLMQ_USE_CLUSTER",
                 false),
         },
         throttler: {
-            host: parseString("REDIS_THROTTLER_HOST",
+            host: parseEnvString("REDIS_THROTTLER_HOST",
                 "localhost"),
-            port: parseInt("REDIS_THROTTLER_PORT",
+            port: parseEnvInt("REDIS_THROTTLER_PORT",
                 6379),
-            password: parseString("REDIS_THROTTLER_PASSWORD",
+            password: parseEnvString("REDIS_THROTTLER_PASSWORD",
                 "Cuong123_A"),
-            useCluster: parseBoolean("REDIS_THROTTLER_USE_CLUSTER",
+            useCluster: parseEnvBoolean("REDIS_THROTTLER_USE_CLUSTER",
                 false),
         }
     },
@@ -378,117 +440,201 @@ export const envConfig = () => ({
     databases: {
         mongoose: {
             primary: {
-                host: parseString("PRIMARY_MONGO_DB_HOST",
+                host: parseEnvString("PRIMARY_MONGO_DB_HOST",
                     "localhost"),
-                port: parseInt("PRIMARY_MONGO_DB_PORT",
+                port: parseEnvInt("PRIMARY_MONGO_DB_PORT",
                     27018),
-                password: parseString("PRIMARY_MONGO_DB_PASSWORD",
+                password: parseEnvString("PRIMARY_MONGO_DB_PASSWORD",
                     "Cuong123_A"),
-                username: parseString("PRIMARY_MONGO_DB_USERNAME",
+                username: parseEnvString("PRIMARY_MONGO_DB_USERNAME",
                     "root"),
-                dbName: parseString("PRIMARY_MONGO_DB_NAME",
+                dbName: parseEnvString("PRIMARY_MONGO_DB_NAME",
                     "cicore"),
             },
         },
     },
     // loki config
     loki: {
-        host: parseString("LOKI_HOST",
+        host: parseEnvString("LOKI_HOST",
             "http://localhost:3100"),
-        requireAuth: parseBoolean("LOKI_REQUIRE_AUTH",
+        requireAuth: parseEnvBoolean("LOKI_REQUIRE_AUTH",
             false),
-        username: parseString("LOKI_USERNAME",
+        username: parseEnvString("LOKI_USERNAME",
             ""),
-        password: parseString("LOKI_PASSWORD",
+        password: parseEnvString("LOKI_PASSWORD",
             ""),
     },
     // history config
     history: {
-        serieCount: parseInt("HISTORY_SERIE_COUNT",
+        serieCount: parseEnvInt("HISTORY_SERIE_COUNT",
             5000),
     },
     // mount path config
     mountPath: {
         data: {
-            restore: parseString("DATA_RESTORE_MOUNT_PATH",
+            restore: parseEnvString("DATA_RESTORE_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "data",
                     "restore")),
-            backup: parseString("DATA_BACKUP_MOUNT_PATH",
+            backup: parseEnvString("DATA_BACKUP_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "data",
                     "backup")),
         },
         terraform: {
-            coinMarketCapApiKey: parseString("TERRAFORM_COINMARKETCAP_API_KEY_MOUNT_PATH",
+            coinMarketCapApiKey: parseEnvString("TERRAFORM_COINMARKETCAP_API_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "coinmarketcap-api.key")),
-            encryptedAesKey: parseString("TERRAFORM_ENCRYPTED_AES_KEY_MOUNT_PATH",
+            encryptedAesKey: parseEnvString("TERRAFORM_ENCRYPTED_AES_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "encrypted-aes.key")),
-            encryptedJwtSecretKey: parseString("TERRAFORM_ENCRYPTED_JWT_SECRET_KEY_MOUNT_PATH",
+            encryptedJwtSecretKey: parseEnvString("TERRAFORM_ENCRYPTED_JWT_SECRET_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "encrypted-jwt-secret.key")),
-            gcpCryptoKeyEdSa: parseString("TERRAFORM_GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH",
+            gcpCryptoKeyEdSa: parseEnvString("TERRAFORM_GCP_CRYPTO_KEY_ED_SA_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "gcp-crypto-key-ed-sa.json")),
-            gcpGoogleDriveUdSa: parseString("TERRAFORM_GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH",
+            gcpGoogleDriveUdSa: parseEnvString("TERRAFORM_GCP_GOOGLE_DRIVE_UD_SA_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "gcp-google-drive-ud-sa.json")),
-            gcpCloudKmsCryptoOperatorSa: parseString("TERRAFORM_GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH",
+            gcpCloudKmsCryptoOperatorSa: parseEnvString("TERRAFORM_GCP_CLOUD_KMS_CRYPTO_OPERATOR_SA_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "gcp-cloud-kms-crypto-operator-sa.json")),
-            privyAppSecretKey: parseString("TERRAFORM_PRIVY_APP_SECRET_KEY_MOUNT_PATH",
+            privyAppSecretKey: parseEnvString("TERRAFORM_PRIVY_APP_SECRET_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "privy-app-secret.key")),
-            privySignerPrivateKey: parseString("TERRAFORM_PRIVY_SIGNER_PRIVATE_KEY_MOUNT_PATH",
+            privySignerPrivateKey: parseEnvString("TERRAFORM_PRIVY_SIGNER_PRIVATE_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
                     "privy-signer-private-key.key")),
         },
         config: {
-            app: parseString("CONFIG_APP_MOUNT_PATH",
+            app: parseEnvString("CONFIG_APP_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "config",
                     "app.json")),
-            rpcs: parseString("CONFIG_RPCS_MOUNT_PATH",
+            rpcs: parseEnvString("CONFIG_RPCS_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "config",
                     "rpcs.json")),
         },
     },
-    // chunks config
-    chunks: {
-        coingecko: {
-            rest: parseInt("CHUNKS_COINGECKO_REST",
-                10),
+    // jwt config
+    jwt: {
+        accessToken: {
+            expiration: parseEnvMs("JWT_ACCESS_TOKEN_EXPIRATION",
+                "1h"),
         },
-        pyth: {
-            rest: parseInt("CHUNKS_PYTH_REST",
-                10),
+        refreshToken: {
+            expiration: parseEnvMs("JWT_REFRESH_TOKEN_EXPIRATION",
+                "1d"),
         },
-        coinmarketcap: {
-            rest: parseInt("CHUNKS_COINMARKETCAP_REST",
-                10),
+    },
+    // rpc config
+    rpc: {
+        ejection: {
+            ttl: parseEnvMs("RPCS_EJECTION_TTL",
+                "1h"),
+        }
+    },
+    // kafka config
+    kafka: {
+        maxInFlightRequests: parseEnvInt("KAFKA_MAX_IN_FLIGHT_REQUESTS",
+            20),
+        metadataStabilizationDelayMs: parseEnvMs("KAFKA_METADATA_STABILIZATION_DELAY_MS",
+            "1s"),
+        kafkaTopicPollIntervalMs: parseEnvMs("KAFKA_TOPIC_POLL_INTERVAL_MS",
+            "500ms"),
+        kafkaTopicPollTimeoutMs: parseEnvMs("KAFKA_TOPIC_POLL_TIMEOUT_MS",
+            "10s"),
+        resetTopics: parseEnvBoolean("KAFKA_RESET_TOPICS",
+            false),
+        heartbeatInterval: parseEnvMs("KAFKA_HEARTBEAT_INTERVAL",
+            "3s"), // 3 seconds
+        retry: {
+            retries: parseEnvInt("KAFKA_RETRY_RETRIES",
+                10), // 10 retries
+            restartOnFailure: parseEnvBoolean("KAFKA_RETRY_RESTART_ON_FAILURE",
+                true),
+            factor: parseEnvFloat("KAFKA_RETRY_FACTOR",
+                2.0), // 2x exponential backoff
         },
+        numPartitions: parseEnvInt("KAFKA_NUM_PARTITIONS",
+            1),
+        replicationFactor: parseEnvInt("KAFKA_REPLICATION_FACTOR",
+            1),
+        retentionMs: parseEnvMs("KAFKA_RETENTION_MS",
+            "1s"), // 1 second
+        cleanupPolicy: parseEnvString("KAFKA_CLEANUP_POLICY",
+            "delete"),
+        segmentMs: parseEnvInt("KAFKA_SEGMENT_MS",
+            1000), // 1 second
+        segmentBytes: parseEnvInt("KAFKA_SEGMENT_BYTES",
+            10485760), // 10 MB
+        maxMessageBytes: parseEnvInt("KAFKA_MAX_MESSAGE_BYTES",
+            1024), // 1 KB
+        fileDeleteDelayMs: parseEnvMs("KAFKA_FILE_DELETE_DELAY_MS",
+            "1s"), // 1 second
+        host: parseEnvString("KAFKA_BROKER_HOST",
+            "localhost"),
+        port: parseEnvInt("KAFKA_BROKER_PORT",
+            9092),
+        sasl: {
+            enabled: parseEnvBoolean("KAFKA_SASL_ENABLED",
+                false),
+            username: parseEnvString("KAFKA_SASL_USERNAME",
+                ""),
+            password: parseEnvString("KAFKA_SASL_PASSWORD",
+                ""),
+        },
+    },
+    // salt config
+    salt: {
+        jwt: parseEnvString("SALT_JWT",
+            "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI"),
+        aesCbc: parseEnvString("SALT_AES_CBC",
+            "ZsOM7sCx0UemrdC3gsi2q6NRQLb7TCsI"),
+    },
+    // bullmq config
+    bullmq: {
+        attempts: parseEnvInt("BULLMQ_ATTEMPTS",
+            5),
+        delay: parseEnvMs("BULLMQ_DELAY",
+            "200ms"),
+        concurrency: parseEnvInt("BULLMQ_CONCURRENCY",
+            1000),
+        batchSize: parseEnvInt("BULLMQ_BATCH_SIZE",
+            1000),
+        lockDuration: parseEnvMs("BULLMQ_LOCK_DURATION",
+            "10s"),
+        completedJobCount: parseEnvInt("BULLMQ_COMPLETED_JOB_COUNT",
+            1000),
+        failedJobCount: parseEnvInt("BULLMQ_FAILED_JOB_COUNT",
+            1000),
+        timeout: parseEnvMs("BULLMQ_TIMEOUT",
+            "30s"),
+        stalledInterval: parseEnvMs("BULLMQ_STALLED_INTERVAL",
+            "30s"),
+        maxStalledCount: parseEnvInt("BULLMQ_MAX_STALLED_COUNT",
+            1),
     },
 })

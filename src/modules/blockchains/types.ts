@@ -1,10 +1,15 @@
 // we use this interface to extend the coin object with the amount
 
-import { ObjectRef, TransactionObjectArgument } from "@mysten/sui/transactions"
+import {
+    ObjectRef, TransactionObjectArgument 
+} from "@mysten/sui/transactions"
 import BN from "bn.js"
-import { BotSchema, TokenId } from "@modules/databases"
-import { sendAndConfirmTransactionFactory, signTransaction } from "@solana/kit"
-import { Dayjs } from "dayjs"
+import {
+    LiquidityPoolId, TokenId 
+} from "@modules/databases"
+import {
+    sendAndConfirmTransactionFactory, signTransaction 
+} from "@solana/kit"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -20,22 +25,6 @@ export interface CoinArgument {
     coinObjectId?: string
 }
 
-export interface DynamicLiquidityPoolInfo {
-    tickCurrent: number
-    liquidity: BN
-    sqrtPriceX64: BN
-    rewards: Array<unknown>
-    feeGrowthGlobalA: BN
-    feeGrowthGlobalB: BN
-    snapshotAt: Dayjs
-}
-
-export interface DynamicDlmmLiquidityPoolInfo {
-    activeId: number
-    rewards: Array<unknown>
-    snapshotAt: Dayjs
-}
-
 export type TransactionWithLifetime = Parameters<typeof signTransaction>[1]
 export type SendAndConfirmTransactionType = Parameters<ReturnType<typeof sendAndConfirmTransactionFactory>>[0]
 
@@ -46,27 +35,19 @@ export enum GasStatus {
 }
 
 export interface BasePayload {
-    bot: BotSchema
+    jobId: string
+    botId: string
 }
 
 export interface OpenPositionPayload extends BasePayload {
-    jobId: string
-    leaseId: string
-    state: string
-    bot: BotSchema
+    liquidityPoolId: LiquidityPoolId
 }
 
 export interface ClosePositionPayload extends BasePayload {
-    jobId: string
-    leaseId: string
-    state: string
-    bot: BotSchema
+    liquidityPoolId: LiquidityPoolId
 }
 
 export interface ReconcileBalancePayload extends BasePayload {
-    jobId: string
-    leaseId: string
-    bot: BotSchema
     targetBalanceAmount?: BN
     quoteBalanceAmount?: BN
     gasBalanceAmount?: BN

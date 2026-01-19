@@ -1,13 +1,21 @@
-import { Injectable } from "@nestjs/common"
-import { ChainId } from "@modules/typedefs"
-import { P2cBalancer } from "load-balancers"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    ChainId 
+} from "@modules/typedefs"
+import {
+    P2cBalancer 
+} from "load-balancers"
 import {
     ReadinessWatcherFactoryService,
 } from "@modules/mixin"
-import { MountStorageService, RpcAccessType } from "@modules/filesystem"
-import { RpcAccessConfig } from "@modules/filesystem"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import {
+    MountStorageService, RpcAccessType 
+} from "@modules/filesystem"
+import {
+    RpcAccessConfig 
+} from "@modules/filesystem"
 import { 
     RpcEjection, 
     InjectPrimaryMongoose, 
@@ -16,13 +24,34 @@ import {
     StateRecord,
     RpcEjectionState
 } from "@modules/databases"
-import { DayjsService } from "@modules/mixin"
-import { Connection } from "mongoose"
-import { createObjectId } from "@modules/utils"
-import { envConfig } from "@modules/env"
-import { Decimal } from "decimal.js"
-import { OnEvent } from "@nestjs/event-emitter"
-import { EventEmitterService, EventName, ReinitializeBalancersEvent } from "@modules/event"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    Connection 
+} from "mongoose"
+import {
+    createObjectId 
+} from "@modules/utils"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Decimal 
+} from "decimal.js"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    EventEmitterService, EventName, 
+    ReinitializeBalancersEventPayload
+} from "@modules/event"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    NoAvailableRpcException 
+} from "@modules/exceptions"
 
 /* =========================================================
  * Types & Enums
@@ -75,13 +104,13 @@ export class P2CBalancerService {
                 >
             >
         >
-    > = {}
+    > = {
+        }
 
     constructor(
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly mountStorageService: MountStorageService,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
@@ -115,7 +144,8 @@ export class P2CBalancerService {
                 this.mountStorageService.rpcAccessConfigs[chainId]
 
             const expanded = this.expandByWeight(baseConfigs)
-            this.balancers[chainId] = {}
+            this.balancers[chainId] = {
+            }
             for (const accessType of Object.values(RpcAccessType)) {
                 this.balancers[chainId]![accessType] = this.createBalancer(
                     expanded.filter(
@@ -128,8 +158,6 @@ export class P2CBalancerService {
         // 1. Load eject state from database
         // 2. Initialize balancers for each chain, access type, and transport
         await this.initializeBalancers()
-        // log the initialization
-        this.winstonLogger.debug(WinstonLog.P2CBalancersInitialized)
     }
 
     /* ---------------------------------------------------------
@@ -147,14 +175,17 @@ export class P2CBalancerService {
         const entry =
             this.balancers[chainId]?.[accessType]
         if (!entry || entry.rpcAccessConfigs.length === 0) {
-            this.winstonLogger.error(
-                WinstonLog.NoAvailableRpc, {
+            this.winstonService.log(
+                WinstonLog.NoAvailableRpc,
+                {
                     chainId,
                     accessType,
                 }
             )
-            // exit the application
-            process.exit(1)
+            throw new NoAvailableRpcException({
+                chainId,
+                accessType,
+            })
         }
         const index = entry.instance.pick()
         return entry.rpcAccessConfigs[index]
@@ -170,30 +201,22 @@ export class P2CBalancerService {
         if (!rpcIds.length) throw new Error("No RPC IDs to eject")
         await this.addEjectedRpcs(rpcIds)
         const ejectedRpcs = await this.loadRpcEjectionState()
-        await this.eventEmitterService.emit<ReinitializeBalancersEvent>(
+        await this.eventEmitterService.emit(
             EventName.ReinitializeBalancers, 
-            {
-                ejectedRpcs,
-            },
-            {
-                // emit the event to the kafka and local event emitter
-                withoutKafka: false,
-                // emit the event to the local event emitter
-                withoutLocal: false,
-            }
+            ejectedRpcs
         )
     }
     
     // handle the reinitialize balancers event
     @OnEvent(EventName.ReinitializeBalancers)
     async handleReinitializeBalancers(
-        event?: ReinitializeBalancersEvent
+        event?: ReinitializeBalancersEventPayload
     ) {
         await this.initializeBalancers(event)
     }
 
-    private async initializeBalancers(event?: ReinitializeBalancersEvent) {
-        const ejectedRpcs = event?.ejectedRpcs ?? await this.loadRpcEjectionState()
+    private async initializeBalancers(event?: ReinitializeBalancersEventPayload) {
+        const ejectedRpcs = event ?? await this.loadRpcEjectionState()
         for (const chainId of Object.values(ChainId)) {
             for (const accessType of Object.values(RpcAccessType)) {
                 this.initializeBalancer(
@@ -214,7 +237,7 @@ export class P2CBalancerService {
         if (!entry) return
         const { rpcAccessConfigs } = entry
         const now = this.dayjsService.now()
-        const ttl = envConfig().ejection.rpcTtl
+        const ttl = envConfig().rpc.ejection.ttl
         // filter out the ejected RPCs
         const filteredConfigs = rpcAccessConfigs.filter(
             rpcAccessConfig => !ejectedRpcs.some(
@@ -263,7 +286,8 @@ export class P2CBalancerService {
     ): Array<RpcAccessConfig> {
         const expanded: Array<RpcAccessConfig> = []
         for (const rpcAccessConfig of rpcAccessConfigs) {
-            const weight = Math.max(1, Math.floor(rpcAccessConfig.weight ?? 1))
+            const weight = Math.max(1,
+                Math.floor(rpcAccessConfig.weight ?? 1))
             for (let i = 0; i < weight; i++) {
                 expanded.push(rpcAccessConfig)
             }
@@ -291,14 +315,19 @@ export class P2CBalancerService {
         await this.connection
             .model<StateSchema>(StateSchema.name)
             .updateOne(
-                { _id: createObjectId(StateId.RpcEjection) },
+                {
+                    _id: createObjectId(StateId.RpcEjection) 
+                },
                 [
                     {
                         $set: {
                             "value.data": {
                                 $let: {
                                     vars: {
-                                        existing: { $ifNull: ["$value.data", []] },
+                                        existing: {
+                                            $ifNull: ["$value.data",
+                                                []] 
+                                        },
                                         incoming: rpcIds.map(
                                             rpcId => (
                                                 {
@@ -323,7 +352,10 @@ export class P2CBalancerService {
                                                                     as: "old",
                                                                     in: {
                                                                         $and: [
-                                                                            { $eq: ["$$old.rpcId", "$$new.rpcId"] },
+                                                                            {
+                                                                                $eq: ["$$old.rpcId",
+                                                                                    "$$new.rpcId"] 
+                                                                            },
                                                                         ],
                                                                     },
                                                                 },
@@ -354,12 +386,16 @@ export class P2CBalancerService {
         await this.connection
             .model<StateSchema>(StateSchema.name)
             .updateOne(
-                { _id: createObjectId(StateId.RpcEjection) },
+                {
+                    _id: createObjectId(StateId.RpcEjection) 
+                },
                 {
                     $pull: {
                         value: {
                             data: {
-                                rpcId: { $in: rpcIds },
+                                rpcId: {
+                                    $in: rpcIds 
+                                },
                             },
                         },
                     },

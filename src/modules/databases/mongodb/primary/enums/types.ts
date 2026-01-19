@@ -184,3 +184,22 @@ registerEnumType(
         }
     }
 )
+
+export enum PositionSettlementReason {
+    OutOfRange = "outOfRange",
+}
+
+export const GraphQLTypePositionSettlementReason = createEnumType(PositionSettlementReason)
+
+registerEnumType(
+    GraphQLTypePositionSettlementReason,
+    {
+        name: "PositionSettlementReason",
+        description: "The reason for the settlement",
+        valuesMap: {
+            [PositionSettlementReason.OutOfRange]: {
+                description: "The position is settled out of range"
+            }
+        }
+    }
+)

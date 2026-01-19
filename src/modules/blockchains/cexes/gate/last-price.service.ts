@@ -2,31 +2,45 @@ import {
     Injectable,
     OnApplicationBootstrap,
 } from "@nestjs/common"
-import { GATE_WS_URL } from "./constants"
-import { MarketId } from "@modules/databases"
-import { CachePriceUtilsService } from "@modules/cache"
-import { AsyncService, DayjsService, RetryService } from "@modules/mixin"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { GateUtilsService } from "./gate-utils.service"
-import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
+import {
+    GATE_WS_URL 
+} from "./constants"
+import {
+    MarketListingId 
+} from "@modules/databases"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
+import {
+    AsyncService, DayjsService, RetryService 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    GateTokenRegistryService 
+} from "./token-registry.service"
+import {
+    WebSocketStreamConnection, StreamAsyncIteratorService 
+} from "@modules/stream-async-iterator"
 
 @Injectable()
 export class GateLastPriceService implements OnApplicationBootstrap {
     constructor(
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
-        private readonly gateUtilsService: GateUtilsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly cachePriceUtilsService: CachePriceUtilsService,
+        private readonly gateTokenRegistryService: GateTokenRegistryService,
+        private readonly winstonService: WinstonService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly asyncService: AsyncService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) { }
 
     onApplicationBootstrap() {
-        const symbols = this.gateUtilsService.getGateSymbols()
+        const symbols = this.gateTokenRegistryService.getSymbols()
         if (!symbols.length) return
 
         this.retryService.retry(
@@ -45,15 +59,15 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout.gate.lastPrice,
+                            envConfig().cexes.gate.ws.idleTimeout,
                         )
                     }
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         signal: abortController.signal,
                         onOpen: (connection: WebSocketStreamConnection) => {
-                            this.logger.info(
-                                WinstonLog.WebsocketConnected,
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionOpened,
                                 {
                                     streamName: "gate-last-price",
                                     symbols,
@@ -68,8 +82,9 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                 }))
                         },
                         onError: (error: Error) => {
-                            this.logger.error(
-                                WinstonLog.WebsocketCloseError, {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionError,
+                                {
                                     error: error.message,
                                     streamName: "gate-last-price",
                                     symbols,
@@ -77,8 +92,9 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                             )
                         },
                         onClose: () => {
-                            this.logger.error(
-                                WinstonLog.WebsocketClosed, {
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionClosed,
+                                {
                                     streamName: "gate-last-price",
                                     symbols,
                                 }
@@ -90,7 +106,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                         for await (const data of stream) {
                             try {
                                 const parsed = JSON.parse(data.toString()) as GateTickerUpdate
-                                const tokenPrices = this.gateUtilsService.getGateTokenPrices([
+                                const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices([
                                     {
                                         symbol: parsed.result.currency_pair,
                                         price: parseFloat(parsed.result.last),
@@ -103,18 +119,18 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                 // update the token prices
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map(
-                                        (tokenPrice) =>
-                                            this.cachePriceUtilsService.updateAggregatedTokenPrice({
+                                        async (tokenPrice) =>
+                                            await this.aggregatedTokenPriceCacheService.set({
                                                 tokenId: tokenPrice.tokenId,
                                                 price: tokenPrice.price,
-                                                marketId: MarketId.Gate,
-                                            }
-                                            )
+                                                marketListingId: MarketListingId.Gate,
+                                            })
                                     )
                                 )
                             } catch (error) {
-                                this.logger.error(
-                                    WinstonLog.WebsocketMessageError, {
+                                this.winstonService.log(
+                                    WinstonLog.WebsocketSubscriptionError,
+                                    {
                                         error: error.message,
                                         streamName: "gate-last-price",
                                         symbols,

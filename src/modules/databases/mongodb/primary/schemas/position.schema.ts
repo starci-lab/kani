@@ -31,13 +31,15 @@ import {
 import {
     GraphQLJSON 
 } from "graphql-type-json"
+import {
+    PositionSettlementSchema, PositionSettlementSchemaClass 
+} from "./position-settlement.schema"
 
 @Schema({
     collection: "positions", timestamps: true 
 })
 @ObjectType()
 export class PositionSchema extends AbstractSchema {
-
     @Field(() => String,
         {
             description: "Transaction hash that created this position" 
@@ -318,6 +320,15 @@ export class PositionSchema extends AbstractSchema {
         type: Number, required: false 
     })
         positionValueAtClose?: number
+
+    @Field(() => PositionSettlementSchema,
+        {
+            description: "The settlement of the position", nullable: true 
+        })
+    @Prop({
+        type: PositionSettlementSchemaClass, required: false 
+    })
+        positionSettlement?: PositionSettlementSchema
 
     // grahpql only, not stored in the database
     @Field(() => LiquidityPoolSchema,

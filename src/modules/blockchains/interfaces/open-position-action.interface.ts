@@ -9,7 +9,7 @@ import {
     SolanaTx 
 } from "./types"
 import {
-    DlmmLiquidityPoolState, ClmmLiquidityPoolState, PrepareOpenPositionParams 
+    LiquidityPoolState, PrepareOpenPositionParams 
 } from "./types"
 import {
     SignatureWithBytes 
@@ -36,7 +36,7 @@ export interface PrepareOpenPositionResult {
 
 export interface ExecuteOpenPositionParams {
     bot: BotSchema;
-    state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+    state: LiquidityPoolState;
     isRetry: boolean;
     signatureWithBytes?: SignatureWithBytes
     solanaTx?: SolanaTx;
@@ -90,7 +90,7 @@ export interface CreateExecuteResult {
 
 export interface ConfirmOpenPositionParams {
   positionId: string;
-  state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+  state: LiquidityPoolState;
 }
 
 export interface ConfirmOpenPositionResult {
@@ -99,7 +99,7 @@ export interface ConfirmOpenPositionResult {
 
 export interface FeesParams {
   bot: BotSchema
-  state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+  state: LiquidityPoolState;
 }
 
 export interface FeesResult {
@@ -116,7 +116,7 @@ export interface IFeesService {
 }
 
 export interface ReservesParams {
-  state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+  state: LiquidityPoolState;
   bot: BotSchema;
 }
 

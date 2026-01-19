@@ -11,15 +11,14 @@ import {
     JobSchema,
     JobStatus,
     JobType,
-    LiquidityPoolId,
-    LiquidityPoolType,
     PrimaryMemoryStorageService,
-    QuoteRatioStatus
+    QuoteRatioStatus,
+    LiquidityPoolSchema
 } from "@modules/databases"
 import {
     DexNotFoundException,
     DexNotImplementedException,
-    LiquidityPoolNotFoundException,
+    SnapshotBalancesNotFoundException,
     TokenNotFoundException
 } from "@modules/exceptions"
 import {
@@ -35,12 +34,12 @@ import {
     MeteoraOpenPositionActionService 
 } from "./meteora"
 import {
+    ClmmLiquidityPoolState,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
     DlmmLiquidityPoolState,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
-    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
 } from "../interfaces"
@@ -50,19 +49,6 @@ import {
 import {
     QuoteRatioService 
 } from "../math"
-import {
-    computeDenomination, createObjectId 
-} from "@modules/utils"
-import Decimal from "decimal.js"
-import {
-    FlowXOpenPositionActionService 
-} from "./flowx"
-import {
-    CacheKey, createCacheKey, InjectRedisCache 
-} from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
 import {
     CetusOpenPositionActionService 
 } from "./cetus"
@@ -82,29 +68,17 @@ import {
     Queue 
 } from "bullmq"
 import {
-    OpenPositionPayload 
-} from "../types"
-import {
     envConfig 
 } from "@modules/env"
 import {
     v4 
 } from "uuid"
 import {
-    LeaseKey, LeaseService, getLeaseKey 
-} from "@modules/lock"
-import {
     Connection 
 } from "mongoose"
 import {
-    WinstonLog 
+    WinstonService, WinstonLog 
 } from "@modules/winston"
-import {
-    InjectWinston 
-} from "@modules/winston"
-import {
-    Logger as WinstonLogger 
-} from "winston"
 import {
     InjectSuperJson 
 } from "@modules/mixin"
@@ -112,6 +86,13 @@ import SuperJSON from "superjson"
 import {
     BalanceEligibilityService 
 } from "../balance"
+import _ from "lodash"
+import {
+    FlowXOpenPositionActionService 
+} from "./flowx"
+import {
+    OpenPositionPayload 
+} from "../types"
 
 /**
  * OpenPositionOrchestratorService
@@ -142,18 +123,14 @@ export class OpenPositionOrchestratorService {
         private readonly momentumOpenPositionActionService: MomentumOpenPositionActionService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
-        private readonly openPositionQueue: Queue<OpenPositionPayload>,
-        private readonly leaseService: LeaseService,
+        private readonly openPositionQueue: Queue<string>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
         private readonly balanceEligibilityService: BalanceEligibilityService,
+        private readonly winstonService: WinstonService,
     ) { }
 
     /**
@@ -164,35 +141,10 @@ export class OpenPositionOrchestratorService {
      */
     async enqueue(
         {
-            liquidityPoolId,
+            liquidityPool,
             bot,
         }: EnqueueOpenPositionParams,
     ) {
-        /**
-         * Lease lock guard:
-         * Prevent concurrent actions on the same bot.
-         */
-        const lease = this.leaseService.lease(
-            getLeaseKey(LeaseKey.Action,
-                bot.id),
-        )
-        if (lease.isLocked()) {
-            return
-        }
-
-        /**
-         * Retrieve liquidity pool definition from memory.
-         */
-        const liquidityPool =
-                this.primaryMemoryStorageService.liquidityPools.find(
-                    liquidityPool =>
-                        liquidityPool.displayId === liquidityPoolId,
-                )
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(
-                `Liquidity pool ${liquidityPoolId} not found`,
-            )
-        }
         /**
          * Balance eligibility check:
          * Ensure bot has sufficient total balance (USD-based).
@@ -209,22 +161,30 @@ export class OpenPositionOrchestratorService {
          * Resolve target token metadata.
          */
         const targetToken =
-            this.primaryMemoryStorageService.tokens.find(
-                token => token.id === bot.targetToken.toString(),
-            )
+            this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: bot.targetToken.toString(),
+                },
+            })
         if (!targetToken) {
-            throw new TokenNotFoundException("Target token not found")
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
         }
 
         /**
          * Resolve quote token metadata.
          */
         const quoteToken =
-            this.primaryMemoryStorageService.tokens.find(
-                token => token.id === bot.quoteToken.toString(),
-            )
+            this.primaryMemoryStorageService.tokenCollection.findOne({
+                id: {
+                    $eq: bot.quoteToken.toString(),
+                },
+            })
         if (!quoteToken) {
-            throw new TokenNotFoundException("Quote token not found")
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            })
         }
 
         /**
@@ -232,23 +192,27 @@ export class OpenPositionOrchestratorService {
          * Ensure the liquidity pool is associated with this bot.
          */
         if (
-            !bot.liquidityPools
-                .map(liquidityPool => liquidityPool.toString())
-                .includes(createObjectId(liquidityPoolId).toString())
+            !_.some(
+                bot.liquidityPools,
+                _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
+            )
         ) {
             return
         }
-
+        if (!bot.snapshots) {
+            throw new SnapshotBalancesNotFoundException({
+                botId: bot.id,
+            })
+        }
         /**
          * Convert snapshot balances to BN for precise arithmetic.
          */
-        const snapshotTargetBalanceAmountBN = new BN(
-            bot.snapshotTargetBalanceAmount,
+        const snapshotTargetBalanceAmount = new BN(
+            bot.snapshots.targetBalanceAmount,
         )
-        const snapshotQuoteBalanceAmountBN = new BN(
-            bot.snapshotQuoteBalanceAmount,
+        const snapshotQuoteBalanceAmount = new BN(
+            bot.snapshots.quoteBalanceAmount,
         )
-
         /**
          * Quote ratio computation:
          * Determines whether market conditions are favorable.
@@ -258,8 +222,8 @@ export class OpenPositionOrchestratorService {
                 {
                     targetTokenId: targetToken.displayId,
                     quoteTokenId: quoteToken.displayId,
-                    targetBalanceAmount: snapshotTargetBalanceAmountBN,
-                    quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
+                    targetBalanceAmount: snapshotTargetBalanceAmount,
+                    quoteBalanceAmount: snapshotQuoteBalanceAmount,
                 }
             )
 
@@ -275,117 +239,7 @@ export class OpenPositionOrchestratorService {
         ) {
             return
         }
-
-        /**
-         * Idempotency guard:
-         * Prevent duplicate open-position transactions per bot.
-         */
-        if (
-            await this.cacheManager.get(
-                createCacheKey(
-                    CacheKey.OpenPositionTransaction,
-                    {
-                        botId: bot.id 
-                    },
-                ),
-            )
-        ) {
-            return
-        }
-
-        /**
-         * Fetch latest liquidity pool state.
-         * DLMM and non-DLMM pools use different state resolvers.
-         */
-        let state: LiquidityPoolState | DlmmLiquidityPoolState
-        if (liquidityPool.type === LiquidityPoolType.Dlmm) {
-            state =
-                await this.liquidityPoolStateService.getDlmmState(
-                    liquidityPoolId,
-                )
-        } else {
-            state =
-                await this.liquidityPoolStateService.getState(
-                    liquidityPoolId,
-                )
-        }
-
-        /**
-         * DEX existence validation.
-         */
-        const dex =
-            this.primaryMemoryStorageService.dexes.find(
-                dex => dex.id === state.static.dex.toString(),
-            )
-        if (!dex) {
-            throw new DexNotFoundException("Dex not found")
-        }
-
-        /**
-         * DEX support validation.
-         */
-        const enabledDex = this.primaryMemoryStorageService.dexes.find(
-            dex => dex.id === state.static.dex.toString(),
-        )
-        if (!enabledDex) {
-            throw new DexNotImplementedException(`Dex ${state.static.dex.toString()} not supported`)
-        }
-        /**
-         * Recompute quote ratio for balance normalization.
-         */
-        const quoteRatioResponse =
-            await this.quoteRatioService.computeQuoteRatio({
-                targetTokenId: targetToken.displayId,
-                quoteTokenId: quoteToken.displayId,
-                targetBalanceAmount: new BN(
-                    bot.snapshotTargetBalanceAmount || 0,
-                ),
-                quoteBalanceAmount: new BN(
-                    bot.snapshotQuoteBalanceAmount || 0,
-                ),
-            })
-
-        /**
-         * Normalize balances into target-token units.
-         */
-        const targetBalanceAmountInTarget =
-            computeDenomination(
-                new BN(bot.snapshotTargetBalanceAmount || 0),
-                targetToken.decimals,
-            )
-
-        const quoteBalanceAmountInTarget =
-            computeDenomination(
-                new BN(bot.snapshotQuoteBalanceAmount || 0),
-                quoteToken.decimals,
-            ).div(quoteRatioResponse.oraclePrice.toNumber())
-
-        /**
-         * Total effective balance expressed in target token.
-         */
-        const totalBalanceAmountInTarget =
-            targetBalanceAmountInTarget.add(
-                quoteBalanceAmountInTarget,
-            )
-
-        /**
-         * Minimum balance safety check.
-         */
-        if (
-            totalBalanceAmountInTarget.lt(
-                new Decimal(
-                    0,
-                ),
-            )
-        ) {
-            return
-        }
-
-        /**
-         * Try to lock the lease.
-         */
-        const leaseId = v4()
-        lease.tryLock(leaseId)
+        // start a session
         const session = await this.connection.startSession()
         try {
             await session.withTransaction(
@@ -403,42 +257,41 @@ export class OpenPositionOrchestratorService {
                                 executor: envConfig().executor.id,
                                 type: JobType.OpenPosition,
                                 status: JobStatus.Pending,
-                                leaseId,
                             }
                         ]
                     )
+                    const job = jobRaw.toJSON()
                     /**
-                * Enqueue open-position job for async processing.
-                */
+                    * Enqueue open-position job for async processing.
+                    */
+                    const payload: OpenPositionPayload = {
+                        jobId: job.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                        botId: bot.id,
+                    }
                     await this.openPositionQueue.add(
                         v4(),
-                        {
-                            jobId: jobRaw.toJSON().id,
-                            state: this.superjson.stringify(state),
-                            bot,
-                            leaseId,
-                        }
+                        this.superjson.stringify(payload)
                     )
                     /**
-                * Structured logging for observability.
-                */
-                    this.logger.verbose(
+                    * Structured logging for observability.
+                    */
+                    this.winstonService.log(
                         WinstonLog.OpenPositionEnqueued,
                         {
                             botId: bot.id,
-                            liquidityPoolId,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
                 }
             )
         } catch (error) {
-            // unlock the lease if the job is not enqueued
-            lease.unlock(leaseId)
             // log the error
-            this.logger.error(
+            this.winstonService.log(
                 WinstonLog.OpenPositionEnqueueFailed,
                 {
                     botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
                 }
             )
@@ -455,13 +308,19 @@ export class OpenPositionOrchestratorService {
             bot,
         }: PrepareOpenPositionParams,
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
+        const _state = state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
 
         const dex =
-            this.primaryMemoryStorageService.dexes.find(
-                dex => dex.id === _state.static.dex.toString(),
+            this.primaryMemoryStorageService.dexCollection.findOne(
+                {
+                    id: {
+                        $eq: _state.static.dex.toString(),
+                    },
+                }
             )
-        if (!dex) throw new DexNotFoundException("Dex not found")
+        if (!dex) throw new DexNotFoundException({
+            id: _state.static.dex.toString(),
+        })
 
         switch (dex.displayId) {
         case DexId.Raydium:
@@ -494,7 +353,9 @@ export class OpenPositionOrchestratorService {
             })
         default:
             throw new DexNotImplementedException(
-                `DEX ${_state.static.dex.toString()} not supported`,
+                {
+                    id: _state.static.dex.toString(),
+                }
             )
         }
     }
@@ -505,19 +366,25 @@ export class OpenPositionOrchestratorService {
     async execute(
         params: ExecuteOpenPositionParams,
     ): Promise<ExecuteOpenPositionResult> {
-        const _state = params.state as LiquidityPoolState | DlmmLiquidityPoolState
-
+        const _state = params.state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
         const dex =
-            this.primaryMemoryStorageService.dexes.find(
-                dex => dex.id === _state.static.dex.toString(),
+            this.primaryMemoryStorageService.dexCollection.findOne(
+                {
+                    id: {
+                        $eq: _state.static.dex.toString(),
+                    },
+                }
             )
-        if (!dex) throw new DexNotFoundException("Dex not found")
+        if (!dex) throw new DexNotFoundException({
+            id: _state.static.dex.toString(),
+        })
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
-                `Dex ${_state.static.dex.toString()} not supported`,
+                {
+                    id: _state.static.dex.toString(),
+                }
             )
         }
-
         switch (dex.displayId) {
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.execute(params)
@@ -535,7 +402,9 @@ export class OpenPositionOrchestratorService {
             return this.meteoraOpenPositionActionService.execute(params)
         default:
             throw new DexNotImplementedException(
-                `DEX ${_state.static.dex.toString()} not supported for execute`,
+                {
+                    id: _state.static.dex.toString(),
+                }
             )
         }
     }
@@ -546,19 +415,26 @@ export class OpenPositionOrchestratorService {
     async confirm(
         params: ConfirmOpenPositionParams,
     ): Promise<ConfirmOpenPositionResult> {
-        const _state = params.state as LiquidityPoolState | DlmmLiquidityPoolState
+        const _state = params.state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
 
         const dex =
-            this.primaryMemoryStorageService.dexes.find(
-                dex => dex.id === _state.static.dex.toString(),
+            this.primaryMemoryStorageService.dexCollection.findOne(
+                {
+                    id: {
+                        $eq: _state.static.dex.toString(),
+                    },
+                }
             )
-        if (!dex) throw new DexNotFoundException("Dex not found")
+        if (!dex) throw new DexNotFoundException({
+            id: _state.static.dex.toString(),
+        })
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
-                `Dex ${_state.static.dex.toString()} not supported`,
+                {
+                    id: _state.static.dex.toString(),
+                }
             )
         }
-
         switch (dex.displayId) {
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.confirm(params)
@@ -576,7 +452,9 @@ export class OpenPositionOrchestratorService {
             return this.meteoraOpenPositionActionService.confirm(params)
         default:
             throw new DexNotImplementedException(
-                `DEX ${_state.static.dex.toString()} not supported for confirm`,
+                {
+                    id: _state.static.dex.toString(),
+                }
             )
         }
     }
@@ -584,5 +462,5 @@ export class OpenPositionOrchestratorService {
 
 export interface EnqueueOpenPositionParams {
     bot: BotSchema
-    liquidityPoolId: LiquidityPoolId
+    liquidityPool: LiquidityPoolSchema
 }

@@ -60,7 +60,7 @@ export class PythRestService implements OnApplicationBootstrap {
     /**
      * Fetch the prices interval
      */
-    @Interval(envConfig().time.interval.pyth.rest)
+    @Interval(envConfig().priceFeeds.pyth.interval.rest)
     async fetchPricesInterval() {
         await this.fetchPrices()
     }
@@ -74,7 +74,7 @@ export class PythRestService implements OnApplicationBootstrap {
         try {
             // we split the symbols into chunks
             const chunks = _.chunk(symbols,
-                envConfig().chunks.pyth.rest)
+                envConfig().priceFeeds.pyth.chunks.rest)
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {

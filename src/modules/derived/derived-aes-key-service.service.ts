@@ -1,13 +1,25 @@
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import { EncryptionService } from "@modules/crypto"
-import { EncryptedPayload } from "@modules/typedefs"
-import { GcpKmsService } from "@modules/gcp"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    Injectable, OnModuleInit 
+} from "@nestjs/common"
+import {
+    EncryptionService 
+} from "@modules/crypto"
+import {
+    EncryptedPayload 
+} from "@modules/typedefs"
+import {
+    GcpKmsService 
+} from "@modules/gcp"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 import crypto from "crypto"
-import { envConfig } from "@modules/env"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { WinstonLog } from "@modules/winston"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
 
 @Injectable()
 export class DerivedAesKeyService implements OnModuleInit {
@@ -16,8 +28,7 @@ export class DerivedAesKeyService implements OnModuleInit {
         private readonly encryptionService: EncryptionService,
         private readonly gcpKmsService: GcpKmsService,
         private readonly mountStorageService: MountStorageService,
-        @InjectWinston() 
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) {}
 
     async onModuleInit() {
@@ -35,19 +46,23 @@ export class DerivedAesKeyService implements OnModuleInit {
                 "sha256"
             ) 
         } catch (error) {
-            this.logger.error(
+            this.winstonService.log(
                 WinstonLog.ErrorDecryptingAesKey, 
-                error.message
+                {
+                    error: error.message 
+                }
             )
             this.key = crypto.randomBytes(32)
         }
     }
 
     encrypt(data: string): EncryptedPayload {
-        return this.encryptionService.encrypt(data, this.key)
+        return this.encryptionService.encrypt(data,
+            this.key)
     }
 
     decrypt(payload: EncryptedPayload): string {
-        return this.encryptionService.decrypt(payload, this.key)
+        return this.encryptionService.decrypt(payload,
+            this.key)
     }
 }

@@ -2,7 +2,8 @@ import {
     EventName
 } from "./enum"
 import {
-    ClmmLiquidityPoolsSyncedEventPayload, DlmmLiquidityPoolsSyncedEventPayload 
+    ClmmLiquidityPoolsSyncedEventPayload, DlmmLiquidityPoolsSyncedEventPayload, 
+    ReinitializeBalancersEventPayload
 } from "./types"
 import {
     KafkaTopicConfig 
@@ -24,5 +25,13 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as DlmmLiquidityPoolsSyncedEventPayload
+    },
+    [EventName.ReinitializeBalancers]: {
+        useKafka: true,
+        useLocal: false,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ReinitializeBalancersEventPayload
     },
 }

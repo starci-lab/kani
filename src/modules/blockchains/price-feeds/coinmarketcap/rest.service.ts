@@ -72,7 +72,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
     /**
      * Fetch the prices interval
      */
-    @Interval(envConfig().time.interval.coinmarketcap.rest)
+    @Interval(envConfig().priceFeeds.coinmarketcap.interval.rest)
     async fetchPricesInterval() {
         await this.fetchPrices()
     }
@@ -86,7 +86,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
         try {
             // we split the ids into chunks
             const chunks = _.chunk(symbols,
-                envConfig().chunks.coinmarketcap.rest)
+                envConfig().priceFeeds.coinmarketcap.chunks.rest)
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
