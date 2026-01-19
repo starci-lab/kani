@@ -1,6 +1,10 @@
 
-import { DexId } from "@modules/databases"
-import { CoinArgument } from "../types"
+import {
+    DexId 
+} from "@modules/databases"
+import {
+    CoinArgument 
+} from "../types"
 
 export interface DexesOptions {
     dexIds?: Array<DexId>

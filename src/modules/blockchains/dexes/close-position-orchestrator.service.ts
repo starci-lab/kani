@@ -5,10 +5,10 @@ import {
     LiquidityPoolStateService 
 } from "./liquidity-pool-state.service"
 import {
-    BotSchema, DexId, InjectPrimaryMongoose, JobSchema, JobStatus, JobType, LiquidityPoolSchema, LiquidityPoolType, PrimaryMemoryStorageService 
+    BotSchema, DexId, InjectPrimaryMongoose, JobSchema, JobStatus, JobType, LiquidityPoolSchema, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    DexNotFoundException, DexNotImplementedException, LiquidityPoolNotFoundException 
+    DexNotFoundException, DexNotImplementedException 
 } from "@modules/exceptions"
 import {
     RaydiumClosePositionActionService 
@@ -23,9 +23,6 @@ import {
     MeteoraClosePositionActionService 
 } from "./meteora"
 import {
-    DlmmLiquidityPoolState, ClmmLiquidityPoolState 
-} from "../interfaces"
-import {
     FlowXClosePositionActionService 
 } from "./flowx"
 import {
@@ -38,13 +35,10 @@ import {
     MomentumClosePositionActionService 
 } from "./momentum"
 import { 
-    PrepareClosePositionParams, 
     PrepareClosePositionResult, 
-    ExecuteClosePositionParams as ExecuteClosePositionParamsInterface 
+    ExecuteClosePositionParams,
+    PrepareClosePositionParams, 
 } from "../interfaces"
-import {
-    createObjectId 
-} from "@modules/utils"
 import {
     InjectQueue 
 } from "@nestjs/bullmq"
@@ -67,10 +61,10 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    ExitStrategyEngineOutputService 
+    SettlementService 
 } from "../settlement"
 import {
-    WinstonLevel, WinstonService 
+    WinstonLog, WinstonService 
 } from "@modules/winston"
 
 @Injectable()
@@ -85,14 +79,14 @@ export class ClosePositionOrchestratorService {
         private readonly cetusClosePositionActionService: CetusClosePositionActionService,
         private readonly turbosClosePositionActionService: TurbosClosePositionActionService,
         private readonly momentumClosePositionActionService: MomentumClosePositionActionService,
+        private readonly winstonService: WinstonService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<ClosePositionPayload>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly exitStrategyEngineOutputService: ExitStrategyEngineOutputService,
-        private readonly winstonService: WinstonService,
+        private readonly settlementService: SettlementService,
     ) {}
 
     async enqueue(
@@ -104,138 +98,95 @@ export class ClosePositionOrchestratorService {
         /**
          * Safety check, if the active position is not set, return and remind user to open a position first
          */
-        if (!bot.activePosition) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             return
         }
         /**
          * Check if current liquidity pool is belong to the active position
          */
-        if (bot.activePosition.liquidityPool.toString() !== createObjectId(liquidityPoolId).toString()) {
+        if (bot.activePosition.liquidityPool.toString() !== liquidityPool.id) {
             return
-        }
-        /**
-         * Retrieve the liquidity pool
-         */
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-            {
-                displayId: liquidityPoolId,
-            }
-        )
-        if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException({
-                displayId: liquidityPoolId,
-            })
         }
         /**
          * Fetch latest liquidity pool state
          * (DLMM and non-DLMM pools have different state handlers)
          */
-        let state: ClmmLiquidityPoolState | DlmmLiquidityPoolState
-        if (liquidityPool.type === LiquidityPoolType.Dlmm) {
-            state = await this.liquidityPoolStateService.getDlmmState(liquidityPoolId)
-        } else {
-            state = await this.liquidityPoolStateService.getState(liquidityPoolId)
-        }
+        const state = await this.liquidityPoolStateService.getState(liquidityPool)
         /**
          * Validate that the pool's DEX exists
          */
         const dex = this.primaryMemoryStorageService.dexCollection.findOne({
-            id: state.static.dex.toString(),
+            id: {
+                $eq: state.static.dex.toString(),
+            },
         })
         if (!dex) {
-            throw new DexNotFoundException("Dex not found")
+            throw new DexNotFoundException({
+                id: state.static.dex.toString(),
+            })
         }   
         /**
          * Ensure the DEX is supported by current bot configuration
          */
         if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException(`Dex ${dex.displayId} not supported`)
+            throw new DexNotImplementedException({
+                id: state.static.dex.toString(),
+            })
         }
         /**
          * Check if the position can be closed
          */
-        const { willExit, reasons } = await this.exitStrategyEngineOutputService.willExit({
+        const { settled, reason } = await this.settlementService.settle({
             bot,
             state,
         })
-        if (!willExit) {
-            this.logger.debug(
-                WinstonLog.ClosePositionNotExitable,
-                {
-                    botId: bot.id,
-                    liquidityPoolId,
-                    reasons,
-                }
-            )
+        console.log(settled,
+            reason)
+        if (!settled) {
             return
         }
-        // try to lock the lease
-        const leaseId = v4()
-        lease.tryLock(leaseId)
-        const session = await this.connection.startSession()
-        try {
-            await session.withTransaction(async () => {
-            /**
+        /**
              * Persist job record.
              */
-                const [ jobRaw ] = await this.connection.model<JobSchema>(
-                    JobSchema.name
-                ).create(
-                    [
-                        {
-                            liquidityPool: liquidityPool.id,
-                            bot: bot.id,
-                            executor: envConfig().executor.id,
-                            type: JobType.ClosePosition,
-                            status: JobStatus.Pending,
-                            leaseId,
-                        }
-                    ]
-                )
-                /**
+        const [ jobRaw ] = await this.connection.model<JobSchema>(
+            JobSchema.name
+        ).create(
+            [
+                {
+                    liquidityPool: liquidityPool.id,
+                    bot: bot.id,
+                    executor: envConfig().executor.id,
+                    type: JobType.ClosePosition,
+                    status: JobStatus.Pending,
+                }
+            ]
+        )
+        /**
             * Add close position job to the queue
             */
-                await this.closePositionQueue.add(
-                    v4(),
-                    {
-                        jobId: jobRaw.toJSON().id,
-                        state: this.superjson.stringify(state),
-                        bot,
-                        leaseId,
-                    }
-                )
-                /**
+        await this.closePositionQueue.add(
+            v4(),
+            {
+                jobId: jobRaw.toJSON().id,
+                botId: bot.id,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
+        /**
             * Structured logging for observability.
             */
-                this.logger.verbose(
-                    WinstonLog.ClosePositionEnqueued,
-                    {
-                        botId: bot.id,
-                        jobId: jobRaw.toJSON().id,
-                        liquidityPoolId,
-                    }
-                )
-            })
-        } catch (error) {
-            // unlock the lease if the job is not enqueued
-            lease.unlock(leaseId)
-            // log the error
-            this.logger.error(
-                WinstonLog.ClosePositionEnqueueFailed,
-                {
-                    botId: bot.id,
-                    error: error.message,
-                }
-            )
-        }
+        this.winstonService.log(
+            WinstonLog.ClosePositionEnqueued,
+            {
+                botId: bot.id,
+                liquidityPoolId: liquidityPool.displayId,
+            }
+        )
     }
 
-    async prepare(
-        {
-            bot,
-            state,
-        }: PrepareClosePositionParams,
+    async prepare(params: PrepareClosePositionParams,
     ): Promise<PrepareClosePositionResult> {
+        const { bot, state } = params
         const dex = this.primaryMemoryStorageService.dexCollection.findOne({
             id: {
                 $eq: state.static.dex.toString(),
@@ -269,28 +220,16 @@ export class ClosePositionOrchestratorService {
             })
         }
         case DexId.Momentum: {
-            return await this.momentumClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.momentumClosePositionActionService.prepare(params)
         }
         case DexId.Raydium: {
-            return await this.raydiumClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.raydiumClosePositionActionService.prepare(params)
         }
         case DexId.Orca: {
-            return await this.orcaClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.orcaClosePositionActionService.prepare(params)
         }
         case DexId.Meteora: {
-            return await this.meteoraClosePositionActionService.prepare({
-                state,
-                bot,
-            })
+            return await this.meteoraClosePositionActionService.prepare(params)
         }
         default: {
             throw new DexNotImplementedException({
@@ -301,15 +240,17 @@ export class ClosePositionOrchestratorService {
     }
 
     async execute(
-        params: ExecuteClosePositionParamsInterface,
+        params: ExecuteClosePositionParams,
     ): Promise<void> {
         const { state } = params
-        const _state = state as LiquidityPoolState | DlmmLiquidityPoolState
-        const dex = this.primaryMemoryStorageService.dexes.find(dex => dex.id === _state.static.dex.toString())
-        if (!dex) throw new DexNotFoundException("Dex not found")
-        if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException(`Dex ${_state.static.dex.toString()} not supported`)
-        }
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
+            id: {
+                $eq: state.static.dex.toString(),
+            },
+        })
+        if (!dex) throw new DexNotFoundException({
+            id: state.static.dex.toString(),
+        })
         switch (dex.displayId) {
         case DexId.Raydium: {
             return await this.raydiumClosePositionActionService.execute(params)
@@ -334,7 +275,7 @@ export class ClosePositionOrchestratorService {
         }
         default: {
             throw new DexNotImplementedException({
-                id: _state.static.dex.toString(),
+                id: state.static.dex.toString(),
             })
         }
         }
@@ -344,9 +285,4 @@ export class ClosePositionOrchestratorService {
 export interface EnqueueClosePositionParams {
     bot: BotSchema
     liquidityPool: LiquidityPoolSchema
-}
-
-export interface ExecuteClosePositionOrchestratorParams {
-    liquidityPool: LiquidityPoolSchema
-    bot: BotSchema
 }
