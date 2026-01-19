@@ -14,9 +14,9 @@ import { UserJwtLike } from "@modules/passport"
 import {
     UserNotFoundException,
     TokenNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import { KeypairsService } from "@modules/blockchains"
-import { chainIdToPlatformId } from "@typedefs"
+import { chainIdToPlatformId } from "@modules/typedefs"
 import { Decimal } from "decimal.js"
 import { GoogleDriveFolderId, GoogleDriveService } from "@modules/gcp"
 import { InjectSuperJson } from "@modules/mixin"

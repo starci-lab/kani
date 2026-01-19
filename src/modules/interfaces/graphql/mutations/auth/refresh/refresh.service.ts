@@ -11,7 +11,7 @@ import {
     SessionNotFoundException,
     UserNotFoundException,
     UserTotpSecretNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 
 @Injectable()
 export class RefreshService {

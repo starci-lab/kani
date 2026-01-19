@@ -4,7 +4,7 @@ import { PrimaryMemoryStorageService } from "@modules/databases"
 import { AsyncService, DayjsService, ReadinessWatcherFactoryService } from "@modules/mixin"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { sleep } from "@utils"
+import { sleep } from "@modules/utils"
 import { envConfig } from "@modules/env"
 
 export interface DiagnosePythPriceParams {

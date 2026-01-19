@@ -20,7 +20,7 @@ import {
     BotNotFoundException, 
     BotNotOwnedByUserException, 
     LiquidityPoolNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import { LiquidityPoolStateService } from "@modules/blockchains"
 import { ReservesOrchestratorService } from "@modules/blockchains/dexes"
 

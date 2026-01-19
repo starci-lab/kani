@@ -5,7 +5,7 @@ import {
     SocketIoAccessTokenMissingException,
     SocketIoAccessTokenInvalidException,
     SocketIoAccessTokenExpiredException
-} from "@exceptions"
+} from "@modules/exceptions"
 import { DerivedJwtSecretService } from "@modules/derived"
 
 export const socketIoAuthMiddleware = (

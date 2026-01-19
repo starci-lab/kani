@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import crypto from "crypto"
-import { EncryptedPayload } from "@typedefs"
+import { EncryptedPayload } from "@modules/typedefs"
 
 @Injectable()
 export class EncryptionService {

@@ -7,10 +7,10 @@ import {
 } from "@nestjs/common"
 import {
     TokenType,
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     TokenNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     GasStatus,
 } from "../types"

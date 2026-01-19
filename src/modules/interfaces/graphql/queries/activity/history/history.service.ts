@@ -19,7 +19,7 @@ import { DayjsService, MsService } from "@modules/mixin"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { ChartInterval, chartIntervalToMsString } from "../../../abstracts"
 
 /**

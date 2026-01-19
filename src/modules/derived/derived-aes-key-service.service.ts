@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import { EncryptionService } from "@modules/crypto"
-import { EncryptedPayload } from "@typedefs"
+import { EncryptedPayload } from "@modules/typedefs"
 import { GcpKmsService } from "@modules/gcp"
 import { MountStorageService } from "@modules/filesystem"
 import crypto from "crypto"

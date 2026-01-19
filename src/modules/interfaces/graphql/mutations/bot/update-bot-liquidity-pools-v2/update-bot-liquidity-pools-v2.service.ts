@@ -13,7 +13,7 @@ import {
     BotNotV2Exception, 
     SomeLiquidityPoolsNotFoundException, 
     UserNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import { UpdateBotLiquidityPoolsV2Request } from "./update-bot-liquidity-pools-v2.dto"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 

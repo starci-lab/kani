@@ -2,7 +2,7 @@ import { CoinAsset } from "../../types"
 import { Injectable } from "@nestjs/common"
 import BN from "bn.js"
 import { Transaction, TransactionResult } from "@mysten/sui/transactions"
-import { CoinAssetNotFoundException } from "@exceptions"
+import { CoinAssetNotFoundException } from "@modules/exceptions"
 import { RpcExecutorService } from "@modules/blockchains"
 import { RpcAccessType } from "@modules/filesystem"
 

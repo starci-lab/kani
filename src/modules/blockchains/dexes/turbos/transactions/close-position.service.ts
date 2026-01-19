@@ -19,16 +19,16 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
 import {
     MAX_UINT_64 
-} from "@utils"
+} from "@modules/utils"
 import {
     deprecatedPoolRewards 
 } from "turbos-clmm-sdk"

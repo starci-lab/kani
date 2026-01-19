@@ -6,7 +6,7 @@ import {
 } from "@mysten/sui/transactions"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import BN from "bn.js"
 
 /**

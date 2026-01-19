@@ -19,7 +19,7 @@ import {
 } from "./solana.service"
 import {
     TokenType, ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     SuiBalanceService 
 } from "./sui.service"
@@ -35,7 +35,7 @@ import {
     TokenNotFoundException,
     MinOperationalGasAmountNotFoundException,
     UnsupportedChainIdException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     GasStatusService 
 } from "./gas-status.service"
@@ -48,7 +48,7 @@ import {
 } from "../math"
 import {
     computeDenomination 
-} from "@utils"
+} from "@modules/utils"
 import Decimal from "decimal.js"
 import {
     v4 

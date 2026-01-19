@@ -15,7 +15,7 @@ import {
 } from "./bot.schema"
 import {
     ChainId, GraphQLTypeChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     GraphQLTypeTransactionType, TokenId, TransactionType 
 } from "../enums"

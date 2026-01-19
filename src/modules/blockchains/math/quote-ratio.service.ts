@@ -9,10 +9,10 @@ import {
 } from "./swap.service"
 import {
     TokenNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     computeDenomination 
-} from "@utils"
+} from "@modules/utils"
 import {
     Decimal 
 } from "decimal.js"

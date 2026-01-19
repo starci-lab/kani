@@ -14,14 +14,14 @@ import {
     AggregatorQuoteFailedException,
     AggregatorSwapFailedException,
     TokenNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import BN from "bn.js"
 import {
     RetryService 
 } from "@modules/mixin"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     address 
 } from "@solana/kit"
@@ -30,7 +30,7 @@ import {
 } from "@modules/filesystem"
 import {
     AggregatorId 
-} from "./types"
+} from "@modules/typedefs"
 import {
     envConfig 
 } from "@modules/env"

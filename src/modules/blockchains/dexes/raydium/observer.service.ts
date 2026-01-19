@@ -1,5 +1,5 @@
 import {
-    Injectable, OnApplicationBootstrap 
+    Injectable, OnApplicationBootstrap, OnModuleInit 
 } from "@nestjs/common"
 import {
     CacheKey,
@@ -11,22 +11,24 @@ import {
     LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
+    LiquidityPoolSchema,
 } from "@modules/databases"
 import {
-    AsyncService, DayjsService, RetryService 
+    AsyncService, DayjsService, RetryService, LokiJSService 
 } from "@modules/mixin"
 import {
-    LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException 
-} from "@exceptions"
+    LiquidityPoolNotFoundException, LiquidityPoolNoWsIdleTimeoutException, 
+    SolanaAccountNotFoundException, ErrorSolanaAccountName
+} from "@modules/exceptions"
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    ClmmLiquidityPoolsFetchedEvent, EventEmitterService, EventName 
+    EventEmitterService, EventName 
 } from "@modules/event"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import {
     Interval 
 } from "@nestjs/schedule"
@@ -50,7 +52,8 @@ import {
 } from "./beets"
 
 @Injectable()
-export class RaydiumObserverService implements OnApplicationBootstrap {
+export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleInit {
+    private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
         private readonly winstonService: WinstonService,
         private readonly cacheManager: CacheService,
@@ -60,30 +63,36 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
         private readonly eventEmitterService: EventEmitterService,
         private readonly dayjsService: DayjsService,
         private readonly retryService: RetryService,
+        private readonly lokiJSService: LokiJSService,
     ) { }
 
+    async onModuleInit() {
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find({
+            dex: {
+                $eq: createObjectId(DexId.Raydium).toString(),
+            },
+        })
+        this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+            "raydium-observer-liquidity-pools", 
+        )
+        this.liquidityPoolCollection.insert(liquidityPools)
+    }
     // ============================================
     // Main bootstrap
     // ============================================
     onApplicationBootstrap() {
-        this.handlePoolStateUpdateInterval().then(() => {
-            for (const liquidityPool of this.memoryStorageService.liquidityPools) {
-                if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
-                this.observeClmmPool(liquidityPool.displayId)
-            }
-        })
+        this.handlePoolStateUpdateInterval()
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+            this.observeClmmPool(liquidityPool)
+        }
     }
 
-    @Interval(envConfig().timeConfig.interval.poolStateUpdate)
+    @Interval(envConfig().dexes.raydium.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.memoryStorageService.liquidityPools) {
-            if (liquidityPool.dex.toString() !== createObjectId(DexId.Raydium).toString()) continue
+        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
-                (
-                    async () => {
-                        await this.fetchPoolInfo(liquidityPool.displayId)
-                    })()
+                this.fetchPoolInfo(liquidityPool.displayId)
             )
         }
         await this.asyncService.allIgnoreError(promises)
@@ -93,7 +102,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     // Shared handler for new pool state
     // ============================================
     private async handlePoolStateUpdate(
-        liquidityPoolId: LiquidityPoolId,
+        liquidityPool: LiquidityPoolSchema,
         state: PoolState
     ) {
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
@@ -117,18 +126,15 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 this.cacheManager.set(
                     {
                         key: CacheKey.DynamicClmmLiquidityPoolInfo,
-                        args: [liquidityPoolId],
+                        args: [liquidityPool.id],
                         cacheResult: parsed,
                     }
                 ),
                 // emit event through event emitter
-                this.eventEmitterService.emit<ClmmLiquidityPoolsFetchedEvent>(
-                    EventName.ClmmLiquidityPoolsFetched,
+                this.eventEmitterService.emit(
+                    EventName.ClmmLiquidityPoolsSynced,
                     {
-                        liquidityPoolId, ...parsed 
-                    },
-                    {
-                        withoutLocal: true 
+                        id: liquidityPool.id, ...parsed 
                     },
                 ),
             ]
@@ -143,10 +149,14 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     private async fetchPoolInfo(
         liquidityPoolId: LiquidityPoolId
     ) {
-        const liquidityPool = this.memoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.displayId === liquidityPoolId,
-        )
-        if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+        const liquidityPool = this.liquidityPoolCollection.findOne({
+            id: {
+                $eq: liquidityPoolId,
+            },
+        })
+        if (!liquidityPool) throw new LiquidityPoolNotFoundException({
+            displayId: liquidityPoolId,
+        })
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
@@ -155,10 +165,15 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                     {
                         commitment: "confirmed",
                     })
-                if (!accountInfo || !accountInfo.exists) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
+                if (!accountInfo || !accountInfo.exists) throw new SolanaAccountNotFoundException({
+                    name: ErrorSolanaAccountName.Pool,
+                    address: liquidityPool.poolAddress,
+                    dexId: DexId.Raydium,
+                    liquidityPoolId: liquidityPool.displayId,
+                })
                 const [state] = PoolState.struct.deserialize(Buffer.from(accountInfo.data),
                     8)
-                return await this.handlePoolStateUpdate(liquidityPoolId,
+                return await this.handlePoolStateUpdate(liquidityPool,
                     state)
             },
         })
@@ -169,18 +184,13 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
     // Observe (subscribe)
     // ============================================
     private async observeClmmPool(
-        liquidityPoolId: LiquidityPoolId
+        liquidityPool: LiquidityPoolSchema
     ) {
         try {
-            const liquidityPool = this.memoryStorageService.liquidityPools.find(
-                liquidityPool => liquidityPool.displayId === liquidityPoolId,
-            )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException(`Liquidity pool ${liquidityPoolId} not found`)
             if (!liquidityPool.wsIdleTimeoutMs) {
-                throw new LiquidityPoolNoWsIdleTimeoutException(
-                    liquidityPoolId,
-                    "Liquidity pool has no WS idle timeout"
-                )
+                throw new LiquidityPoolNoWsIdleTimeoutException({
+                    displayId: liquidityPool.displayId,
+                })
             }
             // infinite loop to ensure the connection is alive
             const abortController = new AbortController()
@@ -214,7 +224,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                                     8
                                 )
                                 resetTimeout()
-                                await this.handlePoolStateUpdate(liquidityPoolId,
+                                await this.handlePoolStateUpdate(liquidityPool,
                                     state)
                             }
                         },
@@ -226,12 +236,13 @@ export class RaydiumObserverService implements OnApplicationBootstrap {
                 }
             })
         } catch (error) {
-            this.winstonService.error(
+            this.winstonService.log(
                 WinstonLog.LiquidityPoolWsError,
                 {
-                    liquidityPoolId,
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
-                })
+                }
+            )
         }
     }
 }

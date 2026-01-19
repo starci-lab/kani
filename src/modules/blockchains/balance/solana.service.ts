@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     FetchBalanceParams,
     FetchBalanceResult,
@@ -21,7 +21,7 @@ import {
     MissingSolanaTxParamException,
     TokenNotFoundException,
     TransactionNotExecutedException
-} from "@exceptions"
+} from "@modules/exceptions"
 import BN from "bn.js"
 import {
     address,

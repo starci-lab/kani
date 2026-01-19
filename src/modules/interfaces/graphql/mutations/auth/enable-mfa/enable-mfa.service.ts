@@ -9,7 +9,7 @@ import { JwtAuthService, UserJwtLike } from "@modules/passport"
 import {
     UserNotFoundException,
     UserTotpSecretNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { CookieService } from "@modules/cookie"
 import { Response } from "express"
 

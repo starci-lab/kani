@@ -40,7 +40,7 @@ import {
     SuiObjectInvalidTypeException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "../../clients"

@@ -10,13 +10,13 @@ import {
 import {
     AggregatorAllQuotesFailedException, 
     AggregatorNotImplementedException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     AggregatorId 
-} from "./types"
+} from "@modules/typedefs"
 import { 
     BatchQuoteParams, 
     BatchQuoteResult, 

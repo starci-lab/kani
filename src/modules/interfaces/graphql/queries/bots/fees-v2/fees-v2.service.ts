@@ -18,7 +18,7 @@ import {
     BotNotOwnedByUserException, 
     LiquidityPoolNotFoundException,
     UserNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { FeesOrchestratorService } from "@modules/blockchains"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { Cache } from "cache-manager"

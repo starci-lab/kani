@@ -11,7 +11,7 @@ import {
     BotNotOwnedByUserException, 
     BotNotV2Exception, 
     UserNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import { UpdateBotSettingsV2Request } from "./update-bot-settings-v2.dto"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 

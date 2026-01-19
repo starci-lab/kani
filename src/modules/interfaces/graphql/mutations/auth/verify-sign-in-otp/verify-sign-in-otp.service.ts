@@ -14,7 +14,7 @@ import {
     FailedToGenerateReferralCodeException,
     SignInOtpMismatchException,
     SignInOtpNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { createCacheKey, InjectRedisCache, SignInOtpCacheResult } from "@modules/cache"
 import { Cache } from "cache-manager"
 import { CacheKey } from "@modules/cache"

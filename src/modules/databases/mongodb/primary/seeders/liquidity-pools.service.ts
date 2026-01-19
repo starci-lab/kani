@@ -9,10 +9,10 @@ import {
 } from "../schemas"
 import {
     DeepPartial, ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import {
     Seeder 
 } from "./seeder.interface"

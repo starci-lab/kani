@@ -12,7 +12,7 @@ import {
     KmsCiphertextNotFoundException,
     KmsDecryptionFailedException,
     KmsEncryptionFailedException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     MountStorageService 
 } from "@modules/filesystem"

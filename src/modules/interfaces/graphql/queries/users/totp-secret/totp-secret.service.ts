@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { InjectPrimaryMongoose, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
-import { UserMfaAlreadyEnabledException, UserNotFoundException, UserTotpSecretNotFoundException } from "@exceptions"
+import { UserMfaAlreadyEnabledException, UserNotFoundException, UserTotpSecretNotFoundException } from "@modules/exceptions"
 import { UserJwtLike } from "@modules/passport"
 import { TotpSecretResponseData } from "./totp-secret.dto"
 import { TotpService } from "@modules/totp"

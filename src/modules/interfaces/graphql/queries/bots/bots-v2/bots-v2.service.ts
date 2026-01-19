@@ -12,7 +12,7 @@ import {
 import Decimal from "decimal.js"
 import { ProfitService } from "../../../services"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { UserNotFoundException } from "@exceptions"
+import { UserNotFoundException } from "@modules/exceptions"
 import { envConfig } from "@modules/env"
 import { ValidateService } from "../../../services"
 

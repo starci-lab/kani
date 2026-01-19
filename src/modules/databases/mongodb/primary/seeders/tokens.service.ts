@@ -4,7 +4,7 @@ import {
 } from "../enums"
 import {
     ChainId, DeepPartial, TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     TokenSchema 
 } from "../schemas"
@@ -22,7 +22,7 @@ import {
 } from "@nestjs/common"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 
 @Injectable()
 export class TokensService implements Seeder {

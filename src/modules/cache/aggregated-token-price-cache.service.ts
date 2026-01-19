@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     createObjectId
-} from "@utils"
+} from "@modules/utils"
 import {
     MarketListingId, TokenId 
 } from "@modules/databases"
@@ -12,7 +12,7 @@ import {
 } from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     AggregatedTokenPriceCacheResult 
 } from "./config"

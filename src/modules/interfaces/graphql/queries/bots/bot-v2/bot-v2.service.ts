@@ -5,9 +5,9 @@ import { Connection } from "mongoose"
 import { 
     BotV2Request,
 } from "./bot-v2.dto"
-import { BotNotFoundException } from "@exceptions"
+import { BotNotFoundException } from "@modules/exceptions"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { UserNotFoundException } from "@exceptions"
+import { UserNotFoundException } from "@modules/exceptions"
 
 @Injectable()
 export class BotV2Service {

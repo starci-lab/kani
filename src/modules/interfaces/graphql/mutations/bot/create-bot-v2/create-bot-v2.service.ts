@@ -15,7 +15,7 @@ import { VerifyAccessTokenResponse } from "@privy-io/node"
 import {
     UserNotFoundException,
     TokenNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { Decimal } from "decimal.js"
 import { PrivyCoreService } from "@modules/privy"
 import { DerivedAesKeyService } from "@modules/derived"

@@ -20,7 +20,7 @@ import {
 } from "@solana/kit"
 import {
     InvalidPoolTokensException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TickArrayService 
 } from "./tick-array.service"
@@ -51,7 +51,7 @@ import {
 } from "@solana-program/token"
 import {
     TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     FeeService 
 } from "../../../math"

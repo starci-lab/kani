@@ -7,7 +7,7 @@ import { Connection } from "mongoose"
 import { UserJwtLike } from "@modules/passport"
 import {
     UserNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { Send2FactorOtpMailService } from "@modules/mail"
 import { CodeGeneratorService } from "@modules/code"
 import { createCacheKey, InjectRedisCache } from "@modules/cache"

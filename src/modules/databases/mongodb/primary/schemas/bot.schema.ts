@@ -9,7 +9,7 @@ import {
 } from "@nestjs/graphql"
 import {
     ChainId, EncryptedPayload, GraphQLTypeChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     Schema as MongooseSchema, Types 
 } from "mongoose"

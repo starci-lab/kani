@@ -5,7 +5,7 @@ import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
     Q64, Q96, Q128 
-} from "@utils"
+} from "@modules/utils"
 import {
     ClmmTickFormulaService 
 } from "./clmm-tick.service"

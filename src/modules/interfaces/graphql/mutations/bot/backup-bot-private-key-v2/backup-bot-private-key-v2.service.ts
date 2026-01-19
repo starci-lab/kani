@@ -16,7 +16,7 @@ import {
     BotAlreadyBackupedPrivateKeyException,
     UserNotFoundException,
     BotNotV2Exception,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { VerifyAccessTokenResponse } from "@privy-io/node"
 import { DerivedAesKeyService } from "@modules/derived"
 import { InjectPrivyClient } from "@modules/privy"

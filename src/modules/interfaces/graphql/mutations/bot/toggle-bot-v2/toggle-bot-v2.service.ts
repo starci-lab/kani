@@ -15,7 +15,7 @@ import {
     BotNotOwnedByUserException,
     UserNotFoundException,
     BotNotV2Exception,
-} from "@exceptions"
+} from "@modules/exceptions"
 
 @Injectable()
 export class ToggleBotV2Service {

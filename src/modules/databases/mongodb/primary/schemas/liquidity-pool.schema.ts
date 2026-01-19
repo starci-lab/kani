@@ -6,7 +6,7 @@ import {
 } from "./abstract"
 import {
     ChainId, GraphQLTypeChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     TokenSchema 
 } from "./token.schema"

@@ -12,7 +12,7 @@ import {
     BotNotFoundException, 
     BotNotOwnedByUserException, 
     BotAlreadyBackupedPrivateKeyException
-} from "@exceptions"
+} from "@modules/exceptions"
 import { UserJwtLike } from "@modules/passport"
 import { DerivedAesKeyService } from "@modules/derived"
 

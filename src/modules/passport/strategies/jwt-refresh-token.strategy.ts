@@ -4,7 +4,7 @@ import { UserJwtLike } from "../types"
 import { Request } from "express"
 import { PassportStrategy } from "@nestjs/passport"
 import { ExtractJwt } from "passport-jwt"
-import { InvalidAuthenticationTokenException, NoAuthenticationTokenException } from "@exceptions"
+import { InvalidAuthenticationTokenException, NoAuthenticationTokenException } from "@modules/exceptions"
 import { JwtAuthService } from "../jwt"
 
 export const JWT_REFRESH_TOKEN_STRATEGY = "jwt-refresh-token"

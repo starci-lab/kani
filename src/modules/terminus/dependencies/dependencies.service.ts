@@ -8,7 +8,7 @@ import { DependencyName } from "./config"
 import { KafkaService } from "./kafka.service"
 import { MongodbService } from "./mongodb.service"
 import { RedisService } from "./redis.service"
-import { DependencyNotFoundException } from "@exceptions"
+import { DependencyNotFoundException } from "@modules/exceptions"
 import { DiskService } from "./disk.service"
 import { MemoryService } from "./memory.service"
 

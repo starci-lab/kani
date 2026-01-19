@@ -1,7 +1,7 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { SwapMathService } from "@modules/blockchains"
 import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { ChainId, TokenType } from "@typedefs"
+import { ChainId, TokenType } from "@modules/typedefs"
 import BN from "bn.js"
 
 @Injectable()

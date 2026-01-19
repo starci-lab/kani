@@ -17,7 +17,7 @@ import {
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException, SolanaAccountNotFoundException, ErrorSolanaAccountName
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     WinstonLog, WinstonService
 } from "@modules/winston"
@@ -27,7 +27,7 @@ import {
 } from "@modules/event"
 import {
     createObjectId
-} from "@utils"
+} from "@modules/utils"
 import {
     LbPair
 } from "./beets"

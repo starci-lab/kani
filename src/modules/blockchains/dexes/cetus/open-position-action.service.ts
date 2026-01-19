@@ -45,7 +45,7 @@ import {
     SuiObjectInvalidTypeException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
     ExecuteOpenPositionParams 
@@ -61,7 +61,7 @@ import {
 } from "@modules/winston"
 import {
     toScaledBN 
-} from "@utils"
+} from "@modules/utils"
 import {
     envConfig 
 } from "@modules/env"

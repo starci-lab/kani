@@ -3,7 +3,7 @@ import {
 } from "@nestjs/graphql"
 import {
     createEnumType 
-} from "@utils"
+} from "@modules/utils"
 
 export enum LiquidityPoolType {
     Clmm = "clmm",

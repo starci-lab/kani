@@ -3,7 +3,7 @@ import BN from "bn.js"
 import { CoinAsset, CoinArgument } from "../../types"
 import { Transaction } from "@mysten/sui/transactions"
 import { FetchCoinsService } from "./fetch-coins.service"
-import { isSuiCoin, ZERO_BN } from "@utils"
+import { isSuiCoin, ZERO_BN } from "@modules/utils"
 import { toCoinArgument } from "../../utils"
 
 @Injectable()

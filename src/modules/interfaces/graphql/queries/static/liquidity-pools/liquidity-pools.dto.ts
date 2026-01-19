@@ -9,7 +9,7 @@ import {
     PaginationPageFilters,
     PaginationPageResponseData
 } from "../../../abstracts"
-import { createEnumType } from "@utils"
+import { createEnumType } from "@modules/utils"
 
 export enum LiquidityPoolsSortBy {
     Apr = "apr",

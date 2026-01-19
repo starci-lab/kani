@@ -16,7 +16,7 @@ import {
     SuiHTTPStatusError
 } from "@mysten/sui/client"
 import { P2CBalancerService } from "@modules/p2c-balancer"
-import { ChainId } from "@typedefs"
+import { ChainId } from "@modules/typedefs"
 import { RpcAccessType } from "@modules/filesystem"
 import { AbortError } from "p-retry"
 import { InjectWinston, WinstonLog } from "@modules/winston"

@@ -1,5 +1,5 @@
 import { InputType, Field, ObjectType, ID } from "@nestjs/graphql"
-import { GraphQLTypeChainId, ChainId } from "@typedefs"
+import { GraphQLTypeChainId, ChainId } from "@modules/typedefs"
 import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
 
 @InputType({

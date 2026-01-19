@@ -13,14 +13,14 @@ import {
     SuiObjectNotFoundException,
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import BN from "bn.js"
 import {
     ClmmLiquidityPoolState 
 } from "../../interfaces"
 import {
     Q128, Q64 
-} from "@utils"
+} from "@modules/utils"
 import {
     RpcAccessType 
 } from "@modules/filesystem"

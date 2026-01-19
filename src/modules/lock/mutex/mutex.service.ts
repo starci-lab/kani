@@ -1,4 +1,4 @@
-import { sleep } from "@utils"
+import { sleep } from "@modules/utils"
 import { Injectable } from "@nestjs/common"
 import { Mutex } from "async-mutex"
 

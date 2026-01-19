@@ -13,7 +13,7 @@ import {
 import BN from "bn.js"
 import {
     computeDenomination 
-} from "@utils"
+} from "@modules/utils"
 import {
     AsyncService, 
     RetryService,

@@ -28,7 +28,7 @@ import {
     MissingPositionIdParamException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     PrivyMetadataNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TickMathService 
 } from "../../math"
@@ -56,7 +56,7 @@ import {
 } from "./transactions"
 import {
     adjustSlippage 
-} from "@utils"
+} from "@modules/utils"
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"

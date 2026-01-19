@@ -11,7 +11,7 @@ import {
     DexNotImplementedException,
     LiquidityPoolNotFoundException,
     ActivePositionNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
 import {
     DlmmLiquidityPoolState,

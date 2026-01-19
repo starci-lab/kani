@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     Q128, Q64 
-} from "@utils"
+} from "@modules/utils"
 import BN from "bn.js"
 
 /**

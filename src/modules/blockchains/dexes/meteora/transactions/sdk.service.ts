@@ -16,7 +16,7 @@ import {
 import { BotSchema, PrimaryMemoryStorageService, MeteoraLiquidityPoolMetadata} from "@modules/databases"
 import { Injectable } from "@nestjs/common"     
 import { AccountMeta, AccountRole, address, Address, Instruction } from "@solana/kit"
-import { DLMMOverflowDefaultBinArrayBitmapException, InvalidPoolTokensException } from "@exceptions"
+import { DLMMOverflowDefaultBinArrayBitmapException, InvalidPoolTokensException } from "@modules/exceptions"
 import BN from "bn.js"
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system"
 import { AnchorUtilsService, WSOL_MINT_ADDRESS } from "../../../tx-builder"

@@ -20,7 +20,7 @@ import {
     SolanaAccountNotFoundException,
     ErrorSolanaAccountName,
     MissingActivePositionLiquidityException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TickArrayLayout 
 } from "@raydium-io/raydium-sdk-v2"
@@ -35,7 +35,7 @@ import {
 } from "@modules/databases"
 import {
     Q128, Q64 
-} from "@utils"
+} from "@modules/utils"
 import {
     TickArrayService 
 } from "./transactions"

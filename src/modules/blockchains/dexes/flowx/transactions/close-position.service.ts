@@ -14,10 +14,10 @@ import {
 } from "@mysten/sui/transactions"
 import {
     InvalidPoolTokensException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     ActivePositionNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
@@ -30,7 +30,7 @@ import {
 import BN from "bn.js"
 import {
     ZERO_BN 
-} from "@utils"
+} from "@modules/utils"
 import {
     ClmmLiquidityPoolState 
 } from "../../../interfaces"

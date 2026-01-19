@@ -9,7 +9,7 @@ import {
 } from "./privy.decorators"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     MountStorageService 
 } from "@modules/filesystem"

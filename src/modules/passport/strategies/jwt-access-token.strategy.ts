@@ -6,7 +6,7 @@ import {
     InvalidAuthenticationTokenException, 
     NoAuthenticationTokenException, 
     UserHasNotCompletedMFAAuthenticationException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import { JwtAuthService } from "../jwt"
 import { Request } from "express"
 import { ExtractJwt } from "passport-jwt"

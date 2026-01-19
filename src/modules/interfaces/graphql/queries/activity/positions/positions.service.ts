@@ -13,7 +13,7 @@ import { UserJwtLike } from "@modules/passport"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
 

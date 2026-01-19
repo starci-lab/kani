@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { OutOfRangeExitCheckParams } from "./types"
-import { ActivePositionNotFoundException } from "@exceptions"
+import { ActivePositionNotFoundException } from "@modules/exceptions"
 import { Decimal } from "decimal.js"
 import { DynamicDlmmLiquidityPoolInfo, DynamicLiquidityPoolInfo } from "../types"
 import { LiquidityPoolType } from "@modules/databases"

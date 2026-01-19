@@ -10,7 +10,7 @@ import {
 import { 
     InvalidAuthenticationTokenException, 
     NoAuthenticationTokenException, 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Request 
 } from "express"

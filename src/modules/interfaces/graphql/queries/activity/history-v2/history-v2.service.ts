@@ -21,7 +21,7 @@ import {
     BotNotFoundException,
     BotNotOwnedByUserException,
     UserNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { ChartInterval, chartIntervalToMsString } from "../../../abstracts"
 
 @Injectable()

@@ -14,7 +14,7 @@ import {
 import {
     AggregatedTokenPriceNotFoundException,
     TokenNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"

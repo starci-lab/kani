@@ -20,7 +20,7 @@ import {
     InvalidPoolTokensException,
     ErrorSolanaAccountName,
     SolanaAccountNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Position 
 } from "./beets"
@@ -33,7 +33,7 @@ import {
 } from "../../interfaces"
 import {
     Q128, Q64 
-} from "@utils"
+} from "@modules/utils"
 import {
     DexId,
     OrcaLiquidityPoolMetadata,

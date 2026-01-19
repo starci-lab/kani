@@ -21,7 +21,7 @@ import {
     DexNotImplementedException,
     LiquidityPoolNotFoundException,
     TokenNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RaydiumOpenPositionActionService 
 } from "./raydium"
@@ -52,7 +52,7 @@ import {
 } from "../math"
 import {
     computeDenomination, createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import Decimal from "decimal.js"
 import {
     FlowXOpenPositionActionService 

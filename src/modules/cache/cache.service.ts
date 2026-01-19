@@ -14,7 +14,7 @@ import {
 } from "./config"
 import {
     createHash
-} from "@utils"
+} from "@modules/utils"
 import {
     CacheType,
     DelParams,

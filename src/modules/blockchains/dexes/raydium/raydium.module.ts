@@ -1,17 +1,33 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./raydium.module-definition"
-import { RaydiumObserverService } from "./observer.service"
-import { RaydiumOpenPositionActionService } from "./open-position-action.service"
-import { RaydiumClosePositionActionService } from "./close-position-action.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./raydium.module-definition"
+import {
+    RaydiumObserverService 
+} from "./observer.service"
+import {
+    RaydiumOpenPositionActionService 
+} from "./open-position-action.service"
+import {
+    RaydiumClosePositionActionService 
+} from "./close-position-action.service"
 import { 
     TickArrayService, 
     PersonalPositionService,
     ClosePositionInstructionService,
     OpenPositionInstructionService
 } from "./transactions"
-import { RaydiumAnalyticsService } from "./analytics.service"
-import { RaydiumFeesService } from "./fees.service"
-import { RaydiumReservesService } from "./reserves.service"
+import {
+    RaydiumAnalyticsService 
+} from "./analytics.service"
+import {
+    RaydiumFeesService 
+} from "./fees.service"
+import {
+    RaydiumReservesService 
+} from "./reserves.service"
 
 @Injectable()
 export class RaydiumModule extends ConfigurableModuleClass {

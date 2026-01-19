@@ -17,7 +17,7 @@ import {
 } from "../../../interfaces"
 import {
     ActivePositionNotFoundException, InvalidPoolTokensException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     EventAuthorityService 
 } from "./event-authority.service"
@@ -45,7 +45,7 @@ import {
 } from "./sdk.service"
 import {
     convertWeb3MetaToKitMeta 
-} from "@utils"
+} from "@modules/utils"
 import {
     RewardInfo 
 } from "../beets"
@@ -54,7 +54,7 @@ import {
 } from "@solana-program/system"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 
 export interface CreateCloseInstructionsParams {
     bot: BotSchema

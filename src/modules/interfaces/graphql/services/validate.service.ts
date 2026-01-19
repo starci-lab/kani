@@ -1,7 +1,7 @@
 import { 
     PaginationLimitOutOfRangeException, 
     PaginationPageNumberOutOfRangeException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import { Injectable } from "@nestjs/common"
 import { Decimal } from "decimal.js"
 

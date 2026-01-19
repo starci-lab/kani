@@ -3,7 +3,7 @@ import { BotsLoaderService } from "../../loaders"
 import { Injectable } from "@nestjs/common"
 import { EventEmitter2, OnEvent } from "@nestjs/event-emitter"
 import { LiquidityPoolType } from "@modules/databases"
-import { createObjectId } from "@utils"
+import { createObjectId } from "@modules/utils"
 
 @Injectable()
 export class DlmmSubscriptionService {

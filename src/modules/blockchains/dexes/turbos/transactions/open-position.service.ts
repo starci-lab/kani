@@ -31,10 +31,10 @@ import {
     FeeToAddressNotFoundException, 
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"

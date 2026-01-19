@@ -24,13 +24,13 @@ import {
     AggregatorSwapFailedException,
     QuoteNotFoundException, 
     TokenNotFoundException, 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Transaction 
 } from "@mysten/sui/transactions"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     RpcAccessType 
 } from "@modules/filesystem"
@@ -39,7 +39,7 @@ import {
 } from "@modules/env"
 import {
     AggregatorId 
-} from "./types"
+} from "@modules/typedefs"
 
 @Injectable()
 export class CetusAggregatorService implements IAggregatorService {

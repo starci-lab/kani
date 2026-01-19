@@ -1,4 +1,4 @@
-import { InvalidPoolTokensException } from "@exceptions"
+import { InvalidPoolTokensException } from "@modules/exceptions"
 import { CacheKey, createCacheKey, DynamicLiquidityPoolInfoCacheResult, DynamicDlmmLiquidityPoolInfoCacheResult, PoolAnalyticsCacheResult } from "@modules/cache"
 import { PrimaryMemoryStorageService, LiquidityPoolSchema, GraphQLDynamicLiquidityPoolInfo } from "@modules/databases"
 import { Injectable } from "@nestjs/common"

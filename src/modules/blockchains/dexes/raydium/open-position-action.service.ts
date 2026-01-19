@@ -1,7 +1,9 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     IOpenActionService,
-    LiquidityPoolState,
+    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
@@ -9,18 +11,30 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionResult,
 } from "../../interfaces"
-import { LiquidityMath, SqrtPriceMath } from "@raydium-io/raydium-sdk-v2"
-import { SignerService } from "../../signers"
-import { AppVersion, PrimaryMemoryStorageService, RaydiumPositionMetadata } from "@modules/databases"
+import {
+    LiquidityMath, SqrtPriceMath 
+} from "@raydium-io/raydium-sdk-v2"
+import {
+    SignerService 
+} from "../../signers"
+import {
+    AppVersion, DexId, PrimaryMemoryStorageService, RaydiumPositionMetadata 
+} from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
     SnapshotBalancesNotSetException,
     TransactionNotPreparedException,
-    PositionIdNotSetException,
-    PositionNotFoundException,
     TransactionNotExecutedException,
-} from "@exceptions"
-import { TickMathService } from "../../math"
+    MissingPositionIdParamException,
+    ErrorTransactionType,
+    SolanaAccountNotFoundException,
+    ErrorSolanaAccountName,
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    PrivyMetadataNotFoundException,
+} from "@modules/exceptions"
+import {
+    TickMathService 
+} from "../../math"
 import { 
     pipe,
     setTransactionMessageFeePayerSigner,
@@ -43,15 +57,28 @@ import BN from "bn.js"
 import { 
     OpenPositionInstructionService 
 } from "./transactions"
-import { adjustSlippage } from "@utils"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import {
+    adjustSlippage 
+} from "@modules/utils"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
 import Decimal from "decimal.js"
-import { RpcExecutorService } from "../../clients"
-import { RpcAccessType } from "@modules/filesystem"
-import { envConfig } from "@modules/env"
-import { PersonalPositionState } from "./beets"
-import { PrivySignService } from "@modules/privy"
+import {
+    RpcExecutorService 
+} from "../../clients"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    PersonalPositionState 
+} from "./beets"
+import {
+    PrivySignService 
+} from "@modules/privy"
 
 @Injectable()
 export class RaydiumOpenPositionActionService implements IOpenActionService {
@@ -62,8 +89,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         private readonly openPositionInstructionService: OpenPositionInstructionService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
 
     async prepare(
@@ -72,23 +98,26 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             bot,
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
-        const _state = state as LiquidityPoolState
-        const slippage = new Decimal(envConfig().slippage.openPosition.liquidtyAdjustment)
+        const _state = state as ClmmLiquidityPoolState
+        const slippage = new Decimal(envConfig().dexes.raydium.openPosition.slippage)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        const {
-            snapshotTargetBalanceAmount,
-            snapshotQuoteBalanceAmount,
-            snapshotGasBalanceAmount,
-        } = bot
-        if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !snapshotGasBalanceAmount) {
-            throw new SnapshotBalancesNotSetException("Snapshot balances not set")
+        if (!bot.snapshots) {
+            throw new SnapshotBalancesNotSetException({
+                botId: bot.id,
+            })
         }
-        const tokenA = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenA.toString())
-        const tokenB = this.primaryMemoryStorageService.tokens
-            .find((token) => token.id === _state.static.tokenB.toString())
+        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenA.toString(),
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: _state.static.tokenB.toString(),
+        })
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException("Either token A or token B is not in the pool")
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const { 
             tickLower, 
@@ -141,17 +170,24 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
                 const transactionMessage = pipe(
-                    createTransactionMessage({ version: 0 }),
-                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)), tx),
-                    (tx) => appendTransactionMessageInstructions(openPositionInstructions, tx),
-                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+                    createTransactionMessage({
+                        version: 0 
+                    }),
+                    (tx) => setTransactionMessageFeePayerSigner(createNoopSigner(address(bot.accountAddress)),
+                        tx),
+                    (tx) => appendTransactionMessageInstructions(openPositionInstructions,
+                        tx),
+                    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
+                        tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
-                            const signedTransaction = await signTransaction([signer.keyPair, mintKeyPair.keyPair], transaction)
+                            const signedTransaction = await signTransaction([signer.keyPair,
+                                mintKeyPair.keyPair],
+                            transaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
                             assertIsSendableTransaction(signedTransaction)
@@ -174,8 +210,19 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     // partial sign the transaction
-                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair], transaction)
+                    const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
+                        transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -215,28 +262,42 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         state,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         if (!positionId) {
-            throw new PositionIdNotSetException("Position id not set")
+            throw new MissingPositionIdParamException({
+                botId: bot.id,
+                liquidityPoolId: state.static.displayId,
+            })
         }
-        const _state = state as LiquidityPoolState
         if (isRetry) {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
                     const transaction = await rpc.getTransaction(
                         signature(txHash), 
-                        { commitment: "confirmed", encoding: "base58" }
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }
                     ).send()
                     if (transaction) {
                         return {
                             positionId: positionId.toString(),
                         }
                     }
-                    throw new TransactionNotExecutedException("Transaction not executed")
+                    throw new TransactionNotExecutedException({
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: state.static.displayId,
+                        type: ErrorTransactionType.OpenPosition,
+                    })
                 },
             })  
         }
         if (!solanaTx) {
-            throw new TransactionNotPreparedException("Transaction not prepared")
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: state.static.displayId,
+                type: ErrorTransactionType.OpenPosition,
+            })
         }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
@@ -251,11 +312,12 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         commitment: "confirmed",
                     }
                 )
-                this.logger.verbose(
-                    WinstonLog.OpenPositionExecuted, {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionExecuted,
+                    {
                         botId: bot.id,
                         txHash,
-                        liquidityPoolId: _state.static.displayId,
+                        liquidityPoolId: state.static.displayId,
                     }
                 )
                 return {
@@ -268,6 +330,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     async confirm(
         {
             positionId,
+            state,
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
@@ -275,13 +338,20 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             callback: async ({ rpc }) => {
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 
-                    address(positionId), {
+                    address(positionId),
+                    {
                         commitment: "confirmed",
                     })
                 if (!positionInfo || !positionInfo.exists) {
-                    throw new PositionNotFoundException("Position not found")
+                    throw new SolanaAccountNotFoundException({
+                        name: ErrorSolanaAccountName.PersonalPosition,
+                        address: positionId.toString(),
+                        dexId: DexId.Raydium,
+                        liquidityPoolId: state.static.displayId,
+                    })
                 }
-                const [personalPositionState] = PersonalPositionState.struct.deserialize(Buffer.from(positionInfo.data), 8)
+                const [personalPositionState] = PersonalPositionState.struct.deserialize(Buffer.from(positionInfo.data),
+                    8)
                 return {
                     liquidity: new BN(personalPositionState.liquidity.toString()),
                 }

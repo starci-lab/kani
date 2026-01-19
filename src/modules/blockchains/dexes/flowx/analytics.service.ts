@@ -34,10 +34,10 @@ import {
 } from "@apollo/client"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import {
     GraphQLDataNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Collection 
 } from "lokijs"

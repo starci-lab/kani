@@ -12,7 +12,7 @@ import {
 } from "@modules/derived"
 import {
     EncryptedPayload 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     FullySolanaTransaction, SolanaTransaction 
 } from "./types"

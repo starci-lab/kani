@@ -12,7 +12,7 @@ import {
 import { 
     InvalidPoolTokensException, 
     ActivePositionNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"

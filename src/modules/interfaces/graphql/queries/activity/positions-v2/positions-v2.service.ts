@@ -15,7 +15,7 @@ import {
     BotNotFoundException,
     BotNotOwnedByUserException,
     UserNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import Decimal from "decimal.js"
 import { envConfig } from "@modules/env"
 import { AttachLiquidityPoolService } from "../../../services"

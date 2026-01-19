@@ -11,7 +11,7 @@ import { UserJwtLike } from "@modules/passport"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException
-} from "@exceptions"
+} from "@modules/exceptions"
 
 @Injectable()
 export class ToggleBotService {

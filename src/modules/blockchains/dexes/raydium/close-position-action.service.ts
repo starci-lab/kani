@@ -26,7 +26,7 @@ import {
     MissingSolanaTxParamException, 
     PrivyMetadataNotFoundException, 
     TransactionNotExecutedException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "../../clients"

@@ -2,7 +2,7 @@ import {
     FeeToAddressNotFoundException, 
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     ClmmLiquidityPoolState 
 } from "../../../interfaces"
@@ -22,7 +22,7 @@ import {
 } from "@nestjs/common"
 import {
     adjustSlippage, decimalToBips 
-} from "@utils"
+} from "@modules/utils"
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
@@ -33,7 +33,7 @@ import {
 } from "../../../tx-builder"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     FeeService 
 } from "../../../math"

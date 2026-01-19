@@ -2,7 +2,7 @@ import {
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException, 
     SuiObjectNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "@modules/blockchains"
@@ -31,7 +31,7 @@ import {
 } from "@nestjs/schedule"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import { 
     DynamicClmmLiquidityPoolInfoCacheResult, 
     CacheService, 

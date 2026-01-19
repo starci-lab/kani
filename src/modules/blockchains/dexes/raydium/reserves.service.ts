@@ -1,17 +1,29 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     IReservesService, 
     ClmmLiquidityPoolState, 
     ReservesParams, 
     ReservesResult 
 } from "../../interfaces"
-import { PrimaryMemoryStorageService } from "@modules/databases"
-import { InvalidPoolTokensException, LiquidityPoolNotFoundException } from "@exceptions"
-import { ClmmReservesFormulaService } from "../../formulas"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
+import {
+    ClmmReservesFormulaService 
+} from "../../formulas"
 import Decimal from "decimal.js"
 import BN from "bn.js"
-import { Q64 } from "@utils"
-import { DayjsService } from "@modules/mixin"
+import {
+    Q64 
+} from "@modules/utils"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class RaydiumReservesService implements IReservesService {
@@ -23,11 +35,14 @@ export class RaydiumReservesService implements IReservesService {
 
     async reserves(
         {
-            liquidityPoolId,
             state,
             bot,
         }: ReservesParams): Promise<ReservesResult> {
-
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
         const _state = state as ClmmLiquidityPoolState
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
@@ -38,38 +53,40 @@ export class RaydiumReservesService implements IReservesService {
         })
 
         if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException(
-                "Either token A or token B is not in the pool"
-            )
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
 
         const liquidityPool =
             this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                displayId: liquidityPoolId,
+                id: {
+                    $eq: bot.activePosition.liquidityPool.toString(),
+                },
             })
 
         if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException(
-                "Liquidity pool not found"
-            )
+            throw new LiquidityPoolNotFoundException({
+                displayId: _state.static.displayId,
+            })
         }
 
         const {
-            tokenA: amountA,
-            tokenB: amountB,
+            reserveA,
+            reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
-            tickLower: new Decimal(bot.activePosition?.tickLower ?? 0),
-            tickUpper: new Decimal(bot.activePosition?.tickUpper ?? 0),
+            tickLower: new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0),
+            tickUpper: new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0),
             tickCurrent: new Decimal(_state.dynamic.tickCurrent.toNumber()),
-            liquidity: new BN(bot.activePosition?.liquidity ?? 0),
-            decimalsA: tokenA.decimals,
-            decimalsB: tokenB.decimals,
+            liquidity: new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
             fixedPointScale: Q64,
         })
 
         return {
-            tokenA: amountA,
-            tokenB: amountB,
+            reserveA,
+            reserveB,
             snapshotAt: this.dayjsService.now(),
         }
     }

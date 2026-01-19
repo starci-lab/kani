@@ -18,7 +18,7 @@ import {
 } from "@modules/mixin"
 import {
     LiquidityPoolNoWsIdleTimeoutException, LiquidityPoolNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
@@ -27,7 +27,7 @@ import {
 } from "@modules/event"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import {
     Whirlpool 
 } from "./beets"

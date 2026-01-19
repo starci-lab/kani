@@ -1,10 +1,10 @@
 
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     toScaledBN 
-} from "@utils"
+} from "@modules/utils"
 import {
     Injectable 
 } from "@nestjs/common"

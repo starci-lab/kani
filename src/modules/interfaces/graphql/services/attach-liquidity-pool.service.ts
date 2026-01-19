@@ -1,4 +1,4 @@
-import { LiquidityPoolNotFoundException } from "@exceptions"
+import { LiquidityPoolNotFoundException } from "@modules/exceptions"
 import { PositionSchema, PrimaryMemoryStorageService } from "@modules/databases"
 import { Injectable } from "@nestjs/common"
 

@@ -33,7 +33,7 @@ import {
 } from "../../../interfaces"
 import {
     ActivePositionNotFoundException, InvalidPoolTokensException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TickArrayService 
 } from "./tick-array.service"

@@ -26,7 +26,7 @@ import {
 } from "../../../interfaces"
 import {
     InvalidPoolTokensException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TickArrayService 
 } from "./tick-array.service"
@@ -54,7 +54,7 @@ import {
 } from "../../../math"
 import {
     TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     MountStorageService 
 } from "@modules/filesystem"

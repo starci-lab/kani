@@ -5,7 +5,7 @@ import { Connection } from "mongoose"
 import { 
     BotRequest,
 } from "./bot.dto"
-import { BotNotFoundException } from "@exceptions"
+import { BotNotFoundException } from "@modules/exceptions"
 import { UserJwtLike } from "@modules/passport"
 
 @Injectable()

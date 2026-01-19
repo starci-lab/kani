@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { InjectPrimaryMongoose, UserSchema } from "@modules/databases"
 import { Connection } from "mongoose"
-import { UserNotFoundException } from "@exceptions"
+import { UserNotFoundException } from "@modules/exceptions"
 import { UserJwtLike } from "@modules/passport"
 
 @Injectable()

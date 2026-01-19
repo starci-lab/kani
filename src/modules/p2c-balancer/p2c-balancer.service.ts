@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ChainId } from "@typedefs"
+import { ChainId } from "@modules/typedefs"
 import { P2cBalancer } from "load-balancers"
 import {
     ReadinessWatcherFactoryService,
@@ -18,7 +18,7 @@ import {
 } from "@modules/databases"
 import { DayjsService } from "@modules/mixin"
 import { Connection } from "mongoose"
-import { createObjectId } from "@utils"
+import { createObjectId } from "@modules/utils"
 import { envConfig } from "@modules/env"
 import { Decimal } from "decimal.js"
 import { OnEvent } from "@nestjs/event-emitter"

@@ -27,7 +27,7 @@ import {
 } from "./bot.schema"
 import {
     ChainId, GraphQLTypeChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     GraphQLJSON 
 } from "graphql-type-json"

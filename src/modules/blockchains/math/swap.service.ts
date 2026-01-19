@@ -4,7 +4,7 @@ import {
     MinOperationalGasAmountNotFoundException,
     AdditionalSwapAmountGasNotFoundException,
     SwapThresholdGasAmountNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { 
     PrimaryMemoryStorageService, 
     QuoteRatioStatus, 
@@ -19,10 +19,10 @@ import {
 } from "decimal.js"
 import {
     computeRaw, toScaledBN, toUnit 
-} from "@utils"
+} from "@modules/utils"
 import {
     ChainId, TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import BN from "bn.js"
 import {
     QuoteRatioService 

@@ -9,7 +9,7 @@ import {
 } from "@nestjs/graphql"
 import {
     EncryptedPayload 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     Schema as MongooseSchema 
 } from "mongoose"

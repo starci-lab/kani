@@ -23,7 +23,7 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import BN from "bn.js"
 import {
     clusterApiUrl, Connection, PublicKey
@@ -36,14 +36,14 @@ import {
 } from "@solana/kit"
 import {
     computeDenomination
-} from "@utils"
+} from "@modules/utils"
 import Decimal from "decimal.js"
 import {
     Q128
-} from "@utils"
+} from "@modules/utils"
 import {
     ErrorSolanaAccountName, SolanaAccountNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 
 @Injectable()
 export class MeteoraFeesService implements IFeesService {

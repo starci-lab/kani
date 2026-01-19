@@ -18,7 +18,7 @@ import {
     BotNotOwnedByUserException, 
     LiquidityPoolNotFoundException,
     UserNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { ReservesOrchestratorService } from "@modules/blockchains"
 
 @Injectable()

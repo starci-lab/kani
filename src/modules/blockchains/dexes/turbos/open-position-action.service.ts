@@ -45,7 +45,7 @@ import {
     ErrorTransactionType,
     SuiObjectNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
     RpcExecutorService 
@@ -64,7 +64,7 @@ import {
 } from "../../math"
 import {
     toScaledBN 
-} from "@utils"
+} from "@modules/utils"
 import {
     AsyncService 
 } from "@modules/mixin"

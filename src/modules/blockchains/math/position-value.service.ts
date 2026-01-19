@@ -7,13 +7,13 @@ import {
 } from "@modules/databases"
 import {
     TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     TokenNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     computeDenomination 
-} from "@utils"
+} from "@modules/utils"
 import BN from "bn.js"
 import {
     PriceService 

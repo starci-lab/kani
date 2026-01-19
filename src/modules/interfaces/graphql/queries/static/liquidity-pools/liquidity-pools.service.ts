@@ -17,7 +17,7 @@ import {
     ValidateService,
 } from "../../../services"
 import BN from "bn.js"
-import { OnlyTwoTokenIdsAllowedException } from "@exceptions"
+import { OnlyTwoTokenIdsAllowedException } from "@modules/exceptions"
 
 @Injectable()
 export class LiquidityPoolsService {

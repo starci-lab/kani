@@ -13,7 +13,7 @@ import {
 import {
     InvalidPoolTokensException, SolanaAccountNotFoundException, ErrorSolanaAccountName, 
     ActivePositionNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "../../clients"
@@ -38,11 +38,11 @@ import {
 } from "@modules/databases"
 import {
     computeDenomination, divBn, toScaledBN 
-} from "@utils"
+} from "@modules/utils"
 import BN from "bn.js"
 import {
     Q64 
-} from "@utils"
+} from "@modules/utils"
 
 @Injectable()
 export class MeteoraReservesService implements IReservesService {

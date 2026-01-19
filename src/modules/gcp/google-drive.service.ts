@@ -9,14 +9,14 @@ import {
 } from "google-auth-library"
 import {
     GoogleDriveFolderName 
-} from "./types"
+} from "@modules/typedefs"
 import {
     MountStorageService 
 } from "@modules/filesystem"
 import {
     GoogleDriveFileDownloadFailedException,
     GoogleDriveFolderIdNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import path from "path"
 import {
     Readable 

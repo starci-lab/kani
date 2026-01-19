@@ -1,5 +1,5 @@
 import { registerEnumType } from "@nestjs/graphql"
-import { createEnumType } from "@utils"
+import { createEnumType } from "@modules/utils"
 import ms from "ms"
 
 export enum ChartInterval {

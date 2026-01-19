@@ -9,7 +9,7 @@ import {
 } from "@modules/databases"
 import {
     DexNotFoundException, DexNotImplementedException, LiquidityPoolNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RaydiumClosePositionActionService 
 } from "./raydium"
@@ -44,7 +44,7 @@ import {
 } from "../interfaces"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import {
     InjectQueue 
 } from "@nestjs/bullmq"

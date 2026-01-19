@@ -1,6 +1,6 @@
 import { GraphQLTypeTokenId, TokenId, GraphQLTypeLiquidityPoolId, LiquidityPoolId } from "@modules/databases"
 import { InputType, Field, ObjectType } from "@nestjs/graphql"
-import { GraphQLTypeChainId, ChainId } from "@typedefs"
+import { GraphQLTypeChainId, ChainId } from "@modules/typedefs"
 import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
 
 @InputType({

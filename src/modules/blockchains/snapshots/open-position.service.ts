@@ -6,8 +6,8 @@ import {
     PositionSchema 
 } from "@modules/databases"
 import BN from "bn.js"
-import { createObjectId } from "@utils"
-import { ChainId } from "@typedefs"
+import { createObjectId } from "@modules/utils"
+import { ChainId } from "@modules/typedefs"
 import { DayjsService } from "@modules/mixin"
 import { LiquidityPoolId } from "@modules/databases"
 import { Decimal } from "decimal.js"

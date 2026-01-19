@@ -8,9 +8,9 @@ import { InjectPrimaryMongoose, SessionSchema } from "@modules/databases"
 import { ClientSession, Connection } from "mongoose"
 import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
 import { MsService } from "@modules/mixin"
-import { UserIdRequiredToGenerateAccessTokenException } from "@exceptions"
+import { UserIdRequiredToGenerateAccessTokenException } from "@modules/exceptions"
 import { Cache } from "cache-manager"
-import { EncryptedPayload } from "@typedefs"
+import { EncryptedPayload } from "@modules/typedefs"
 import { DerivedJwtSecretService } from "@modules/derived"
 
 export interface GenerateParams {

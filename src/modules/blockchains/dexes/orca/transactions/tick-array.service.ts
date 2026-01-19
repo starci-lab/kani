@@ -24,7 +24,7 @@ import {
 } from "../../../tx-builder"
 import {
     MissingBotParametersException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "@modules/blockchains"

@@ -1,17 +1,31 @@
 import Decimal from "decimal.js"
-import { Injectable } from "@nestjs/common"
-import { computeDenomination } from "@utils"
-import BN from "bn.js"
-import { BotSchema, PrimaryMemoryStorageService } from "@modules/databases"
-import { LiquidityPoolState } from "../interfaces"
 import {
-    PriceStaleException,
+    Injectable 
+} from "@nestjs/common"
+import {
+    computeDenomination 
+} from "@modules/utils"
+import BN from "bn.js"
+import {
+    BotSchema, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    ClmmLiquidityPoolState 
+} from "../interfaces"
+import {
+    ,
     SnapshotBalancesNotSetException, 
     TokenNotFoundException
-} from "@exceptions"
-import { PriceService } from "./price.service"
-import { LiquidityMath } from "@raydium-io/raydium-sdk-v2"
-import { ClmmTickFormulaService } from "../formulas"
+} from "@modules/exceptions"
+import {
+    PriceService 
+} from "./price.service"
+import {
+    LiquidityMath 
+} from "@raydium-io/raydium-sdk-v2"
+import {
+    ClmmTickFormulaService 
+} from "../formulas"
 // import assert from "assert"
 
 @Injectable()
@@ -163,7 +177,8 @@ export class TickMathService {
         // we iterate over the tick multiplier
         for (let i = 0; i < tickMultiplier; i++) {
             // we compute the R value
-            const currentR = computeR(tickLowerEntry, tickUpperEntry)
+            const currentR = computeR(tickLowerEntry,
+                tickUpperEntry)
             // we compute the difference between the current R value and the target R value
             const diff = currentR.sub(R).abs()
             // if the difference is greater than the best difference, we break

@@ -7,13 +7,13 @@ import {
 import {
     MinOperationalGasAmountNotFoundException,
     TokenNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     computeDenomination, createEnumType 
-} from "@utils"
+} from "@modules/utils"
 import {
     AsyncService, DayjsService 
 } from "@modules/mixin"

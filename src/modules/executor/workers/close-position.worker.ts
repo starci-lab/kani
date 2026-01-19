@@ -32,7 +32,7 @@ import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     SnapshotBalancesBeforeOpenNotSetException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { InjectSuperJson } from "@modules/mixin"
 import SuperJSON from "superjson"
 import Decimal from "decimal.js"

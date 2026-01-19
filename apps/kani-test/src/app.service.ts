@@ -1,4 +1,4 @@
-import { WsConnectionAbortedException } from "@exceptions"
+import { WsConnectionAbortedException } from "@modules/exceptions"
 import { WebSocketStreamConnection } from "@modules/mixin"
 import { Injectable, OnModuleInit } from "@nestjs/common"
 import pRetry from "p-retry"

@@ -15,11 +15,11 @@ import {
 } from "@nestjs/common"
 import {
     InvalidPoolTokensException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
     ActivePositionNotFoundException, TargetOperationalGasAmountNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     FeeService 
 } from "../../../math"
@@ -29,7 +29,7 @@ import {
 import BN from "bn.js"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"

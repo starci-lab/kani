@@ -3,7 +3,7 @@ import {
 } from "./types"
 import {
     StreamConnectionAbortedException, StreamConnectionClosedException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Injectable 
 } from "@nestjs/common"

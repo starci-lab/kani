@@ -26,7 +26,7 @@ import {
     TransactionNotExecutedException,
     ErrorTransactionType,
     MissingSolanaTxParamException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "../../clients"

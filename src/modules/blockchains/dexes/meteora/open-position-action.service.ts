@@ -28,7 +28,7 @@ import {
     MissingSolanaTxParamException,
     SolanaAccountNotFoundException,
     ErrorSolanaAccountName,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { 
     pipe,
     setTransactionMessageFeePayerSigner,

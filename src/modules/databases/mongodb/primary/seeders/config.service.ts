@@ -3,7 +3,7 @@ import {
 } from "../enums"
 import {
     ChainId, DeepPartial 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     ConfigSchema 
 } from "../schemas"
@@ -21,7 +21,7 @@ import {
 } from "@nestjs/common"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 
 @Injectable()
 export class ConfigService implements Seeder {

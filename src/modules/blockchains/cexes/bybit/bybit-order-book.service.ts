@@ -12,7 +12,7 @@ import { OrderBook } from "../types"
 import { envConfig } from "@modules/env"
 import { InjectWinston, WinstonLog } from "@modules/winston"
 import { Logger as WinstonLogger } from "winston"
-import { chunkArray } from "@utils"
+import { chunkArray } from "@modules/utils"
 import { BybitUtilsService } from "./bybit-utils.service"
 import { WebSocketStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
 

@@ -24,16 +24,16 @@
         "./apps/*"
       ],
       "@exceptions": [
-        "./src/exceptions"
+        "src/modules/exceptions"
       ],
       "@modules/*": [
         "./src/modules/*"
       ],
       "@typedefs": [
-        "./src/typedefs"
+        "src/modules/typedefs"
       ],
       "@utils": [
-        "./src/utils"
+        "src/modules/utils"
       ]
     }
   }

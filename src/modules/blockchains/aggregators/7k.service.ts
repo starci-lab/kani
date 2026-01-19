@@ -11,13 +11,13 @@ import {
     AggregatorQuoteFailedException,
     AggregatorSwapFailedException,
     TokenNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     Transaction 
 } from "@mysten/sui/transactions"
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 import SevenK, {
     BluefinXTx, QuoteResponse as SevenKQuoteResponse 
 } from "@7kprotocol/sdk-ts"
@@ -42,7 +42,7 @@ import {
 } from "@modules/filesystem"
 import {
     AggregatorId 
-} from "./types"
+} from "@modules/typedefs"
 
 @Injectable()
 export class SevenKAggregatorService implements IAggregatorService {

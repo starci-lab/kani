@@ -25,7 +25,7 @@ import {
     PrivyPublicKeyNotFoundException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     RpcExecutorService 
 } from "@modules/blockchains"

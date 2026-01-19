@@ -9,7 +9,7 @@ import {
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
     Q128, Q64, Q96 
-} from "@utils"
+} from "@modules/utils"
 
 /**
  * CLMM Tick / Price formula service

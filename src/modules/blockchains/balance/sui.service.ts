@@ -19,7 +19,7 @@ import {
     PrivyPublicKeyNotFoundException, 
     ErrorTransactionType,
     MissingSuiMessageWithBytesParamException
-} from "@exceptions"
+} from "@modules/exceptions"
 import BN from "bn.js"
 import {
     SuiAggregatorSelectorService 

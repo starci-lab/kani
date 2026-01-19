@@ -31,7 +31,7 @@ import {
 } from "axios"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import {
     Collection 
 } from "lokijs"

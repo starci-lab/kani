@@ -3,7 +3,7 @@ import {
 } from "./aggregator.interface"
 import {
     AggregatorId 
-} from "./types"
+} from "@modules/typedefs"
 import {
     TransactionObjectArgument, Transaction 
 } from "@mysten/sui/transactions"

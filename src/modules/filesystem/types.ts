@@ -1,6 +1,6 @@
 import {
     ChainId 
-} from "@typedefs"
+} from "@modules/typedefs"
 
 export enum RpcAccessType {
     Http = "http",

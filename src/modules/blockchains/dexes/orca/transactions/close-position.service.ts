@@ -26,7 +26,7 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     u128, u64, BeetArgsStruct 
 } from "@metaplex-foundation/beet"

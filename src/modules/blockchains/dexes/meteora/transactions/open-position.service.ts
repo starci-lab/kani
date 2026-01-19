@@ -29,7 +29,7 @@ import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
     InvalidPoolTokensException, MeteoraMultipleDlmmPositionsNotSupportedException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS 
 } from "@solana-program/system"
@@ -56,7 +56,7 @@ import {
 } from "@solana-program/token"
 import {
     TokenType 
-} from "@typedefs"
+} from "@modules/typedefs"
 import {
     MountStorageService 
 } from "@modules/filesystem"

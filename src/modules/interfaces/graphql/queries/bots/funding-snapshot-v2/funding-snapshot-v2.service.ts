@@ -12,15 +12,15 @@ import {
     BotNotOwnedByUserException, 
     TokenNotFoundException, 
     UserNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import { 
     FundingSnapshotV2Request, 
     FundingSnapshotV2ResponseData 
 } from "./funding-snapshot-v2.dto"
 import BN from "bn.js"
 import { BalanceEligibilityService } from "@modules/blockchains"
-import { computeDenomination } from "@utils"
-import { TokenType } from "@typedefs"
+import { computeDenomination } from "@modules/utils"
+import { TokenType } from "@modules/typedefs"
 
 @Injectable()
 export class FundingSnapshotV2Service {

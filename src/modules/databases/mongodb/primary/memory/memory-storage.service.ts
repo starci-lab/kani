@@ -24,12 +24,12 @@ import {
 } from "../enums"
 import {
     createObjectId 
-} from "@utils"
+} from "@modules/utils"
 import { 
     AccountLimitsConfigNotFoundException, 
     BalanceConfigNotFoundException, 
     GasConfigNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {

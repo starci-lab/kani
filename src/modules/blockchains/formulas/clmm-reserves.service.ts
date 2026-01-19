@@ -6,7 +6,7 @@ import Decimal from "decimal.js"
 import {
     Q128, Q64, Q96, 
     toDecimalAmount
-} from "@utils"
+} from "@modules/utils"
 import {
     ClmmTickFormulaService 
 } from "./clmm-tick.service"
