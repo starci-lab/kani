@@ -42,6 +42,14 @@ import {
     BotSnapshotsSchema,
     PositionSettlementSchema,
     PositionSettlementSchemaClass,
+    PositionSnapshotsSchemaClass,
+    PositionSnapshotsSchema,
+    PositionFeesSchemaClass,
+    PositionFeesSchema,
+    ClmmStateSchemaClass,
+    ClmmStateSchema,
+    DlmmStateSchemaClass,
+    DlmmStateSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -221,6 +229,22 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: BotSnapshotsSchema.name,
                         useFactory: () => BotSnapshotsSchemaClass,
+                    },
+                    {
+                        name: PositionSnapshotsSchema.name,
+                        useFactory: () => PositionSnapshotsSchemaClass,
+                    },
+                    {
+                        name: PositionFeesSchema.name,
+                        useFactory: () => PositionFeesSchemaClass,
+                    },
+                    {
+                        name: ClmmStateSchema.name,
+                        useFactory: () => ClmmStateSchemaClass,
+                    },
+                    {
+                        name: DlmmStateSchema.name,
+                        useFactory: () => DlmmStateSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

@@ -1,5 +1,5 @@
 import {
-    Injectable, Logger 
+    Injectable
 } from "@nestjs/common"
 import {
     InjectConsoleWinston, InjectLokiWinston 
@@ -10,6 +10,9 @@ import {
 import {
     WinstonLevel 
 } from "./types"
+import {
+    Logger 
+} from "winston"
 
 @Injectable()
 export class WinstonService {
@@ -46,13 +49,13 @@ export class WinstonService {
                 break
             }
             case WinstonLevel.Fatal: {
-                this.lokiLogger.fatal(
+                this.lokiLogger.error(
                     config.name,
                     message)
                 break
             }
             default: {
-                this.lokiLogger.log(
+                this.lokiLogger.info(
                     config.name,
                     message)
                 break
@@ -79,13 +82,13 @@ export class WinstonService {
                 break
             }
             case WinstonLevel.Fatal: {
-                this.consoleLogger.fatal(
+                this.consoleLogger.error(
                     config.name,
                     message)
                 break
             }
             default: {
-                this.consoleLogger.log(
+                this.consoleLogger.info(
                     config.name,
                     message)
                 break

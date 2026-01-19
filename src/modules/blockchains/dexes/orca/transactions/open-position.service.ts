@@ -65,7 +65,6 @@ import {
     ClmmLiquidityPoolState 
 } from "@modules/blockchains/interfaces"
 import BN from "bn.js"
-import Decimal from "decimal.js"
 
 @Injectable()
 export class OpenPositionInstructionService {
@@ -388,8 +387,8 @@ export class OpenPositionInstructionService {
 export interface CreateOpenPositionInstructionsParams {
   bot: BotSchema;
   state: ClmmLiquidityPoolState;
-  tickLower: Decimal;
-  tickUpper: Decimal;
+  tickLower: BN;
+  tickUpper: BN;
   liquidity: BN;
   amountA: BN;
   amountB: BN;

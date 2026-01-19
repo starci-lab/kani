@@ -9,9 +9,6 @@ import {
     DayjsService, RetryService 
 } from "@modules/mixin"
 import {
-    OrderBook 
-} from "../types"
-import {
     envConfig 
 } from "@modules/env"
 import {
@@ -93,26 +90,25 @@ export class GateOrderBookService implements OnApplicationBootstrap {
 
                 for await (const data of stream) {
                     try {
-                        const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
-                        const tokenId = this.gateTokenRegistryService.getTokenIdBySymbol(parsed.result.s)
-                        if (!tokenId) continue
+                        // const parsed = JSON.parse(data.toString()) as GateBookTickerUpdate
+                        // const tokenId = this.gateTokenRegistryService.getTokenIdBySymbol(parsed.result.s)
+                        // if (!tokenId) continue
 
-                        const orderBook: OrderBook = {
-                            bidPrice: parseFloat(parsed.result.b),
-                            bidQty: parseFloat(parsed.result.B),
-                            askPrice: parseFloat(parsed.result.a),
-                            askQty: parseFloat(parsed.result.A),
-                        }
+                        // const orderBook: OrderBook = {
+                        //     bidPrice: parseFloat(parsed.result.b),
+                        //     bidQty: parseFloat(parsed.result.B),
+                        //     askPrice: parseFloat(parsed.result.a),
+                        //     askQty: parseFloat(parsed.result.A),
+                        // }
 
-                        if (
-                            !Number.isFinite(orderBook.bidPrice) ||
-                                !Number.isFinite(orderBook.bidQty) ||
-                                !Number.isFinite(orderBook.askPrice) ||
-                                !Number.isFinite(orderBook.askQty)
-                        ) {
-                            continue
-                        }
-
+                        // if (
+                        //     !Number.isFinite(orderBook.bidPrice) ||
+                        //         !Number.isFinite(orderBook.bidQty) ||
+                        //         !Number.isFinite(orderBook.askPrice) ||
+                        //         !Number.isFinite(orderBook.askQty)
+                        // ) {
+                        //     continue
+                        // }
                         resetTimeout()
                     } catch (error) {
                         this.winstonService.log(WinstonLog.WebsocketSubscriptionError,

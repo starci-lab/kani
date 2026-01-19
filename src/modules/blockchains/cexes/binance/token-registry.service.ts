@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    MarketListingId, MarketListingSchema, PrimaryMemoryStorageService 
+    MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     BinanceTokenPrice, BinanceTokenPriceData 
@@ -19,11 +19,15 @@ export class BinanceTokenRegistryService {
      * @returns The Binance symbols without duplicates
      */
     getBinanceSymbols() {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Binance
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                marketListings: {
+                    $elemMatch: {
+                        id: MarketListingId.Binance,
+                    },
+                }
             }
-        })
+        )
         if (!tokens.length) {
             return []
         }
@@ -42,22 +46,28 @@ export class BinanceTokenRegistryService {
      * @param tokenPriceData The token price data from Binance API
      * @returns The Binance token prices
      */
-    getBinanceTokenPrices(tokenPriceData: Array<BinanceTokenPriceData>): Array<BinanceTokenPrice> {
+    getBinanceTokenPrices(tokenPriceDataArray: Array<BinanceTokenPriceData>): Array<BinanceTokenPrice> {
         // retrieve the tokens from the primary memory storage service
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Binance
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                marketListings: {
+                    $elemMatch: {
+                        id: MarketListingId.Binance,
+                    },
+                }
             }
-        })
+        )
         if (!tokens.length) {
             return []
         }
         // map the token prices to the Binance token prices
         return tokens.map(
             token => {
-                const listingSymbol = token.marketListings.find(market => market.id === MarketListingId.Binance)?.symbol
+                const listingSymbol = token.marketListings.find(
+                    market => market.id === MarketListingId.Binance
+                )?.symbol
                 if (!listingSymbol) return undefined
-                const tokenPrice = tokenPriceData.find(
+                const tokenPrice = tokenPriceDataArray.find(
                     tokenPriceData => tokenPriceData.symbol === listingSymbol)
                 if (!tokenPrice) return undefined
                 return {

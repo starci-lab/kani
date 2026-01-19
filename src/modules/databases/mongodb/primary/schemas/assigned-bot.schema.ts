@@ -13,6 +13,9 @@ import {
 import {
     Schema as MongooseSchema, Types 
 } from "mongoose"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
 
 @ObjectType({
     description: "Represents a bot assigned to an executor",
@@ -26,7 +29,9 @@ export class AssignedBotSchema extends AbstractSchema {
             description: "The bot id" 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: BotSchema.name, required: true 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Bot,
+        required: true,
     })
         bot: BotSchema | Types.ObjectId
 }

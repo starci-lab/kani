@@ -56,6 +56,7 @@ import {
 import {
     StreamAsyncIteratorModule
 } from "@modules/stream-async-iterator"
+import { CexesModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -70,20 +71,23 @@ import {
             isGlobal: true,
             memoryStorage: true,
         }),
-        // WinstonModule.register({
-        //     isGlobal: true,
-        //     appName: "kani-algorithm-tests",
-        //     level: WinstonLevel.Info,
-        // }),
-        // CacheModule.register({
-        //     isGlobal: true,
-        // }),
-        // StreamAsyncIteratorModule.register({
-        //     isGlobal: true,
-        // }),
-        // CexesModule.register({
-        //     isGlobal: true,
-        // }),
+        WinstonModule.register({
+            isGlobal: true,
+            appName: "kani-algorithm-tests",
+            level: WinstonLevel.Verbose,
+        }),
+        MixinModule.register({
+            isGlobal: true,
+        }),
+        CacheModule.register({
+            isGlobal: true,
+        }),
+        StreamAsyncIteratorModule.register({
+            isGlobal: true,
+        }),
+        CexesModule.register({
+            isGlobal: true,
+        }),
         // AxiosModule.register({
         //     isGlobal: true,
         // }),

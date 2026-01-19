@@ -78,7 +78,6 @@ import {
 } from "@modules/privy"
 import {
     ClmmLiquidityFormulaService,
-    ClmmTickFormulaService 
 } from "@modules/blockchains"
 
 @Injectable()
@@ -91,7 +90,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
-        private readonly clmmTickFormulaService: ClmmTickFormulaService,
         private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) { }
 
@@ -133,7 +131,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         const liquidityRaw = this.clmmLiquidityFormulaService.computeLiquidity({
             tickLower,
             tickUpper,
-            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toString()),
+            tickCurrent: _state.dynamic.tickCurrent,
             amountA,
             amountB,
         })

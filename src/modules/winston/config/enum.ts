@@ -36,4 +36,7 @@ export enum WinstonLog {
     WebsocketSubscriptionClosed = "Websocket.Subscription.Closed",
     WebsocketSubscriptionError = "Websocket.Subscription.Error",
     WebsocketSubscriptionResolved = "Websocket.Subscription.Resolved",
+    EjectRpcFatalError = "Eject.Rpc.Fatal.Error",
+    EjectRpcRetryableError = "Eject.Rpc.Retryable.Error",
+    EjectRpcIgnorableError = "Eject.Rpc.Ignorable.Error",
 }

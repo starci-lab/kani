@@ -27,6 +27,8 @@ import {
 import {
     WebSocketStreamConnection, StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
+
+const BINANCE_LAST_PRICE_STREAM_NAME = "binance-last-price"
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(
@@ -81,7 +83,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     this.winstonService.log(
                                         WinstonLog.WebsocketSubscriptionOpened,
                                         {
-                                            streamName: "binance-last-price",
+                                            streamName: BINANCE_LAST_PRICE_STREAM_NAME,
                                             symbols: batch,
                                         }
                                     )
@@ -100,7 +102,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                         WinstonLog.WebsocketSubscriptionError,
                                         {
                                             error: error.message,
-                                            streamName: "binance-last-price",
+                                            streamName: BINANCE_LAST_PRICE_STREAM_NAME,
                                             symbols: batch,
                                         }
                                     )
@@ -109,7 +111,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     this.winstonService.log(
                                         WinstonLog.WebsocketSubscriptionClosed,
                                         {
-                                            streamName: "binance-last-price",
+                                            streamName: BINANCE_LAST_PRICE_STREAM_NAME,
                                             symbols: batch,
                                         }
                                     )
@@ -138,21 +140,20 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                         }
                                     ]
                                 )
-                                if (!tokenPrices.length) {
-                                    continue
-                                }
                                 resetTimeout()
                                 // update the token prices
                                 await this.asyncService.allIgnoreError(
-                                    tokenPrices.map(async (tokenPrice) => {
-                                        await this.aggregatedTokenPriceCacheService.set(
-                                            {
-                                                tokenId: tokenPrice.tokenId,
-                                                price: tokenPrice.price,
-                                                marketListingId: MarketListingId.Binance,
-                                            }
-                                        )
-                                    })
+                                    tokenPrices.map(
+                                        async (tokenPrice) => {
+                                            await this.aggregatedTokenPriceCacheService.set(
+                                                {
+                                                    tokenId: tokenPrice.tokenId,
+                                                    price: tokenPrice.price,
+                                                    marketListingId: MarketListingId.Binance,
+                                                }
+                                            )
+                                        }
+                                    )
                                 )
                             } catch (error) {
                             // log the error
@@ -160,7 +161,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                     WinstonLog.WebsocketSubscriptionError,
                                     {
                                         error: error.message,
-                                        streamName: "binance-last-price",
+                                        streamName: BINANCE_LAST_PRICE_STREAM_NAME,
                                         symbols: batch,
                                     }
                                 )

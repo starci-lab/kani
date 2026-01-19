@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { AsyncService, RetryOptions, RetryService } from "@modules/mixin"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    AsyncService, RetryOptions, RetryService 
+} from "@modules/mixin"
 import {
     createSolanaRpc,
     createSolanaRpcSubscriptions,
@@ -15,12 +19,22 @@ import {
     JsonRpcError,
     SuiHTTPStatusError
 } from "@mysten/sui/client"
-import { P2CBalancerService } from "@modules/p2c-balancer"
-import { ChainId } from "@modules/typedefs"
-import { RpcAccessType } from "@modules/filesystem"
-import { AbortError } from "p-retry"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import {
+    P2CBalancerService 
+} from "@modules/p2c-balancer"
+import {
+    ChainId 
+} from "@modules/typedefs"
+import {
+    RpcAccessType 
+} from "@modules/filesystem"
+import {
+    AbortError 
+} from "p-retry"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 // Retryable RPC error indicating a temporary failure that blocks progress
 // (e.g. request timeout, transient cluster issues, blockhash expiration,
@@ -54,8 +68,7 @@ export class RpcExecutorService {
         private readonly p2cBalancerService: P2CBalancerService,
         private readonly retryService: RetryService,
         private readonly asyncService: AsyncService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
 
     private getSolanaRpcErrorType(error: SolanaError): RpcErrorType {
@@ -66,11 +79,15 @@ export class RpcExecutorService {
         // =========================
         if (code === 8100002 /* SOLANA_ERROR__RPC__TRANSPORT_HTTP_ERROR */) {
             // Rate limit / gateway / temporary infra issues
-            if ([429, 502, 503, 504].includes(http)) {
+            if ([429,
+                502,
+                503,
+                504].includes(http)) {
                 return RpcErrorType.Ignorable
             }
             // Unauthorized / forbidden => permanent failure
-            if ([401, 403].includes(http)) {
+            if ([401,
+                403].includes(http)) {
                 return RpcErrorType.Fatal
             }
             // Other HTTP errors -> retry cautiously
@@ -198,9 +215,11 @@ export class RpcExecutorService {
                         )
                     } catch (error) {
                         if (error instanceof SolanaRpcFatalError) {
-                            this.logger.error(
+                            this.winstonService.log(
                                 WinstonLog.EjectRpcFatalError,
-                                { rpcId: id }
+                                {
+                                    rpcId: id 
+                                }
                             )
                             await this.p2cBalancerService.ejectRpcs([id])
                             throw error
@@ -215,11 +234,15 @@ export class RpcExecutorService {
         // if the error is a http status error, return the error type
         if (error instanceof SuiHTTPStatusError) {
             // Rate limit / gateway / temporary infra issues
-            if ([429, 502, 503, 504].includes(error.status)) {
+            if ([429,
+                502,
+                503,
+                504].includes(error.status)) {
                 return RpcErrorType.Ignorable
             }
             // Unauthorized / forbidden => permanent failure
-            if ([401, 403].includes(error.status)) {
+            if ([401,
+                403].includes(error.status)) {
                 return RpcErrorType.Fatal
             }
             return RpcErrorType.Ignorable
@@ -259,8 +282,11 @@ export class RpcExecutorService {
                         options,
                         action: async () => {
                             // resolve the tuple of response and error
-                            const [result, error] = await this.asyncService.resolveTuple(
-                                callback({ suiClient, rpcUrl })
+                            const [result,
+                                error] = await this.asyncService.resolveTuple(
+                                callback({
+                                    suiClient, rpcUrl 
+                                })
                             )
                             // if the response is not null, return the response
                             if (result !== null) {
@@ -283,7 +309,12 @@ export class RpcExecutorService {
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
                     if (error instanceof SuiRpcFatalError) {
-                        this.logger.error(WinstonLog.EjectRpcFatalError, { rpcId: id })
+                        this.winstonService.log(
+                            WinstonLog.EjectRpcFatalError,
+                            {
+                                rpcId: id 
+                            }
+                        )
                         await this.p2cBalancerService.ejectRpcs([id])
                         throw error
                     }

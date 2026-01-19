@@ -1,8 +1,10 @@
 import {
-    AbstractSchema, 
     GraphQLTypePositionSettlementReason, 
     PositionSettlementReason 
-} from "@modules/databases"
+} from "../enums"
+import {
+    AbstractSchema,
+} from "./abstract"
 import {
     Field, ObjectType 
 } from "@nestjs/graphql"
@@ -11,6 +13,9 @@ import {
     SchemaFactory
 } from "@nestjs/mongoose"
 import GraphQLJSON from "graphql-type-json"
+import {
+    Schema as MongooseSchema 
+} from "mongoose"
 
 @ObjectType()
 @Schema({
@@ -20,23 +25,27 @@ export class PositionSettlementSchema extends AbstractSchema {
     @Field(() => GraphQLTypePositionSettlementReason,
         {
             description: "The reason for the settlement"
-        })
-    @Prop({
-        type: String, enum: PositionSettlementReason
-    })
+        }
+    )
+    @Prop(
+        {
+            type: String, enum: PositionSettlementReason
+        }
+    )
         reason: PositionSettlementReason
 
     @Field(() => GraphQLJSON,
         {
             description: "The metadata for the settlement"
-        })
+        }
+    )
     @Prop({
-        type: GraphQLJSON
+        type: MongooseSchema.Types.Mixed
     })
-        metadata: unknown
+        metadata?: unknown
 }
 
-export interface PositionSettlementReasonExitOutOfRangeMetadata {
+export interface PositionSettlementReasonOutOfRangeMetadata {
     tickAtClose: number
 }
 

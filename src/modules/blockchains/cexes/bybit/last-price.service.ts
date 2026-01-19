@@ -42,7 +42,6 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
     onApplicationBootstrap() {
         const symbols = this.bybitTokenRegistryService.getSymbols()
         if (!symbols.length) return
-    
         // Split symbols into chunks (Bybit has a limit on subscription args)
         const batches = _.chunk(symbols,
             envConfig().cexes.bybit.chunks.lastPrice)
@@ -139,7 +138,8 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                     )
                                 )
                             } catch (error) {
-                                this.winstonService.log(WinstonLog.WebsocketSubscriptionError,
+                                this.winstonService.log(
+                                    WinstonLog.WebsocketSubscriptionError,
                                     {
                                         error: error.message,
                                         streamName: "bybit-last-price",

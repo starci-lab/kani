@@ -26,6 +26,9 @@ import GraphQLJSON from "graphql-type-json"
 import {
     Types 
 } from "mongoose"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
 
 @ObjectType({
     description: "Represents a job",
@@ -40,7 +43,9 @@ export class JobSchema extends AbstractSchema {
             description: "Reference to the liquidity pool associated with this job", nullable: true 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name, required: false 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.LiquidityPool,
+        required: false,
     })
         liquidityPool?: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 
@@ -49,7 +54,8 @@ export class JobSchema extends AbstractSchema {
             description: "Reference to the bot associated with this job" 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: BotSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Bot,
     })
         bot: BotSchema | MongooseSchema.Types.ObjectId
 
@@ -58,7 +64,9 @@ export class JobSchema extends AbstractSchema {
             description: "Reference to the executor associated with this job", nullable: true 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: ExecutorSchema.name, required: false 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Executor,
+        required: false,
     })
         executor?: ExecutorSchema | Types.ObjectId
 

@@ -13,6 +13,9 @@ import {
 import {
     Schema as MongooseSchema, Types 
 } from "mongoose"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
 
 @Schema({
     timestamps: true,
@@ -29,7 +32,8 @@ export class SessionSchema extends AbstractSchema {
             description: "The user who owns the session" 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: UserSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.User,
     })
         user: UserSchema | Types.ObjectId
 

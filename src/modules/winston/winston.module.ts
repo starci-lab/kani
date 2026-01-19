@@ -7,6 +7,9 @@ import {
 import {
     createConsoleWinstonProvider, createLokiWinstonProvider 
 } from "./winston.providers"
+import {
+    WinstonService 
+} from "./winston.service"
 
 @Module({
 })
@@ -20,8 +23,12 @@ export class WinstonModule extends ConfigurableModuleClass {
         return {
             ...dynamicModule,
             providers: [...dynamicModule.providers || [],
-                ...providers],
-            exports: [...providers],
+                ...providers,
+                WinstonService,
+            ],
+            exports: [
+                WinstonService,
+            ],
         }
     }
 }   

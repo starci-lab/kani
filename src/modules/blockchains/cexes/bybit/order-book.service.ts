@@ -3,19 +3,10 @@ import {
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
-    EventEmitterService 
-} from "@modules/event"
-import {
     BYBIT_WS_URL 
 } from "./constants"
 import {
-    InjectRedisCache 
-} from "@modules/cache"
-import {
-    Cache 
-} from "cache-manager"
-import {
-    AsyncService, RetryService 
+    RetryService 
 } from "@modules/mixin"
 import {
     OrderBook 
@@ -39,11 +30,7 @@ import {
 @Injectable()
 export class BybitOrderBookService implements OnApplicationBootstrap {
     constructor(
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        private readonly eventEmitterService: EventEmitterService,
         private readonly bybitTokenRegistryService: BybitTokenRegistryService,
-        private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
         private readonly winstonService: WinstonService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,

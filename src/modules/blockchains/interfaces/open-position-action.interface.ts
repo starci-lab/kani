@@ -24,8 +24,8 @@ export interface PrepareOpenPositionResult {
   solanaTx?: SolanaTx;
   feeAmountA: BN;
   feeAmountB: BN;
-  tickLower?: Decimal;
-  tickUpper?: Decimal;
+  tickLower?: BN;
+  tickUpper?: BN;
   amountA?: BN;
   amountB?: BN;
   minBinId?: Decimal;

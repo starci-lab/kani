@@ -275,3 +275,24 @@ export interface WebsocketSubscriptionResolvedMessage {
     streamName: string
     symbols: Array<string>
 }
+
+/**
+ * Eject RPC Fatal Error Message
+ */
+export interface EjectRpcFatalErrorMessage {
+    rpcId: string
+}
+
+/**
+ * Eject RPC Retryable Error Message
+ */
+export interface EjectRpcRetryableErrorMessage {
+    rpcId: string
+}
+
+/**
+ * Eject RPC Ignorable Error Message
+ */
+export interface EjectRpcIgnorableErrorMessage {
+    rpcId: string
+}

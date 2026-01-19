@@ -1,5 +1,5 @@
 import winston, {
-    Logger, format, transports 
+    format, transports, createLogger
 } from "winston"
 import {
     CONSOLE_WINSTON, LOKI_WINSTON 
@@ -63,12 +63,14 @@ export const createConsoleWinstonProvider = () => {
         useFactory: (
             options: typeof OPTIONS_TYPE
         ) => {
-            return new Logger({
-                level: "info",
-                transports: [
-                    createConsoleTransport(options),
-                ],
-            })
+            return createLogger(
+                {
+                    level: options.level,
+                    transports: [
+                        createConsoleTransport(options),
+                    ],
+                }
+            )
         },
     }
 }
@@ -80,13 +82,15 @@ export const createLokiWinstonProvider = () => {
         useFactory: (
             options: typeof OPTIONS_TYPE
         ) => {
-            return new Logger({
-                level: "info",
-                transports: [
-                    createConsoleTransport(options),
-                    createLokiTransport(options),
-                ],
-            })
+            return createLogger(
+                {
+                    level: options.level,
+                    transports: [
+                        createConsoleTransport(options),
+                        createLokiTransport(options),
+                    ],
+                }
+            )
         }
     }
 }   

@@ -134,7 +134,8 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
 
                             resetTimeout()
                         } catch (error) {
-                            this.winstonService.log(WinstonLog.WebsocketSubscriptionError,
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionError,
                                 {
                                     error: error.message,
                                     streamName: ORDER_BOOK_STREAM_NAME,

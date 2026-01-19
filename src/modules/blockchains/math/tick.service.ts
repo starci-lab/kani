@@ -48,9 +48,11 @@ export class TickMathService {
     ) {
         // check if the bot has snapshots
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotFoundException({
-                botId: bot.id,
-            })
+            throw new SnapshotBalancesNotFoundException(
+                {
+                    botId: bot.id,
+                }
+            )
         }
     
         const {
@@ -173,8 +175,8 @@ export class TickMathService {
     
         let tickUpperEntry = tickLowerEntry.add(S)
     
-        let bestTickLower: Decimal | null = null
-        let bestTickUpper: Decimal | null = null
+        let bestTickLower: BN | null = null
+        let bestTickUpper: BN | null = null
         let bestDiff: Decimal | null = null
         // we iterate over the tick multiplier
         for (let i = 0; i < tickMultiplier; i++) {
@@ -191,8 +193,8 @@ export class TickMathService {
             }
             // we update the best difference, tick lower, and tick upper
             bestDiff = diff
-            bestTickLower = tickLowerEntry
-            bestTickUpper = tickUpperEntry
+            bestTickLower = new BN(tickLowerEntry.toString())
+            bestTickUpper = new BN(tickUpperEntry.toString())
             // we update the tick lower and tick upper
             tickLowerEntry = tickLowerEntry.add(tickSpacing)
             tickUpperEntry = tickUpperEntry.add(tickSpacing)
@@ -342,13 +344,13 @@ export interface GetTickBoundsParams {
     bot: BotSchema
 }
 
-export interface GetTickBoundsResult {
-    tickLower: Decimal
-    tickUpper: Decimal
-}
+// export interface GetTickBoundsResult {
+//     tickLower: Decimal
+//     tickUpper: Decimal
+// }
 
-export interface TickRecord {
-    tickLower: Decimal
-    tickUpper: Decimal
-    R: Decimal
-}
+// export interface TickRecord {
+//     tickLower: Decimal
+//     tickUpper: Decimal
+//     R: Decimal
+// }

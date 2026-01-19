@@ -31,6 +31,9 @@ import {
 import {
     GraphQLJSON 
 } from "graphql-type-json"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
 
 /**
  * GraphQL response type for the dynamic liquidity pools query.
@@ -123,7 +126,8 @@ export class LiquidityPoolSchema extends AbstractSchema {
             description: "The DEX this pool belongs to" 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: DexSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Dex,
     })
         dex: DexSchema | Types.ObjectId
 
@@ -141,7 +145,8 @@ export class LiquidityPoolSchema extends AbstractSchema {
             description: "First token in the pool" 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Token,
     })
         tokenA: TokenSchema | Types.ObjectId
 
@@ -150,7 +155,8 @@ export class LiquidityPoolSchema extends AbstractSchema {
             description: "Second token in the pool" 
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: TokenSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Token,
     })
         tokenB: TokenSchema | Types.ObjectId
 

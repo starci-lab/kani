@@ -13,6 +13,9 @@ import {
 import {
     AggregatedTokenPriceCacheService 
 } from "./aggregated-token-price-cache.service"
+import {
+    CacheService 
+} from "./cache.service"
 @Module({
 })
 export class CacheModule extends ConfigurableModuleClass {
@@ -22,15 +25,19 @@ export class CacheModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             createRedisCacheManagerProvider(),
-            createMemoryCacheManagerProvider(),
-            AggregatedTokenPriceCacheService,
+            createMemoryCacheManagerProvider()
         ]
         return {
             ...dynamicModule,
             providers: [...dynamicModule.providers || [],
-                ...providers],
-            exports: [...providers,
-                AggregatedTokenPriceCacheService],
+                ...providers,
+                CacheService,
+                AggregatedTokenPriceCacheService,
+            ],
+            exports: [
+                CacheService,
+                AggregatedTokenPriceCacheService
+            ],
         }
     }
 }

@@ -36,7 +36,10 @@ import {
     WebsocketSubscriptionResolvedMessage,
     WebsocketSubscriptionErrorMessage,
     WebsocketSubscriptionClosedMessage,
-    WebsocketSubscriptionOpenedMessage
+    WebsocketSubscriptionOpenedMessage,
+    EjectRpcRetryableErrorMessage,
+    EjectRpcFatalErrorMessage,
+    EjectRpcIgnorableErrorMessage
 } from "./types"
 
 export const configMap = {
@@ -336,5 +339,29 @@ export const configMap = {
         loki: true,
         messageType: {
         } as WebsocketSubscriptionResolvedMessage,
+    },
+    // Eject RPC Fatal Error
+    [WinstonLog.EjectRpcFatalError]: {
+        name: WinstonLog.EjectRpcFatalError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as EjectRpcFatalErrorMessage,
+    },
+    // Eject RPC Retryable Error
+    [WinstonLog.EjectRpcRetryableError]: {
+        name: WinstonLog.EjectRpcRetryableError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as EjectRpcRetryableErrorMessage,
+    },
+    // Eject RPC Ignorable Error
+    [WinstonLog.EjectRpcIgnorableError]: {
+        name: WinstonLog.EjectRpcIgnorableError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as EjectRpcIgnorableErrorMessage,
     },
 }

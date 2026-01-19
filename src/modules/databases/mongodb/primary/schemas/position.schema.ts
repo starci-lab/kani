@@ -1,351 +1,387 @@
 import {
-    Field, Float, Int 
+    Field,
+    Float,
 } from "@nestjs/graphql"
 import {
-    Prop, Schema 
+    Prop,
+    Schema,
 } from "@nestjs/mongoose"
 import {
-    LiquidityPoolSchema 
-} from "./liquidity-pool.schema"
-import {
-    SchemaFactory 
+    SchemaFactory,
 } from "@nestjs/mongoose"
 import {
-    Schema as MongooseSchema 
+    Schema as MongooseSchema,
 } from "mongoose"
 import {
-    ObjectType 
+    ObjectType,
+    ID,
 } from "@nestjs/graphql"
+
 import {
-    AbstractSchema 
+    AbstractSchema,
 } from "./abstract"
 import {
-    ID 
-} from "@nestjs/graphql"
+    LiquidityPoolSchema,
+} from "./liquidity-pool.schema"
 import {
-    BotSchema 
+    BotSchema,
 } from "./bot.schema"
 import {
-    ChainId, GraphQLTypeChainId 
+    ChainId,
+    GraphQLTypeChainId,
 } from "@modules/typedefs"
 import {
-    GraphQLJSON 
+    GraphQLJSON,
 } from "graphql-type-json"
-import {
-    PositionSettlementSchema, PositionSettlementSchemaClass 
-} from "./position-settlement.schema"
 
+import {
+    PositionSettlementSchema,
+    PositionSettlementSchemaClass,
+} from "./position-settlement.schema"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
+import {
+    ClmmStateSchema,
+    ClmmStateSchemaClass,
+} from "./clmm-state.schema"
+import {
+    DlmmStateSchema,
+    DlmmStateSchemaClass,
+} from "./dlmm-state.schema"
+import {
+    PositionFeesSchema,
+    PositionFeesSchemaClass,
+} from "./position-fees.schema"
+import {
+    PositionSnapshotsSchema,
+    PositionSnapshotsSchemaClass,
+} from "./position-snapshots.schema"
+
+/**
+ * PositionSchema
+ *
+ * Represents a single trading / liquidity position created by a bot
+ * on a specific blockchain and liquidity pool.
+ *
+ * This schema stores:
+ * - immutable identifiers (tx hash, pool, chain)
+ * - protocol-specific state (CLMM / DLMM)
+ * - lifecycle snapshots (open / close)
+ * - computed performance metrics (ROI, PnL)
+ * - settlement & fee information
+ */
 @Schema({
-    collection: "positions", timestamps: true 
+    collection: "positions",
+    timestamps: true,
 })
 @ObjectType()
 export class PositionSchema extends AbstractSchema {
+
+    /**
+     * On-chain transaction hash that created (opened) this position.
+     * Guaranteed to be unique across all positions.
+     */
     @Field(() => String,
         {
-            description: "Transaction hash that created this position" 
+            description: "Transaction hash that created this position",
         })
     @Prop({
-        unique: true,
         type: String,
         required: true,
+        unique: true,
     })
         openTxHash: string
 
+    /**
+     * Reference to the liquidity pool where this position was opened.
+     * Stored as ObjectId and resolved lazily in GraphQL.
+     */
     @Field(() => ID,
         {
-            description: "Reference to the liquidity pool associated with this position" 
+            description: "Reference to the liquidity pool associated with this position",
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: LiquidityPoolSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.LiquidityPool,
     })
         liquidityPool: LiquidityPoolSchema | MongooseSchema.Types.ObjectId
 
-    @Field(() => String,
+    /**
+     * CLMM-specific state captured at position creation.
+     * Includes tick range and liquidity parameters.
+     *
+     * Present only for CLMM-based protocols.
+     */
+    @Field(() => ClmmStateSchema,
         {
-            description: "The snapshot of the target balance amount before opening the position" 
+            nullable: true,
         })
     @Prop({
-        type: String, required: true 
+        type: ClmmStateSchemaClass,
+        required: false,
     })
-        snapshotTargetBalanceAmountBeforeOpen: string
+        clmmState?: ClmmStateSchema
 
-    @Field(() => String,
+    /**
+     * DLMM-specific state captured at position creation.
+     * Includes bin range and distribution parameters.
+     *
+     * Present only for DLMM-based protocols.
+     */
+    @Field(() => DlmmStateSchema,
         {
-            description: "The snapshot of the quote balance amount before opening the position" 
+            nullable: true,
         })
     @Prop({
-        type: String, required: true 
+        type: DlmmStateSchemaClass,
+        required: false,
     })
-        snapshotQuoteBalanceAmountBeforeOpen: string
+        dlmmState?: DlmmStateSchema
 
-    @Field(() => String,
-        {
-            description: "The snapshot of the gas balance amount before opening the position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        snapshotGasBalanceAmountBeforeOpen?: string
-
-    @Field(() => String,
-        {
-            description: "The snapshot of the target balance amount after closing the position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        snapshotTargetBalanceAmountAfterClose?: string
-
-    @Field(() => String,
-        {
-            description: "The snapshot of the quote balance amount after closing the position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        snapshotQuoteBalanceAmountAfterClose?: string
-
-    @Field(() => String,
-        {
-            description: "The snapshot of the gas balance amount after closing the position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        snapshotGasBalanceAmountAfterClose?: string
-
-    @Field(() => String,
-        {
-            description: "Liquidity amount minted for this position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        liquidity?: string
-
-    @Field(() => Int,
-        {
-            description: "Lower tick boundary of the position's price range", nullable: true 
-        })
-    @Prop({
-        type: Number, required: false 
-    })
-        tickLower?: number
-
-    @Field(() => Int,
-        {
-            description: "Upper tick boundary of the position's price range", nullable: true 
-        })
-    @Prop({
-        type: Number, required: false 
-    })
-        tickUpper?: number
-
-    @Field(() => String,
-        {
-            description: "Amount of target tokens spent to open the position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        amountA?: string
-
-    @Field(() => String,
-        {
-            description: "Amount of quote tokens spent to open the position", nullable: true 
-        })
-    @Prop({
-        type: String, required: false 
-    })
-        amountB?: string
-        
-    @Field(() => Int,
-        {
-            description: "Lower bin id of the position's price range", nullable: true 
-        })
-    @Prop({
-        type: Number, required: false 
-    })
-        minBinId?: number
-
-    @Field(() => Int,
-        {
-            description: "Lower bin id of the position's price range", nullable: true 
-        })
-    @Prop({
-        type: Number, required: false 
-    })
-        maxBinId?: number
-
+    /**
+     * Reference to the bot instance that created and manages this position.
+     */
     @Field(() => ID,
         {
-            description: "Reference to the bot that created this position" 
+            description: "Reference to the bot that created this position",
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: BotSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Bot,
     })
         bot: BotSchema | MongooseSchema.Types.ObjectId
 
+    /**
+     * Blockchain network where this position exists
+     * (e.g. Solana, Aptos, Ethereum).
+     */
     @Field(() => GraphQLTypeChainId,
-        { 
-            description: "The blockchain chain ID where this position is created" 
+        {
+            description: "The blockchain chain ID where this position is created",
         })
     @Prop({
-        type: String, enum: ChainId, required: true 
+        type: String,
+        enum: ChainId,
+        required: true,
     })
         chainId: ChainId
 
+    /**
+     * Indicates whether the target asset corresponds to token A
+     * in the associated liquidity pool.
+     */
     @Field(() => Boolean,
         {
-            description: "Whether the target token is token A in the liquidity pool" 
+            description: "Whether the target token is token A in the liquidity pool",
         })
     @Prop({
-        type: Boolean, default: true 
+        type: Boolean,
+        default: true,
     })
         targetIsA: boolean
 
-    @Field(() => Date,
-        {
-            description: "The date and time this position was opened" 
-        })
-    @Prop({
-        type: Date, required: true 
-    })
-        positionOpenedAt: Date
-
+    /**
+     * Protocol-specific on-chain identifier of the position.
+     *
+     * Examples:
+     * - NFT mint address
+     * - PDA / position account
+     */
     @Field(() => String,
         {
-            description: "On-chain identifier of this position" 
+            description: "On-chain identifier of this position",
         })
     @Prop({
-        type: String, required: false 
+        type: String,
+        required: false,
     })
         positionId: string
 
+    /**
+     * Indicates whether the position is currently active (open).
+     * Set to false once the position is closed or settled.
+     */
     @Field(() => Boolean,
         {
-            description: "Whether the position is active", nullable: true 
+            description: "Whether the position is active",
+            nullable: true,
         })
     @Prop({
-        type: Boolean, default: true 
+        type: Boolean,
+        default: true,
     })
         isActive: boolean
 
+    /**
+     * On-chain transaction hash that closed this position.
+     * Present only after the position is closed.
+     */
     @Field(() => String,
         {
-            description: "Transaction hash that closed this position", nullable: true 
+            description: "Transaction hash that closed this position",
+            nullable: true,
         })
     @Prop({
-        type: String, required: false 
+        type: String,
+        required: false,
     })
         closeTxHash?: string
 
-    @Field(() => Date,
+    /**
+     * Snapshot captured at the time the position was opened.
+     *
+     * Includes:
+     * - token balances
+     * - position value (token & USD)
+     *
+     * Used as the baseline for performance calculations.
+     */
+    @Field(() => PositionSnapshotsSchema,
         {
-            description: "The date and time this position was closed", nullable: true 
+            description: "Snapshot information for this position",
+            nullable: true,
         })
     @Prop({
-        type: Date, required: false 
+        type: PositionSnapshotsSchemaClass,
+        required: false,
     })
-        positionClosedAt?: Date
+        openSnapshot?: PositionSnapshotsSchema
 
-    @Field(() => Float,
-        { 
-            description: "The return on investment (ROI) percentage of the position", 
-            nullable: true 
+    /**
+     * Snapshot captured at the time the position was closed.
+     *
+     * Used to finalize ROI, PnL and settlement values.
+     */
+    @Field(() => PositionSnapshotsSchema,
+        {
+            description: "Snapshot information for this position",
+            nullable: true,
         })
     @Prop({
-        type: Number, required: false 
+        type: PositionSnapshotsSchemaClass,
+        required: false,
+    })
+        closeSnapshot?: PositionSnapshotsSchema
+
+    /**
+     * Return on investment (ROI) percentage.
+     * Computed off-chain from open and close snapshots.
+     */
+    @Field(() => Float,
+        {
+            description: "The return on investment (ROI) percentage of the position",
+            nullable: true,
+        })
+    @Prop({
+        type: Number,
+        required: false,
     })
         roi?: number
 
+    /**
+     * Profit and loss (PnL) percentage.
+     * Computed off-chain from snapshot deltas.
+     */
     @Field(() => Float,
-        { 
-            description: "The profit or loss in percentage of the position", 
-            nullable: true 
+        {
+            description: "The profit or loss in percentage of the position",
+            nullable: true,
         })
     @Prop({
-        type: Number, required: false 
+        type: Number,
+        required: false,
     })
         pnl?: number
-    
+
+    /**
+     * Protocol-specific metadata stored as a flexible JSON object.
+     *
+     * Used for:
+     * - NFT / position account info
+     * - vault caching
+     * - protocol extensions
+     */
     @Field(() => GraphQLJSON,
-        { 
-            description: "Additional position-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
-            nullable: true 
+        {
+            description:
+            "Additional position-specific metadata stored as flexible key-value JSON",
+            nullable: true,
         })
     @Prop({
-        type: MongooseSchema.Types.Mixed, required: false 
+        type: MongooseSchema.Types.Mixed,
+        required: false,
     })
         metadata?: unknown
- 
-    @Field(() => String,
-        { 
-            description: "The amount of target tokens paid as fees for the position", 
-        })
-    @Prop({
-        type: String 
-    })
-        feeAmountTarget: string
 
-    @Field(() => String,
-        { 
-            description: "The amount of quote tokens paid as fees for the position", 
-        })
-    @Prop({
-        type: String 
-    })
-        feeAmountQuote: string
-
-    // whether the position is simulated
-    @Prop({
-        type: Boolean, default: false 
-    })
-        isSimulated?: boolean
-
-    @Field(() => Float,
+    /**
+     * Accumulated fees earned by this position,
+     * expressed from target/quote asset perspective.
+     */
+    @Field(() => PositionFeesSchema,
         {
-            description: "The value of the position at the time of opening", nullable: true 
+            description: "Fee amounts for this position (target/quote perspective)",
         })
     @Prop({
-        type: Number, required: false 
+        type: PositionFeesSchemaClass,
+        required: true,
     })
-        positionValueAtOpen?: number
+        fees: PositionFeesSchema
 
-    @Field(() => Float,
-        {
-            description: "The value of the position at the time of closing", nullable: true 
-        })
-    @Prop({
-        type: Number, required: false 
-    })
-        positionValueAtClose?: number
-
+    /**
+     * Settlement information after the position is closed.
+     *
+     * Includes:
+     * - final transferred amounts
+     * - settlement status
+     */
     @Field(() => PositionSettlementSchema,
         {
-            description: "The settlement of the position", nullable: true 
+            description: "The settlement of the position",
+            nullable: true,
         })
     @Prop({
-        type: PositionSettlementSchemaClass, required: false 
+        type: PositionSettlementSchemaClass,
+        required: false,
     })
         positionSettlement?: PositionSettlementSchema
 
-    // grahpql only, not stored in the database
+    /**
+     * GraphQL-only field.
+     *
+     * Fully resolved liquidity pool document for API responses.
+     * Not persisted in the database.
+     */
     @Field(() => LiquidityPoolSchema,
         {
-            description: "The liquidity pool associated with this position" 
+            description: "The liquidity pool associated with this position",
         })
         associatedLiquidityPool: LiquidityPoolSchema
 }
-export const PositionSchemaClass = SchemaFactory.createForClass(PositionSchema)
-// index the position by bot, isActive and positionClosedAt
-PositionSchemaClass.index({
-    bot: 1, isActive: 1, positionClosedAt: 1 
-},
-{
-    unique: true 
-})
 
+export const PositionSchemaClass =
+    SchemaFactory.createForClass(PositionSchema)
+
+/**
+ * Index constraint:
+ * A single bot can have at most one active position at any time.
+ */
+PositionSchemaClass.index(
+    {
+        bot: 1,
+        isActive: 1,
+    },
+    {
+        unique: true,
+        partialFilterExpression: {
+            isActive: true,
+        },
+    },
+)
+
+/**
+ * Protocol-specific metadata typings
+ */
 export interface RaydiumPositionMetadata {
     nftMintAddress: string
     ataAddress: string

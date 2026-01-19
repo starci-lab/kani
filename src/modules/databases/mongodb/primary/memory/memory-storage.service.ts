@@ -30,7 +30,6 @@ import {
     BalanceConfigNotFoundException, 
     GasConfigNotFoundException 
 } from "@modules/exceptions"
-
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
     // configs

@@ -1,0 +1,12 @@
+diff --git a/node_modules/@types/lokijs/index.d.ts b/node_modules/@types/lokijs/index.d.ts
+index 5ec8ffa..863e318 100644
+--- a/node_modules/@types/lokijs/index.d.ts
++++ b/node_modules/@types/lokijs/index.d.ts
+@@ -43,6 +43,7 @@ declare var LokiOps: {
+     $size(a: any, b: any): boolean;
+     $len(a: any, b: any): boolean;
+     $where(a: any, b: any): boolean;
++    $elemMatch(a: any, b: any): boolean;
+     // field-level logical operators
+     // a is the value in the collection
+     // b is the nested query operation (for '$not')

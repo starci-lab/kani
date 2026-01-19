@@ -13,6 +13,9 @@ import {
 import {
     Types 
 } from "mongoose"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
 
 @ObjectType({
     description: "Represents a history serie" 
@@ -66,7 +69,8 @@ export class HistorySchema extends AbstractSchema {
             description: "Reference to the bot that created this position" 
         })
     @Prop({
-        type: Types.ObjectId, ref: BotSchema.name 
+        type: Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Bot,
     })
         bot: BotSchema | Types.ObjectId    
 }

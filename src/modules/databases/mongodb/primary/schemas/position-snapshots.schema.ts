@@ -5,6 +5,7 @@ import {
 } from "@nestjs/mongoose"
 import {
     Field,
+    Float,
     ObjectType,
 } from "@nestjs/graphql"
 import {
@@ -12,13 +13,13 @@ import {
 } from "./abstract"
 
 @ObjectType({
-    description: "Represents the bot's snapshots",
+    description: "Represents the position's snapshots",
 })
 @Schema({
     _id: false,
     autoCreate: false,
 })
-export class BotSnapshotsSchema extends AbstractSchema {
+export class PositionSnapshotsSchema extends AbstractSchema {
     /**
      * Snapshot of the target balance amount (stringified BN).
      */
@@ -70,10 +71,34 @@ export class BotSnapshotsSchema extends AbstractSchema {
         required: true,
     })
         snapshotAt: Date
+
+    /**
+     * Position value in the target token at the time of snapshot
+     */
+    @Field(() => Float,
+        {
+            description: "The value of the position in the target token at the time of snapshot",
+        })
+    @Prop({
+        type: Number,
+    })
+        positionValue: number
+
+    /**
+     * Position value in USD at the time of snapshot
+     */
+    @Field(() => Float,
+        {
+            description: "The value of the position in USD at the time of snapshot",
+        })
+    @Prop({
+        type: Number,
+    })
+        positionValueInUsd: number
 }
 
 /**
  * The actual Mongoose schema generated from the class definition above.
  * This is what gets registered with the NestJS Mongoose module.
  */
-export const BotSnapshotsSchemaClass = SchemaFactory.createForClass(BotSnapshotsSchema)
+export const PositionSnapshotsSchemaClass = SchemaFactory.createForClass(PositionSnapshotsSchema)

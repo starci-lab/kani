@@ -25,11 +25,15 @@ export class BybitTokenRegistryService {
      * (e.g. `"BTCUSDT"`).
      */
     getSymbols(): Array<string> {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
-            marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Bybit,
-            },
-        })
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                marketListings: {
+                    $elemMatch: {
+                        id: MarketListingId.Bybit,
+                    },
+                }
+            }
+        )
         if (!tokens.length) return []
         return [
             ...new Set(
@@ -45,7 +49,9 @@ export class BybitTokenRegistryService {
     /**
      * Map Bybit price updates (symbol -> price) into tokenId -> price.
      */
-    resolveTokenPrices(tokenPriceData: Array<BybitTokenPriceData>): Array<BybitTokenPrice> {
+    resolveTokenPrices(
+        tokenPriceDataArray: Array<BybitTokenPriceData>
+    ): Array<BybitTokenPrice> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
                 $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Bybit,
@@ -57,7 +63,7 @@ export class BybitTokenRegistryService {
                 marketListing => marketListing.id === MarketListingId.Bybit,
             )?.symbol
             if (!listingSymbol) return undefined
-            const tokenPrice = tokenPriceData.find(d => d.symbol === listingSymbol)
+            const tokenPrice = tokenPriceDataArray.find(tokenPriceData => tokenPriceData.symbol === listingSymbol)
             if (!tokenPrice) return undefined
             return {
                 tokenId: token.displayId,

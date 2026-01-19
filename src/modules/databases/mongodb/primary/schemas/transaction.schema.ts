@@ -20,6 +20,9 @@ import {
     GraphQLTypeTransactionType, TokenId, TransactionType 
 } from "../enums"
 import GraphQLJSON from "graphql-type-json"
+import {
+    PrimaryMongoDbCollectionRef,
+} from "../ref"
 
 @ObjectType({
     description: "Represents a transaction",
@@ -43,7 +46,8 @@ export class TransactionSchema extends AbstractSchema {
             description: "The bot that the swap transaction is associated with",
         })
     @Prop({
-        type: MongooseSchema.Types.ObjectId, ref: BotSchema.name 
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Bot,
     })
         bot: BotSchema | Types.ObjectId
 
