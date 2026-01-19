@@ -1,17 +1,30 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./pyth.module-definition"
-import { createHermesClientProvider } from "./pyth.providers"
-import { PythUtilsService } from "./pyth-utils.service"
-import { PythRestService } from "./pyth-rest.service"
-import { PythSubscriptionsService } from "./pyth-subscriptions.service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./pyth.module-definition"
+import {
+    createHermesClientProvider 
+} from "./pyth.providers"
+import {
+    PythTokenRegistryService 
+} from "./token-registry.service"
+import {
+    PythRestService 
+} from "./rest.service"
+import {
+    PythSubscriptionsService 
+} from "./subscriptions.service"
 
-@Module({})
+@Module({
+})
 export class PythModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             createHermesClientProvider(),
-            PythUtilsService,
+            PythTokenRegistryService,
             PythRestService,
             PythSubscriptionsService
         ]

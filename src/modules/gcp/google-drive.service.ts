@@ -3,8 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     drive_v3,
-    google,
-} from "googleapis"
+} from "googleapis/build/src/apis/drive/v3"
 import {
     GoogleAuth 
 } from "google-auth-library"
@@ -56,8 +55,7 @@ export class GoogleDriveService {
             keyFile: envConfig().mountPath.terraform.gcpGoogleDriveUdSa,
             scopes: ["https://www.googleapis.com/auth/drive"],
         })
-        this.drive = google.drive({
-            version: "v3",
+        this.drive = new drive_v3.Drive({
             auth: this.auth,
         })
     }

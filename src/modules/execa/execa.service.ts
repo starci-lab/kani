@@ -1,5 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import { execa } from "execa"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    execa 
+} from "execa"
 
 @Injectable()
 export class ExecaService {
@@ -7,9 +11,11 @@ export class ExecaService {
     constructor() {
     }
     public async exec(command: string, args: Array<string> = []): Promise<string> {
-        const subprocess = execa(command, args, {
-            shell: false,
-        })
+        const subprocess = execa(command,
+            args,
+            {
+                shell: false,
+            })
         // Execute the command
         const { stdout, stderr } = await subprocess
         if (stderr) {

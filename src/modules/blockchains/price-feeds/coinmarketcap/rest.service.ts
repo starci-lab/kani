@@ -1,23 +1,41 @@
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
-import { AxiosService } from "@modules/axios"
-import { MarketId, PrimaryMemoryStorageService } from "@modules/databases"
-import { 
-    TokenListIsEmptyException,
-} from "@exceptions"
+import {
+    Injectable, OnApplicationBootstrap, OnModuleInit 
+} from "@nestjs/common"
+import {
+    AxiosService 
+} from "@modules/axios"
+import {
+    MarketListingId 
+} from "@modules/databases"
 import {
     AsyncService, 
     RetryService,
 } from "@modules/mixin"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { CoinMarketCapUtilsService } from "./coinmarketcap-utils.service"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    CoinMarketCapTokenRegistryService 
+} from "./token-registry.service"
 import _ from "lodash"
-import { CoinMarketCapTokenPriceData } from "./types"
-import { CachePriceUtilsService } from "@modules/cache"
-import { Interval } from "@nestjs/schedule"
-import { AxiosInstance } from "axios"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    CoinMarketCapTokenPriceData 
+} from "./types"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    AxiosInstance 
+} from "axios"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModuleInit {
@@ -25,24 +43,22 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
 
     constructor(
         private readonly axiosService: AxiosService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
-        private readonly coinMarketCapUtilsService: CoinMarketCapUtilsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly cachePriceUtilsService: CachePriceUtilsService,
+        private readonly coinMarketCapTokenRegistryService: CoinMarketCapTokenRegistryService,
+        private readonly winstonService: WinstonService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly mountStorageService: MountStorageService,
     ) {}
 
     onModuleInit() {
         const key = "coinmarketcap"
         this.axios = this.axiosService.create(
-            key, {
+            key,
+            {
                 baseURL: "https://pro-api.coinmarketcap.com",
             }
         )
-        this.axiosService.addRetry({ key })
         this.axios.defaults.headers.common["X-CMC_PRO_API_KEY"] = this.mountStorageService.coinMarketCapApiKey
     }
 
@@ -56,7 +72,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
     /**
      * Fetch the prices interval
      */
-    @Interval(envConfig().timeConfig.interval.coinmarketcap)
+    @Interval(envConfig().time.interval.coinmarketcap.rest)
     async fetchPricesInterval() {
         await this.fetchPrices()
     }
@@ -65,17 +81,12 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
      * Fetch the prices
      */
     async fetchPrices() {
+        const symbols = this.coinMarketCapTokenRegistryService.getSymbols()
+        if (!symbols.length) return
         try {
-            const tokens = this.primaryMemoryStorageService.tokenArray
-                .filter(
-                    token => !!token.marketListings.find(market => market.id === MarketId.CoinMarketCap)
-                )
-            if (!tokens.length) {
-                throw new TokenListIsEmptyException("No CoinMarketCap tokens found for mainnet")
-            }
-            const symbols = this.coinMarketCapUtilsService.getCoinMarketCapSymbols()
-            // we split the symbols into chunks of 10
-            const chunks = _.chunk(symbols, envConfig().chunks.coinmarketcapPrices?.rest || 10)
+            // we split the ids into chunks
+            const chunks = _.chunk(symbols,
+                envConfig().chunks.coinmarketcap.rest)
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
@@ -83,7 +94,6 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                             {
                                 action: async () => {
                                     const ids = chunk.join(",")
-                                    console.log(ids)
                                     const response = await this.axios.get<CoinMarketCapTokenPriceResult>(
                                         "/v1/cryptocurrency/quotes/latest",
                                         {
@@ -96,7 +106,9 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                                 },
                             }
                         )
-                        return Object.entries(prices.data || {}).map(([symbol, data]) => ({
+                        return Object.entries(prices.data || {
+                        }).map(([symbol,
+                            data]) => ({
                             symbol,
                             price: data?.quote?.USD?.price ?? 0,
                         }))
@@ -105,34 +117,35 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
                 symbol: data?.symbol ?? "",
                 price: data?.price ?? 0,
             }))
-            this.logger.info(
+            if (!priceData.length) return
+            this.winstonService.log(
                 WinstonLog.CoinMarketCapPricesFetched,
                 {
                     fetchedCount: priceData.length,
                     expectedCount: symbols.length,
                 }
             )
-            const tokenList = this.coinMarketCapUtilsService.getCoinMarketCapTokenPrices(priceData)
+            const tokenPrices = this.coinMarketCapTokenRegistryService.resolveCoinMarketCapTokenPrices(priceData)
             // cache the prices and emit the event
             await this.asyncService.allIgnoreError(
-                tokenList.map(
+                tokenPrices.map(
                     async (data) => {
-                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
+                        await this.aggregatedTokenPriceCacheService.set(
                             {
                                 tokenId: data.tokenId,
                                 price: data.price,
-                                marketId: MarketId.CoinMarketCap,
+                                marketListingId: MarketListingId.CoinMarketCap,
                             }
                         )
                     }
                 ),
             )
         } catch (error) {
-            // throw the error to prevent the application from crashing
-            this.logger.error(
+            this.winstonService.log(
                 WinstonLog.CoinMarketCapPricesFetchFailed,
                 {
                     error: error.message,
+                    expectedCount: symbols.length,
                 }
             )
         }

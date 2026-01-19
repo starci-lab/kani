@@ -1,6 +1,12 @@
-import { Provider } from "@nestjs/common"
-import { HERMES_CLIENT } from "./constants"
-import { HermesClient } from "@pythnetwork/hermes-client"
+import {
+    Provider 
+} from "@nestjs/common"
+import {
+    HERMES_CLIENT 
+} from "./constants"
+import {
+    HermesClient 
+} from "@pythnetwork/hermes-client"
 
 export const createHermesClientProvider = (): Provider<HermesClient> => ({
     provide: HERMES_CLIENT,

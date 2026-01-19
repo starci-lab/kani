@@ -1,4 +1,8 @@
 export enum WinstonLog {
+    CoinMarketCapPricesFetched = "CoinMarketCap.Prices.Fetched",
+    CoinMarketCapPricesFetchFailed = "CoinMarketCap.Prices.Fetch.Failed",
+    CoingeckoPricesFetched = "Coingecko.Prices.Fetched",
+    CoingeckoPricesFetchFailed = "Coingecko.Prices.Fetch.Failed",
     GoogleDriveFileUploaded = "Google.Drive.File.Uploaded",
     GoogleDriveFileDownloaded = "Google.Drive.File.Downloaded",
     GoogleDriveFileDownloadError = "Google.Drive.File.Download.Error",
@@ -15,4 +19,10 @@ export enum WinstonLog {
     OpenPositionTransactionFailed = "Open.Position.Transaction.Failed",
     SwapTransactionExecuted = "Swap.Transaction.Executed",
     SwapTransactionFailed = "Swap.Transaction.Failed",
+    PythPricesFetched = "Pyth.Prices.Fetched",
+    PythPricesFetchFailed = "Pyth.Prices.Fetch.Failed",
+    PythSubscriptionOpened = "Pyth.Subscription.Opened",
+    PythSubscriptionClosed = "Pyth.Subscription.Closed",
+    PythSubscriptionError = "Pyth.Subscription.Error",
+    PythSubscriptionResolved = "Pyth.Subscription.Resolved",
 }

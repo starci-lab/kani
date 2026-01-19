@@ -4,7 +4,8 @@ import {
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
-    Q128, Q64 
+    Q128, Q64, 
+    toDecimalAmount
 } from "@utils"
 import {
     ClmmUtilsService 
@@ -98,6 +99,8 @@ export class ClmmFeesFormulaService {
         liquidity,
         feeOwnedA = new BN(0),
         feeOwnedB = new BN(0),
+        decimalsA,
+        decimalsB,
         outsideDeltaWrapModulus = Q128,
         insideDeltaWrapModulus = Q128,
         resultDiv = Q64,
@@ -141,8 +144,14 @@ export class ClmmFeesFormulaService {
         })
 
         return {
-            feeA: feeOwnedA.add(feeEarnedA),
-            feeB: feeOwnedB.add(feeEarnedB),
+            feeA: toDecimalAmount({
+                amount: feeOwnedA.add(feeEarnedA),
+                decimals: decimalsA,
+            }),
+            feeB: toDecimalAmount({
+                amount: feeOwnedB.add(feeEarnedB),
+                decimals: decimalsB,
+            }),
         }
     }
 }
@@ -252,17 +261,27 @@ export interface ComputeFeesParams {
      * Commonly Q64 for Q64.64 fixed-point fee growth values.
      */
     resultDiv?: typeof Q64 | typeof Q128
+
+    /**
+     * Decimals of token A.
+     */
+    decimalsA: Decimal
+
+    /**
+     * Decimals of token B.
+     */
+    decimalsB: Decimal
 }
 
 export interface ComputeFeesResult {
     /**
      * Fees earned for token A.
      */
-    feeA: BN
+    feeA: Decimal
     /**
      * Fees earned for token B.
      */
-    feeB: BN
+    feeB: Decimal
 }
 
 

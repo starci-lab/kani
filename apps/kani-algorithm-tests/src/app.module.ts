@@ -59,9 +59,6 @@ import {
 import {
     StreamAsyncIteratorModule
 } from "@modules/stream-async-iterator"
-import {
-    FeesTestService
-} from "./fees-test.service"
 
 @Module({
     imports: [
@@ -137,22 +134,22 @@ import {
         BullModule.forRoot({
             isGlobal: true,
         }),
-        DexesModule.register({
-            isGlobal: true,
-            dexIds: [
-                DexId.Cetus,
-                DexId.Turbos,
-                DexId.Momentum,
-                DexId.FlowX,
-                DexId.Raydium,
-                DexId.Orca,
-                DexId.Meteora,
-                DexId.Saros,
-            ],
-            enabled: {
-                fees: true,
-            },
-        }),
+        // DexesModule.register({
+        //     isGlobal: true,
+        //     dexIds: [
+        //         DexId.Cetus,
+        //         DexId.Turbos,
+        //         DexId.Momentum,
+        //         DexId.FlowX,
+        //         DexId.Raydium,
+        //         DexId.Orca,
+        //         DexId.Meteora,
+        //         DexId.Saros,
+        //     ],
+        //     enabled: {
+        //         fees: true,
+        //     },
+        // }),
         MixinModule.register({
             isGlobal: true,
         }),
@@ -166,7 +163,7 @@ import {
     providers: [
         //ComputeSwapAmountsService,
         //RpcTestsService,
-        FeesTestService,
+        //FeesTestService,
     ],
 })
 export class AppModule { }

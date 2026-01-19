@@ -1,22 +1,38 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { AxiosService } from "@modules/axios"
-import { MarketId, PrimaryMemoryStorageService } from "@modules/databases"
-import { 
-    TokenListIsEmptyException,
-} from "@exceptions"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
+import {
+    AxiosService 
+} from "@modules/axios"
+import {
+    MarketListingId 
+} from "@modules/databases"
 import {
     AsyncService, 
     RetryService,
 } from "@modules/mixin"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { CoingeckoUtilsService } from "./coingecko-utils.service"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    CoingeckoTokenRegistryService 
+} from "./token-registry.service"
 import _ from "lodash"
-import { CoingeckoTokenPriceData } from "./types"
-import { CachePriceUtilsService } from "@modules/cache"
-import { Interval } from "@nestjs/schedule"
-import { AxiosInstance } from "axios"
+import {
+    CoingeckoTokenPriceData 
+} from "./types"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    AxiosInstance 
+} from "axios"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
 
 @Injectable()
 export class CoingeckoRestService implements OnApplicationBootstrap {
@@ -24,17 +40,14 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
 
     constructor(
         private readonly axiosService: AxiosService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
-        private readonly coingeckoUtilsService: CoingeckoUtilsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly cachePriceUtilsService: CachePriceUtilsService,
+        private readonly coingeckoTokenRegistryService: CoingeckoTokenRegistryService,
+        private readonly winstonService: WinstonService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
     ) {
         const key = "coingecko"
         this.axios = this.axiosService.create(key)
-        this.axiosService.addRetry({ key })
     }
 
     /**
@@ -47,7 +60,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
     /**
      * Fetch the prices interval
      */
-    @Interval(envConfig().timeConfig.interval.coingecko)
+    @Interval(envConfig().time.interval.coingecko.rest)
     async fetchPricesInterval() {
         await this.fetchPrices()
     }
@@ -56,17 +69,12 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
      * Fetch the prices
      */
     async fetchPrices() {
-        try {
-            const tokens = this.primaryMemoryStorageService.tokenArray
-                .filter(
-                    token => !!token.marketListings.find(market => market.id === MarketId.Coingecko)
-                )
-            if (!tokens.length) {
-                throw new TokenListIsEmptyException("No Coingecko tokens found for mainnet")
-            }
-            const coinIds = this.coingeckoUtilsService.getCoingeckoIds()
-            // we split the coin ids into chunks of 10
-            const chunks = _.chunk(coinIds, envConfig().chunks.coingeckoPrices?.rest || 10)
+        const symbols = this.coingeckoTokenRegistryService.getSymbols()
+        if (!symbols.length) return
+        try {  
+            // we split the coin ids into chunks
+            const chunks = _.chunk(symbols,
+                envConfig().chunks.coingecko.rest)
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
@@ -86,7 +94,8 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                                 },
                             }
                         )
-                        return Object.entries(prices).map(([coinId, data]) => ({
+                        return Object.entries(prices).map(([coinId,
+                            data]) => ({
                             coinId,
                             price: data?.usd ?? 0,
                         }))
@@ -95,23 +104,24 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                 coinId: data?.coinId ?? "",
                 price: data?.price ?? 0,
             }))
-            this.logger.info(
+            if (!priceData.length) return
+            this.winstonService.log(
                 WinstonLog.CoingeckoPricesFetched,
                 {
                     fetchedCount: priceData.length,
-                    expectedCount: coinIds.length,
+                    expectedCount: symbols.length,
                 }
             )
-            const tokenList = this.coingeckoUtilsService.getCoingeckoTokenPrices(priceData)
+            const tokenPrices = this.coingeckoTokenRegistryService.resolveCoingeckoTokenPrices(priceData)
             // cache the prices and emit the event
             await this.asyncService.allIgnoreError(
-                tokenList.map(
+                tokenPrices.map(
                     async (data) => {
-                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
+                        await this.aggregatedTokenPriceCacheService.set(
                             {
                                 tokenId: data.tokenId,
                                 price: data.price,
-                                marketId: MarketId.Coingecko,
+                                marketListingId: MarketListingId.Coingecko,
                             }
                         )
                     }
@@ -119,10 +129,11 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
             )
         } catch (error) {
             // throw the error to prevent the application from crashing
-            this.logger.error(
+            this.winstonService.log(
                 WinstonLog.CoingeckoPricesFetchFailed,
                 {
                     error: error.message,
+                    expectedCount: symbols.length,
                 }
             )
         }

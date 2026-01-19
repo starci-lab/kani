@@ -59,12 +59,11 @@ export class BotSchema extends AbstractSchema {
     @Field(() => String,
         {
             description: "The account address of the wallet",
-            nullable: true,
         })
     @Prop({
-        type: String, required: false 
+        type: String 
     })
-        accountAddress?: string
+        accountAddress: string
  
     /**
      * The encrypted private key corresponding to the account address.

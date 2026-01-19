@@ -5,7 +5,8 @@ import {
     BN, Decimal 
 } from "turbos-clmm-sdk"
 import {
-    Q128, Q64 
+    Q128, Q64, 
+    toDecimalAmount
 } from "@utils"
 import {
     ClmmUtilsService 
@@ -119,14 +120,14 @@ export class ClmmRewardsFormulaService {
     }
 
     /**
-     * Compute total reward for a position
+     * Compute reward for a position
      *
      * Flow:
      *  1. Compute reward growth inside range
      *  2. Compute reward earned since last checkpoint
      *  3. Add already owned reward
      */
-    public computeRewards(
+    public computeReward(
         {
             rewardGrowthGlobal,
             rewardGrowthOutsideLower,
@@ -138,13 +139,13 @@ export class ClmmRewardsFormulaService {
             rewardGrowthInsideLast,
             liquidity,
             rewardOwned = new BN(0),
-
+            decimals,
+            
             outsideDeltaWrapModulus = Q128,
             insideDeltaWrapModulus = Q128,
             resultDiv = Q64,
-        }: ComputeRewardsParams
-    ): BN {
-
+        }: ComputeRewardParams
+    ): Decimal {
         // Step 1: reward growth inside range
         const rewardGrowthInside = this.computeRewardGrowthInside({
             rewardGrowthGlobal,
@@ -166,7 +167,10 @@ export class ClmmRewardsFormulaService {
         })
 
         // Step 3: add already owned reward
-        return rewardOwned.add(rewardEarned)
+        return toDecimalAmount({
+            amount: rewardOwned.add(rewardEarned),
+            decimals: decimals,
+        })
     }
 }
 
@@ -207,7 +211,7 @@ export interface ComputeRewardEarnedParams {
     resultDiv?: typeof Q64 | typeof Q128
 }
 
-export interface ComputeRewardsParams {
+export interface ComputeRewardParams {
     rewardGrowthGlobal: BN
     rewardGrowthOutsideLower: BN
     rewardGrowthOutsideUpper: BN
@@ -217,6 +221,10 @@ export interface ComputeRewardsParams {
     rewardGrowthInsideLast: BN
     liquidity: BN
     rewardOwned?: BN
+    /**
+     * Decimals of the token that is being rewarded.
+     */
+    decimals: Decimal
 
     /**
      * Wrapping modulus for outside growth delta

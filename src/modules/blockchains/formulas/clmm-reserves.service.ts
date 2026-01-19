@@ -4,7 +4,8 @@ import {
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
-    computeDenomination, Q128, Q64, Q96 
+    Q128, Q64, Q96, 
+    toDecimalAmount
 } from "@utils"
 import {
     ClmmTickFormulaService 
@@ -108,8 +109,10 @@ export class ClmmReservesFormulaService {
                 .div(sqrtPriceUpper)
 
             return {
-                reserveA: computeDenomination(tokenA,
-                    decimalsA),
+                reserveA: toDecimalAmount({
+                    amount: tokenA,
+                    decimals: decimalsA,
+                }),
                 reserveB: new Decimal(0),
             }
         }
@@ -128,8 +131,10 @@ export class ClmmReservesFormulaService {
 
             return {
                 reserveA: new Decimal(0),
-                reserveB: computeDenomination(tokenB,
-                    decimalsB),
+                reserveB: toDecimalAmount({
+                    amount: tokenB,
+                    decimals: decimalsB,
+                }),
             }
         }
 
@@ -149,10 +154,14 @@ export class ClmmReservesFormulaService {
             .div(fixedPointScale)
 
         return {
-            reserveA: computeDenomination(tokenA,
-                decimalsA),
-            reserveB: computeDenomination(tokenB,
-                decimalsB),
+            reserveA: toDecimalAmount({
+                amount: tokenA,
+                decimals: decimalsA,
+            }),
+            reserveB: toDecimalAmount({
+                amount: tokenB,
+                decimals: decimalsB,
+            }),
         }
     }
 }
@@ -186,11 +195,11 @@ export interface CalculateReservesParams {
     /**
      * Decimals of token A
      */
-    decimalsA: number
+    decimalsA: Decimal
     /**
      * Decimals of token B
      */
-    decimalsB: number
+    decimalsB: Decimal
 }
 
 export interface CalculateReservesResult {

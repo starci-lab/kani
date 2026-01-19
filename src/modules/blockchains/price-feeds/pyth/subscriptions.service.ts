@@ -1,21 +1,45 @@
-import { CachePriceUtilsService } from "@modules/cache"
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { HermesClient, PriceUpdate } from "@pythnetwork/hermes-client"
-import { InjectHermesClient } from "./pyth.decorators"
-import { MarketId } from "@modules/databases"
+import {
+    AggregatedTokenPriceCacheService 
+} from "@modules/cache"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
+import {
+    HermesClient, PriceUpdate 
+} from "@pythnetwork/hermes-client"
+import {
+    InjectHermesClient 
+} from "./pyth.decorators"
+import {
+    MarketListingId 
+} from "@modules/databases"
 import BN from "bn.js"
-import { computeDenomination } from "@utils"
+import {
+    computeDenomination 
+} from "@utils"
 import {
     AsyncService,
     RetryService,
 } from "@modules/mixin"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { PythUtilsService } from "./pyth-utils.service"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    PythTokenRegistryService 
+} from "./token-registry.service"
 import _ from "lodash"
-import { PythTokenPriceData } from "./types"
-import { EventSourceStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
+import {
+    PythTokenPriceData 
+} from "./types"
+import {
+    EventSourceStreamConnection, StreamAsyncIteratorService 
+} from "@modules/stream-async-iterator"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
+
+const STREAM_NAME = "pyth-subscriptions"
 
 @Injectable()
 export class PythSubscriptionsService implements OnApplicationBootstrap {
@@ -23,10 +47,9 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         @InjectHermesClient() private readonly hermesClient: HermesClient,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
-        private readonly pythUtilsService: PythUtilsService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
-        private readonly cachePriceUtilsService: CachePriceUtilsService,
+        private readonly pythTokenRegistryService: PythTokenRegistryService,
+        private readonly winstonService: WinstonService,
+        private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) { }
 
@@ -35,9 +58,11 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
     }
 
     async subscribe() {
-        const feedIds = this.pythUtilsService.getPythIds()
+        const symbols = this.pythTokenRegistryService.getSymbols()
+        if (!symbols.length) return
         // seperate into batches of 5
-        const batches = _.chunk(feedIds, envConfig().chunks.pythPrices.rest)
+        const batches = _.chunk(symbols,
+            envConfig().chunks.pyth.rest)
         for (const batch of batches) {
             this.retryService.retry({
                 action: async () => {
@@ -53,32 +78,26 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout.pyth.subscriptions,
+                            envConfig().time.stream.pyth.idleTimeout,
                         )
                     }
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         onOpen: () => {
-                            this.logger.info(
-                                WinstonLog.WebsocketConnected, {
-                                    streamName: "pyth-subscriptions",
-                                    symbols: batch,
-                                })
-                        },
-                        onError: (error) => {
-                            this.logger.error(
-                                WinstonLog.WebsocketCloseError, {
-                                    error: error.message,
-                                    streamName: "pyth-subscriptions",
-                                    symbols: batch,
-                                })
+                            this.winstonService.log(
+                                WinstonLog.PythSubscriptionOpened,
+                                {
+                                    fetchedCount: batch.length,
+                                    expectedCount: symbols.length
+                                }
+                            )
                         },
                         onClose: () => {
-                            this.logger.info(
-                                WinstonLog.WebsocketClosed,
+                            this.winstonService.log(
+                                WinstonLog.PythSubscriptionClosed,
                                 {
-                                    streamName: "pyth-subscriptions",
-                                    symbols: batch,
+                                    streamName: STREAM_NAME,
+                                    error: "Connection closed",
                                 }
                             )
                         },
@@ -96,32 +115,33 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                     price: price.toNumber(),
                                 }
                             }) 
-                            const tokenList = this.pythUtilsService.getPythTokenPrices(priceData ?? [])
+                            const pythTokenPrices = this.pythTokenRegistryService.resolvePythTokenPrices(priceData ?? [])
                             // mark message received if there are token prices
-                            if (!tokenList.length) {
+                            if (!pythTokenPrices.length) {
                                 continue
                             }
                             resetTimeout()
                             // cache the prices and emit the event
                             await this.asyncService.allIgnoreError(
-                                tokenList.map(
+                                pythTokenPrices.map(
                                     async (data) => {
-                                        await this.cachePriceUtilsService.updateAggregatedTokenPrice(
+                                        await this.aggregatedTokenPriceCacheService.set(
                                             {
                                                 tokenId: data.tokenId,
                                                 price: data.price,
-                                                marketId: MarketId.Pyth,
+                                                marketListingId: MarketListingId.Pyth,
                                             }
                                         )
                                     }
                                 ),
                             )
                         } catch (error) {
-                            this.logger.error(
-                                WinstonLog.PythPricesSubscriptionFailed, {
+                            this.winstonService.log(
+                                WinstonLog.PythSubscriptionError,
+                                {
                                     error: error.message,
-                                    streamName: "pyth-subscriptions",
-                                    symbols: batch,
+                                    streamName: STREAM_NAME,
+                                    expectedCount: symbols.length
                                 }
                             )
                         

@@ -1,5 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common"
-import { LiquidityPoolStateService } from "./liquidity-pool-state.service"
+import {
+    Inject, Injectable 
+} from "@nestjs/common"
+import {
+    LiquidityPoolStateService 
+} from "./liquidity-pool-state.service"
 import {
     BotSchema,
     DexId,
@@ -18,10 +22,18 @@ import {
     LiquidityPoolNotFoundException,
     TokenNotFoundException
 } from "@exceptions"
-import { RaydiumOpenPositionActionService } from "./raydium"
-import { OrcaOpenPositionActionService } from "./orca"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./dexes.module-definition"
-import { MeteoraOpenPositionActionService } from "./meteora"
+import {
+    RaydiumOpenPositionActionService 
+} from "./raydium"
+import {
+    OrcaOpenPositionActionService 
+} from "./orca"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "./dexes.module-definition"
+import {
+    MeteoraOpenPositionActionService 
+} from "./meteora"
 import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
@@ -32,30 +44,74 @@ import {
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
 } from "../interfaces"
-import { BN } fr    om "bn.js"
-import { QuoteRatioService } from "../math"
-import { computeDenomination, createObjectId } from "@utils"
+import {
+    BN 
+} from "bn.js"
+import {
+    QuoteRatioService 
+} from "../math"
+import {
+    computeDenomination, createObjectId 
+} from "@utils"
 import Decimal from "decimal.js"
-import { FlowXOpenPositionActionService } from "./flowx"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { CetusOpenPositionActionService } from "./cetus"
-import { TurbosOpenPositionActionService } from "./turbos"
-import { MomentumOpenPositionActionService } from "./momentum"
-import { InjectQueue } from "@nestjs/bullmq"
-import { bullData, BullQueueName } from "@modules/bullmq"
-import { Queue } from "bullmq"
-import { OpenPositionPayload } from "../types"
-import { envConfig } from "@modules/env"
-import { v4 } from "uuid"
-import { LeaseKey, LeaseService, getLeaseKey } from "@modules/lock"
-import { Connection } from "mongoose"
-import { WinstonLog } from "@modules/winston"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { InjectSuperJson } from "@modules/mixin"
+import {
+    FlowXOpenPositionActionService 
+} from "./flowx"
+import {
+    CacheKey, createCacheKey, InjectRedisCache 
+} from "@modules/cache"
+import {
+    Cache 
+} from "cache-manager"
+import {
+    CetusOpenPositionActionService 
+} from "./cetus"
+import {
+    TurbosOpenPositionActionService 
+} from "./turbos"
+import {
+    MomentumOpenPositionActionService 
+} from "./momentum"
+import {
+    InjectQueue 
+} from "@nestjs/bullmq"
+import {
+    bullData, BullQueueName 
+} from "@modules/bullmq"
+import {
+    Queue 
+} from "bullmq"
+import {
+    OpenPositionPayload 
+} from "../types"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    v4 
+} from "uuid"
+import {
+    LeaseKey, LeaseService, getLeaseKey 
+} from "@modules/lock"
+import {
+    Connection 
+} from "mongoose"
+import {
+    WinstonLog 
+} from "@modules/winston"
+import {
+    InjectWinston 
+} from "@modules/winston"
+import {
+    Logger as WinstonLogger 
+} from "winston"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
 import SuperJSON from "superjson"
-import { BalanceEligibilityService } from "../balance"
+import {
+    BalanceEligibilityService 
+} from "../balance"
 
 /**
  * OpenPositionOrchestratorService
@@ -117,7 +173,8 @@ export class OpenPositionOrchestratorService {
          * Prevent concurrent actions on the same bot.
          */
         const lease = this.leaseService.lease(
-            getLeaseKey(LeaseKey.Action, bot.id),
+            getLeaseKey(LeaseKey.Action,
+                bot.id),
         )
         if (lease.isLocked()) {
             return
@@ -211,7 +268,9 @@ export class OpenPositionOrchestratorService {
          */
         if (
             this.quoteRatioService.checkQuoteRatioStatus(
-                { quoteRatio }
+                {
+                    quoteRatio 
+                }
             ) !== QuoteRatioStatus.Good
         ) {
             return
@@ -225,7 +284,9 @@ export class OpenPositionOrchestratorService {
             await this.cacheManager.get(
                 createCacheKey(
                     CacheKey.OpenPositionTransaction,
-                    { botId: bot.id },
+                    {
+                        botId: bot.id 
+                    },
                 ),
             )
         ) {
@@ -375,7 +436,8 @@ export class OpenPositionOrchestratorService {
             lease.unlock(leaseId)
             // log the error
             this.logger.error(
-                WinstonLog.OpenPositionEnqueueFailed, {
+                WinstonLog.OpenPositionEnqueueFailed,
+                {
                     botId: bot.id,
                     error: error.message,
                 }
@@ -403,19 +465,33 @@ export class OpenPositionOrchestratorService {
 
         switch (dex.displayId) {
         case DexId.Raydium:
-            return this.raydiumOpenPositionActionService.prepare({ state: _state, bot })
+            return this.raydiumOpenPositionActionService.prepare({
+                state: _state, bot 
+            })
         case DexId.Orca:
-            return this.orcaOpenPositionActionService.prepare({ state: _state, bot })
+            return this.orcaOpenPositionActionService.prepare({
+                state: _state, bot 
+            })
         case DexId.Meteora:
-            return this.meteoraOpenPositionActionService.prepare({ state: _state, bot })
+            return this.meteoraOpenPositionActionService.prepare({
+                state: _state, bot 
+            })
         case DexId.FlowX:
-            return this.flowxOpenPositionActionService.prepare({ state, bot })
+            return this.flowxOpenPositionActionService.prepare({
+                state, bot 
+            })
         case DexId.Cetus:
-            return this.cetusOpenPositionActionService.prepare({ state, bot })
+            return this.cetusOpenPositionActionService.prepare({
+                state, bot 
+            })
         case DexId.Turbos:
-            return this.turbosOpenPositionActionService.prepare({ state, bot })
+            return this.turbosOpenPositionActionService.prepare({
+                state, bot 
+            })
         case DexId.Momentum:
-            return this.momentumOpenPositionActionService.prepare({ state, bot })
+            return this.momentumOpenPositionActionService.prepare({
+                state, bot 
+            })
         default:
             throw new DexNotImplementedException(
                 `DEX ${_state.static.dex.toString()} not supported`,

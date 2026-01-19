@@ -1,4 +1,6 @@
-import { TokenId } from "@modules/databases"
+import {
+    TokenId 
+} from "@modules/databases"
 
 export interface CoinMarketCapTokenPrice {
     tokenId: TokenId

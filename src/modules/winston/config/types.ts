@@ -98,3 +98,84 @@ export interface GoogleDriveFileDownloadedMessage {
 export interface GoogleDriveFileDownloadErrorMessage {
     error: string
 }
+
+/**
+ * Pyth Prices Fetched Message
+ */
+export interface PythPricesFetchedMessage {
+    fetchedCount: number
+    expectedCount: number
+}
+
+/**
+ * Pyth Prices Fetch Failed Message
+ */
+export interface PythPricesFetchFailedMessage {
+    error: string
+    expectedCount: number
+}
+
+/**
+ * Pyth Subscriptions Opened Message
+ */
+export interface PythSubscriptionsOpenedMessage {
+    fetchedCount: number
+    expectedCount: number
+}
+
+/**
+ * Pyth Subscriptions Closed Message
+ */
+export interface PythSubscriptionsClosedMessage {
+    streamName: string
+    error: string
+}
+
+/**
+ * Pyth Subscription Resolved Message
+ */
+export interface PythSubscriptionResolvedMessage {
+    streamName: string
+    symbols: Array<string>
+}
+
+/**
+ * Pyth Subscription Error Message
+ */
+export interface PythSubscriptionErrorMessage {
+    streamName: string
+    error: string
+    expectedCount: number
+}
+
+/**
+ * Coin Market Cap Prices Fetched Message
+ */
+export interface CoinMarketCapPricesFetchedMessage {
+    fetchedCount: number
+    expectedCount: number
+}
+
+/**
+ * Coin Market Cap Prices Fetch Failed Message
+ */
+export interface CoinMarketCapPricesFetchFailedMessage {
+    error: string
+    expectedCount: number
+}
+
+/**
+ * Coingecko Prices Fetched Message
+ */
+export interface CoingeckoPricesFetchedMessage {
+    fetchedCount: number
+    expectedCount: number
+}
+
+/**
+ * Coingecko Prices Fetch Failed Message
+ */
+export interface CoingeckoPricesFetchFailedMessage {
+    error: string
+    expectedCount: number
+}

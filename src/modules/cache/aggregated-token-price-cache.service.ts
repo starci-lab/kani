@@ -62,7 +62,9 @@ export class AggregatedTokenPriceCacheService {
             args: [createObjectId(tokenId).toString()],
         })
         if (!cachedResult) {
-            throw new AggregatedTokenPriceNotFoundException(tokenId)
+            throw new AggregatedTokenPriceNotFoundException({
+                tokenId
+            })
         }
         return cachedResult
     }   

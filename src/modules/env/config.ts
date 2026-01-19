@@ -71,6 +71,26 @@ export const envConfig = () => ({
     },
     // time config
     time: {
+        stream: {
+            pyth: {
+                idleTimeout: parseMs("TIME_STREAM_PYTH_IDLE_TIMEOUT",
+                    "10s"),
+            }
+        },
+        interval: {
+            coingecko: {
+                rest: parseMs("TIME_INTERVAL_COINGECKO_REST",
+                    "10s"),
+            },
+            pyth: {
+                rest: parseMs("TIME_INTERVAL_PYTH_REST",
+                    "10s"),
+            },
+            coinmarketcap: {
+                rest: parseMs("TIME_INTERVAL_COINMARKETCAP_REST",
+                    "5m"),
+            },
+        },
         stale: {
             balanceSnapshot: parseMs("TIME_STALE_BALANCE_SNAPSHOT",
                 "30s"),
@@ -320,6 +340,21 @@ export const envConfig = () => ({
                     ".mount",
                     "config",
                     "rpcs.json")),
+        },
+    },
+    // chunks config
+    chunks: {
+        coingecko: {
+            rest: parseInt("CHUNKS_COINGECKO_REST",
+                10),
+        },
+        pyth: {
+            rest: parseInt("CHUNKS_PYTH_REST",
+                10),
+        },
+        coinmarketcap: {
+            rest: parseInt("CHUNKS_COINMARKETCAP_REST",
+                10),
         },
     },
 })

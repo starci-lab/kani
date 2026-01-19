@@ -1,14 +1,23 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./coinmarketcap.module-definition"
-import { CoinMarketCapRestService } from "./coinmarketcap-rest.service"
-import { CoinMarketCapUtilsService } from "./coinmarketcap-utils.service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./coinmarketcap.module-definition"
+import {
+    CoinMarketCapRestService 
+} from "./rest.service"
+import {
+    CoinMarketCapTokenRegistryService 
+} from "./token-registry.service"
 
-@Module({})
+@Module({
+})
 export class CoinMarketCapModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            CoinMarketCapUtilsService,
+            CoinMarketCapTokenRegistryService,
             CoinMarketCapRestService,
         ]
         return {

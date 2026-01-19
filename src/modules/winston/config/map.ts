@@ -7,6 +7,10 @@ import {
 import {
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
+    CoingeckoPricesFetchedMessage,
+    CoingeckoPricesFetchFailedMessage,
+    CoinMarketCapPricesFetchedMessage,
+    CoinMarketCapPricesFetchFailedMessage,
     GoogleDriveFileDownloadedMessage,
     GoogleDriveFileDownloadErrorMessage,
     GoogleDriveFileUploadedMessage,
@@ -14,6 +18,12 @@ import {
     LiquidityPoolWsErrorMessage,
     OpenPositionTransactionExecutedMessage,
     OpenPositionTransactionFailedMessage,
+    PythPricesFetchedMessage,
+    PythPricesFetchFailedMessage,
+    PythSubscriptionErrorMessage,
+    PythSubscriptionResolvedMessage,
+    PythSubscriptionsClosedMessage,
+    PythSubscriptionsOpenedMessage,
     SwapTransactionExecutedMessage,
     SwapTransactionFailedMessage
 } from "./types"
@@ -147,5 +157,85 @@ export const configMap = {
         loki: true,
         messageType: {
         } as GoogleDriveFileDownloadErrorMessage,
+    },
+    // Pyth Prices Fetched
+    [WinstonLog.PythPricesFetched]: {
+        name: WinstonLog.PythPricesFetched,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as PythPricesFetchedMessage,
+    },
+    // Pyth Prices Fetch Failed
+    [WinstonLog.PythPricesFetchFailed]: {
+        name: WinstonLog.PythPricesFetchFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as PythPricesFetchFailedMessage,
+    },
+    // Pyth Subscriptions Opened
+    [WinstonLog.PythSubscriptionOpened]: {
+        name: WinstonLog.PythSubscriptionOpened,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as PythSubscriptionsOpenedMessage,
+    },
+    // Pyth Subscriptions Closed
+    [WinstonLog.PythSubscriptionClosed]: {
+        name: WinstonLog.PythSubscriptionClosed,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as PythSubscriptionsClosedMessage,
+    },
+    // Pyth Subscription Resolved
+    [WinstonLog.PythSubscriptionResolved]: {
+        name: WinstonLog.PythSubscriptionResolved,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as PythSubscriptionResolvedMessage,
+    },
+    // Pyth Subscription Error
+    [WinstonLog.PythSubscriptionError]: {
+        name: WinstonLog.PythSubscriptionError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as PythSubscriptionErrorMessage,
+    },
+    // Coin Market Cap Prices Fetched
+    [WinstonLog.CoinMarketCapPricesFetched]: {
+        name: WinstonLog.CoinMarketCapPricesFetched,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoinMarketCapPricesFetchedMessage,
+    },
+    // Coin Market Cap Prices Fetch Failed
+    [WinstonLog.CoinMarketCapPricesFetchFailed]: {
+        name: WinstonLog.CoinMarketCapPricesFetchFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CoinMarketCapPricesFetchFailedMessage,
+    },
+    // Coingecko Prices Fetched
+    [WinstonLog.CoingeckoPricesFetched]: {
+        name: WinstonLog.CoingeckoPricesFetched,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoingeckoPricesFetchedMessage,
+    },
+    // Coingecko Prices Fetch Failed
+    [WinstonLog.CoingeckoPricesFetchFailed]: {
+        name: WinstonLog.CoingeckoPricesFetchFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CoingeckoPricesFetchFailedMessage,
     },
 }
