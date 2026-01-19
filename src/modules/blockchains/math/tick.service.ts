@@ -119,19 +119,19 @@ export class TickMathService {
             .div(tokenAAmountInB.add(tokenBAmountInB))
         
         // we define a function to compute the R value
-        const computeR = (tickLower: Decimal, tickUpper: Decimal): Decimal => {
+        const computeR = (tickLower: BN, tickUpper: BN): Decimal => {
             const amountA = new BN(1_000_000_000)
             const liquidity = this.clmmLiquidityFormulaService.computeLiquidity({
                 tickLower,
                 tickUpper,
-                tickCurrent: new Decimal(tickCurrent.toString()),
+                tickCurrent,
                 amountA,
                 amountB: new BN(0),
             })
             const { amountA: amountAOut, amountB: amountBOut } =
                 LiquidityMath.getAmountsFromLiquidity(
                     this.clmmTickFormulaService.tickToSqrtPrice({
-                        tickIndex: new Decimal(tickCurrent.toString()),
+                        tickIndex: tickCurrent,
                     }),
                     this.clmmTickFormulaService.tickToSqrtPrice({
                         tickIndex: tickLower,
@@ -179,8 +179,10 @@ export class TickMathService {
         // we iterate over the tick multiplier
         for (let i = 0; i < tickMultiplier; i++) {
             // we compute the R value
-            const currentR = computeR(tickLowerEntry,
-                tickUpperEntry)
+            const currentR = computeR(
+                new BN(tickLowerEntry.toString()),
+                new BN(tickUpperEntry.toString())
+            )
             // we compute the difference between the current R value and the target R value
             const diff = currentR.sub(R).abs()
             // if the difference is greater than the best difference, we break
