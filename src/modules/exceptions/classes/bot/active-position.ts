@@ -1,5 +1,6 @@
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException,
+    AbstractExceptionMetadata,
 } from "../abstract"
 
 /** Thrown when active position cannot be found for bot */
@@ -9,14 +10,14 @@ export interface ActivePositionNotFoundExceptionMetadata extends AbstractExcepti
 
 export class ActivePositionNotFoundException extends AbstractException {
     constructor(
-        { botId, originalError }: ActivePositionNotFoundExceptionMetadata
+        { botId, originalError }: ActivePositionNotFoundExceptionMetadata,
     ) {
         super("Active position not found",
             "ACTIVE_POSITION_NOT_FOUND_EXCEPTION",
             {
                 botId,
                 originalError,
-            }
+            },
         )
     }
 }
@@ -25,15 +26,18 @@ export class ActivePositionNotFoundException extends AbstractException {
 export interface AssociatedPositionNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
 }
+
 export class AssociatedPositionNotFoundException extends AbstractException {
     constructor(
-        { botId, originalError }: AssociatedPositionNotFoundExceptionMetadata
+        { botId, originalError }: AssociatedPositionNotFoundExceptionMetadata,
     ) {
         super("Associated position not found",
             "ASSOCIATED_POSITION_NOT_FOUND_EXCEPTION",
             {
-                botId, originalError,
-            }
+                botId,
+                originalError,
+            },
         )
     }
 }
+
