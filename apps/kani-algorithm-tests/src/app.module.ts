@@ -56,7 +56,7 @@ import {
 import {
     StreamAsyncIteratorModule
 } from "@modules/stream-async-iterator"
-import { CexesModule } from "@modules/blockchains"
+import { CexesModule, PriceFeedsModule } from "@modules/blockchains"
 
 @Module({
     imports: [
@@ -86,6 +86,12 @@ import { CexesModule } from "@modules/blockchains"
             isGlobal: true,
         }),
         CexesModule.register({
+            isGlobal: true,
+        }),
+        AxiosModule.register({
+            isGlobal: true,
+        }),
+        PriceFeedsModule.register({
             isGlobal: true,
         }),
         // AxiosModule.register({

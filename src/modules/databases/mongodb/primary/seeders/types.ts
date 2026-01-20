@@ -1,4 +1,6 @@
-import { Seeder } from "./seeder.interface"
+import {
+    Seeder 
+} from "./seeder.interface"
 
 export interface SeedersOptions {
     seeders?: Array<Seeder> | Seeder 

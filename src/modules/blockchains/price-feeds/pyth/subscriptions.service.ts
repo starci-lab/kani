@@ -38,8 +38,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
-
-const STREAM_NAME = "pyth-subscriptions"
+import {
+    PYTH_SUBSCRIPTIONS_STREAM_NAME 
+} from "./constants"
 
 @Injectable()
 export class PythSubscriptionsService implements OnApplicationBootstrap {
@@ -87,7 +88,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             this.winstonService.log(
                                 WinstonLog.PythSubscriptionOpened,
                                 {
-                                    streamName: STREAM_NAME,
+                                    streamName: PYTH_SUBSCRIPTIONS_STREAM_NAME,
                                     symbols: batch,
                                 }
                             )
@@ -96,7 +97,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             this.winstonService.log(
                                 WinstonLog.PythSubscriptionClosed,
                                 {
-                                    streamName: STREAM_NAME,
+                                    streamName: PYTH_SUBSCRIPTIONS_STREAM_NAME,
                                     error: "Connection closed",
                                     symbols: batch,
                                 }
@@ -141,7 +142,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                 WinstonLog.PythSubscriptionError,
                                 {
                                     error: error.message,
-                                    streamName: STREAM_NAME,
+                                    streamName: PYTH_SUBSCRIPTIONS_STREAM_NAME,
                                     symbols: batch,
                                 }
                             )

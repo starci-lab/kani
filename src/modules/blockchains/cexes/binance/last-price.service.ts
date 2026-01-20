@@ -3,6 +3,7 @@ import {
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
+    BINANCE_LAST_PRICE_STREAM_NAME,
     BINANCE_WS_URL 
 } from "./constants"
 import {
@@ -28,7 +29,6 @@ import {
     WebSocketStreamConnection, StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
 
-const BINANCE_LAST_PRICE_STREAM_NAME = "binance-last-price"
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
     constructor(

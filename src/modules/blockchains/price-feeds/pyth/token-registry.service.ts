@@ -1,5 +1,5 @@
 import {
-    MarketListingId, MarketListingSchema, PrimaryMemoryStorageService 
+    MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     Injectable 
@@ -20,7 +20,9 @@ export class PythTokenRegistryService {
     getSymbols(): Array<string> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Pyth
+                $elemMatch: {
+                    id: MarketListingId.Pyth
+                }
             }
         })
         if (!tokens.length) return []
@@ -43,15 +45,19 @@ export class PythTokenRegistryService {
     ): Array<PythTokenPrice> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Pyth
+                $elemMatch: {
+                    id: MarketListingId.Pyth
+                }
             }
-        })
+        }
+        )
         return tokens.map(token => {
             const priceFeed = tokenPriceData.find(
-                feed => token.marketListings.some(marketListing => marketListing.symbol.includes(feed.feedId))
+                feed => token.marketListings.some(
+                    marketListing => marketListing.symbol.includes(feed.feedId)
+                )
             )
             if (!priceFeed) return undefined
-
             return {
                 tokenId: token.displayId,
                 price: priceFeed.price,

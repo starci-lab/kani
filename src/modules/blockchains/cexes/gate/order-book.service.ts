@@ -100,7 +100,7 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                         //     askPrice: parseFloat(parsed.result.a),
                         //     askQty: parseFloat(parsed.result.A),
                         // }
-
+ 
                         // if (
                         //     !Number.isFinite(orderBook.bidPrice) ||
                         //         !Number.isFinite(orderBook.bidQty) ||

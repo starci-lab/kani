@@ -12,6 +12,7 @@ import {
     AsyncService, RetryService 
 } from "@modules/mixin"
 import {
+    BYBIT_LAST_PRICE_STREAM_NAME,
     BYBIT_WS_URL 
 } from "./constants"
 import {
@@ -71,7 +72,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         onOpen: (connection: WebSocketStreamConnection) => {
                             this.winstonService.log(WinstonLog.WebsocketSubscriptionOpened,
                                 {
-                                    streamName: "bybit-last-price",
+                                    streamName: BYBIT_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
                                 })
                             resetTimeout()
@@ -85,7 +86,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 WinstonLog.WebsocketSubscriptionError,
                                 {
                                     error: error.message,
-                                    streamName: "bybit-last-price",
+                                    streamName: BYBIT_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
                                 })
                         },
@@ -93,7 +94,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionClosed,
                                 {
-                                    streamName: "bybit-last-price",
+                                    streamName: BYBIT_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
                                 }
                             )

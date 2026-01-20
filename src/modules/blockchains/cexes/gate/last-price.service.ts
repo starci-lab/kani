@@ -3,6 +3,7 @@ import {
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
+    GATE_LAST_PRICE_STREAM_NAME,
     GATE_WS_URL 
 } from "./constants"
 import {
@@ -69,7 +70,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionOpened,
                                 {
-                                    streamName: "gate-last-price",
+                                    streamName: GATE_LAST_PRICE_STREAM_NAME,
                                     symbols,
                                 })
                             resetTimeout()
@@ -86,7 +87,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                                 WinstonLog.WebsocketSubscriptionError,
                                 {
                                     error: error.message,
-                                    streamName: "gate-last-price",
+                                    streamName: GATE_LAST_PRICE_STREAM_NAME,
                                     symbols,
                                 }
                             )
@@ -95,7 +96,7 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionClosed,
                                 {
-                                    streamName: "gate-last-price",
+                                    streamName: GATE_LAST_PRICE_STREAM_NAME,
                                     symbols,
                                 }
                             )
