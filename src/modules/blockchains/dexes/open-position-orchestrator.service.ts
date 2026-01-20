@@ -18,7 +18,7 @@ import {
 import {
     DexNotFoundException,
     DexNotImplementedException,
-    SnapshotBalancesNotFoundException,
+    BalanceSnapshotsNotFoundException,
     TokenNotFoundException
 } from "@modules/exceptions"
 import {
@@ -200,7 +200,7 @@ export class OpenPositionOrchestratorService {
             return
         }
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotFoundException({
+            throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }

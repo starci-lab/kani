@@ -32,7 +32,7 @@ import {
 } from "../../math"
 import { 
     InvalidPoolTokensException, 
-    SnapshotBalancesNotFoundException,
+    BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
     TransactionNotExecutedException,
@@ -164,7 +164,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotFoundException({
+            throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }

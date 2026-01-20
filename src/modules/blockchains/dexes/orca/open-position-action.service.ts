@@ -19,7 +19,7 @@ import {
 } from "@modules/databases"
 import { 
     InvalidPoolTokensException, 
-    SnapshotBalancesNotFoundException,
+    BalanceSnapshotsNotFoundException,
     TransactionNotExecutedException,
     ErrorTransactionType,
     SolanaAccountNotFoundException,
@@ -102,7 +102,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         const _state = state as ClmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         if (!bot.snapshots) {
-            throw new SnapshotBalancesNotFoundException({
+            throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }

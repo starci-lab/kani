@@ -14,7 +14,7 @@ import {
 } from "../interfaces"
 import {
     CacheStaleException,
-    SnapshotBalancesNotFoundException, 
+    BalanceSnapshotsNotFoundException, 
     TokenNotFoundException
 } from "@modules/exceptions"
 import {
@@ -47,8 +47,8 @@ export class TickMathService {
         }: GetTickBoundsParams
     ) {
         // check if the bot has snapshots
-        if (!bot.snapshots) {
-            throw new SnapshotBalancesNotFoundException(
+        if (!bot.balanceSnapshots) {
+            throw new BalanceSnapshotsNotFoundException(
                 {
                     botId: bot.id,
                 }
@@ -101,14 +101,14 @@ export class TickMathService {
         // token amounts in B denomination
         const tokenAAmountInB = toDecimalAmount(
             {
-                amount: new BN(bot.snapshots.targetBalanceAmount),
+                amount: new BN(bot.balanceSnapshots.targetBalanceAmount),
                 decimals: new Decimal(tokenAEntity.decimals),
             }
         ).mul(price)
     
         const tokenBAmountInB = toDecimalAmount(
             {
-                amount: new BN(bot.snapshots.quoteBalanceAmount),
+                amount: new BN(bot.balanceSnapshots.quoteBalanceAmount),
                 decimals: new Decimal(tokenBEntity.decimals),
             }
         )
@@ -229,7 +229,7 @@ export class TickMathService {
     //         quoteToken
     //     } = bot
     //     if (!snapshotTargetBalanceAmount || !snapshotQuoteBalanceAmount || !targetToken || !quoteToken) {
-    //         throw new SnapshotBalancesNotFoundException("Snapshot balances not set")
+    //         throw new BalanceSnapshotsNotFoundException("Snapshot balances not set")
     //     }
     //     const {
     //         dynamic: { tickCurrent },
