@@ -296,3 +296,19 @@ export interface EjectRpcRetryableErrorMessage {
 export interface EjectRpcIgnorableErrorMessage {
     rpcId: string
 }
+
+/**
+ * Pyth Rest Prices Fetched Message
+ */
+export interface PythRestPricesFetchedMessage {
+    fetchedCount: number
+    expectedCount: number
+}
+
+/**
+ * Pyth Rest Prices Fetch Failed Message
+ */
+export interface PythRestPricesFetchFailedMessage {
+    error: string
+    expectedCount: number
+}

@@ -97,7 +97,7 @@ export class PythRestService implements OnApplicationBootstrap {
             }) 
             if (!priceData.length) return
             this.winstonService.log(
-                WinstonLog.PythPricesFetched,
+                WinstonLog.PythRestPricesFetched,
                 {
                     fetchedCount: priceData.length,
                     expectedCount: symbols.length
@@ -120,7 +120,7 @@ export class PythRestService implements OnApplicationBootstrap {
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.PythPricesFetchFailed,
+                WinstonLog.PythRestPricesFetchFailed,
                 {
                     error: error.message,
                     expectedCount: symbols.length

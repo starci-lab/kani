@@ -44,35 +44,16 @@ export class MinOperationalGasAmountNotFoundException extends AbstractException 
 }
 
 /** Thrown when additional swap amount gas config is not found */
-export interface AdditionalSwapAmountGasNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+export interface SwapAmountGasNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
-export class AdditionalSwapAmountGasNotFoundException extends AbstractException {
+export class SwapAmountGasNotFoundException extends AbstractException {
     constructor(
-        { chainId, originalError }: AdditionalSwapAmountGasNotFoundExceptionMetadata
+        { chainId, originalError }: SwapAmountGasNotFoundExceptionMetadata
     ) {
         super(
-            "Additional swap amount gas not found",
-            "ADDITIONAL_SWAP_AMOUNT_GAS_NOT_FOUND_EXCEPTION",
-            {
-                chainId,
-                originalError,
-            }
-        )
-    }
-}
-
-/** Thrown when swap threshold gas amount config is not found */
-export interface SwapThresholdGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    chainId: ChainId
-}
-export class SwapThresholdGasAmountNotFoundException extends AbstractException {
-    constructor(
-        { chainId, originalError }: SwapThresholdGasAmountNotFoundExceptionMetadata
-    ) {
-        super(
-            "Swap threshold gas amount not found",
-            "SWAP_THRESHOLD_GAS_AMOUNT_NOT_FOUND_EXCEPTION",
+            "Swap amount gas not found",
+            "SWAP_AMOUNT_GAS_NOT_FOUND_EXCEPTION",
             {
                 chainId,
                 originalError,

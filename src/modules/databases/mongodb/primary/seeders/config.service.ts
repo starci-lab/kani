@@ -49,14 +49,12 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 [ChainId.Sui]: {
                     minOperationalAmount: 0.05, // 25%
                     targetOperationalAmount: 0.2, // 100%
-                    gasSwapThresholdAmount: 0.15, // 75%
-                    additionalSwapAmount: 0.1, // 50%
+                    swapAmount: 0.1, // 50%
                 },
                 [ChainId.Solana]: {
                     minOperationalAmount: 0.025, // 25%
                     targetOperationalAmount: 0.1, // 100%
-                    swapThresholdAmount: 0.075, // 75%
-                    additionalSwapAmount: 0.05, // 50%
+                    swapAmount: 0.05, // 50%
                 },
             },
         },

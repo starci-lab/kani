@@ -1,8 +1,18 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./price-feeds.module-definition"
-import { CoingeckoModule } from "./coingecko"
-import { CoinMarketCapModule } from "./coinmarketcap"
-import { PythModule } from "./pyth"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./price-feeds.module-definition"
+import {
+    CoingeckoModule 
+} from "./coingecko"
+import {
+    CoinMarketCapModule 
+} from "./coinmarketcap"
+import {
+    PythModule 
+} from "./pyth"
  
 @Module({
     imports: [

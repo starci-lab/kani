@@ -1,8 +1,17 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { SwapMathService } from "@modules/blockchains"
-import { PrimaryMemoryStorageService, TokenId } from "@modules/databases"
-import { ChainId, TokenType } from "@modules/typedefs"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
+import {
+    SwapMathService 
+} from "@modules/blockchains"
+import {
+    PrimaryMemoryStorageService, TokenId 
+} from "@modules/databases"
+import {
+    ChainId, TokenType 
+} from "@modules/typedefs"
 import BN from "bn.js"
+import { sleep } from "@utils"
 
 @Injectable()
 export class ComputeSwapAmountsService implements OnApplicationBootstrap {
@@ -21,26 +30,61 @@ export class ComputeSwapAmountsService implements OnApplicationBootstrap {
         const quoteTokenId = TokenId.SuiUsdc
         const chainId = ChainId.Sui
         // get the tokens instances
-        const targetToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.displayId === targetTokenId
-        )
-        const quoteToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.displayId === quoteTokenId
-        )
-        const gasToken = this.primaryMemoryStorageService.tokens.find(
-            token => token.type === TokenType.Native
-            && token.chainId === chainId
-        )
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: targetTokenId
+            }
+        })
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            displayId: {
+                $eq: quoteTokenId
+            }
+        })
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            type: {
+                $eq: TokenType.Native
+            },
+            chainId: {
+                $eq: chainId
+            }
+        })
         if (!targetToken || !quoteToken || !gasToken) {
             throw new Error("Target, quote or gas token not found")
         }
-        
+        await sleep(3000)
         const scenarios = [
             {
                 inputs: {
-                    targetBalanceAmount: 0, // no IKA
-                    quoteBalanceAmount: 100, // 100 USDC
-                    gasBalanceAmount: 0.075, // 0.075 SUI
+                    targetBalanceAmount: new BN(0), // no IKA
+                    quoteBalanceAmount: new BN(100_000_000), // 100 USDC
+                    gasBalanceAmount: new BN(7_500_000), // 0.075 SUI
+                },
+                outputs: {
+                },
+            },
+            {
+                inputs: {
+                    targetBalanceAmount: new BN(100_000_000_000), // 100 IKA
+                    quoteBalanceAmount: new BN(100_000_000), // 100 USDC
+                    gasBalanceAmount: new BN(7_500_000), // 0.5 SUI
+                },
+                outputs: {
+                },
+            },
+            {
+                inputs: {
+                    targetBalanceAmount: new BN(1_000_000_000_000_000), // 100000 IKA
+                    quoteBalanceAmount: new BN(0), // no USDC
+                    gasBalanceAmount: new BN(7_500_000), // 0.075 SUI
+                },
+                outputs: {
+                },
+            },
+            {
+                inputs: {
+                    targetBalanceAmount: new BN(1_000_000_000_000_000), // 100000 IKA
+                    quoteBalanceAmount: new BN(0), // no USDC
+                    gasBalanceAmount: new BN(500_000_000), // 0.50 SUI
                 },
                 outputs: {
                 },
@@ -49,13 +93,18 @@ export class ComputeSwapAmountsService implements OnApplicationBootstrap {
         // get the swap amounts
         for (const scenario of scenarios) {
             const swapAmounts = await this.swapMathService.computeSwapAmounts({
-                targetTokenId,
-                quoteTokenId,
-                targetBalanceAmount: new BN(scenario.inputs.targetBalanceAmount),
-                quoteBalanceAmount: new BN(scenario.inputs.quoteBalanceAmount),
-                gasBalanceAmount: new BN(scenario.inputs.gasBalanceAmount),
+                targetToken,
+                quoteToken,
+                gasToken,
+                targetBalanceAmount: scenario.inputs.targetBalanceAmount,
+                quoteBalanceAmount: scenario.inputs.quoteBalanceAmount,
+                gasBalanceAmount: scenario.inputs.gasBalanceAmount,
             })
-            console.log(swapAmounts)
+            console.log(swapAmounts.swapSteps.map(step => ({
+                direction: step.direction,
+                usedAmount: step.usedAmount.toString(),
+                swappedAmount: step.swappedAmount.toString(),
+            })))
         }
     }
 }

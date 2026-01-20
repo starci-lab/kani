@@ -28,10 +28,9 @@ registerEnumType(GraphQLTypeLiquidityPoolType,
 
 export enum QuoteRatioStatus {
     Good = "good",
-    TargetTooLow = "targetTooLow",
-    TargetTooHigh = "targetTooHigh",
+    TargetUnderweighted = "targetUnderweighted",
+    TargetOverweighted  = "targetOverweighted",
 }
-
 export const GraphQLTypeQuoteRatioStatus = createEnumType(QuoteRatioStatus)
 
 registerEnumType(GraphQLTypeQuoteRatioStatus,
@@ -42,14 +41,15 @@ registerEnumType(GraphQLTypeQuoteRatioStatus,
             [QuoteRatioStatus.Good]: {
                 description: "The quote ratio is good"
             },
-            [QuoteRatioStatus.TargetTooLow]: {
-                description: "The quote ratio is too low"
+            [QuoteRatioStatus.TargetUnderweighted]: {
+                description: "The quote ratio is underweighted"
             },
-            [QuoteRatioStatus.TargetTooHigh]: {
-                description: "The quote ratio is too high"
+            [QuoteRatioStatus.TargetOverweighted]: {
+                description: "The quote ratio is overweighted"
             }
         }
-    })
+    }
+)
 
 export enum BotType {
     Standard = "standard",

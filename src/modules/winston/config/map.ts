@@ -39,7 +39,9 @@ import {
     WebsocketSubscriptionOpenedMessage,
     EjectRpcRetryableErrorMessage,
     EjectRpcFatalErrorMessage,
-    EjectRpcIgnorableErrorMessage
+    EjectRpcIgnorableErrorMessage,
+    PythRestPricesFetchedMessage,
+    PythRestPricesFetchFailedMessage
 } from "./types"
 
 export const configMap = {
@@ -363,5 +365,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as EjectRpcIgnorableErrorMessage,
+    },
+    // Pyth Rest Prices Fetched
+    [WinstonLog.PythRestPricesFetched]: {
+        name: WinstonLog.PythRestPricesFetched,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as PythRestPricesFetchedMessage,
+    },
+    // Pyth Rest Prices Fetch Failed
+    [WinstonLog.PythRestPricesFetchFailed]: {
+        name: WinstonLog.PythRestPricesFetchFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as PythRestPricesFetchFailedMessage,
     },
 }

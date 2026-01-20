@@ -56,7 +56,17 @@ import {
 import {
     StreamAsyncIteratorModule
 } from "@modules/stream-async-iterator"
-import { CexesModule, PriceFeedsModule } from "@modules/blockchains"
+import {
+    CexesModule, PriceFeedsModule 
+} from "@modules/blockchains"
+import {
+    ComputeSwapAmountsService 
+} from "./compute-swap-amounts.service"
+import {
+    MathModule 
+} from "@modules/blockchains"
+import { FormulasModule } from "@modules/blockchains"
+import { TickBoundsService } from "./tick-bounds.service"
 
 @Module({
     imports: [
@@ -92,6 +102,12 @@ import { CexesModule, PriceFeedsModule } from "@modules/blockchains"
             isGlobal: true,
         }),
         PriceFeedsModule.register({
+            isGlobal: true,
+        }),
+        FormulasModule.register({
+            isGlobal: true,
+        }),
+        MathModule.register({
             isGlobal: true,
         }),
         // AxiosModule.register({
@@ -172,8 +188,9 @@ import { CexesModule, PriceFeedsModule } from "@modules/blockchains"
     ],
     providers: [
         //ComputeSwapAmountsService,
-        //RpcTestsService,
-        //FeesTestService,
+        // RpcTestsService,
+        // FeesTestService,
+        TickBoundsService,
     ],
 })
 export class AppModule { }

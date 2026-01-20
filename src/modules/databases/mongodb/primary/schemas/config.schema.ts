@@ -41,11 +41,8 @@ export interface GasAmountRequired {
     minOperationalAmount: number
     // Target gas amount for stable and uninterrupted operation
     targetOperationalAmount: number
-    // Gas threshold below which a gas swap is required
-    // (the swap may use primary or secondary tokens, not gas-only)
-    swapThresholdAmount: number
-    // Gas amount to swap when the additional swap is triggered
-    additionalSwapAmount: number
+    // Gas amount to swap when the swap is triggered
+    swapAmount: number
 }
 
 export interface ConfigRecord<T> {

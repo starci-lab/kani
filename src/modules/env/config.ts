@@ -68,6 +68,10 @@ export const envConfig = () => ({
             fractionDigits: parseEnvInt("COMPUTATION_AMOUNT_FRACTION_DIGITS",
                 10),
         },
+        operation: {
+            fractionDigits: parseEnvInt("COMPUTATION_OPERATION_FRACTION_DIGITS",
+                10),
+        },
     },
     // time config
     priceFeeds: {

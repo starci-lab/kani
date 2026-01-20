@@ -1,7 +1,4 @@
 import {
-    TokenId 
-} from "@modules/databases"
-import {
     Injectable 
 } from "@nestjs/common"
 import Decimal from "decimal.js"
@@ -13,10 +10,9 @@ import {
 } from "@modules/mixin"
 import {
     AggregatedTokenPriceNotFoundException,
-    TokenNotFoundException,
 } from "@modules/exceptions"
 import {
-    PrimaryMemoryStorageService 
+    TokenSchema 
 } from "@modules/databases"
 import {
     median 
@@ -29,7 +25,6 @@ import {
 export class PriceService {
     constructor(
         private readonly dayjsService: DayjsService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly asyncService: AsyncService 
     ) {}
@@ -45,23 +40,11 @@ export class PriceService {
      *   and marked as stale.
      */
     async resolvePrice(
-        { tokenId }: ResolvePriceParams,
+        { token }: ResolvePriceParams,
     ): Promise<ResolvePriceResult> {
         const aggregated =
-            await this.aggregatedTokenPriceCacheService.get(tokenId)
-
-        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-            displayId: {
-                $eq: tokenId
-            }
-        })
-
-        if (!token) {
-            throw new TokenNotFoundException({
-                displayId: tokenId
-            })
-        }
-
+            await this.aggregatedTokenPriceCacheService.get(token.displayId)
+        console.log(`aggregated: ${JSON.stringify(aggregated)}`)
         const now = this.dayjsService.now()
         const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
         const maxDeviationRatio = envConfig().price.deviationMaxRatio
@@ -87,7 +70,7 @@ export class PriceService {
         if (observedPrices.length === 0) {
             throw new AggregatedTokenPriceNotFoundException(
                 {
-                    tokenId: tokenId
+                    tokenId: token.displayId
                 }
             )
         }
@@ -144,7 +127,7 @@ export class PriceService {
 
         throw new AggregatedTokenPriceNotFoundException(
             {
-                tokenId
+                tokenId: token.displayId
             }
         )
     }
@@ -157,17 +140,18 @@ export class PriceService {
      * - ageMs = max(ageA, ageB)
      */
     async resolveRelativePrice(
-        { tokenAId, tokenBId }: ResolveRelativePriceParams,
+        { tokenA, tokenB }: ResolveRelativePriceParams,
     ): Promise<ResolveRelativePriceResult> {
+        console.log(`starting resolveRelativePrice with tokenA: ${tokenA.displayId}, tokenB: ${tokenB.displayId}`)
         const [
             priceA, 
             priceB
         ] = await this.asyncService.allMustDone([
             this.resolvePrice({
-                tokenId: tokenAId 
+                token: tokenA 
             }),
             this.resolvePrice({
-                tokenId: tokenBId 
+                token: tokenB 
             }),
         ])
         const relativePrice = priceA.price.div(priceB.price)
@@ -185,7 +169,7 @@ export class PriceService {
  * ======================= */
 
 export interface ResolvePriceParams {
-    tokenId: TokenId
+    token: TokenSchema
 }
 
 export interface ResolvePriceResult {
@@ -198,8 +182,8 @@ export interface ResolvePriceResult {
 }
 
 export interface ResolveRelativePriceParams {
-    tokenAId: TokenId
-    tokenBId: TokenId
+    tokenA: TokenSchema
+    tokenB: TokenSchema
 }
 
 export interface ResolveRelativePriceResult {

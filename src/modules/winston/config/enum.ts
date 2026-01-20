@@ -1,4 +1,6 @@
 export enum WinstonLog {
+    PythRestPricesFetched = "Pyth.Rest.Prices.Fetched",
+    PythRestPricesFetchFailed = "Pyth.Rest.Prices.Fetch.Failed",
     CoinMarketCapPricesFetched = "CoinMarketCap.Prices.Fetched",
     CoinMarketCapPricesFetchFailed = "CoinMarketCap.Prices.Fetch.Failed",
     CoingeckoPricesFetched = "Coingecko.Prices.Fetched",

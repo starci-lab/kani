@@ -38,22 +38,28 @@ export class AggregatedTokenPriceCacheService {
         : SetAggregatedTokenPriceParams
     ): Promise<void> {
         // try to get the cache result
-        let cachedResult = await this.cacheService.get({
+        let cacheResult = await this.cacheService.get({
             key: CacheKey.AggregatedTokenPrice,
             args: [createObjectId(tokenId).toString()],
         })
-        if (!cachedResult) {
-            cachedResult = {
+        if (!cacheResult) {
+            cacheResult = {
                 prices: {
                 },
                 snapshotAt: this.dayjsService.now(),
             } as AggregatedTokenPriceCacheResult
         }
         // update the cache result
-        cachedResult.prices[marketListingId] = {
+        cacheResult.prices[marketListingId] = {
             price: price,
             snapshotAt: this.dayjsService.now(),
         }
+        // save the cache result
+        await this.cacheService.set({
+            key: CacheKey.AggregatedTokenPrice,
+            args: [createObjectId(tokenId).toString()],
+            cacheResult,
+        })
     }
 
     async get(tokenId: TokenId): Promise<AggregatedTokenPriceCacheResult> {

@@ -1,14 +1,11 @@
 import { 
     TargetOperationalGasAmountNotFoundException, 
-    TokenNotFoundException,
     MinOperationalGasAmountNotFoundException,
-    AdditionalSwapAmountGasNotFoundException,
-    SwapThresholdGasAmountNotFoundException,
+    SwapAmountGasNotFoundException,
 } from "@modules/exceptions"
 import { 
     PrimaryMemoryStorageService, 
     QuoteRatioStatus, 
-    TokenId, 
     TokenSchema
 } from "@modules/databases"
 import {
@@ -18,10 +15,13 @@ import {
     Decimal 
 } from "decimal.js"
 import {
-    computeRaw, toScaledBN, toUnit 
+    bnDivDecimal,
+    pow10, 
+    toDecimalAmount, 
+    toRawAmount, 
 } from "@modules/utils"
 import {
-    ChainId, TokenType 
+    TokenType 
 } from "@modules/typedefs"
 import BN from "bn.js"
 import {
@@ -33,371 +33,501 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    PriceService 
+} from "./price.service"
 
 @Injectable()
 export class SwapMathService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly quoteRatioService: QuoteRatioService,
+        private readonly priceService: PriceService,
     ) {}
 
-    
+    /**
+     * Computes swap amounts when target token is the gas token.
+     * 
+     * Since target is gas, we don't need to swap for gas.
+     * We only need to rebalance between target (gas) and quote tokens.
+     * 
+     * Strategy:
+     * - If ratio is good: no swaps needed
+     * - If target is overweighted: swap target to quote to reduce target exposure
+     * - If target is underweighted: swap quote to target to increase target exposure
+     * 
+     * @param params - Extended parameters including tokens, balances, and quote ratio result
+     * @returns Swap steps to execute in order (no gas swaps needed)
+     */
     private async computeSwapAmountsWhenTargetIsGas(
         {
-            targetTokenId,
-            quoteTokenId,
+            targetToken,
+            quoteToken,
             quoteRatioResult,
+            targetBalanceAmount,
+            quoteBalanceAmount,
         }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResult> {
-        const targetToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: targetTokenId
-                }
-            })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                displayId: targetTokenId
-            })
-        }
-        const quoteToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: quoteTokenId
-                }
-            })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                displayId: quoteTokenId
-            })
-        }
+        // Step 1: Check the current quote ratio status
+        // This determines if we need to rebalance between target (gas) and quote tokens
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
             quoteRatio: quoteRatioResult.quoteRatio,
         })
-        // Compute the quote ratio
-        switch (quoteRatioStatus)    {
-        case QuoteRatioStatus.Good: {
-            return {
-                processSwaps: false,
-                quoteRatioStatus,
-                quoteRatioResult,
-            }
-        }
-        case QuoteRatioStatus.TargetTooHigh: {
-            // target is too much, we need to swap from target to quote
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.expected.below)
-            const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResult.quoteBalanceAmountInQuote)
-            const quoteShortfallInQuoteBN = new BN(
-                computeRaw(
-                    new Decimal(quoteShortfallInQuote),
-                    quoteToken.decimals
-                )
-            )
-            const targetBalanceAmountSwapToQuote = toScaledBN(
-                toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
-                ))
-                .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
-            return {
-                processSwaps: true,
-                swapTargetToQuoteAmount: targetBalanceAmountSwapToQuote,
-                estimatedSwappedQuoteAmount: quoteShortfallInQuoteBN,
-                quoteRatioStatus: QuoteRatioStatus.TargetTooLow,
-                quoteRatioResult,
-            }
-        }
-        case QuoteRatioStatus.TargetTooLow: {
-            // target is too little, we need to swap from quote to target
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.expected.above)
-            const excessQuoteInQuote = quoteRatioResult.quoteBalanceAmountInQuote.sub(idealQuoteBalanceInQuote)
-            const excessQuoteInQuoteBN = new BN(
-                computeRaw(new Decimal(excessQuoteInQuote),
-                    quoteToken.decimals)
-            )
-            const estimatedSwappedTargetAmount = toScaledBN(
-                toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
-                ))
-                .mul(excessQuoteInQuoteBN).div(toUnit(quoteToken.decimals))
-            // quote is too much, we need to swap from quote to target
-            return {
-                processSwaps: true,
-                swapQuoteToTargetAmount: excessQuoteInQuoteBN,
-                estimatedSwappedTargetAmount,
-                quoteRatioStatus: QuoteRatioStatus.TargetTooHigh,
-                quoteRatioResult,
-            }
-        }
-        }
-    }
 
-    private async computeSwapAmountsWhenTargetIsQuote(
-        {
-            targetTokenId,
-            quoteTokenId,
-            quoteRatioResult,
-        }: ExtendedComputeSwapAmountsParams
-    ): Promise<ComputeSwapAmountsResult> {
-        const targetToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: targetTokenId
-                }
-            })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                displayId: targetTokenId
-            })
-        }
-        const quoteToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: quoteTokenId
-                }
-            })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                displayId: quoteTokenId
-            })
-        }
-        const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
-            quoteRatio: quoteRatioResult.quoteRatio,
-        })
+        // Step 2: Handle different quote ratio statuses
+        // Since target is gas, we only rebalance, no gas swaps needed
         switch (quoteRatioStatus) {
         case QuoteRatioStatus.Good: {
+            // Case: Ratio is good, no swaps needed
+            // Target (gas) and quote are already in balance
             return {
-                processSwaps: false,
-                quoteRatioStatus,
-                quoteRatioResult,
+                swapSteps: [],
             }
         }
-        case QuoteRatioStatus.TargetTooLow: {
-            // quote is too little, we need to swap from target to quote
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.safe.below)
-            const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResult.quoteBalanceAmountInQuote)
-            const quoteShortfallInQuoteBN = new BN(
-                computeRaw(
-                    new Decimal(quoteShortfallInQuote),
-                    quoteToken.decimals
-                )
+
+        case QuoteRatioStatus.TargetOverweighted: {
+            // Case: Target (gas) is overweighted (too much target, too little quote)
+            // Strategy: Swap target to quote to reduce target exposure
+            const swapSteps: Array<SwapStep> = []
+
+            // Compute how much target to swap to quote to reach target ratio
+            const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
+                {
+                    amount: targetBalanceAmount,
+                    currentRatio: quoteRatioResult.quoteRatio,
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetToken,
+                    quoteToken,
+                    direction: RebalanceDirection.TargetToQuote,
+                    relativePrice: quoteRatioResult.relativePrice,
+                }
             )
-            const targetBalanceAmountSwapToQuote = toScaledBN(
-                toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
-                ))
-                .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
+
+            swapSteps.push({
+                direction: SwapDirection.TargetToQuote,
+                usedAmount: usedAmount,
+                swappedAmount: swappedAmount,
+            })
+
             return {
-                processSwaps: true,
-                quoteRatioStatus,
-                swapTargetToQuoteAmount: targetBalanceAmountSwapToQuote,
-                estimatedSwappedQuoteAmount: targetBalanceAmountSwapToQuote,
-                quoteRatioResult,
+                swapSteps,
             }
         }
-        case QuoteRatioStatus.TargetTooHigh: {
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.safe.above)
-            const excessQuoteInQuote = quoteRatioResult.quoteBalanceAmountInQuote.sub(idealQuoteBalanceInQuote)
-            const excessQuoteInQuoteBN = new BN(
-                computeRaw(new Decimal(excessQuoteInQuote),
-                    quoteToken.decimals)
+
+        case QuoteRatioStatus.TargetUnderweighted: {
+            // Case: Target (gas) is underweighted (too little target, too much quote)
+            // Strategy: Swap quote to target to increase target exposure
+            const swapSteps: Array<SwapStep> = []
+
+            // Compute how much quote to swap to target to reach target ratio
+            const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
+                {
+                    amount: quoteBalanceAmount,
+                    currentRatio: quoteRatioResult.quoteRatio,
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetToken,
+                    quoteToken,
+                    direction: RebalanceDirection.QuoteToTarget,
+                    relativePrice: quoteRatioResult.relativePrice,
+                }
             )
-            const quoteToTargetSwapAmount = toScaledBN(
-                toUnit(quoteToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice))
-            )
-            // quote is too much, we need to swap from quote to target
+
+            swapSteps.push({
+                direction: SwapDirection.QuoteToTarget,
+                usedAmount: usedAmount,
+                swappedAmount: swappedAmount,
+            })
+
             return {
-                processSwaps: true,
-                quoteRatioStatus,
-                swapQuoteToTargetAmount: excessQuoteInQuoteBN,
-                estimatedSwappedTargetAmount: quoteToTargetSwapAmount,
-                quoteRatioResult,
+                swapSteps,
             }
         }
         }
     }
 
-    private async computeSwapAmountsWhenNeitherTargetNorQuoteIsGas(
+    /**
+     * Computes swap amounts when quote token is the gas token.
+     * 
+     * Since quote is gas, we don't need to swap for gas.
+     * We only need to rebalance between target and quote (gas) tokens.
+     * 
+     * Strategy:
+     * - If ratio is good: no swaps needed
+     * - If target is overweighted: swap target to quote to reduce target exposure
+     * - If target is underweighted: swap quote to target to increase target exposure
+     * 
+     * @param params - Extended parameters including tokens, balances, and quote ratio result
+     * @returns Swap steps to execute in order (no gas swaps needed)
+     */
+    private async computeSwapAmountsWhenTargetIsQuote(
         {
-            targetTokenId,
-            quoteTokenId,
-            gasBalanceAmount,
+            targetToken,
+            quoteToken,
             quoteRatioResult,
+            targetBalanceAmount,
+            quoteBalanceAmount,
         }: ExtendedComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResult> {
-        const chainId = ChainId.Solana
-        const targetToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: targetTokenId
-                }
-            })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                displayId: targetTokenId
-            })
+        // Step 1: Check the current quote ratio status
+        // This determines if we need to rebalance between target and quote (gas) tokens
+        const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
+            quoteRatio: quoteRatioResult.quoteRatio,
+        })
+
+        // Step 2: Handle different quote ratio statuses
+        // Since quote is gas, we only rebalance, no gas swaps needed
+        switch (quoteRatioStatus) {
+        case QuoteRatioStatus.Good: {
+            // Case: Ratio is good, no swaps needed
+            // Target and quote (gas) are already in balance
+            return {
+                swapSteps: [],
+            }
         }
-        const quoteToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: quoteTokenId
+
+        case QuoteRatioStatus.TargetOverweighted: {
+            // Case: Target is overweighted (too much target, too little quote/gas)
+            // Strategy: Swap target to quote to reduce target exposure
+            const swapSteps: Array<SwapStep> = []
+
+            // Compute how much target to swap to quote to reach target ratio
+            const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
+                {
+                    amount: targetBalanceAmount,
+                    currentRatio: quoteRatioResult.quoteRatio,
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetToken,
+                    quoteToken,
+                    direction: RebalanceDirection.TargetToQuote,
+                    relativePrice: quoteRatioResult.relativePrice,
                 }
+            )
+
+            swapSteps.push({
+                direction: SwapDirection.TargetToQuote,
+                usedAmount: usedAmount,
+                swappedAmount: swappedAmount,
             })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                displayId: quoteTokenId
-            })
+
+            return {
+                swapSteps,
+            }
         }
-        const gasToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native
-                },
-                chainId: {
-                    $eq: chainId
+
+        case QuoteRatioStatus.TargetUnderweighted: {
+            // Case: Target is underweighted (too little target, too much quote/gas)
+            // Strategy: Swap quote to target to increase target exposure
+            const swapSteps: Array<SwapStep> = []
+
+            // Compute how much quote to swap to target to reach target ratio
+            const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
+                {
+                    amount: quoteBalanceAmount,
+                    currentRatio: quoteRatioResult.quoteRatio,
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetToken,
+                    quoteToken,
+                    direction: RebalanceDirection.QuoteToTarget,
+                    relativePrice: quoteRatioResult.relativePrice,
                 }
+            )
+
+            swapSteps.push({
+                direction: SwapDirection.QuoteToTarget,
+                usedAmount: usedAmount,
+                swappedAmount: swappedAmount,
             })
-        if (!gasToken) {
-            throw new TokenNotFoundException({
-                conditions: {
-                    type: TokenType.Native,
-                    chainId: chainId,
-                },
-            })
+
+            return {
+                swapSteps,
+            }
         }
-        // check quote ratio status
+        }
+    }
+
+    /**
+     * Computes swap amounts when neither target token nor quote token is the gas token.
+     * 
+     * This function handles the most complex case where we need to:
+     * 1. Ensure sufficient gas balance for operations
+     * 2. Rebalance the portfolio ratio between target and quote tokens
+     * 
+     * Strategy:
+     * - If gas is insufficient, swap from the token that has excess (based on ratio)
+     * - If ratio is imbalanced, rebalance by swapping between target and quote
+     * - When both conditions exist, handle gas swap first, then rebalance with remaining balance
+     * 
+     * @param params - Extended parameters including tokens, balances, and quote ratio result
+     * @returns Swap steps to execute in order
+     */
+    private async computeSwapAmountsWhenNeitherTargetNorQuoteIsGas(
+        {
+            targetToken,
+            quoteToken,
+            gasToken,
+            gasBalanceAmount,
+            quoteRatioResult,
+            targetBalanceAmount,
+            quoteBalanceAmount,
+        }: ExtendedComputeSwapAmountsParams
+    ): Promise<ComputeSwapAmountsResult> {
+        // Step 1: Check the current quote ratio status
+        // This determines if we need to rebalance between target and quote tokens
         const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus(
             {
                 quoteRatio: quoteRatioResult.quoteRatio,
             }
         )
-        // retrieve the gas config
+
+        // Step 2: Retrieve gas configuration for this chain
+        // These values define the minimum and target gas amounts required for operations
         const {
             minOperationalAmount: minOperationalGasAmount,
             targetOperationalAmount: targetOperationalGasAmount,
-            swapThresholdAmount: swapThresholdGasAmount,
-            additionalSwapAmount: additionalSwapAmountGas,
-        } = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[chainId] ?? {
+            swapAmount: swapGasAmount,
+        } = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[gasToken.chainId] ?? {
         }
-        // validate the gas config
+
+        // Step 3: Validate that all required gas config values are present
+        // Missing config would prevent proper gas management
         if (!minOperationalGasAmount) {
             throw new MinOperationalGasAmountNotFoundException(
                 {
-                    chainId: chainId,
+                    chainId: gasToken.chainId,
                 }
             )
         }
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException(
                 {
-                    chainId: chainId,
+                    chainId: gasToken.chainId,
                 }
             )
         }
-        if (!swapThresholdGasAmount) {
-            throw new SwapThresholdGasAmountNotFoundException(
+        if (!swapGasAmount) {
+            throw new SwapAmountGasNotFoundException(
                 {
-                    chainId: chainId,
+                    chainId: gasToken.chainId,
                 }
             )
         }
-        if (!additionalSwapAmountGas) {
-            throw new AdditionalSwapAmountGasNotFoundException(
-                {
-                    chainId: chainId,
-                }
-            )
-        }   
-        const minOperationalGasAmountBN = computeRaw(
-            new Decimal(minOperationalGasAmount),
-            gasToken.decimals
-        )
-        const swapThresholdGasAmountBN = computeRaw(
-            new Decimal(swapThresholdGasAmount),
-            gasToken.decimals
-        )
-        const additionalSwapAmountGasBN = computeRaw(
-            new Decimal(additionalSwapAmountGas),
-            gasToken.decimals
-        )
-        // whether we need to swap from either quote or target to gas
-        let needsGasSwap = false
-        // check gas status
-        if (gasBalanceAmount.lt(swapThresholdGasAmountBN)) {
-            // we have to perform a swap from either quote or target to gas
-            needsGasSwap = true
-        } else if (gasBalanceAmount.lt(minOperationalGasAmountBN)) {
-            // do nothing, since the gas amount is not enough
-            return {
-                processSwaps: false,
-                quoteRatioStatus,
-                quoteRatioResult,
+
+        // Step 4: Convert gas amounts from human-readable to raw amounts (with decimals)
+        // This ensures we work with the correct precision for blockchain operations
+        const targetOperationalGasAmountBN = toRawAmount(
+            {
+                amount: new Decimal(targetOperationalGasAmount),
+                decimals: new Decimal(gasToken.decimals),
             }
+        )
+        const swapGasAmountBN = toRawAmount(
+            {
+                amount: new Decimal(swapGasAmount),
+                decimals: new Decimal(gasToken.decimals),
+            }
+        )
+
+        // Step 5: Determine if we need to swap for gas
+        // We need gas swap if current gas balance is below the target operational amount
+        let needsGasSwap = false
+        if (gasBalanceAmount.lt(targetOperationalGasAmountBN)) {
+            needsGasSwap = true
         }
+
+        // Step 6: Handle different quote ratio statuses
         switch (quoteRatioStatus) {
         case QuoteRatioStatus.Good: {
-            // good ratio, no need to swap between target to quote or quote to target
-            // but we must ensure that gas amount is enough, or >= target operational gas amount
-            if (gasBalanceAmount.gte(swapThresholdGasAmountBN)) {
+            // Case: Ratio is good, only need to ensure sufficient gas
+            // No rebalancing needed between target and quote tokens
+            
+            // If gas is already sufficient, no swaps needed
+            if (!needsGasSwap) {
                 return {
-                    processSwaps: false,
-                    quoteRatioStatus,
-                    quoteRatioResult,
+                    swapSteps: [],
                 }
             }
-            return {
-                processSwaps: false,
-                quoteRatioStatus,
-                quoteRatioResult,
-            }
-        }
-        case QuoteRatioStatus.TargetTooLow: {
-            // since this case is target too low, which means we have too much quote, so that
-            if (needsGasSwap) {
-                // this case mean we need to swap a partial of to gas
-                const swapResult = await this.computeSwapResult(
+
+            // Gas is insufficient, need to swap from either target or quote to gas
+            // Strategy: Swap from the token that has more value (higher ratio)
+            // If target ratio > 0.5, we have more target, so swap target to gas
+            // Otherwise, swap quote to gas
+            const swapSteps: Array<SwapStep> = []
+            
+            if (quoteRatioResult.quoteRatio.gt(0.5)) {
+                // Target token has more than 50% of portfolio value
+                // Swap from target to gas to maintain better balance
+                const { price: targetToGasRelativePrice } = await this.priceService.resolveRelativePrice({
+                    tokenA: targetToken,
+                    tokenB: gasToken,
+                })
+                
+                // Calculate how much target token we need to swap to get the required gas
+                const targetAmountForGasSwap = this.computeAmountOutByPrice(
                     {
-                        amountIn: additionalSwapAmountGasBN,
+                        amountIn: swapGasAmountBN,
                         tokenIn: gasToken,
-                        tokenOut: quoteToken,
-                        relativePrice: quoteRatioResult.relativePrice,
+                        tokenOut: targetToken,
+                        relativePrice: targetToGasRelativePrice,
                     }
                 )
-                return {
-                    processSwaps: true,
-                    swapQuoteToGasAmount: swapResult,
-                    estimatedSwappedGasAmount: swapResult,
-                    quoteRatioStatus,
-                    quoteRatioResult,
-                }
+                
+                swapSteps.push({
+                    direction: SwapDirection.TargetToGas,
+                    usedAmount: targetAmountForGasSwap,
+                    swappedAmount: swapGasAmountBN,
+                })
             }
-            // target too low mean, the quote is too much, we need to swap a partial of quote to the target and gas
-            const idealQuoteBalanceInQuote = quoteRatioResult.totalBalanceAmountInQuote.mul(envConfig().quote.ratio.safe.below)
-            const quoteShortfallInQuote = idealQuoteBalanceInQuote.sub(quoteRatioResult.quoteBalanceAmountInQuote)
-            const quoteShortfallInQuoteBN = new BN(
-                computeRaw(
-                    new Decimal(quoteShortfallInQuote),
-                    quoteToken.decimals
+            else {
+                // Quote token has more than 50% of portfolio value (or equal)
+                // Swap from quote to gas to maintain better balance
+                const { price: quoteToGasRelativePrice } = await this.priceService.resolveRelativePrice({
+                    tokenA: quoteToken,
+                    tokenB: gasToken,
+                })
+                
+                // Calculate how much quote token we need to swap to get the required gas
+                const quoteAmountForGasSwap = this.computeAmountOutByPrice(
+                    {
+                        amountIn: swapGasAmountBN,
+                        tokenIn: gasToken,
+                        tokenOut: quoteToken,
+                        relativePrice: quoteToGasRelativePrice,
+                    }
                 )
-            )
-            const targetBalanceAmountSwapToQuote = toScaledBN(
-                toUnit(targetToken.decimals),
-                new Decimal(1).div(new Decimal(quoteRatioResult.relativePrice)
-                ))
-                .mul(quoteShortfallInQuoteBN).div(toUnit(quoteToken.decimals))
+                
+                swapSteps.push({
+                    direction: SwapDirection.QuoteToGas,
+                    usedAmount: quoteAmountForGasSwap,
+                    swappedAmount: swapGasAmountBN,
+                })
+            }
+            
             return {
-                processSwaps: true,
-                swapTargetToQuoteAmount: targetBalanceAmountSwapToQuote,
-                estimatedSwappedQuoteAmount: quoteShortfallInQuoteBN,
-                quoteRatioStatus,
-                quoteRatioResult,
+                swapSteps,
             }
         }
-        case QuoteRatioStatus.TargetTooHigh: {
+
+        case QuoteRatioStatus.TargetUnderweighted: {
+            // Case: Target token is underweighted (too little target, too much quote)
+            // Strategy:
+            // 1. If gas needed, swap from quote to gas (since we have excess quote)
+            // 2. Then rebalance by swapping remaining quote to target
+            
+            const swapSteps: Array<SwapStep> = []
+            let quoteAmountForGasSwap = new BN(0)
+
+            // Step 6.1: Handle gas swap if needed
+            // Since we have excess quote, swap quote to gas first
+            if (needsGasSwap) {
+                const { price: relativePrice } = await this.priceService.resolveRelativePrice({
+                    tokenA: quoteToken,
+                    tokenB: gasToken,
+                })
+                
+                // Calculate how much quote token we need to swap to get the required gas
+                quoteAmountForGasSwap = this.computeAmountOutByPrice(
+                    {
+                        amountIn: swapGasAmountBN,
+                        tokenIn: gasToken,
+                        tokenOut: quoteToken,
+                        relativePrice,
+                    }
+                )
+                
+                swapSteps.push({
+                    direction: SwapDirection.QuoteToGas,
+                    usedAmount: quoteAmountForGasSwap,
+                    swappedAmount: swapGasAmountBN,
+                })
+            }
+
+            // Step 6.2: Rebalance by swapping remaining quote to target
+            // Calculate remaining quote after gas swap
+            const remainingQuoteAmount = quoteBalanceAmount.sub(quoteAmountForGasSwap)
+            
+            // Compute how much quote to swap to target to reach target ratio
+            const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
+                {
+                    amount: remainingQuoteAmount,
+                    currentRatio: quoteRatioResult.quoteRatio,
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetToken,
+                    quoteToken,
+                    direction: RebalanceDirection.QuoteToTarget,
+                    relativePrice: quoteRatioResult.relativePrice,
+                }
+            )
+            
+            swapSteps.push({
+                direction: SwapDirection.QuoteToTarget,
+                usedAmount: usedAmount,
+                swappedAmount: swappedAmount,
+            })
+            
             return {
-                processSwaps: false,
-                quoteRatioStatus,
-                quoteRatioResult,
+                swapSteps,
+            }
+        }
+
+        case QuoteRatioStatus.TargetOverweighted: {
+            // Case: Target token is overweighted (too much target, too little quote)
+            // Strategy:
+            // 1. If gas needed, swap from target to gas (since we have excess target)
+            // 2. Then rebalance by swapping remaining target to quote
+            
+            const swapSteps: Array<SwapStep> = []
+            let targetAmountForGasSwap = new BN(0)
+
+            // Step 6.1: Handle gas swap if needed
+            // Since we have excess target, swap target to gas first
+            if (needsGasSwap) {
+                const { price: relativePrice } = await this.priceService.resolveRelativePrice({
+                    tokenA: targetToken,
+                    tokenB: gasToken,
+                })
+                
+                // Calculate how much target token we need to swap to get the required gas
+                targetAmountForGasSwap = this.computeAmountOutByPrice(
+                    {
+                        amountIn: swapGasAmountBN,
+                        tokenIn: gasToken,
+                        tokenOut: targetToken,
+                        relativePrice,
+                    }
+                )
+                
+                swapSteps.push({
+                    direction: SwapDirection.TargetToGas,
+                    usedAmount: targetAmountForGasSwap,
+                    swappedAmount: swapGasAmountBN,
+                })
+            }
+
+            // Step 6.2: Rebalance by swapping remaining target to quote
+            // Calculate remaining target after gas swap
+            const remainingTargetAmount = targetBalanceAmount.sub(targetAmountForGasSwap)
+            
+            // Compute how much target to swap to quote to reach target ratio
+            const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
+                {
+                    amount: remainingTargetAmount,
+                    currentRatio: quoteRatioResult.quoteRatio,
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetToken,
+                    quoteToken,
+                    direction: RebalanceDirection.TargetToQuote,
+                    relativePrice: quoteRatioResult.relativePrice,
+                }
+            )
+            
+            swapSteps.push({
+                direction: SwapDirection.TargetToQuote,
+                usedAmount: usedAmount,
+                swappedAmount: swappedAmount,
+            })
+            
+            return {
+                swapSteps,
             }
         }
         }
@@ -405,52 +535,35 @@ export class SwapMathService {
 
     public async computeSwapAmounts(
         {
-            targetTokenId,
-            quoteTokenId,
+            targetToken,    
+            quoteToken,
+            gasToken,
             targetBalanceAmount,
             quoteBalanceAmount,
             gasBalanceAmount,
         }: ComputeSwapAmountsParams
     ): Promise<ComputeSwapAmountsResult> {
-        const targetToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: targetTokenId
-                }
-            })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                displayId: targetTokenId
-            })
-        }
-        const quoteToken = this.primaryMemoryStorageService
-            .tokenCollection.findOne({
-                displayId: {
-                    $eq: quoteTokenId
-                }
-            })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                displayId: quoteTokenId
-            })
-        }
         let gasStatus = GasStatus.IsGas
         if (targetToken.type === TokenType.Native) {
             gasStatus = GasStatus.IsTarget
         } else if (quoteToken.type === TokenType.Native) {
             gasStatus = GasStatus.IsQuote
         }
-        const quoteRatioResult = await this.quoteRatioService.computeQuoteRatio({
-            targetTokenId,
-            quoteTokenId,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-        })
+        const quoteRatioResult = await this.quoteRatioService.computeQuoteRatio(
+            {
+                targetToken,
+                quoteToken,
+                targetBalanceAmount,
+                quoteBalanceAmount,
+            }
+        )
+        console.log(`quoteRatioResult: ${JSON.stringify(quoteRatioResult)}`)
         switch (gasStatus) {
         case GasStatus.IsTarget: {
             return this.computeSwapAmountsWhenTargetIsGas({
-                targetTokenId,
-                quoteTokenId,
+                targetToken,
+                quoteToken,
+                gasToken,
                 quoteRatioResult,
                 targetBalanceAmount,
                 quoteBalanceAmount,
@@ -459,8 +572,9 @@ export class SwapMathService {
         }
         case GasStatus.IsQuote: {
             return this.computeSwapAmountsWhenTargetIsQuote({
-                targetTokenId,
-                quoteTokenId,
+                targetToken,
+                quoteToken,
+                gasToken,
                 quoteRatioResult,
                 targetBalanceAmount,
                 quoteBalanceAmount,
@@ -469,8 +583,9 @@ export class SwapMathService {
         }
         case GasStatus.IsGas: {
             return this.computeSwapAmountsWhenNeitherTargetNorQuoteIsGas({
-                targetTokenId,
-                quoteTokenId,
+                targetToken,
+                quoteToken,
+                gasToken,
                 quoteRatioResult,
                 targetBalanceAmount,
                 quoteBalanceAmount,
@@ -479,63 +594,213 @@ export class SwapMathService {
         }
         }
     }
-
-    private async computeSwapResult(
+    
+    /**
+ * Computes output amount from an input amount using a relative price.
+ *
+ * Formula:
+ *   amountOut = amountIn / price
+ *               × 10^outDecimals / 10^inDecimals
+ *
+ * Note:
+ * - price must be denominated as tokenOut / tokenIn
+ * - no AMM curve, no fee, no slippage
+ */
+    private computeAmountOutByPrice(
         {
             amountIn,
             tokenIn,
             tokenOut,
             relativePrice,
-        }: ComputeSwapResultParams
-    ): Promise<BN> {
-        return toScaledBN(
-            toUnit(tokenIn.decimals),
-            new Decimal(1).div(new Decimal(relativePrice))
-        )
-            .mul(amountIn).div(toUnit(tokenOut.decimals))
+        }: ComputeAmountOutByPriceParams
+    ) {
+        return bnDivDecimal({
+            bn: amountIn,
+            decimal: relativePrice,
+        })
+            .mul(pow10({
+                exponent: new Decimal(tokenOut.decimals),
+                asBN: true,
+            }))
+            .div(pow10({
+                exponent: new Decimal(tokenIn.decimals),
+                asBN: true,
+            }
+            )
+            )
+    }
+
+    /**
+ * Compute how much token needs to be swapped to rebalance from currentRatio to targetRatio
+ *
+ * Definitions:
+ * - amount: amount of the token being swapped (raw amount, before decimal normalization)
+ * - currentRatio: current target allocation ratio (target / total)
+ * - targetRatio: desired target allocation ratio
+ * - relativePrice: price of targetToken denominated in quoteToken
+ *
+ * Returns:
+ * - swappedAmount: amount of token being swapped (in source token unit)
+ * - usedAmount: value spent/received in the opposite token
+ */
+    private computeRebalanceAmount(
+        {
+            amount,
+            currentRatio,
+            targetRatio,
+            targetToken,
+            quoteToken,
+            direction,
+            relativePrice,
+        }: ComputeRebalanceAmountParams
+    ): ComputeRebalanceAmountResult {
+    /**
+     * Case 1: Quote → Target (increase target exposure)
+     *
+     * current_ratio = A / (A + Q)
+     * target_ratio  = (A + X) / (A + Q)
+     *
+     * where:
+     * - A = amount_target
+     * - Q = amount_quote_in_target
+     * - X = target added (in target unit)
+     */
+        if (direction === RebalanceDirection.QuoteToTarget) {
+        // Convert quote amount into target unit
+            const amountQuoteInTarget = toDecimalAmount({
+                amount,
+                decimals: new Decimal(quoteToken.decimals),
+            }).div(relativePrice)
+
+            /**
+         * Special case: no target yet
+         *
+         * target_ratio = X / Q
+         * => X = target_ratio * Q
+         */
+            if (currentRatio.eq(0)) {
+                const swappedAmount = targetRatio.mul(amountQuoteInTarget)
+                const usedAmount = swappedAmount.mul(relativePrice)
+
+                return {
+                    swappedAmount: toRawAmount({
+                        amount: swappedAmount,
+                        decimals: new Decimal(targetToken.decimals),
+                    }),
+                    usedAmount: toRawAmount({
+                        amount: usedAmount,
+                        decimals: new Decimal(quoteToken.decimals),
+                    }),
+                }
+            }
+
+            /**
+         * General case:
+         *
+         * target_ratio = (A + X) / (A + Q)
+         * current_ratio = A / (A + Q)
+         *
+         * => X = A * (target_ratio / current_ratio - 1)
+         */
+            const amountTarget = currentRatio
+                .mul(amountQuoteInTarget)
+                .div(new Decimal(1).sub(currentRatio))
+
+            const swappedAmount = amountTarget
+                .mul(targetRatio.div(currentRatio).sub(1))
+
+            const usedAmount = swappedAmount.mul(relativePrice)
+
+            return {
+                swappedAmount: toRawAmount({
+                    amount: swappedAmount,
+                    decimals: new Decimal(targetToken.decimals),
+                }),
+                usedAmount: toRawAmount({
+                    amount: usedAmount,
+                    decimals: new Decimal(quoteToken.decimals),
+                }),
+            }
+        }
+
+        /**
+     * Case 2: Target → Quote (decrease target exposure)
+     *
+     * current_ratio = A / (A + Q)
+     * target_ratio  = (A - X) / (A + Q)
+     *
+     * => X = A * (1 - target_ratio / current_ratio)
+     */
+        else {
+        // Normalize target amount
+            const amountTarget = toDecimalAmount({
+                amount,
+                decimals: new Decimal(targetToken.decimals),
+            })
+
+            /**
+         * X = A * (1 - targetRatio / currentRatio)
+         */
+            const swappedAmount = amountTarget
+                .mul(new Decimal(1).sub(targetRatio.div(currentRatio)))
+
+            const usedAmount = swappedAmount.mul(relativePrice)
+
+            return {
+                swappedAmount: toRawAmount({
+                    amount: swappedAmount,
+                    decimals: new Decimal(
+                        quoteToken.decimals
+                    ),
+                }),
+                usedAmount: toRawAmount({
+                    amount: usedAmount,
+                    decimals: new Decimal(
+                        targetToken.decimals
+                    ),
+                }),
+            }
+        }
     }
 }
 
 export interface ComputeSwapAmountsParams {
-    targetTokenId: TokenId
-    quoteTokenId: TokenId
+    targetToken: TokenSchema
+    quoteToken: TokenSchema
+    gasToken: TokenSchema
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount: BN
 }
 
+export enum SwapDirection {
+    TargetToQuote = "targetToQuote",
+    QuoteToTarget = "quoteToTarget",
+    TargetToGas = "targetToGas",
+    QuoteToGas = "quoteToGas",
+}
+
+export interface SwapStep {
+    direction: SwapDirection
+    usedAmount: BN
+    swappedAmount: BN
+}
 export interface ComputeSwapAmountsResult {
-    // processSwaps, means whether we need to swap between target to quote or quote to target
-    processSwaps: boolean
-    quoteRatioStatus: QuoteRatioStatus
-    // Quote ratio
-    quoteRatioResult: ComputeQuoteRatioResult
-    // Amounts of tokens that will be swapped
-    swapTargetToQuoteAmount?: BN
-    swapQuoteToTargetAmount?: BN
-    swapTargetToGasAmount?: BN
-    swapQuoteToGasAmount?: BN
-    // Estimated amounts of tokens that will be swapped
-    estimatedSwappedQuoteAmount?: BN
-    estimatedSwappedTargetAmount?: BN
-    estimatedSwappedGasAmount?: BN
-    // Remaining amounts of tokens after swapping
-    remainingTargetBalanceAmount?: BN
-    remainingQuoteBalanceAmount?: BN
+    swapSteps: Array<SwapStep>
 }
 
 export interface ComputeQuoteRatioParams {
-    targetTokenId: TokenId
-    quoteTokenId: TokenId
+    targetToken: TokenSchema
+    quoteToken: TokenSchema
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
 }
 
 export interface ComputeQuoteRatioResult {
     quoteRatio: Decimal
-    totalBalanceAmountInQuote: Decimal
-    targetBalanceAmountInQuote: Decimal
-    quoteBalanceAmountInQuote: Decimal
+    totalBalanceInTargetAmount: Decimal
+    targetBalanceInTargetAmount: Decimal
+    quoteBalanceInTargetAmount: Decimal
     relativePrice: Decimal
 }
 
@@ -543,14 +808,33 @@ export interface ExtendedComputeSwapAmountsParams extends ComputeSwapAmountsPara
     quoteRatioResult: ComputeQuoteRatioResult
 }
 
-export interface ComputeSwapResultParams {
+export interface ComputeAmountOutByPriceParams {
     amountIn: BN
     tokenIn: TokenSchema
     tokenOut: TokenSchema
     relativePrice: Decimal
 }
 
-export interface ComputeSwapResult {
+export interface ComputeAmountOutByPriceResult {
     swapTargetToQuoteAmount: BN
     swapQuoteToTargetAmount: BN
+}
+
+export enum RebalanceDirection {
+    QuoteToTarget = "quoteToTarget",
+    TargetToQuote = "targetToQuote",
+}
+export interface ComputeRebalanceAmountParams {
+    amount: BN
+    currentRatio: Decimal
+    targetRatio: Decimal
+    targetToken: TokenSchema
+    quoteToken: TokenSchema
+    direction: RebalanceDirection
+    relativePrice: Decimal
+}
+
+export interface ComputeRebalanceAmountResult {
+    swappedAmount: BN
+    usedAmount: BN
 }
