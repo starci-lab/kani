@@ -72,7 +72,7 @@ implements OnModuleInit, OnApplicationBootstrap
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
                 dex: {
-                    $eq: createObjectId(DexId.FlowX),
+                    $eq: createObjectId(DexId.FlowX).toString(),
                 },
             }
         )
@@ -153,6 +153,7 @@ implements OnModuleInit, OnApplicationBootstrap
             getClmmPoolsDetail: { items },
         } = data
         const promises: Array<Promise<void>> = []
+        const snapshotAt = this.dayjsService.now()
         for (const item of items) {
             promises.push(
                 (async () => {
@@ -171,7 +172,7 @@ implements OnModuleInit, OnApplicationBootstrap
                                 volume24H: new Decimal(item.stats.volume24H).toString(),
                                 tvl: item.stats.totalLiquidityInUSD,
                                 apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
-                                snapshotAt: this.dayjsService.now(),
+                                snapshotAt,
                             },
                         }
                     )

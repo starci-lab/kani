@@ -71,7 +71,9 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     async onModuleInit() {
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
-                dex: createObjectId(DexId.Orca),
+                dex: {
+                    $eq: createObjectId(DexId.Orca).toString(),
+                },
             }
         )
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(

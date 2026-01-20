@@ -641,4 +641,150 @@ export const envConfig = () => ({
         maxStalledCount: parseEnvInt("BULLMQ_MAX_STALLED_COUNT",
             1),
     },
+    // k8s
+    k8s: {
+        podNamespace: parseEnvString("K8S_POD_NAMESPACE",
+            "default"),
+        executor: {
+            probes: {
+                liveness: {
+                    failureThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD",
+                        3),
+                    httpGet: {
+                        path: parseEnvString("K8S_EXECUTOR_PROBES_LIVENESS_PATH",
+                            "/api/terminus/liveness"),
+                        port: parseEnvString("K8S_EXECUTOR_PROBES_LIVENESS_PORT",
+                            "app"),
+                        scheme: parseEnvString("K8S_EXECUTOR_PROBES_LIVENESS_SCHEME",
+                            "HTTP"),
+                    },
+                    initialDelaySeconds: parseEnvMs("K8S_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS",
+                        "30s"),
+                    periodSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS",
+                        "10s"),
+                    successThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD",
+                        1),
+                    timeoutSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS",
+                        "5s"),
+                },
+                readiness: {
+                    failureThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_READINESS_FAILURE_THRESHOLD",
+                        3),
+                    httpGet: {
+                        path: parseEnvString("K8S_EXECUTOR_PROBES_READINESS_PATH",
+                            "/api/terminus/readiness"),
+                        port: parseEnvString("K8S_EXECUTOR_PROBES_READINESS_PORT",
+                            "app"),
+                        scheme: parseEnvString("K8S_EXECUTOR_PROBES_READINESS_SCHEME",
+                            "HTTP"),
+                    },
+                    initialDelaySeconds: parseEnvMs("K8S_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS",
+                        "30s"),
+                    periodSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS",
+                        "10s"),
+                    successThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD",
+                        1),
+                    timeoutSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS",
+                        "5s"),
+                },
+                startup: {
+                    failureThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_STARTUP_FAILURE_THRESHOLD",
+                        3),
+                    httpGet: {
+                        path: parseEnvString("K8S_EXECUTOR_PROBES_STARTUP_PATH",
+                            "/api/terminus/startup"),
+                        port: parseEnvString("K8S_EXECUTOR_PROBES_STARTUP_PORT",
+                            "app"),
+                        scheme: parseEnvString("K8S_EXECUTOR_PROBES_STARTUP_SCHEME",
+                            "HTTP"),
+                    },
+                    initialDelaySeconds: parseEnvMs("K8S_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS",
+                        "30s"),
+                    periodSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS",
+                        "10s"),
+                    successThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD",
+                        1),
+                    timeoutSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS",
+                        "5s"),
+                }
+            },
+            image: parseEnvString("K8S_EXECUTOR_IMAGE",
+                "nginx:alpine"),
+            replicas: parseEnvInt("K8S_EXECUTOR_REPLICAS",
+                1),
+            envVarsConfigMapName: parseEnvString("K8S_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME",
+                "kani-executor-service-env-vars"),
+            envVarsSecretName: parseEnvString("K8S_EXECUTOR_ENV_VARS_SECRET_NAME",
+                "kani-executor-service-env-vars"),
+            resources: {
+                limits: {
+                    cpu: parseEnvString("K8S_EXECUTOR_RESOURCES_LIMITS_CPU",
+                        "512m"),
+                    memory: parseEnvString("K8S_EXECUTOR_RESOURCES_LIMITS_MEMORY",
+                        "1Gi"),
+                },
+                requests: {
+                    cpu: parseEnvString("K8S_EXECUTOR_RESOURCES_REQUESTS_CPU",
+                        "64m"),
+                    memory: parseEnvString("K8S_EXECUTOR_RESOURCES_REQUESTS_MEMORY",
+                        "128Mi"),
+                },
+            },
+            nodePool: parseEnvString("K8S_EXECUTOR_NODE_POOL",
+                "kani-primary-node-pool"),
+        },
+    },
+    // resources config
+    resources: {
+        ram: {
+            threadhold: parseEnvInt("RAM_ALLOCATION_THRESHOLD",
+                250), 
+        }, 
+        disk: {
+            threadholdPercent: parseEnvFloat("DISK_ALLOCATION_THRESHOLD",
+                0.8), 
+        }, 
+    },
+    // ports config
+    ports: {
+        kaniInterface: parseEnvInt("KANI_INTERFACE_PORT",
+            3001),
+        kaniCoordinator: parseEnvInt("KANI_COORDINATOR_PORT",
+            3002),
+        kaniExecutor: parseEnvInt("KANI_EXECUTOR_PORT",
+            3003),
+        botCoordinator: parseEnvInt("BOT_COORDINATOR_PORT",
+            3002),
+        botExecutor: parseEnvInt("BOT_EXECUTOR_PORT",
+            3004),
+        kaniObserver: parseEnvInt("KANI_OBSERVER_PORT",
+            3005),
+    },
+    // cors config
+    cors: {
+        origins: Array.from({
+            length: 10 
+        },
+        (_, i) =>
+            parseEnvString(`CORS_ORIGIN_${i + 1}`,
+                "")
+        ).filter((url) => url !== ""),
+    },
+    // coordinator config
+    coordinator: {
+        version: parseEnvString("COORDINATOR_VERSION",
+            "1"),
+        streams: {
+            mongoDbChangeStream: {
+                timeout: parseEnvMs(
+                    "COORDINATOR_STREAMS_MONGO_DB_CHANGE_STREAM_TIMEOUT",
+                    "30m"
+                ),
+            },
+        },
+        interval: {
+            load: parseEnvMs("COORDINATOR_INTERVAL_LOAD",
+                "10s"),
+        }
+    },
 })

@@ -64,7 +64,7 @@ implements OnModuleInit, OnApplicationBootstrap
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
             {
                 dex: {
-                    $eq: createObjectId(DexId.Orca),
+                    $eq: createObjectId(DexId.Orca).toString(),
                 },
             }
         )
@@ -83,6 +83,7 @@ implements OnModuleInit, OnApplicationBootstrap
         const { data } = await this.axios.get<WhirlpoolPoolResult>(
             `${this.url}?addresses=${poolAddresses}`,
         )
+        const snapshotAt = this.dayjsService.now()
         const promises: Array<Promise<void>> = []
         for (const item of data.data) {
             promises.push(
@@ -100,7 +101,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         volume24H: new Decimal(volume).toString(),
                         tvl: new Decimal(tvlUsdc).toString(),
                         apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
-                        snapshotAt: this.dayjsService.now(),
+                        snapshotAt,
                     }
                     await this.cacheService.set(
                         {

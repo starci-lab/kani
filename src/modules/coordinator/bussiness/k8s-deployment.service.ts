@@ -1,18 +1,41 @@
-import { Injectable } from "@nestjs/common"
-import { envConfig } from "@modules/env"
-import { InjectKubernetesApi } from "@modules/kubernetes"
-import { AppsV1Api } from "@kubernetes/client-node"
-import { createExecutorName } from "../utils"
-import { AsyncService, DayjsService } from "@modules/mixin"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { PatchOperation } from "../types"
-import { K8SLabelsService } from "./k8s-labels.service"
-import { ExecutorSchema } from "@modules/databases"
-import { K8SAnnotationKey, K8SAnnotationsService } from "./k8s-annotations.service"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    InjectKubernetesApi 
+} from "@modules/kubernetes"
+import {
+    AppsV1Api 
+} from "@kubernetes/client-node"
+import {
+    createExecutorName 
+} from "../utils"
+import {
+    AsyncService, DayjsService 
+} from "@modules/mixin"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    PatchOperation 
+} from "../types"
+import {
+    K8SLabelsService 
+} from "./k8s-labels.service"
+import {
+    ExecutorSchema 
+} from "@modules/databases"
+import {
+    K8SAnnotationKey, K8SAnnotationsService 
+} from "./k8s-annotations.service"
 
 const escapeJsonPointerSegment = (value: string): string => {
-    return value.replace(/~/g, "~0").replace(/\//g, "~1")
+    return value.replace(/~/g,
+        "~0").replace(/\//g,
+        "~1")
 }
 
 /**
@@ -29,8 +52,7 @@ export class K8SDeploymentService  {
     constructor(
         @InjectKubernetesApi()
         private readonly kubernetesApi: AppsV1Api,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
         private readonly k8sLabelsService: K8SLabelsService,
@@ -51,7 +73,7 @@ export class K8SDeploymentService  {
             this.kubernetesApi.readNamespacedDeployment(
                 {
                     name,
-                    namespace: envConfig().kubernetes.podNamespace,
+                    namespace: envConfig().k8s.podNamespace,
                 }
             )
         )
@@ -88,11 +110,11 @@ export class K8SDeploymentService  {
         const annotations = this.k8sAnnotationsService.getAnnotations(executor)
     
         await this.kubernetesApi.createNamespacedDeployment({
-            namespace: envConfig().kubernetes.podNamespace,
+            namespace: envConfig().k8s.podNamespace,
             body: {
                 metadata: {
                     name,
-                    namespace: envConfig().kubernetes.podNamespace,
+                    namespace: envConfig().k8s.podNamespace,
                     labels,
                     annotations,
                 },
@@ -125,7 +147,7 @@ export class K8SDeploymentService  {
                             containers: [
                                 {
                                     name,
-                                    image: envConfig().k8s.kaniExecutor.image,
+                                    image: envConfig().k8s.executor.image,
                                     env: [
                                         {
                                             name: "POD_NAME",
@@ -138,7 +160,7 @@ export class K8SDeploymentService  {
                                         },
                                         {
                                             name: "POD_NAMESPACE",
-                                            value: envConfig().kubernetes.podNamespace,
+                                            value: envConfig().k8s.podNamespace,
                                         },
                                         {
                                             name: "EXECUTOR_ID",
@@ -148,50 +170,50 @@ export class K8SDeploymentService  {
                                     envFrom: [
                                         {
                                             configMapRef: {
-                                                name: envConfig().k8s.kaniExecutor.envVarsConfigMapName,
+                                                name: envConfig().k8s.executor.envVarsConfigMapName,
                                             }
                                         },
                                         {
                                             secretRef: {
-                                                name: envConfig().k8s.kaniExecutor.envVarsSecretName,
+                                                name: envConfig().k8s.executor.envVarsSecretName,
                                             }
                                         }
                                     ],
                                     livenessProbe: {
-                                        failureThreshold: envConfig().k8s.kaniExecutor.probes.liveness.failureThreshold,
+                                        failureThreshold: envConfig().k8s.executor.probes.liveness.failureThreshold,
                                         httpGet: {
-                                            path: envConfig().k8s.kaniExecutor.probes.liveness.httpGet.path,
-                                            port: envConfig().k8s.kaniExecutor.probes.liveness.httpGet.port,
-                                            scheme: envConfig().k8s.kaniExecutor.probes.liveness.httpGet.scheme,
+                                            path: envConfig().k8s.executor.probes.liveness.httpGet.path,
+                                            port: envConfig().k8s.executor.probes.liveness.httpGet.port,
+                                            scheme: envConfig().k8s.executor.probes.liveness.httpGet.scheme,
                                         },
-                                        initialDelaySeconds: envConfig().k8s.kaniExecutor.probes.liveness.initialDelaySeconds,
-                                        periodSeconds: envConfig().k8s.kaniExecutor.probes.liveness.periodSeconds,
-                                        successThreshold: envConfig().k8s.kaniExecutor.probes.liveness.successThreshold,
-                                        timeoutSeconds: envConfig().k8s.kaniExecutor.probes.liveness.timeoutSeconds,
+                                        initialDelaySeconds: envConfig().k8s.executor.probes.liveness.initialDelaySeconds,
+                                        periodSeconds: envConfig().k8s.executor.probes.liveness.periodSeconds,
+                                        successThreshold: envConfig().k8s.executor.probes.liveness.successThreshold,
+                                        timeoutSeconds: envConfig().k8s.executor.probes.liveness.timeoutSeconds,
                                     },
                                     readinessProbe: {
-                                        failureThreshold: envConfig().k8s.kaniExecutor.probes.readiness.failureThreshold,
+                                        failureThreshold: envConfig().k8s.executor.probes.readiness.failureThreshold,
                                         httpGet: {
-                                            path: envConfig().k8s.kaniExecutor.probes.readiness.httpGet.path,
-                                            port: envConfig().k8s.kaniExecutor.probes.readiness.httpGet.port,
-                                            scheme: envConfig().k8s.kaniExecutor.probes.readiness.httpGet.scheme,
+                                            path: envConfig().k8s.executor.probes.readiness.httpGet.path,
+                                            port: envConfig().k8s.executor.probes.readiness.httpGet.port,
+                                            scheme: envConfig().k8s.executor.probes.readiness.httpGet.scheme,
                                         },
-                                        initialDelaySeconds: envConfig().k8s.kaniExecutor.probes.readiness.initialDelaySeconds,
-                                        periodSeconds: envConfig().k8s.kaniExecutor.probes.readiness.periodSeconds,
-                                        successThreshold: envConfig().k8s.kaniExecutor.probes.readiness.successThreshold,
-                                        timeoutSeconds: envConfig().k8s.kaniExecutor.probes.readiness.timeoutSeconds,
+                                        initialDelaySeconds: envConfig().k8s.executor.probes.readiness.initialDelaySeconds,
+                                        periodSeconds: envConfig().k8s.executor.probes.readiness.periodSeconds,
+                                        successThreshold: envConfig().k8s.executor.probes.readiness.successThreshold,
+                                        timeoutSeconds: envConfig().k8s.executor.probes.readiness.timeoutSeconds,
                                     },
                                     startupProbe: {
-                                        failureThreshold: envConfig().k8s.kaniExecutor.probes.startup.failureThreshold,
+                                        failureThreshold: envConfig().k8s.executor.probes.startup.failureThreshold,
                                         httpGet: {
-                                            path: envConfig().k8s.kaniExecutor.probes.startup.httpGet.path,
-                                            port: envConfig().k8s.kaniExecutor.probes.startup.httpGet.port,
-                                            scheme: envConfig().k8s.kaniExecutor.probes.startup.httpGet.scheme,
+                                            path: envConfig().k8s.executor.probes.startup.httpGet.path,
+                                            port: envConfig().k8s.executor.probes.startup.httpGet.port,
+                                            scheme: envConfig().k8s.executor.probes.startup.httpGet.scheme,
                                         },
-                                        initialDelaySeconds: envConfig().k8s.kaniExecutor.probes.startup.initialDelaySeconds,
-                                        periodSeconds: envConfig().k8s.kaniExecutor.probes.startup.periodSeconds,
-                                        successThreshold: envConfig().k8s.kaniExecutor.probes.startup.successThreshold,
-                                        timeoutSeconds: envConfig().k8s.kaniExecutor.probes.startup.timeoutSeconds,
+                                        initialDelaySeconds: envConfig().k8s.executor.probes.startup.initialDelaySeconds,
+                                        periodSeconds: envConfig().k8s.executor.probes.startup.periodSeconds,
+                                        successThreshold: envConfig().k8s.executor.probes.startup.successThreshold,
+                                        timeoutSeconds: envConfig().k8s.executor.probes.startup.timeoutSeconds,
                                     },
                                     ports: [
                                         {
@@ -202,12 +224,12 @@ export class K8SDeploymentService  {
                                     ],
                                     resources: {
                                         limits: {
-                                            cpu: envConfig().k8s.kaniExecutor.resources.limits.cpu,
-                                            memory: envConfig().k8s.kaniExecutor.resources.limits.memory,
+                                            cpu: envConfig().k8s.executor.resources.limits.cpu,
+                                            memory: envConfig().k8s.executor.resources.limits.memory,
                                         },
                                         requests: {
-                                            cpu: envConfig().k8s.kaniExecutor.resources.requests.cpu,
-                                            memory: envConfig().k8s.kaniExecutor.resources.requests.memory,
+                                            cpu: envConfig().k8s.executor.resources.requests.cpu,
+                                            memory: envConfig().k8s.executor.resources.requests.memory,
                                         },
                                     },
                                     securityContext: {
@@ -227,38 +249,45 @@ export class K8SDeploymentService  {
                                     volumeMounts: [
                                         // terraform
                                         {
-                                            mountPath: envConfig().mountPath.terraform.gcpCloudKmsCryptoOperatorSa.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.gcpCloudKmsCryptoOperatorSa.replace(/\/data$/,
+                                                ""),
                                             name: "gcp-cloud-kms-crypto-operator-sa",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.terraform.gcpCryptoKeyEdSa.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.gcpCryptoKeyEdSa.replace(/\/data$/,
+                                                ""),
                                             name: "gcp-crypto-key-ed-sa",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.terraform.gcpGoogleDriveUdSa.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.gcpGoogleDriveUdSa.replace(/\/data$/,
+                                                ""),
                                             name: "gcp-google-drive-ud-sa",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.terraform.encryptedAesKey.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.encryptedAesKey.replace(/\/data$/,
+                                                ""),
                                             name: "aes",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.terraform.encryptedJwtSecretKey.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.terraform.encryptedJwtSecretKey.replace(/\/data$/,
+                                                ""),
                                             name: "jwt-secret",
                                             readOnly: true
                                         },
                                         // config
                                         {
-                                            mountPath: envConfig().mountPath.config.app.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.config.app.replace(/\/data$/,
+                                                ""),
                                             name: "app",
                                             readOnly: true
                                         },
                                         {
-                                            mountPath: envConfig().mountPath.config.rpcs.replace(/\/data$/, ""),
+                                            mountPath: envConfig().mountPath.config.rpcs.replace(/\/data$/,
+                                                ""),
                                             name: "rpcs",
                                             readOnly: true
                                         },
@@ -266,7 +295,7 @@ export class K8SDeploymentService  {
                                 },
                             ],
                             nodeSelector: {
-                                "doks.digitalocean.com/node-pool": envConfig().k8s.kaniExecutor.nodePool,
+                                "doks.digitalocean.com/node-pool": envConfig().k8s.executor.nodePool,
                             },
                             securityContext: {
                                 fsGroup: 1001,
@@ -323,7 +352,7 @@ export class K8SDeploymentService  {
                 },
             },
         })
-        this.winstonLogger.verbose(
+        this.winstonService.log(
             WinstonLog.DeploymentCreated, 
             {
                 executorId: executor.id,
@@ -356,12 +385,13 @@ export class K8SDeploymentService  {
         ]
         await this.kubernetesApi.patchNamespacedDeployment({
             name,
-            namespace: envConfig().kubernetes.podNamespace,
+            namespace: envConfig().k8s.podNamespace,
             body: patchBody,
         }
         )
-        this.winstonLogger.verbose(
-            WinstonLog.DeploymentPatched, {
+        this.winstonService.log(
+            WinstonLog.DeploymentPatched,
+            {
                 executorId: executor.id,
             }
         )
@@ -383,11 +413,12 @@ export class K8SDeploymentService  {
         await this.kubernetesApi.deleteNamespacedDeployment(
             {
                 name,
-                namespace: envConfig().kubernetes.podNamespace,
+                namespace: envConfig().k8s.podNamespace,
             }
         )
-        this.winstonLogger.verbose(
-            WinstonLog.DeploymentDeleted, {
+        this.winstonService.log(
+            WinstonLog.DeploymentDeleted,
+            {
                 executorId,
             }
         )

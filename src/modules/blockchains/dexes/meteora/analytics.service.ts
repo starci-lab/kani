@@ -91,6 +91,7 @@ implements OnModuleInit, OnApplicationBootstrap
         }
         const { data } = await this.axios.get<PoolAnalyticsResult>(baseURL.toString())
         const promises: Array<Promise<void>> = []
+        const snapshotAt = this.dayjsService.now()
         for (const group of data.groups) {
             for (const pair of group.pairs) {
                 promises.push(
@@ -110,7 +111,7 @@ implements OnModuleInit, OnApplicationBootstrap
                                     volume24H: new Decimal(pair.trade_volume_24h).toString(),
                                     tvl: pair.liquidity,
                                     apr24H: new Decimal(pair.apr).div(100).toString(),
-                                    snapshotAt: this.dayjsService.now(),
+                                    snapshotAt,
                                 },
                             }
                         )

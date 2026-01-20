@@ -2,7 +2,7 @@ import {
     EventName
 } from "./enum"
 import {
-    ClmmLiquidityPoolsSyncedEventPayload, DlmmLiquidityPoolsSyncedEventPayload, 
+    ClmmLiquidityPoolsSyncedEventPayload, CoordinatorExecutorCreatedEventPayload, CoordinatorExecutorDeletedEventPayload, CoordinatorExecutorUpdatedEventPayload, DlmmLiquidityPoolsSyncedEventPayload, 
     ReinitializeBalancersEventPayload
 } from "./types"
 import {
@@ -33,5 +33,29 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as ReinitializeBalancersEventPayload
+    },
+    [EventName.CoordinatorExecutorCreated]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as CoordinatorExecutorCreatedEventPayload
+    },
+    [EventName.CoordinatorExecutorDeleted]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as CoordinatorExecutorDeletedEventPayload
+    },
+    [EventName.CoordinatorExecutorUpdated]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as CoordinatorExecutorUpdatedEventPayload
     },
 }

@@ -1,9 +1,18 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./runtimes.module-definition"
-import { RuntimesFactoryService } from "./runtimes-factory.service"
-import { RuntimeContextService } from "./runtime.context-service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./runtimes.module-definition"
+import {
+    RuntimesFactoryService 
+} from "./runtimes-factory.service"
+import {
+    RuntimeContextService 
+} from "./runtime.context-service"
 
-@Module({})
+@Module({
+})
 export class RuntimesModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -15,7 +24,8 @@ export class RuntimesModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }

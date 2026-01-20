@@ -1,16 +1,32 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     HealthCheckResult, 
     HealthCheckService, 
     HealthIndicatorFunction 
 } from "@nestjs/terminus"
-import { DependencyName } from "./config"
-import { KafkaService } from "./kafka.service"
-import { MongodbService } from "./mongodb.service"
-import { RedisService } from "./redis.service"
-import { DependencyNotFoundException } from "@modules/exceptions"
-import { DiskService } from "./disk.service"
-import { MemoryService } from "./memory.service"
+import {
+    DependencyName 
+} from "./config"
+import {
+    KafkaService 
+} from "./kafka.service"
+import {
+    MongodbService 
+} from "./mongodb.service"
+import {
+    RedisService 
+} from "./redis.service"
+import {
+    DependencyNotFoundException 
+} from "@modules/exceptions"
+import {
+    DiskService 
+} from "./disk.service"
+import {
+    MemoryService 
+} from "./memory.service"
 
 @Injectable()
 export class DependenciesService {
@@ -23,10 +39,10 @@ export class DependenciesService {
         private readonly healthCheckService: HealthCheckService,
     ) {}
 
-    async ping(deps: Array<DependencyName>): Promise<HealthCheckResult> {
+    async ping(dependencyNames: Array<DependencyName>): Promise<HealthCheckResult> {
         const promises: Array<HealthIndicatorFunction> = []
-        for (const dep of deps) {
-            switch (dep) {
+        for (const dependencyName of dependencyNames) {
+            switch (dependencyName) {
             case DependencyName.Kafka:
                 promises.push(() => this.kafkaService.pingKafka())
                 break
@@ -52,7 +68,9 @@ export class DependenciesService {
                 promises.push(() => this.memoryService.pingMemory())
                 break
             default:
-                throw new DependencyNotFoundException(dep, `Unknown dependency: ${dep}`)
+                throw new DependencyNotFoundException({
+                    dependencyName,
+                })
             }
         }
         return this.healthCheckService.check(promises)

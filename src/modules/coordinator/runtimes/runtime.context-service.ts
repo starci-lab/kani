@@ -1,15 +1,30 @@
-import { ExecutorSchema, InjectPrimaryMongoose } from "@modules/databases"
-import { envConfig } from "@modules/env"
-import { CoordinatorExecutorUpdatedEvent, createEventName, EventName } from "@modules/event"
-import { Injectable, Scope, Inject } from "@nestjs/common"
-import { REQUEST } from "@nestjs/core"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { Connection } from "mongoose"
-import { K8SDeploymentService, K8SServiceService, K8SAnnotationKey } from "../bussiness"
-import { AsyncService, RetryService } from "@modules/mixin"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-
+import {
+    ExecutorSchema, InjectPrimaryMongoose 
+} from "@modules/databases"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    CoordinatorExecutorUpdatedEventPayload, EventEmitterService, EventName 
+} from "@modules/event"
+import {
+    Injectable, Scope, Inject 
+} from "@nestjs/common"
+import {
+    REQUEST 
+} from "@nestjs/core"
+import {
+    Connection 
+} from "mongoose"
+import {
+    K8SDeploymentService, K8SServiceService, K8SAnnotationKey 
+} from "../bussiness"
+import {
+    AsyncService, RetryService 
+} from "@modules/mixin"
+import {
+    WinstonService 
+} from "@modules/winston"
 @Injectable(
     {
         scope: Scope.REQUEST,
@@ -32,17 +47,16 @@ export class RuntimeContextService {
         private readonly k8sServiceService: K8SServiceService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly eventEmitter2: EventEmitter2,
+        private readonly eventEmitterService: EventEmitterService,
         private readonly asyncService: AsyncService,
         private readonly retryService: RetryService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
     ) { }
 
     private readonly executorUpdatedHandler = (
-        event: CoordinatorExecutorUpdatedEvent,
+        payload: CoordinatorExecutorUpdatedEventPayload,
     ) => {
-        this.refreshExecutor(event)
+        this.refreshExecutor(payload)
     }
 
     /**
@@ -52,10 +66,10 @@ export class RuntimeContextService {
      * - Otherwise, fetch the executor from the database.
      */
     private async refreshExecutor(
-        event?: CoordinatorExecutorUpdatedEvent,
+        payload?: CoordinatorExecutorUpdatedEventPayload,
     ) {
-        if (event) {
-            this.executor = event
+        if (payload) {
+            this.executor = payload
         } else {
             const executor = await this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)
@@ -87,26 +101,12 @@ export class RuntimeContextService {
                 // set the maximum retry time to infinity
                 options: {
                     maxRetryTime: Infinity,
-                    onFailedAttempt: (context) => {
-                        this.logger.error(
-                            WinstonLog.CoordinatorRuntimeInitializationFailed, 
-                            { 
-                                error: context.error.message, 
-                                executorId: this.context.id 
-                            }
-                        )
-                    },
                 },
                 // set the action to initialize the runtime
                 action: async () => {
                     // subscribe to executor updated events
-                    this.eventEmitter2.on(
-                        createEventName(
-                            EventName.CoordinatorExecutorUpdated,
-                            {
-                                id: this.context.id
-                            }
-                        ),
+                    this.eventEmitterService.on(
+                        EventName.CoordinatorExecutorUpdated,
                         this.executorUpdatedHandler,
                     )
                     // load the initial executor state
@@ -162,7 +162,7 @@ export class RuntimeContextService {
         // if the executor version or coordinator version is not the same as the cached executor, delete the deployment and create a new one
         if (
             executorVersion !== this.executor.version ||
-            coordinatorVersion !== envConfig().version.coordinator
+            coordinatorVersion !== envConfig().coordinator.version
         ) {
             await this.k8sDeploymentService.deleteDeployment(this.executor.id)
             await this.k8sDeploymentService.createDeployment(this.executor)
@@ -203,7 +203,7 @@ export class RuntimeContextService {
 
         if (
             executorVersion !== this.executor.version ||
-            coordinatorVersion !== envConfig().version.coordinator
+            coordinatorVersion !== envConfig().coordinator.version
         ) {
             await this.k8sServiceService.deleteService(this.executor.id)
             await this.k8sServiceService.createService(this.executor)
@@ -220,13 +220,8 @@ export class RuntimeContextService {
             return
         }
         // unsubscribe from the executor updated event
-        this.eventEmitter2.off(
-            createEventName(
-                EventName.CoordinatorExecutorUpdated,
-                {
-                    id: this.context.id
-                }
-            ),
+        this.eventEmitterService.off(
+            EventName.CoordinatorExecutorUpdated,
             this.executorUpdatedHandler,
         )
         if (withDestroy) {

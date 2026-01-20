@@ -100,6 +100,7 @@ implements OnModuleInit, OnApplicationBootstrap
             },
         )
         const promises: Array<Promise<void>> = []
+        const snapshotAt = this.dayjsService.now()
         for (const item of list) {
             promises.push(
                 (async () => {
@@ -117,7 +118,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         volume24H: vol,
                         tvl,
                         apr24H: apr,
-                        snapshotAt: this.dayjsService.now(),
+                        snapshotAt,
                     }
                     await this.cacheService.set(
                         {

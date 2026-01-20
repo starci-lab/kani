@@ -312,3 +312,156 @@ export interface PythRestPricesFetchFailedMessage {
     error: string
     expectedCount: number
 }
+
+/**
+ * Cleanup Deployments Error Message
+ */
+export interface CleanupDeploymentsErrorMessage {
+    error: string
+}
+
+/**
+ * Cleanup Services Error Message
+ */
+export interface CleanupServicesErrorMessage {
+    error: string
+}
+
+/**
+ * Deployment Created Message
+ */
+export interface DeploymentCreatedMessage {
+    executorId: string
+}
+
+/**
+ * Deployment Deleted Message
+ */
+export interface DeploymentDeletedMessage {
+    executorId: string
+}
+
+/**
+ * Deployment Patched Message
+ */
+export interface DeploymentPatchedMessage {
+    executorId: string
+}
+
+/**
+ * Deployment Patch Failed Message
+ */
+export interface DeploymentPatchFailedMessage {
+    executorId: string
+    error: string
+}
+
+/**
+ * Deployment Create Failed Message
+ */
+export interface DeploymentCreateFailedMessage {
+    executorId: string
+    error: string
+}
+
+/**
+ * Deployment Delete Failed Message
+ */
+export interface DeploymentDeleteFailedMessage {
+    executorId: string
+    error: string
+}
+
+/**
+ * Service Created Message
+ */
+export interface ServiceCreatedMessage {
+    executorId: string
+}
+
+/**
+ * Service Deleted Message
+ */
+export interface ServiceDeletedMessage {
+    executorId: string
+}
+
+/**
+ * Service Create Failed Message
+ */
+export interface ServiceCreateFailedMessage {
+    executorId: string
+    error: string
+}
+
+/**
+ * Service Delete Failed Message
+ */
+export interface ServiceDeleteFailedMessage {
+    executorId: string
+    error: string
+}
+
+/**
+ * Coordinator Executors Created Message
+ */
+export interface CoordinatorExecutorsCreatedMessage {
+    ids: Array<string>
+}
+
+/**
+ * Coordinator Executors Deleted Message
+ */
+export interface CoordinatorExecutorsDeletedMessage {
+    ids: Array<string>
+}
+
+/**
+ * Coordinator Executors Updated Message
+ */
+export interface CoordinatorExecutorsUpdatedMessage {
+    ids: Array<string>
+}
+
+/**
+ * Coordinator Primary Mongo Db Change Stream Error Message
+ */
+export interface CoordinatorPrimaryMongoDbChangeStreamErrorMessage {
+    streamName: string
+    error: string
+}
+
+/**
+ * Coordinator Primary Mongo Db Change Stream Close Message
+ */
+export interface CoordinatorPrimaryMongoDbChangeStreamCloseMessage {
+    streamName: string
+}
+
+/**
+ * Coordinator Primary Mongo Db Change Stream Started Message
+ */
+export interface CoordinatorPrimaryMongoDbChangeStreamStartedMessage {
+    streamName: string
+}
+
+/**
+ * Coordinator Primary Mongo Db Change Stream Executor Created Message
+ */
+export interface CoordinatorPrimaryMongoDbChangeStreamExecutorCreatedMessage {
+    id: string
+}
+
+/**
+ * Coordinator Primary Mongo Db Change Stream Executor Deleted Message
+ */
+export interface CoordinatorPrimaryMongoDbChangeStreamExecutorDeletedMessage {
+    id: string
+}
+
+/**
+ * Coordinator Primary Mongo Db Change Stream Executor Updated Message
+ */
+export interface CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage {
+    id: string
+}

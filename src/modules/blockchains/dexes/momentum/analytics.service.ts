@@ -82,6 +82,7 @@ implements OnModuleInit, OnApplicationBootstrap
         const { data } = await this.axios.get<LiquidityPoolsApiResult>(
             this.url,
         )
+        const snapshotAt = this.dayjsService.now()
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
             promises.push(
@@ -103,7 +104,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         volume24H: new Decimal(volume24h).toString(),
                         tvl: new Decimal(tvl).toString(),
                         apr24H: new Decimal(total).div(365).div(100).toString(),
-                        snapshotAt: this.dayjsService.now(),
+                        snapshotAt,
                     }
                     await this.cacheService.set(
                         {

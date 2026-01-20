@@ -1,8 +1,18 @@
-import { Injectable } from "@nestjs/common"
-import { HealthIndicatorResult, MicroserviceHealthIndicator, MicroserviceHealthIndicatorOptions } from "@nestjs/terminus"
-import { MicroserviceOptions, Transport } from "@nestjs/microservices"
-import { DependencyName } from "./config"
-import { envConfig } from "@modules/env"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    HealthIndicatorResult, MicroserviceHealthIndicator, MicroserviceHealthIndicatorOptions 
+} from "@nestjs/terminus"
+import {
+    MicroserviceOptions, Transport 
+} from "@nestjs/microservices"
+import {
+    DependencyName 
+} from "./config"
+import {
+    envConfig 
+} from "@modules/env"
 
 type RedisTarget = "cache" | "adapter" | "bullmq" | "throttler"
 

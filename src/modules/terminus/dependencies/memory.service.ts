@@ -1,7 +1,15 @@
-import { Injectable } from "@nestjs/common"
-import { MemoryHealthIndicator, HealthIndicatorResult } from "@nestjs/terminus"
-import { DependencyName } from "./config"
-import { envConfig } from "@modules/env"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    MemoryHealthIndicator, HealthIndicatorResult 
+} from "@nestjs/terminus"
+import {
+    DependencyName 
+} from "./config"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class MemoryService {

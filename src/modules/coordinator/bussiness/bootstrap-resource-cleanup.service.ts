@@ -1,15 +1,34 @@
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import { K8SDeploymentService } from "./k8s-deployment.service"
-import { K8SServiceService } from "./k8s-service.service"
-import { InjectKubernetesApi, InjectKubernetesCoreApi } from "@modules/kubernetes"
-import { AppsV1Api, CoreV1Api } from "@kubernetes/client-node"
-import { envConfig } from "@modules/env"
-import { ExecutorsLoaderService } from "../loaders"
-import { createExecutorName, isCreatedExecutorName, parseExecutorId } from "../utils"
-import { AsyncService, ReadinessWatcherFactoryService } from "@modules/mixin"
-import { WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { InjectWinston } from "@modules/winston"
+import {
+    Injectable, OnModuleInit 
+} from "@nestjs/common"
+import {
+    K8SDeploymentService 
+} from "./k8s-deployment.service"
+import {
+    K8SServiceService 
+} from "./k8s-service.service"
+import {
+    InjectKubernetesApi, InjectKubernetesCoreApi 
+} from "@modules/kubernetes"
+import {
+    AppsV1Api, CoreV1Api 
+} from "@kubernetes/client-node"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    ExecutorsLoaderService 
+} from "../loaders"
+import {
+    createExecutorName, isCreatedExecutorName, parseExecutorId 
+} from "../utils"
+import {
+    AsyncService, ReadinessWatcherFactoryService 
+} from "@modules/mixin"
+import {
+    WinstonLog, 
+    WinstonService
+} from "@modules/winston"
 
 @Injectable()
 export class BootstrapResourceCleanupService implements OnModuleInit {
@@ -22,8 +41,7 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
         private readonly k8sServiceService: K8SServiceService,
         private readonly executorsLoaderService: ExecutorsLoaderService,
         private readonly asyncService: AsyncService,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
     ) {}
  
@@ -48,7 +66,7 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             // retrieve all deployments
             const deployments = await this.kubernetesApi.listNamespacedDeployment(
                 {
-                    namespace: envConfig().kubernetes.podNamespace,
+                    namespace: envConfig().k8s.podNamespace,
                 }
             )
             // filter out the deployments that are not in the database
@@ -76,8 +94,9 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
                 )
             )
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.CleanupDeploymentsError, {
+            this.winstonService.log(
+                WinstonLog.CleanupDeploymentsError,
+                {
                     error: error.message,
                 }
             )
@@ -94,7 +113,7 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             // retrieve all services
             const services = await this.kubernetesCoreApi.listNamespacedService(
                 {
-                    namespace: envConfig().kubernetes.podNamespace,
+                    namespace: envConfig().k8s.podNamespace,
                 }
             )
             // filter out the services that are not in the database
@@ -120,8 +139,9 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
                 )
             )
         } catch (error) {
-            this.winstonLogger.error(
-                WinstonLog.CleanupServicesError, {
+            this.winstonService.log(
+                WinstonLog.CleanupServicesError,
+                {
                     error: error.message,
                 }
             )

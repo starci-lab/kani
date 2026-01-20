@@ -1,9 +1,19 @@
 
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./coordinator.module-definition"
-import { LoadersModule } from "./loaders"
-import { BussinessModule } from "./bussiness"
-import { RuntimesModule } from "./runtimes"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./coordinator.module-definition"
+import {
+    LoadersModule 
+} from "./loaders"
+import {
+    BussinessModule 
+} from "./bussiness"
+import {
+    RuntimesModule 
+} from "./runtimes"
 
 @Module({
     imports: [

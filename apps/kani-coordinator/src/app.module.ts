@@ -1,17 +1,48 @@
-import { Module } from "@nestjs/common"
-import { APP_FILTER } from "@nestjs/core"
-import { EnvModule } from "@modules/env"
-import { WinstonLevel, WinstonModule } from "@modules/winston"
-import { CoordinatorModule } from "@modules/coordinator"
-import { PrimaryMongoDbModule } from "@modules/databases"
-import { MixinModule } from "@modules/mixin"
-import { SemaModule } from "@modules/lock"
-import { EventEmitterModule } from "@nestjs/event-emitter"
-import { KubernetesModule } from "@modules/kubernetes"
-import { DependencyName, TerminusModule } from "@modules/terminus"
-import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
-import { StreamAsyncIteratorModule } from "@modules/stream-async-iterator"
-import { ScheduleModule } from "@nestjs/schedule"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    APP_FILTER 
+} from "@nestjs/core"
+import {
+    EnvModule 
+} from "@modules/env"
+import {
+    WinstonLevel, WinstonModule 
+} from "@modules/winston"
+import {
+    CoordinatorModule 
+} from "@modules/coordinator"
+import {
+    PrimaryMongoDbModule 
+} from "@modules/databases"
+import {
+    MixinModule 
+} from "@modules/mixin"
+import {
+    SemaModule 
+} from "@modules/lock"
+import {
+    EventEmitterModule 
+} from "@nestjs/event-emitter"
+import {
+    KubernetesModule 
+} from "@modules/kubernetes"
+import {
+    DependencyName, TerminusModule 
+} from "@modules/terminus"
+import {
+    SentryCatchAllExceptionFilter, SentryModule 
+} from "@modules/sentry"
+import {
+    StreamAsyncIteratorModule 
+} from "@modules/stream-async-iterator"
+import {
+    ScheduleModule 
+} from "@nestjs/schedule"
+import {
+    EventModule 
+} from "@modules/event"
 
 @Module({
     imports: [
@@ -20,6 +51,9 @@ import { ScheduleModule } from "@nestjs/schedule"
             isGlobal: true,
         }),
         EventEmitterModule.forRoot(),
+        EventModule.register({
+            isGlobal: true,
+        }),
         WinstonModule.register({
             isGlobal: true,
             appName: "Kani Coordinator",

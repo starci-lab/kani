@@ -1,15 +1,34 @@
-import { Injectable } from "@nestjs/common"
-import { envConfig } from "@modules/env"
-import { CoreV1Api } from "@kubernetes/client-node"
-import { createExecutorName } from "../utils"
-import { InjectWinston } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { InjectKubernetesCoreApi } from "@modules/kubernetes"
-import { WinstonLog } from "@modules/winston"
-import { AsyncService } from "@modules/mixin"
-import { ExecutorSchema } from "@modules/databases"
-import { K8SAnnotationsService } from "./k8s-annotations.service"
-import { K8SLabelsService } from "./k8s-labels.service"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    CoreV1Api 
+} from "@kubernetes/client-node"
+import {
+    createExecutorName 
+} from "../utils"
+import {
+    WinstonService, 
+    WinstonLog,
+} from "@modules/winston"
+import {
+    InjectKubernetesCoreApi 
+} from "@modules/kubernetes"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    ExecutorSchema 
+} from "@modules/databases"
+import {
+    K8SAnnotationsService 
+} from "./k8s-annotations.service"
+import {
+    K8SLabelsService 
+} from "./k8s-labels.service"
 
 /**
  * Manages Kubernetes `Service` resources for executor instances.
@@ -24,8 +43,7 @@ export class K8SServiceService {
     constructor(
         @InjectKubernetesCoreApi()
         private readonly kubernetesCoreApi: CoreV1Api,
-        @InjectWinston()
-        private readonly winstonLogger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly asyncService: AsyncService,
         private readonly k8sAnnotationsService: K8SAnnotationsService,
         private readonly k8sLabelsService: K8SLabelsService,
@@ -41,7 +59,7 @@ export class K8SServiceService {
         const [service] = await this.asyncService.resolveTuple(
             this.kubernetesCoreApi.readNamespacedService({
                 name,
-                namespace: envConfig().kubernetes.podNamespace,
+                namespace: envConfig().k8s.podNamespace,
             }),
         )
         return service
@@ -63,11 +81,11 @@ export class K8SServiceService {
         const annotations = this.k8sAnnotationsService.getAnnotations(executor)
         // we create the service
         await this.kubernetesCoreApi.createNamespacedService({
-            namespace: envConfig().kubernetes.podNamespace,
+            namespace: envConfig().k8s.podNamespace,
             body: {
                 metadata: {
                     name,
-                    namespace: envConfig().kubernetes.podNamespace,
+                    namespace: envConfig().k8s.podNamespace,
                     labels,
                     annotations,
                 },
@@ -85,9 +103,12 @@ export class K8SServiceService {
                 },
             },
         })
-        this.winstonLogger.verbose(WinstonLog.ServiceCreated, {
-            executorId: executor.id,
-        })
+        this.winstonService.log(
+            WinstonLog.ServiceCreated,
+            {
+                executorId: executor.id,
+            }
+        )
     }
 
     /**
@@ -99,10 +120,12 @@ export class K8SServiceService {
         const name = createExecutorName(executorId)
         await this.kubernetesCoreApi.deleteNamespacedService({
             name,
-            namespace: envConfig().kubernetes.podNamespace,
+            namespace: envConfig().k8s.podNamespace,
         })
-        this.winstonLogger.verbose(WinstonLog.ServiceDeleted, {
-            executorId,
-        })
+        this.winstonService.log(
+            WinstonLog.ServiceDeleted,
+            {
+                executorId,
+            })
     }
 }

@@ -20,17 +20,14 @@ export class FeeToAddressNotFoundException extends AbstractException {
 }
 
 /** Thrown when fee rate is not found */
-export interface FeeRateNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    feeRate: number
-}
+export type FeeRateNotFoundExceptionMetadata = AbstractExceptionMetadata
 export class FeeRateNotFoundException extends AbstractException {
     constructor(
-        { feeRate, originalError }: FeeRateNotFoundExceptionMetadata
+        { originalError }: FeeRateNotFoundExceptionMetadata
     ) {
         super("Fee rate not found",
             "FEE_RATE_NOT_FOUND_EXCEPTION",
             {
-                feeRate,
                 originalError,
             })
     }

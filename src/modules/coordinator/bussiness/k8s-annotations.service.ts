@@ -1,7 +1,15 @@
-import { ExecutorSchema } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { DayjsService } from "@modules/mixin"
-import { envConfig } from "@modules/env"
+import {
+    ExecutorSchema 
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * Builds Kubernetes annotations for executor-related resources.
@@ -27,14 +35,13 @@ export class K8SAnnotationsService {
      * @returns The annotations.
      */
     public getAnnotations(executor: ExecutorSchema): Record<K8SAnnotationKey, string> {
-        const config = envConfig()
         const nowIso = this.dayjsService.now().toISOString()
         return {
             [K8SAnnotationKey.ExecutorId]: String(executor.id),
             [K8SAnnotationKey.ExecutorVersion]: String(executor.version ?? "unknown"),
             [K8SAnnotationKey.CreatedBy]: "coordinator",
             [K8SAnnotationKey.CreatedAt]: nowIso,
-            [K8SAnnotationKey.CoordinatorVersion]: String(config.version.coordinator ?? "unknown"),
+            [K8SAnnotationKey.CoordinatorVersion]: String(envConfig().coordinator.version ?? "unknown"),
             // Rollout trigger timestamp; `patchDeployment()` updates this to force a new ReplicaSet.
             [K8SAnnotationKey.PatchAt]: nowIso,
         }

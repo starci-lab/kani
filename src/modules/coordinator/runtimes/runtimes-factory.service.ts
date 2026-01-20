@@ -1,11 +1,27 @@
-import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
-import { ContextIdFactory, ModuleRef } from "@nestjs/core"
-import { AsyncService } from "@modules/mixin"
-import { ExecutorsLoaderService } from "../loaders"
-import { ExecutorSchema } from "@modules/databases"
-import { CoordinatorExecutorCreatedEvent, EventName, CoordinatorExecutorDeletedEvent } from "@modules/event"
-import { OnEvent } from "@nestjs/event-emitter"
-import { RuntimeContext, RuntimeContextService } from "./runtime.context-service"
+import {
+    Injectable, OnApplicationBootstrap, OnApplicationShutdown 
+} from "@nestjs/common"
+import {
+    ContextIdFactory, ModuleRef 
+} from "@nestjs/core"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    ExecutorsLoaderService 
+} from "../loaders"
+import {
+    ExecutorSchema 
+} from "@modules/databases"
+import {
+    CoordinatorExecutorCreatedEventPayload, EventName, CoordinatorExecutorDeletedEventPayload 
+} from "@modules/event"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    RuntimeContext, RuntimeContextService 
+} from "./runtime.context-service"
 
 /**
  * Factory service responsible for creating and managing runtime instances for executors.
@@ -66,9 +82,9 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         EventName.CoordinatorExecutorCreated
     )
     async handleCoordinatorExecutorCreated(
-        payload: CoordinatorExecutorCreatedEvent
+        payload: CoordinatorExecutorCreatedEventPayload
     ) {
-        await this.createRuntime({ id: payload.id })
+        await this.createRuntime(payload)
     }
     
     /**
@@ -96,7 +112,9 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
                 // Register a request-scoped context with the executor ID
                 // This allows request-scoped services to access the executor ID
                 this.moduleRef.registerRequestByContextId<RuntimeContext>(
-                    { id: executor.id?.toString() || "" }, 
+                    {
+                        id: executor.id?.toString() || "" 
+                    }, 
                     contextId
                 )
                 // Resolve the RuntimeRequestService within the executor's context
@@ -119,7 +137,7 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         EventName.CoordinatorExecutorDeleted
     )
     async handleExecutorDeleted(
-        { id}: CoordinatorExecutorDeletedEvent
+        { id}: CoordinatorExecutorDeletedEventPayload
     ) {
         const runtime = this.runtimes.get(id)
         if (!runtime) {

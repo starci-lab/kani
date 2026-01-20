@@ -3,7 +3,7 @@ import {
     ChainId 
 } from "@modules/typedefs"
 import {
-    toScaledBN 
+    bnMulDecimal
 } from "@modules/utils"
 import {
     Injectable 
@@ -15,6 +15,9 @@ import {
 import {
     MountStorageService 
 } from "@modules/filesystem"
+import {
+    FeeRateNotFoundException 
+} from "@exceptions"
 
 @Injectable()
 export class FeeService {
@@ -30,10 +33,15 @@ export class FeeService {
     ): SplitAmountResult {
         const feeRate = this.mountStorageService.appConfig.fees.openPosition[chainId].feeRate
         if (!feeRate) {
-            throw new Error("Fee rate not found")
+            throw new FeeRateNotFoundException({
+            })
         }
-        const feeAmount = toScaledBN(amount,
-            new Decimal(feeRate))
+        const feeAmount = bnMulDecimal(
+            {
+                bn: amount,
+                decimal: new Decimal(feeRate),
+            }
+        )
         const remainingAmount = amount.sub(feeAmount)
         return {
             feeAmount,

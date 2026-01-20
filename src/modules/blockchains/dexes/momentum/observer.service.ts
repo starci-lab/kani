@@ -71,15 +71,21 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     ) {}
 
     async onModuleInit() {
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find({
-            dex: createObjectId(DexId.Momentum),
-        })
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
+            {
+                dex: {
+                    $eq: createObjectId(DexId.Momentum).toString(),
+                },
+            }
+        )
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "momentum-observer-liquidity-pools", 
             {
-                indices: ["poolAddress",
+                indices: [
+                    "poolAddress",
                     "displayId",
-                    "id"],
+                    "id"
+                ],
             })
         this.liquidityPoolCollection.insert(liquidityPools)
     }

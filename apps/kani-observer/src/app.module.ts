@@ -39,7 +39,7 @@ import {
     CacheModule 
 } from "@modules/cache"
 import {
-    EventModule, EventName, KafkaMode 
+    EventModule, EventName 
 } from "@modules/event"
 import {
     GcpModule 
@@ -114,11 +114,9 @@ import {
             isGlobal: true,
             kafka: {
                 createTopics: true,
-                modes: [
-                    KafkaMode.Producer, 
-                    KafkaMode.Consumer
-                ],
-                kafkaTopics: [
+                useConsume: true,
+                usePublish: true,
+                topics: [
                     EventName.ReinitializeBalancers,
                 ],
             },

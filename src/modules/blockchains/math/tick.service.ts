@@ -96,21 +96,28 @@ export class TickMathService {
             const usedBPercent = new Decimal(amountB.toString())
                 .div(quoteBalanceAmount.toString())
             // bottleneck principle: the score is the minimum of the used percentages
-            const utilizationPercentage = Decimal.min(usedAPercent,
-                usedBPercent)
+            const utilizationPercentage = Decimal.min(
+                usedAPercent,
+                usedBPercent
+            )
             // add the candidate range to the list
-            candidateRanges.push({
-                tickLower: new BN(tickLower.toString()),
-                tickUpper: new BN(tickUpper.toString()),
-                utilizationPercentage,
-            })
+            candidateRanges.push(
+                {
+                    tickLower: new BN(tickLower.toString()),
+                    tickUpper: new BN(tickUpper.toString()),
+                    utilizationPercentage,
+                }
+            )
         }
         // select the candidate range with the highest score
         return candidateRanges.sort(
             (
                 candidateRangeA, 
                 candidateRangeB
-            ) => candidateRangeB.utilizationPercentage.sub(candidateRangeA.utilizationPercentage).toNumber())[0]
+            ) => candidateRangeB
+                .utilizationPercentage
+                .sub(candidateRangeA.utilizationPercentage)
+                .toNumber())[0]
     }
 }
 

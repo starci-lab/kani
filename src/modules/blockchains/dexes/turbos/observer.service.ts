@@ -160,7 +160,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                 this.cacheService.set(
                     {
                         key: CacheKey.DynamicClmmLiquidityPoolInfo,
-                        args: [liquidityPool.displayId],
+                        args: [liquidityPool.id],
                         cacheResult: parsed,
                     }
                 ),

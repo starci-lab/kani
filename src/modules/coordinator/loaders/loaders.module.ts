@@ -1,8 +1,15 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./loaders.module-definition"
-import { ExecutorsLoaderService } from "./executors-loader.service"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./loaders.module-definition"
+import {
+    ExecutorsLoaderService 
+} from "./executors-loader.service"
 
-@Module({})
+@Module({
+})
 export class LoadersModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -13,7 +20,8 @@ export class LoadersModule extends ConfigurableModuleClass {
         ]
         return {
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }

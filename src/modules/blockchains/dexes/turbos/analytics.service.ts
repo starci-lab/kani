@@ -86,7 +86,7 @@ implements OnModuleInit, OnApplicationBootstrap {
         }
         const { data } = await this.axios.get<Array<TurbosPool>>(baseURL.toString())
         const promises: Array<Promise<void>> = []
-        const now = this.dayjsService.now()
+        const snapshotAt = this.dayjsService.now()
         for (const item of data) {
             promises.push(
                 (async () => {
@@ -97,7 +97,7 @@ implements OnModuleInit, OnApplicationBootstrap {
                         return
                     }
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        snapshotAt: now,
+                        snapshotAt,
                         fee24H: new Decimal(item.fee_24h_usd).toString(),
                         volume24H: new Decimal(item.volume_24h_usd).toString(),
                         tvl: new Decimal(item.liquidity_usd).toString(),

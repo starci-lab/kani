@@ -41,7 +41,28 @@ import {
     EjectRpcFatalErrorMessage,
     EjectRpcIgnorableErrorMessage,
     PythRestPricesFetchedMessage,
-    PythRestPricesFetchFailedMessage
+    PythRestPricesFetchFailedMessage,
+    CleanupDeploymentsErrorMessage,
+    CleanupServicesErrorMessage,
+    DeploymentCreatedMessage,
+    DeploymentDeletedMessage,
+    DeploymentPatchFailedMessage,
+    DeploymentPatchedMessage,
+    DeploymentCreateFailedMessage,
+    ServiceCreatedMessage,
+    DeploymentDeleteFailedMessage,
+    ServiceDeletedMessage,
+    ServiceCreateFailedMessage,
+    ServiceDeleteFailedMessage,
+    CoordinatorExecutorsDeletedMessage,
+    CoordinatorExecutorsUpdatedMessage,
+    CoordinatorExecutorsCreatedMessage,
+    CoordinatorPrimaryMongoDbChangeStreamStartedMessage,
+    CoordinatorPrimaryMongoDbChangeStreamCloseMessage,
+    CoordinatorPrimaryMongoDbChangeStreamErrorMessage,
+    CoordinatorPrimaryMongoDbChangeStreamExecutorCreatedMessage,
+    CoordinatorPrimaryMongoDbChangeStreamExecutorDeletedMessage,
+    CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage
 } from "./types"
 
 export const configMap = {
@@ -201,7 +222,7 @@ export const configMap = {
     // Pyth Subscriptions Closed
     [WinstonLog.PythSubscriptionClosed]: {
         name: WinstonLog.PythSubscriptionClosed,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Error,
         loki: true,
         messageType: {
         } as PythSubscriptionsClosedMessage,
@@ -321,7 +342,7 @@ export const configMap = {
     // Websocket Subscription Closed
     [WinstonLog.WebsocketSubscriptionClosed]: {
         name: WinstonLog.WebsocketSubscriptionClosed,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Error,
         loki: true,
         messageType: {
         } as WebsocketSubscriptionClosedMessage,
@@ -381,5 +402,173 @@ export const configMap = {
         loki: true,
         messageType: {
         } as PythRestPricesFetchFailedMessage,
+    },
+    // Cleanup Deployments Error
+    [WinstonLog.CleanupDeploymentsError]: {
+        name: WinstonLog.CleanupDeploymentsError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CleanupDeploymentsErrorMessage,
+    },
+    // Cleanup Services Error
+    [WinstonLog.CleanupServicesError]: {
+        name: WinstonLog.CleanupServicesError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CleanupServicesErrorMessage,
+    },
+    // Deployment Created
+    [WinstonLog.DeploymentCreated]: {
+        name: WinstonLog.DeploymentCreated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as DeploymentCreatedMessage,
+    },
+    // Deployment Deleted
+    [WinstonLog.DeploymentDeleted]: {
+        name: WinstonLog.DeploymentDeleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as DeploymentDeletedMessage,
+    },
+    // Deployment Patched
+    [WinstonLog.DeploymentPatched]: {
+        name: WinstonLog.DeploymentPatched,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as DeploymentPatchedMessage,
+    },
+    // Deployment Patch Failed
+    [WinstonLog.DeploymentPatchFailed]: {
+        name: WinstonLog.DeploymentPatchFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as DeploymentPatchFailedMessage,
+    },  
+    // Deployment Create Failed
+    [WinstonLog.DeploymentCreateFailed]: {
+        name: WinstonLog.DeploymentCreateFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as DeploymentCreateFailedMessage,
+    },
+    // Deployment Delete Failed
+    [WinstonLog.DeploymentDeleteFailed]: {
+        name: WinstonLog.DeploymentDeleteFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as DeploymentDeleteFailedMessage,
+    },
+    // Service Created
+    [WinstonLog.ServiceCreated]: {
+        name: WinstonLog.ServiceCreated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ServiceCreatedMessage,
+    },
+    // Service Deleted
+    [WinstonLog.ServiceDeleted]: {
+        name: WinstonLog.ServiceDeleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ServiceDeletedMessage,
+    },
+    // Service Create Failed
+    [WinstonLog.ServiceCreateFailed]: {
+        name: WinstonLog.ServiceCreateFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ServiceCreateFailedMessage,
+    },
+    // Service Delete Failed
+    [WinstonLog.ServiceDeleteFailed]: {
+        name: WinstonLog.ServiceDeleteFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ServiceDeleteFailedMessage,
+    },
+    // Coordinator Executors Created
+    [WinstonLog.CoordinatorExecutorsCreated]: {
+        name: WinstonLog.CoordinatorExecutorsCreated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorExecutorsCreatedMessage,
+    },
+    // Coordinator Executors Deleted
+    [WinstonLog.CoordinatorExecutorsDeleted]: {
+        name: WinstonLog.CoordinatorExecutorsDeleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorExecutorsDeletedMessage,
+    },
+    // Coordinator Executors Updated
+    [WinstonLog.CoordinatorExecutorsUpdated]: {
+        name: WinstonLog.CoordinatorExecutorsUpdated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorExecutorsUpdatedMessage,
+    },
+    // Coordinator Primary Mongo Db Change Stream Error
+    [WinstonLog.CoordinatorPrimaryMongoDbChangeStreamError]: {
+        name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CoordinatorPrimaryMongoDbChangeStreamErrorMessage,
+    },
+    // Coordinator Primary Mongo Db Change Stream Close
+    [WinstonLog.CoordinatorPrimaryMongoDbChangeStreamClose]: {
+        name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamClose,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorPrimaryMongoDbChangeStreamCloseMessage,
+    },
+    // Coordinator Primary Mongo Db Change Stream Started
+    [WinstonLog.CoordinatorPrimaryMongoDbChangeStreamStarted]: {
+        name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamStarted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorPrimaryMongoDbChangeStreamStartedMessage,
+    },
+    // Coordinator Primary Mongo Db Change Stream Executor Created
+    [WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorCreated]: {
+        name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorCreated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorPrimaryMongoDbChangeStreamExecutorCreatedMessage,
+    },
+    // Coordinator Primary Mongo Db Change Stream Executor Deleted
+    [WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorDeleted]: {
+        name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorDeleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorPrimaryMongoDbChangeStreamExecutorDeletedMessage,
+    },
+    // Coordinator Primary Mongo Db Change Stream Executor Updated
+    [WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorUpdated]: {
+        name: WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorUpdated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage,
     },
 }

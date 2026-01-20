@@ -106,4 +106,20 @@ export class EventEmitterService implements OnModuleInit {
             })
         }
     }
+
+    on<T extends EventName>(
+        event: T,
+        listener: (payload: typeof configMap[T]["eventPayload"]) => void,
+    ) {
+        this.eventEmitter.on(event,
+            listener)
+    }
+
+    off<T extends EventName>(
+        event: T,
+        listener: (payload: typeof configMap[T]["eventPayload"]) => void,
+    ) {
+        this.eventEmitter.off(event,
+            listener)
+    }
 }

@@ -2,20 +2,41 @@ import {
     ExecutorSchema,
     InjectPrimaryMongoose,
 } from "@modules/databases"
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
-import { Connection, Types } from "mongoose"
-import { ResumeToken } from "mongodb"
-import { Interval } from "@nestjs/schedule"
-import { ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
-import { SemaService } from "@modules/lock"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { CoordinatorExecutorUpdatedEvent, createEventName, EventName } from "@modules/event"
-import { MongoDBChangeStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
+import {
+    Injectable, OnApplicationBootstrap, OnModuleInit 
+} from "@nestjs/common"
+import {
+    Connection, Types 
+} from "mongoose"
+import {
+    ResumeToken 
+} from "mongodb"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    ReadinessWatcherFactoryService, RetryService 
+} from "@modules/mixin"
+import {
+    SemaService 
+} from "@modules/lock"
+import {
+    EventEmitterService,
+    EventName
+} from "@modules/event"
+import {
+    MongoDBChangeStreamConnection, StreamAsyncIteratorService 
+} from "@modules/stream-async-iterator"
 import _ from "lodash"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { Sema } from "async-sema"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonService, WinstonLog 
+} from "@modules/winston"
+import {
+    Sema 
+} from "async-sema"
 
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
@@ -27,18 +48,18 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly eventEmitter2: EventEmitter2,
+        private readonly eventEmitterService: EventEmitterService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly retryService: RetryService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly winstonService: WinstonService,
         private readonly semaService: SemaService,
     ) { }
 
     async onModuleInit() {
         this.readinessWatcherFactoryService.createWatcher(ExecutorsLoaderService.name)
         // init semaphore before any load/observe work uses it
-        this.sema = this.semaService.sema(ExecutorsLoaderService.name, 1)
+        this.sema = this.semaService.sema(ExecutorsLoaderService.name,
+            1)
         // load executors
         await this.load()
         // set readiness
@@ -61,17 +82,21 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 .model<ExecutorSchema>(ExecutorSchema.name)
                 // query all executors (include fields used for update detection)
             const executorRaws = await model
-                .find({}, { _id: 1, version: 1 })
-                .lean()
-                .exec()
+                .find({
+                },
+                {
+                    _id: 1, version: 1 
+                })
                 // map the executors to a partial executor schema
             const newExecutors: Array<ExecutorSchema> = executorRaws.map((executor) => executor.toJSON<ExecutorSchema>()) ?? []
             // get the old and new executor ids
             const oldExecutorIds = Array.from(this.executors.keys())
             const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
             // get the added and removed executor ids
-            const createdExecutorIds = _.difference(newExecutorIds, oldExecutorIds)
-            const deletedExecutorIds = _.difference(oldExecutorIds, newExecutorIds)
+            const createdExecutorIds = _.difference(newExecutorIds,
+                oldExecutorIds)
+            const deletedExecutorIds = _.difference(oldExecutorIds,
+                newExecutorIds)
             // detect updated executors by comparing snapshots (excluding created/deleted)
             const updatedExecutorIds = newExecutors
                 .map((executor) => {
@@ -81,54 +106,71 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     const old = this.executors.get(id)
                     if (!old) return null
                     // Compare only the fields we fetched for update detection.
-                    const oldSnapshot = _.pick(old, ["version"])
-                    const newSnapshot = _.pick(executor, ["version"])
-                    return _.isEqual(oldSnapshot, newSnapshot) ? null : id
+                    const oldSnapshot = _.pick(old,
+                        ["version"])
+                    const newSnapshot = _.pick(executor,
+                        ["version"])
+                    return _.isEqual(oldSnapshot,
+                        newSnapshot) ? null : id
                 })
                 .filter((id): id is string => Boolean(id))
                 // check if there are created executors
             if (createdExecutorIds.length > 0) {
-                this.logger.verbose(
-                    WinstonLog.CoordinatorExecutorsCreated, {
+                this.winstonService.log(
+                    WinstonLog.CoordinatorExecutorsCreated,
+                    {
                         ids: createdExecutorIds,
                     }
                 )
                 for (const id of createdExecutorIds) {
-                    this.eventEmitter2.emit(EventName.CoordinatorExecutorCreated, { id })
+                    this.eventEmitterService.emit(
+                        EventName.CoordinatorExecutorCreated,
+                        {
+                            id 
+                        }
+                    )
                 }
             }
             // check if there are deleted executors
             if (deletedExecutorIds.length > 0) {
-                this.logger.verbose(
-                    WinstonLog.CoordinatorExecutorsDeleted, {
+                this.winstonService.log(
+                    WinstonLog.CoordinatorExecutorsDeleted,
+                    {
                         ids: deletedExecutorIds,
                     }
                 )
                 for (const id of deletedExecutorIds) {
-                    this.eventEmitter2.emit(EventName.CoordinatorExecutorDeleted, { id })
+                    this.eventEmitterService.emit(
+                        EventName.CoordinatorExecutorDeleted,
+                        {
+                            id 
+                        }
+                    )
                 }
             }
             // check if there are updated executors
             if (updatedExecutorIds.length > 0) {
-                this.logger.verbose(
-                    WinstonLog.CoordinatorExecutorsUpdated, {
+                this.winstonService.log(
+                    WinstonLog.CoordinatorExecutorsUpdated,
+                    {
                         ids: updatedExecutorIds,
                     }
                 )
                 const updatedRaws = await model
                     .find(
-                        { _id: { $in: updatedExecutorIds.map((id) => new Types.ObjectId(id)) } },
+                        {
+                            _id: {
+                                $in: updatedExecutorIds.map((id) => new Types.ObjectId(id)) 
+                            } 
+                        },
                     )
                     .lean()
                     .exec()
                 for (const raw of updatedRaws) {
                     const data = model.hydrate(raw).toJSON<ExecutorSchema>()
-                    const event: CoordinatorExecutorUpdatedEvent = data
-                    this.eventEmitter2.emit(
-                        createEventName(
-                            EventName.CoordinatorExecutorUpdated, { id: data.id }
-                        ),
-                        event,
+                    this.eventEmitterService.emit(
+                        EventName.CoordinatorExecutorUpdated,
+                        data
                     )
                 }
             }
@@ -136,7 +178,8 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             this.executors = new Map(
                 newExecutors
                     .filter((executor) => Boolean(executor.id))
-                    .map((executor) => [executor.id!, executor]),
+                    .map((executor) => [executor.id!,
+                        executor]),
             )
         } finally {
             if (token) {
@@ -168,7 +211,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout.mongoDbChangeStream.loader,
+                            envConfig().coordinator.streams.mongoDbChangeStream.timeout,
                         )
                     }
                     // create the get resume token function
@@ -178,7 +221,11 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                         pipeline: [
                             {
                                 $match: {
-                                    operationType: { $in: ["insert", "delete", "update"] },
+                                    operationType: {
+                                        $in: ["insert",
+                                            "delete",
+                                            "update"] 
+                                    },
                                 },
                             },
                         ],
@@ -194,23 +241,26 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             connection: streamConnection,
                             signal: abortController.signal,
                             onError: async (error) => {
-                                this.logger.error(
-                                    WinstonLog.MongooseChangeStreamError, {
+                                this.winstonService.log(
+                                    WinstonLog.CoordinatorPrimaryMongoDbChangeStreamError,
+                                    {
                                         streamName: "executors-loader",
                                         error: error.message,
                                     })
                             },
                             onClose: async () => {
-                                this.logger.error(
-                                    WinstonLog.MongooseChangeStreamClose, {
+                                this.winstonService.log(
+                                    WinstonLog.CoordinatorPrimaryMongoDbChangeStreamClose,
+                                    {
                                         streamName: "executors-loader",
                                     }
                                 )
 
                             },
                             onOpen: async () => {
-                                this.logger.info(
-                                    WinstonLog.MongooseChangeStreamStarted, {
+                                this.winstonService.log(
+                                    WinstonLog.CoordinatorPrimaryMongoDbChangeStreamStarted,
+                                    {
                                         streamName: "executors-loader",
                                     }
                                 )
@@ -229,47 +279,57 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                             switch (change.operationType) {
                             case "insert": {
                                 const data = model.hydrate(change.fullDocument).toJSON() as ExecutorSchema
-                                this.logger.verbose(
-                                    WinstonLog.CoordinatorChangeStreamExecutorCreated, {
+                                this.winstonService.log(
+                                    WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorCreated,
+                                    {
                                         id: data.id,
                                     }
                                 )
                                 if (this.executors.has(data.id)) break
-                                this.executors.set(data.id, data)
-                                this.eventEmitter2.emit(EventName.CoordinatorExecutorCreated, { id: data.id })
+                                this.executors.set(data.id,
+                                    data)
+                                this.eventEmitterService.emit(EventName.CoordinatorExecutorCreated,
+                                    {
+                                        id: data.id 
+                                    })
                                 break
                             }
                             case "delete": {
                                 const id = (change.documentKey._id as Types.ObjectId).toString()
-                                this.logger.verbose(
-                                    WinstonLog.CoordinatorChangeStreamExecutorDeleted, {
+                                this.winstonService.log(
+                                    WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorDeleted,
+                                    {
                                         id,
                                     }
                                 )
                                 this.executors.delete(id)
-                                this.eventEmitter2.emit(EventName.CoordinatorExecutorDeleted, { id })
+                                this.eventEmitterService.emit(EventName.CoordinatorExecutorDeleted,
+                                    {
+                                        id 
+                                    })
                                 break
                             }
                             case "update": {
                                 const data = model.hydrate(change.fullDocument).toJSON<ExecutorSchema>() 
-                                this.logger.verbose(
-                                    WinstonLog.CoordinatorChangeStreamExecutorUpdated, {
+                                this.winstonService.log(
+                                    WinstonLog.CoordinatorPrimaryMongoDbChangeStreamExecutorUpdated,
+                                    {
                                         id: data.id,
                                     }
                                 )
-                                const oldSnapshot = _.pick(this.executors.get(data.id), ["version"])
-                                const newSnapshot = _.pick(data, ["version"])
-                                if (_.isEqual(oldSnapshot, newSnapshot)) {
+                                const oldSnapshot = _.pick(this.executors.get(data.id),
+                                    ["version"])
+                                const newSnapshot = _.pick(data,
+                                    ["version"])
+                                if (_.isEqual(oldSnapshot,
+                                    newSnapshot)) {
                                     break
                                 }
-                                this.executors.set(data.id, data)
-                                const event: CoordinatorExecutorUpdatedEvent = data
-                                this.eventEmitter2.emit(
-                                    createEventName(
-                                        EventName.CoordinatorExecutorUpdated, 
-                                        { id: data.id }
-                                    ),
-                                    event,
+                                this.executors.set(data.id,
+                                    data)
+                                this.eventEmitterService.emit(
+                                    EventName.CoordinatorExecutorUpdated,
+                                    data
                                 )
                                 break
                             }
@@ -288,9 +348,9 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
     }
 
     @Interval(
-        envConfig().timeConfig.interval.coordinator.executorsLoader
+        envConfig().coordinator.interval.load,
     )
-    async handleExecutorsLoaderInterval() {
+    async handleLoadInterval() {
         await this.load()
     }
 }

@@ -4,6 +4,9 @@ import {
 import {
     RpcEjection 
 } from "@modules/databases"
+import {
+    ExecutorSchema 
+} from "@modules/databases"
 
 export type WithId<T> = T & {
     id: string
@@ -11,3 +14,10 @@ export type WithId<T> = T & {
 export type ClmmLiquidityPoolsSyncedEventPayload = WithId<DynamicClmmLiquidityPoolInfoCacheResult>
 export type DlmmLiquidityPoolsSyncedEventPayload = WithId<DynamicDlmmLiquidityPoolInfoCacheResult>
 export type ReinitializeBalancersEventPayload = Array<RpcEjection>
+export interface CoordinatorExecutorCreatedEventPayload {
+    id: string
+}
+export interface CoordinatorExecutorDeletedEventPayload {
+    id: string
+}
+export type CoordinatorExecutorUpdatedEventPayload = ExecutorSchema

@@ -70,7 +70,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
         const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
             {
                 dex: {
-                    $eq: createObjectId(DexId.FlowX),
+                    $eq: createObjectId(DexId.FlowX).toString(),
                 },
             }
         )

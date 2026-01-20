@@ -1,13 +1,23 @@
-import { envConfig } from "@modules/env"
-import { Injectable } from "@nestjs/common"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     HealthIndicatorResult, 
     MicroserviceHealthIndicator, 
     MicroserviceHealthIndicatorOptions 
 } from "@nestjs/terminus"
-import { MicroserviceOptions, Transport } from "@nestjs/microservices"
-import { DependencyName } from "./config"
-import { InstanceIdService } from "@modules/mixin"
+import {
+    MicroserviceOptions, Transport 
+} from "@nestjs/microservices"
+import {
+    DependencyName 
+} from "./config"
+import {
+    InstanceIdService 
+} from "@modules/mixin"
 
 @Injectable()
 export class KafkaService {
