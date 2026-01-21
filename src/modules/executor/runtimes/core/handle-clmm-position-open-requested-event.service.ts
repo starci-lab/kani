@@ -4,6 +4,9 @@ import {
 import {
     Injectable 
 } from "@nestjs/common"
+import {
+    BotSchema 
+} from "@modules/databases"
 
 @Injectable()
 export class HandleClmmPositionOpenRequestedEventService {
@@ -11,6 +14,7 @@ export class HandleClmmPositionOpenRequestedEventService {
     ) {}
 
     process(
+        bot: BotSchema,
         event: ClmmPositionOpenRequestedEventPayload,
     ) {
         console.log(event)

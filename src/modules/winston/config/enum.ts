@@ -72,4 +72,6 @@ export enum WinstonLog {
     ExecutorRuntimeInitializationFailed = "Executor.Runtime.Initialization.Failed",
     CoordinatorRuntimeInitializationFailed = "Coordinator.Runtime.Initialization.Failed",
     ExecutorNotFound = "Executor.Not.Found",
+    ReconcileBalanceEnqueued = "Reconcile.Balance.Enqueued",
+    ReconcileBalanceEnqueueFailed = "Reconcile.Balance.Enqueue.Failed",
 }

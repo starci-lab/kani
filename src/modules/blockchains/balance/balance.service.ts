@@ -72,7 +72,7 @@ import {
     InjectQueue 
 } from "@nestjs/bullmq"
 import {
-    WinstonService, WinstonLog 
+    WinstonService 
 } from "@modules/winston"
 import {
     AsyncService,
@@ -101,84 +101,43 @@ export class BalanceService implements IBalanceService {
         }: EnqueueBalanceRebalancingParams,
     ) {
         /**
-         * Retrieve sema to prevent concurrent actions on the same bot
-         */
-        const lease = this.leaseService.lease(
-            getLeaseKey(LeaseKey.Action,
-                bot.id),
-        )
-        // if the sema is locked, skip the execution
-        if (lease.isLocked()) {
-            // there is a job already running for this bot
-            return
-        }
-        /**
          * Safety check, if the active position is set, return only
          */
         if (bot.activePosition
-            || bot.activePositionLiquidityPool
-            || bot.activePositionLiquidityPoolType
         ) {
             return
         }
-        // try to lock the lease
-        const leaseId = v4()
-        lease.tryLock(leaseId)
         /**
          * Add reconcile balance job to the queue
          */
         const session = await this.connection.startSession()
-        try {
-            await session.withTransaction(async () => {
-                /**
+        await session.withTransaction(async () => {
+            /**
                  * Persist job record.
                  */
-                const [ jobRaw ] = await this.connection.model<JobSchema>(
-                    JobSchema.name
-                ).create(
-                    [
-                        {
-                            bot: bot.id,
-                            type: JobType.ReconcileBalance,
-                            status: JobStatus.Pending,
-                            executor: envConfig().executor.id,
-                            leaseId,
-                        }
-                    ])
-                /**
+            const [ jobRaw ] = await this.connection.model<JobSchema>(
+                JobSchema.name
+            ).create(
+                [
+                    {
+                        bot: bot.id,
+                        type: JobType.ReconcileBalance,
+                        status: JobStatus.Pending,
+                        executor: envConfig().executor.id,
+                    }
+                ])
+            /**
                 * Add reconcile balance job to the queue
                 */
-                await this.reconcileBalanceQueue.add(
-                    v4(),
-                    {
-                        jobId: jobRaw.toJSON().id,
-                        leaseId,
-                        bot,
-                    }
-                )
-                /**
-                * Structured logging for observability.
-                */
-                this.logger.verbose(
-                    WinstonLog.ReconcileBalanceEnqueued,
-                    {
-                        botId: bot.id,
-                    }
-                )
-            }
-            )
-        } catch (error) {
-            // unlock the lease if the job is not enqueued
-            lease.unlock(leaseId)
-            // log the error
-            this.logger.error(
-                WinstonLog.ReconcileBalanceEnqueueFailed,
+            await this.reconcileBalanceQueue.add(
+                v4(),
                 {
+                    jobId: jobRaw.toJSON().id,
                     botId: bot.id,
-                    error: error.message,
                 }
             )
         }
+        )
     }   
 
     async determineReconcileBalancePlan({

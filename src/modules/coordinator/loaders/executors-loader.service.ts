@@ -18,6 +18,9 @@ import {
     ReadinessWatcherFactoryService, RetryService 
 } from "@modules/mixin"
 import {
+    LokiJSService 
+} from "@modules/mixin"
+import {
     SemaService 
 } from "@modules/lock"
 import {
@@ -56,6 +59,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         private readonly retryService: RetryService,
         private readonly winstonService: WinstonService,
         private readonly semaService: SemaService,
+        private readonly lokiJSService: LokiJSService,
     ) { }
 
     async onModuleInit() {
@@ -63,6 +67,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         // init semaphore before any load/observe work uses it
         this.sema = this.semaService.sema(ExecutorsLoaderService.name,
             1)
+        this.executorCollection = await this.lokiJSService.createCollection<ExecutorSchema>(
+            "coordinator-executors",
+            {
+                indices: ["id"],
+            }
+        )
         // load executors
         await this.load()
         // set readiness

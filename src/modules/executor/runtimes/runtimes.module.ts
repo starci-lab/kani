@@ -11,7 +11,10 @@ import {
     RuntimeContextService 
 } from "./runtime.context-service"
 import {
-    HandleClmmPositionOpenRequestedEventService, HandleDlmmPositionOpenRequestedEventService 
+    HandleClmmPositionOpenRequestedEventService, 
+    HandleDlmmPositionOpenRequestedEventService,
+    HandleReconcileBalanceService,
+    LockAuthorityService
 } from "./core"
 
 @Module({
@@ -30,8 +33,10 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 RuntimesFactoryService,
                 RuntimeContextService,
+                LockAuthorityService,
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
+                HandleReconcileBalanceService
             ],
             exports: [
                 RuntimesFactoryService,

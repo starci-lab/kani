@@ -298,6 +298,8 @@ export const envConfig = () => ({
             interval: {
                 refresh: parseEnvMs("EXECUTOR_RUNTIME_INTERVAL_REFRESH",
                     "10s"),
+                reconcileBalance: parseEnvMs("EXECUTOR_RUNTIME_INTERVAL_RECONCILE_BALANCE",
+                    "30s"),
             },
         },
     },

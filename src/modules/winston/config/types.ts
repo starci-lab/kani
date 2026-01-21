@@ -538,3 +538,18 @@ export interface CoordinatorRuntimeInitializationFailedMessage {
 export interface ExecutorNotFoundMessage {
     id: string
 }
+
+/**
+ * Reconcile Balance Enqueue Failed Message
+ */
+export interface ReconcileBalanceEnqueueFailedMessage {
+    botId: string
+    error: string
+}
+
+/**
+ * Reconcile Balance Enqueued Message
+ */
+export interface ReconcileBalanceEnqueuedMessage {
+    botId: string
+}

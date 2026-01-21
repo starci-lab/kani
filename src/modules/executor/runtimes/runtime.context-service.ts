@@ -27,9 +27,9 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    
     HandleClmmPositionOpenRequestedEventService,
-    HandleDlmmPositionOpenRequestedEventService
+    HandleDlmmPositionOpenRequestedEventService,
+    HandleReconcileBalanceService,
 } from "./core"
 
 @Injectable(
@@ -57,6 +57,7 @@ export class RuntimeContextService {
         private readonly winstonService: WinstonService,
         private readonly handleClmmPositionOpenRequestedEventService: HandleClmmPositionOpenRequestedEventService,
         private readonly handleDlmmPositionOpenRequestedEventService: HandleDlmmPositionOpenRequestedEventService,
+        private readonly handleReconcileBalanceService: HandleReconcileBalanceService,
     ) { }
 
     private readonly executorBotUpdatedHandler = (
@@ -86,6 +87,23 @@ export class RuntimeContextService {
             }
             this.bot = bot.toJSON()
         }
+    }
+
+    invokeAndSchedule(
+        interval: number,
+        callback: (bot: BotSchema) => void,
+    ) {
+        setInterval(() => {
+            if (!this.bot) {
+                return
+            }
+            callback(this.bot)
+        },
+        interval)
+        if (!this.bot) {
+            return
+        }
+        callback(this.bot)
     }
 
     /**
@@ -122,14 +140,31 @@ export class RuntimeContextService {
                     this.eventEmitterService.on({
                         event: EventName.ClmmPositionOpenRequested,
                         args: [this.context.id],
-                        listener: (event) => this.handleClmmPositionOpenRequestedEventService.process(event),
+                        listener: (event) => {
+                            if (!this.bot) {
+                                return
+                            }
+                            this.handleClmmPositionOpenRequestedEventService.process(this.bot,
+                                event)
+                        },
                     })
                     // subscribe to dlmm position open requested events
                     this.eventEmitterService.on({
                         event: EventName.DlmmPositionOpenRequested,
                         args: [this.context.id],
-                        listener: (event) => this.handleDlmmPositionOpenRequestedEventService.process(event),
+                        listener: (event) => {
+                            if (!this.bot) {
+                                return
+                            }
+                            this.handleDlmmPositionOpenRequestedEventService.process(this.bot,
+                                event)
+                        },
                     })
+                    // invoke and schedule the reconcile balance service
+                    this.invokeAndSchedule(
+                        envConfig().executor.runtime.interval.reconcileBalance,
+                        (bot) => this.handleReconcileBalanceService.process(bot),
+                    )
                     // gradually load the initial executor state
                     setInterval(() => {
                         this.refreshBot()

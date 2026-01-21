@@ -72,7 +72,9 @@ import {
     ExecutorMongoDbChangeStreamBotUpdatedMessage,
     ExecutorRuntimeInitializationFailedMessage,
     CoordinatorRuntimeInitializationFailedMessage,
-    ExecutorNotFoundMessage
+    ExecutorNotFoundMessage,
+    ReconcileBalanceEnqueueFailedMessage,
+    ReconcileBalanceEnqueuedMessage
 } from "./types"
 
 export const configMap = {
@@ -660,5 +662,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ExecutorNotFoundMessage,
+    },
+    // Reconcile Balance Enqueue Failed
+    [WinstonLog.ReconcileBalanceEnqueueFailed]: {
+        name: WinstonLog.ReconcileBalanceEnqueueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceEnqueueFailedMessage,
+    },
+    // Reconcile Balance Enqueued
+    [WinstonLog.ReconcileBalanceEnqueued]: {
+        name: WinstonLog.ReconcileBalanceEnqueued,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceEnqueuedMessage,
     },
 }
