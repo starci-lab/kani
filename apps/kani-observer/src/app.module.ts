@@ -113,7 +113,7 @@ import {
         EventModule.register({
             isGlobal: true,
             kafka: {
-                createTopics: true,
+                createTopicsIfNotExists: true,
                 useConsume: true,
                 usePublish: true,
                 topics: [

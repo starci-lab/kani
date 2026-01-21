@@ -40,3 +40,39 @@ export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
         )
     }
 }
+
+/** Thrown when liquidity pool clmm state is not found */
+export interface LiquidityPoolClmmStateNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    liquidityPoolId: LiquidityPoolId
+}
+export class LiquidityPoolClmmStateNotFoundException extends AbstractException {
+    constructor(
+        { liquidityPoolId, originalError }: LiquidityPoolClmmStateNotFoundExceptionMetadata
+    ) {
+        super(
+            "Liquidity pool clmm state not found",
+            "LIQUIDITY_POOL_CLMM_STATE_NOT_FOUND_EXCEPTION",
+            {
+                liquidityPoolId, originalError 
+            }
+        )
+    }
+}
+
+/** Thrown when liquidity pool dlmm state is not found */
+export interface LiquidityPoolDlmmStateNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    liquidityPoolId: LiquidityPoolId
+}
+export class LiquidityPoolDlmmStateNotFoundException extends AbstractException {
+    constructor(
+        { liquidityPoolId, originalError }: LiquidityPoolDlmmStateNotFoundExceptionMetadata
+    ) {
+        super(
+            "Liquidity pool dlmm state not found",
+            "LIQUIDITY_POOL_DLMM_STATE_NOT_FOUND_EXCEPTION",
+            {
+                liquidityPoolId, originalError 
+            }
+        )
+    }
+}

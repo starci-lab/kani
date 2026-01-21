@@ -103,17 +103,7 @@ export class KafkaAdminService implements OnModuleInit {
          * This prevents accidental topic creation/deletion
          * in sensitive environments like production.
          */
-        if (this.options.createTopics) {
-            /**
-             * Optionally reset topics.
-             *
-             * This should be enabled ONLY in development or testing.
-             * It deletes existing topics before recreating them.
-             */
-            if (envConfig().kafka.resetTopics) {
-                await this.deleteTopics()
-            }
-
+        if (this.options.createTopicsIfNotExists) {
             /**
              * Create Kafka topics based on application metadata.
              */

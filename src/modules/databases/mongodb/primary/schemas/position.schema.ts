@@ -42,13 +42,13 @@ import {
     PrimaryMongoDbCollectionRef,
 } from "../ref"
 import {
-    ClmmStateSchema,
-    ClmmStateSchemaClass,
-} from "./clmm-state.schema"
+    PositionClmmStateSchema,
+    PositionClmmStateSchemaClass,
+} from "./position-clmm-state.schema"
 import {
-    DlmmStateSchema,
-    DlmmStateSchemaClass,
-} from "./dlmm-state.schema"
+    PositionDlmmStateSchema,
+    PositionDlmmStateSchemaClass,
+} from "./position-dlmm-state.schema"
 import {
     PositionFeesSchema,
     PositionFeesSchemaClass,
@@ -113,15 +113,15 @@ export class PositionSchema extends AbstractSchema {
      *
      * Present only for CLMM-based protocols.
      */
-    @Field(() => ClmmStateSchema,
+    @Field(() => PositionClmmStateSchema,
         {
             nullable: true,
         })
     @Prop({
-        type: ClmmStateSchemaClass,
+        type: PositionClmmStateSchemaClass,
         required: false,
     })
-        clmmState?: ClmmStateSchema
+        clmmState?: PositionClmmStateSchema
 
     /**
      * DLMM-specific state captured at position creation.
@@ -129,15 +129,15 @@ export class PositionSchema extends AbstractSchema {
      *
      * Present only for DLMM-based protocols.
      */
-    @Field(() => DlmmStateSchema,
+    @Field(() => PositionDlmmStateSchema,
         {
             nullable: true,
         })
     @Prop({
-        type: DlmmStateSchemaClass,
+        type: PositionDlmmStateSchemaClass,
         required: false,
     })
-        dlmmState?: DlmmStateSchema
+        dlmmState?: PositionDlmmStateSchema
 
     /**
      * Reference to the bot instance that created and manages this position.

@@ -67,13 +67,16 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
     ) { }
 
     async onModuleInit() {
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
-            {
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.FlowX).toString(),
                 },
-            }
-        )
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "flowx-observer-liquidity-pools", 
             {
@@ -91,7 +94,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
     @Interval(envConfig().dexes.flowx.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (
                     async () => {

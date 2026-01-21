@@ -63,13 +63,16 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "cetus-analytics"
         this.axios = this.axiosService.create(key)
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.Cetus).toString(),
                 },
-            }
-        )
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "cetus-analytics-liquidity-pools", 
             {
@@ -136,7 +139,7 @@ implements OnModuleInit, OnApplicationBootstrap
   @Interval(envConfig().dexes.cetus.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPoolCollection.chain().data().reduce(
+        const chunks = this.liquidityPoolCollection.find().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),

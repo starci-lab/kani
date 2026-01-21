@@ -71,13 +71,17 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     ) {}
 
     async onModuleInit() {
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
-            {
-                dex: {
-                    $eq: createObjectId(DexId.Momentum).toString(),
-                },
-            }
-        )
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
+            .chain()
+            .find(
+                {
+                    dex: {
+                        $eq: createObjectId(DexId.Momentum).toString(),
+                    },
+                })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "momentum-observer-liquidity-pools", 
             {
@@ -97,7 +101,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
     @Interval(envConfig().dexes.momentum.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (
                     async () => {

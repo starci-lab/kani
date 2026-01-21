@@ -167,10 +167,13 @@ import {
         }),
         EventModule.register({
             kafka: {
+                createTopicsIfNotExists: true,
                 useConsume: true,
                 usePublish: false,
                 topics: [
                     EventName.ReinitializeBalancers,
+                    EventName.ClmmLiquidityPoolsSynced,
+                    EventName.DlmmLiquidityPoolsSynced,
                 ],
             },
             isGlobal: true,

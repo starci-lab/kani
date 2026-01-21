@@ -28,6 +28,7 @@ import {
     MissingPositionIdParamException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     PrivyMetadataNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     TickMathService 
@@ -55,9 +56,6 @@ import {
     OpenPositionInstructionService 
 } from "./transactions"
 import {
-    adjustSlippage 
-} from "@modules/utils"
-import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import Decimal from "decimal.js"
@@ -68,17 +66,11 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 import {
-    envConfig 
-} from "@modules/env"
-import {
     Position 
 } from "./beets"
 import {
     PrivySignService 
 } from "@modules/privy"
-import {
-    ClmmLiquidityFormulaService,
-} from "@modules/blockchains"
 
 @Injectable()
 export class OrcaOpenPositionActionService implements IOpenActionService {
@@ -90,7 +82,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
-        private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) { }
 
     async prepare(
@@ -101,13 +92,13 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        if (!bot.snapshots) {
+        if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -119,25 +110,23 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const { 
             tickLower, 
             tickUpper
-        } = await this.tickMathService.getTickBounds({
-            state: _state,
-            bot,
+        } = await this.tickMathService.findOptimalTickRange({
+            tickCurrent: new BN(_state.dynamic.tickCurrent),
+            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
+            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
         })
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
-        const liquidityRaw = this.clmmLiquidityFormulaService.computeLiquidity({
-            tickLower,
-            tickUpper,
-            tickCurrent: _state.dynamic.tickCurrent,
-            amountA,
-            amountB,
-        })
-        // no slippage for orca
-        const liquidity = adjustSlippage(liquidityRaw,
-            new Decimal(envConfig().dexes.orca.openPosition.slippage))
         const {
             mintKeyPair,
             ataAddress,
@@ -145,15 +134,17 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             feeAmountA,
             feeAmountB,
             personalPosition,
-        } = await this.openPositionInstructionService.createOpenPositionInstructions({
-            bot,
-            state: _state,
-            liquidity,
-            amountA,
-            amountB,
-            tickLower,
-            tickUpper,
-        })
+        } = await this.openPositionInstructionService.createOpenPositionInstructions(
+            {
+                bot,
+                state: _state,
+                liquidity: _state.dynamic.liquidity,
+                amountA,
+                amountB,
+                tickLower,
+                tickUpper,
+            }
+        )
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {

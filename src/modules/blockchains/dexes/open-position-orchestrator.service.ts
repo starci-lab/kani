@@ -195,7 +195,7 @@ export class OpenPositionOrchestratorService {
         ) {
             return
         }
-        if (!bot.snapshots) {
+        if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
@@ -204,10 +204,10 @@ export class OpenPositionOrchestratorService {
          * Convert snapshot balances to BN for precise arithmetic.
          */
         const snapshotTargetBalanceAmount = new BN(
-            bot.snapshots.targetBalanceAmount,
+            bot.balanceSnapshots.targetBalanceAmount,
         )
         const snapshotQuoteBalanceAmount = new BN(
-            bot.snapshots.quoteBalanceAmount,
+            bot.balanceSnapshots.quoteBalanceAmount,
         )
         /**
          * Quote ratio computation:
@@ -216,8 +216,8 @@ export class OpenPositionOrchestratorService {
         const { quoteRatio } =
             await this.quoteRatioService.computeQuoteRatio(
                 {
-                    targetTokenId: targetToken.displayId,
-                    quoteTokenId: quoteToken.displayId,
+                    targetToken,
+                    quoteToken,
                     targetBalanceAmount: snapshotTargetBalanceAmount,
                     quoteBalanceAmount: snapshotQuoteBalanceAmount,
                 }

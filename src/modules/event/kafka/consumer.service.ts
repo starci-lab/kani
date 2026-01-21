@@ -11,7 +11,7 @@ import {
     Consumer, Kafka 
 } from "kafkajs"
 import {
-    InstanceIdService, ReadinessWatcherFactoryService 
+    InstanceIdService, ReadinessWatcherFactoryService, RetryService 
 } from "@modules/mixin"
 import {
     InjectKafka 
@@ -38,28 +38,38 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
         private readonly instanceIdService: InstanceIdService,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
         private readonly winstonService: WinstonService,
+        private readonly retryService: RetryService,
     ) {}
     
     async onModuleInit(): Promise<void> {
-        this.readinessWatcherFactoryService.createWatcher(KafkaConsumerService.name)
-        await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
-        this.consumer = this.kafka.consumer(
-            { 
-                groupId: this.instanceIdService.getId(),
-                allowAutoTopicCreation: false,
-                heartbeatInterval: envConfig().kafka.heartbeatInterval,
-                retry: {
-                    retries: envConfig().kafka.retry.retries,
-                    restartOnFailure: () => Promise.resolve(envConfig().kafka.retry.restartOnFailure),
-                    factor: envConfig().kafka.retry.factor,    
-                },
-                readUncommitted: true,
-            })
-        await this.consumer.connect()
-        this.winstonService.log(WinstonLog.KafkaConsumerReady,
+        await this.retryService.retry(
             {
-            })
-        this.readinessWatcherFactoryService.setReady(KafkaConsumerService.name)
+                options: {
+                    maxRetryTime: Infinity,
+                },
+                action: async () => {
+                    this.readinessWatcherFactoryService.createWatcher(KafkaConsumerService.name)
+                    await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
+                    this.consumer = this.kafka.consumer(
+                        { 
+                            groupId: this.instanceIdService.getId(),
+                            allowAutoTopicCreation: false,
+                            heartbeatInterval: envConfig().kafka.heartbeatInterval,
+                            retry: {
+                                retries: envConfig().kafka.retry.retries,
+                                restartOnFailure: () => Promise.resolve(envConfig().kafka.retry.restartOnFailure),
+                                factor: envConfig().kafka.retry.factor,    
+                            },
+                            readUncommitted: true,
+                        })
+                    await this.consumer.connect()
+                    this.winstonService.log(WinstonLog.KafkaConsumerReady,
+                        {
+                        })
+                    this.readinessWatcherFactoryService.setReady(KafkaConsumerService.name)
+                }
+            }
+        )
     }
 
     async onApplicationShutdown(): Promise<void> {

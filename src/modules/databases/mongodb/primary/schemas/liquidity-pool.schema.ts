@@ -14,7 +14,7 @@ import {
     Schema as MongooseSchema, Types 
 } from "mongoose"
 import {
-    Field, Float, ID, Int, ObjectType 
+    Field, Float, ID, ObjectType 
 } from "@nestjs/graphql"
 import {
     GraphQLTypeLiquidityPoolId,
@@ -34,6 +34,12 @@ import {
 import {
     PrimaryMongoDbCollectionRef,
 } from "../ref"
+import {
+    LiquidityPoolClmmStateSchema, LiquidityPoolClmmStateSchemaClass 
+} from "./liquidity-pool-clmm-state.schema"
+import {
+    LiquidityPoolDlmmStateSchema, LiquidityPoolDlmmStateSchemaClass 
+} from "./liquidity-pool-dlmm-state.schema"
 
 /**
  * GraphQL response type for the dynamic liquidity pools query.
@@ -192,35 +198,6 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
         type: LiquidityPoolType
 
-    @Field(() => Number,
-        {
-            description: "The tick spacing of the pool",
-            nullable: true,
-        })
-    @Prop({
-        type: Number, nullable: true 
-    })
-        tickSpacing: number
-
-    @Field(() => Number,
-        {
-            description: "The bin step of the pool",
-            nullable: true,
-        })
-    @Prop({
-        type: Number, nullable: true 
-    })
-        binStep: number
-
-    @Field(() => Number,
-        {
-            description: "The bin offset of the pool",
-            nullable: true,
-        })
-    @Prop({
-        type: Number, nullable: true 
-    })
-        binOffset: number
 
     @Field(() => Boolean,
         {
@@ -230,15 +207,6 @@ export class LiquidityPoolSchema extends AbstractSchema {
         type: Boolean, default: true 
     })
         isActive: boolean
-
-    @Field(() => Int,
-        {
-            description: "The tick spacing multiplier of the pool" 
-        })
-    @Prop({
-        type: Number, default: 1 
-    })
-        tickMultiplier: number
 
     @Field(() => GraphQLJSON,
         {
@@ -251,6 +219,28 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
         metadata?: unknown
 
+    @Field(() => LiquidityPoolClmmStateSchema,
+        {
+            description: "The CLMM-specific liquidity pool state",
+            nullable: true,
+        })
+    @Prop({
+        type: LiquidityPoolClmmStateSchemaClass,
+        required: false,
+    })
+        clmmState?: LiquidityPoolClmmStateSchema
+
+    @Field(() => LiquidityPoolDlmmStateSchema,
+        {
+            description: "The DLMM-specific liquidity pool state",
+            nullable: true,
+        })
+    @Prop({
+        type: LiquidityPoolDlmmStateSchemaClass,
+        required: false,
+    })
+        dlmmState?: LiquidityPoolDlmmStateSchema
+
     @Field(() => String,
         {
             description: "The URL of the liquidity pool" 
@@ -259,16 +249,6 @@ export class LiquidityPoolSchema extends AbstractSchema {
         type: String 
     })
         url: string
-
-    @Field(() => Number,
-        {
-            description: "The basis point max of the pool",
-            nullable: true,
-        })
-    @Prop({
-        type: Number, nullable: true 
-    })
-        basisPointMax?: number
 
     @Field(() => GraphQLDynamicLiquidityPoolInfo,
         {

@@ -1,5 +1,5 @@
 export interface KafkaOptions {
-    createTopics?: boolean
+    createTopicsIfNotExists?: boolean
     topics?: Array<string>
     usePublish?: boolean
     useConsume?: boolean

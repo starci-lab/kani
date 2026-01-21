@@ -57,13 +57,17 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
     ) {}
 
     onModuleInit() {
-        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
-            {
+        this.liquidityPools = this.memoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.Turbos).toString(),
                 },
+            })
+            .data({
+                removeMeta: true 
             }
-        )
+            )
     }
 
     onApplicationBootstrap() {

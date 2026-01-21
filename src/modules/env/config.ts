@@ -288,6 +288,18 @@ export const envConfig = () => ({
                     "10s"),
             },
         },
+        interval: {
+            load: parseEnvMs("EXECUTOR_INTERVAL_LOAD",
+                "10s"),
+            rotate: parseEnvMs("EXECUTOR_INTERVAL_ROTATE",
+                "10s"),
+        },
+        runtime: {
+            interval: {
+                refresh: parseEnvMs("EXECUTOR_RUNTIME_INTERVAL_REFRESH",
+                    "10s"),
+            },
+        },
     },
     // quote config
     quote: {

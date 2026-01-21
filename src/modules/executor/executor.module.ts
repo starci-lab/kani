@@ -7,6 +7,12 @@ import {
 import {
     LoadersModule 
 } from "./loaders"
+import {
+    RuntimesModule 
+} from "./runtimes"
+import {
+    BussinessModule 
+} from "./bussiness"
 
 @Module({
 })
@@ -24,12 +30,12 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 LoadersModule.register({
                     isGlobal: true,
                 }),
-                // RuntimesModule.register({
-                //     isGlobal: true,
-                // }),
-                // BussinessModule.register({
-                //     isGlobal: true,
-                // }),
+                RuntimesModule.register({
+                    isGlobal: true,
+                }),
+                BussinessModule.register({
+                    isGlobal: true,
+                }),
                 // SubscriptionsModule.register({
                 //     isGlobal: true,
                 // }), 

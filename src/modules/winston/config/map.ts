@@ -69,7 +69,10 @@ import {
     ExecutorMongoDbChangeStreamErrorMessage,
     ExecutorMongoDbChangeStreamCloseMessage,
     ExecutorMongoDbChangeStreamStartedMessage,
-    ExecutorMongoDbChangeStreamBotUpdatedMessage
+    ExecutorMongoDbChangeStreamBotUpdatedMessage,
+    ExecutorRuntimeInitializationFailedMessage,
+    CoordinatorRuntimeInitializationFailedMessage,
+    ExecutorNotFoundMessage
 } from "./types"
 
 export const configMap = {
@@ -429,7 +432,7 @@ export const configMap = {
     // Deployment Created
     [WinstonLog.DeploymentCreated]: {
         name: WinstonLog.DeploymentCreated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as DeploymentCreatedMessage,
@@ -437,7 +440,7 @@ export const configMap = {
     // Deployment Deleted
     [WinstonLog.DeploymentDeleted]: {
         name: WinstonLog.DeploymentDeleted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as DeploymentDeletedMessage,
@@ -445,7 +448,7 @@ export const configMap = {
     // Deployment Patched
     [WinstonLog.DeploymentPatched]: {
         name: WinstonLog.DeploymentPatched,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as DeploymentPatchedMessage,
@@ -477,7 +480,7 @@ export const configMap = {
     // Service Created
     [WinstonLog.ServiceCreated]: {
         name: WinstonLog.ServiceCreated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ServiceCreatedMessage,
@@ -485,7 +488,7 @@ export const configMap = {
     // Service Deleted
     [WinstonLog.ServiceDeleted]: {
         name: WinstonLog.ServiceDeleted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ServiceDeletedMessage,
@@ -509,7 +512,7 @@ export const configMap = {
     // Coordinator Executors Created
     [WinstonLog.CoordinatorExecutorsCreated]: {
         name: WinstonLog.CoordinatorExecutorsCreated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as CoordinatorExecutorsCreatedMessage,
@@ -517,7 +520,7 @@ export const configMap = {
     // Coordinator Executors Deleted
     [WinstonLog.CoordinatorExecutorsDeleted]: {
         name: WinstonLog.CoordinatorExecutorsDeleted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as CoordinatorExecutorsDeletedMessage,
@@ -525,7 +528,7 @@ export const configMap = {
     // Coordinator Executors Updated
     [WinstonLog.CoordinatorExecutorsUpdated]: {
         name: WinstonLog.CoordinatorExecutorsUpdated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as CoordinatorExecutorsUpdatedMessage,
@@ -581,7 +584,7 @@ export const configMap = {
     // Executor Bots Updated
     [WinstonLog.ExecutorBotsUpdated]: {
         name: WinstonLog.ExecutorBotsUpdated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ExecutorBotsUpdatedMessage,
@@ -589,7 +592,7 @@ export const configMap = {
     // Executor Bots Created
     [WinstonLog.ExecutorBotsCreated]: {
         name: WinstonLog.ExecutorBotsCreated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ExecutorBotsCreatedMessage,
@@ -597,7 +600,7 @@ export const configMap = {
     // Executor Bots Deleted
     [WinstonLog.ExecutorBotsDeleted]: {
         name: WinstonLog.ExecutorBotsDeleted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ExecutorBotsDeletedMessage,
@@ -633,5 +636,29 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamBotUpdatedMessage,
+    },
+    // Executor Runtime Initialization Failed
+    [WinstonLog.ExecutorRuntimeInitializationFailed]: {
+        name: WinstonLog.ExecutorRuntimeInitializationFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ExecutorRuntimeInitializationFailedMessage,
+    },
+    // Coordinator Runtime Initialization Failed
+    [WinstonLog.CoordinatorRuntimeInitializationFailed]: {
+        name: WinstonLog.CoordinatorRuntimeInitializationFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CoordinatorRuntimeInitializationFailedMessage,
+    },
+    // Executor Not Found
+    [WinstonLog.ExecutorNotFound]: {
+        name: WinstonLog.ExecutorNotFound,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ExecutorNotFoundMessage,
     },
 }

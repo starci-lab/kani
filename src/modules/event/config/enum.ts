@@ -9,5 +9,7 @@ export enum EventName {
     ExecutorBotCreated = "executor.bot.created",
     ExecutorBotDeleted = "executor.bot.deleted",
     ClmmPositionOpenRequested = "clmm.position.open.requested",
+    ClmmPositionCloseRequested = "clmm.position.close.requested",
+    DlmmPositionOpenRequested = "dlmm.position.open.requested",
     DlmmPositionCloseRequested = "dlmm.position.close.requested",
 }

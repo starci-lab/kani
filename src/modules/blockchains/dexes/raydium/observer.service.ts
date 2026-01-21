@@ -67,11 +67,16 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     ) { }
 
     async onModuleInit() {
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find({
-            dex: {
-                $eq: createObjectId(DexId.Raydium).toString(),
-            },
-        })
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
+                dex: {
+                    $eq: createObjectId(DexId.Raydium).toString(),
+                },
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "raydium-observer-liquidity-pools", 
         )
@@ -82,7 +87,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     // ============================================
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             this.observeClmmPool(liquidityPool)
         }
     }
@@ -90,7 +95,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
     @Interval(envConfig().dexes.raydium.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 this.fetchPoolInfo(liquidityPool.displayId)
             )

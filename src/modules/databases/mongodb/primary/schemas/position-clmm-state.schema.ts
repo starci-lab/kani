@@ -21,9 +21,9 @@ import {
     _id: false,
     autoCreate: false,
 })
-export class ClmmStateSchema {
+export class PositionClmmStateSchema {
     /**
-     * On-chain liquidity minted for this CLMM position (optional).
+     * On-chain liquidity minted for this CLMM position.
      * Stored as string to preserve precision.
      */
     @Field(() => String,
@@ -36,7 +36,7 @@ export class ClmmStateSchema {
     })
         liquidity: string
     /**
-     * Lower tick boundary of the CLMM position's price range (optional).
+     * Lower tick boundary of the CLMM position's price range.
      */
     @Field(() => Int,
         {
@@ -48,7 +48,7 @@ export class ClmmStateSchema {
     })
         tickLower: number
     /**
-     * Upper tick boundary of the CLMM position's price range (optional).
+     * Upper tick boundary of the CLMM position's price range.
      */
     @Field(() => Int,
         {
@@ -62,4 +62,4 @@ export class ClmmStateSchema {
         tickUpper: number
 }
 
-export const ClmmStateSchemaClass = SchemaFactory.createForClass(ClmmStateSchema)
+export const PositionClmmStateSchemaClass = SchemaFactory.createForClass(PositionClmmStateSchema)

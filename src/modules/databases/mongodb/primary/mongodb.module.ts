@@ -46,10 +46,14 @@ import {
     PositionSnapshotsSchema,
     PositionFeesSchemaClass,
     PositionFeesSchema,
-    ClmmStateSchemaClass,
-    ClmmStateSchema,
-    DlmmStateSchemaClass,
-    DlmmStateSchema,
+    LiquidityPoolClmmStateSchemaClass,
+    LiquidityPoolClmmStateSchema,
+    LiquidityPoolDlmmStateSchemaClass,
+    LiquidityPoolDlmmStateSchema,
+    PositionClmmStateSchemaClass,
+    PositionClmmStateSchema,
+    PositionDlmmStateSchemaClass,
+    PositionDlmmStateSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -239,12 +243,20 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                         useFactory: () => PositionFeesSchemaClass,
                     },
                     {
-                        name: ClmmStateSchema.name,
-                        useFactory: () => ClmmStateSchemaClass,
+                        name: LiquidityPoolClmmStateSchema.name,
+                        useFactory: () => LiquidityPoolClmmStateSchemaClass,
                     },
                     {
-                        name: DlmmStateSchema.name,
-                        useFactory: () => DlmmStateSchemaClass,
+                        name: LiquidityPoolDlmmStateSchema.name,
+                        useFactory: () => LiquidityPoolDlmmStateSchemaClass,
+                    },
+                    {
+                        name: PositionClmmStateSchema.name,
+                        useFactory: () => PositionClmmStateSchemaClass,
+                    },
+                    {
+                        name: PositionDlmmStateSchema.name,
+                        useFactory: () => PositionDlmmStateSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

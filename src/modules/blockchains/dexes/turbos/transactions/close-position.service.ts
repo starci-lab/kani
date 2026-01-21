@@ -18,6 +18,7 @@ import {
 import { 
     ActivePositionNotFoundException,
     InvalidPoolTokensException, 
+    PositionClmmStateNotFoundException, 
     TargetOperationalGasAmountNotFoundException 
 } from "@modules/exceptions"
 import {
@@ -49,6 +50,12 @@ export class ClosePositionTxbService {
     ): Promise<CreateClosePositionTxbResult> {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
                 botId: bot.id,
             })
         }
@@ -104,7 +111,7 @@ export class ClosePositionTxbService {
                 // position id
                 txb.object(bot.activePosition.associatedPosition.positionId),
                 // liquidity
-                txb.pure.u128(bot.activePosition.associatedPosition.liquidity?.toString() || "0"),
+                txb.pure.u128(bot.activePosition.associatedPosition.clmmState.liquidity?.toString() || "0"),
                 // minimum amount A
                 txb.pure.u64(0),
                 // minimum amount B

@@ -69,13 +69,16 @@ implements OnModuleInit, OnApplicationBootstrap
             key,
             uri: this.uri,
         })
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.FlowX).toString(),
                 },
-            }
-        )
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "flowx-analytics-liquidity-pools", 
             {
@@ -185,7 +188,7 @@ implements OnModuleInit, OnApplicationBootstrap
     @Interval(envConfig().dexes.flowx.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
-        const chunks = this.liquidityPoolCollection.chain().data().reduce(
+        const chunks = this.liquidityPoolCollection.find().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
                 acc[chunkIndex] = [...(acc[chunkIndex] || []),

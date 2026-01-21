@@ -1,11 +1,24 @@
-import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
-import { ContextIdFactory, ModuleRef } from "@nestjs/core"
-import { AsyncService } from "@modules/mixin"
-import { BotsLoaderService } from "../loaders"
-import { BotSchema } from "@modules/databases"
-import { CoordinatorExecutorCreatedEvent, EventName, CoordinatorExecutorDeletedEvent } from "@modules/event"
-import { OnEvent } from "@nestjs/event-emitter"
-import { RuntimeContext, RuntimeContextService } from "./runtime.context-service"
+import {
+    Injectable, OnApplicationBootstrap, OnApplicationShutdown 
+} from "@nestjs/common"
+import {
+    ContextIdFactory, ModuleRef 
+} from "@nestjs/core"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    BotsLoaderService 
+} from "../loaders"
+import {
+    EventName, ExecutorBotCreatedEventPayload, ExecutorBotDeletedEventPayload 
+} from "@modules/event"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    RuntimeContext, RuntimeContextService 
+} from "./runtime.context-service"
 
 /**
  * Factory service responsible for creating and managing runtime instances for executors.
@@ -34,13 +47,11 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         // Create runtime instances for all executors that were loaded from the database
         // Using allMustDone ensures all runtime creations complete successfully
         this.asyncService.allMustDone(
-            Array.from(
-                this.botsLoaderService.bots.values())
-                .map(
-                    async (bot) => {
-                        await this.createRuntime(bot)
-                    }
-                )
+            this.botsLoaderService.botCollection.find().map(
+                async (bot) => {
+                    await this.createRuntime(bot)
+                }
+            )
         )
     }
 
@@ -55,39 +66,39 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
     }
 
     /**
-     * Event handler that responds to executor creation events.
+     * Event handler that responds to bot creation events.
      * 
-     * When a new executor is detected (either through initial load or change stream),
-     * this handler creates a new runtime instance for that executor.
+     * When a new bot is detected (either through initial load or change stream),
+     * this handler creates a new runtime instance for that bot.
      * 
-     * @param payload - The event payload containing the executor ID
+     * @param event - The event payload containing the bot ID
      */
     @OnEvent(
-        EventName.CoordinatorExecutorCreated
+        EventName.ExecutorBotCreated
     )
-    async handleCoordinatorExecutorCreated(
-        payload: CoordinatorExecutorCreatedEvent
+    async handleBotCreated(
+        event: ExecutorBotCreatedEventPayload
     ) {
-        await this.createRuntime({ id: payload.id })
+        await this.createRuntime(event)
     }
     
     /**
      * Creates a new runtime instance for a given executor.
      * 
      * This method:
-     * 1. Creates a unique context ID for the executor's runtime
-     * 2. Registers a request-scoped context with the executor ID
+     * 1. Creates a unique context ID for the bot's runtime
+     * 2. Registers a request-scoped context with the bot ID
      * 3. Resolves the RuntimeRequestService within that context
      * 4. Initializes the runtime service
      * 
-     * Each executor gets its own isolated context, allowing request-scoped services
-     * to be executor-specific. This is useful for maintaining separate state and
+     * Each bot gets its own isolated context, allowing request-scoped services
+     * to be bot-specific. This is useful for maintaining separate state and
      * configuration per executor.
      * 
-     * @param executor - Partial executor schema containing at least the executor ID
+     * @param event - The event payload containing the bot ID
      */
     async createRuntime(
-        bot: Partial<BotSchema>
+        event: ExecutorBotCreatedEventPayload
     ) {
         await this.asyncService.allMustDone(
             [
@@ -95,9 +106,11 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
                 // Create a unique context ID for this bot's runtime
                     const contextId = ContextIdFactory.create()
                     // Register a request-scoped context with the bot ID
-                    // This allows request-scoped services to access the executor ID
+                    // This allows request-scoped services to access the bot ID
                     this.moduleRef.registerRequestByContextId<RuntimeContext>(
-                        { id: bot.id?.toString() || "" }, 
+                        {
+                            id: event.id 
+                        }, 
                         contextId
                     )
                     // Resolve the RuntimeRequestService within the bot's context
@@ -109,7 +122,7 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
                     // Initialize the runtime service for this bot
                     await runtimeContextService.initialize()
                     this.runtimes.set(
-                        bot.id?.toString() || "", 
+                        event.id, 
                         runtimeContextService
                     )
                 })(),
@@ -120,16 +133,16 @@ export class RuntimesFactoryService implements OnApplicationBootstrap, OnApplica
         EventName.ExecutorBotDeleted
     )
     async handleBotDeleted(
-        { id}: CoordinatorExecutorDeletedEvent
+        event: ExecutorBotDeletedEventPayload
     ) {
-        const runtime = this.runtimes.get(id)
+        const runtime = this.runtimes.get(event.id)
         if (!runtime) {
             return
         }
         // dispose & destroy the runtime
         await runtime.dispose()
         // delete the runtime from the map
-        this.runtimes.delete(id)
+        this.runtimes.delete(event.id)
     }
 
 }   

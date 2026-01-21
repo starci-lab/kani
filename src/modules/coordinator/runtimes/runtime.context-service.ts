@@ -5,7 +5,7 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    CoordinatorExecutorUpdatedEventPayload, EventEmitterService, EventName 
+    CoordinatorExecutorUpdatedEventPayload, EventName, EventEmitterService
 } from "@modules/event"
 import {
     Injectable, Scope, Inject 
@@ -23,7 +23,8 @@ import {
     AsyncService, RetryService 
 } from "@modules/mixin"
 import {
-    WinstonService 
+    WinstonLog,
+    WinstonService
 } from "@modules/winston"
 @Injectable(
     {
@@ -53,10 +54,10 @@ export class RuntimeContextService {
         private readonly winstonService: WinstonService,
     ) { }
 
-    private readonly executorUpdatedHandler = (
-        payload: CoordinatorExecutorUpdatedEventPayload,
+    private readonly coordinatorExecutorUpdatedHandler = (
+        event: CoordinatorExecutorUpdatedEventPayload,
     ) => {
-        this.refreshExecutor(payload)
+        this.refreshExecutor(event)
     }
 
     /**
@@ -66,10 +67,10 @@ export class RuntimeContextService {
      * - Otherwise, fetch the executor from the database.
      */
     private async refreshExecutor(
-        payload?: CoordinatorExecutorUpdatedEventPayload,
+        event?: CoordinatorExecutorUpdatedEventPayload,
     ) {
-        if (payload) {
-            this.executor = payload
+        if (event) {
+            this.executor = event
         } else {
             const executor = await this.connection
                 .model<ExecutorSchema>(ExecutorSchema.name)
@@ -101,14 +102,24 @@ export class RuntimeContextService {
                 // set the maximum retry time to infinity
                 options: {
                     maxRetryTime: Infinity,
+                    onFailedAttempt: (context) => {
+                        this.winstonService.log(
+                            WinstonLog.CoordinatorRuntimeInitializationFailed, 
+                            { 
+                                error: context.error.message, 
+                                coordinatorId: this.context.id 
+                            }
+                        )
+                    },
                 },
                 // set the action to initialize the runtime
                 action: async () => {
                     // subscribe to executor updated events
-                    this.eventEmitterService.on(
-                        EventName.CoordinatorExecutorUpdated,
-                        this.executorUpdatedHandler,
-                    )
+                    this.eventEmitterService.on({
+                        event: EventName.CoordinatorExecutorUpdated,
+                        args: [this.context.id],
+                        listener: this.coordinatorExecutorUpdatedHandler,
+                    })
                     // load the initial executor state
                     await this.refreshExecutor()
                     // reconcile the deployment and service
@@ -221,8 +232,11 @@ export class RuntimeContextService {
         }
         // unsubscribe from the executor updated event
         this.eventEmitterService.off(
-            EventName.CoordinatorExecutorUpdated,
-            this.executorUpdatedHandler,
+            {
+                event: EventName.CoordinatorExecutorUpdated,
+                args: [this.context.id],
+                listener: this.coordinatorExecutorUpdatedHandler,
+            }
         )
         if (withDestroy) {
             await this.destroy()

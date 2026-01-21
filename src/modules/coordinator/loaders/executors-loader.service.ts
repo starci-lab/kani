@@ -37,13 +37,16 @@ import {
 import {
     Sema 
 } from "async-sema"
+import {
+    Collection 
+} from "lokijs"
 
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
     // mutex for loading executors
     private sema!: Sema
     // executors
-    public executors: Map<string, ExecutorSchema> = new Map()
+    public executorCollection: Collection<ExecutorSchema>
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -90,7 +93,9 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 // map the executors to a partial executor schema
             const newExecutors: Array<ExecutorSchema> = executorRaws.map((executor) => executor.toJSON<ExecutorSchema>()) ?? []
             // get the old and new executor ids
-            const oldExecutorIds = Array.from(this.executors.keys())
+            const oldExecutorIds = this.executorCollection.chain().find().data({
+                removeMeta: true
+            }).map(executor => executor.id)
             const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
             // get the added and removed executor ids
             const createdExecutorIds = _.difference(newExecutorIds,
@@ -103,7 +108,9 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     const id = executor.id
                     if (!id) return null
                     if (createdExecutorIds.includes(id) || deletedExecutorIds.includes(id)) return null
-                    const old = this.executors.get(id)
+                    const old = this.executorCollection.find({
+                        id 
+                    })
                     if (!old) return null
                     // Compare only the fields we fetched for update detection.
                     const oldSnapshot = _.pick(old,
@@ -181,12 +188,8 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 }
             }
             // update the executors map snapshot
-            this.executors = new Map(
-                newExecutors
-                    .filter((executor) => Boolean(executor.id))
-                    .map((executor) => [executor.id!,
-                        executor]),
-            )
+            this.executorCollection.clear()
+            this.executorCollection.insert(newExecutors)
         } finally {
             if (token) {
                 this.sema.release(token)
@@ -291,9 +294,15 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id: data.id,
                                     }
                                 )
-                                if (this.executors.has(data.id)) break
-                                this.executors.set(data.id,
-                                    data)
+                                const exists = this.executorCollection.find({
+                                    id: data.id
+                                })
+                                if (exists) {
+                                    break
+                                }
+                                this.executorCollection.insert(
+                                    [data]
+                                )
                                 this.eventEmitterService.emit({
                                     event: EventName.CoordinatorExecutorCreated,
                                     payload: data,
@@ -308,7 +317,13 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id,
                                     }
                                 )
-                                this.executors.delete(id)
+                                const exists = this.executorCollection.find({
+                                    id: id
+                                })
+                                if (!exists) {
+                                    break
+                                }
+                                this.executorCollection.remove(exists)
                                 this.eventEmitterService.emit({
                                     event: EventName.CoordinatorExecutorDeleted,
                                     payload: {
@@ -325,16 +340,27 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                         id: data.id,
                                     }
                                 )
-                                const oldSnapshot = _.pick(this.executors.get(data.id),
-                                    ["version"])
+                                const oldSnapshot = _.pick(this.executorCollection.find({
+                                    id: data.id
+                                }),
+                                ["version"])
                                 const newSnapshot = _.pick(data,
                                     ["version"])
                                 if (_.isEqual(oldSnapshot,
                                     newSnapshot)) {
                                     break
                                 }
-                                this.executors.set(data.id,
-                                    data)
+                                const exists = this.executorCollection.find({
+                                    id: {
+                                        $eq: data.id
+                                    }
+                                })
+                                if (exists) {
+                                    this.executorCollection.remove(exists)
+                                }
+                                this.executorCollection.insert(
+                                    [data]
+                                )
                                 this.eventEmitterService.emit(
                                     {
                                         event: EventName.CoordinatorExecutorUpdated,

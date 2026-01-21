@@ -1,8 +1,15 @@
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bussiness.module-definition"
-import { SubscriptionsModule } from "./subscriptions/subscriptions.module"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./bussiness.module-definition"
+import {
+    SubscriptionsModule 
+} from "./subscriptions"
 
-@Module({})
+@Module({
+})
 export class BussinessModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE

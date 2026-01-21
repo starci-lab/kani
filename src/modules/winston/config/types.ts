@@ -515,3 +515,26 @@ export interface ExecutorMongoDbChangeStreamStartedMessage {
 export interface ExecutorMongoDbChangeStreamBotUpdatedMessage {
     id: string
 }
+
+/**
+ * Executor Runtime Initialization Failed Message
+ */
+export interface ExecutorRuntimeInitializationFailedMessage {
+    executorId: string
+    error: string
+}
+
+/**
+ * Coordinator Runtime Initialization Failed Message
+ */
+export interface CoordinatorRuntimeInitializationFailedMessage {
+    coordinatorId: string
+    error: string
+}
+
+/**
+ * Executor Not Found Message
+ */
+export interface ExecutorNotFoundMessage {
+    id: string
+}

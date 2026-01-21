@@ -61,13 +61,16 @@ implements OnModuleInit, OnApplicationBootstrap
     async onModuleInit() {
         const key = "momentum-analytics"
         this.axios = this.axiosService.create(key)
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.Momentum).toString(),
                 },
-            }
-        )
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "momentum-analytics-liquidity-pools", 
             {
@@ -84,7 +87,7 @@ implements OnModuleInit, OnApplicationBootstrap
         )
         const snapshotAt = this.dayjsService.now()
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (async () => {
                     const pool = data.data.find(

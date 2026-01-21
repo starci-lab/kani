@@ -66,20 +66,24 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
 
     // snapshot here
     async onModuleInit() {
-        const liquidityPools = this.memoryStorageService.liquidityPoolCollection.find(
-            {
+        const liquidityPools = this.memoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.Cetus).toString(),
                 },
-            }
-        )
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "cetus-observer-liquidity-pools", 
             {
                 indices: ["poolAddress",
                     "displayId",
                     "id"],
-            })
+            }
+        )
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
@@ -90,7 +94,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
     @Interval(envConfig().dexes.cetus.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (
                     async () => {

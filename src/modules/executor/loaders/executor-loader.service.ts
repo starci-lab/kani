@@ -87,57 +87,54 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                 .findById(envConfig().executor.id)
             if (!executor) {
                 this.winstonService.log(
-                    WinstonLog.ExecutorMongoDbChangeStreamError,
+                    WinstonLog.ExecutorNotFound,
                     {
-                        streamName: STREAM_NAME,
-                        error: "Executor not found",
+                        id: envConfig().executor.id,
                     }
                 )
                 return
             }
             // if the executor is the same as the cached executor, we check if the bots is created or deleted
-            if (this.executor && this.executor.id === executor.id) {
-                const newBotIds = executor.assignedBots.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id))
-                const oldBotIds = this.executor?.assignedBots?.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id)) ?? []
-                const createdBotIds = _.difference(newBotIds,
-                    oldBotIds)
-                const deletedBotIds = _.difference(oldBotIds,
-                    newBotIds)
-                if (createdBotIds.length > 0) {
-                    this.winstonService.log(
-                        WinstonLog.ExecutorBotsCreated,
+            const newBotIds = executor.assignedBots.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id))
+            const oldBotIds = this.executor?.assignedBots?.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id)) ?? []
+            const createdBotIds = _.difference(newBotIds,
+                oldBotIds)
+            const deletedBotIds = _.difference(oldBotIds,
+                newBotIds)
+            if (createdBotIds.length > 0) {
+                this.winstonService.log(
+                    WinstonLog.ExecutorBotsCreated,
+                    {
+                        ids: createdBotIds,
+                    }
+                )
+                for (const id of createdBotIds) {
+                    this.eventEmitterService.emit(
                         {
-                            ids: createdBotIds,
+                            event: EventName.ExecutorBotCreated,
+                            payload: {
+                                id 
+                            },
                         }
                     )
-                    for (const id of createdBotIds) {
-                        this.eventEmitterService.emit(
-                            {
-                                event: EventName.ExecutorBotCreated,
-                                payload: {
-                                    id 
-                                },
-                            }
-                        )
+                }
+            }   
+            if (deletedBotIds.length > 0) {
+                this.winstonService.log(
+                    WinstonLog.ExecutorBotsDeleted,
+                    {
+                        ids: deletedBotIds,
                     }
-                }   
-                if (deletedBotIds.length > 0) {
-                    this.winstonService.log(
-                        WinstonLog.ExecutorBotsDeleted,
+                )
+                for (const id of deletedBotIds) {
+                    this.eventEmitterService.emit(
                         {
-                            ids: deletedBotIds,
+                            event: EventName.ExecutorBotDeleted,
+                            payload: {
+                                id 
+                            },
                         }
                     )
-                    for (const id of deletedBotIds) {
-                        this.eventEmitterService.emit(
-                            {
-                                event: EventName.ExecutorBotDeleted,
-                                payload: {
-                                    id 
-                                },
-                            }
-                        )
-                    }
                 }
             }
             this.executor = executor.toJSON<ExecutorSchema>()

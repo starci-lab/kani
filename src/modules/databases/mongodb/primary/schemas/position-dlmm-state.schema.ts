@@ -21,7 +21,7 @@ import {
     _id: false,
     autoCreate: false,
 })
-export class DlmmStateSchema {
+export class PositionDlmmStateSchema {
     /**
      * Lower bin id boundary of the DLMM position's price range.
      */
@@ -49,4 +49,4 @@ export class DlmmStateSchema {
         maxBinId: number
 }
 
-export const DlmmStateSchemaClass = SchemaFactory.createForClass(DlmmStateSchema)
+export const PositionDlmmStateSchemaClass = SchemaFactory.createForClass(PositionDlmmStateSchema)

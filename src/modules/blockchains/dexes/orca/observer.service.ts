@@ -8,7 +8,6 @@ import {
 } from "@modules/cache"
 import BN from "bn.js"
 import {
-    LiquidityPoolId,
     PrimaryMemoryStorageService,
     DexId,
     LiquidityPoolSchema,
@@ -69,13 +68,16 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     ) {}
 
     async onModuleInit() {
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
+            .chain()
+            .find({
                 dex: {
                     $eq: createObjectId(DexId.Orca).toString(),
                 },
-            }
-        )
+            })
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "orca-observer-liquidity-pools", 
             {
@@ -90,18 +92,16 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     // Main bootstrap
     // ============================================
     onApplicationBootstrap() {
-        this.handlePoolStateUpdateInterval().then(() => {
-            // observe
-            for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
-                this.observeClmmPool(liquidityPool.displayId)
-            }
-        })
+        this.handlePoolStateUpdateInterval()
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+            this.observeClmmPool(liquidityPool)
+        }
     }
 
     @Interval(envConfig().dexes.orca.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)
@@ -196,20 +196,9 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
     // Observe (subscribe)
     // ============================================
     private async observeClmmPool(
-        liquidityPoolId: LiquidityPoolId
+        liquidityPool: LiquidityPoolSchema
     ) {
         try {
-            const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-                {
-                    id: liquidityPoolId,
-                }
-            )
-            if (!liquidityPool) 
-                throw new LiquidityPoolNotFoundException(
-                    {
-                        id: liquidityPoolId,
-                    }
-                )
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException(
                     {
@@ -263,7 +252,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             this.winstonService.log(
                 WinstonLog.LiquidityPoolWsError,
                 {
-                    liquidityPoolId,
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
                 }
             )

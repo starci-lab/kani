@@ -27,14 +27,23 @@ export interface ClmmPositionOpenRequestedEventPayload {
     payload: ClmmLiquidityPoolsSyncedEventPayload
     bot: BotSchema
 }
+
+export interface ClmmPositionCloseRequestedEventPayload {
+    payload: ClmmLiquidityPoolsSyncedEventPayload
+    bot: BotSchema
+}
+
+export interface DlmmPositionOpenRequestedEventPayload {
+    payload: DlmmLiquidityPoolsSyncedEventPayload
+    bot: BotSchema
+}
+
 export interface DlmmPositionCloseRequestedEventPayload {
     payload: DlmmLiquidityPoolsSyncedEventPayload
     bot: BotSchema
 }
 
-export interface ExecutorBotUpdatedEventPayload {
-    id: string
-}
+export type ExecutorBotUpdatedEventPayload = BotSchema
 export interface ExecutorBotCreatedEventPayload {
     id: string
 }

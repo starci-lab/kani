@@ -2,8 +2,15 @@ import {
     EventName
 } from "./enum"
 import {
-    ClmmLiquidityPoolsSyncedEventPayload, ClmmPositionOpenRequestedEventPayload, CoordinatorExecutorCreatedEventPayload, CoordinatorExecutorDeletedEventPayload, CoordinatorExecutorUpdatedEventPayload, DlmmLiquidityPoolsSyncedEventPayload, 
+    ClmmLiquidityPoolsSyncedEventPayload, 
+    ClmmPositionCloseRequestedEventPayload, 
+    ClmmPositionOpenRequestedEventPayload, 
+    CoordinatorExecutorCreatedEventPayload, 
+    CoordinatorExecutorDeletedEventPayload, 
+    CoordinatorExecutorUpdatedEventPayload, 
+    DlmmLiquidityPoolsSyncedEventPayload, 
     DlmmPositionCloseRequestedEventPayload, 
+    DlmmPositionOpenRequestedEventPayload, 
     ExecutorBotCreatedEventPayload, 
     ExecutorBotDeletedEventPayload, 
     ExecutorBotUpdatedEventPayload, 
@@ -69,6 +76,22 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as ClmmPositionOpenRequestedEventPayload
+    },
+    [EventName.ClmmPositionCloseRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ClmmPositionCloseRequestedEventPayload
+    },
+    [EventName.DlmmPositionOpenRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as DlmmPositionOpenRequestedEventPayload
     },
     [EventName.DlmmPositionCloseRequested]: {
         useKafka: false,

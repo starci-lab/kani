@@ -73,23 +73,24 @@ export class EventEmitterService implements OnModuleInit {
             },
         }: EmitParams<T>
     ) {
+        const config = configMap[event]
         if (args) {
             event = createHash(
                 event,
                 ...args
             ) as T
         }
-        const config = configMap[event]
         // if useLocal is not provided, use the config value
         const useLocal =
-          options.useLocal !== undefined
-              ? options.useLocal
-              : config.useLocal
+          options?.useLocal !== undefined
+              ? options?.useLocal
+              : config?.useLocal
         // if useKafka is not provided, use the config value
         const useKafka =
-          options.useKafka !== undefined
-              ? options.useKafka
-              : config.useKafka
+          options?.useKafka !== undefined
+              ? options?.useKafka
+              : config?.useKafka
+        console.log(`useLocal: ${useLocal}, useKafka: ${useKafka}`)
       
         // Emit locally (in-process listeners)
         if (useLocal) {

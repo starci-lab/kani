@@ -73,13 +73,18 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     ) { }
 
     async onModuleInit() {
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection.find(
-            {
-                dex: {
-                    $eq: createObjectId(DexId.Meteora).toString(),
-                },
-            }
-        )
+        const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
+            .chain()
+            .find(
+                {
+                    dex: {
+                        $eq: createObjectId(DexId.Meteora).toString(),
+                    },
+                }
+            )
+            .data({
+                removeMeta: true 
+            })
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "meteora-observer-liquidity-pools", 
             {
@@ -95,7 +100,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     @Interval(envConfig().dexes.meteora.interval.observer.fetch)
     async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
-        for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (async () => {
                     await this.fetchPoolInfo(liquidityPool)
@@ -108,11 +113,10 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
     // Main bootstrap
     // ============================================
     onApplicationBootstrap() {
-        this.handlePoolStateUpdateInterval().then(() => {
-            for (const liquidityPool of this.liquidityPoolCollection.chain().data()) {
-                this.observeDlmmPool(liquidityPool)
-            }
-        })
+        this.handlePoolStateUpdateInterval()
+        for (const liquidityPool of this.liquidityPoolCollection.find()) {
+            this.observeDlmmPool(liquidityPool)
+        }
     }
 
     // ============================================

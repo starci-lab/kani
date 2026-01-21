@@ -1,9 +1,20 @@
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./subscriptions.module-definition"
-import { ClmmSubscriptionService } from "./clmm.service"
-import { DlmmSubscriptionService } from "./dlmm.service"
-import { LiquidityPoolRotationService } from "./liquidity-pool-assignments-rotation.service"
-@Module({})
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./subscriptions.module-definition"
+import {
+    ClmmSubscriptionService 
+} from "./clmm.service"
+import {
+    DlmmSubscriptionService 
+} from "./dlmm.service"
+import {
+    LiquidityPoolAssignmentsRotationService 
+} from "./liquidity-pool-assignments-rotation.service"
+@Module({
+})
 export class SubscriptionsModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -15,7 +26,7 @@ export class SubscriptionsModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 ClmmSubscriptionService, 
                 DlmmSubscriptionService,
-                LiquidityPoolRotationService
+                LiquidityPoolAssignmentsRotationService
             ],
             exports: [],
         }

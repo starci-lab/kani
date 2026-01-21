@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-    Schema, Document 
+    Schema, Document, 
+    Types
 } from "mongoose"
 
 // Define types for the schema options
@@ -54,6 +55,7 @@ export const normalizeMongoose = (schema: SchemaType): void => {
                 }
             }
 
+            returnValue = deepNormalizeObjectId(returnValue)
             if (transform) {
                 return transform(doc,
                     returnValue,
@@ -65,4 +67,20 @@ export const normalizeMongoose = (schema: SchemaType): void => {
     schema.options.toJSON = {
         ...toJSON, ...json 
     }
+}
+
+const deepNormalizeObjectId = (obj: unknown): unknown => {
+    if (!obj) return obj
+    if (obj instanceof Types.ObjectId) {
+        return obj.toString()
+    }
+    if (Array.isArray(obj)) {
+        return obj.map(deepNormalizeObjectId)
+    }
+    if (typeof obj === "object") {
+        for (const key of Object.keys(obj)) {
+            obj[key] = deepNormalizeObjectId(obj[key])
+        }
+    }
+    return obj
 }

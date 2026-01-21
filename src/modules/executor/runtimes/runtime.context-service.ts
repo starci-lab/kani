@@ -1,12 +1,36 @@
-import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
-import { createEventName, EventName, ExecutorBotUpdatedEvent } from "@modules/event"
-import { Injectable, Scope, Inject } from "@nestjs/common"
-import { REQUEST } from "@nestjs/core"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { Connection } from "mongoose"
-import { RetryService } from "@modules/mixin"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import {
+    BotSchema, InjectPrimaryMongoose 
+} from "@modules/databases"
+import {
+    EventName, 
+    ExecutorBotUpdatedEventPayload,
+} from "@modules/event"
+import {
+    Injectable, Scope, Inject 
+} from "@nestjs/common"
+import {
+    REQUEST 
+} from "@nestjs/core"
+import {
+    EventEmitterService 
+} from "@modules/event"
+import {
+    Connection 
+} from "mongoose"
+import {
+    RetryService 
+} from "@modules/mixin"
+import {
+    WinstonService, WinstonLog
+} from "@modules/winston"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    
+    HandleClmmPositionOpenRequestedEventService,
+    HandleDlmmPositionOpenRequestedEventService
+} from "./core"
 
 @Injectable(
     {
@@ -28,14 +52,15 @@ export class RuntimeContextService {
         private readonly context: RuntimeContext,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly eventEmitter2: EventEmitter2,
         private readonly retryService: RetryService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly eventEmitterService: EventEmitterService,
+        private readonly winstonService: WinstonService,
+        private readonly handleClmmPositionOpenRequestedEventService: HandleClmmPositionOpenRequestedEventService,
+        private readonly handleDlmmPositionOpenRequestedEventService: HandleDlmmPositionOpenRequestedEventService,
     ) { }
 
-    private readonly botUpdatedHandler = (
-        event: ExecutorBotUpdatedEvent,
+    private readonly executorBotUpdatedHandler = (
+        event: ExecutorBotUpdatedEventPayload,
     ) => {
         this.refreshBot(event)
     }
@@ -47,7 +72,7 @@ export class RuntimeContextService {
      * - Otherwise, fetch the bot from the database.
      */
     private async refreshBot(
-        event?: ExecutorBotUpdatedEvent,
+        event?: ExecutorBotUpdatedEventPayload,
     ) {
         if (event) {
             this.bot = event
@@ -76,7 +101,7 @@ export class RuntimeContextService {
                 options: {
                     maxRetryTime: Infinity,
                     onFailedAttempt: (context) => {
-                        this.logger.error(
+                        this.winstonService.log(
                             WinstonLog.ExecutorRuntimeInitializationFailed, 
                             { 
                                 error: context.error.message, 
@@ -88,14 +113,28 @@ export class RuntimeContextService {
                 // set the action to initialize the runtime
                 action: async () => {
                     // subscribe to executor updated events
-                    this.eventEmitter2.on(
-                        createEventName(
-                            EventName.ExecutorBotUpdated,
-                            {
-                                id: this.context.id
-                            }
-                        ),
-                        this.botUpdatedHandler,
+                    this.eventEmitterService.on({
+                        event: EventName.ExecutorBotUpdated,
+                        args: [this.context.id],
+                        listener: this.executorBotUpdatedHandler,
+                    })
+                    // subscribe to clmm position open requested events
+                    this.eventEmitterService.on({
+                        event: EventName.ClmmPositionOpenRequested,
+                        args: [this.context.id],
+                        listener: (event) => this.handleClmmPositionOpenRequestedEventService.process(event),
+                    })
+                    // subscribe to dlmm position open requested events
+                    this.eventEmitterService.on({
+                        event: EventName.DlmmPositionOpenRequested,
+                        args: [this.context.id],
+                        listener: (event) => this.handleDlmmPositionOpenRequestedEventService.process(event),
+                    })
+                    // gradually load the initial executor state
+                    setInterval(() => {
+                        this.refreshBot()
+                    }, 
+                    envConfig().executor.runtime.interval.refresh
                     )
                     // load the initial executor state
                     await this.refreshBot()
@@ -114,15 +153,11 @@ export class RuntimeContextService {
             return
         }
         // unsubscribe from the executor updated event
-        this.eventEmitter2.off(
-            createEventName(
-                EventName.ExecutorBotUpdated,
-                {
-                    id: this.context.id
-                }
-            ),
-            this.botUpdatedHandler,
-        )
+        this.eventEmitterService.off({
+            event: EventName.ExecutorBotUpdated,
+            args: [this.context.id],
+            listener: this.executorBotUpdatedHandler,
+        })
         // clear the cached bot
         this.bot = null
     }

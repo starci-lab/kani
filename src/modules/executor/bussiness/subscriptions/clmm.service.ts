@@ -3,9 +3,6 @@ import {
     ClmmLiquidityPoolsSyncedEventPayload
 } from "@modules/event"
 import {
-    BotsLoaderService 
-} from "../../loaders"
-import {
     Injectable 
 } from "@nestjs/common"
 import {
@@ -14,12 +11,15 @@ import {
 import {
     EventEmitterService 
 } from "@modules/event"
+import {
+    LiquidityPoolAssignmentsRotationService 
+} from "./liquidity-pool-assignments-rotation.service"
 
 @Injectable()
 export class ClmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
-        private readonly botsLoaderService: BotsLoaderService,
+        private readonly liquidityPoolAssignmentsRotationService: LiquidityPoolAssignmentsRotationService,
     ) {}
     
     /**
@@ -38,16 +38,10 @@ export class ClmmSubscriptionService {
         event: ClmmLiquidityPoolsSyncedEventPayload
     ) {
         // Select bots that are currently idle and associated with THIS CLMM pool
-        const idleClmmBots = Array.from(
-            this.botsLoaderService.bots.values()
-        )
-            .filter(
-                (bot) => !bot.activePosition
-                && bot.liquidityPools.some(
-                    (liquidityPool) => liquidityPool?.toString() === event.id
-                )
-            )
-
+        const idleClmmBots =
+            this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find()
+                .filter((bot) => !bot.activePosition)
+                .filter((bot) => bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === event.id))
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {
