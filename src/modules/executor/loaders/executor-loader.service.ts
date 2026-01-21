@@ -4,21 +4,43 @@ import {
     ExecutorSchema,
     InjectPrimaryMongoose,
 } from "@modules/databases"
-import { Injectable, OnApplicationBootstrap, OnModuleInit } from "@nestjs/common"
-import { Connection, Types } from "mongoose"
-import { ResumeToken } from "mongodb"
-import { Interval } from "@nestjs/schedule"
-import { ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
-import { SemaService } from "@modules/lock"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { EventName } from "@modules/event"
-import { MongoDBChangeStreamConnection, StreamAsyncIteratorService } from "@modules/stream-async-iterator"
+import {
+    Injectable, OnApplicationBootstrap, OnModuleInit 
+} from "@nestjs/common"
+import {
+    Connection, Types 
+} from "mongoose"
+import {
+    ResumeToken 
+} from "mongodb"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    ReadinessWatcherFactoryService, RetryService 
+} from "@modules/mixin"
+import {
+    SemaService 
+} from "@modules/lock"
+import {
+    EventEmitterService,
+    EventName 
+} from "@modules/event"
+import {
+    MongoDBChangeStreamConnection, StreamAsyncIteratorService 
+} from "@modules/stream-async-iterator"
 import _ from "lodash"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { Sema } from "async-sema"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService
+} from "@modules/winston"
+import {
+    Sema 
+} from "async-sema"
 
+const STREAM_NAME = "executor-loader"
 @Injectable()
 export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleInit {
     // mutex for loading executor
@@ -29,18 +51,18 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-        private readonly eventEmitter2: EventEmitter2,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly retryService: RetryService,
-        @InjectWinston()
-        private readonly logger: WinstonLogger,
+        private readonly eventEmitterService: EventEmitterService,
+        private readonly winstonService: WinstonService,
         private readonly semaService: SemaService,
     ) { }
 
     async onModuleInit() {
         this.readinessWatcherFactoryService.createWatcher(ExecutorLoaderService.name)
         // init semaphore before any load/observe work uses it
-        this.sema = this.semaService.sema(ExecutorLoaderService.name, 1)
+        this.sema = this.semaService.sema(ExecutorLoaderService.name,
+            1)
         // load executor
         await this.load()
         // set readiness
@@ -64,37 +86,57 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                 .model<ExecutorSchema>(ExecutorSchema.name)
                 .findById(envConfig().executor.id)
             if (!executor) {
-                this.logger.error(
-                    WinstonLog.ExecutorNotFound, {
-                        id: envConfig().executor.id,
+                this.winstonService.log(
+                    WinstonLog.ExecutorMongoDbChangeStreamError,
+                    {
+                        streamName: STREAM_NAME,
+                        error: "Executor not found",
                     }
                 )
                 return
             }
             // if the executor is the same as the cached executor, we check if the bots is created or deleted
             if (this.executor && this.executor.id === executor.id) {
-                const newBotIds = executor.assignedBots.map(assignedBot => assignedBot?.botId).filter((id): id is string => Boolean(id))
-                const oldBotIds = this.executor?.assignedBots?.map(assignedBot => assignedBot?.botId).filter((id): id is string => Boolean(id)) ?? []
-                const createdBotIds = _.difference(newBotIds, oldBotIds)
-                const deletedBotIds = _.difference(oldBotIds, newBotIds)
+                const newBotIds = executor.assignedBots.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id))
+                const oldBotIds = this.executor?.assignedBots?.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id)) ?? []
+                const createdBotIds = _.difference(newBotIds,
+                    oldBotIds)
+                const deletedBotIds = _.difference(oldBotIds,
+                    newBotIds)
                 if (createdBotIds.length > 0) {
-                    this.logger.verbose(
-                        WinstonLog.ExecutorBotsCreated, {
+                    this.winstonService.log(
+                        WinstonLog.ExecutorBotsCreated,
+                        {
                             ids: createdBotIds,
                         }
                     )
                     for (const id of createdBotIds) {
-                        this.eventEmitter2.emit(EventName.ExecutorBotCreated, { id })
+                        this.eventEmitterService.emit(
+                            {
+                                event: EventName.ExecutorBotCreated,
+                                payload: {
+                                    id 
+                                },
+                            }
+                        )
                     }
                 }   
                 if (deletedBotIds.length > 0) {
-                    this.logger.verbose(
-                        WinstonLog.ExecutorBotsDeleted, {
+                    this.winstonService.log(
+                        WinstonLog.ExecutorBotsDeleted,
+                        {
                             ids: deletedBotIds,
                         }
                     )
                     for (const id of deletedBotIds) {
-                        this.eventEmitter2.emit(EventName.ExecutorBotDeleted, { id })
+                        this.eventEmitterService.emit(
+                            {
+                                event: EventName.ExecutorBotDeleted,
+                                payload: {
+                                    id 
+                                },
+                            }
+                        )
                     }
                 }
             }
@@ -129,7 +171,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                         }
                         timeout = setTimeout(
                             () => abortController.abort(),
-                            envConfig().timeConfig.ws.idleTimeout.mongoDbChangeStream.loader,
+                            envConfig().executor.streams.mongoDbChangeStream.timeout,
                         )
                     }
                     // create the get resume token function
@@ -139,7 +181,9 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                         pipeline: [
                             {
                                 $match: {
-                                    operationType: { $in: ["update"] },
+                                    operationType: {
+                                        $in: ["update"] 
+                                    },
                                     "documentKey._id": new Types.ObjectId(envConfig().executor.id),
                                 },
                             },
@@ -156,24 +200,28 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                             connection: streamConnection,
                             signal: abortController.signal,
                             onError: async (error) => {
-                                this.logger.error(
-                                    WinstonLog.MongooseChangeStreamError, {
-                                        streamName: "executor-loader",
+                                this.winstonService.log(
+                                    WinstonLog.ExecutorMongoDbChangeStreamError,
+                                    {
+                                        streamName: STREAM_NAME,
                                         error: error.message,
-                                    })
+                                    }
+                                )
                             },
                             onClose: async () => {
-                                this.logger.error(
-                                    WinstonLog.MongooseChangeStreamClose, {
-                                        streamName: "executor-loader",
+                                this.winstonService.log(
+                                    WinstonLog.ExecutorMongoDbChangeStreamClose,
+                                    {
+                                        streamName: STREAM_NAME,
                                     }
                                 )
 
                             },
                             onOpen: async () => {
-                                this.logger.info(
-                                    WinstonLog.MongooseChangeStreamStarted, {
-                                        streamName: "executor-loader",
+                                this.winstonService.log(
+                                    WinstonLog.ExecutorMongoDbChangeStreamStarted,
+                                    {
+                                        streamName: STREAM_NAME,
                                     }
                                 )
                             },
@@ -191,46 +239,76 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
                             switch (change.operationType) {
                             case "update": {
                                 const data = model.hydrate(change.fullDocument).toJSON<ExecutorSchema>() 
-                                const assignedBots = data.assignedBots.map(assignedBot => assignedBot?.botId).filter((id): id is string => Boolean(id))
-                                const oldAssignedBots = this.executor?.assignedBots?.map(assignedBot => assignedBot?.botId).filter((id): id is string => Boolean(id)) ?? []
-                                const createdBotIds = _.difference(assignedBots, oldAssignedBots)
-                                const deletedBotIds = _.difference(oldAssignedBots, assignedBots)
+                                const assignedBots = data.assignedBots.map(assignedBot => assignedBot?.bot.toString()).filter((id): id is string => Boolean(id))
+                                const oldAssignedBots = this.executor?.assignedBots?.map(assignedBot => assignedBot?.bot?.toString()).filter((id): id is string => Boolean(id)) ?? []
+                                const createdBotIds = _.difference(assignedBots,
+                                    oldAssignedBots)
+                                const deletedBotIds = _.difference(oldAssignedBots,
+                                    assignedBots)
                                 if (createdBotIds.length > 0) {
                                     // ensure the bots created persists in the database
                                     const createdBots = await this.connection
                                         .model<BotSchema>(BotSchema.name)
-                                        .find({ _id: { $in: createdBotIds.map((id) => new Types.ObjectId(id)) } })
+                                        .find({
+                                            _id: {
+                                                $in: createdBotIds.map((id) => new Types.ObjectId(id)) 
+                                            } 
+                                        })
                                     const jsonCreatedBots = createdBots?.map((bot) => bot.toJSON<BotSchema>()) ?? []
                                     const filteredCreatedBots = jsonCreatedBots
                                         .filter((bot) => Boolean(bot.id) && bot.version === AppVersion.V2)
-                                        .map((bot) => ({ id: bot.id }))
+                                        .map((bot) => ({
+                                            id: bot.id 
+                                        }))
                                     // log the created bots
-                                    this.logger.verbose(WinstonLog.ExecutorBotsCreated, {
-                                        ids: filteredCreatedBots.map((bot) => bot.id),
-                                    })
+                                    this.winstonService.log(WinstonLog.ExecutorBotsCreated,
+                                        {
+                                            ids: filteredCreatedBots.map((bot) => bot.id),
+                                        })
                                     // emit the event for the created bots
                                     for (const bot of filteredCreatedBots) {
-                                        this.eventEmitter2.emit(EventName.ExecutorBotCreated, { id: bot.id })
+                                        this.eventEmitterService.emit(
+                                            {
+                                                event: EventName.ExecutorBotCreated,
+                                                payload: {
+                                                    id: bot.id 
+                                                },
+                                            }
+                                        )
                                     }
                                 }
                                 if (deletedBotIds.length > 0) {
                                     // ensure the bots deleted persists in the database
                                     const deletedBots = await this.connection
                                         .model<BotSchema>(BotSchema.name)
-                                        .find({ _id: { $in: deletedBotIds.map((id) => new Types.ObjectId(id)) } })
+                                        .find({
+                                            _id: {
+                                                $in: deletedBotIds.map((id) => new Types.ObjectId(id)) 
+                                            } 
+                                        })
                                     const flattenedDeletedBots = deletedBots?.map((bot) => bot.toJSON<BotSchema>()) ?? []
                                     const filteredDeletedBots = flattenedDeletedBots
                                         .filter((bot) => Boolean(bot.id) && bot.version === AppVersion.V2)
-                                        .map((bot) => ({ id: bot.id }))
+                                        .map((bot) => ({
+                                            id: bot.id 
+                                        }))
                                     // log the deleted bots
-                                    this.logger.verbose(
-                                        WinstonLog.ExecutorBotsDeleted, {
+                                    this.winstonService.log(
+                                        WinstonLog.ExecutorBotsDeleted,
+                                        {
                                             ids: filteredDeletedBots.map((bot) => bot.id),
                                         }
                                     )
                                     // emit the event for the deleted bots
                                     for (const bot of filteredDeletedBots) {
-                                        this.eventEmitter2.emit(EventName.ExecutorBotDeleted, { id: bot.id })
+                                        this.eventEmitterService.emit(
+                                            {
+                                                event: EventName.ExecutorBotDeleted,
+                                                payload: {
+                                                    id: bot.id 
+                                                },
+                                            }
+                                        )
                                     }
                                 }
                                 this.executor = data
@@ -251,7 +329,7 @@ export class ExecutorLoaderService implements OnApplicationBootstrap, OnModuleIn
     }
 
     @Interval(
-        envConfig().timeConfig.interval.executor.executorLoader
+        envConfig().executor.streams.mongoDbChangeStream.timeout
     )
     async handleExecutorLoaderInterval() {
         await this.load()

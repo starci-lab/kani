@@ -282,6 +282,12 @@ export const envConfig = () => ({
     executor: {
         id: parseEnvString("EXECUTOR_ID",
             "6956717486b425cf9938c665"),
+        streams: {
+            mongoDbChangeStream: {
+                timeout: parseEnvMs("EXECUTOR_STREAMS_MONGO_DB_CHANGE_STREAM_TIMEOUT",
+                    "10s"),
+            },
+        },
     },
     // quote config
     quote: {

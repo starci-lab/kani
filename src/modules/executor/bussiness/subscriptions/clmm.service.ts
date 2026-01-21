@@ -1,13 +1,24 @@
-import { createEventName, ClmmLiquidityPoolsFetchedEvent, EventName } from "@modules/event"
-import { BotsLoaderService } from "../../loaders"
-import { Injectable } from "@nestjs/common"
-import { EventEmitter2, OnEvent } from "@nestjs/event-emitter"
-import { createObjectId } from "@modules/utils"
+import {
+    EventName, 
+    ClmmLiquidityPoolsSyncedEventPayload
+} from "@modules/event"
+import {
+    BotsLoaderService 
+} from "../../loaders"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    EventEmitterService 
+} from "@modules/event"
 
 @Injectable()
 export class ClmmSubscriptionService {
     constructor(
-        private readonly eventEmitter: EventEmitter2,
+        private readonly eventEmitterService: EventEmitterService,
         private readonly botsLoaderService: BotsLoaderService,
     ) {}
     
@@ -22,26 +33,33 @@ export class ClmmSubscriptionService {
      * - BROADCAST (not load-balancing)
      * - Deterministic fan-out
      */
-    @OnEvent(EventName.ClmmLiquidityPoolsFetched)
-    async handleLiquidityPoolsFetched(
-        event: ClmmLiquidityPoolsFetchedEvent
+    @OnEvent(EventName.ClmmLiquidityPoolsSynced)
+    async handleClmmLiquidityPoolsSynced(
+        event: ClmmLiquidityPoolsSyncedEventPayload
     ) {
         // Select bots that are currently idle and associated with THIS CLMM pool
-        const idleClmmBots = Array.from(this.botsLoaderService.bots.values())
+        const idleClmmBots = Array.from(
+            this.botsLoaderService.bots.values()
+        )
             .filter(
-                (bot) => !bot.activeLiquidityPoolType
-                && bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === createObjectId(event.liquidityPoolId).toString())
+                (bot) => !bot.activePosition
+                && bot.liquidityPools.some(
+                    (liquidityPool) => liquidityPool?.toString() === event.id
+                )
             )
 
         // Broadcast open-position request to all idle bots on this pool.
         // No round-robin: each bot owns and opens its own position.
         for (const bot of idleClmmBots) {
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.ClmmPositionOpenRequested,
-                    { id: bot.id }
-                ),
-                event
+            this.eventEmitterService.emit(
+                {
+                    event: EventName.ClmmPositionOpenRequested,
+                    args: [bot.id],
+                    payload: {
+                        bot,
+                        payload: event
+                    },
+                }
             )
         }
     }

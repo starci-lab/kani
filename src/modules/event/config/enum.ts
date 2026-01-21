@@ -5,4 +5,9 @@ export enum EventName {
     CoordinatorExecutorCreated = "coordinator.executor.created",
     CoordinatorExecutorDeleted = "coordinator.executor.deleted",
     CoordinatorExecutorUpdated = "coordinator.executor.updated",
+    ExecutorBotUpdated = "executor.bot.updated",
+    ExecutorBotCreated = "executor.bot.created",
+    ExecutorBotDeleted = "executor.bot.deleted",
+    ClmmPositionOpenRequested = "clmm.position.open.requested",
+    DlmmPositionCloseRequested = "dlmm.position.close.requested",
 }

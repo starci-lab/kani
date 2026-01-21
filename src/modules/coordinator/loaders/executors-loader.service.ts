@@ -124,9 +124,11 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 )
                 for (const id of createdExecutorIds) {
                     this.eventEmitterService.emit(
-                        EventName.CoordinatorExecutorCreated,
                         {
-                            id 
+                            event: EventName.CoordinatorExecutorCreated,
+                            payload: {
+                                id 
+                            },
                         }
                     )
                 }
@@ -141,9 +143,11 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 )
                 for (const id of deletedExecutorIds) {
                     this.eventEmitterService.emit(
-                        EventName.CoordinatorExecutorDeleted,
                         {
-                            id 
+                            event: EventName.CoordinatorExecutorDeleted,
+                            payload: {
+                                id 
+                            },
                         }
                     )
                 }
@@ -169,8 +173,10 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 for (const raw of updatedRaws) {
                     const data = model.hydrate(raw).toJSON<ExecutorSchema>()
                     this.eventEmitterService.emit(
-                        EventName.CoordinatorExecutorUpdated,
-                        data
+                        {
+                            event: EventName.CoordinatorExecutorUpdated,
+                            payload: data,
+                        }
                     )
                 }
             }
@@ -288,10 +294,10 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                 if (this.executors.has(data.id)) break
                                 this.executors.set(data.id,
                                     data)
-                                this.eventEmitterService.emit(EventName.CoordinatorExecutorCreated,
-                                    {
-                                        id: data.id 
-                                    })
+                                this.eventEmitterService.emit({
+                                    event: EventName.CoordinatorExecutorCreated,
+                                    payload: data,
+                                })
                                 break
                             }
                             case "delete": {
@@ -303,10 +309,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                     }
                                 )
                                 this.executors.delete(id)
-                                this.eventEmitterService.emit(EventName.CoordinatorExecutorDeleted,
-                                    {
+                                this.eventEmitterService.emit({
+                                    event: EventName.CoordinatorExecutorDeleted,
+                                    payload: {
                                         id 
-                                    })
+                                    },
+                                })
                                 break
                             }
                             case "update": {
@@ -328,8 +336,11 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                                 this.executors.set(data.id,
                                     data)
                                 this.eventEmitterService.emit(
-                                    EventName.CoordinatorExecutorUpdated,
-                                    data
+                                    {
+                                        event: EventName.CoordinatorExecutorUpdated,
+                                        args: [data.id],
+                                        payload: data,
+                                    }
                                 )
                                 break
                             }

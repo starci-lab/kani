@@ -23,6 +23,9 @@ import {
 import {
     EventName, configMap 
 } from "./config"
+import {
+    createHash 
+} from "@modules/utils"
 
 export interface EmitOptions {
     useKafka?: boolean
@@ -62,11 +65,20 @@ export class EventEmitterService implements OnModuleInit {
     }
 
     async emit<T extends EventName>(
-        event: T,
-        payload: typeof configMap[T]["eventPayload"],
-        options: EmitOptions = {
-        },
-    ): Promise<void> {
+        {
+            event,
+            args,
+            payload,
+            options = {
+            },
+        }: EmitParams<T>
+    ) {
+        if (args) {
+            event = createHash(
+                event,
+                ...args
+            ) as T
+        }
         const config = configMap[event]
         // if useLocal is not provided, use the config value
         const useLocal =
@@ -81,8 +93,10 @@ export class EventEmitterService implements OnModuleInit {
       
         // Emit locally (in-process listeners)
         if (useLocal) {
-            this.eventEmitter.emit(event,
-                payload)
+            this.eventEmitter.emit(
+                event,
+                payload
+            )
         }
       
         // Emit to Kafka (cross-instance / distributed)
@@ -108,18 +122,57 @@ export class EventEmitterService implements OnModuleInit {
     }
 
     on<T extends EventName>(
-        event: T,
-        listener: (payload: typeof configMap[T]["eventPayload"]) => void,
+        {
+            event,
+            args,
+            listener,
+        }: OnParams<T>
     ) {
-        this.eventEmitter.on(event,
-            listener)
+        if (args) {
+            event = createHash(
+                event,
+                ...args
+            ) as T
+        }
+        this.eventEmitter.on(
+            event,
+            listener
+        )
     }
 
     off<T extends EventName>(
-        event: T,
-        listener: (payload: typeof configMap[T]["eventPayload"]) => void,
+        {
+            event,
+            args,
+            listener,
+        }: OffParams<T>
     ) {
+        if (args) {
+            event = createHash(
+                event,
+                ...args
+            ) as T
+        }
         this.eventEmitter.off(event,
             listener)
     }
+}
+
+export interface EmitParams<T extends EventName> {
+    event: T
+    args?: Array<unknown>
+    payload: typeof configMap[T]["eventPayload"]
+    options?: EmitOptions
+}
+
+export interface OnParams<T extends EventName> {
+    event: T
+    args?: Array<unknown>
+    listener: (payload: typeof configMap[T]["eventPayload"]) => void
+}
+
+export interface OffParams<T extends EventName> {
+    event: T
+    args?: Array<unknown>
+    listener: (payload: typeof configMap[T]["eventPayload"]) => void
 }

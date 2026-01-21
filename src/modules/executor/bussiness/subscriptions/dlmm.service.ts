@@ -1,14 +1,24 @@
-import { ClmmLiquidityPoolsFetchedEvent, createEventName, DlmmLiquidityPoolsFetchedEvent, EventName } from "@modules/event"
-import { BotsLoaderService } from "../../loaders"
-import { Injectable } from "@nestjs/common"
-import { EventEmitter2, OnEvent } from "@nestjs/event-emitter"
-import { LiquidityPoolType } from "@modules/databases"
-import { createObjectId } from "@modules/utils"
+import {
+    EventName, 
+    DlmmLiquidityPoolsSyncedEventPayload,
+} from "@modules/event"
+import {
+    BotsLoaderService 
+} from "../../loaders"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    EventEmitterService 
+} from "@modules/event"
 
 @Injectable()
 export class DlmmSubscriptionService {
     constructor(
-        private readonly eventEmitter: EventEmitter2,
+        private readonly eventEmitterService: EventEmitterService,
         private readonly botsLoaderService: BotsLoaderService,
     ) {}
 
@@ -23,95 +33,32 @@ export class DlmmSubscriptionService {
      * - BROADCAST (not load-balancing)
      * - Deterministic fan-out
      */
-    @OnEvent(EventName.DlmmLiquidityPoolsFetched)
+    @OnEvent(EventName.DlmmLiquidityPoolsSynced)
     async handleDlmmLiquidityPoolsFetched(
-        event: DlmmLiquidityPoolsFetchedEvent
+        event: DlmmLiquidityPoolsSyncedEventPayload
     ) {
         // Select bots that are actively running on THIS DLMM pool
         const activeDlmmBots = Array.from(this.botsLoaderService.bots.values())
             .filter(
                 (bot) =>
-                    bot.activeLiquidityPoolType === LiquidityPoolType.Dlmm &&
-                    bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === createObjectId(event.liquidityPoolId).toString())
+                    bot.activePosition &&
+                    bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === event.id)
             )
 
         // Broadcast close-position request to ALL active bots on this pool.
         // No round-robin: each bot owns and closes its own position.
         for (const bot of activeDlmmBots) {
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.DlmmPositionCloseRequested,
-                    { id: bot.id }
-                ),
-                event
+            this.eventEmitterService.emit(
+                {
+                    event: EventName.DlmmPositionCloseRequested,
+                    args: [bot.id],
+                    payload: {
+                        bot,
+                        payload: event
+                    },
+                }
             )
         }
     }
 
-    /**
-     * Broadcast close-position request to bots that:
-     * - Support DLMM
-     * - Are associated with this liquidity pool
-     *
-     * Used when we want to force-close positions even if
-     * bots are not currently marked as "active".
-     */
-    broadcastClosePositionRequest(
-        event: DlmmLiquidityPoolsFetchedEvent
-    ) {
-        const eligibleDlmmBots = Array.from(this.botsLoaderService.bots.values())
-            .filter(
-                (bot) =>
-                    bot.activeLiquidityPoolType === LiquidityPoolType.Dlmm &&
-                    bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === createObjectId(event.liquidityPoolId).toString())
-            )
-
-        // Broadcast close-position request.
-        // This is still a BROADCAST pattern, not load-balancing.
-        for (const bot of eligibleDlmmBots) {
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.DlmmPositionCloseRequested,
-                    { id: bot.id }
-                ),
-                event
-            )
-        }
-    }
-
-    /**
-     * Broadcast open-position request for CLMM pools.
-     *
-     * Intent:
-     * - Fan-out the opportunity to open positions
-     * - Bots are currently IDLE (no active liquidity pool)
-     *
-     * Note:
-     * - This currently broadcasts to ALL idle bots
-     * - If load / risk control is needed, introduce:
-     *   - random sampling (e.g. 30%)
-     *   - or deterministic hashing
-     */
-    broadcastOpenPositionRequest(
-        event: ClmmLiquidityPoolsFetchedEvent
-    ) {
-        // Select bots that are currently idle
-        const idleBots = Array.from(this.botsLoaderService.bots.values())
-            .filter(
-                (bot) => !bot.activeLiquidityPoolType
-                && bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === createObjectId(event.liquidityPoolId).toString())
-            )
-
-        // Broadcast open-position request to all idle bots.
-        // No ordering guarantees are relied upon.
-        for (const bot of idleBots) {
-            this.eventEmitter.emit(
-                createEventName(
-                    EventName.ClmmPositionOpenRequested,
-                    { id: bot.id }
-                ),
-                event
-            )
-        }
-    }
 }

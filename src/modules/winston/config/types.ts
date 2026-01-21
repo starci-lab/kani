@@ -465,3 +465,53 @@ export interface CoordinatorPrimaryMongoDbChangeStreamExecutorDeletedMessage {
 export interface CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage {
     id: string
 }
+
+/**
+ * Executor Bots Updated Message
+ */
+export interface ExecutorBotsUpdatedMessage {
+    ids: Array<string>
+}
+
+/**
+ * Executor Bots Created Message
+ */
+export interface ExecutorBotsCreatedMessage {
+    ids: Array<string>
+}
+
+/**
+ * Executor Bots Deleted Message
+ */
+export interface ExecutorBotsDeletedMessage {
+    ids: Array<string>
+}
+
+/**
+ * Executor Mongo Db Change Stream Error Message
+ */
+export interface ExecutorMongoDbChangeStreamErrorMessage {
+    streamName: string
+    error: string
+}
+
+/**
+ * Executor Mongo Db Change Stream Close Message
+ */
+export interface ExecutorMongoDbChangeStreamCloseMessage {
+    streamName: string
+}
+
+/**
+ * Executor Mongo Db Change Stream Started Message
+ */
+export interface ExecutorMongoDbChangeStreamStartedMessage {
+    streamName: string
+}
+
+/**
+ * Executor Mongo Db Change Stream Bot Updated Message 
+ */
+export interface ExecutorMongoDbChangeStreamBotUpdatedMessage {
+    id: string
+}

@@ -2,7 +2,11 @@ import {
     EventName
 } from "./enum"
 import {
-    ClmmLiquidityPoolsSyncedEventPayload, CoordinatorExecutorCreatedEventPayload, CoordinatorExecutorDeletedEventPayload, CoordinatorExecutorUpdatedEventPayload, DlmmLiquidityPoolsSyncedEventPayload, 
+    ClmmLiquidityPoolsSyncedEventPayload, ClmmPositionOpenRequestedEventPayload, CoordinatorExecutorCreatedEventPayload, CoordinatorExecutorDeletedEventPayload, CoordinatorExecutorUpdatedEventPayload, DlmmLiquidityPoolsSyncedEventPayload, 
+    DlmmPositionCloseRequestedEventPayload, 
+    ExecutorBotCreatedEventPayload, 
+    ExecutorBotDeletedEventPayload, 
+    ExecutorBotUpdatedEventPayload, 
     ReinitializeBalancersEventPayload
 } from "./types"
 import {
@@ -57,5 +61,45 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as CoordinatorExecutorUpdatedEventPayload
+    },
+    [EventName.ClmmPositionOpenRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ClmmPositionOpenRequestedEventPayload
+    },
+    [EventName.DlmmPositionCloseRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as DlmmPositionCloseRequestedEventPayload
+    },
+    [EventName.ExecutorBotUpdated]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ExecutorBotUpdatedEventPayload
+    },
+    [EventName.ExecutorBotCreated]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ExecutorBotCreatedEventPayload
+    },
+    [EventName.ExecutorBotDeleted]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ExecutorBotDeletedEventPayload
     },
 }

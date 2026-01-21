@@ -177,10 +177,12 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                 ),
                 // event
                 this.eventEmitterService.emit(
-                    EventName.ClmmLiquidityPoolsSynced,
                     {
-                        id: liquidityPool.id,
-                        ...parsed,
+                        event: EventName.ClmmLiquidityPoolsSynced,
+                        payload: {
+                            id: liquidityPool.id,
+                            ...parsed,
+                        },
                     }
                 ),
             ]

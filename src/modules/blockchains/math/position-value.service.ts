@@ -73,17 +73,17 @@ export class PositionValueMathService {
 
         const { price: beforeTargetPrice } = await this.priceService.resolvePrice(
             {
-                tokenId: targetToken.displayId,
+                token: targetToken,
             }
         )
         const { price: beforeQuotePrice } = await this.priceService.resolvePrice(
             {
-                tokenId: quoteToken.displayId,
+                token: quoteToken,
             }
         )
         const { price: beforeGasPrice } = await this.priceService.resolvePrice(
             {
-                tokenId: gasToken.displayId,
+                token: gasToken,
             }
         )
         const quoteTargetPrice = beforeQuotePrice.div(beforeTargetPrice)

@@ -150,10 +150,12 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
             ),
             // event
             this.eventEmitterService.emit(
-                EventName.DlmmLiquidityPoolsSynced,
                 {
-                    id: liquidityPool.id,
-                    ...dynamicDlmmLiquidityPoolInfo
+                    event: EventName.DlmmLiquidityPoolsSynced,
+                    payload: {
+                        id: liquidityPool.id,
+                        ...dynamicDlmmLiquidityPoolInfo,
+                    },
                 }
             ),
         ])

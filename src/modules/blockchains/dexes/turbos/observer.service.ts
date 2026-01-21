@@ -166,10 +166,12 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                 ),
                 // emit event through event emitter
                 this.eventEmitterService.emit(
-                    EventName.ClmmLiquidityPoolsSynced,
                     {
-                        id: liquidityPool.id,
-                        ...parsed,
+                        event: EventName.ClmmLiquidityPoolsSynced,
+                        payload: {
+                            id: liquidityPool.id,
+                            ...parsed,
+                        },
                     }
                 ),
             ]

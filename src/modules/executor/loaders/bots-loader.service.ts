@@ -8,29 +8,44 @@ import {
     OnApplicationBootstrap,
     OnModuleInit,
 } from "@nestjs/common"
-import { Connection, Types } from "mongoose"
-import { ResumeToken } from "mongodb"
-import { Interval } from "@nestjs/schedule"
-import { ReadinessWatcherFactoryService, RetryService } from "@modules/mixin"
-import { SemaService } from "@modules/lock"
-import { EventEmitter2 } from "@nestjs/event-emitter"
 import {
-    CoordinatorExecutorUpdatedEvent,
-    createEventName,
+    Connection, Types 
+} from "mongoose"
+import {
+    ResumeToken 
+} from "mongodb"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    ReadinessWatcherFactoryService, RetryService 
+} from "@modules/mixin"
+import {
+    SemaService 
+} from "@modules/lock"
+import {
+    EventEmitterService,
     EventName,
-    ExecutorBotUpdatedEvent,
 } from "@modules/event"
 import {
     MongoDBChangeStreamConnection,
     StreamAsyncIteratorService,
 } from "@modules/stream-async-iterator"
 import _ from "lodash"
-import { envConfig } from "@modules/env"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { Sema } from "async-sema"
-import { ExecutorLoaderService } from "./executor-loader.service"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    WinstonLog, WinstonService
+} from "@modules/winston"
+import {
+    Sema 
+} from "async-sema"
+import {
+    ExecutorLoaderService 
+} from "./executor-loader.service"
 
+const STREAM_NAME = "bots-loader"
 @Injectable()
 export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
     // mutex for loading bots
@@ -41,12 +56,11 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     private readonly readinessWatcherFactoryService: ReadinessWatcherFactoryService,
-    private readonly eventEmitter2: EventEmitter2,
     private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     private readonly retryService: RetryService,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
+    private readonly eventEmitterService: EventEmitterService,
     private readonly semaService: SemaService,
+    private readonly winstonService: WinstonService,
     ) {}
 
     async onModuleInit() {
@@ -55,7 +69,8 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
         )
         this.readinessWatcherFactoryService.createWatcher(BotsLoaderService.name)
         // init semaphore before any load/observe work uses it
-        this.sema = this.semaService.sema(BotsLoaderService.name, 1)
+        this.sema = this.semaService.sema(BotsLoaderService.name,
+            1)
         // load bots
         await this.load()
         // set readiness
@@ -83,13 +98,17 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
             }
             // get the bot ids
             const botIds = executor.assignedBots.map(
-                (assignedBot) => assignedBot.botId,
+                (assignedBot) => assignedBot.bot.toString(),
             )
             // get the bots model
             const model = this.connection.model<BotSchema>(BotSchema.name)
             // query all bots (include fields used for update detection)
             const bots = await model
-                .find({ _id: { $in: botIds } })
+                .find({
+                    _id: {
+                        $in: botIds 
+                    } 
+                })
             // map the bots to a partial bot schema
             const newBots: Array<BotSchema> = bots.map((bot) => bot.toJSON<BotSchema>()) ?? []
             // detect updated bots by comparing snapshots (excluding created/deleted)
@@ -100,33 +119,37 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
                     const old = this.bots.get(id)
                     if (!old) return null
                     // Compare only the fields we fetched for update detection.
-                    const oldSnapshot = _.pick(old, ["running"])
-                    const newSnapshot = _.pick(bot, ["running"])
-                    return _.isEqual(oldSnapshot, newSnapshot) ? null : id
+                    const oldSnapshot = _.pick(old,
+                        ["running"])
+                    const newSnapshot = _.pick(bot,
+                        ["running"])
+                    return _.isEqual(oldSnapshot,
+                        newSnapshot) ? null : id
                 })
                 .filter((id): id is string => Boolean(id))
             // check if there are updated bots
             if (updatedBotIds.length > 0) {
-                this.logger.verbose(
-                    WinstonLog.ExecutorBotsUpdated, {
+                this.winstonService.log(
+                    WinstonLog.ExecutorBotsUpdated,
+                    {
                         ids: updatedBotIds,
                     }
                 )
                 const updatedRaws = await model
                     .find({
-                        _id: { $in: updatedBotIds.map((id) => new Types.ObjectId(id)) },
+                        _id: {
+                            $in: updatedBotIds.map((id) => new Types.ObjectId(id)) 
+                        },
                     })
                     .lean()
                     .exec()
                 for (const raw of updatedRaws) {
                     const data = model.hydrate(raw).toJSON<ExecutorSchema>()
-                    const event: CoordinatorExecutorUpdatedEvent = data
-                    this.eventEmitter2.emit(
-                        createEventName(
-                            EventName.ExecutorBotUpdated, {
-                                id: data.id,
-                            }),
-                        event,
+                    this.eventEmitterService.emit(
+                        {
+                            event: EventName.ExecutorBotUpdated,
+                            payload: data,
+                        }
                     )
                 }
             }
@@ -136,7 +159,8 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
                     .filter((bot) =>
                         Boolean(bot.id),
                     )
-                    .map((bot) => [bot.id!, bot]),
+                    .map((bot) => [bot.id!,
+                        bot]),
             )
         } finally {
             if (token) {
@@ -167,7 +191,7 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
                     }
                     timeout = setTimeout(
                         () => abortController.abort(),
-                        envConfig().timeConfig.ws.idleTimeout.mongoDbChangeStream.loader,
+                        envConfig().executor.streams.mongoDbChangeStream.timeout,
                     )
                 }
                 // create the get resume token function
@@ -177,7 +201,9 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
                     pipeline: [
                         {
                             $match: {
-                                operationType: { $in: ["update"] },
+                                operationType: {
+                                    $in: ["update"] 
+                                },
                             },
                         },
                     ],
@@ -192,20 +218,23 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
                     connection: streamConnection,
                     signal: abortController.signal,
                     onError: async (error) => {
-                        this.logger.error(WinstonLog.MongooseChangeStreamError, {
-                            streamName: "bots-loader",
-                            error: error.message,
-                        })
+                        this.winstonService.log(WinstonLog.ExecutorMongoDbChangeStreamError,
+                            {
+                                streamName: STREAM_NAME,
+                                error: error.message,
+                            })
                     },
                     onClose: async () => {
-                        this.logger.error(WinstonLog.MongooseChangeStreamClose, {
-                            streamName: "bots-loader",
-                        })
+                        this.winstonService.log(WinstonLog.ExecutorMongoDbChangeStreamClose,
+                            {
+                                streamName: STREAM_NAME,
+                            })
                     },
                     onOpen: async () => {
-                        this.logger.info(WinstonLog.MongooseChangeStreamStarted, {
-                            streamName: "bots-loader",
-                        })
+                        this.winstonService.log(WinstonLog.ExecutorMongoDbChangeStreamStarted,
+                            {
+                                streamName: STREAM_NAME,
+                            })
                     },
                 })
                 for await (const change of stream) {
@@ -222,22 +251,29 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
                             const data = model
                                 .hydrate(change.fullDocument)
                                 .toJSON<BotSchema>()
-                            this.logger.verbose(WinstonLog.ExecutorChangeStreamBotUpdated, {
-                                id: data.id,
-                            })
-                            const props: Array<string> = ["running", "name", "liquidityPools","isExitToUsdc"]
-                            const oldSnapshot = _.pick(this.bots.get(data.id), props)
-                            const newSnapshot = _.pick(data, props)
-                            if (_.isEqual(oldSnapshot, newSnapshot)) {
+                            this.winstonService.log(WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
+                                {
+                                    id: data.id,
+                                })
+                            const props: Array<string> = ["running",
+                                "name",
+                                "liquidityPools",
+                                "isExitToUsdc"]
+                            const oldSnapshot = _.pick(this.bots.get(data.id),
+                                props)
+                            const newSnapshot = _.pick(data,
+                                props)
+                            if (_.isEqual(oldSnapshot,
+                                newSnapshot)) {
                                 break
                             }
-                            this.bots.set(data.id, data)
-                            const event: ExecutorBotUpdatedEvent = data
-                            this.eventEmitter2.emit(
-                                createEventName(EventName.ExecutorBotUpdated, {
-                                    id: data.id,
-                                }),
-                                event,
+                            this.bots.set(data.id,
+                                data)
+                            this.eventEmitterService.emit(
+                                {
+                                    event: EventName.ExecutorBotUpdated,
+                                    payload: data,
+                                }
                             )
                             break
                         }
@@ -254,7 +290,7 @@ export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
         })
     }
 
-  @Interval(envConfig().timeConfig.interval.executor.botsLoader)
+  @Interval(envConfig().executor.streams.mongoDbChangeStream.timeout)
     async handleBotsLoaderInterval() {
         await this.load()
     }

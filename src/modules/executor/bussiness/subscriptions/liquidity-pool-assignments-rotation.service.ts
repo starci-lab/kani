@@ -1,9 +1,21 @@
-import { BotsLoaderService } from "../../loaders"
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import { EventEmitter2 } from "@nestjs/event-emitter"
-import { ReadinessWatcherFactoryService } from "@modules/mixin"
-import { LiquidityPoolId } from "@modules/databases"
-import { PrimaryMemoryStorageService } from "@modules/databases"
+import {
+    BotsLoaderService 
+} from "../../loaders"
+import {
+    Injectable, OnModuleInit 
+} from "@nestjs/common"
+import {
+    EventEmitter2 
+} from "@nestjs/event-emitter"
+import {
+    ReadinessWatcherFactoryService 
+} from "@modules/mixin"
+import {
+    LiquidityPoolId 
+} from "@modules/databases"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
 
 @Injectable()
 export class LiquidityPoolAssignmentsRotationService implements OnModuleInit {
@@ -22,10 +34,10 @@ export class LiquidityPoolAssignmentsRotationService implements OnModuleInit {
     }
 
     // rotate is a method to reallocate the liquidity pools to the bots
-    rotate() {
+    async rotate() {
         const bots = Array.from(this.botsLoaderService.bots.values())
         const map = new Map<LiquidityPoolId, number>()
-        const liquidityPools = this.primaryMemoryStorageService.liquidityPools
+        const liquidityPools = await this.primaryMemoryStorageService.getLiquidityPools()
         for (const bot of bots) {
             // retrieve the liquidity pool ids from the bot
             const liquidityPoolIds = bot.liquidityPools

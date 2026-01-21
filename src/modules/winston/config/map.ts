@@ -62,7 +62,14 @@ import {
     CoordinatorPrimaryMongoDbChangeStreamErrorMessage,
     CoordinatorPrimaryMongoDbChangeStreamExecutorCreatedMessage,
     CoordinatorPrimaryMongoDbChangeStreamExecutorDeletedMessage,
-    CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage
+    CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage,
+    ExecutorBotsDeletedMessage,
+    ExecutorBotsCreatedMessage,
+    ExecutorBotsUpdatedMessage,
+    ExecutorMongoDbChangeStreamErrorMessage,
+    ExecutorMongoDbChangeStreamCloseMessage,
+    ExecutorMongoDbChangeStreamStartedMessage,
+    ExecutorMongoDbChangeStreamBotUpdatedMessage
 } from "./types"
 
 export const configMap = {
@@ -570,5 +577,61 @@ export const configMap = {
         loki: true,
         messageType: {
         } as CoordinatorPrimaryMongoDbChangeStreamExecutorUpdatedMessage,
+    },
+    // Executor Bots Updated
+    [WinstonLog.ExecutorBotsUpdated]: {
+        name: WinstonLog.ExecutorBotsUpdated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorBotsUpdatedMessage,
+    },
+    // Executor Bots Created
+    [WinstonLog.ExecutorBotsCreated]: {
+        name: WinstonLog.ExecutorBotsCreated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorBotsCreatedMessage,
+    },
+    // Executor Bots Deleted
+    [WinstonLog.ExecutorBotsDeleted]: {
+        name: WinstonLog.ExecutorBotsDeleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorBotsDeletedMessage,
+    },
+    // Executor Mongo Db Change Stream Error
+    [WinstonLog.ExecutorMongoDbChangeStreamError]: {
+        name: WinstonLog.ExecutorMongoDbChangeStreamError,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ExecutorMongoDbChangeStreamErrorMessage,
+    },
+    // Executor Mongo Db Change Stream Close
+    [WinstonLog.ExecutorMongoDbChangeStreamClose]: {
+        name: WinstonLog.ExecutorMongoDbChangeStreamClose,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorMongoDbChangeStreamCloseMessage,
+    },
+    // Executor Mongo Db Change Stream Started
+    [WinstonLog.ExecutorMongoDbChangeStreamStarted]: {
+        name: WinstonLog.ExecutorMongoDbChangeStreamStarted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorMongoDbChangeStreamStartedMessage,
+    },
+    // Executor Mongo Db Change Stream Bot Updated
+    [WinstonLog.ExecutorMongoDbChangeStreamBotUpdated]: {
+        name: WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ExecutorMongoDbChangeStreamBotUpdatedMessage,
     },
 }

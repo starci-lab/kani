@@ -202,8 +202,10 @@ export class P2CBalancerService {
         await this.addEjectedRpcs(rpcIds)
         const ejectedRpcs = await this.loadRpcEjectionState()
         await this.eventEmitterService.emit(
-            EventName.ReinitializeBalancers, 
-            ejectedRpcs
+            {
+                event: EventName.ReinitializeBalancers, 
+                payload: ejectedRpcs,
+            }
         )
     }
     

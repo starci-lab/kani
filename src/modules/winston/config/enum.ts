@@ -62,4 +62,11 @@ export enum WinstonLog {
     CoordinatorPrimaryMongoDbChangeStreamExecutorCreated = "Coordinator.Primary.MongoDb.Change.Stream.Executor.Created",
     CoordinatorPrimaryMongoDbChangeStreamExecutorDeleted = "Coordinator.Primary.MongoDb.Change.Stream.Executor.Deleted",
     CoordinatorPrimaryMongoDbChangeStreamExecutorUpdated = "Coordinator.Primary.MongoDb.Change.Stream.Executor.Updated",
+    ExecutorMongoDbChangeStreamError = "Executor.MongoDb.Change.Stream.Error",
+    ExecutorMongoDbChangeStreamClose = "Executor.MongoDb.Change.Stream.Close",
+    ExecutorMongoDbChangeStreamStarted = "Executor.MongoDb.Change.Stream.Started",
+    ExecutorMongoDbChangeStreamBotUpdated = "Executor.MongoDb.Change.Stream.Bot.Updated",
+    ExecutorBotsUpdated = "Executor.Bots.Updated",
+    ExecutorBotsCreated = "Executor.Bots.Created",
+    ExecutorBotsDeleted = "Executor.Bots.Deleted",
 }

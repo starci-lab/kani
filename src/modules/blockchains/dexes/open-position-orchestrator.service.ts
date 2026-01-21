@@ -2,9 +2,6 @@ import {
     Inject, Injectable 
 } from "@nestjs/common"
 import {
-    LiquidityPoolStateService 
-} from "./liquidity-pool-state.service"
-import {
     BotSchema,
     DexId,
     InjectPrimaryMongoose,
@@ -111,7 +108,6 @@ import {
 @Injectable()
 export class OpenPositionOrchestratorService {
     constructor(
-        private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly raydiumOpenPositionActionService: RaydiumOpenPositionActionService,
         private readonly orcaOpenPositionActionService: OrcaOpenPositionActionService,

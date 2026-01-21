@@ -1,1 +1,0 @@
-export const USERS_PER_BATCH = 1000

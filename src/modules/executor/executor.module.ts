@@ -1,15 +1,15 @@
-import { DynamicModule, Module, Provider } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./executor.module-definition"
-import { LoadersModule } from "./loaders"
-import { RuntimesModule } from "./runtimes"
-import { BussinessModule } from "./bussiness"
-// import { SubscriptionsModule } from "./subscriptions"
-// import { ProcessorsModule } from "./processors"
-// import { WorkersModule } from "./workers"
-// import { DiagnosticsModule } from "./diagnostics"
-// import { PollersModule } from "./pollers"
+import {
+    DynamicModule, Module, Provider 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./executor.module-definition"
+import {
+    LoadersModule 
+} from "./loaders"
 
-@Module({})
+@Module({
+})
 export class ExecutorModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -24,12 +24,12 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 LoadersModule.register({
                     isGlobal: true,
                 }),
-                RuntimesModule.register({
-                    isGlobal: true,
-                }),
-                BussinessModule.register({
-                    isGlobal: true,
-                }),
+                // RuntimesModule.register({
+                //     isGlobal: true,
+                // }),
+                // BussinessModule.register({
+                //     isGlobal: true,
+                // }),
                 // SubscriptionsModule.register({
                 //     isGlobal: true,
                 // }), 
@@ -44,7 +44,8 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 // }),
             ],
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [], ...providers],
+            providers: [...dynamicModule.providers || [],
+                ...providers],
             exports: [...providers],
         }
     }
