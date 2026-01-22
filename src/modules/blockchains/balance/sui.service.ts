@@ -10,15 +10,15 @@ import {
     ExecuteSwapTransactionParams,
 } from "./balance.interface"
 import {
-    AppVersion, PrimaryMemoryStorageService 
+    AppVersion, 
 } from "@modules/databases"
 import {
-    TokenNotFoundException, 
     TransactionNotExecutedException, 
     TransactionNotFoundException, 
     PrivyPublicKeyNotFoundException, 
     ErrorTransactionType,
-    MissingSuiMessageWithBytesParamException
+    MissingSuiMessageWithBytesParamException,
+    EncryptedPrivySignerPrivateKeyNotFoundException
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -48,7 +48,6 @@ import {
 export class SuiBalanceService implements IBalanceService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly suiAggregatorSelectorService: SuiAggregatorSelectorService,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
@@ -109,8 +108,13 @@ export class SuiBalanceService implements IBalanceService {
                         signatureWithBytes,
                     }
                 } else {
-                    if (!bot.privyMetadata.walletPublicKey) {
+                    if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
                             botId: bot.id,
                         })
                     }
@@ -120,7 +124,8 @@ export class SuiBalanceService implements IBalanceService {
                         walletId: bot.privyMetadata.walletId,
                         transaction: txb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                    })
+                    }
+                    )
                 }
             },
         })
@@ -178,8 +183,8 @@ export class SuiBalanceService implements IBalanceService {
                     {
                         botId: bot.id,
                         txHash,
-                        tokenIn,
-                        tokenOut,
+                        tokenIn: tokenIn.displayId,
+                        tokenOut: tokenOut.displayId,
                     }
                 )
             },
@@ -189,19 +194,9 @@ export class SuiBalanceService implements IBalanceService {
     async fetchBalance(
         {
             bot,
-            tokenId,
+            token,
         }: FetchBalanceParams
     ): Promise<FetchBalanceResult> {
-        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-            displayId: {
-                $eq: tokenId
-            }
-        })
-        if (!token) {
-            throw new TokenNotFoundException({
-                displayId: tokenId,
-            })
-        }
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {

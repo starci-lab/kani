@@ -18,11 +18,9 @@ import {
     envConfig 
 } from "@modules/env/config"
 import {
-    createIoRedisKey, IoRedisModule 
+    createIoRedisKey, IoRedisInstanceKey, IoRedisModule 
 } from "@modules/native"
 import Redis from "ioredis"
-
-export const BULLMQ_KEY = "BullMQ"
 
 @Module({
 })
@@ -64,17 +62,10 @@ export class BullModule extends ConfigurableModuleClass {
                 NestBullModule.forRootAsync({
                     imports: [
                         IoRedisModule.register({
-                            host: envConfig().redis.bullmq.host,
-                            port: envConfig().redis.bullmq.port,
-                            password: envConfig().redis.bullmq.password,
-                            useCluster: envConfig().redis.bullmq.useCluster,
-                            additionalInstanceKeys: [BULLMQ_KEY],
-                            additionalOptions: {
-                                maxRetriesPerRequest: null,
-                            },
+                            instanceKey: IoRedisInstanceKey.BullMQ,
                         }),
                     ],
-                    inject: [createIoRedisKey(BULLMQ_KEY)],
+                    inject: [createIoRedisKey(IoRedisInstanceKey.BullMQ)],
                     useFactory: async (redis: Redis) => ({
                         // connection to redis
                         connection: redis,

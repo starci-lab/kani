@@ -39,6 +39,9 @@ import {
 import {
     PrimaryMongoDbCollectionRef,
 } from "../ref"
+import {
+    JobSchema 
+} from "./job.schema"
 /**
  * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -246,6 +249,20 @@ export class BotSchema extends AbstractSchema {
     })
         activePosition?: BotActivePositionSchema
 
+    /**
+     * The date and time the bot was last reconciled.
+     */
+    @Field(() => ID,
+        {
+            description: "The active job id of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Job,
+        required: false,
+    })
+        activeJob?: JobSchema | Types.ObjectId
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

@@ -74,4 +74,9 @@ export enum WinstonLog {
     ExecutorNotFound = "Executor.Not.Found",
     ReconcileBalanceEnqueued = "Reconcile.Balance.Enqueued",
     ReconcileBalanceEnqueueFailed = "Reconcile.Balance.Enqueue.Failed",
+    ReconcileBalanceProcessingFailedUnrecoverable = "Reconcile.Balance.Processing.Failed.Unrecoverable",
+    ReconcileBalanceProcessingFailedPermanentFailure = "Reconcile.Balance.Processing.Failed.Permanent.Failure",
+    ReconcileBalanceProcessingFailedRetryable = "Reconcile.Balance.Processing.Failed.Retryable",
+    ReconcileBalanceProcessingCompleted = "Reconcile.Balance.Processing.Completed",
+    ReconcileBalanceProcessingStarted = "Reconcile.Balance.Processing.Started",
 }

@@ -1,18 +1,17 @@
-import { Cluster, Redis, RedisOptions } from "ioredis"
+import {
+    Cluster, Redis 
+} from "ioredis"
 
 export interface IoRedisOptions {
-    // Whether to use a Redis cluster
-    useCluster?: boolean
-    // The host of the Redis server
-    host: string
-    // The port of the Redis server
-    port: number
-    // The password of the Redis server
-    password: string
-    // Additional instance keys
-    additionalInstanceKeys?: Array<string>
-    // Additional options
-    additionalOptions?: RedisOptions
+    // Instance key
+    instanceKey: IoRedisInstanceKey
 }
 
 export type RedisOrCluster = Redis | Cluster
+
+export enum IoRedisInstanceKey {
+    BullMQ = "bullmq",
+    LockAuthority = "lock-authority",
+    Throttler = "throttler",
+    Adapter = "adapter",
+}

@@ -24,9 +24,6 @@ export class ExecutorModule extends ConfigurableModuleClass {
         const providers: Array<Provider> = []
         return {
             imports: [
-                // DiagnosticsModule.register({
-                //     isGlobal: true,
-                // }),
                 LoadersModule.register({
                     isGlobal: true,
                 }),
@@ -36,18 +33,6 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 BussinessModule.register({
                     isGlobal: true,
                 }),
-                // SubscriptionsModule.register({
-                //     isGlobal: true,
-                // }), 
-                // PollersModule.register({
-                //     isGlobal: true,
-                // }),
-                // ProcessorsModule.register({
-                //     isGlobal: true,
-                // }),
-                // WorkersModule.register({
-                //     isGlobal: true,
-                // }),
             ],
             ...dynamicModule,
             providers: [...dynamicModule.providers || [],

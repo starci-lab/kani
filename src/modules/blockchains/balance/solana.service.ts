@@ -14,12 +14,12 @@ import {
 } from "./balance.interface"
 import { 
     AppVersion,
-    PrimaryMemoryStorageService, 
 } from "@modules/databases"
 import {
+    EncryptedPrivySignerPrivateKeyNotFoundException,
     ErrorTransactionType,
     MissingSolanaTxParamException,
-    TokenNotFoundException,
+    PrivyMetadataNotFoundException,
     TransactionNotExecutedException
 } from "@modules/exceptions"
 import BN from "bn.js"
@@ -62,9 +62,6 @@ import {
     SolanaAggregatorSelectorService 
 } from "../aggregators"
 import {
-    EnsureMathService 
-} from "../math"
-import {
     SignerService 
 } from "../signers"
 import {
@@ -88,9 +85,7 @@ import {
 export class SolanaBalanceService implements IBalanceService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly solanaAggregatorSelectorService: SolanaAggregatorSelectorService,
-        private readonly ensureMathService: EnsureMathService,
         private readonly signerService: SignerService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
@@ -99,19 +94,9 @@ export class SolanaBalanceService implements IBalanceService {
     public async fetchBalance(
         {
             bot,
-            tokenId,
+            token,
         }: FetchBalanceParams
     ): Promise<FetchBalanceResult> {
-        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-            displayId: {
-                $eq: tokenId.toString()
-            }
-        })
-        if (!token) {
-            throw new TokenNotFoundException({
-                displayId: tokenId,
-            })
-        }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
@@ -240,6 +225,16 @@ export class SolanaBalanceService implements IBalanceService {
                         },
                     })
                 } else {
+                    if (!bot.privyMetadata) {
+                        throw new PrivyMetadataNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
+                    if (!bot.encryptedPrivySignerPrivateKeyPayload) {
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
+                    }
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -313,8 +308,8 @@ export class SolanaBalanceService implements IBalanceService {
                     {
                         botId: bot.id,
                         txHash: transactionSignature.toString(),
-                        tokenIn,
-                        tokenOut,
+                        tokenIn: tokenIn.displayId,
+                        tokenOut: tokenOut.displayId,
                     }
                 )
             },

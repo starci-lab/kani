@@ -25,3 +25,8 @@ export interface RegisterQueueOptions {
     queueName?: BullQueueName
     isGlobal?: boolean
 }
+
+export enum JobDecision {
+    Retry = "Retry",
+    Cancel = "Cancel",
+  }

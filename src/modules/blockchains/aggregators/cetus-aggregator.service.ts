@@ -82,17 +82,17 @@ export class CetusAggregatorService implements IAggregatorService {
             })
             if (!tokenInInstance) {
                 throw new TokenNotFoundException({
-                    displayId: tokenIn,
+                    displayId: tokenIn.displayId,
                 })
             }
             const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
                 displayId: {
-                    $eq: tokenOut,
+                    $eq: tokenOut.displayId,
                 },
             })
             if (!tokenOutInstance) {
                 throw new TokenNotFoundException({
-                    displayId: tokenOut,
+                    displayId: tokenOut.displayId,
                 })
             }
             return await this.rpcExecutorService.withSuiClient({

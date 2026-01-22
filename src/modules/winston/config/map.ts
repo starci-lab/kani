@@ -74,7 +74,12 @@ import {
     CoordinatorRuntimeInitializationFailedMessage,
     ExecutorNotFoundMessage,
     ReconcileBalanceEnqueueFailedMessage,
-    ReconcileBalanceEnqueuedMessage
+    ReconcileBalanceEnqueuedMessage,
+    ReconcileBalanceProcessingStartedMessage,
+    ReconcileBalanceProcessingCompletedMessage,
+    ReconcileBalanceProcessingFailedPermanentFailureMessage,
+    ReconcileBalanceProcessingFailedUnrecoverableMessage,
+    ReconcileBalanceProcessingFailedRetryableMessage
 } from "./types"
 
 export const configMap = {
@@ -678,5 +683,45 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceEnqueuedMessage,
+    },
+    // Reconcile Balance Processing Completed
+    [WinstonLog.ReconcileBalanceProcessingCompleted]: {
+        name: WinstonLog.ReconcileBalanceProcessingCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceProcessingCompletedMessage,
+    },
+    // Reconcile Balance Processing Started
+    [WinstonLog.ReconcileBalanceProcessingStarted]: {
+        name: WinstonLog.ReconcileBalanceProcessingStarted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceProcessingStartedMessage,
+    },
+    // Reconcile Balance Processing Failed Unrecoverable
+    [WinstonLog.ReconcileBalanceProcessingFailedUnrecoverable]: {
+        name: WinstonLog.ReconcileBalanceProcessingFailedUnrecoverable,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceProcessingFailedUnrecoverableMessage,
+    },
+    // Reconcile Balance Processing Failed Permanent Failure
+    [WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure]: {
+        name: WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceProcessingFailedPermanentFailureMessage,
+    },
+    // Reconcile Balance Processing Failed Retryable
+    [WinstonLog.ReconcileBalanceProcessingFailedRetryable]: {
+        name: WinstonLog.ReconcileBalanceProcessingFailedRetryable,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceProcessingFailedRetryableMessage,
     },
 }

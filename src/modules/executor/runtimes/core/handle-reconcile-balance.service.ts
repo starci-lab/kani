@@ -14,6 +14,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    Types 
+} from "mongoose"
 
 @Injectable()
 export class HandleReconcileBalanceService {
@@ -30,13 +33,25 @@ export class HandleReconcileBalanceService {
         if (!bot.running) return
         // we do nothing if the bot has an active position
         if (bot.activePosition) return
-        const acquired = await this.lockAuthorityService.acquire(bot)
+            
+        const jobId = new Types.ObjectId().toString()
+        // check if the bot has an active job
+        if (bot.activeJob) {
+            return
+        }
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+                jobId,
+            }
+        )
         if (!acquired) return
         // enqueue the balance rebalancing
         try {
             await this.balanceService.enqueue(
                 {
                     bot,
+                    jobId,
                 }
             )
             this.winstonService.log(
@@ -53,7 +68,12 @@ export class HandleReconcileBalanceService {
                     error: error.message,
                 }
             )
-            this.lockAuthorityService.release(bot)
+            this.lockAuthorityService.release(
+                {
+                    botId: bot.id,
+                    jobId,
+                }
+            )
         }
     }
 }

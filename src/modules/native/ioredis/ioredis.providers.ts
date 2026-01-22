@@ -1,15 +1,23 @@
-import { Provider } from "@nestjs/common"
+import {
+    Provider 
+} from "@nestjs/common"
 import Redis from "ioredis"
-import { createIoRedisKey } from "./constants"
-import { MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./ioredis.module-definition"
+import {
+    ioRedisInstanceKeyMap 
+} from "./config"
+import {
+    createIoRedisKey 
+} from "./constants"
+import {
+    IoRedisInstanceKey 
+} from "./types"
 
-export const createIoRedisProvider = (key?: string): Provider => ({
+export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
     provide: createIoRedisKey(key),
-    inject: [MODULE_OPTIONS_TOKEN],
+    inject: [],
     useFactory: (
-        options: typeof OPTIONS_TYPE,
     ) => {
-        const { host, port, password, additionalOptions, useCluster } = options
+        const { host, port, password, additionalOptions, useCluster } = ioRedisInstanceKeyMap[key]
         if (useCluster) {
             return new Redis.Cluster(
                 [
@@ -27,6 +35,9 @@ export const createIoRedisProvider = (key?: string): Provider => ({
                 }
             )
         }
-        return new Redis(`redis://${host}:${port}`, { password, ...additionalOptions })
+        return new Redis(`redis://${host}:${port}`,
+            {
+                password, ...additionalOptions 
+            })
     },
 })

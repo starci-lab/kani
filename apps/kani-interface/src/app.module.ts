@@ -1,34 +1,94 @@
-import { Module } from "@nestjs/common"
-import { envConfig, EnvModule } from "@modules/env"
-import { WinstonLevel, WinstonModule } from "@modules/winston"
-import { MixinModule } from "@modules/mixin"
-import { DexId, PrimaryMongoDbModule } from "@modules/databases"
-import { HttpModule } from "@modules/interfaces/http"
-import { PassportModule } from "@modules/passport"
-import { BalanceModule, DexesModule, FormulasModule, KeypairsModule, MathModule, PythModule, SpotModule } from "@modules/blockchains"
-import { CryptoModule } from "@modules/crypto"
-import { GcpModule } from "@modules/gcp"
-import { CodeModule } from "@modules/code"
-import { TotpModule } from "@modules/totp"
-import { CacheModule } from "@modules/cache"
-import { GraphQLModule } from "@modules/interfaces"
-import { ThrottlerModule } from "@modules/throttler"
-import { CookieModule } from "@modules/cookie"
-import { SentryCatchAllExceptionFilter, SentryModule } from "@modules/sentry"
-import { MailModule } from "@modules/mail"
-import { SocketIoModule } from "@modules/interfaces"
-import { ScheduleModule } from "@nestjs/schedule"
-import { DependencyName, TerminusModule } from "@modules/terminus"
-import { FilesystemModule } from "@modules/filesystem"
-import { IoRedisModule } from "@modules/native"
-import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
-import { APP_FILTER } from "@nestjs/core"
-import { DerivedModule } from "@modules/derived"
-import { ClientsModule, TxBuilderModule } from "@modules/blockchains"
-import { P2CBalancerModule } from "@modules/p2c-balancer"
-import { EventEmitterModule } from "@nestjs/event-emitter"
-import { EventModule, KafkaMode } from "@modules/event"
-import { PrivyModule } from "@modules/privy"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    EnvModule 
+} from "@modules/env"
+import {
+    WinstonLevel, WinstonModule 
+} from "@modules/winston"
+import {
+    MixinModule 
+} from "@modules/mixin"
+import {
+    DexId, PrimaryMongoDbModule 
+} from "@modules/databases"
+import {
+    HttpModule 
+} from "@modules/interfaces/http"
+import {
+    PassportModule 
+} from "@modules/passport"
+import {
+    BalanceModule, DexesModule, FormulasModule, KeypairsModule, MathModule 
+} from "@modules/blockchains"
+import {
+    CryptoModule 
+} from "@modules/crypto"
+import {
+    GcpModule 
+} from "@modules/gcp"
+import {
+    CodeModule 
+} from "@modules/code"
+import {
+    TotpModule 
+} from "@modules/totp"
+import {
+    CacheModule 
+} from "@modules/cache"
+import {
+    GraphQLModule 
+} from "@modules/interfaces"
+import {
+    ThrottlerModule 
+} from "@modules/throttler"
+import {
+    CookieModule 
+} from "@modules/cookie"
+import {
+    SentryCatchAllExceptionFilter, SentryModule 
+} from "@modules/sentry"
+import {
+    MailModule 
+} from "@modules/mail"
+import {
+    SocketIoModule 
+} from "@modules/interfaces"
+import {
+    ScheduleModule 
+} from "@nestjs/schedule"
+import {
+    DependencyName, TerminusModule 
+} from "@modules/terminus"
+import {
+    FilesystemModule 
+} from "@modules/filesystem"
+import {
+    IoRedisInstanceKey, IoRedisModule 
+} from "@modules/native"
+import {
+    APP_FILTER 
+} from "@nestjs/core"
+import {
+    DerivedModule 
+} from "@modules/derived"
+import {
+    ClientsModule, TxBuilderModule 
+} from "@modules/blockchains"
+import {
+    P2CBalancerModule 
+} from "@modules/p2c-balancer"
+import {
+    EventEmitterModule 
+} from "@nestjs/event-emitter"
+import {
+    EventModule, 
+    EventName
+} from "@modules/event"
+import {
+    PrivyModule 
+} from "@modules/privy"
 
 @Module({
     imports: [
@@ -38,11 +98,7 @@ import { PrivyModule } from "@modules/privy"
         }),
         IoRedisModule.register({
             isGlobal: true,
-            additionalInstanceKeys: [SOCKETIO_ADAPTER_KEY],
-            host: envConfig().redis.adapter.host,
-            port: envConfig().redis.adapter.port,
-            password: envConfig().redis.adapter.password,
-            useCluster: envConfig().redis.adapter.useCluster,
+            instanceKey: IoRedisInstanceKey.Adapter,
         }),
         FormulasModule.register({
             isGlobal: true,
@@ -54,12 +110,12 @@ import { PrivyModule } from "@modules/privy"
         EventModule.register({
             isGlobal: true,
             kafka: {
-                modes: [
-                    KafkaMode.Producer, 
-                    KafkaMode.Consumer
+                createTopicsIfNotExists: true,
+                useConsume: true,
+                usePublish: true,
+                topics: [
+                    EventName.ReinitializeBalancers,
                 ],
-                createTopics: true,
-                kafkaTopics: []
             },
         }),
         TxBuilderModule.register({
@@ -94,9 +150,6 @@ import { PrivyModule } from "@modules/privy"
                 analytics: false,
                 reserves: true,
             },
-        }),
-        SpotModule.register({
-            isGlobal: true,
         }),
         WinstonModule.register({
             isGlobal: true,
@@ -154,10 +207,6 @@ import { PrivyModule } from "@modules/privy"
             isGlobal: true,
             memoryStorage: true,
             withSeeders: true,
-        }),
-        PythModule.register({
-            isGlobal: true,
-            utilitiesOnly: true,
         }),
         HttpModule.register({
             isGlobal: true,

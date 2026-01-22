@@ -17,7 +17,7 @@ import {
     BotSchema 
 } from "./bot.schema"
 import {
-    JobType, GraphQLTypeJobType, GraphQLTypeJobStatus, JobStatus, TokenId 
+    JobType, GraphQLTypeJobType, GraphQLTypeJobStatus, JobStatus 
 } from "../enums"
 import {
     ExecutorSchema 
@@ -87,15 +87,6 @@ export class JobSchema extends AbstractSchema {
         type: String, enum: JobStatus 
     })
         status: JobStatus
-    
-    @Field(() => String,
-        {
-            description: "The lease id of the job" 
-        })
-    @Prop({
-        type: String, required: true 
-    })
-        leaseId: string
 
     @Field(() => String,
         {
@@ -147,6 +138,18 @@ export class JobSchema extends AbstractSchema {
         type: Date, required: false 
     })
         processedAt?: Date
+
+    @Field(
+        () => Date, 
+        { 
+            description: "The date and time the job was started",
+            nullable: true
+        }
+    )
+    @Prop({
+        type: Date, required: false 
+    })
+        startedAt?: Date
 }
 
 export const JobSchemaClass = SchemaFactory.createForClass(JobSchema)
@@ -160,29 +163,4 @@ export const getJobStatusOrder = (status: JobStatus): number => {
     case JobStatus.Completed: return 3
     case JobStatus.Failed: return 0
     }
-}
-
-export interface ReconcileBalanceJobData {
-    needsSwap: boolean
-    tokenIn: TokenId
-    tokenOut: TokenId
-}
-
-export interface ClosePositionJobData {
-    positionId: string
-}
-
-export interface OpenPositionJobData {
-    txHash: string
-    feeAmountA: string
-    feeAmountB: string
-    tickLower: string
-    tickUpper: string
-    amountA: string
-    amountB: string
-    minBinId: string
-    maxBinId: string
-    metadata: unknown
-    ataAddress: string
-    positionId: string
 }

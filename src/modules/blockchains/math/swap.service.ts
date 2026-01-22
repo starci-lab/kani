@@ -557,7 +557,6 @@ export class SwapMathService {
                 quoteBalanceAmount,
             }
         )
-        console.log(`quoteRatioResult: ${JSON.stringify(quoteRatioResult)}`)
         switch (gasStatus) {
         case GasStatus.IsTarget: {
             return this.computeSwapAmountsWhenTargetIsGas({

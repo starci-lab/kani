@@ -1,5 +1,5 @@
 import {
-    TokenId 
+    TokenSchema 
 } from "@modules/databases"
 import {
     Transaction, TransactionObjectArgument 
@@ -23,8 +23,8 @@ export interface IAggregatorService {
  * Parameters for requesting a swap quote.
  */
 export interface QuoteParams {
-    tokenIn: TokenId
-    tokenOut: TokenId
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
     amountIn: BN
     senderAddress: string
     recipientAddress?: string
@@ -44,8 +44,8 @@ export interface QuoteResult {
 
 export interface SwapParams {
     payload: unknown
-    tokenIn: TokenId
-    tokenOut: TokenId
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
     accountAddress: string
     inputCoin?: TransactionObjectArgument
     txb?: Transaction

@@ -17,6 +17,6 @@ export class HandleClmmPositionOpenRequestedEventService {
         bot: BotSchema,
         event: ClmmPositionOpenRequestedEventPayload,
     ) {
-        console.log(event)
+
     }
 }

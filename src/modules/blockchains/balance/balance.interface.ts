@@ -1,5 +1,5 @@
 import {
-    BotSchema, TokenId, TokenSchema 
+    BotSchema, TokenSchema 
 } from "@modules/databases"
 import BN from "bn.js"
 import Decimal from "decimal.js"
@@ -9,6 +9,9 @@ import {
 import {
     SignatureWithBytes 
 } from "@mysten/sui/cryptography"
+import {
+    ComputeSwapAmountsResult 
+} from "../math"
 
 /**
  * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
@@ -23,33 +26,20 @@ export interface IBalanceService {
 export interface DetermineReconcileBalancePlanParams {
     bot: BotSchema
     // if you pass those params, we will not fetch the balances from on-chain
-    snapshotTargetBalanceAmount?: BN
-    snapshotQuoteBalanceAmount?: BN
-    snapshotGasBalanceAmount?: BN
+    targetBalanceAmount?: BN
+    quoteBalanceAmount?: BN
+    gasBalanceAmount?: BN
 }
 
-export interface DetermineReconcileBalancePlanResult {
-    needsSwap: boolean
-    needsSnapshot: boolean
-    swapDirection?: "targetToQuote" | "quoteToTarget"
-    tokenIn?: TokenSchema
-    tokenOut?: TokenSchema
-    amountIn?: BN
-    estimatedSwappedAmount?: BN
-}
+export type DetermineReconcileBalancePlanResult = ComputeSwapAmountsResult
+
 export interface FetchBalanceParams {
     bot: BotSchema
-    tokenId: TokenId
+    token: TokenSchema
 }
 
 export interface FetchBalanceResult {
     balanceAmount: BN
-}
-
-export enum GasStatus {
-    IsTarget = "isTarget",
-    IsQuote = "isQuote",
-    IsGas = "isGas",
 }
 
 export interface FetchBalancesParams {
@@ -78,8 +68,8 @@ export interface ProcessTransferFeesResult {
 
 export interface ProcessSwapTransactionParams {
     bot: BotSchema
-    tokenIn: TokenId
-    tokenOut: TokenId
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
     amountIn: BN
     estimatedSwappedAmount: BN
 }
@@ -90,8 +80,8 @@ export interface ProcessSwapTransactionResult {
 
 export interface PrepareSwapTransactionParams {
     bot: BotSchema
-    tokenIn: TokenId
-    tokenOut: TokenId
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
     amountIn: BN
     estimatedSwappedAmount: BN
 }
@@ -108,12 +98,13 @@ export interface ExecuteSwapTransactionParams {
     solanaTx?: SolanaTx // Solana Transaction object
     signatureWithBytes?: SignatureWithBytes
     isRetry: boolean
-    tokenIn: TokenId
-    tokenOut: TokenId
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
 }
 
 export interface EnqueueBalanceRebalancingParams {
     bot: BotSchema
+    jobId: string
 }
 
 export interface GetBalanceAmountInUsdParams {

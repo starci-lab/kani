@@ -28,13 +28,15 @@ import {
     JobStatus, 
     PrimaryMemoryStorageService, 
     InjectPrimaryMongoose, 
-    JobSchema, 
+    JobSchema,
+    BotSchema, 
 } from "@modules/databases"
 import {
     TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
     MinOperationalGasAmountNotFoundException,
     UnsupportedChainIdException,
+    InsufficientMinGasBalanceAmountException,
 } from "@modules/exceptions"
 import {
     GasStatusService 
@@ -46,10 +48,6 @@ import BN from "bn.js"
 import {
     SwapMathService 
 } from "../math"
-import {
-    computeDenomination 
-} from "@modules/utils"
-import Decimal from "decimal.js"
 import {
     v4 
 } from "uuid"
@@ -66,18 +64,15 @@ import {
     bullData, BullQueueName 
 } from "@modules/bullmq"
 import {
-    ReconcileBalancePayload 
-} from "../types"
-import {
     InjectQueue 
 } from "@nestjs/bullmq"
 import {
-    WinstonService 
-} from "@modules/winston"
-import {
-    AsyncService,
+    InjectSuperJson 
 } from "@modules/mixin"
-
+import SuperJSON from "superjson"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -90,14 +85,17 @@ export class BalanceService implements IBalanceService {
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
     @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
-    private readonly reconcileBalanceQueue: Queue<ReconcileBalancePayload>,
-    private readonly winstonService: WinstonService,
-    private readonly asyncService: AsyncService,
-    ) {}
+    private readonly reconcileBalanceQueue: Queue<string>,
+    @InjectSuperJson()
+    private readonly superJson: SuperJSON,
+    private readonly dayjsService: DayjsService,
+    ) {
+    }
 
     async enqueue(
         {
             bot,
+            jobId,
         }: EnqueueBalanceRebalancingParams,
     ) {
         /**
@@ -111,44 +109,70 @@ export class BalanceService implements IBalanceService {
          * Add reconcile balance job to the queue
          */
         const session = await this.connection.startSession()
-        await session.withTransaction(async () => {
-            /**
-                 * Persist job record.
-                 */
-            const [ jobRaw ] = await this.connection.model<JobSchema>(
-                JobSchema.name
-            ).create(
-                [
-                    {
-                        bot: bot.id,
-                        type: JobType.ReconcileBalance,
-                        status: JobStatus.Pending,
-                        executor: envConfig().executor.id,
-                    }
-                ])
-            /**
-                * Add reconcile balance job to the queue
+        await session.withTransaction(
+            async () => {
+                /**
+                * Persist job record.
                 */
-            await this.reconcileBalanceQueue.add(
-                v4(),
-                {
-                    jobId: jobRaw.toJSON().id,
-                    botId: bot.id,
-                }
-            )
-        }
+                const [ jobRaw ] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            _id: jobId,
+                            bot: bot.id,
+                            type: JobType.ReconcileBalance,
+                            status: JobStatus.Pending,
+                            executor: envConfig().executor.id,
+                            startedAt: this.dayjsService.now().toDate(),
+                        }
+                    ],
+                    {
+                        session 
+                    })
+                const job = jobRaw.toJSON<JobSchema>()
+                /**
+                * Update the bot with the active job id.
+                */
+                await this.connection.model<BotSchema>(BotSchema.name)
+                    .updateOne(
+                        {
+                            _id: bot.id 
+                        },
+                        {
+                            $set: {
+                                activeJob: job.id,
+                            } 
+                        },
+                        {
+                            session 
+                        }
+                    )
+                /**
+                * Enqueue reconcile balance job.
+                */
+                await this.reconcileBalanceQueue.add(
+                    v4(),
+                    this.superJson.stringify(
+                        {
+                            jobId: job.id,
+                            botId: bot.id,
+                        }
+                    ),
+                )
+            }
         )
     }   
 
     async determineReconcileBalancePlan({
         bot,
-        snapshotTargetBalanceAmount,
-        snapshotQuoteBalanceAmount,
-        snapshotGasBalanceAmount,
+        targetBalanceAmount: _targetBalanceAmount,
+        quoteBalanceAmount: _quoteBalanceAmount,
+        gasBalanceAmount: _gasBalanceAmount,
     }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: bot.targetToken
+                $eq: bot.targetToken.toString()
             }
         })
         if (!targetToken) {
@@ -158,7 +182,7 @@ export class BalanceService implements IBalanceService {
         }   
         const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: bot.quoteToken
+                $eq: bot.quoteToken.toString()
             }
         })
         if (!quoteToken) {
@@ -166,111 +190,58 @@ export class BalanceService implements IBalanceService {
                 id: bot.quoteToken.toString(),
             })
         }   
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            type: {
+                $eq: TokenType.Native
+            },
+            chainId: {
+                $eq: bot.chainId
+            }
+        })
+        if (!gasToken) {
+            throw new TokenNotFoundException({
+                conditions: {
+                    chainId: bot.chainId,
+                    type: TokenType.Native,
+                },
+            })
+        }
         // if you pass the snapshot balances, we will use them instead of fetching the balances from on-chain
         let targetBalanceAmount: BN
         let quoteBalanceAmount: BN
         let gasBalanceAmount: BN
         if (
-            snapshotTargetBalanceAmount &&
-            snapshotQuoteBalanceAmount &&
-            snapshotGasBalanceAmount
+            _targetBalanceAmount &&
+            _quoteBalanceAmount &&
+            _gasBalanceAmount
         ) {
-            targetBalanceAmount = snapshotTargetBalanceAmount
-            quoteBalanceAmount = snapshotQuoteBalanceAmount
-            gasBalanceAmount = snapshotGasBalanceAmount
+            targetBalanceAmount = _targetBalanceAmount
+            quoteBalanceAmount = _quoteBalanceAmount
+            gasBalanceAmount = _gasBalanceAmount
         } else {
             const {
-                targetBalanceAmount: fetchedTargetBalanceAmount,
-                quoteBalanceAmount: fetchedQuoteBalanceAmount,
-                gasBalanceAmount: fetchedGasBalanceAmount,
+                targetBalanceAmount: _targetBalanceAmount,
+                quoteBalanceAmount: _quoteBalanceAmount,
+                gasBalanceAmount: _gasBalanceAmount,
             } = await this.fetchBalances(
                 {
                     bot,
                 }
             )
-            targetBalanceAmount = fetchedTargetBalanceAmount
-            quoteBalanceAmount = fetchedQuoteBalanceAmount
-            gasBalanceAmount = fetchedGasBalanceAmount
+            targetBalanceAmount = _targetBalanceAmount
+            quoteBalanceAmount = _quoteBalanceAmount
+            gasBalanceAmount = _gasBalanceAmount
         }
-        const {
-            processSwaps,
-            swapTargetToQuoteAmount,
-            swapQuoteToTargetAmount,
-            estimatedSwappedTargetAmount,
-            estimatedSwappedQuoteAmount,
-            quoteRatioResult,
-        } = await this.swapMathService.computeSwapAmounts(
+        return await this.swapMathService.computeSwapAmounts(
             {
-                targetTokenId: targetToken.displayId,
-                quoteTokenId: quoteToken.displayId,
+                targetToken,
+                quoteToken,
+                gasToken,
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasBalanceAmount
             }
         )
-        if (!processSwaps) {
-            // just snapshot the balances and return
-            return {
-                needsSwap: false,
-                needsSnapshot: true,
-            }
-        }
-        const targetBalanceAmountInTarget = computeDenomination(
-            targetBalanceAmount,
-            targetToken.decimals,
-        )
-        const quoteBalanceAmountInTarget = computeDenomination(
-            quoteBalanceAmount,
-            quoteToken.decimals,
-        ).div(quoteRatioResult.relativePrice)
-        const totalBalanceAmountInTarget = targetBalanceAmountInTarget.add(
-            quoteBalanceAmountInTarget,
-        )
-        if (
-            totalBalanceAmountInTarget.lt(
-                new Decimal(targetToken.minSwapAmount || 0),
-            )
-        ) {
-            // snapshot the balances and return, since the balance is not enough to swap
-            return {
-                needsSwap: false,
-                needsSnapshot: true,
-            }
-        }
-        if (swapTargetToQuoteAmount) {
-            if (!estimatedSwappedQuoteAmount) {
-                throw new EstimatedSwappedQuoteAmountNotFoundException(
-                    "Estimated swapped quote amount not found",
-                )
-            }       
-            return {
-                needsSwap: true,
-                needsSnapshot: true,
-                tokenIn: targetToken,
-                tokenOut: quoteToken,
-                amountIn: swapTargetToQuoteAmount,
-                estimatedSwappedAmount: estimatedSwappedQuoteAmount,
-            }
-        }
-        if (swapQuoteToTargetAmount) {
-            if (!estimatedSwappedTargetAmount) {
-                throw new EstimatedSwappedTargetAmountNotFoundException(
-                    "Estimated swapped target amount not found",
-                )
-            }
-            return {
-                needsSwap: true,
-                needsSnapshot: false,
-                tokenIn: quoteToken,
-                tokenOut: targetToken,
-                amountIn: swapQuoteToTargetAmount,
-                estimatedSwappedAmount: estimatedSwappedTargetAmount,
-            }
-        }
-        return {
-            needsSwap: false,
-            needsSnapshot: true,
-        }
     }
 
     async prepareSwapTransaction(
@@ -299,12 +270,14 @@ export class BalanceService implements IBalanceService {
         }
     }
 
-    public async fetchBalances({
-        bot,
-    }: FetchBalancesParams): Promise<FetchBalancesResult> {
+    public async fetchBalances(
+        {
+            bot,
+        }: FetchBalancesParams
+    ): Promise<FetchBalancesResult> {
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: bot.targetToken
+                $eq: bot.targetToken.toString()
             }
         })
         if (!targetToken) {
@@ -314,7 +287,7 @@ export class BalanceService implements IBalanceService {
         }
         const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: bot.quoteToken
+                $eq: bot.quoteToken.toString()
             }
         })
         if (!quoteToken) {
@@ -324,11 +297,11 @@ export class BalanceService implements IBalanceService {
         }
         const { balanceAmount: targetBalanceAmount } = await this.fetchBalance({
             bot,
-            tokenId: targetToken.displayId,
+            token: targetToken,
         })
         const { balanceAmount: quoteBalanceAmount } = await this.fetchBalance({
             bot,
-            tokenId: quoteToken.displayId,
+            token: quoteToken,
         })
         const gasStatus = this.gasStatusService.getGasStatus({
             targetTokenId: targetToken.displayId,
@@ -366,7 +339,10 @@ export class BalanceService implements IBalanceService {
             if (effectiveGasAmountBN.lt(minOperationalGasAmountBN)) {
                 throw new InsufficientMinGasBalanceAmountException(
                     {
+                        gasBalanceAmount: effectiveGasAmountBN.toString(),
+                        minOperationalGasAmount: minOperationalGasAmountBN.toString(),
                         chainId: bot.chainId,
+                        botId: bot.id,
                     }
                 )
             }
@@ -407,7 +383,7 @@ export class BalanceService implements IBalanceService {
             }
             const { balanceAmount: gasBalanceAmount } = await this.fetchBalance({
                 bot,
-                tokenId: gasToken.displayId,
+                token: gasToken,
             })
             return {
                 targetBalanceAmount,

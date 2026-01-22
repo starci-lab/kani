@@ -16,6 +16,9 @@ import {
     HandleReconcileBalanceService,
     LockAuthorityService
 } from "./core"
+import {
+    ReconcileBalanceWorker 
+} from "./workers"
 
 @Module({
 })
@@ -36,7 +39,8 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 LockAuthorityService,
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
-                HandleReconcileBalanceService
+                HandleReconcileBalanceService,
+                ReconcileBalanceWorker,
             ],
             exports: [
                 RuntimesFactoryService,

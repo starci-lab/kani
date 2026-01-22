@@ -553,3 +553,47 @@ export interface ReconcileBalanceEnqueueFailedMessage {
 export interface ReconcileBalanceEnqueuedMessage {
     botId: string
 }
+
+/**
+ * Reconcile Balance Processing Completed Message
+ */
+export interface ReconcileBalanceProcessingCompletedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Reconcile Balance Processing Started Message
+ */
+export interface ReconcileBalanceProcessingStartedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Reconcile Balance Processing Failed Unrecoverable Message
+ */
+export interface ReconcileBalanceProcessingFailedUnrecoverableMessage {
+    botId: string
+    jobId: string
+    error: string
+}
+
+/**
+ * Reconcile Balance Processing Failed Permanent Failure Message
+ */
+export interface ReconcileBalanceProcessingFailedPermanentFailureMessage {
+    botId: string
+    jobId: string
+    error: string
+}
+
+/**
+ * Reconcile Balance Processing Failed Retryable Message
+ */
+export interface ReconcileBalanceProcessingFailedRetryableMessage {
+    botId: string
+    jobId: string
+    error: string
+    attemptsMade: number
+}

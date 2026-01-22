@@ -302,6 +302,10 @@ export const envConfig = () => ({
                     "30s"),
             },
         },
+        lockAuthority: {
+            ttl: parseEnvMs("EXECUTOR_LOCK_AUTHORITY_TTL",
+                "30s"),
+        },
     },
     // quote config
     quote: {
@@ -458,7 +462,27 @@ export const envConfig = () => ({
                 "Cuong123_A"),
             useCluster: parseEnvBoolean("REDIS_THROTTLER_USE_CLUSTER",
                 false),
-        }
+        },
+        lockAuthority: {
+            host: parseEnvString("REDIS_LOCK_AUTHORITY_HOST",
+                "localhost"),
+            port: parseEnvInt("REDIS_LOCK_AUTHORITY_PORT",
+                6379),
+            password: parseEnvString("REDIS_LOCK_AUTHORITY_PASSWORD",
+                "Cuong123_A"),
+            useCluster: parseEnvBoolean("REDIS_LOCK_AUTHORITY_USE_CLUSTER",
+                false),
+        },
+        adapter: {
+            host: parseEnvString("REDIS_ADAPTER_HOST",
+                "localhost"),
+            port: parseEnvInt("REDIS_ADAPTER_PORT",
+                6379),
+            password: parseEnvString("REDIS_ADAPTER_PASSWORD",
+                "Cuong123_A"),
+            useCluster: parseEnvBoolean("REDIS_ADAPTER_USE_CLUSTER",
+                false),
+        },
     },
     // database config
     databases: {

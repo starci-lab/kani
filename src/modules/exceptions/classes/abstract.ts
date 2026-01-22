@@ -9,15 +9,39 @@ export abstract class AbstractException extends Error {
     readonly metadata?: Record<string, unknown>
 
     /**
-     * @param message Human readable message
-     * @param name Exception code (kept as `Error.name` for backward compatibility)
-     * @param metadata Extra debugging metadata
-     */
+         * @param message Human readable message
+         * @param name Exception code (kept as `Error.name` for backward compatibility)
+         * @param metadata Extra debugging metadata
+         */
     constructor(message: string, name: string, metadata?: Record<string, unknown>) {
         super(message)
         this.code = name
         this.name = name
         this.metadata = metadata
+    }
+
+    toJSON(): string {
+        return JSON.stringify(
+            {
+                message: this.message,
+                code: this.code,
+                metadata: this.metadata,
+            }
+        )
+    }
+
+    static fromJSON<T extends AbstractException>(
+        this: new (
+          message: string,
+          code: string,
+          metadata?: Record<string, unknown>
+        ) => T,
+        json: string,
+    ): T {
+        const { message, code, metadata } = JSON.parse(json)
+        return new this(message,
+            code,
+            metadata)
     }
 }
 

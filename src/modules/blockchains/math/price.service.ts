@@ -44,7 +44,6 @@ export class PriceService {
     ): Promise<ResolvePriceResult> {
         const aggregated =
             await this.aggregatedTokenPriceCacheService.get(token.displayId)
-        console.log(`aggregated: ${JSON.stringify(aggregated)}`)
         const now = this.dayjsService.now()
         const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
         const maxDeviationRatio = envConfig().price.deviationMaxRatio
@@ -142,7 +141,6 @@ export class PriceService {
     async resolveRelativePrice(
         { tokenA, tokenB }: ResolveRelativePriceParams,
     ): Promise<ResolveRelativePriceResult> {
-        console.log(`starting resolveRelativePrice with tokenA: ${tokenA.displayId}, tokenB: ${tokenB.displayId}`)
         const [
             priceA, 
             priceB

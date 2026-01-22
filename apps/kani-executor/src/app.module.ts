@@ -86,6 +86,10 @@ import {
 import {
     StreamAsyncIteratorModule 
 } from "@modules/stream-async-iterator"
+import {
+    IoRedisModule,
+    IoRedisInstanceKey 
+} from "@modules/native"
 
 @Module({
     imports: [
@@ -96,6 +100,12 @@ import {
         SentryModule.register({
             isGlobal: true,
         }),
+        IoRedisModule.register(
+            {
+                isGlobal: true,
+                instanceKey: IoRedisInstanceKey.LockAuthority,
+            }
+        ),
         SemaModule.register({
             isGlobal: true,
         }),
