@@ -79,7 +79,15 @@ import {
     ReconcileBalanceProcessingCompletedMessage,
     ReconcileBalanceProcessingFailedPermanentFailureMessage,
     ReconcileBalanceProcessingFailedUnrecoverableMessage,
-    ReconcileBalanceProcessingFailedRetryableMessage
+    ReconcileBalanceProcessingFailedRetryableMessage,
+    PriceDiagnosticFailedMessage,
+    PriceDiagnosticSuccessMessage,
+    PriceDiagnosticFailedNotFoundMessage,
+    DynamicLiquidityPoolInfoDiagnosticFailedMessage,
+    DynamicLiquidityPoolInfoDiagnosticFailedNotFoundMessage,
+    DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage,
+    DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
+    PriceDiagnosticFailedStaleMessage
 } from "./types"
 
 export const configMap = {
@@ -723,5 +731,69 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceProcessingFailedRetryableMessage,
+    },
+    // Price Diagnostic Failed
+    [WinstonLog.PriceDiagnosticFailed]: {
+        name: WinstonLog.PriceDiagnosticFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as PriceDiagnosticFailedMessage,
+    },
+    // Price Diagnostic Success
+    [WinstonLog.PriceDiagnosticSuccess]: {
+        name: WinstonLog.PriceDiagnosticSuccess,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as PriceDiagnosticSuccessMessage,
+    },
+    // Price Diagnostic Warning
+    [WinstonLog.PriceDiagnosticFailedStale]: {
+        name: WinstonLog.PriceDiagnosticFailedStale,
+        level: WinstonLevel.Warn,
+        loki: true,
+        messageType: {
+        } as PriceDiagnosticFailedStaleMessage,
+    },
+    // Price Diagnostic Failed Not Found
+    [WinstonLog.PriceDiagnosticFailedNotFound]: {
+        name: WinstonLog.PriceDiagnosticFailedNotFound,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as PriceDiagnosticFailedNotFoundMessage,
+    },
+    // Dynamic Liquidity Pool Info Diagnostic Failed
+    [WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed]: {
+        name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as DynamicLiquidityPoolInfoDiagnosticFailedMessage,
+    },
+    // Dynamic Liquidity Pool Info Diagnostic Failed Not Found
+    [WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound]: {
+        name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as DynamicLiquidityPoolInfoDiagnosticFailedNotFoundMessage,
+    },
+    // Dynamic Liquidity Pool Info Diagnostic Failed Stale
+    [WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale]: {
+        name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale,
+        level: WinstonLevel.Warn,
+        loki: true,
+        messageType: {
+        } as DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage,
+    },
+    // Dynamic Liquidity Pool Info Diagnostic Success
+    [WinstonLog.DynamicLiquidityPoolInfoDiagnosticSuccess]: {
+        name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticSuccess,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
     },
 }

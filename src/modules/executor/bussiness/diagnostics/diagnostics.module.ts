@@ -1,7 +1,20 @@
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./diagnostics.module-definition"
-import { PythPriceDiagnosticService } from "./oracle-price.service"
-@Module({})
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./diagnostics.module-definition"
+import {
+    PriceDiagnosticService 
+} from "./price.service"
+import {
+    DynamicLiquidityPoolInfoDiagnosticService 
+} from "./dynamic-liquidity-pool-info.service"
+import {
+    DiagnosticsService 
+} from "./diagnostics.service"
+@Module({
+})
 export class DiagnosticsModule extends ConfigurableModuleClass {
     static register(
         options: typeof OPTIONS_TYPE
@@ -11,7 +24,9 @@ export class DiagnosticsModule extends ConfigurableModuleClass {
             ...dynamicModule,
             providers: [
                 ...dynamicModule.providers || [], 
-                PythPriceDiagnosticService, 
+                DynamicLiquidityPoolInfoDiagnosticService,
+                PriceDiagnosticService, 
+                DiagnosticsService,
             ],
         }
     }

@@ -13,7 +13,6 @@ import {
     AppVersion, 
 } from "@modules/databases"
 import {
-    TransactionNotExecutedException, 
     TransactionNotFoundException, 
     PrivyPublicKeyNotFoundException, 
     ErrorTransactionType,
@@ -89,7 +88,7 @@ export class SuiBalanceService implements IBalanceService {
             txb.transferObjects([outputCoin],
                 bot.accountAddress)
         }
-        return await this.rpcExecutorService.withSuiClient({
+        const result = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
                 if (bot.version === AppVersion.V1) {
@@ -106,6 +105,8 @@ export class SuiBalanceService implements IBalanceService {
                     return {
                         txHash,
                         signatureWithBytes,
+                        tokenIn,
+                        tokenOut,
                     }
                 } else {
                     if (!bot.privyMetadata?.walletPublicKey) {
@@ -129,6 +130,11 @@ export class SuiBalanceService implements IBalanceService {
                 }
             },
         })
+        return {
+            ...result,
+            tokenIn,
+            tokenOut,
+        }
     }
 
     async executeSwapTransaction(
@@ -136,28 +142,20 @@ export class SuiBalanceService implements IBalanceService {
             bot,
             txHash,
             signatureWithBytes,
-            isRetry,
             tokenIn,
             tokenOut,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        if (isRetry) {
-            return await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    const transaction = await suiClient.getTransactionBlock({
-                        digest: txHash,
-                    })
-                    if (transaction) {
-                        return
-                    }
-                    throw new TransactionNotExecutedException({
-                        botId: bot.id,
-                        txHash,
-                        type: ErrorTransactionType.Swap,
-                    })
-                },
-            })
+        const transaction = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Http,
+            callback: async ({ suiClient }) => {
+                return await suiClient.getTransactionBlock({
+                    digest: txHash,
+                })
+            },
+        })
+        if (transaction) {
+            return
         }
         if (!signatureWithBytes) {
             throw new MissingSuiMessageWithBytesParamException({

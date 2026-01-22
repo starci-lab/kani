@@ -356,7 +356,7 @@ export const envConfig = () => ({
         stale: {
             priceMaxAgeMs: parseEnvMs(
                 "CACHE_STALE_PRICE_MAX_AGE_MS",
-                "10s"),
+                "10s")
         },
     },
     // price config

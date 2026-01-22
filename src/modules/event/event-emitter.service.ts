@@ -90,7 +90,6 @@ export class EventEmitterService implements OnModuleInit {
           options?.useKafka !== undefined
               ? options?.useKafka
               : config?.useKafka
-        console.log(`useLocal: ${useLocal}, useKafka: ${useKafka}`)
       
         // Emit locally (in-process listeners)
         if (useLocal) {

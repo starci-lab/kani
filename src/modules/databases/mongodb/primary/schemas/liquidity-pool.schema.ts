@@ -257,16 +257,25 @@ export class LiquidityPoolSchema extends AbstractSchema {
         })
         dynamicInfo?: GraphQLDynamicLiquidityPoolInfo
 
-    @Field(() => Number,
+    @Field(() => Float,
         {
             description:
             "The WS idle timeout of the liquidity pool (for liquidity pool supporting WS connection)",
             nullable: true,
         })
     @Prop({
-        type: Number, nullable: true 
+        type: Number, nullable: true
     })
-        wsIdleTimeoutMs: number
+        wsIdleTimeoutMs?: number
+
+    @Field(() => Float,
+        {
+            description: "The stale time of the dynamic liquidity pool info in milliseconds",
+        })
+    @Prop({
+        type: Number
+    })
+        staleMs: number
 }
 
 export const LiquidityPoolSchemaClass =

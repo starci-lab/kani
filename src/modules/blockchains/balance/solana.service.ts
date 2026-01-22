@@ -19,8 +19,7 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     ErrorTransactionType,
     MissingSolanaTxParamException,
-    PrivyMetadataNotFoundException,
-    TransactionNotExecutedException
+    PrivyMetadataNotFoundException
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -221,6 +220,8 @@ export class SolanaBalanceService implements IBalanceService {
                             return {
                                 txHash,
                                 solanaTx: signedTransaction,
+                                tokenIn,
+                                tokenOut,
                             }
                         },
                     })
@@ -247,6 +248,8 @@ export class SolanaBalanceService implements IBalanceService {
                     return {
                         txHash: signedTransaction.txHash,
                         solanaTx: signedTransaction.signedTransaction,
+                        tokenIn,
+                        tokenOut,
                     }
                 }
             },
@@ -258,31 +261,22 @@ export class SolanaBalanceService implements IBalanceService {
             bot,
             txHash,
             solanaTx,
-            isRetry,
             tokenIn,
             tokenOut,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        if (isRetry) {
-            return await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    const transaction = await rpc.getTransaction(signature(txHash),
-                        {
-                            commitment: "confirmed", encoding: "base58" 
-                        }).send()
-                    if (transaction) {
-                        return
-                    }
-                    throw new TransactionNotExecutedException(
-                        {
-                            botId: bot.id,
-                            txHash,
-                            type: ErrorTransactionType.Swap,
-                        }
-                    )
-                },
-            })
+        const transaction = await this.rpcExecutorService.withSolanaRpc({
+            accessType: RpcAccessType.Http,
+            callback: async ({ rpc }) => {
+                return await rpc.getTransaction(signature(txHash),
+                    {
+                        commitment: "confirmed", encoding: "base58" 
+                    }).send()
+
+            },
+        })
+        if (transaction) {
+            return
         }
         if (!solanaTx) {
             throw new MissingSolanaTxParamException({

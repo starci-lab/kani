@@ -545,6 +545,7 @@ export interface ExecutorNotFoundMessage {
 export interface ReconcileBalanceEnqueueFailedMessage {
     botId: string
     error: string
+    bullmqJobId?: string
 }
 
 /**
@@ -552,6 +553,8 @@ export interface ReconcileBalanceEnqueueFailedMessage {
  */
 export interface ReconcileBalanceEnqueuedMessage {
     botId: string
+    jobId: string
+    bullmqJobId?: string
 }
 
 /**
@@ -560,6 +563,7 @@ export interface ReconcileBalanceEnqueuedMessage {
 export interface ReconcileBalanceProcessingCompletedMessage {
     botId: string
     jobId: string
+    bullmqJobId?: string
 }
 
 /**
@@ -568,6 +572,7 @@ export interface ReconcileBalanceProcessingCompletedMessage {
 export interface ReconcileBalanceProcessingStartedMessage {
     botId: string
     jobId: string
+    bullmqJobId?: string
 }
 
 /**
@@ -576,6 +581,7 @@ export interface ReconcileBalanceProcessingStartedMessage {
 export interface ReconcileBalanceProcessingFailedUnrecoverableMessage {
     botId: string
     jobId: string
+    bullmqJobId?: string
     error: string
 }
 
@@ -585,6 +591,7 @@ export interface ReconcileBalanceProcessingFailedUnrecoverableMessage {
 export interface ReconcileBalanceProcessingFailedPermanentFailureMessage {
     botId: string
     jobId: string
+    bullmqJobId?: string
     error: string
 }
 
@@ -594,6 +601,75 @@ export interface ReconcileBalanceProcessingFailedPermanentFailureMessage {
 export interface ReconcileBalanceProcessingFailedRetryableMessage {
     botId: string
     jobId: string
+    bullmqJobId?: string
     error: string
     attemptsMade: number
+}
+
+/**
+ * Price Diagnostic Failed Message
+ */
+export interface PriceDiagnosticFailedMessage {
+    tokenId: TokenId
+    error: string
+}
+
+/**
+ * Price Diagnostic Success Message
+ */
+export interface PriceDiagnosticSuccessMessage {
+    tokenId: TokenId
+}
+
+/**
+ * Price Diagnostic Failed Not Found Message
+ */
+export interface PriceDiagnosticFailedNotFoundMessage {
+    tokenId: TokenId
+}
+
+/**
+ * Price Diagnostic Failed Stale Message
+ */
+export interface PriceDiagnosticFailedStaleMessage {
+    tokenId: TokenId
+    ageMs: number
+}
+
+/**
+ * Price Diagnostic Failed Message
+ */
+export interface PriceDiagnosticFailedMessage {
+    tokenId: TokenId
+    error: string
+}
+
+/**
+ * Dynamic Liquidity Pool Info Diagnostic Failed Not Found Message
+ */
+export interface DynamicLiquidityPoolInfoDiagnosticFailedNotFoundMessage {
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Dynamic Liquidity Pool Info Diagnostic Success Message
+ */
+export interface DynamicLiquidityPoolInfoDiagnosticSuccessMessage {
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Dynamic Liquidity Pool Info Diagnostic Failed Stale Message
+ */
+export interface DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage {
+    liquidityPoolId: LiquidityPoolId
+    ageMs: number
+}
+
+/**
+ * Dynamic Liquidity Pool Info Diagnostic Failed Message
+ */
+export interface DynamicLiquidityPoolInfoDiagnosticFailedMessage {
+    liquidityPoolId: LiquidityPoolId
+    error: string
 }

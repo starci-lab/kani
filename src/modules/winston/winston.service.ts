@@ -54,6 +54,12 @@ export class WinstonService {
                     message)
                 break
             }
+            case WinstonLevel.Warn: {
+                this.lokiLogger.warn(
+                    config.name,
+                    message)
+                break
+            }
             default: {
                 this.lokiLogger.info(
                     config.name,
@@ -83,6 +89,12 @@ export class WinstonService {
             }
             case WinstonLevel.Fatal: {
                 this.consoleLogger.error(
+                    config.name,
+                    message)
+                break
+            }
+            case WinstonLevel.Warn: {
+                this.consoleLogger.warn(
                     config.name,
                     message)
                 break

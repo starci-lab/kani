@@ -33,22 +33,20 @@ export class HandleReconcileBalanceService {
         if (!bot.running) return
         // we do nothing if the bot has an active position
         if (bot.activePosition) return
-            
-        const jobId = new Types.ObjectId().toString()
-        // check if the bot has an active job
         if (bot.activeJob) {
             return
         }
+        const jobId = new Types.ObjectId().toString()
+        // check if the bot has an active job
         const acquired = await this.lockAuthorityService.acquire(
             {
                 botId: bot.id,
-                jobId,
             }
         )
         if (!acquired) return
         // enqueue the balance rebalancing
         try {
-            await this.balanceService.enqueue(
+            const bullmqJob = await this.balanceService.enqueue(
                 {
                     bot,
                     jobId,
@@ -57,7 +55,9 @@ export class HandleReconcileBalanceService {
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceEnqueued,
                 {
+                    jobId,
                     botId: bot.id,
+                    bullmqJobId: bullmqJob?.id,
                 }
             )
         } catch (error) {
@@ -71,7 +71,6 @@ export class HandleReconcileBalanceService {
             this.lockAuthorityService.release(
                 {
                     botId: bot.id,
-                    jobId,
                 }
             )
         }

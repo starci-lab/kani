@@ -90,6 +90,8 @@ export interface PrepareSwapTransactionResult {
     txHash: string
     solanaTx?: SolanaTx // Solana Transaction object
     signatureWithBytes?: SignatureWithBytes
+    tokenIn: TokenSchema
+    tokenOut: TokenSchema
 }
 
 export interface ExecuteSwapTransactionParams {
@@ -97,7 +99,6 @@ export interface ExecuteSwapTransactionParams {
     txHash: string
     solanaTx?: SolanaTx // Solana Transaction object
     signatureWithBytes?: SignatureWithBytes
-    isRetry: boolean
     tokenIn: TokenSchema
     tokenOut: TokenSchema
 }

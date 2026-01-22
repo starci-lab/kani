@@ -7,6 +7,9 @@ import {
 import {
     SubscriptionsModule 
 } from "./subscriptions"
+import {
+    DiagnosticsModule 
+} from "./diagnostics"
 
 @Module({
 })
@@ -18,9 +21,16 @@ export class BussinessModule extends ConfigurableModuleClass {
         return {
             ...dynamicModule,
             imports: [
-                SubscriptionsModule.register({
-                    isGlobal: options.isGlobal,
-                }),
+                DiagnosticsModule.register(
+                    {
+                        isGlobal: options.isGlobal,
+                    }
+                ),
+                SubscriptionsModule.register(
+                    {
+                        isGlobal: options.isGlobal,
+                    }
+                ),
             ],
         }
     }

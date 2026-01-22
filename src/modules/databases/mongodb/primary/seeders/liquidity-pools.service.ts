@@ -54,6 +54,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 1,
         },
         url: "https://app.cetus.zone/clmm?poolAddress=0xc23e7e8a74f0b18af4dfb7c3280e2a56916ec4d41e14416f85184a8aab6b7789",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusUsdcSui005),
@@ -78,6 +79,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             positionManagerId: "0x0bad9ea1bcb68c4ac3eb71819639360906392047f5fcd1675902cbb84d6157e8"
         },
         url: "https://app.cetus.zone/clmm?poolAddress=0x51e883ba7c0b566a26cbc8a94cd33eb0abd418a77cc1e60ad22fd9b1f29cd2ab",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosSuiUsdc005),
@@ -100,6 +102,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             positionsObject: "0xf5762ae5ae19a2016bb233c72d9a4b2cba5a302237a82724af66292ae43ae52d",
         },
         url: "https://app.turbos.finance/#/pools/0x0df4f02d0e210169cb6d5aabd03c3058328c06f2c4dbb0804faa041159c78443/add-liquidity",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosIkaUsdc015),
@@ -116,6 +119,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 1,
         },
         url: "https://app.turbos.finance/pool/0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosDeepUsdc015),
@@ -132,6 +136,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 1,
         },
         url: "https://app.turbos.finance/pool/0x198af6ff81028c6577e94465d534c4e2cfcbbab06a95724ece7011c55a9d1f5a",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.FlowXSuiUsdc03),
@@ -160,6 +165,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             ticksId: "0x79327cb85a89aab545ff507fab821183e67ce286b55b6acd2ff393499c6a01e4",
         },
         url: "https://flowx.finance/explore/pools/0x325239132e2b619147c00052986461cea02815172ea9d000c58e68484f514a90",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.CetusUsdcEth025),
@@ -176,6 +182,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 1,
         },
         url: "https://app.cetus.zone/clmm?poolAddress=0x9e59de50d9e5979fc03ac5bcacdb581c823dbd27d63a036131e17b391f2fac88",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.MomentumWalSui02),
@@ -197,6 +204,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 1,
         },
         url: "https://app.mmt.finance/liquidity/0x919a34b9df1d7a56fa078ae6ddc6bd203e284974704d85721062d38ee3a6701a",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.MomentumSuiUsdc0175),
@@ -218,6 +226,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             versionObject: "0x2375a0b1ec12010aaea3b2545acfa2ad34cfbba03ce4b59f4c39e1e25eed1b2a",
         },
         url: "https://app.mmt.finance/liquidity/0x455cf8d2ac91e7cb883f515874af750ed3cd18195c970b7a2d46235ac2b0c388",
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdc004),
@@ -245,7 +254,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             ]
         },
         url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
-        wsIdleTimeoutMs: ms("1 minute")
+        wsIdleTimeoutMs: ms("1m"),
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.RaydiumSolUsdt001),
@@ -262,7 +272,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 200,
         },
         url: "https://raydium.io/clmm/create-position/?pool_id=3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF",
-        wsIdleTimeoutMs: ms("1 minute")
+        wsIdleTimeoutMs: ms("1m"),
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.OrcaSolUsdc004),
@@ -284,7 +295,8 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tokenVault1: "2WLWEuKDgkDUccTpbwYp1GToYktiSB1cXvreHUwiSUVP",
         },
         url: "https://www.orca.so/pools/Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
-        wsIdleTimeoutMs: ms("2 minute")
+        wsIdleTimeoutMs: ms("2m"),
+        staleMs: ms("20s")
     },
     {
         _id: createObjectId(LiquidityPoolId.MeteoraSolUsdcBinStep4),
@@ -292,6 +304,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         dex: createObjectId(DexId.Meteora),
         poolAddress: "5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6",
         tokenA: createObjectId(TokenId.SolNative),
+        chainId: ChainId.Solana,
         tokenB: createObjectId(TokenId.SolUsdc),
         fee: 0.0004,
         type: LiquidityPoolType.Dlmm,
@@ -306,6 +319,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             reserveYAddress: "CoaxzEh8p5YyGLcj36Eo3cUThVJxeKCs7qvLAGDYwBcz",
         },
         url: "https://www.meteora.ag/dlmm/5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6?referrer=home",
-        wsIdleTimeoutMs: ms("1 minute")
+        wsIdleTimeoutMs: ms("1m"),
+        staleMs: ms("20s")
     },
 ]

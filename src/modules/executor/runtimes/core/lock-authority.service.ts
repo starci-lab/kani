@@ -21,17 +21,14 @@ const LOCK_AUTHORITY_KEY = "lock-authority"
 
 export interface AcquireParams {
     botId: string,
-    jobId: string,
 }
 
 export interface ReleaseParams {
     botId: string,
-    jobId: string,
 }
 
 export interface SendHeartbeatParams {
     botId: string,
-    jobId: string,
 }
 
 @Injectable()
@@ -45,14 +42,12 @@ export class LockAuthorityService {
     async acquire(
         {
             botId,
-            jobId,
         }: AcquireParams,
     ) {
         // create the key for the lock authority
         const key = createHash(
             LOCK_AUTHORITY_KEY,
             botId,
-            jobId,
         )
         // set the lock authority
         const ok = await this.redisClient.set(
@@ -70,14 +65,12 @@ export class LockAuthorityService {
     async release(
         {
             botId,
-            jobId,
         }: ReleaseParams,
     ) {
         // create the key for the lock authority
         const key = createHash(
             LOCK_AUTHORITY_KEY,
             botId,
-            jobId,
         )
         // delete the lock authority
         const result = await this.redisClient.del(key)
@@ -88,14 +81,12 @@ export class LockAuthorityService {
     async sendHeartbeat(
         {
             botId,
-            jobId,
         }: SendHeartbeatParams,
     ) {
         // create the key for the lock authority
         const key = createHash(
             LOCK_AUTHORITY_KEY,
             botId,
-            jobId,
         )
         // create the lua script
         const lua = `

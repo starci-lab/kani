@@ -54,7 +54,7 @@ import {
 const STREAM_NAME = "bots-loader"
 @Injectable()
 export class BotsLoaderService implements OnApplicationBootstrap, OnModuleInit {
-    // mutex for loading bots
+    // semaphore for loading bots
     private sema!: Sema
     // bots
     public botCollection: Collection<BotSchema>

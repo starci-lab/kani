@@ -8,7 +8,6 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    AggregatorAllQuotesFailedException, 
     AggregatorNotImplementedException
 } from "@modules/exceptions"
 import {
@@ -44,22 +43,8 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
                 }))()
             )
         }
-        // Execute + ignore errors
-        const results = await this.asyncService.allIgnoreError(promises)
-        // Remove null or undefined
-        const filteredResults = results.filter(
-            (r): r is BatchQuoteResult => r != null
-        )
-        if (filteredResults.length === 0) {
-            throw new AggregatorAllQuotesFailedException({
-                aggregatorIds: results.map((r): AggregatorId => r?.aggregatorId ?? AggregatorId.Jupiter),
-            })
-        }
-        // Pick the best (largest amountOut)
-        const best = filteredResults.reduce((a, b) =>
-            a.response.amountOut.gt(b.response.amountOut) ? a : b
-        )
-        return best
+        // Race the promises
+        return await this.asyncService.raceValue(promises)      
     }
 
     async selectorSwap(

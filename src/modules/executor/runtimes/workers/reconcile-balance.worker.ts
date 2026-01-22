@@ -2,8 +2,7 @@ import {
     BalanceService,
     PrepareSwapTransactionResult,
     ReconcileBalancePayload,
-    SwapDirection,
-    SwapStep
+    SwapDirection
 } from "@modules/blockchains"
 import {
     Job, UnrecoverableError
@@ -24,14 +23,11 @@ import {
     WinstonService
 } from "@modules/winston"
 import {
-    OnWorkerEvent, Processor as Worker, WorkerHost
+    Processor as Worker, WorkerHost
 } from "@nestjs/bullmq"
 import {
     BullQueueName, bullData
 } from "@modules/bullmq"
-import {
-    EventEmitter2
-} from "@nestjs/event-emitter"
 import {
     envConfig
 } from "@modules/env"
@@ -44,7 +40,7 @@ import {
 } from "../core"
 import BN from "bn.js"
 import {
-    BotNotFoundException, JobNotFoundException, 
+    BotNotFoundException, HeartbeatTimeoutException, JobNotFoundException, 
     TokenNotFoundException
 } from "@exceptions"
 import {
@@ -52,7 +48,7 @@ import {
 } from "@modules/typedefs"
 
 export interface ReconcileBalanceJobMetadata {
-    swapSteps: Array<SwapStep>
+    swapTransactions: Array<PrepareSwapTransactionResult>
 }
 
 @Worker(
@@ -67,7 +63,6 @@ export interface ReconcileBalanceJobMetadata {
 )
 export class ReconcileBalanceWorker extends WorkerHost {
     constructor(
-        private readonly eventEmitter: EventEmitter2,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
@@ -114,9 +109,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         // If any balance is missing from payload,
         // fetch live on-chain balances to ensure correctness
         if (
-            !gasBalanceAmount ||
-        !quoteBalanceAmount ||
-        !targetBalanceAmount
+            !gasBalanceAmount || !quoteBalanceAmount || !targetBalanceAmount
         ) {
             const { 
                 targetBalanceAmount, 
@@ -266,86 +259,164 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        metadata: {
-                            swapSteps
-                        },
+                        "metadata.swapTransactions": swapTransactions,
                     },
                 }
             )
 
         // Return execution plan to next phase
         return {
-            swapSteps
+            swapTransactions
         }
     }
 
-    // async execute({
-    //     job,
-    //     bot,
-    //     payload,
-    // }: ExecuteParams): Promise<ReconcileBalanceJobMetadata> {
-    //     let metadata = job.metadata as ReconcileBalanceJobMetadata
-    //     if (getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)) {
-    //         return metadata
-    //     }
-    //     // we take the swap steps from the job metadata
-    //     const swapSteps = metadata.swapSteps
-    //     // we execute the swap steps
-        
-    // }
+    async execute(
+        {
+            job,
+            bot,
+            bullmqJob,
+            prepareResult,
+        }: ExecuteParams
+    ) {
+        // Send heartbeat to the lock authority
+        const isHeartbeatSent = await this.lockAuthorityService.sendHeartbeat(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!isHeartbeatSent) {
+            // if the heartbeat is not sent, we have to cancel the job to prevent the job from being stuck
+            throw new UnrecoverableError(
+                new HeartbeatTimeoutException(
+                    {
+                        botId: bot.id,
+                        jobId: job.id,
+                        bullmqJobId: bullmqJob.id,
+                    }
+                ).toJSON()
+            )
+        }
+        // Guard: if job already passed EXECUTED phase, do nothing
+        if (
+            getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
+        ) {
+            return
+        }
+        const { swapTransactions } = prepareResult
+        for (const swapTransaction of swapTransactions) {
+            await this.balanceService.executeSwapTransaction(
+                {
+                    bot,
+                    txHash: swapTransaction.txHash,
+                    tokenIn: swapTransaction.tokenIn,
+                    tokenOut: swapTransaction.tokenOut,
+                    signatureWithBytes: swapTransaction.signatureWithBytes,
+                }
+            )
+        }
+        await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .updateOne(
+                {
+                    _id: job.id 
+                },
+                {
+                    $set: {
+                        status: JobStatus.Executed,
+                    },
+                }
+            )
+        return
+    }
 
     async process(
         bullmqJob: Job<string>
     ) {
+        const isRetry = bullmqJob.attemptsMade > 0
+        if (isRetry && !bullmqJob.progress) {
+            return
+        }
         const payload = this.superJson.parse<ReconcileBalancePayload>(bullmqJob.data)
-        const { botId, jobId } = this.superJson.parse<ReconcileBalancePayload>(bullmqJob.data)
         // find the bot
-        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(botId)
+        const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(payload.botId)
         if (!bot) {
             throw new UnrecoverableError(
                 new BotNotFoundException(
                     {
-                        botId,
+                        botId: payload.botId,
                     }
                 ).toJSON()
             )
-        }
         // find the job
-        const job = await this.connection.model<JobSchema>(JobSchema.name).findById(jobId)
+        }
+        const job = await this.connection.model<JobSchema>(JobSchema.name).findById(payload.jobId)
         if (!job) {
             throw new UnrecoverableError(
                 new JobNotFoundException(
                     {
-                        jobId,
+                        jobId: payload.jobId,
                     }
                 ).toJSON()
             )
         }
-        // we get the prepare result
-        const prepareResult = await this.prepare(
-            {
+        await bullmqJob.updateProgress(1)
+        try {
+            // we get the prepare result
+            const prepareResult = await this.prepare(
+                {
+                    job,
+                    bot,
+                    bullmqJob,
+                    payload,
+                }
+            )
+            await this.execute({
                 job,
                 bot,
                 bullmqJob,
                 payload,
-            }
-        )
-        console.log(prepareResult)
+                prepareResult,
+            })
+            await this.onCompleted(
+                {
+                    job,
+                    bot,
+                    bullmqJob,
+                    payload,
+                }
+            )
+        } catch (error) {
+            await this.onFailed(
+                {
+                    job,
+                    bot,
+                    bullmqJob,
+                    error,
+                    payload,
+                }
+            )
+        }
     }
 
-    @OnWorkerEvent("failed")
-    async onFailed(job: Job<string>, error: Error) {
-        const { botId, jobId } = this.superJson.parse<ReconcileBalancePayload>(job.data)
-        const maxAttempts = job.opts.attempts ?? 1
-        const isPermanentFailure = job.attemptsMade >= maxAttempts
+    async onFailed(
+        {
+            job,
+            bot,
+            bullmqJob,
+            error,
+        }: OnFailedParams
+    ) {
+        const maxAttempts = bullmqJob.opts.attempts ?? 1
+        const isPermanentFailure = bullmqJob.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError
         // if the error is unrecoverable, delete the job schema
         if (isUnrecoverable) {
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceProcessingFailedUnrecoverable,
                 {
-                    botId,
-                    jobId,
+                    botId: bot.id,
+                    jobId: job.id,
+                    bullmqJobId: bullmqJob.id,
                     error: error.message,
                 }
             )
@@ -353,7 +424,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             await this.connection
                 .model<JobSchema>(JobSchema.name)
                 .updateOne({
-                    _id: jobId
+                    _id: job.id
                 },
                 {
                     $set: {
@@ -362,21 +433,21 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     },
                 }
                 )
-            // 
             // if the error is permanent failure, increment the retry count
         } else if (isPermanentFailure) {
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure,
                 {
-                    botId,
-                    jobId,
+                    botId: bot.id,
+                    jobId: job.id,
+                    bullmqJobId: bullmqJob.id,
                     error: error.message,
                 }
             )
             // increment the retry count
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
-                    _id: jobId
+                    _id: job.id
                 },
                 {
                     $set: {
@@ -393,53 +464,57 @@ export class ReconcileBalanceWorker extends WorkerHost {
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceProcessingFailedRetryable,
                 {
-                    botId,
-                    jobId,
+                    botId: bot.id,
+                    jobId: job.id,
+                    bullmqJobId: bullmqJob.id,
                     error: error.message,
-                    attemptsMade: job.attemptsMade,
+                    attemptsMade: bullmqJob.attemptsMade,
                 }
             )
         }
+        throw error
     }
 
-    @OnWorkerEvent("completed")
-    async onCompleted(job: Job<string>) {
-        const { botId, jobId } = this.superJson.parse<ReconcileBalancePayload>(job.data)
+    async onCompleted({
+        job,
+        bot,
+    }: OnCompletedParams) {
         // delete the job schema and release the lock authority
         const session = await this.connection.startSession()
-        session.withTransaction(async () => {
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: jobId,
-                },
-                {
-                    $set: {
-                        status: JobStatus.Completed,
-                        processedAt: this.dayjsService.now().toDate(),
+        session.withTransaction(
+            async () => {
+                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                    {
+                        _id: job.id,
                     },
-                }
-            )
-            await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                {
-                    _id: botId,
-                },
-                {
-                    $unset: {
-                        activeJob: null
+                    {
+                        $set: {
+                            status: JobStatus.Completed,
+                            processedAt: this.dayjsService.now().toDate(),
+                        },
+                    }
+                )
+                await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                    {
+                        _id: bot.id,
                     },
-                },
-                {
-                    session
-                }
-            )
-            // release the lock authority
-            await this.lockAuthorityService.release(
-                {
-                    botId,
-                    jobId,
-                }
-            )
-        })
+                    {
+                        $unset: {
+                            activeJob: null
+                        },
+                    },
+                    {
+                        session
+                    }
+                )
+                // release the lock authority
+                await this.lockAuthorityService.release(
+                    {
+                        botId: bot.id,
+                    }
+                )
+            }
+        )
     }
 }
 
@@ -448,7 +523,14 @@ export interface ProcessParams {
     job: JobSchema
     bot: BotSchema
     payload: ReconcileBalancePayload
+
 }
 
 export type PrepareParams = ProcessParams
-export type ExecuteParams = ProcessParams
+export interface ExecuteParams extends ProcessParams {
+    prepareResult: ReconcileBalanceJobMetadata
+}
+export interface OnFailedParams extends ProcessParams {
+    error: Error
+}
+export type OnCompletedParams = ProcessParams

@@ -149,7 +149,7 @@ export class PrivySignService {
             signatureWithBytes: {
                 signature: txSignature,
                 bytes: toBase64(rawBytes)
-            }
+            },
         }
     }
 }

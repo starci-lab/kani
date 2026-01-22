@@ -103,13 +103,13 @@ export class BalanceService implements IBalanceService {
          */
         if (bot.activePosition
         ) {
-            return
+            return null
         }
         /**
          * Add reconcile balance job to the queue
          */
         const session = await this.connection.startSession()
-        await session.withTransaction(
+        return await session.withTransaction(
             async () => {
                 /**
                 * Persist job record.
@@ -151,7 +151,7 @@ export class BalanceService implements IBalanceService {
                 /**
                 * Enqueue reconcile balance job.
                 */
-                await this.reconcileBalanceQueue.add(
+                return await this.reconcileBalanceQueue.add(
                     v4(),
                     this.superJson.stringify(
                         {

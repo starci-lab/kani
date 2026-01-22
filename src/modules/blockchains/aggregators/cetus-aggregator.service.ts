@@ -22,8 +22,7 @@ import {
 import { 
     AggregatorQuoteFailedException,
     AggregatorSwapFailedException,
-    QuoteNotFoundException, 
-    TokenNotFoundException, 
+    QuoteNotFoundException,
 } from "@modules/exceptions"
 import {
     Transaction 
@@ -75,40 +74,20 @@ export class CetusAggregatorService implements IAggregatorService {
         }: QuoteParams
     ): Promise<QuoteResult> {
         try {
-            const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                displayId: {
-                    $eq: tokenIn,
-                },
-            })
-            if (!tokenInInstance) {
-                throw new TokenNotFoundException({
-                    displayId: tokenIn.displayId,
-                })
-            }
-            const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                displayId: {
-                    $eq: tokenOut.displayId,
-                },
-            })
-            if (!tokenOutInstance) {
-                throw new TokenNotFoundException({
-                    displayId: tokenOut.displayId,
-                })
-            }
             return await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                     const quote = await cetusAggregatorClient.findRouters({
-                        from: tokenInInstance.tokenAddress,
-                        target: tokenOutInstance.tokenAddress,
+                        from: tokenIn.tokenAddress,
+                        target: tokenOut.tokenAddress,
                         amount: amountIn,
                         byAmountIn: true,
                     })
                     if (!quote) {
                         throw new QuoteNotFoundException({
-                            from: tokenInInstance.tokenAddress,
-                            target: tokenOutInstance.tokenAddress,
+                            from: tokenIn.tokenAddress,
+                            target: tokenOut.tokenAddress,
                             amount: amountIn,
                         })
                     }
@@ -119,6 +98,7 @@ export class CetusAggregatorService implements IAggregatorService {
                 },
             })
         } catch (error) {
+            console.log(error)
             throw new AggregatorQuoteFailedException({
                 aggregatorId: AggregatorId.CetusAggregator,
                 originalError: error,

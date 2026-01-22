@@ -2,6 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
+    RetryOptions,
     RetryService 
 } from "./retry.service"
 
@@ -21,11 +22,13 @@ export class AsyncService {
     }
 
     async allMustDone<T extends readonly unknown[]>(
-        promises: { [K in keyof T]: Promise<T[K]> }
+        promises: { [K in keyof T]: Promise<T[K]> },
+        options?: RetryOptions
     ): Promise<{ [K in keyof T]: T[K] }> {
         return await Promise.all(Object.values(promises).map(
             async (promise) => {
                 return await this.retryService.retry({
+                    options,
                     action: async () => {
                         return await promise
                     }
@@ -33,6 +36,12 @@ export class AsyncService {
             })) as { [K in keyof T]: T[K] }
     }
 
+    async raceValue<T extends readonly unknown[]>(
+        promises: [...{ [K in keyof T]: Promise<T[K]> }]
+    ): Promise<T[number]> {
+        return Promise.race(promises)
+    }
+    
     // go-like async resolve tuple
     async resolveTuple<T>(
         promise: Promise<T>

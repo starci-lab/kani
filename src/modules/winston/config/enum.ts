@@ -79,4 +79,12 @@ export enum WinstonLog {
     ReconcileBalanceProcessingFailedRetryable = "Reconcile.Balance.Processing.Failed.Retryable",
     ReconcileBalanceProcessingCompleted = "Reconcile.Balance.Processing.Completed",
     ReconcileBalanceProcessingStarted = "Reconcile.Balance.Processing.Started",
+    PriceDiagnosticSuccess = "Price.Diagnostic.Success",
+    PriceDiagnosticFailedNotFound = "Price.Diagnostic.Failed.Not.Found",
+    PriceDiagnosticFailedStale = "Price.Diagnostic.Failed.Stale",
+    PriceDiagnosticFailed = "Price.Diagnostic.Failed",
+    DynamicLiquidityPoolInfoDiagnosticFailedNotFound = "Dynamic.Liquidity.Pool.Info.Diagnostic.Failed.Not.Found",
+    DynamicLiquidityPoolInfoDiagnosticSuccess = "Dynamic.Liquidity.Pool.Info.Diagnostic.Success",
+    DynamicLiquidityPoolInfoDiagnosticFailedStale = "Dynamic.Liquidity.Pool.Info.Diagnostic.Failed.Stale",
+    DynamicLiquidityPoolInfoDiagnosticFailed = "Dynamic.Liquidity.Pool.Info.Diagnostic.Failed",
 }

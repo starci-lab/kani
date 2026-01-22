@@ -79,40 +79,16 @@ export class SevenKAggregatorService implements IAggregatorService {
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
                     SevenK.setSuiClient(suiClient)
-                    const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                        displayId: {
-                            $eq: tokenIn,
-                        },
+                    const quote = await SevenK.getQuote({
+                        amountIn: amountIn.toString(),
+                        tokenIn: tokenIn.tokenAddress,
+                        tokenOut: tokenOut.tokenAddress,    
+                        commissionBps: 2,   
                     })
-                    if (!tokenInInstance) {
-                        throw new TokenNotFoundException({
-                            displayId: tokenIn.displayId,
-                        })
-                    }
-                    const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
-                        displayId: {
-                            $eq: tokenOut.displayId,
-                        },
-                    })
-                    if (!tokenOutInstance) {
-                        throw new TokenNotFoundException({
-                            displayId: tokenOut.displayId,
-                        })
-                    }
-                    return await this.retryService.retry({
-                        action: async () => {  
-                            const quote = await SevenK.getQuote({
-                                amountIn: amountIn.toString(),
-                                tokenIn: tokenInInstance.tokenAddress,
-                                tokenOut: tokenOutInstance.tokenAddress,    
-                                commissionBps: 2,   
-                            })
-                            return {
-                                amountOut: new BN(quote.returnAmountWithDecimal),
-                                payload: quote,
-                            }
-                        },
-                    })
+                    return {
+                        amountOut: new BN(quote.returnAmountWithDecimal),
+                        payload: quote,
+                    }  
                 },
             })
         } catch (error) {
