@@ -9,7 +9,7 @@ import {
 } from "@modules/blockchains"
 import {
     LockAuthorityService 
-} from "./lock-authority.service"
+} from "../../bussiness"
 import {
     WinstonLog,
     WinstonService 

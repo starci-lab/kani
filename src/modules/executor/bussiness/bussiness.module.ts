@@ -10,6 +10,9 @@ import {
 import {
     DiagnosticsModule 
 } from "./diagnostics"
+import {
+    LockAuthorityService 
+} from "./lock-authority.service"
 
 @Module({
 })
@@ -31,6 +34,12 @@ export class BussinessModule extends ConfigurableModuleClass {
                         isGlobal: options.isGlobal,
                     }
                 ),
+            ],
+            exports: [
+                LockAuthorityService,
+            ],
+            providers: [
+                LockAuthorityService,
             ],
         }
     }

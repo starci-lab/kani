@@ -14,7 +14,6 @@ import {
     HandleClmmPositionOpenRequestedEventService, 
     HandleDlmmPositionOpenRequestedEventService,
     HandleReconcileBalanceService,
-    LockAuthorityService
 } from "./core"
 import {
     ReconcileBalanceModule
@@ -37,7 +36,6 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 RuntimesFactoryService,
                 RuntimeContextService,
-                LockAuthorityService,
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,
@@ -45,7 +43,6 @@ export class RuntimesModule extends ConfigurableModuleClass {
             exports: [
                 RuntimesFactoryService,
                 RuntimeContextService,
-                LockAuthorityService,
             ],
         }
     }

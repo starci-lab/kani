@@ -9,7 +9,7 @@ import {
 } from "@modules/exceptions"
 import {
     LockAuthorityService,
-} from "../../runtimes/core"
+} from "../../bussiness"
 import {
     SendHeartbeatParams,
 } from "./types"
