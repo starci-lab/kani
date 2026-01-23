@@ -84,6 +84,12 @@ import {
 import {
     ProcessParams,
 } from "./types"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    EventName, LockAuthorityTimeoutEventPayload 
+} from "@modules/event"
 
 @Worker(
     bullData[BullQueueName.ReconcileBalance].name,
@@ -110,6 +116,13 @@ export class ReconcileBalanceWorker extends WorkerHost {
         super()
     }
 
+    @OnEvent(EventName.LockAuthorityTimeout)
+    async onLockAuthorityReleased(
+        payload: LockAuthorityTimeoutEventPayload
+    ) {
+        console.log(payload)
+        //this.worker.cancelJob(payload.botId)
+    }
     /**
      * BullMQ entrypoint for the `reconcile-balance` queue.
      *
@@ -121,6 +134,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
     async process(
         bullmqJob: Job<string>
     ): Promise<void> {
+        // Deserialize the job payload (SuperJSON) into a typed reconcile-balance payload.
+        const payload = this.superJson.parse<ReconcileBalancePayload>(bullmqJob.data)
         // Determine whether this BullMQ execution is a retry attempt.
         const isRetry = bullmqJob.attemptsMade > 0
         // On retries, if the job never recorded any progress, exit early to avoid reprocessing.
@@ -128,10 +143,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
             // No-op: nothing to do if progress was never set on a retry.
             return
         }
-
-        // Deserialize the job payload (SuperJSON) into a typed reconcile-balance payload.
-        const payload = this.superJson.parse<ReconcileBalancePayload>(bullmqJob.data)
-
         // Load the Bot document from MongoDB (required for all phases).
         const bot = await this.connection
             // Use the Bot model from the primary mongoose connection.
@@ -196,7 +207,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
             // PREPARE phase
             // Compute reconcile plan + prepare swap transactions + persist Prepared status/metadata.
             const { result: prepareResult } = await this.prepareService.process(baseParams)
-
+            
             // HEARTBEAT phase (before executing on-chain transactions)
             // Ensure the lock authority is still held before performing side effects.
             await this.sendHeartbeatService.process(baseParams)

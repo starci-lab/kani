@@ -89,7 +89,8 @@ import {
     DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
     PriceDiagnosticFailedStaleMessage,
     SwapTransactionStimulatedMessage,
-    SwapTransactionPreparedMessage
+    SwapTransactionPreparedMessage,
+    ReconcileBalanceRequeueFailedMessage
 } from "./types"
 
 export const configMap = {
@@ -813,5 +814,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as SwapTransactionPreparedMessage,
+    },
+    // Reconcile Balance Requeue Failed
+    [WinstonLog.ReconcileBalanceRequeueFailed]: {
+        name: WinstonLog.ReconcileBalanceRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceRequeueFailedMessage,
     },
 }

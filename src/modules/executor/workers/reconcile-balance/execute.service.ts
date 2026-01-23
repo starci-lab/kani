@@ -42,10 +42,10 @@ export class ExecuteService {
             bot,
             bullmqJob,
             prepareResult,
+            payload,
         }: ExecuteParams
     ): Promise<ExecuteResult> {
         const isRetry = bullmqJob.attemptsMade > 0
-
         // Guard: if job already passed EXECUTED phase, do nothing
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
@@ -65,7 +65,7 @@ export class ExecuteService {
                     txHash: swapTransaction.txHash,
                     signatureWithBytes: swapTransaction.signatureWithBytes,
                     // only check the transaction if it is a retry
-                    txCheck: isRetry,
+                    txCheck: isRetry || (payload.isRetry ?? false),
                     stimulate: true,
                 }
             )

@@ -49,9 +49,6 @@ import {
     SwapMathService 
 } from "../math"
 import {
-    v4 
-} from "uuid"
-import {
     envConfig 
 } from "@modules/env"
 import {
@@ -73,6 +70,9 @@ import SuperJSON from "superjson"
 import {
     DayjsService 
 } from "@modules/mixin"
+import {
+    v4
+} from "uuid"
 
 @Injectable()
 export class BalanceService implements IBalanceService {
@@ -96,12 +96,14 @@ export class BalanceService implements IBalanceService {
         {
             bot,
             jobId,
+            isRetry,
         }: EnqueueBalanceRebalancingParams,
     ) {
         /**
          * Safety check, if the active position is set, return only
          */
-        if (bot.activePosition
+        if (
+            bot.activePosition
         ) {
             return null
         }
@@ -114,52 +116,62 @@ export class BalanceService implements IBalanceService {
                 /**
                 * Persist job record.
                 */
-                const [ jobRaw ] = await this.connection.model<JobSchema>(
-                    JobSchema.name
-                ).create(
-                    [
-                        {
-                            _id: jobId,
-                            bot: bot.id,
-                            type: JobType.ReconcileBalance,
-                            status: JobStatus.Pending,
-                            executor: envConfig().executor.id,
-                            startedAt: this.dayjsService.now().toDate(),
-                        }
-                    ],
-                    {
-                        session 
-                    })
-                const job = jobRaw.toJSON<JobSchema>()
-                /**
-                * Update the bot with the active job id.
-                */
-                await this.connection.model<BotSchema>(BotSchema.name)
-                    .updateOne(
-                        {
-                            _id: bot.id 
-                        },
-                        {
-                            $set: {
-                                activeJob: job.id,
-                            } 
-                        },
+                if (!isRetry) {
+                    const [ jobRaw ] = await this.connection.model<JobSchema>(
+                        JobSchema.name
+                    ).create(
+                        [
+                            {
+                                _id: jobId,
+                                bot: bot.id,
+                                type: JobType.ReconcileBalance,
+                                status: JobStatus.Pending,
+                                executor: envConfig().executor.id,
+                                startedAt: this.dayjsService.now().toDate(),
+                            }
+                        ],
                         {
                             session 
-                        }
-                    )
+                        })
+                    const job = jobRaw.toJSON<JobSchema>()
+                    /**
+                    * Update the bot with the active job id.
+                    */
+                    await this.connection.model<BotSchema>(BotSchema.name)
+                        .updateOne(
+                            {
+                                _id: bot.id 
+                            },
+                            {
+                                $set: {
+                                    activeJob: {
+                                        job: job.id,
+                                        queuedAt: this.dayjsService.now().toDate(),
+                                    },
+                                } 
+                            },
+                            {
+                                session 
+                            }
+                        )
+                }
                 /**
                 * Enqueue reconcile balance job.
                 */
-                return await this.reconcileBalanceQueue.add(
+                const bullmqJob = await this.reconcileBalanceQueue.add(
                     v4(),
                     this.superJson.stringify(
                         {
-                            jobId: job.id,
+                            jobId,
                             botId: bot.id,
+                            isRetry,
                         }
                     ),
+                    {
+                        jobId: bot.id,
+                    }
                 )
+                return bullmqJob
             }
         )
     }   

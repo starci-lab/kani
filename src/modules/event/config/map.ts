@@ -14,7 +14,8 @@ import {
     ExecutorBotCreatedEventPayload, 
     ExecutorBotDeletedEventPayload, 
     ExecutorBotUpdatedEventPayload, 
-    ReinitializeBalancersEventPayload
+    ReinitializeBalancersEventPayload,
+    LockAuthorityTimeoutEventPayload
 } from "./types"
 import {
     KafkaTopicConfig 
@@ -124,5 +125,13 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as ExecutorBotDeletedEventPayload
+    },
+    [EventName.LockAuthorityTimeout]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as LockAuthorityTimeoutEventPayload
     },
 }

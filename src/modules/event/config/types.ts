@@ -50,3 +50,7 @@ export interface ExecutorBotCreatedEventPayload {
 export interface ExecutorBotDeletedEventPayload {
     id: string
 }
+
+export interface LockAuthorityTimeoutEventPayload {
+    botId: string
+}

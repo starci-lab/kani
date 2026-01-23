@@ -688,3 +688,10 @@ export interface SwapTransactionPreparedMessage {
     botId: string
     txHashes: Array<string>
 }
+
+/**
+ * Reconcile Balance Requeue Failed Message
+ */
+export interface ReconcileBalanceRequeueFailedMessage {
+    error: string
+}

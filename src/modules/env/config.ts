@@ -298,13 +298,25 @@ export const envConfig = () => ({
             interval: {
                 refresh: parseEnvMs("EXECUTOR_RUNTIME_INTERVAL_REFRESH",
                     "10s"),
-                reconcileBalance: parseEnvMs("EXECUTOR_RUNTIME_INTERVAL_RECONCILE_BALANCE",
-                    "30s"),
+            },
+            operation: {
+                reconcileBalance: {
+                    interval: parseEnvMs("EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL",
+                        "30s"),
+                },
+                requeue: {
+                    interval: parseEnvMs("EXECUTOR_OPERATION_REQUEUE_INTERVAL",
+                        "30s"),
+                },
             },
         },
         lockAuthority: {
+            interval: {
+                notifyExpiredLocks: parseEnvMs("EXECUTOR_LOCK_AUTHORITY_INTERVAL_NOTIFY_EXPIRED_LOCKS",
+                    "1s"),
+            },
             ttl: parseEnvMs("EXECUTOR_LOCK_AUTHORITY_TTL",
-                "30s"),
+                "10s"),
         },
     },
     // quote config

@@ -64,7 +64,6 @@ export class OnFailedService {
                     error: error.message,
                 }
             )
-
             await this.connection.model<JobSchema>(JobSchema.name).updateOne(
                 {
                     _id: job.id,
@@ -113,7 +112,6 @@ export class OnFailedService {
                 }
             )
         }
-
         throw error
     }
 }

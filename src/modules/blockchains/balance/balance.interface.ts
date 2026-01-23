@@ -106,6 +106,7 @@ export interface ExecuteSwapTransactionParams {
 export interface EnqueueBalanceRebalancingParams {
     bot: BotSchema
     jobId: string
+    isRetry?: boolean
 }
 
 export interface GetBalanceAmountInUsdParams {

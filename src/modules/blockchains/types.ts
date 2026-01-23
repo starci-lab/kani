@@ -37,6 +37,7 @@ export enum GasStatus {
 export interface BasePayload {
     jobId: string
     botId: string
+    isRetry?: boolean
 }
 
 export interface OpenPositionPayload extends BasePayload {

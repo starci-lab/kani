@@ -12,4 +12,5 @@ export enum EventName {
     ClmmPositionCloseRequested = "clmm.position.close.requested",
     DlmmPositionOpenRequested = "dlmm.position.open.requested",
     DlmmPositionCloseRequested = "dlmm.position.close.requested",
+    LockAuthorityTimeout = "lock.authority.timeout",
 }

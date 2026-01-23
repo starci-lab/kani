@@ -22,6 +22,9 @@ import {
 import {
     OnFailedService,
 } from "./on-failed.service"
+import {
+    RequeueService,
+} from "./requeue.service"
 
 @Module({
     providers: [
@@ -32,6 +35,7 @@ import {
         ConfirmService,
         OnCompletedService,
         OnFailedService,
+        RequeueService,
     ],
 })
 export class ReconcileBalanceModule {}

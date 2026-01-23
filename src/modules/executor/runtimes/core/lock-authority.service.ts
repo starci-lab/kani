@@ -1,21 +1,29 @@
 import {
-    Injectable 
+    Injectable,
+    OnApplicationBootstrap
 } from "@nestjs/common"
 import {
-    InjectIoRedis 
+    InjectIoRedis
 } from "@modules/native"
 import {
-    IoRedisInstanceKey 
+    IoRedisInstanceKey
 } from "@modules/native"
 import {
-    RedisClient 
+    RedisClient
 } from "bullmq"
 import {
-    createHash 
-} from "@modules/utils"
-import {
-    envConfig 
+    envConfig
 } from "@modules/env"
+import {
+    DayjsService
+} from "@modules/mixin"
+import {
+    Interval
+} from "@nestjs/schedule"
+import {
+    EventEmitterService, 
+    EventName
+} from "@modules/event"
 
 const LOCK_AUTHORITY_KEY = "lock-authority"
 
@@ -32,76 +40,270 @@ export interface SendHeartbeatParams {
 }
 
 @Injectable()
-export class LockAuthorityService {
+export class LockAuthorityService implements OnApplicationBootstrap {
+    /**
+     * Redis-backed lock authority for a bot.
+     *
+     * Purpose:
+     * - Ensure only ONE executor instance owns the "authority" to run side-effecting work for a bot.
+     *
+     * Implementation:
+     * - A per-bot lock key (string) is set with TTL (PX).
+     * - A scheduler ZSET tracks lock keys by their expire timestamp (score = expireAt ms).
+     *
+     * Notes:
+     * - Keys are namespaced/hardened with `createHash(...)` and include `envConfig().executor.id`
+     *   so multiple executors do not collide.
+     */
     constructor(
-            @InjectIoRedis(IoRedisInstanceKey.LockAuthority)
-            private readonly redisClient: RedisClient
-    ) {}
+        @InjectIoRedis(IoRedisInstanceKey.LockAuthority)
+        private readonly redisClient: RedisClient,
+        private readonly dayjsService: DayjsService,
+        private readonly eventEmitterService: EventEmitterService,
+    ) { }
 
-    // acquire the lock authority for the bot
+    onApplicationBootstrap() {
+        this.notifyExpiredLocks()
+    }
+
+    /**
+     * Returns the scheduler ZSET key for this executor instance.
+     *
+     * ZSET members are lock keys, score is their `expireAt` timestamp in ms.
+     */
+    private getLockSchedulerKey() {
+        return `${LOCK_AUTHORITY_KEY}:scheduler:${envConfig().executor.id}`
+    }
+
+    /**
+     * Returns the lock key for the given bot for this executor instance.
+     *
+     * The lock key itself stores a simple value (currently `1`) with a TTL.
+     */
+    private getLockKey(botId: string) {
+        return `${LOCK_AUTHORITY_KEY}:${botId}:${envConfig().executor.id}`
+    }
+
+    /**
+     * Returns the bot ID from the lock key.
+     */
+    private getBotId(lockKey: string) {
+        return lockKey.split(":")[1]
+    }
+
+    /**
+     * Periodically scans the scheduler ZSET for expired locks (score <= now).
+     *
+     * Current behavior:
+     * - Reads expired lock keys from the scheduler ZSET.
+     * - Logs them (debug).
+     *
+     * Intended flow (future):
+     * - For each expired lock key:
+     *   - delete the lock key (if still present)
+     *   - remove it from the scheduler ZSET
+     *   - optionally emit metrics/logs for observability
+     */
+    @Interval(envConfig().executor.lockAuthority.interval.notifyExpiredLocks)
+    async notifyExpiredLocks() {
+        const now = this.dayjsService.now()
+
+        const lua = `
+        local expiredKeys = redis.call(
+            "ZRANGEBYSCORE",
+            KEYS[1],
+            "-inf",
+            ARGV[1]
+        )
+
+        for _, lockKey in ipairs(expiredKeys) do
+            redis.call("DEL", lockKey)
+            redis.call("ZREM", KEYS[1], lockKey)
+        end
+
+        return expiredKeys
+    `
+        // evaluate the lua script to get the expired locks
+        const expiredLocks = await this.redisClient.eval(
+            lua,
+            1,                              // number of KEYS
+            this.getLockSchedulerKey(),     // KEYS[1]
+            now.valueOf()                   // ARGV[1]
+        ) as Array<string>
+        // get the bot IDs from the expired locks
+        const botIds = expiredLocks.map(this.getBotId)
+        // broadcast the expired locks to the event emitter
+        for (const botId of botIds) {
+            this.eventEmitterService.emit(
+                {
+                    event: EventName.LockAuthorityTimeout,
+                    payload: {
+                        botId 
+                    },
+                }
+            )
+        }
+    }
+
+    /**
+     * Acquire lock authority for a bot.
+     *
+     * Flow:
+     * - Create per-bot lock key + scheduler ZSET key.
+     * - Compute `expireAt = now + ttl`.
+     * - Run a Lua script to atomically:
+     *   - SET lock key with NX + PX (only if not exists)
+     *   - ZADD scheduler ZSET with score=expireAt and member=lockKey
+     *
+     * Returns:
+     * - true if lock was acquired
+     * - false if lock already existed
+     */
     async acquire(
         {
             botId,
         }: AcquireParams,
     ) {
         // create the key for the lock authority
-        const key = createHash(
-            LOCK_AUTHORITY_KEY,
-            botId,
-        )
-        // set the lock authority
-        const ok = await this.redisClient.set(
-            key,
-            1,
-            "PX",
-            envConfig().executor.lockAuthority.ttl,
-            "NX"
-        )
-        // return the result
-        return ok === "OK"
-    }
+        const key = this.getLockKey(botId)
+        const lockSchedulerKey = this.getLockSchedulerKey()
+        const ttl = envConfig().executor.lockAuthority.ttl
+        const now = this.dayjsService.now()
+        const expireAt = now.add(ttl,
+            "millisecond").valueOf()
 
-    // release the lock authority for the bot
-    async release(
-        {
-            botId,
-        }: ReleaseParams,
-    ) {
-        // create the key for the lock authority
-        const key = createHash(
-            LOCK_AUTHORITY_KEY,
-            botId,
-        )
-        // delete the lock authority
-        const result = await this.redisClient.del(key)
-        return result === 1
-    }
-
-    // send the heartbeat to the lock authority
-    async sendHeartbeat(
-        {
-            botId,
-        }: SendHeartbeatParams,
-    ) {
-        // create the key for the lock authority
-        const key = createHash(
-            LOCK_AUTHORITY_KEY,
-            botId,
-        )
-        // create the lua script
+        /**
+         * Lua script logic (atomic):
+         *
+         * KEYS[1] -> lock key
+         * KEYS[2] -> scheduler ZSET key
+         *
+         * ARGV[1] -> lock value (fixed to 1, boolean-style lock)
+         * ARGV[2] -> TTL in milliseconds
+         * ARGV[3] -> expireAt timestamp (ms) for ZSET score
+         *
+         * Flow:
+         * 1) Try to SET lock key with NX + PX
+         * 2) If successful:
+         *    - Register the lock into scheduler ZSET
+         *    - Return 1
+         * 3) If failed (lock already exists):
+         *    - Return 0
+         */
         const lua = `
-        if redis.call("GET", KEYS[1]) == ARGV[1] then
-            return redis.call("PEXPIRE", KEYS[1], ARGV[2])
+   if redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[2], "NX") then
+       redis.call("ZADD", KEYS[2], ARGV[3], KEYS[1])
+       return 1
+   end
+   return 0
+`
+        const ok = await this.redisClient.eval(
+            lua,
+            2,                              // Number of KEYS
+            key,                            // KEYS[1]: lock key
+            lockSchedulerKey,               // KEYS[2]: scheduler ZSET key
+            1,                              // ARGV[1]: lock value (boolean = 1)
+            ttl,                            // ARGV[2]: TTL (ms)
+            expireAt                        // ARGV[3]: expire timestamp (ms)
+        )
+        return ok === 1
+    }
+
+    /**
+     * Release lock authority for a bot.
+     *
+     * Flow:
+     * - Atomically:
+     *   - DEL the lock key
+     *   - ZREM the lock key from the scheduler ZSET
+     *
+     * Returns:
+     * - true if a lock existed and was removed
+     * - false if no lock existed
+     */
+    async release({ botId }: ReleaseParams): Promise<boolean> {
+        // create the key for the lock authority
+        const key = this.getLockKey(botId)
+        const lockSchedulerKey = this.getLockSchedulerKey()
+        /**
+         * Lua logic (atomic):
+         * - Delete lock key
+         * - Remove it from scheduler ZSET
+         * - Return 1 if lock existed, otherwise 0
+         *
+         * KEYS[1] -> lock key
+         * KEYS[2] -> scheduler ZSET key
+         */
+        const lua = `
+        if redis.call("DEL", KEYS[1]) == 1 then
+            redis.call("ZREM", KEYS[2], KEYS[1])
+            return 1
         end
         return 0
     `
-        // evaluate the lua script
         const result = await this.redisClient.eval(
             lua,
-            1,
-            key,
-            1,
-            envConfig().executor.lockAuthority.ttl,
+            2,
+            key,                            // KEYS[1]: lock key
+            lockSchedulerKey,               // KEYS[2]: scheduler ZSET key
+        )
+        return result === 1
+    }
+
+    /**
+     * Refresh (heartbeat) the lock authority for a bot.
+     *
+     * Flow:
+     * - Check the lock key exists and its value matches expected (== 1)
+     * - Extend TTL (PEXPIRE)
+     * - Update scheduler ZSET score to new expireAt (ZADD)
+     *
+     * Returns:
+     * - true if lock was refreshed
+     * - false if lock does not exist (or value doesn't match), meaning authority is lost
+     */
+    async sendHeartbeat({ botId }: SendHeartbeatParams): Promise<boolean> {
+    // create the key for the lock authority
+        const key = this.getLockKey(botId)
+        const lockSchedulerKey = this.getLockSchedulerKey()
+
+        const ttl = envConfig().executor.lockAuthority.ttl
+        const expireAt = this.dayjsService
+            .now()
+            .add(ttl,
+                "millisecond")
+            .valueOf()
+
+        /**
+         * Lua logic (atomic):
+         * - Check lock exists AND value == 1
+         * - Extend TTL
+         * - Update scheduler ZSET expire time
+         *
+         * KEYS[1] -> lock key
+         * KEYS[2] -> scheduler ZSET key
+         *
+         * ARGV[1] -> expected lock value (1)
+         * ARGV[2] -> TTL in ms
+         * ARGV[3] -> new expireAt timestamp (ms)
+         */
+        const lua = `
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+            redis.call("PEXPIRE", KEYS[1], ARGV[2])
+            redis.call("ZADD", KEYS[2], ARGV[3], KEYS[1])
+            return 1
+        end
+        return 0
+    `
+
+        const result = await this.redisClient.eval(
+            lua,
+            2,
+            key,                            // KEYS[1]: lock key
+            lockSchedulerKey,               // KEYS[2]: scheduler ZSET
+            1,                              // ARGV[1]: expected lock value
+            ttl,                            // ARGV[2]: TTL (ms)
+            expireAt                        // ARGV[3]: new expireAt
         )
 
         return result === 1
