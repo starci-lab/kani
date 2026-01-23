@@ -306,7 +306,7 @@ export const envConfig = () => ({
                 },
                 requeue: {
                     interval: parseEnvMs("EXECUTOR_OPERATION_REQUEUE_INTERVAL",
-                        "30s"),
+                        "10s"),
                 },
             },
         },
