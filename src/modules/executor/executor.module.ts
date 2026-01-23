@@ -13,6 +13,9 @@ import {
 import {
     BussinessModule 
 } from "./bussiness"
+import {
+    WorkersModule 
+} from "./workers"
 
 @Module({
 })
@@ -31,6 +34,9 @@ export class ExecutorModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 BussinessModule.register({
+                    isGlobal: true,
+                }),
+                WorkersModule.register({
                     isGlobal: true,
                 }),
             ],
