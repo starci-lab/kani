@@ -15,7 +15,6 @@ import {
 } from "@modules/winston"
 import {
     AsyncService, 
-    InjectSuperJson,
     LokiJSService,
     RetryService
 } from "@modules/mixin"
@@ -23,10 +22,6 @@ import {
     AggregatedTokenPriceNotFoundException,
     PriceDiagnosticsFailedException
 } from "@exceptions"
-import {
-    SuperJSON 
-} from "superjson"
-
 /**
  * PriceDiagnosticService
  *
@@ -59,8 +54,6 @@ export class PriceDiagnosticService implements OnModuleInit {
     private readonly asyncService: AsyncService,
     private readonly retryService: RetryService,
     private readonly lokiJSService: LokiJSService,
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON
     ) {}
 
     async onModuleInit() {

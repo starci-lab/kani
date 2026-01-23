@@ -60,5 +60,5 @@ export interface AddTransactionRecordParams {
     txHash: string
     chainId: ChainId
     type: TransactionType
-    isStimulated: boolean
+    isStimulated?: boolean
 }

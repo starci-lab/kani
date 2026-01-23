@@ -93,7 +93,19 @@ import {
     ReconcileBalanceRequeueFailedMessage,
     ReconcileBalanceJobAlreadyPreparedMessage,
     ReconcileBalanceJobAlreadyConfirmedMessage,
-    ReconcileBalanceJobAlreadyExecutedMessage
+    ReconcileBalanceJobAlreadyExecutedMessage,
+    OpenPositionJobAlreadyExecutedMessage,
+    ClosePositionJobAlreadyPreparedMessage,
+    OpenPositionJobAlreadyConfirmedMessage,
+    ClosePositionJobAlreadyExecutedMessage,
+    ClosePositionJobAlreadyConfirmedMessage,
+    OpenPositionJobAlreadyPreparedMessage,
+    OpenPositionProcessingFailedUnrecoverableMessage,
+    OpenPositionProcessingFailedPermanentFailureMessage,
+    OpenPositionProcessingFailedRetryableMessage,
+    OpenPositionProcessingCompletedMessage,
+    OpenPositionRequeueFailedMessage,
+    OpenPositionProcessingStartedMessage
 } from "./types"
 
 export const configMap = {
@@ -849,5 +861,101 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceJobAlreadyConfirmedMessage,
+    },
+    // Open Position Job Already Prepared
+    [WinstonLog.OpenPositionJobAlreadyPrepared]: {
+        name: WinstonLog.OpenPositionJobAlreadyPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobAlreadyPreparedMessage,
+    },
+    // Open Position Job Already Executed
+    [WinstonLog.OpenPositionJobAlreadyExecuted]: {
+        name: WinstonLog.OpenPositionJobAlreadyExecuted,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobAlreadyExecutedMessage,
+    },
+    // Open Position Job Already Confirmed
+    [WinstonLog.OpenPositionJobAlreadyConfirmed]: {
+        name: WinstonLog.OpenPositionJobAlreadyConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobAlreadyConfirmedMessage,
+    },
+    // Close Position Job Already Prepared
+    [WinstonLog.ClosePositionJobAlreadyPrepared]: {
+        name: WinstonLog.ClosePositionJobAlreadyPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobAlreadyPreparedMessage,
+    },
+    // Close Position Job Already Executed
+    [WinstonLog.ClosePositionJobAlreadyExecuted]: {
+        name: WinstonLog.ClosePositionJobAlreadyExecuted,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobAlreadyExecutedMessage,
+    },
+    // Close Position Job Already Confirmed
+    [WinstonLog.ClosePositionJobAlreadyConfirmed]: {
+        name: WinstonLog.ClosePositionJobAlreadyConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobAlreadyConfirmedMessage,
+    },
+    // Open Position Processing Failed Unrecoverable
+    [WinstonLog.OpenPositionProcessingFailedUnrecoverable]: {
+        name: WinstonLog.OpenPositionProcessingFailedUnrecoverable,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionProcessingFailedUnrecoverableMessage,
+    },
+    // Open Position Processing Failed Permanent Failure
+    [WinstonLog.OpenPositionProcessingFailedPermanentFailure]: {
+        name: WinstonLog.OpenPositionProcessingFailedPermanentFailure,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionProcessingFailedPermanentFailureMessage,
+    },
+    // Open Position Processing Failed Retryable
+    [WinstonLog.OpenPositionProcessingFailedRetryable]: {
+        name: WinstonLog.OpenPositionProcessingFailedRetryable,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionProcessingFailedRetryableMessage,
+    },
+    // Open Position Processing Completed
+    [WinstonLog.OpenPositionProcessingCompleted]: {
+        name: WinstonLog.OpenPositionProcessingCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as OpenPositionProcessingCompletedMessage,
+    },
+    // Open Position Processing Started
+    [WinstonLog.OpenPositionProcessingStarted]: {
+        name: WinstonLog.OpenPositionProcessingStarted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as OpenPositionProcessingStartedMessage,
+    },
+    // Open Position Requeue Failed
+    [WinstonLog.OpenPositionRequeueFailed]: {
+        name: WinstonLog.OpenPositionRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionRequeueFailedMessage,
     },
 }

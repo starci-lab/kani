@@ -37,14 +37,14 @@ import {
     BotsLoaderService 
 } from "../../loaders"
 import {
-    LockAuthorityService    
-} from "../../bussiness"
+    LockAuthorityService 
+} from "../../runtimes/core"
 
 @Injectable()
 export class RequeueService implements OnApplicationBootstrap {
     constructor(
-        @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
-        private readonly reconcileBalanceQueue: Queue<string>,
+        @InjectQueue(bullData[BullQueueName.OpenPosition].name)
+        private readonly openPositionQueue: Queue<string>,
         private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
         private readonly botsLoaderService: BotsLoaderService,
@@ -58,7 +58,7 @@ export class RequeueService implements OnApplicationBootstrap {
         this.process()
     }
     /**
-     * Requeue the balance rebalancing for the bots that have an active job and the queuedAt is older than the ttl
+     * Requeue the open position for the bots that have an active job and the queuedAt is older than the ttl
      */
     async process() {
         try {
@@ -90,7 +90,7 @@ export class RequeueService implements OnApplicationBootstrap {
              */
             const promises = bots.map(
                 async (bot) => {
-                    const bullmqJob = await this.reconcileBalanceQueue.getJob(bot.id)
+                    const bullmqJob = await this.openPositionQueue.getJob(bot.id)
                     if (bullmqJob) {
                     // we can add additional logic here
                         return

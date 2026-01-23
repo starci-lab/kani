@@ -99,7 +99,6 @@ export class PriceService {
                 "millisecond",
             )
             const isStale = ageMs > maxAgeMs
-
             if (!isStale) {
                 return {
                     price: new Decimal(priceEntry.price),
@@ -107,7 +106,6 @@ export class PriceService {
                     ageMs,
                 }
             }
-
             if (!bestStaleCandidate) {
                 bestStaleCandidate = {
                     price: new Decimal(priceEntry.price),
@@ -115,7 +113,6 @@ export class PriceService {
                 }
             }
         }
-
         if (bestStaleCandidate) {
             return {
                 price: bestStaleCandidate.price,

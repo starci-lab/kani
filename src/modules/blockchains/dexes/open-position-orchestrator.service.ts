@@ -71,18 +71,12 @@ import {
     v4 
 } from "uuid"
 import {
-    Connection 
+    Connection, 
 } from "mongoose"
-import {
-    WinstonService, WinstonLog 
-} from "@modules/winston"
 import {
     InjectSuperJson 
 } from "@modules/mixin"
 import SuperJSON from "superjson"
-import {
-    BalanceEligibilityService 
-} from "../balance"
 import _ from "lodash"
 import {
     FlowXOpenPositionActionService 
@@ -125,8 +119,6 @@ export class OpenPositionOrchestratorService {
         private readonly connection: Connection,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
-        private readonly balanceEligibilityService: BalanceEligibilityService,
-        private readonly winstonService: WinstonService,
     ) { }
 
     /**
@@ -139,35 +131,26 @@ export class OpenPositionOrchestratorService {
         {
             liquidityPool,
             bot,
+            jobId,
+            isRetry,
         }: EnqueueOpenPositionParams,
     ) {
-        /**
-         * Balance eligibility check:
-         * Ensure bot has sufficient total balance (USD-based).
-         */
-        const { 
-            isEligible
-        } = await this.balanceEligibilityService.evaluateBalanceEligibility({
-            bot: bot,
-        })
-        if (!isEligible) {
-            return
-        }
         /**
          * Resolve target token metadata.
          */
         const targetToken =
-            this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: bot.targetToken.toString(),
-                },
-            })
+            this.primaryMemoryStorageService.tokenCollection.findOne(
+                {
+                    id: {
+                        $eq: bot.targetToken.toString(),
+                    },
+                }
+            )
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: bot.targetToken.toString(),
             })
         }
-
         /**
          * Resolve quote token metadata.
          */
@@ -182,7 +165,6 @@ export class OpenPositionOrchestratorService {
                 id: bot.quoteToken.toString(),
             })
         }
-
         /**
          * Ownership check:
          * Ensure the liquidity pool is associated with this bot.
@@ -193,7 +175,7 @@ export class OpenPositionOrchestratorService {
                 _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
             )
         ) {
-            return
+            return null
         }
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
@@ -222,7 +204,6 @@ export class OpenPositionOrchestratorService {
                     quoteBalanceAmount: snapshotQuoteBalanceAmount,
                 }
             )
-
         /**
          * Abort if quote ratio is not in a Good state.
          */
@@ -233,65 +214,49 @@ export class OpenPositionOrchestratorService {
                 }
             ) !== QuoteRatioStatus.Good
         ) {
-            return
+            return null
         }
         // start a session
         const session = await this.connection.startSession()
-        try {
-            await session.withTransaction(
-                async () => {
+        return await session.withTransaction(
+            async () => {
                 /**
                 * Persist job record.
                 */
-                    const [jobRaw] = await this.connection.model<JobSchema>(
-                        JobSchema.name
-                    ).create(
-                        [
-                            {
-                                liquidityPool: liquidityPool.id,
-                                bot: bot.id,
-                                executor: envConfig().executor.id,
-                                type: JobType.OpenPosition,
-                                status: JobStatus.Pending,
-                            }
-                        ]
-                    )
-                    const job = jobRaw.toJSON()
-                    /**
+                const [jobRaw] = await this.connection.model<JobSchema>(
+                    JobSchema.name
+                ).create(
+                    [
+                        {
+                            _id: jobId,
+                            liquidityPool: liquidityPool.id,
+                            bot: bot.id,
+                            executor: envConfig().executor.id,
+                            type: JobType.OpenPosition,
+                            status: JobStatus.Pending,
+                        }
+                    ]
+                )
+                const job = jobRaw.toJSON()
+                /**
                     * Enqueue open-position job for async processing.
                     */
-                    const payload: OpenPositionPayload = {
-                        jobId: job.id,
-                        liquidityPoolId: liquidityPool.displayId,
-                        botId: bot.id,
-                    }
-                    await this.openPositionQueue.add(
-                        v4(),
-                        this.superjson.stringify(payload)
-                    )
-                    /**
-                    * Structured logging for observability.
-                    */
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionEnqueued,
-                        {
-                            botId: bot.id,
-                            liquidityPoolId: liquidityPool.displayId,
-                        }
-                    )
-                }
-            )
-        } catch (error) {
-            // log the error
-            this.winstonService.log(
-                WinstonLog.OpenPositionEnqueueFailed,
-                {
-                    botId: bot.id,
+                const payload: OpenPositionPayload = {
+                    jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    error: error.message,
+                    botId: bot.id,
+                    isRetry,
                 }
-            )
-        }
+                const bullmqJob = await this.openPositionQueue.add(
+                    v4(),
+                    this.superjson.stringify(payload),
+                    {
+                        jobId: bot.id,
+                    }
+                )
+                return bullmqJob
+            }
+        )
     }
 
     /**
@@ -459,4 +424,6 @@ export class OpenPositionOrchestratorService {
 export interface EnqueueOpenPositionParams {
     bot: BotSchema
     liquidityPool: LiquidityPoolSchema
+    jobId: string
+    isRetry?: boolean
 }

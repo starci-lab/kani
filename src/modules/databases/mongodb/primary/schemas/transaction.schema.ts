@@ -80,11 +80,12 @@ export class TransactionSchema extends AbstractSchema {
     @Field(() => Boolean,
         {
             description: "Whether the transaction is stimulated",
+            nullable: true,
         })
     @Prop({
-        type: Boolean, required: true 
+        type: Boolean, required: false 
     })
-        isStimulated: boolean 
+        isStimulated?: boolean 
 }
 
 export const TransactionSchemaClass = SchemaFactory.createForClass(TransactionSchema)

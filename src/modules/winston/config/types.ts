@@ -199,6 +199,8 @@ export interface NoAvailableRpcMessage {
 export interface OpenPositionEnqueuedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
+    jobId: string
+    bullmqJobId?: string
 }
 
 /**
@@ -718,4 +720,112 @@ export interface ReconcileBalanceJobAlreadyExecutedMessage {
 export interface ReconcileBalanceJobAlreadyConfirmedMessage {
     botId: string
     jobId: string
+}
+
+/**
+ * Open Position Job Already Prepared Message
+ */
+export interface OpenPositionJobAlreadyPreparedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Open Position Job Already Executed Message
+ */
+export interface OpenPositionJobAlreadyExecutedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Open Position Job Already Confirmed Message
+ */
+export interface OpenPositionJobAlreadyConfirmedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Close Position Job Already Prepared Message
+ */
+export interface ClosePositionJobAlreadyPreparedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Close Position Job Already Executed Message
+ */
+export interface ClosePositionJobAlreadyExecutedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Close Position Job Already Confirmed Message
+ */
+export interface ClosePositionJobAlreadyConfirmedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Open Position Processing Failed Unrecoverable Message
+ */
+export interface OpenPositionProcessingFailedUnrecoverableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Processing Failed Permanent Failure Message
+ */
+export interface OpenPositionProcessingFailedPermanentFailureMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Processing Failed Retryable Message
+ */
+export interface OpenPositionProcessingFailedRetryableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    attemptsMade: number
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Processing Completed Message
+ */
+export interface OpenPositionProcessingCompletedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Requeue Failed Message
+ */
+export interface OpenPositionRequeueFailedMessage {
+    error: string
+}
+
+/**
+ * Open Position Processing Started Message
+ */
+export interface OpenPositionProcessingStartedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
 }

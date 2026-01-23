@@ -2,11 +2,9 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    BotSchema 
+    BotSchema, 
+    PrimaryMemoryStorageService
 } from "@modules/databases"
-import {
-    BalanceService 
-} from "@modules/blockchains"
 import {
     LockAuthorityService 
 } from "../../bussiness"
@@ -17,26 +15,38 @@ import {
 import {
     Types 
 } from "mongoose"
+import {
+    OpenPositionOrchestratorService 
+} from "@modules/blockchains"
+import {
+    ClmmPositionOpenRequestedEventPayload,
+    DlmmPositionOpenRequestedEventPayload 
+} from "@modules/event"
 
 @Injectable()
-export class HandleReconcileBalanceService {
+export class HandleOpenPositionService {
     /**
-     * Runtime entrypoint for scheduling a "reconcile balance" job for a bot.
+     * Runtime entrypoint for scheduling an "open position" job for a bot.
+     *
+     * This service is called by event adapters (CLMM/DLMM) when a liquidity pool signals
+     * that a position should be opened.
      *
      * Responsibilities:
-     * - Guard against invalid bot states (not running / has active position / already has active job)
+     * - Guard against invalid bot states (not running / already in position / already has active job)
      * - Acquire lock authority (single-writer) before enqueuing work
-     * - Enqueue a BullMQ `ReconcileBalance` job via `BalanceService.enqueue`
+     * - Resolve the requested liquidity pool from memory storage
+     * - Enqueue a BullMQ `OpenPosition` job via `OpenPositionOrchestratorService`
      * - Log enqueue success/failure and release lock on enqueue failure
      */
     constructor(
-        private readonly balanceService: BalanceService,
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
-     * Schedules reconcile-balance work for the given bot.
+     * Handles an open-position request for the given bot and event payload.
      *
      * Side effects:
      * - Acquires lock authority (Redis)
@@ -46,6 +56,7 @@ export class HandleReconcileBalanceService {
      */
     async process(
         bot: BotSchema,
+        event: ClmmPositionOpenRequestedEventPayload | DlmmPositionOpenRequestedEventPayload
     ) {
         // we do nothing if the bot is not running
         if (!bot.running) return
@@ -63,26 +74,40 @@ export class HandleReconcileBalanceService {
         )
         if (!acquired) return
         // enqueue the balance rebalancing
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+            {
+                id: {
+                    $eq: event.payload.id,
+                }
+            }
+        )
+        if (!liquidityPool) {
+            return
+        }
         try {
-            const bullmqJob = await this.balanceService.enqueue(
+            const bullmqJob = await this.openPositionOrchestratorService.enqueue(
                 {
                     bot,
                     jobId,
+                    isRetry: false,
+                    liquidityPool,
                 }
             )
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceEnqueued,
+                WinstonLog.OpenPositionEnqueued,
                 {
-                    jobId,
                     botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    jobId,
                     bullmqJobId: bullmqJob?.id,
                 }
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceEnqueueFailed,
+                WinstonLog.OpenPositionEnqueueFailed,
                 {
                     botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
                     error: error.message,
                 }
             )

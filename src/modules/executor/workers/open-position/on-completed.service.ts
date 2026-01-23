@@ -35,16 +35,17 @@ export class OnCompletedService {
     ) {}
 
     /**
-     * Completion handler for reconcile-balance processing.
+     * Completion handler for open-position processing.
      *
-     * Marks the job COMPLETED, clears the bot's `activeJob`, logs completion,
-     * and releases the lock authority.
+     * Marks the job COMPLETED, clears the bot's `activeJob`, logs completion
+     * (including `liquidityPoolId`), and releases the lock authority.
      */
     async process(
         {
             job,
             bot,
             bullmqJob,
+            liquidityPool
         }: OnCompletedParams
     ): Promise<void> {
         const session = await this.connection.startSession()
@@ -82,11 +83,12 @@ export class OnCompletedService {
                     )
 
                     this.winstonService.log(
-                        WinstonLog.ReconcileBalanceProcessingCompleted,
+                        WinstonLog.OpenPositionProcessingCompleted,
                         {
                             botId: bot.id,
                             jobId: job.id,
                             bullmqJobId: bullmqJob.id,
+                            liquidityPoolId: liquidityPool.displayId,
                         }
                     )
 
