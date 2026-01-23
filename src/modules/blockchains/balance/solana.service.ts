@@ -263,8 +263,6 @@ export class SolanaBalanceService implements IBalanceService {
             bot,
             txHash,
             solanaTx,
-            tokenIn,
-            tokenOut,
             txCheck,
             stimulate,
         }: ExecuteSwapTransactionParams
@@ -316,8 +314,6 @@ export class SolanaBalanceService implements IBalanceService {
                         {
                             botId: bot.id,
                             txHash,
-                            tokenIn: tokenIn.displayId,
-                            tokenOut: tokenOut.displayId,
                         }
                     )
                     return txHash
@@ -337,8 +333,6 @@ export class SolanaBalanceService implements IBalanceService {
                     {
                         botId: bot.id,
                         txHash: transactionSignature.toString(),
-                        tokenIn: tokenIn.displayId,
-                        tokenOut: tokenOut.displayId,
                     }
                 )
             },

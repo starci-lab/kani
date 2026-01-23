@@ -144,8 +144,6 @@ export class SuiBalanceService implements IBalanceService {
             bot,
             txHash,
             signatureWithBytes,
-            tokenIn,
-            tokenOut,
             txCheck,
             stimulate,
         }: ExecuteSwapTransactionParams
@@ -196,8 +194,6 @@ export class SuiBalanceService implements IBalanceService {
                         {
                             botId: bot.id,
                             txHash,
-                            tokenIn: tokenIn.displayId,
-                            tokenOut: tokenOut.displayId,
                         }
                     )
                     return devInspect.effects.transactionDigest
@@ -216,8 +212,6 @@ export class SuiBalanceService implements IBalanceService {
                     {
                         botId: bot.id,
                         txHash,
-                        tokenIn: tokenIn.displayId,
-                        tokenOut: tokenOut.displayId,
                     }
                 )
             },

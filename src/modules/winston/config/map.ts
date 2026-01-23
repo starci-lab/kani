@@ -88,7 +88,8 @@ import {
     DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage,
     DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
     PriceDiagnosticFailedStaleMessage,
-    SwapTransactionStimulatedMessage
+    SwapTransactionStimulatedMessage,
+    SwapTransactionPreparedMessage
 } from "./types"
 
 export const configMap = {
@@ -184,7 +185,7 @@ export const configMap = {
     // Swap Transaction Executed
     [WinstonLog.SwapTransactionExecuted]: {
         name: WinstonLog.SwapTransactionExecuted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as SwapTransactionExecutedMessage,
@@ -688,7 +689,7 @@ export const configMap = {
     // Reconcile Balance Enqueued
     [WinstonLog.ReconcileBalanceEnqueued]: {
         name: WinstonLog.ReconcileBalanceEnqueued,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ReconcileBalanceEnqueuedMessage,
@@ -800,9 +801,17 @@ export const configMap = {
     // Swap Transaction Stimulated
     [WinstonLog.SwapTransactionStimulated]: {
         name: WinstonLog.SwapTransactionStimulated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as SwapTransactionStimulatedMessage,
+    },
+    // Swap Transaction Prepared
+    [WinstonLog.SwapTransactionPrepared]: {
+        name: WinstonLog.SwapTransactionPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as SwapTransactionPreparedMessage,
     },
 }

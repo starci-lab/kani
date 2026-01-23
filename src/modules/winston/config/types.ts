@@ -67,8 +67,6 @@ export interface OpenPositionTransactionFailedMessage {
 export interface SwapTransactionExecutedMessage {
     botId: string
     txHash: string
-    tokenIn: TokenId
-    tokenOut: TokenId
 }
 
 /**
@@ -681,6 +679,12 @@ export interface DynamicLiquidityPoolInfoDiagnosticFailedMessage {
 export interface SwapTransactionStimulatedMessage {
     botId: string
     txHash: string
-    tokenIn: TokenId
-    tokenOut: TokenId
+}
+
+/**
+ * Swap Transaction Prepared Message
+ */
+export interface SwapTransactionPreparedMessage {
+    botId: string
+    txHashes: Array<string>
 }

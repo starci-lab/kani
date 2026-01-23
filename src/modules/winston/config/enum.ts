@@ -19,6 +19,7 @@ export enum WinstonLog {
     LiquidityPoolWsError = "Liquidity.Pool.Ws.Error",
     OpenPositionTransactionExecuted = "Open.Position.Transaction.Executed",
     OpenPositionTransactionFailed = "Open.Position.Transaction.Failed",
+    SwapTransactionPrepared = "Swap.Transaction.Prepared",
     SwapTransactionExecuted = "Swap.Transaction.Executed",
     SwapTransactionStimulated = "Swap.Transaction.Stimulated",
     SwapTransactionFailed = "Swap.Transaction.Failed",

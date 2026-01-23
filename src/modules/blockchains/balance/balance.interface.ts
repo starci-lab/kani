@@ -99,8 +99,6 @@ export interface ExecuteSwapTransactionParams {
     txHash: string
     solanaTx?: SolanaTx // Solana Transaction object
     signatureWithBytes?: SignatureWithBytes
-    tokenIn: TokenSchema
-    tokenOut: TokenSchema
     txCheck: boolean
     stimulate?: boolean
 }

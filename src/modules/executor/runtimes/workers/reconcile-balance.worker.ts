@@ -316,7 +316,13 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     },
                 }
             )
-
+        this.winstonService.log(
+            WinstonLog.SwapTransactionPrepared,
+            {
+                botId: bot.id,
+                txHashes: swapTransactions.map((swapTransaction) => swapTransaction.txHash),
+            }
+        )
         // Return execution plan to next phase
         return {
             swapTransactions
@@ -354,8 +360,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 {
                     bot,
                     txHash: swapTransaction.txHash,
-                    tokenIn: swapTransaction.tokenIn,
-                    tokenOut: swapTransaction.tokenOut,
                     signatureWithBytes: swapTransaction.signatureWithBytes,
                     // only check the transaction if it is a retry
                     txCheck: isRetry,
@@ -368,9 +372,11 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     txHash: swapTransaction.txHash,
                     chainId: bot.chainId,
                     type: TransactionType.Swap,
+                    isStimulated: true,
                 }
             )
         }
+        
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -686,6 +692,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
     async onCompleted({
         job,
         bot,
+        bullmqJob,
     }: OnCompletedParams) {
         // delete the job schema and release the lock authority
         const session = await this.connection.startSession()
@@ -713,6 +720,14 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     },
                     {
                         session
+                    }
+                )
+                this.winstonService.log(
+                    WinstonLog.ReconcileBalanceProcessingCompleted,
+                    {
+                        botId: bot.id,
+                        jobId: job.id,
+                        bullmqJobId: bullmqJob.id,
                     }
                 )
                 // release the lock authority

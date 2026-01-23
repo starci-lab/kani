@@ -19,7 +19,6 @@ import {
 import {
     GraphQLTypeTransactionType, TokenId, TransactionType 
 } from "../enums"
-import GraphQLJSON from "graphql-type-json"
 import {
     PrimaryMongoDbCollectionRef,
 } from "../ref"
@@ -69,16 +68,6 @@ export class TransactionSchema extends AbstractSchema {
     })
         type: TransactionType
 
-    @Field(() => GraphQLJSON,
-        { 
-            description: "Additional transaction-specific metadata stored as flexible key-value JSON. Used for protocol extensions, cached vault info, or program-derived values.",
-            nullable: true 
-        })
-    @Prop({
-        type: MongooseSchema.Types.Mixed 
-    })
-        metadata?: unknown 
-
     @Field(() => Date,
         {
             description: "The timestamp of the transaction",
@@ -87,6 +76,15 @@ export class TransactionSchema extends AbstractSchema {
         type: Date, required: true 
     })
         timestamp: Date
+
+    @Field(() => Boolean,
+        {
+            description: "Whether the transaction is stimulated",
+        })
+    @Prop({
+        type: Boolean, required: true 
+    })
+        isStimulated: boolean 
 }
 
 export const TransactionSchemaClass = SchemaFactory.createForClass(TransactionSchema)
