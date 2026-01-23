@@ -1,8 +1,16 @@
-import { Injectable } from "@nestjs/common"
-import { ClientSession, Connection } from "mongoose"
-import { BotSchema, InjectPrimaryMongoose } from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    ClientSession, Connection 
+} from "mongoose"
+import {
+    BotSchema, InjectPrimaryMongoose 
+} from "@modules/databases"
 import BN from "bn.js"
-import { DayjsService } from "@modules/mixin"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class BalanceSnapshotService {
@@ -22,13 +30,18 @@ export class BalanceSnapshotService {
         }: UpdateBotSnapshotBalancesRecordParams
     ) {  
         await this.connection.model(BotSchema.name).updateOne(
-            { _id: bot.id },
-            { $set: { 
-                snapshotTargetBalanceAmount: targetBalanceAmount.toString(), 
-                snapshotQuoteBalanceAmount: quoteBalanceAmount.toString(), 
-                snapshotGasBalanceAmount: gasBalanceAmount.toString(), 
-                lastBalancesSnapshotAt: this.dayjsService.now().toDate(),
-            } 
+            {
+                _id: bot.id 
+            },
+            {
+                $set: { 
+                    balanceSnapshots: {
+                        targetBalanceAmount: targetBalanceAmount.toString(), 
+                        quoteBalanceAmount: quoteBalanceAmount.toString(), 
+                        gasBalanceAmount: gasBalanceAmount.toString(), 
+                        snapshotAt: this.dayjsService.now().toDate(),
+                    }
+                } 
             },
             {
                 session,

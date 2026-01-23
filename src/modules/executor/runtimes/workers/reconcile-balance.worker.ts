@@ -1,8 +1,29 @@
+/**
+ * Reconcile Balance Worker
+ *
+ * BullMQ worker responsible for reconciling a bot's balances toward the configured target allocation.
+ *
+ * High-level pipeline:
+ * - prepare(): fetch/normalize balances (if needed), compute reconcile plan, and prepare swap transactions
+ * - sendHeartbeat(): ensure we still hold the lock authority (prevents stuck jobs)
+ * - execute(): execute prepared swap transactions and collect transaction records
+ * - confirm(): post-transaction updates (persist tx snapshots and update balance snapshots)
+ * - onCompleted(): finalize job state + unlock bot
+ * - onFailed(): classify and persist failure state, then rethrow
+ *
+ * Design goals:
+ * - Idempotent phases (safe retries)
+ * - Explicit persisted job status transitions (PENDING → PREPARED → EXECUTED → CONFIRMED → COMPLETED)
+ */
+
 import {
+    AddTransactionRecordParams,
     BalanceService,
+    BalanceSnapshotService,
     PrepareSwapTransactionResult,
     ReconcileBalancePayload,
-    SwapDirection
+    SwapDirection,
+    TransactionSnapshotService
 } from "@modules/blockchains"
 import {
     Job, UnrecoverableError
@@ -17,6 +38,7 @@ import {
     JobSchema,
     JobStatus,
     PrimaryMemoryStorageService,
+    TransactionType,
 } from "@modules/databases"
 import {
     WinstonLog,
@@ -40,7 +62,9 @@ import {
 } from "../core"
 import BN from "bn.js"
 import {
-    BotNotFoundException, HeartbeatTimeoutException, JobNotFoundException, 
+    BotNotFoundException, 
+    HeartbeatTimeoutException, 
+    JobNotFoundException, 
     TokenNotFoundException
 } from "@exceptions"
 import {
@@ -48,7 +72,17 @@ import {
 } from "@modules/typedefs"
 
 export interface ReconcileBalanceJobMetadata {
+    /**
+     * Prepared swap transactions to be executed in order.
+     * Persisted on the job document as metadata during the PREPARE phase.
+     */
     swapTransactions: Array<PrepareSwapTransactionResult>
+
+    /**
+     * Post-execution transaction records (e.g., swaps) to be persisted during CONFIRM.
+     * This is populated by execute() and may be absent if the job hasn't executed yet.
+     */
+    transactionRecords?: Array<AddTransactionRecordParams>
 }
 
 @Worker(
@@ -62,6 +96,13 @@ export interface ReconcileBalanceJobMetadata {
     }
 )
 export class ReconcileBalanceWorker extends WorkerHost {
+    /**
+     * Creates the reconcile-balance BullMQ worker.
+     *
+     * This worker follows a two-phase approach:
+     * - prepare(): compute an idempotent execution plan and persist job metadata
+     * - execute(): perform the swaps and advance job state
+     */
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -72,6 +113,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly balanceService: BalanceService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly transactionSnapshotService: TransactionSnapshotService,
+        private readonly balanceSnapshotService: BalanceSnapshotService,
     ) {
         super()
     }
@@ -84,6 +127,16 @@ export class ReconcileBalanceWorker extends WorkerHost {
     // Notes:
     // - This phase must be idempotent
     // - Safe to re-enter on retry
+    /**
+     * PREPARE phase.
+     *
+     * Ensures balances are available (payload or live fetch), computes the reconcile
+     * swap plan, pre-builds swap transactions, and persists a state transition:
+     * PENDING → PREPARED (including `metadata.swapTransactions`).
+     *
+     * Idempotency: if the job is already at/after PREPARED, returns the previously
+     * persisted metadata instead of recomputing.
+     */
     async prepare({
         job,
         bot, 
@@ -270,6 +323,15 @@ export class ReconcileBalanceWorker extends WorkerHost {
         }
     }
 
+    /**
+     * EXECUTE phase.
+     *
+     * Sends a heartbeat to the lock authority, then executes the prepared swap
+     * transactions in order. Persists a state transition: PREPARED → EXECUTED.
+     *
+     * Idempotency: if the job is already at/after EXECUTED, it returns early.
+     * Retry behavior: on retries, enables transaction checks (`txCheck`) while executing.
+     */
     async execute(
         {
             job,
@@ -277,6 +339,68 @@ export class ReconcileBalanceWorker extends WorkerHost {
             bullmqJob,
             prepareResult,
         }: ExecuteParams
+    ): Promise<ReconcileBalanceJobMetadata> {
+        const isRetry = bullmqJob.attemptsMade > 0
+        // Guard: if job already passed EXECUTED phase, do nothing
+        if (
+            getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
+        ) {
+            return job.metadata as ReconcileBalanceJobMetadata
+        }
+        const transactionRecords: Array<AddTransactionRecordParams> = []
+        const { swapTransactions } = prepareResult
+        for (const swapTransaction of swapTransactions) {
+            await this.balanceService.executeSwapTransaction(
+                {
+                    bot,
+                    txHash: swapTransaction.txHash,
+                    tokenIn: swapTransaction.tokenIn,
+                    tokenOut: swapTransaction.tokenOut,
+                    signatureWithBytes: swapTransaction.signatureWithBytes,
+                    // only check the transaction if it is a retry
+                    txCheck: isRetry,
+                    stimulate: true,
+                }
+            )
+            transactionRecords.push(
+                {
+                    bot,
+                    txHash: swapTransaction.txHash,
+                    chainId: bot.chainId,
+                    type: TransactionType.Swap,
+                }
+            )
+        }
+        await this.connection
+            .model<JobSchema>(JobSchema.name)
+            .updateOne(
+                {
+                    _id: job.id 
+                },
+                {
+                    $set: {
+                        status: JobStatus.Executed,
+                    },
+                }
+            )
+        return {
+            ...prepareResult,
+            transactionRecords,
+        }
+    }
+
+    /**
+     * Sends a heartbeat to the lock authority for this bot.
+     *
+     * If the heartbeat cannot be sent, this throws an UnrecoverableError so BullMQ
+     * will not keep retrying a job that cannot safely proceed (prevents "stuck" locks).
+     */
+    async sendHeartbeat(
+        {
+            bot,
+            job,
+            bullmqJob,
+        }: SendHeartbeatParams
     ) {
         // Send heartbeat to the lock authority
         const isHeartbeatSent = await this.lockAuthorityService.sendHeartbeat(
@@ -296,24 +420,59 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 ).toJSON()
             )
         }
-        // Guard: if job already passed EXECUTED phase, do nothing
-        if (
-            getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
-        ) {
+    }
+
+    /**
+     * CONFIRM phase.
+     *
+     * Performs post-transaction bookkeeping after swaps have been executed:
+     * - re-fetch balances from chain
+     * - persist transaction snapshot records (if any)
+     * - persist updated bot balance snapshot
+     * - transition job status to CONFIRMED
+     *
+     * Idempotency: if the job is already at/after CONFIRMED, returns early.
+     */
+    async confirm(
+        {
+            bot,
+            job,
+            executeResult,
+        }: ConfirmParams
+    ) {
+        if (getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)) {
             return
         }
-        const { swapTransactions } = prepareResult
-        for (const swapTransaction of swapTransactions) {
-            await this.balanceService.executeSwapTransaction(
-                {
-                    bot,
-                    txHash: swapTransaction.txHash,
-                    tokenIn: swapTransaction.tokenIn,
-                    tokenOut: swapTransaction.tokenOut,
-                    signatureWithBytes: swapTransaction.signatureWithBytes,
+        const { transactionRecords } = executeResult
+        // we do post-transaction updates here
+        // first, we re-fetch the balances
+        const {
+            targetBalanceAmount,
+            quoteBalanceAmount,
+            gasBalanceAmount,
+        } = await this.balanceService.fetchBalances({
+            bot,
+        })
+        const session = await this.connection.startSession()
+        session.withTransaction(
+            async (session) => {
+                // we iterate over the transaction records and add them to the database
+                for (const transactionRecord of transactionRecords || []) {
+                    await this.transactionSnapshotService.addTransactionRecord({
+                        ...transactionRecord,
+                        session,
+                    })
                 }
-            )
-        }
+                // we update the bot snapshot balances
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord({
+                    bot,
+                    targetBalanceAmount,
+                    quoteBalanceAmount,
+                    gasBalanceAmount,
+                    session,
+                })
+            }
+        )
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -322,13 +481,21 @@ export class ReconcileBalanceWorker extends WorkerHost {
                 },
                 {
                     $set: {
-                        status: JobStatus.Executed,
+                        status: JobStatus.Confirmed,
                     },
                 }
             )
-        return
     }
 
+    /**
+     * BullMQ entrypoint for the reconcile-balance queue.
+     *
+     * Loads bot + job documents, then runs the pipeline:
+     * prepare() → execute() → onCompleted().
+     *
+     * On failure, delegates to onFailed() for state/log updates and rethrows.
+     * Guard: on retry, if progress was never set, returns early to avoid reprocessing.
+     */
     async process(
         bullmqJob: Job<string>
     ) {
@@ -370,12 +537,37 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     payload,
                 }
             )
-            await this.execute({
+            await this.sendHeartbeat({
+                job,
+                bot,
+                bullmqJob,
+                payload,
+            })
+            const executeResult = await this.execute({
                 job,
                 bot,
                 bullmqJob,
                 payload,
                 prepareResult,
+            })
+            await this.sendHeartbeat({
+                job,
+                bot,
+                bullmqJob,
+                payload,
+            })
+            await this.confirm({
+                job,
+                bot,
+                bullmqJob,
+                payload,
+                executeResult,
+            })
+            await this.sendHeartbeat({
+                job,
+                bot,
+                bullmqJob,
+                payload,
             })
             await this.onCompleted(
                 {
@@ -398,6 +590,16 @@ export class ReconcileBalanceWorker extends WorkerHost {
         }
     }
 
+    /**
+     * Failure handler for reconcile-balance processing.
+     *
+     * Classifies failures into:
+     * - unrecoverable (BullMQ `UnrecoverableError`): mark job FAILED immediately
+     * - permanent (attempts exhausted): mark job FAILED and increment retryCount
+     * - retryable: log as retrying and let BullMQ retry
+     *
+     * Always rethrows the original error so BullMQ can apply its retry/failure behavior.
+     */
     async onFailed(
         {
             job,
@@ -475,6 +677,12 @@ export class ReconcileBalanceWorker extends WorkerHost {
         throw error
     }
 
+    /**
+     * Completion handler for reconcile-balance processing.
+     *
+     * Marks the job COMPLETED, clears the bot's `activeJob`, and releases the lock
+     * authority. Performs DB updates within a MongoDB transaction session.
+     */
     async onCompleted({
         job,
         bot,
@@ -519,18 +727,43 @@ export class ReconcileBalanceWorker extends WorkerHost {
 }
 
 export interface ProcessParams {
+    /**
+     * Raw BullMQ job object (queue metadata, attempts, progress, etc.).
+     * Note: actual business payload is stored in `bullmqJob.data` as SuperJSON.
+     */
     bullmqJob: Job<string>
+
+    /** Persisted job document (used for status transitions + metadata). */
     job: JobSchema
+
+    /** Persisted bot document (holds tokens/chain config and active job state). */
     bot: BotSchema
+
+    /** Deserialized reconcile-balance payload (botId/jobId + optional balances). */
     payload: ReconcileBalancePayload
 
 }
 
+/** Parameters for the PREPARE phase (same shape as ProcessParams). */
 export type PrepareParams = ProcessParams
+
 export interface ExecuteParams extends ProcessParams {
+    /** Output of prepare() (prepared swap transactions + optional metadata). */
     prepareResult: ReconcileBalanceJobMetadata
 }
+
+/** Parameters for sendHeartbeat() (same shape as ProcessParams). */
+export type SendHeartbeatParams = ProcessParams
+
+export interface ConfirmParams extends ProcessParams {
+    /** Output of execute() (includes transactionRecords for snapshotting). */
+    executeResult: ReconcileBalanceJobMetadata
+}
+
 export interface OnFailedParams extends ProcessParams {
+    /** The error thrown during processing (used for classification + logging). */
     error: Error
 }
+
+/** Parameters for onCompleted() (same shape as ProcessParams). */
 export type OnCompletedParams = ProcessParams

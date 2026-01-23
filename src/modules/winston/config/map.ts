@@ -87,7 +87,8 @@ import {
     DynamicLiquidityPoolInfoDiagnosticFailedNotFoundMessage,
     DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage,
     DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
-    PriceDiagnosticFailedStaleMessage
+    PriceDiagnosticFailedStaleMessage,
+    SwapTransactionStimulatedMessage
 } from "./types"
 
 export const configMap = {
@@ -795,5 +796,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
+    },
+    // Swap Transaction Stimulated
+    [WinstonLog.SwapTransactionStimulated]: {
+        name: WinstonLog.SwapTransactionStimulated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as SwapTransactionStimulatedMessage,
     },
 }

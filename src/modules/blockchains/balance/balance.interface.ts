@@ -101,6 +101,8 @@ export interface ExecuteSwapTransactionParams {
     signatureWithBytes?: SignatureWithBytes
     tokenIn: TokenSchema
     tokenOut: TokenSchema
+    txCheck: boolean
+    stimulate?: boolean
 }
 
 export interface EnqueueBalanceRebalancingParams {

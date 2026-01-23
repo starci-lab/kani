@@ -1,6 +1,6 @@
 import {
     AbstractException, AbstractExceptionMetadata 
-} from "@exceptions"
+} from "../abstract"
 
 /**
  * Heartbeat timeout exception

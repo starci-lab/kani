@@ -20,6 +20,7 @@ export enum WinstonLog {
     OpenPositionTransactionExecuted = "Open.Position.Transaction.Executed",
     OpenPositionTransactionFailed = "Open.Position.Transaction.Failed",
     SwapTransactionExecuted = "Swap.Transaction.Executed",
+    SwapTransactionStimulated = "Swap.Transaction.Stimulated",
     SwapTransactionFailed = "Swap.Transaction.Failed",
     PythPricesFetched = "Pyth.Prices.Fetched",
     PythPricesFetchFailed = "Pyth.Prices.Fetch.Failed",

@@ -19,7 +19,8 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     ErrorTransactionType,
     MissingSolanaTxParamException,
-    PrivyMetadataNotFoundException
+    PrivyMetadataNotFoundException,
+    TransactionValidationFailedException
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -45,6 +46,7 @@ import {
     SolanaRpcSubscriptionsApi,
     createNoopSigner,
     signature,
+    getBase64EncodedWireTransaction,
 } from "@solana/kit"
 import { 
     findAssociatedTokenPda, 
@@ -263,20 +265,28 @@ export class SolanaBalanceService implements IBalanceService {
             solanaTx,
             tokenIn,
             tokenOut,
+            txCheck,
+            stimulate,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        const transaction = await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Http,
-            callback: async ({ rpc }) => {
-                return await rpc.getTransaction(signature(txHash),
-                    {
-                        commitment: "confirmed", encoding: "base58" 
-                    }).send()
+        if (txCheck) {
+            // we don't need to check the transaction if we are stimulating
+            if (stimulate) {
+                return
+            }
+            const transaction = await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Http,
+                callback: async ({ rpc }) => {
+                    return await rpc.getTransaction(signature(txHash),
+                        {
+                            commitment: "confirmed", encoding: "base58" 
+                        }).send()
 
-            },
-        })
-        if (transaction) {
-            return
+                },
+            })
+            if (transaction) {
+                return
+            }
         }
         if (!solanaTx) {
             throw new MissingSolanaTxParamException({
@@ -287,6 +297,31 @@ export class SolanaBalanceService implements IBalanceService {
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
+                if (stimulate) {
+                    const simulateTransactionResult = await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(solanaTx),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        }).send()
+                    if (simulateTransactionResult.value.err) {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash,
+                            type: ErrorTransactionType.Swap,
+                        })
+                    }
+                    this.winstonService.log(
+                        WinstonLog.SwapTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            tokenIn: tokenIn.displayId,
+                            tokenOut: tokenOut.displayId,
+                        }
+                    )
+                    return txHash
+                }
                 const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                     rpc,
                     rpcSubscriptions,

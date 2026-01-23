@@ -132,6 +132,7 @@ export enum JobStatus {
     Pending = "pending",
     Prepared = "prepared",
     Executed = "executed",
+    Confirmed = "confirmed",
     Completed = "completed",
     Failed = "failed",
 }

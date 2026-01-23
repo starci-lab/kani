@@ -673,3 +673,14 @@ export interface DynamicLiquidityPoolInfoDiagnosticFailedMessage {
     liquidityPoolId: LiquidityPoolId
     error: string
 }
+
+
+/**
+ * Swap Transaction Stimulated Message
+ */
+export interface SwapTransactionStimulatedMessage {
+    botId: string
+    txHash: string
+    tokenIn: TokenId
+    tokenOut: TokenId
+}

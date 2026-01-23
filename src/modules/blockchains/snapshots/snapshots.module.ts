@@ -1,9 +1,21 @@
-import { DynamicModule, Injectable, Provider } from "@nestjs/common"
-import { BalanceSnapshotService } from "./balance.service"
-import { OpenPositionSnapshotService } from "./open-position.service"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./snapshots.module-definition"
-import { TransactionSnapshotService } from "./transaction.service"
-import { ClosePositionSnapshotService } from "./close-position.service"
+import {
+    DynamicModule, Injectable, Provider 
+} from "@nestjs/common"
+import {
+    BalanceSnapshotService 
+} from "./balance.service"
+import {
+    OpenPositionSnapshotService 
+} from "./open-position.service"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./snapshots.module-definition"
+import {
+    TransactionSnapshotService 
+} from "./transaction.service"
+import {
+    ClosePositionSnapshotService 
+} from "./close-position.service"
 
 @Injectable()
 export class SnapshotsModule extends ConfigurableModuleClass {

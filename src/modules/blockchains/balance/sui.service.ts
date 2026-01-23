@@ -17,7 +17,8 @@ import {
     PrivyPublicKeyNotFoundException, 
     ErrorTransactionType,
     MissingSuiMessageWithBytesParamException,
-    EncryptedPrivySignerPrivateKeyNotFoundException
+    EncryptedPrivySignerPrivateKeyNotFoundException,
+    TransactionValidationFailedException
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -33,6 +34,7 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 import {
+    Transaction,
     TransactionDataBuilder 
 } from "@mysten/sui/transactions"
 import {
@@ -144,18 +146,26 @@ export class SuiBalanceService implements IBalanceService {
             signatureWithBytes,
             tokenIn,
             tokenOut,
+            txCheck,
+            stimulate,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        const transaction = await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                return await suiClient.getTransactionBlock({
-                    digest: txHash,
-                })
-            },
-        })
-        if (transaction) {
-            return
+        if (txCheck) {
+            // we don't need to check the transaction if we are stimulating
+            if (stimulate) {
+                return
+            }
+            const transaction = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Http,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.getTransactionBlock({
+                        digest: txHash,
+                    })
+                },
+            })
+            if (transaction) {
+                return
+            }
         }
         if (!signatureWithBytes) {
             throw new MissingSuiMessageWithBytesParamException({
@@ -166,7 +176,32 @@ export class SuiBalanceService implements IBalanceService {
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
-                
+                if (stimulate) {
+                    const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+                    const devInspect = await suiClient.devInspectTransactionBlock(
+                        {
+                            transactionBlock,
+                            sender: bot.accountAddress,
+                        }
+                    )
+                    if (devInspect.effects.status.status !== "success") {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            type: ErrorTransactionType.Swap,
+                        })
+                    }
+                    this.winstonService.log(
+                        WinstonLog.SwapTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            tokenIn: tokenIn.displayId,
+                            tokenOut: tokenOut.displayId,
+                        }
+                    )
+                    return devInspect.effects.transactionDigest
+                }
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
