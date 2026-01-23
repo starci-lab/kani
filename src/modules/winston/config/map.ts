@@ -90,7 +90,10 @@ import {
     PriceDiagnosticFailedStaleMessage,
     SwapTransactionStimulatedMessage,
     SwapTransactionPreparedMessage,
-    ReconcileBalanceRequeueFailedMessage
+    ReconcileBalanceRequeueFailedMessage,
+    ReconcileBalanceJobAlreadyPreparedMessage,
+    ReconcileBalanceJobAlreadyConfirmedMessage,
+    ReconcileBalanceJobAlreadyExecutedMessage
 } from "./types"
 
 export const configMap = {
@@ -822,5 +825,29 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceRequeueFailedMessage,
+    },
+    // Reconcile Balance Job Already Prepared
+    [WinstonLog.ReconcileBalanceJobAlreadyPrepared]: {
+        name: WinstonLog.ReconcileBalanceJobAlreadyPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobAlreadyPreparedMessage,
+    },
+    // Reconcile Balance Job Already Executed
+    [WinstonLog.ReconcileBalanceJobAlreadyExecuted]: {
+        name: WinstonLog.ReconcileBalanceJobAlreadyExecuted,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobAlreadyExecutedMessage,
+    },
+    // Reconcile Balance Job Already Confirmed
+    [WinstonLog.ReconcileBalanceJobAlreadyConfirmed]: {
+        name: WinstonLog.ReconcileBalanceJobAlreadyConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobAlreadyConfirmedMessage,
     },
 }

@@ -19,6 +19,10 @@ import {
 import {
     Connection
 } from "mongoose"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 @Injectable()
 export class ExecuteService {
@@ -26,6 +30,7 @@ export class ExecuteService {
         private readonly balanceService: BalanceService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -50,6 +55,13 @@ export class ExecuteService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceJobAlreadyExecuted,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                }
+            )
             return {
                 result: job.metadata as ReconcileBalanceJobMetadata
             }

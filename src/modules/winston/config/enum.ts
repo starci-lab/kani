@@ -90,4 +90,7 @@ export enum WinstonLog {
     DynamicLiquidityPoolInfoDiagnosticFailedStale = "Dynamic.Liquidity.Pool.Info.Diagnostic.Failed.Stale",
     DynamicLiquidityPoolInfoDiagnosticFailed = "Dynamic.Liquidity.Pool.Info.Diagnostic.Failed",
     ReconcileBalanceRequeueFailed = "Reconcile.Balance.Requeue.Failed",
+    ReconcileBalanceJobAlreadyPrepared = "Reconcile.Balance.Job.Already.Prepared",
+    ReconcileBalanceJobAlreadyExecuted = "Reconcile.Balance.Job.Already.Executed",
+    ReconcileBalanceJobAlreadyConfirmed = "Reconcile.Balance.Job.Already.Confirmed",
 }

@@ -83,6 +83,13 @@ export class PrepareService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceJobAlreadyPrepared,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                }
+            )
             return {
                 result: job.metadata as ReconcileBalanceJobMetadata
             }

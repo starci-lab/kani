@@ -695,3 +695,27 @@ export interface SwapTransactionPreparedMessage {
 export interface ReconcileBalanceRequeueFailedMessage {
     error: string
 }
+
+/**
+ * Reconcile Balance Job Already Prepared Message
+ */
+export interface ReconcileBalanceJobAlreadyPreparedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Reconcile Balance Job Already Executed Message
+ */
+export interface ReconcileBalanceJobAlreadyExecutedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Reconcile Balance Job Already Confirmed Message
+ */
+export interface ReconcileBalanceJobAlreadyConfirmedMessage {
+    botId: string
+    jobId: string
+}

@@ -207,13 +207,10 @@ export class ReconcileBalanceWorker extends WorkerHost {
             // PREPARE phase
             // Compute reconcile plan + prepare swap transactions + persist Prepared status/metadata.
             const { result: prepareResult } = await this.prepareService.process(baseParams)
-            
             // HEARTBEAT phase (before executing on-chain transactions)
             // Ensure the lock authority is still held before performing side effects.
             await this.sendHeartbeatService.process(baseParams)
-
             // EXECUTE phase
-
             // Execute prepared swaps; returns transaction records for snapshotting.
             const { result: executeResult } = await this.executeService.process(
                 // Extend the base params with the PREPARE output.
@@ -224,7 +221,6 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     prepareResult,
                 }
             )
-
             // HEARTBEAT phase (before post-transaction persistence)
             // Ensure the lock authority is still held before persisting post-tx snapshots.
             await this.sendHeartbeatService.process(baseParams)

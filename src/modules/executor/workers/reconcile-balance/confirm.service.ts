@@ -18,6 +18,10 @@ import {
 import {
     ConfirmParams,
 } from "./types"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 @Injectable()
 export class ConfirmService {
@@ -27,6 +31,7 @@ export class ConfirmService {
         private readonly balanceSnapshotService: BalanceSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -50,6 +55,13 @@ export class ConfirmService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceJobAlreadyConfirmed,
+                {
+                    botId: bot.id,
+                    jobId: job.id,
+                }
+            )
             return
         }
 
