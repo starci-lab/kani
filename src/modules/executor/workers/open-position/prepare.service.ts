@@ -51,11 +51,13 @@ export class PrepareService {
      * Idempotency: if the job is already at/after PREPARED, returns the previously
      * persisted metadata instead of recomputing.
      */
-    async process({
-        job,
-        bot, 
-        state,
-    }: PrepareParams): Promise<PrepareResult> {
+    async process(
+        {
+            job,
+            bot, 
+            state,
+        }: PrepareParams
+    ): Promise<PrepareResult> {
         // Guard: if job already passed PENDING phase, do nothing
         // This prevents duplicate preparation on retry or replay
         if (

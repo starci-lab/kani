@@ -28,7 +28,7 @@ import {
     OpenPositionTxbService 
 } from "./transactions"
 import {
-    TickMathService 
+    TickMathService
 } from "../../math"
 import { 
     InvalidPoolTokensException, 
@@ -45,6 +45,7 @@ import {
     ErrorTransactionType,
     SuiObjectNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -80,6 +81,9 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    _TickMathService 
+} from "../../math/_tick.service"
         
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -88,6 +92,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly openPositionTxbService: OpenPositionTxbService,
         private readonly tickMathService: TickMathService,
+        private readonly _tickMathService: _TickMathService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly ensureMathService: EnsureMathService,
@@ -163,13 +168,18 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.snapshots) {
+        if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -182,13 +192,24 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             })
         }       
         const targetIsA = bot.targetToken.toString() === tokenA.id
-        const { 
-            tickLower, 
-            tickUpper
-        } = await this.tickMathService.getTickBounds({
+        const { tickLower: _tickLower, tickUpper: _tickUpper } = await this._tickMathService.getTickBounds({
             state: _state,
             bot,
         })
+        console.log(`_tickLower: ${_tickLower.toString()}, _tickUpper: ${_tickUpper.toString()}`)
+        const { 
+            tickLower, 
+            tickUpper,
+            utilizationPercentage
+        } = await this.tickMathService.findOptimalTickRange({
+            tickCurrent: new BN(_state.dynamic.tickCurrent),
+            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
+            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+        })
+        console.log(`tickLower: ${tickLower.toString()}, tickUpper: ${tickUpper.toString()}`)
+        console.log(`utilizationPercentage: ${utilizationPercentage.toString()}`)
         let amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         let amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         const sdk = new TurbosSdk(Network.mainnet)

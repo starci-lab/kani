@@ -329,7 +329,7 @@ export const configMap = {
     // Open Position Enqueued
     [WinstonLog.OpenPositionEnqueued]: {
         name: WinstonLog.OpenPositionEnqueued,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as OpenPositionEnqueuedMessage,

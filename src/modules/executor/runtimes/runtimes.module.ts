@@ -13,11 +13,9 @@ import {
 import {
     HandleClmmPositionOpenRequestedEventService, 
     HandleDlmmPositionOpenRequestedEventService,
+    HandleOpenPositionService,
     HandleReconcileBalanceService,
 } from "./core"
-import {
-    ReconcileBalanceModule
-} from "../workers/reconcile-balance/reconcile-balance.module"
 
 @Module({
 })
@@ -30,7 +28,6 @@ export class RuntimesModule extends ConfigurableModuleClass {
             ...dynamicModule,
             imports: [
                 ...dynamicModule.imports || [],
-                ReconcileBalanceModule,
             ],
             providers: [
                 ...dynamicModule.providers || [], 
@@ -39,6 +36,7 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleClmmPositionOpenRequestedEventService,
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,
+                HandleOpenPositionService,
             ],
             exports: [
                 RuntimesFactoryService,
