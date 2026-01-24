@@ -57,9 +57,6 @@ import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    EnsureMathService 
-} from "../../math"
-import {
     AsyncService 
 } from "@modules/mixin"
 import {
@@ -84,7 +81,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly tickMathService: TickMathService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
-        private readonly ensureMathService: EnsureMathService,
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
     ) {}
