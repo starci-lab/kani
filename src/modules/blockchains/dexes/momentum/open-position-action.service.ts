@@ -39,6 +39,7 @@ import {
     SuiObjectInvalidTypeException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -65,6 +66,9 @@ import {
 import {
     ClmmLiquidityPoolState 
 } from "../../interfaces"
+import {
+    Decimal 
+} from "decimal.js"
 
 @Injectable()
 export class MomentumOpenPositionActionService implements IOpenActionService {
@@ -124,13 +128,18 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
-        if (!bot.snapshots) {
+        if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -146,9 +155,13 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         const { 
             tickLower, 
             tickUpper
-        } = await this.tickMathService.getTickBounds({
-            state: _state,
-            bot,
+        } = await this.tickMathService.findOptimalTickRange({
+            tickCurrent: _state.dynamic.tickCurrent,
+            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
+            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetIsA,
         })
         const amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount

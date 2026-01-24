@@ -19,7 +19,8 @@ import {
     KeyPairSigner,
 } from "@solana/kit"
 import {
-    InvalidPoolTokensException 
+    InvalidPoolTokensException, 
+    LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     TickArrayService 
@@ -87,18 +88,24 @@ export class OpenPositionInstructionService {
         amountA,
         amountB,
     }: CreateOpenPositionInstructionsParams): Promise<CreateOpenPositionInstructionsResult> {
+        const _state = state as ClmmLiquidityPoolState
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: _state.static.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: _state.static.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
             })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
@@ -133,19 +140,19 @@ export class OpenPositionInstructionService {
                 }),
             )
         }
-        const { programAddress, tokenVault0, tokenVault1 } = state.static
+        const { programAddress, tokenVault0, tokenVault1 } = _state.static
             .metadata as OrcaLiquidityPoolMetadata
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
-            tickIndex: tickLower.toNumber(),
-            tickSpacing: state.static.tickSpacing,
+            poolStateAddress: address(_state.static.poolAddress),
+            tickIndex: tickLower,
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
             bot,
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
-            poolStateAddress: address(state.static.poolAddress),
-            tickIndex: tickUpper.toNumber(),
-            tickSpacing: state.static.tickSpacing,
+            poolStateAddress: address(_state.static.poolAddress),
+            tickIndex: tickUpper,
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
             bot,
         })

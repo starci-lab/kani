@@ -13,7 +13,8 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    InvalidPoolTokensException 
+    InvalidPoolTokensException, 
+    LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -72,6 +73,11 @@ export class OpenPositionTxbService {
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: state.static.tokenB.toString(),
         })
+        if (!state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
+            })
+        }
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
                 {
@@ -137,6 +143,7 @@ export class OpenPositionTxbService {
         feeToAddress)
         const { packageId, versionObject } = state.static
             .metadata as MomentumLiquidityPoolMetadata
+        const slippage = new Decimal(envConfig().dexes.momentum.openPosition.slippage)
         const [lowerTick1] = txb.moveCall({
             target: `${packageId}::tick_math::get_tick_at_sqrt_price`,
             arguments: [txb.pure.u128(TickMath.tickIndexToSqrtPriceX64(tickLower.toNumber()).toString())],
@@ -147,7 +154,7 @@ export class OpenPositionTxbService {
         })
         const [tick_spacing] = txb.moveCall({
             target: `${packageId}::i32::from_u32`,
-            arguments: [txb.pure.u32(state.static.tickSpacing)],
+            arguments: [txb.pure.u32(state.static.clmmState.tickSpacing)],
         })
         const [lowerTickmod] = txb.moveCall({
             target: `${packageId}::i32::mod`,
@@ -193,16 +200,18 @@ export class OpenPositionTxbService {
                 txb.object(sourceCoinA.coinArg),
                 txb.object(sourceCoinB.coinArg),
                 txb.pure.u64(
-                    adjustSlippage(
-                        remainingAmountA, 
-                        new Decimal(envConfig().dexes.momentum.openPosition.slippage)
-                    ).toString(),
+                    adjustSlippage({
+                        bn: remainingAmountA,
+                        slippage,
+                        isRoundUp: false,
+                    }).toString(),
                 ),
                 txb.pure.u64(
-                    adjustSlippage(
-                        remainingAmountB, 
-                        new Decimal(envConfig().dexes.momentum.openPosition.slippage)
-                    ).toString(),
+                    adjustSlippage({
+                        bn: remainingAmountB,
+                        slippage,
+                        isRoundUp: false,
+                    }).toString(),
                 ),
                 txb.object(SUI_CLOCK_OBJECT_ID),
                 txb.object(versionObject),
@@ -224,8 +233,8 @@ export class OpenPositionTxbService {
 export interface CreateOpenPositionTxbParams {
   txb?: Transaction;
   state: ClmmLiquidityPoolState;
-  tickLower: Decimal;
-  tickUpper: Decimal;
+  tickLower: BN;
+  tickUpper: BN;
   amountA: BN;
   amountB: BN;
   bot: BotSchema;

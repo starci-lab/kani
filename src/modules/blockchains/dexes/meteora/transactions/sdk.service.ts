@@ -23,7 +23,7 @@ import {
     AccountMeta, AccountRole, address, Address, Instruction 
 } from "@solana/kit"
 import {
-    InvalidPoolTokensException, DLMMOverflowDefaultBinArrayBitmapException 
+    InvalidPoolTokensException, DLMMOverflowDefaultBinArrayBitmapException, LiquidityPoolDlmmStateNotFoundException 
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -91,6 +91,11 @@ export class MeteoraSdkService {
         ataAddressB,
     }: DepositWithRebalanceEndpointParams): Promise<Array<Instruction>> {
         const instructions: Array<Instruction> = []
+        if (!state.static.dlmmState) {
+            throw new LiquidityPoolDlmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
+            })
+        }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.targetToken.toString(),
@@ -204,7 +209,7 @@ export class MeteoraSdkService {
             deltaY,
             x0,
             y0,
-            new BN(state.static.binStep),
+            new BN(state.static.dlmmState.binStep),
             strategy.singleSidedX ?? false
         ).reduce(
             (acc, bin) => ({

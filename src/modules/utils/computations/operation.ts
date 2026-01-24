@@ -85,3 +85,28 @@ export const bnDivDecimal = ({
         fractionDigits,
     })
 }
+
+export const bnDivBn = ({
+    bn1,
+    bn2,
+    fractionDigits = new Decimal(
+        envConfig().computation.operation.fractionDigits
+    ),
+}: BnDivBnParams): Decimal => {
+    const multiplier = pow10({
+        exponent: fractionDigits,
+        asBN: true,
+    })
+    return new Decimal(bn1.mul(multiplier).div(bn2).toString())
+        .div(new Decimal(multiplier.toString()))
+        .toDecimalPlaces(
+            fractionDigits.toNumber(),
+            Decimal.ROUND_HALF_UP
+        )
+}
+
+export interface BnDivBnParams {
+    bn1: BN
+    bn2: BN
+    fractionDigits?: Decimal
+}

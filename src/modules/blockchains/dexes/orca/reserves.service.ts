@@ -11,9 +11,11 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
+    ActivePositionNotFoundException,
     InvalidPoolTokensException, 
-    LiquidityPoolNotFoundException, 
-    MissingActivePositionLiquidityException
+    LiquidityPoolClmmStateNotFoundException, 
+    LiquidityPoolNotFoundException,
+    PositionClmmStateNotFoundException, 
 } from "@modules/exceptions"
 import {
     ClmmReservesFormulaService 
@@ -41,11 +43,22 @@ export class OrcaReservesService implements IReservesService {
             bot,
         }: ReservesParams): Promise<ReservesResult> {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
-            throw new MissingActivePositionLiquidityException({
+            throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         const _state = state as ClmmLiquidityPoolState
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -77,10 +90,10 @@ export class OrcaReservesService implements IReservesService {
             reserveA,
             reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
-            tickLower: new BN(bot.activePosition.associatedPosition?.tickLower ?? 0),
-            tickUpper: new BN(bot.activePosition.associatedPosition?.tickUpper ?? 0),
+            tickLower: new BN(bot.activePosition.associatedPosition.clmmState.tickLower),
+            tickUpper: new BN(bot.activePosition.associatedPosition.clmmState.tickUpper),
             tickCurrent: _state.dynamic.tickCurrent,
-            liquidity: new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+            liquidity: new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
             fixedPointScale: Q64,

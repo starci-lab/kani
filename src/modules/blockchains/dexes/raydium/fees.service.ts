@@ -20,6 +20,8 @@ import {
     SolanaAccountNotFoundException,
     ErrorSolanaAccountName,
     MissingActivePositionLiquidityException,
+    PositionClmmStateNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     TickArrayLayout 
@@ -60,7 +62,11 @@ export class RaydiumFeesService implements IFeesService {
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
-
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -68,30 +74,38 @@ export class RaydiumFeesService implements IFeesService {
         }
 
         const positionId = bot.activePosition.associatedPosition.positionId
-        const tickLower = bot.activePosition.associatedPosition?.tickLower ?? 0
-        const tickUpper = bot.activePosition.associatedPosition?.tickUpper ?? 0
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
+        const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
+        const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
 
         const { programAddress } =
-            state.static.metadata as RaydiumLiquidityPoolMetadata
+            _state.static.metadata as RaydiumLiquidityPoolMetadata
 
         // ----------------------------
         // PDA derivation
         // ----------------------------
         const { pda: tickArrayLowerPda } =
             await this.tickArrayService.getPda({
-                poolStateAddress: address(state.static.poolAddress),
+                poolStateAddress: address(_state.static.poolAddress),
                 tickIndex: tickLower,
-                tickSpacing: state.static.tickSpacing,
+                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
                 programAddress: address(programAddress),
-            })
+            }
+            )
 
         const { pda: tickArrayUpperPda } =
             await this.tickArrayService.getPda({
                 poolStateAddress: address(state.static.poolAddress),
                 tickIndex: tickUpper,
-                tickSpacing: state.static.tickSpacing,
+                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
                 programAddress: address(programAddress),
-            })
+            }
+            )
 
         // ----------------------------
         // Batch fetch accounts
@@ -176,13 +190,13 @@ export class RaydiumFeesService implements IFeesService {
         // ----------------------------
         // Tick index resolution
         // ----------------------------
-        const tickLowerIndex = new Decimal(tickLower)
-            .sub(tickArrayLower.startTickIndex)
-            .div(state.static.tickSpacing)
+        const tickLowerIndex = new Decimal(tickLower.toString())
+            .sub(new Decimal(tickArrayLower.startTickIndex.toString()))
+            .div(new Decimal(_state.static.clmmState.tickSpacing.toString()))
 
-        const tickUpperIndex = new Decimal(tickUpper)
-            .sub(tickArrayUpper.startTickIndex)
-            .div(state.static.tickSpacing)
+        const tickUpperIndex = new Decimal(tickUpper.toString())
+            .sub(new Decimal(tickArrayUpper.startTickIndex.toString()))
+            .div(new Decimal(_state.static.clmmState.tickSpacing.toString()))
 
         if (
             tickLowerIndex.lessThan(0) ||

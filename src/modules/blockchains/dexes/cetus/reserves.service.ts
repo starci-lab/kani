@@ -11,7 +11,7 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolNotFoundException
+    ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolClmmStateNotFoundException, LiquidityPoolNotFoundException
 } from "@modules/exceptions"
 import {
     ClmmReservesFormulaService
@@ -45,17 +45,24 @@ export class CetusReservesService implements IReservesService {
                 }
             )
         }
+        if (!bot.activePosition.associatedPosition?.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException(
+                {
+                    liquidityPoolId: state.static.displayId,
+                }
+            )
+        }
         const _state = state as ClmmLiquidityPoolState
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenA.toString(),
+            id: state.static.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: _state.static.tokenB.toString(),
+            id: state.static.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException(
                 {
-                    liquidityPoolId: _state.static.displayId,
+                    liquidityPoolId: state.static.displayId,
                 }
             )
         }
@@ -71,7 +78,7 @@ export class CetusReservesService implements IReservesService {
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException(
                 {
-                    displayId: _state.static.displayId,
+                    displayId: state.static.displayId,
                 }
             )
         }
@@ -80,10 +87,10 @@ export class CetusReservesService implements IReservesService {
             reserveA,
             reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
-            tickLower: new BN(bot.activePosition.associatedPosition?.tickLower ?? 0),
-            tickUpper: new BN(bot.activePosition.associatedPosition?.tickUpper ?? 0),
+            tickLower: new BN(bot.activePosition.associatedPosition.clmmState.tickLower),
+            tickUpper: new BN(bot.activePosition.associatedPosition.clmmState.tickUpper),
             tickCurrent: _state.dynamic.tickCurrent,
-            liquidity: new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+            liquidity: new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
             fixedPointScale: Q64,

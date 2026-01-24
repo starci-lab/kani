@@ -184,11 +184,9 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const { 
             tickLower, 
             tickUpper,
-            amountA,
-            amountB,
             utilizationPercentage,
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: new BN(_state.dynamic.tickCurrent),
+            tickCurrent: _state.dynamic.tickCurrent,
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
@@ -204,7 +202,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 slippage: slippage.toNumber(),
             })
         }
-
+        const amountAMax = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         const { 
             txb: openPositionTxb,
             feeAmountA,
@@ -212,8 +211,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         } = await this.openPositionTxbService.createOpenPositionTxb({
             bot,
             liquidity: new BN(0),
-            amountAMax: amountA,
-            amountBMax: amountB,
+            amountAMax,
+            amountBMax,
             tickLower,
             state: _state,
             tickUpper,
@@ -249,8 +248,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                 feeAmountB,
                                 tickLower,
                                 tickUpper,
-                                amountA,
-                                amountB,
                             }
                         },
                     })
@@ -279,21 +276,21 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         feeAmountB,
                         tickLower,
                         tickUpper,
-                        amountA,
-                        amountB,
                     }
                 }
             },
         })
     }
 
-    async execute({
-        bot,
-        state,
-        isRetry,
-        txHash,
-        signatureWithBytes,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+    async execute(
+        {
+            bot,
+            state,
+            isRetry,
+            txHash,
+            signatureWithBytes,
+        }: ExecuteOpenPositionParams
+    ): Promise<ExecuteOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         if (isRetry) {
             const [txBlock] = await this.asyncService.resolveTuple(

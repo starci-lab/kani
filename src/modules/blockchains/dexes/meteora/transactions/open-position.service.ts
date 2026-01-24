@@ -28,7 +28,7 @@ import {
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
-    InvalidPoolTokensException, MeteoraMultipleDlmmPositionsNotSupportedException 
+    InvalidPoolTokensException, LiquidityPoolDlmmStateNotFoundException, MeteoraMultipleDlmmPositionsNotSupportedException 
 } from "@modules/exceptions"
 import {
     getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS 
@@ -74,8 +74,8 @@ export interface CreateOpenPositionInstructionsParams {
 export interface CreateOpenPositionInstructionsResult {
     instructions: Array<Instruction>
     positionKeyPair: KeyPairSigner
-    minBinId: Decimal
-    maxBinId: Decimal
+    minBinId: BN
+    maxBinId: BN
     feeAmountA: BN
     feeAmountB: BN
 }
@@ -100,6 +100,12 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResult>
     {
+        const _state = state as DlmmLiquidityPoolState
+        if (!_state.static.dlmmState) {
+            throw new LiquidityPoolDlmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const {
             feeAmount: feeAmountA,
             remainingAmount: remainingAmountA,
@@ -116,14 +122,14 @@ export class OpenPositionInstructionService {
         })
         const metadata = state.static.metadata as MeteoraLiquidityPoolMetadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenA.toString(),
+            id: _state.static.tokenA.toString(),
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: state.static.tokenB.toString(),
+            id: _state.static.tokenB.toString(),
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
             })
         }
         // transfer the fees to the fee address
@@ -147,8 +153,8 @@ export class OpenPositionInstructionService {
                 }))
         }
         const endInstructions: Array<Instruction> = []
-        const minBinId = new Decimal(state.dynamic.activeId).sub(state.static.binOffset)
-        const maxBinId = new Decimal(state.dynamic.activeId).add(state.static.binOffset)
+        const minBinId = _state.dynamic.activeId.sub(new BN(_state.static.dlmmState.binOffset))
+        const maxBinId = _state.dynamic.activeId.add(new BN(_state.static.dlmmState.binOffset))
         const binCount = getBinCount(minBinId.toNumber(),
             maxBinId.toNumber())
         const positionCount = getPositionCountByBinCount(binCount)
@@ -164,11 +170,11 @@ export class OpenPositionInstructionService {
         const liquidityStrategyParameters = buildLiquidityStrategyParameters(
             remainingAmountA,
             remainingAmountB,
-            new BN(minBinId.sub(new Decimal(state.dynamic.activeId)).toNumber()),
-            new BN(maxBinId.sub(new Decimal(state.dynamic.activeId)).toNumber()),
-            new BN(state.static.binStep),
+            minBinId.sub(state.dynamic.activeId),
+            maxBinId.sub(state.dynamic.activeId),
+            new BN(_state.static.dlmmState.binStep),
             false,
-            new BN(state.dynamic.activeId),
+            _state.dynamic.activeId,
             getLiquidityStrategyParameterBuilder(StrategyType.Curve)
         )
         const {

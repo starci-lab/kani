@@ -54,26 +54,26 @@ export class TickArrayService {
      *
      * This matches Raydium’s negative index behavior.
      */
-    getArrayStartIndex(tickIndex: number, tickSpacing: number): number {
-        const ticksPerArray = TICK_ARRAY_SIZE * tickSpacing
+    getArrayStartIndex(tickIndex: BN, tickSpacing: BN): BN {
+        const ticksPerArray = tickSpacing.mul(new BN(TICK_ARRAY_SIZE))
 
-        let start = Math.trunc(tickIndex / ticksPerArray)
+        let start = tickIndex.div(ticksPerArray)
 
         // Adjust for negative division like on-chain
-        if (tickIndex < 0 && tickIndex % ticksPerArray !== 0) {
-            start -= 1
+        if (tickIndex.lt(new BN(0)) && !tickIndex.mod(ticksPerArray).eq(new BN(0))) {
+            start = start.sub(new BN(1))
         }
 
-        return start * ticksPerArray
+        return start.mul(ticksPerArray)
     }
 
     /**
      * Validate whether the startIndex aligns with the TickArray boundaries.
      * Valid if: startIndex % (tickSpacing * 60) === 0
      */
-    checkIsValidStartIndex(startIndex: number, tickSpacing: number): boolean {
-        const ticksPerArray = TICK_ARRAY_SIZE * tickSpacing
-        return startIndex % ticksPerArray === 0
+    checkIsValidStartIndex(startIndex: BN, tickSpacing: BN): boolean {
+        const ticksPerArray = tickSpacing.mul(new BN(TICK_ARRAY_SIZE))
+        return startIndex.mod(ticksPerArray).eq(new BN(0))
     }
 
     /**
@@ -83,17 +83,17 @@ export class TickArrayService {
      *   get_tick_offset_in_array()
      */
     getTickOffsetInArray(
-        tickIndex: number,
-        startIndex: number,
-        tickSpacing: number,
-    ): number {
-        if ((tickIndex - startIndex) % tickSpacing !== 0) {
+        tickIndex: BN,
+        startIndex: BN,
+        tickSpacing: BN,
+    ): BN {
+        if (!tickIndex.sub(startIndex).mod(tickSpacing).eq(new BN(0))) {
             throw new Error("tickIndex does not align with tickSpacing")
         }
 
-        const offset = (tickIndex - startIndex) / tickSpacing
+        const offset = tickIndex.sub(startIndex).div(tickSpacing)
 
-        if (offset < 0 || offset >= TICK_ARRAY_SIZE) {
+        if (offset.lt(new BN(0)) || offset.gte(new BN(TICK_ARRAY_SIZE))) {
             throw new Error("Tick is not inside this TickArray")
         }
 
@@ -139,8 +139,8 @@ export class TickArrayService {
     /**
      * Convenience helper that returns startIndex for any tickIndex.
      */
-    getTickArrayStartIndexFromTick(tickIndex: number, tickSpacing: number): number {
-        return this.getArrayStartIndex(tickIndex,
+    getTickArrayStartIndexFromTick(tickIndex: BN, tickSpacing: BN): BN {
+        return this.getArrayStartIndex(new BN(tickIndex),
             tickSpacing)
     }
 }
@@ -154,7 +154,7 @@ export class TickArrayService {
  */
 export interface GetTickArrayPdaByStartIndexParams {
     poolStateAddress: Address
-    startIndex: number
+    startIndex: BN
     programAddress: Address
 }
 
@@ -163,8 +163,8 @@ export interface GetTickArrayPdaByStartIndexParams {
  */
 export interface GetTickArrayPdaParams {
     poolStateAddress: Address
-    tickIndex: number
-    tickSpacing: number
+    tickIndex: BN
+    tickSpacing: BN
     programAddress: Address
 }
 

@@ -14,7 +14,9 @@ import {
     InvalidPoolTokensException, 
     SolanaAccountNotFoundException, 
     ErrorSolanaAccountName, 
-    ActivePositionNotFoundException
+    ActivePositionNotFoundException,
+    PositionDlmmStateNotFoundException,
+    LiquidityPoolDlmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -45,7 +47,9 @@ import {
     MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    computeDenomination, divBn, toScaledBN 
+    bnDivBn,
+    bnDivDecimal,
+    toDecimalAmount
 } from "@modules/utils"
 import BN from "bn.js"
 import {
@@ -64,6 +68,7 @@ export class MeteoraReservesService implements IReservesService {
         bot,
         state,
     }: ReservesParams): Promise<ReservesResult> {
+        const _state = state as DlmmLiquidityPoolState
         if (!bot.activePosition
             || !bot.activePosition.associatedPosition
         ) {
@@ -71,11 +76,21 @@ export class MeteoraReservesService implements IReservesService {
                 botId: bot.id,
             })
         }
-        const _state = state as DlmmLiquidityPoolState
+        if (!bot.activePosition.associatedPosition.dlmmState) {
+            throw new PositionDlmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
+        if (!_state.static.dlmmState) {
+            throw new LiquidityPoolDlmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const activeBinId = _state.dynamic.activeId
         const positionId = bot.activePosition.associatedPosition.positionId
-        const positionMinBinId = bot.activePosition.associatedPosition.minBinId ?? 0
-        const positionMaxBinId = bot.activePosition.associatedPosition.maxBinId ?? 0
+        const positionMinBinId = bot.activePosition.associatedPosition.dlmmState.minBinId
+        const positionMaxBinId = bot.activePosition.associatedPosition.dlmmState.maxBinId
         const binArrayIndexes = getBinArrayIndexesCoverage(
             new BN(positionMinBinId),
             new BN(positionMaxBinId)
@@ -173,22 +188,24 @@ export class MeteoraReservesService implements IReservesService {
         const liquidityShares = position.liquidityShares
         let reserveARaw = new BN(0)
         let reserveBRaw = new BN(0)
-        const binStep = new Decimal(_state.static.binStep)
+        const binStep = new Decimal(_state.static.dlmmState.binStep)
         for (let i = 0; i < liquidityShares.length; i++) {
             const liquidityShareRaw = liquidityShares[i]
             const liquidityShare = liquidityShareRaw.div(Q64)
             if (liquidityShare.isZero()) continue
-            const binIdCurrent = new BN(bot.activePosition.associatedPosition.minBinId ?? 0).add(new BN(i))
+            const binIdCurrent = new BN(bot.activePosition.associatedPosition.dlmmState.minBinId).add(new BN(i))
             const { price } = this.dlmmBinFormulaService.activeIdToPriceRaw({
                 activeId: binIdCurrent,
                 binStep: binStep.toNumber(),
-                basisPointMax: _state.static.basisPointMax,
+                basisPointMax: _state.static.dlmmState.basisPointMax,
             })
             if (binIdCurrent.lt(activeBinId)) {
                 reserveBRaw = reserveBRaw.add(liquidityShare)
             } else if (binIdCurrent.gt(activeBinId)) {
-                reserveARaw = reserveARaw.add(toScaledBN(liquidityShare,
-                    new Decimal(1).div(price)))
+                reserveARaw = reserveARaw.add(bnDivDecimal({
+                    bn: liquidityShare,
+                    decimal: new Decimal(1).div(price),
+                }))
             } else {
                 // get the corresponding bin array
                 const correspondingBinArrayIndex = binLowerAndUpperBinIdsArray.findIndex(
@@ -210,21 +227,31 @@ export class MeteoraReservesService implements IReservesService {
                 const correspondingBinArray = binArrays[correspondingBinArrayIndex]
                 const indexInBinArray = binIdCurrent.sub(binLowerAndUpperBinIdsArray[correspondingBinArrayIndex][0])
                 const globalBin = correspondingBinArray.bins[indexInBinArray.toNumber()]
-                const sharePercentage = divBn(liquidityShareRaw,
-                    globalBin.liquiditySupply)
-                const amountX = toScaledBN(new BN(globalBin.amountX),
-                    sharePercentage)
-                const amountY = toScaledBN(new BN(globalBin.amountY),
-                    sharePercentage)
+                const sharePercentage = bnDivBn({
+                    bn1: liquidityShareRaw,
+                    bn2: new BN(globalBin.liquiditySupply),
+                })
+                const amountX = bnDivDecimal({
+                    bn: new BN(globalBin.amountX),
+                    decimal: sharePercentage,
+                })
+                const amountY = bnDivDecimal({
+                    bn: new BN(globalBin.amountY),
+                    decimal: sharePercentage,
+                })
                 reserveARaw = reserveARaw.add(amountX)
                 reserveBRaw = reserveBRaw.add(amountY)
             }
         }
         return {
-            reserveA: computeDenomination(reserveARaw,
-                decimalsA),
-            reserveB: computeDenomination(reserveBRaw,
-                decimalsB),
+            reserveA: toDecimalAmount({
+                amount: reserveARaw,
+                decimals: new Decimal(decimalsA),
+            }),
+            reserveB: toDecimalAmount({
+                amount: reserveBRaw,
+                decimals: new Decimal(decimalsB),
+            }),
             snapshotAt: state.dynamic.snapshotAt,
         }
     }

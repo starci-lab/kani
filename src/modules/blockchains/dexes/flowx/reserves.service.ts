@@ -11,7 +11,7 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolNotFoundException 
+    ActivePositionNotFoundException, InvalidPoolTokensException, LiquidityPoolClmmStateNotFoundException, LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 import {
     ClmmReservesFormulaService 
@@ -42,6 +42,11 @@ export class FlowXReservesService implements IReservesService {
         ) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
+            })
+        }
+        if (!bot.activePosition.associatedPosition?.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
             })
         }
         const _state = state as ClmmLiquidityPoolState
@@ -88,10 +93,10 @@ export class FlowXReservesService implements IReservesService {
             reserveA,
             reserveB,
         } = this.clmmReservesFormulaService.computeReserves({
-            tickLower: new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0),
-            tickUpper: new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0),
-            tickCurrent: new Decimal(_state.dynamic.tickCurrent.toNumber()),
-            liquidity: new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+            tickLower: new BN(bot.activePosition.associatedPosition.clmmState.tickLower),
+            tickUpper: new BN(bot.activePosition.associatedPosition.clmmState.tickUpper),
+            tickCurrent: _state.dynamic.tickCurrent,
+            liquidity: new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
             decimalsA: new Decimal(tokenA.decimals),
             decimalsB: new Decimal(tokenB.decimals),
             fixedPointScale: Q64,

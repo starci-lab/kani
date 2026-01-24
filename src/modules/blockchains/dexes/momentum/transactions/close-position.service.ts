@@ -11,7 +11,8 @@ import {
 } from "@mysten/sui/transactions"
 import { 
     InvalidPoolTokensException, 
-    ActivePositionNotFoundException 
+    ActivePositionNotFoundException, 
+    LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     SUI_CLOCK_OBJECT_ID 
@@ -36,6 +37,11 @@ export class ClosePositionTxbService {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
+            })
+        }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
             })
         }
         txb = txb ?? new Transaction()
@@ -65,7 +71,7 @@ export class ClosePositionTxbService {
             arguments: [
                 txb.object(state.static.poolAddress),
                 txb.object(bot.activePosition.associatedPosition.positionId),
-                txb.pure.u128(bot.activePosition.associatedPosition.liquidity ?? 0),
+                txb.pure.u128(bot.activePosition.associatedPosition.clmmState.liquidity),
                 txb.pure.u64(0),
                 txb.pure.u64(0),
                 txb.object(SUI_CLOCK_OBJECT_ID),

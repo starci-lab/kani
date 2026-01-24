@@ -110,6 +110,7 @@ export class TickMathService {
                     utilizationPercentage,
                     amountA: new BN(amountA.toString()),
                     amountB: new BN(amountB.toString()),
+                    liquidity,
                 }
             )
         }
@@ -157,6 +158,8 @@ export interface FindOptimalTickRangeResult {
     amountA: BN
     /** Amount of quote token used */
     amountB: BN
+    /** Liquidity provided */
+    liquidity: BN
 }   
 
 export interface CandidateRangeScore {
@@ -165,4 +168,5 @@ export interface CandidateRangeScore {
     utilizationPercentage: Decimal
     amountA: BN
     amountB: BN
+    liquidity: BN
 }

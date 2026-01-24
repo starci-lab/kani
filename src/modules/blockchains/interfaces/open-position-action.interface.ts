@@ -28,8 +28,8 @@ export interface PrepareOpenPositionResult {
   tickUpper?: BN;
   amountA?: BN;
   amountB?: BN;
-  minBinId?: Decimal;
-  maxBinId?: Decimal;
+  minBinId?: BN;
+  maxBinId?: BN;
   metadata?: unknown;
   positionId?: string;
 }

@@ -9,7 +9,8 @@ export const computePercentage = (
     const percentage = new Decimal(numerator)
         .mul(100)
         .div(denominator)
-        .toDecimalPlaces(fractionDigits, Decimal.ROUND_HALF_UP)
+        .toDecimalPlaces(fractionDigits,
+            Decimal.ROUND_HALF_UP)
     return percentage.toNumber()
 }
 
@@ -53,7 +54,8 @@ export const computeDenomination = (
     const scaled = new BN(amount).mul(decimalMultiplier)
     return new Decimal(scaled.div(multiplier).toString())
         .div(new Decimal(decimalMultiplier.toString()))
-        .toDecimalPlaces(fractionDigits, Decimal.ROUND_HALF_UP)
+        .toDecimalPlaces(fractionDigits,
+            Decimal.ROUND_HALF_UP)
 }
 
 export const computeRaw = (
@@ -125,5 +127,6 @@ export const divBn = (numerator: BN, denominator: BN, fractionDigits: number = 1
     const scaledNumerator = new BN(numerator.toString()).mul(decimalMultiplier)
     return new Decimal(scaledNumerator.div(denominator).toString())
         .div(new Decimal(decimalMultiplier.toString()))
-        .toDecimalPlaces(fractionDigits, Decimal.ROUND_HALF_UP)
+        .toDecimalPlaces(fractionDigits,
+            Decimal.ROUND_HALF_UP)
 }

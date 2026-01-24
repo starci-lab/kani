@@ -23,6 +23,7 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
+    PositionDlmmStateNotFoundException,
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -35,7 +36,7 @@ import {
     address, fetchEncodedAccounts
 } from "@solana/kit"
 import {
-    computeDenomination
+    toDecimalAmount
 } from "@modules/utils"
 import {
     Q128
@@ -43,6 +44,9 @@ import {
 import {
     ErrorSolanaAccountName, SolanaAccountNotFoundException
 } from "@modules/exceptions"
+import {
+    Decimal 
+} from "decimal.js"
 
 @Injectable()
 export class MeteoraFeesService implements IFeesService {
@@ -65,9 +69,15 @@ export class MeteoraFeesService implements IFeesService {
                 botId: bot.id,
             })
         }
+        if (!bot.activePosition.associatedPosition.dlmmState) {
+            throw new PositionDlmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
         // get the bin array indexes
-        const positionMinBinId = bot.activePosition.associatedPosition.minBinId ?? 0
-        const positionMaxBinId = bot.activePosition.associatedPosition.maxBinId ?? 0
+        const positionMinBinId = bot.activePosition.associatedPosition.dlmmState.minBinId
+        const positionMaxBinId = bot.activePosition.associatedPosition.dlmmState.maxBinId
         const binArrayIndexes = getBinArrayIndexesCoverage(
             new BN(positionMinBinId),
             new BN(positionMaxBinId)
@@ -158,7 +168,7 @@ export class MeteoraFeesService implements IFeesService {
         // iterate over the liquidity shares
         for (let i = 0; i < position.liquidityShares.length; i++) {
             // get the current bin id
-            const binIdCurrent = new BN(bot.activePosition.associatedPosition.minBinId ?? 0).add(new BN(i))
+            const binIdCurrent = new BN(bot.activePosition.associatedPosition.dlmmState.minBinId).add(new BN(i))
             // get the liquidity
             const liquidity = new BN(position.liquidityShares[i])
             if (liquidity.isZero()) continue
@@ -201,10 +211,14 @@ export class MeteoraFeesService implements IFeesService {
             liquidityPoolId: state.static.displayId,
         })
         return {
-            feeA: computeDenomination(totalFeeX,
-                tokenA.decimals),
-            feeB: computeDenomination(totalFeeY,
-                tokenB.decimals),
+            feeA: toDecimalAmount({
+                amount: totalFeeX,
+                decimals: new Decimal(tokenA.decimals),
+            }),
+            feeB: toDecimalAmount({
+                amount: totalFeeY,
+                decimals: new Decimal(tokenB.decimals),
+            }),  
             rewards: [],
             snapshotAt: state.dynamic.snapshotAt,
         }

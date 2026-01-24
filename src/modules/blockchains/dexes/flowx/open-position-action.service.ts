@@ -62,6 +62,7 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class FlowXOpenPositionActionService implements IOpenActionService {
@@ -126,14 +127,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const _state = state as ClmmLiquidityPoolState
         const txb = new Transaction()
         if (
-            !bot.snapshots
+            !bot.balanceSnapshots
         ) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -147,9 +148,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 }
             )
         }
-        const { tickLower, tickUpper } = await this.tickMathService.getTickBounds({
-            state: _state,
-            bot,
+        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        const { tickLower, tickUpper } = await this.tickMathService.findOptimalTickRange({
+            tickCurrent: _state.dynamic.tickCurrent,
+            tickSpacing: new Decimal(_state.static.clmmState?.tickSpacing ?? 0),
+            tickMultiplier: new Decimal(_state.static.clmmState?.tickMultiplier ?? 0),
+            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
+            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetIsA,
         })
         const {
             txb: openPositionTxb,

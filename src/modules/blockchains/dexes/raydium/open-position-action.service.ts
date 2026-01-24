@@ -12,9 +12,6 @@ import {
     ConfirmOpenPositionResult,
 } from "../../interfaces"
 import {
-    LiquidityMath, SqrtPriceMath 
-} from "@raydium-io/raydium-sdk-v2"
-import {
     SignerService 
 } from "../../signers"
 import {
@@ -31,6 +28,9 @@ import {
     ErrorSolanaAccountName,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     PrivyMetadataNotFoundException,
+    ActivePositionNotFoundException,
+    PositionClmmStateNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     TickMathService 
@@ -58,9 +58,6 @@ import {
     OpenPositionInstructionService 
 } from "./transactions"
 import {
-    adjustSlippage 
-} from "@modules/utils"
-import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import Decimal from "decimal.js"
@@ -71,14 +68,17 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 import {
-    envConfig 
-} from "@modules/env"
-import {
     PersonalPositionState 
 } from "./beets"
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    adjustSlippage 
+} from "@modules/utils"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class RaydiumOpenPositionActionService implements IOpenActionService {
@@ -99,15 +99,30 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        const slippage = new Decimal(envConfig().dexes.raydium.openPosition.slippage)
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        if (!bot.snapshots) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
+        if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -121,34 +136,23 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         }
         const { 
             tickLower, 
-            tickUpper
-        } = await this.tickMathService.getTickBounds({
-            state: _state,
-            bot,
+            tickUpper,
+            liquidity,
+        } = await this.tickMathService.findOptimalTickRange({
+            tickCurrent: _state.dynamic.tickCurrent,
+            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
+            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
+            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetIsA,
         })
-        const sqrtPriceCurrentX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            _state.dynamic.tickCurrent.toNumber(),
-        )
-        const sqrtPriceLowerX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            tickLower.toNumber(),
-        )
-        const sqrtPriceUpperX64 = SqrtPriceMath.getSqrtPriceX64FromTick(
-            tickUpper.toNumber(),
-        )
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
-        const liquidityRaw = 
-                LiquidityMath.getLiquidityFromTokenAmounts(
-                    sqrtPriceCurrentX64,
-                    sqrtPriceLowerX64,
-                    sqrtPriceUpperX64,
-                    amountA,
-                    amountB,
-                )
-        const liquidity = adjustSlippage(
-            liquidityRaw,
-            slippage,
-        )
+        const liquidityAdjusted = adjustSlippage({
+            bn: liquidity,
+            slippage: new Decimal(envConfig().dexes.raydium.openPosition.slippage),
+            isRoundUp: false,
+        })
         const {
             instructions: openPositionInstructions,
             mintKeyPair,
@@ -159,7 +163,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         } = await this.openPositionInstructionService.createOpenPositionInstructions({
             bot,
             state: _state,
-            liquidity,
+            liquidity: liquidityAdjusted,
             amountAMax: amountA,
             amountBMax: amountB,
             tickLower,

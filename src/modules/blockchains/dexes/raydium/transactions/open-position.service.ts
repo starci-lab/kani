@@ -25,7 +25,8 @@ import {
     ClmmLiquidityPoolState 
 } from "../../../interfaces"
 import {
-    InvalidPoolTokensException 
+    InvalidPoolTokensException, 
+    LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     TickArrayService 
@@ -43,9 +44,6 @@ import {
     TOKEN_PROGRAM_ADDRESS, getTransferInstruction 
 } from "@solana-program/token"
 import BN from "bn.js"
-import {
-    Decimal 
-} from "decimal.js"
 import {
     u128, u64, i32, bool, BeetArgsStruct, u8  
 } from "@metaplex-foundation/beet"
@@ -65,8 +63,8 @@ export interface CreateOpenPositionInstructionsParams {
     liquidity: BN
     amountAMax: BN
     amountBMax: BN
-    tickLower: Decimal
-    tickUpper: Decimal
+    tickLower: BN
+    tickUpper: BN
 }
 
 @Injectable()
@@ -94,22 +92,28 @@ export class OpenPositionInstructionService {
     }: CreateOpenPositionInstructionsParams)
     : Promise<CreateOpenPositionInstructionsResult>
     {
+        const _state = state as ClmmLiquidityPoolState
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         const mintKeyPair = await generateKeyPairSigner()
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenA.toString()
+                $eq: _state.static.tokenA.toString()
             }
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenB.toString()
+                $eq: _state.static.tokenB.toString()
             }
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
             })
         }
         const feeToAddress = this.mountStorageService.appConfig.fees.openPosition.solana.feeToAddress
@@ -154,14 +158,14 @@ export class OpenPositionInstructionService {
         } = state.static.metadata as RaydiumLiquidityPoolMetadata
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: tickLower.toNumber(),
-            tickSpacing: state.static.tickSpacing,
+            tickIndex: tickLower,
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: tickUpper.toNumber(),
-            tickSpacing: state.static.tickSpacing,
+            tickIndex: tickUpper,
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const {
@@ -249,12 +253,12 @@ export class OpenPositionInstructionService {
             pdaOnly: true,
         })
         const tickArrayLowerStartIndex = this.tickArrayService.getArrayStartIndex(
-            tickLower.toNumber(), 
-            state.static.tickSpacing
+            tickLower, 
+            new BN(_state.static.clmmState.tickSpacing)
         )
         const tickArrayUpperStartIndex = this.tickArrayService.getArrayStartIndex(
-            tickUpper.toNumber(), 
-            state.static.tickSpacing
+            tickUpper, 
+            new BN(_state.static.clmmState.tickSpacing)
         )
         const {
             pda: personalPositionPda,

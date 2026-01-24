@@ -16,7 +16,7 @@ import {
     DlmmLiquidityPoolState 
 } from "../../../interfaces"
 import {
-    ActivePositionNotFoundException, InvalidPoolTokensException 
+    ActivePositionNotFoundException, InvalidPoolTokensException, PositionDlmmStateNotFoundException 
 } from "@modules/exceptions"
 import {
     EventAuthorityService 
@@ -46,9 +46,6 @@ import {
 import {
     convertWeb3MetaToKitMeta 
 } from "@modules/utils"
-import {
-    RewardInfo 
-} from "../beets"
 import {
     SYSTEM_PROGRAM_ADDRESS 
 } from "@solana-program/system"
@@ -80,6 +77,12 @@ export class ClosePositionInstructionService {
     {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        if (!bot.activePosition.associatedPosition.dlmmState) {
+            throw new PositionDlmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
                 botId: bot.id,
             })
         }
@@ -141,16 +144,16 @@ export class ClosePositionInstructionService {
             new PublicKey(programAddress),
         )
         const [removeLiquidityByRange2Args] = RemoveLiquidityByRange2Args.serialize({
-            fromBinId: bot.activePosition.associatedPosition.minBinId || 0,
-            toBinId: bot.activePosition.associatedPosition.maxBinId || 0,
+            fromBinId: bot.activePosition.associatedPosition.dlmmState.minBinId,
+            toBinId: bot.activePosition.associatedPosition.dlmmState.maxBinId,
             bpsToRemove: 10000,
             remainingAccountsInfo: {
                 slices: [],
             },
         })
         const binArrayAccountsMeta = getBinArrayAccountMetasCoverage(
-            new BN(bot.activePosition.associatedPosition.minBinId || 0),
-            new BN(bot.activePosition.associatedPosition.maxBinId || 0),
+            new BN(bot.activePosition.associatedPosition.dlmmState.minBinId),
+            new BN(bot.activePosition.associatedPosition.dlmmState.maxBinId),
             new PublicKey(state.static.poolAddress),
             new PublicKey(programAddress)
         )
@@ -224,8 +227,8 @@ export class ClosePositionInstructionService {
         }
         instructions.push(removeLiquidityByRange2Instruction)
         const [claimFee2Args] = ClaimFee2Args.serialize({
-            minBinId: bot.activePosition.associatedPosition.minBinId || 0,
-            maxBinId: bot.activePosition.associatedPosition.maxBinId || 0,
+            minBinId: bot.activePosition.associatedPosition.dlmmState.minBinId,
+            maxBinId: bot.activePosition.associatedPosition.dlmmState.maxBinId,
             remainingAccountsInfo: {
                 slices: [],
             },
@@ -298,21 +301,21 @@ export class ClosePositionInstructionService {
         for (let i = 0; i < 2; i++) {
             const [claimReward2Args] = ClaimReward2Args.serialize({
                 rewardIndex: new BN(i),
-                minBinId: bot.activePosition.associatedPosition.minBinId || 0,
-                maxBinId: bot.activePosition.associatedPosition.maxBinId || 0,
+                minBinId: bot.activePosition.associatedPosition.dlmmState.minBinId,
+                maxBinId: bot.activePosition.associatedPosition.dlmmState.maxBinId,
                 remainingAccountsInfo: {
                     slices: [],
                 },
             })  
-            const rewardInfo = state.dynamic.rewards[i] as RewardInfo
-            if (!rewardInfo || address(rewardInfo.mint.toString()) === address(SYSTEM_PROGRAM_ADDRESS))
+            const rewardInfo = state.dynamic.rewards[i]
+            if (!rewardInfo || address(rewardInfo.tokenAddress.toString()) === address(SYSTEM_PROGRAM_ADDRESS))
                 continue
             const {
                 instructions: createAtaRewardInstructions,
                 endInstructions: closeAtaRewardInstructions,
                 ataAddress: ataRewardAddress,
             } = await this.ataInstructionService.getOrCreateAtaInstructions({
-                tokenMint: address(rewardInfo.mint.toString()),
+                tokenMint: address(rewardInfo.tokenAddress.toString()),
                 ownerAddress: address(bot.accountAddress),
                 is2022Token: false,
             })
@@ -322,10 +325,10 @@ export class ClosePositionInstructionService {
             if (closeAtaRewardInstructions?.length) {
                 endInstructions.push(...closeAtaRewardInstructions)
             }
-            const tokenAddress = rewardInfo.mint.toString()
+            const tokenAddress = rewardInfo.tokenAddress.toString()
             let is2022Token = false
             const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                tokenAddress: address(rewardInfo.mint.toString()),
+                tokenAddress: address(rewardInfo.tokenAddress.toString()),
                 chainId: ChainId.Solana,
             })
             if (token) {

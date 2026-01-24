@@ -13,7 +13,8 @@ import {
     Transaction 
 } from "@mysten/sui/transactions"
 import {
-    InvalidPoolTokensException 
+    InvalidPoolTokensException, 
+    LiquidityPoolClmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     ActivePositionNotFoundException 
@@ -54,6 +55,11 @@ export class ClosePositionTxbService {
                 botId: bot.id,
             })
         }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
+            })
+        }
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -84,7 +90,7 @@ export class ClosePositionTxbService {
             arguments: [
                 txb.object(poolRegistryObject),
                 txb.object(bot.activePosition.associatedPosition.positionId),
-                txb.pure.u128(bot.activePosition.associatedPosition?.liquidity?.toString() || "0"),
+                txb.pure.u128(bot.activePosition.associatedPosition.clmmState.liquidity.toString()),
                 txb.pure.u64(this.computeAmountX(bot,
                     state).toString()),
                 txb.pure.u64(this.computeAmountY(bot,
@@ -158,20 +164,25 @@ export class ClosePositionTxbService {
                 botId: bot.id,
             })
         }
-        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0))) {
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
+            })
+        }
+        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState?.tickLower))) {
             return ClmmSqrtPriceMath.getAmountXDelta(
-                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickLower ?? 0),
-                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickUpper ?? 0),
-                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickLower),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState?.tickUpper),
+                new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
                 false
             )
         } else if (
-            new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0))
+            new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState?.tickUpper))
         ) {
             return ClmmSqrtPriceMath.getAmountXDelta(
                 state.dynamic.sqrtPriceX64,
-                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickUpper ?? 0),
-                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickUpper),
+                new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
                 false
             )
         } else {
@@ -188,20 +199,25 @@ export class ClosePositionTxbService {
                 botId: bot.id,
             })
         }
-        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickLower ?? 0))) {
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: state.static.displayId,
+            })
+        }
+        if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState.tickLower))) {
             return ZERO_BN
-        } else if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition?.tickUpper ?? 0))) {
+        } else if (new Decimal(state.dynamic.tickCurrent.toString()).lt(new Decimal(bot.activePosition.associatedPosition.clmmState.tickUpper))) {
             return ClmmSqrtPriceMath.getAmountYDelta(
-                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickLower ?? 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickLower),
                 state.dynamic.sqrtPriceX64,
-                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+                new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
                 false
             )
         } else {
             return ClmmSqrtPriceMath.getAmountYDelta(
-                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickLower ?? 0),
-                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition?.tickUpper ?? 0),
-                new BN(bot.activePosition.associatedPosition?.liquidity ?? 0),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickLower),
+                ClmmTickMath.tickIndexToSqrtPriceX64(bot.activePosition.associatedPosition.clmmState.tickUpper),
+                new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
                 false
             )
         }

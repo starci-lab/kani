@@ -91,10 +91,14 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
+            })
+        }
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
             })
         }
         const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
@@ -110,20 +114,18 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        if (!_state.static.clmmState) {
-            throw new LiquidityPoolClmmStateNotFoundException({
-                liquidityPoolId: _state.static.displayId,
-            })
-        }
+        const targetIsA = bot.targetToken.toString() === tokenA.id
         const { 
             tickLower, 
-            tickUpper
+            tickUpper,
+            liquidity,
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: new BN(_state.dynamic.tickCurrent),
+            tickCurrent: _state.dynamic.tickCurrent,
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetIsA,
         })
         const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
         const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
@@ -138,7 +140,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             {
                 bot,
                 state: _state,
-                liquidity: _state.dynamic.liquidity,
+                liquidity,
                 amountA,
                 amountB,
                 tickLower,

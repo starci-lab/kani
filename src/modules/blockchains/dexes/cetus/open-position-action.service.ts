@@ -10,10 +10,6 @@ import {
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
 } from "../../interfaces"
-import { 
-    ClmmPoolUtil,
-    TickMath,
-} from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
     TransactionDataBuilder 
 } from "@mysten/sui/transactions"
@@ -38,14 +34,13 @@ import {
     TransactionNotExecutedException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
-    EnsureCalculationException,
-    EnsureRangeType,
     SuiObjectNotFoundException,
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
+    SlippageToleranceExceededException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -199,52 +194,24 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const { 
             tickLower, 
-            tickUpper
+            tickUpper,
+            utilizationPercentage,
         } = await this.tickMathService.findOptimalTickRange({
-            tickCurrent: new BN(_state.dynamic.tickCurrent),
+            tickCurrent: _state.dynamic.tickCurrent,
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetIsA,
         })
-        let amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
-        let amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
-        const { coinAmountB: expectedAmountB } = ClmmPoolUtil.estLiquidityAndcoinAmountFromOneAmounts(
-            tickLower.toNumber(),
-            tickUpper.toNumber(),
-            amountA,
-            true,
-            false,
-            0, // zero slippage
-            TickMath.tickIndexToSqrtPriceX64(_state.dynamic.tickCurrent.toNumber()),
-        )
-        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().dexes.cetus.openPosition.slippage))
-        const upperBound = new Decimal(1).add(new Decimal(envConfig().dexes.cetus.openPosition.slippage))
-        const { isAcceptable, ratio } = this.ensureMathService.ensureBetween(
-            {
-                expected: amountB,
-                actual: expectedAmountB,
-                // this indicates the slippage tolerance
-                lowerBound,
-                upperBound,
-            }
-        )
-        if (!isAcceptable) {
-            throw new EnsureCalculationException(
-                {
-                    expected: amountB,
-                    actual: expectedAmountB,
-                    rangeType: EnsureRangeType.Between,
-                    lowerBound,
-                    upperBound,
-                }
-            )
+        const slippage = new Decimal(envConfig().dexes.cetus.openPosition.slippage)
+        if (utilizationPercentage.lt(new Decimal(1).sub(slippage))) {
+            throw new SlippageToleranceExceededException({
+                slippage: slippage.toNumber(),
+            })
         }
-        if (ratio.gt(new Decimal(1))) {
-            amountB = new BN(expectedAmountB)
-            amountA = toScaledBN(amountA,
-                new Decimal(1).div(ratio))
-        }
+        const amountAMax = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
+        const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
         // create the open position txb
         const { 
             txb: openPositionTxb,
@@ -252,8 +219,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             feeAmountB,
         } = await this.openPositionTxbService.createOpenPositionTxb({
             bot,
-            amountAMax: amountA,
-            amountBMax: amountB,
+            amountAMax,
+            amountBMax,
             liquidity: new BN(0),
             tickLower,
             state: _state,
@@ -294,8 +261,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                                 feeAmountB,
                                 tickLower,
                                 tickUpper,
-                                amountA,
-                                amountB,
                             }
                         },
                     })
@@ -330,8 +295,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         feeAmountB,
                         tickLower,
                         tickUpper,
-                        amountA,
-                        amountB,
                     }
                 }
             },

@@ -28,6 +28,7 @@ import {
     MissingSolanaTxParamException,
     SolanaAccountNotFoundException,
     ErrorSolanaAccountName,
+    ActivePositionNotFoundException,
 } from "@modules/exceptions"
 import { 
     pipe,
@@ -81,13 +82,18 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        if (!bot.snapshots) {
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.snapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.snapshots.quoteBalanceAmount)
+        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
+        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),

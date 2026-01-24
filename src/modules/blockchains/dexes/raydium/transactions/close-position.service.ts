@@ -32,7 +32,9 @@ import {
     ClmmLiquidityPoolState 
 } from "../../../interfaces"
 import {
-    ActivePositionNotFoundException, InvalidPoolTokensException 
+    ActivePositionNotFoundException, InvalidPoolTokensException, 
+    LiquidityPoolClmmStateNotFoundException,
+    PositionClmmStateNotFoundException
 } from "@modules/exceptions"
 import {
     TickArrayService 
@@ -65,6 +67,23 @@ export class ClosePositionInstructionService {
         state,
     }: CreateCloseInstructionsParams)
         : Promise<Array<Instruction>> {
+        const _state = state as ClmmLiquidityPoolState
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }   
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -99,14 +118,14 @@ export class ClosePositionInstructionService {
         const personalPositionPda = address(bot.activePosition.associatedPosition?.positionId)  
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.associatedPosition?.tickLower ?? 0,
-            tickSpacing: state.static.tickSpacing,
+            tickIndex: new BN(bot.activePosition.associatedPosition?.clmmState.tickLower),
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.associatedPosition?.tickUpper ?? 0,
-            tickSpacing: state.static.tickSpacing,
+            tickIndex: new BN(bot.activePosition.associatedPosition?.clmmState.tickUpper),
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
         })
         const {
@@ -175,7 +194,7 @@ export class ClosePositionInstructionService {
             })
         }
         const [closePositionArgs] = ClosePositionArgs.serialize({
-            liquidity: bot.activePosition.associatedPosition?.liquidity?.toString(),
+            liquidity: new BN(bot.activePosition.associatedPosition.clmmState.liquidity),
             amount0Max: new BN(0).toString(),
             amount1Max: new BN(0).toString(),
         })

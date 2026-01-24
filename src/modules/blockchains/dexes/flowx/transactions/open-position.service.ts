@@ -115,6 +115,7 @@ export class OpenPositionTxbService {
             amount: amountB,
             chainId: bot.chainId,
         })
+        const slippage = new Decimal(envConfig().dexes.flowx.openPosition.slippage)
         // we check balances of tokenA and tokenB
         const { 
             sourceCoin: sourceCoinA 
@@ -157,13 +158,13 @@ export class OpenPositionTxbService {
         ] = [
             txb.moveCall({
                 target: `${packageId}::i32::${
-                    tickLower.gte(0) ? "from" : "neg_from"
+                    tickLower.gte(new BN(0)) ? "from" : "neg_from"
                 }`,
                 arguments: [txb.pure.u32(tickLower.abs().toNumber())],
             }),
             txb.moveCall({
                 target: `${packageId}::i32::${
-                    tickUpper.gte(0) ? "from" : "neg_from"
+                    tickUpper.gte(new BN(0)) ? "from" : "neg_from"
                 }`,
                 arguments: [txb.pure.u32(tickUpper.abs().toNumber())],
             }),
@@ -196,10 +197,18 @@ export class OpenPositionTxbService {
                 position,
                 sourceCoinA.coinArg,
                 sourceCoinB.coinArg,
-                txb.pure.u64(adjustSlippage(remainingAmountA,
-                    new Decimal(envConfig().dexes.flowx.openPosition.slippage)).toString()),
-                txb.pure.u64(adjustSlippage(remainingAmountB,
-                    new Decimal(envConfig().dexes.flowx.openPosition.slippage)).toString()),
+                txb.pure.u64(
+                    adjustSlippage({
+                        bn: remainingAmountA,
+                        slippage,
+                        isRoundUp: false,
+                    }).toString()),
+                txb.pure.u64(
+                    adjustSlippage({
+                        bn: remainingAmountB,
+                        slippage,
+                        isRoundUp: false,
+                    }).toString()),
                 txb.pure.u64(this.dayjsService.now().add(5,
                     "minute").utc().valueOf().toString()),
                 txb.object(versionObject),
@@ -220,8 +229,8 @@ export interface CreateOpenPositionTxbParams {
     txb?: Transaction 
     bot: BotSchema,
     state: ClmmLiquidityPoolState,
-    tickLower: Decimal,
-    tickUpper: Decimal,
+    tickLower: BN,
+    tickUpper: BN,
     liquidity: BN,
     amountA: BN,
     amountB: BN,

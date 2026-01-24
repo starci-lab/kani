@@ -13,6 +13,7 @@ import {
     SuiObjectNotFoundException,
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -58,6 +59,11 @@ export class MomentumFeesService implements IFeesService {
                 botId: bot.id,
             })
         }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -74,8 +80,8 @@ export class MomentumFeesService implements IFeesService {
             })
         }
         const positionId = bot.activePosition.associatedPosition.positionId
-        const tickLower = new BN(bot.activePosition.associatedPosition.tickLower ?? 0)
-        const tickUpper = new BN(bot.activePosition.associatedPosition.tickUpper ?? 0)
+        const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
+        const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
         const { i32Type } = _state.static.metadata as MomentumLiquidityPoolMetadata
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
             i32Type)

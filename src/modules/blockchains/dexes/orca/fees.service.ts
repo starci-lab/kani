@@ -15,11 +15,12 @@ import {
     fetchEncodedAccounts,
 } from "@solana/kit"
 import {
-    MissingActivePositionLiquidityException,
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
     ErrorSolanaAccountName,
     SolanaAccountNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
+    PositionClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     Position 
@@ -60,28 +61,37 @@ export class OrcaFeesService implements IFeesService {
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
-
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-
         const positionId = bot.activePosition.associatedPosition.positionId
-        const tickLower = bot.activePosition.associatedPosition.tickLower ?? 0
-        const tickUpper = bot.activePosition.associatedPosition.tickUpper ?? 0
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
+        const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
+        const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
 
         const { programAddress } =
-      state.static.metadata as OrcaLiquidityPoolMetadata
+      _state.static.metadata as OrcaLiquidityPoolMetadata
 
         // ----------------------------
         // PDA derivation
         // ----------------------------
         const { pda: tickArrayLowerPda } =
       await this.tickArrayService.getPda({
-          poolStateAddress: address(state.static.poolAddress),
+          poolStateAddress: address(_state.static.poolAddress),
           tickIndex: tickLower,
-          tickSpacing: state.static.tickSpacing,
+          tickSpacing: new BN(_state.static.clmmState.tickSpacing),
           bot,
           pdaOnly: true,
           programAddress: address(programAddress),
@@ -89,9 +99,9 @@ export class OrcaFeesService implements IFeesService {
 
         const { pda: tickArrayUpperPda } =
       await this.tickArrayService.getPda({
-          poolStateAddress: address(state.static.poolAddress),
+          poolStateAddress: address(_state.static.poolAddress),
           tickIndex: tickUpper,
-          tickSpacing: state.static.tickSpacing,
+          tickSpacing: new BN(_state.static.clmmState.tickSpacing),
           bot,
           pdaOnly: true,
           programAddress: address(programAddress),
@@ -183,24 +193,16 @@ export class OrcaFeesService implements IFeesService {
 
         const tickLowerIndex = new BN(tickLower)
             .sub(lowerStart)
-            .div(new BN(state.static.tickSpacing))
+            .div(new BN(_state.static.clmmState.tickSpacing))
 
         const tickUpperIndex = new BN(tickUpper)
             .sub(upperStart)
-            .div(new BN(state.static.tickSpacing))
+            .div(new BN(_state.static.clmmState.tickSpacing))
 
         const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
         const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
 
-        if (!bot.activePosition.associatedPosition.liquidity) {
-            throw new MissingActivePositionLiquidityException(
-                {
-                    botId: bot.id,
-                }
-            )
-        }
-
-        const liquidity = new BN(bot.activePosition.associatedPosition.liquidity?.toString() ?? "0")
+        const liquidity = new BN(bot.activePosition.associatedPosition.clmmState.liquidity)
 
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             // -------- Token A --------

@@ -31,6 +31,7 @@ import {
 import {
     RpcAccessType 
 } from "@modules/filesystem"
+import BN from "bn.js"
 
 @Injectable()
 export class TickArrayService {
@@ -122,11 +123,13 @@ export class TickArrayService {
             pdaOnly
         }: GetTickArrayPdaParams
     ): Promise<GetTickArrayPdaResult> {
-        const startIndex = getTickArrayStartTickIndex(tickIndex,
-            tickSpacing)
+        const startIndex = getTickArrayStartTickIndex(
+            tickIndex.toNumber(),
+            tickSpacing.toNumber()
+        )
         const { pda } = await this.getTickArrayPda({
             poolStateAddress,
-            startIndex,
+            startIndex: new BN(startIndex),
             programAddress,
         })
         if (pdaOnly) {
@@ -197,7 +200,7 @@ export class TickArrayService {
  */
 export interface GetTickArrayPdaByStartIndexParams {
     poolStateAddress: Address
-    startIndex: number
+    startIndex: BN
     programAddress: Address
 }
 
@@ -206,8 +209,8 @@ export interface GetTickArrayPdaByStartIndexParams {
  */
 export interface GetTickArrayPdaParams {
     poolStateAddress: Address
-    tickIndex: number
-    tickSpacing: number
+    tickIndex: BN
+    tickSpacing: BN
     programAddress: Address
     bot?: BotSchema
     pdaOnly?: boolean

@@ -16,7 +16,6 @@ import {
 import {
     InvalidPoolTokensException 
 } from "@modules/exceptions"
-import Decimal from "decimal.js"
 import {
     ActivePositionNotFoundException, TargetOperationalGasAmountNotFoundException 
 } from "@modules/exceptions"
@@ -191,8 +190,8 @@ export class OpenPositionTxbService {
 export interface CreateOpenPositionTxbParams {
     txb?: Transaction
     state: ClmmLiquidityPoolState
-    tickLower: Decimal
-    tickUpper: Decimal
+    tickLower: BN
+    tickUpper: BN
     amountAMax: BN
     amountBMax: BN
     bot: BotSchema
