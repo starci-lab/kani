@@ -36,7 +36,6 @@ import {
     BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
-    TransactionNotExecutedException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectInvalidTypeException,
@@ -353,12 +352,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     positionId,
                 }
             }
-            throw new TransactionNotExecutedException({
-                botId: bot.id,
-                txHash,
-                liquidityPoolId: _state.static.displayId,
-                type: ErrorTransactionType.OpenPosition,
-            })
         }
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException({

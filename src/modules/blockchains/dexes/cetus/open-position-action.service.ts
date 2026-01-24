@@ -32,7 +32,6 @@ import {
     BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
-    TransactionNotExecutedException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectNotFoundException,
@@ -359,12 +358,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     positionId,
                 }
             }
-            throw new TransactionNotExecutedException({
-                type: ErrorTransactionType.OpenPosition,
-                botId: bot.id,  
-                txHash,
-                liquidityPoolId: _state.static.displayId,
-            })
         }
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException({

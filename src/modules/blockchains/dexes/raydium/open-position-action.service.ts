@@ -21,7 +21,6 @@ import {
     InvalidPoolTokensException, 
     BalanceSnapshotsNotFoundException,
     TransactionNotPreparedException,
-    TransactionNotExecutedException,
     MissingPositionIdParamException,
     ErrorTransactionType,
     SolanaAccountNotFoundException,
@@ -310,28 +309,22 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             })
         }
         if (txCheck && !stimulate) {
-            return await this.rpcExecutorService.withSolanaRpc({
+            const transaction = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
-                    const transaction = await rpc.getTransaction(
+                    return await rpc.getTransaction(
                         signature(txHash), 
                         {
                             commitment: "confirmed", encoding: "base58" 
                         }
                     ).send()
-                    if (transaction) {
-                        return {
-                            positionId: positionId.toString(),
-                        }
-                    }
-                    throw new TransactionNotExecutedException({
-                        botId: bot.id,
-                        txHash,
-                        liquidityPoolId: state.static.displayId,
-                        type: ErrorTransactionType.OpenPosition,
-                    })
                 },
-            })  
+            })
+            if (transaction) {
+                return {
+                    positionId: positionId.toString(),
+                }   
+            }
         }
         if (!solanaTx) {
             throw new TransactionNotPreparedException({
