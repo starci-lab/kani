@@ -54,11 +54,13 @@ export class TurbosFeesService implements IFeesService {
 
     async fees({ state, bot }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (fees require an active position)
         if (!bot.activePosition || !bot.activePosition.position) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -71,6 +73,7 @@ export class TurbosFeesService implements IFeesService {
             })
         }
         const positionId = bot.activePosition.associatedPosition?.positionId ?? ""
+        // Stage: state validation (CLMM state must be present on the associated position)
         if (!bot.activePosition.associatedPosition?.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException(
                 {
@@ -85,7 +88,7 @@ export class TurbosFeesService implements IFeesService {
             i32Type)
         const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
             i32Type)
-        // get the tick lower data
+        // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -113,7 +116,7 @@ export class TurbosFeesService implements IFeesService {
             `${string}::tick::TickInfo`
         >
         const tickLowerData = parseTurbosTick(_tickLowerData.content.fields.value.fields)
-        // get the tick upper data
+        // Stage: on-chain fetch (tick upper dynamic field)
         const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {

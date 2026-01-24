@@ -77,7 +77,9 @@ export class FeesOrchestratorService {
             liquidityPool,
         }: OrchestrateFeesParams,
     ): Promise<FeesResult> {
+        // Stage: on-chain/data fetch (load latest pool state from cache/on-chain sources)
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
+        // Stage: state/config validation (DEX must exist and be enabled)
         const dex =
             this.primaryMemoryStorageService.dexCollection.findOne(
                 {
@@ -86,9 +88,11 @@ export class FeesOrchestratorService {
                     },
                 }
             )
-        if (!dex) throw new DexNotFoundException({
-            id: state.static.dex.toString(),
-        })
+        if (!dex) {
+            throw new DexNotFoundException({
+                id: state.static.dex.toString(),
+            })
+        }
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
                 {
@@ -96,9 +100,12 @@ export class FeesOrchestratorService {
                 }
             )
         }
-        if (!bot.activePosition) throw new ActivePositionNotFoundException({
-            botId: bot.id,
-        })
+        // Stage: state validation (fees require an active position)
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
         switch (dex.displayId) {
         case DexId.FlowX:
             return await this.flowxFeesService.fees(

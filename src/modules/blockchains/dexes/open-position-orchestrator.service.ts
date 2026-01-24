@@ -122,6 +122,66 @@ export class OpenPositionOrchestratorService {
     ) { }
 
     /**
+     * === Error-handling convention (DEX orchestrators) ===
+     *
+     * This file follows a staged error pattern to make failures predictable:
+     * - Input validation: required params are missing/invalid (throw immediately)
+     * - State validation: bot/pool/dex state is missing or inconsistent (throw immediately)
+     * - On-chain / data fetch: fetching required dynamic state fails (throws from called service)
+     * - Transaction building: DEX-specific builder throws (bubble up)
+     * - Execution: DEX-specific executor throws (bubble up)
+     * - Event parsing / confirmation: DEX-specific confirm/parsers throw (bubble up)
+     *
+     * We do NOT change behavior here—only organize throws and document intent.
+     */
+
+    /** State validation: resolve a token from memory storage or throw `TokenNotFoundException`. */
+    private getTokenOrThrow(tokenId: string) {
+        const token = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: {
+                    $eq: tokenId,
+                },
+            }
+        )
+        if (!token) {
+            throw new TokenNotFoundException({
+                id: tokenId 
+            })
+        }
+        return token
+    }
+
+    /** State validation: resolve a DEX record from memory storage or throw `DexNotFoundException`. */
+    private getDexOrThrow(dexId: string) {
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne(
+            {
+                id: {
+                    $eq: dexId,
+                },
+            }
+        )
+        if (!dex) {
+            throw new DexNotFoundException({
+                id: dexId 
+            })
+        }
+        return dex
+    }
+
+    /**
+     * State/config validation: ensure the DEX is enabled for this executor instance.
+     * Throws `DexNotImplementedException` (existing behavior) when disabled.
+     */
+    private assertDexEnabledOrThrow(dexId: string, dexDisplayId: DexId) {
+        if (!this.options.dexIds?.includes(dexDisplayId)) {
+            throw new DexNotImplementedException({
+                id: dexId 
+            })
+        }
+    }
+
+    /**
      * Enqueue an open-position job if and only if all preconditions are satisfied.
      *
      * Fail-closed design:
@@ -135,36 +195,9 @@ export class OpenPositionOrchestratorService {
             isRetry,
         }: EnqueueOpenPositionParams,
     ) {
-        /**
-         * Resolve target token metadata.
-         */
-        const targetToken =
-            this.primaryMemoryStorageService.tokenCollection.findOne(
-                {
-                    id: {
-                        $eq: bot.targetToken.toString(),
-                    },
-                }
-            )
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                id: bot.targetToken.toString(),
-            })
-        }
-        /**
-         * Resolve quote token metadata.
-         */
-        const quoteToken =
-            this.primaryMemoryStorageService.tokenCollection.findOne({
-                id: {
-                    $eq: bot.quoteToken.toString(),
-                },
-            })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                id: bot.quoteToken.toString(),
-            })
-        }
+        // Stage: state validation (token metadata required for quote-ratio computation)
+        const targetToken = this.getTokenOrThrow(bot.targetToken.toString())
+        const quoteToken = this.getTokenOrThrow(bot.quoteToken.toString())
         /**
          * Ownership check:
          * Ensure the liquidity pool is associated with this bot.
@@ -177,6 +210,7 @@ export class OpenPositionOrchestratorService {
         ) {
             return null
         }
+        // Stage: state validation (balance snapshots required for quote-ratio computation)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
@@ -269,19 +303,14 @@ export class OpenPositionOrchestratorService {
             bot,
         }: PrepareOpenPositionParams,
     ): Promise<PrepareOpenPositionResult> {
+        // Stage: state validation (DEX must exist for this pool)
         const _state = state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
 
-        const dex =
-            this.primaryMemoryStorageService.dexCollection.findOne(
-                {
-                    id: {
-                        $eq: _state.static.dex.toString(),
-                    },
-                }
-            )
-        if (!dex) throw new DexNotFoundException({
-            id: _state.static.dex.toString(),
-        })
+        const dexId = _state.static.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+
+        // NOTE: existing behavior: `prepare()` does NOT enforce `options.dexIds` (enabled DEX set).
+        // Execution/confirmation do enforce it. We keep that behavior and document it here.
 
         switch (dex.displayId) {
         case DexId.Raydium:
@@ -328,24 +357,13 @@ export class OpenPositionOrchestratorService {
         params: ExecuteOpenPositionParams,
     ): Promise<ExecuteOpenPositionResult> {
         const _state = params.state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
-        const dex =
-            this.primaryMemoryStorageService.dexCollection.findOne(
-                {
-                    id: {
-                        $eq: _state.static.dex.toString(),
-                    },
-                }
-            )
-        if (!dex) throw new DexNotFoundException({
-            id: _state.static.dex.toString(),
-        })
-        if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException(
-                {
-                    id: _state.static.dex.toString(),
-                }
-            )
-        }
+
+        // Stage: state/config validation (DEX must exist and be enabled for execution)
+        const dexId = _state.static.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+        this.assertDexEnabledOrThrow(dexId,
+            dex.displayId)
+
         switch (dex.displayId) {
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.execute(params)
@@ -378,24 +396,12 @@ export class OpenPositionOrchestratorService {
     ): Promise<ConfirmOpenPositionResult> {
         const _state = params.state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
 
-        const dex =
-            this.primaryMemoryStorageService.dexCollection.findOne(
-                {
-                    id: {
-                        $eq: _state.static.dex.toString(),
-                    },
-                }
-            )
-        if (!dex) throw new DexNotFoundException({
-            id: _state.static.dex.toString(),
-        })
-        if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException(
-                {
-                    id: _state.static.dex.toString(),
-                }
-            )
-        }
+        // Stage: state/config validation (DEX must exist and be enabled for confirmation)
+        const dexId = _state.static.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+        this.assertDexEnabledOrThrow(dexId,
+            dex.displayId)
+
         switch (dex.displayId) {
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.confirm(params)

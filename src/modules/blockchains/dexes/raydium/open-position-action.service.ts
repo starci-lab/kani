@@ -92,6 +92,20 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         private readonly winstonService: WinstonService,
     ) { }
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool/position state missing (throw immediately)
+     * - On-chain fetch: RPC account fetch fails or returns null (throw)
+     * - Transaction building: instruction/message/signing validation fails (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     * - Event parsing: required tx fields are missing (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare(
         {
             state,
@@ -100,22 +114,26 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new PositionClmmStateNotFoundException({
                 positionId: bot.activePosition.associatedPosition.positionId,
                 botId: bot.id,
             })
         }
+        // Stage: state validation (requires balance snapshots for sizing / tick math)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
@@ -129,6 +147,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenB.toString(),
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,

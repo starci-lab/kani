@@ -89,6 +89,46 @@ export class ClosePositionOrchestratorService {
         private readonly settlementService: SettlementService,
     ) {}
 
+    /**
+     * === Error-handling convention (DEX orchestrators) ===
+     *
+     * Stages:
+     * - Input validation: required params are missing/invalid (throw immediately)
+     * - State validation: bot/pool/dex state is missing or inconsistent (throw immediately)
+     * - On-chain / data fetch: fetching required dynamic state fails (throws from called service)
+     * - Transaction building: DEX-specific builder throws (bubble up)
+     * - Execution: DEX-specific executor throws (bubble up)
+     */
+
+    /** State validation: resolve a DEX record from memory storage or throw `DexNotFoundException`. */
+    private getDexOrThrow(id: string) {
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne(
+            {
+                id: {
+                    $eq: id,
+                },
+            }
+        )
+        if (!dex) {
+            throw new DexNotFoundException({
+                id 
+            })
+        }
+        return dex
+    }
+
+    /**
+     * State/config validation: ensure the DEX is enabled for this executor instance.
+     * Throws `DexNotImplementedException` (existing behavior) when disabled.
+     */
+    private assertDexEnabledOrThrow(displayId: DexId) {
+        if (!this.options.dexIds?.includes(displayId)) {
+            throw new DexNotImplementedException({
+                displayId 
+            })
+        }
+    }
+
     async enqueue(
         {
             liquidityPool,
@@ -113,35 +153,18 @@ export class ClosePositionOrchestratorService {
          */
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
         /**
-         * Validate that the pool's DEX exists
+         * Stage: state/config validation (DEX must exist and be enabled to enqueue)
          */
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
-            id: {
-                $eq: state.static.dex.toString(),
-            },
-        })
-        if (!dex) {
-            throw new DexNotFoundException({
-                id: state.static.dex.toString(),
-            })
-        }   
-        /**
-         * Ensure the DEX is supported by current bot configuration
-         */
-        if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException({
-                id: state.static.dex.toString(),
-            })
-        }
+        const dexId = state.static.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+        this.assertDexEnabledOrThrow(dex.displayId)
         /**
          * Check if the position can be closed
          */
-        const { settled, reason } = await this.settlementService.settle({
+        const { settled } = await this.settlementService.settle({
             bot,
             state,
         })
-        console.log(settled,
-            reason)
         if (!settled) {
             return
         }
@@ -187,19 +210,10 @@ export class ClosePositionOrchestratorService {
     async prepare(params: PrepareClosePositionParams,
     ): Promise<PrepareClosePositionResult> {
         const { bot, state } = params
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
-            id: {
-                $eq: state.static.dex.toString(),
-            },
-        })
-        if (!dex) throw new DexNotFoundException({
-            id: state.static.dex.toString(),
-        })
-        if (!this.options.dexIds?.includes(dex.displayId)) {
-            throw new DexNotImplementedException({
-                id: state.static.dex.toString(),
-            })
-        }
+        // Stage: state/config validation (DEX must exist and be enabled for transaction building)
+        const dexId = state.static.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+        this.assertDexEnabledOrThrow(dex.displayId)
         switch (dex.displayId) {
         case DexId.FlowX: {
             return await this.flowXClosePositionActionService.prepare({
@@ -243,14 +257,11 @@ export class ClosePositionOrchestratorService {
         params: ExecuteClosePositionParams,
     ): Promise<void> {
         const { state } = params
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
-            id: {
-                $eq: state.static.dex.toString(),
-            },
-        })
-        if (!dex) throw new DexNotFoundException({
-            id: state.static.dex.toString(),
-        })
+        // Stage: state validation (DEX must exist for execution routing)
+        const dexId = state.static.dex.toString()
+        const dex = this.getDexOrThrow(dexId)
+        // NOTE: existing behavior: execute() does not enforce `options.dexIds` (enabled DEX set).
+        // We keep that behavior and document it here.
         switch (dex.displayId) {
         case DexId.Raydium: {
             return await this.raydiumClosePositionActionService.execute(params)

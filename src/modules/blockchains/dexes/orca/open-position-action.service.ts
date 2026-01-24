@@ -84,6 +84,20 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         private readonly winstonService: WinstonService,
     ) { }
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool state missing (throw immediately)
+     * - On-chain fetch: RPC account fetch fails or returns null (throw)
+     * - Transaction building: instruction/message/signing validation fails (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     * - Event parsing: required tx fields are missing (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare(
         {
             state,
@@ -91,11 +105,13 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (requires balance snapshots for sizing / tick math)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
@@ -109,6 +125,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenB.toString(),
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,

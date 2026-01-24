@@ -89,6 +89,20 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly winstonService: WinstonService,
     ) {}
     
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * This service uses staged errors to clarify failure points:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool state missing (throw immediately)
+     * - On-chain fetch: RPC returns missing/invalid objects (throw)
+     * - Transaction building/validation: dev-inspect/build/sign failures (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     * - Event parsing: expected events missing (throw)
+     *
+     * Business logic is unchanged; we only standardize throw structure and add comments.
+     */
+
     async confirm(
         { positionId, state }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
@@ -102,6 +116,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
+                // Stage: on-chain fetch validation (Position NFT object must exist)
                 if (positionNftObjectInfo.error || !positionNftObjectInfo.data) {
                     throw new SuiObjectNotFoundException({
                         name: ErrorSuiObjectName.PositionNFT,
@@ -110,6 +125,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: _state.static.displayId,
                     })
                 }
+                // Stage: on-chain fetch validation (object must be a Move object)
                 if (positionNftObjectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
                         name: ErrorSuiObjectName.PositionNFT,
@@ -126,6 +142,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
+                // Stage: on-chain fetch validation (Position object must exist)
                 if (clmmPosition.error || !clmmPosition.data) {
                     throw new SuiObjectNotFoundException({
                         name: ErrorSuiObjectName.Position,
@@ -134,6 +151,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: _state.static.displayId,
                     })
                 }
+                // Stage: on-chain fetch validation (object must be a Move object)
                 if (clmmPosition.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException({
                         name: ErrorSuiObjectName.PositionNFT,
@@ -157,11 +175,13 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (requires balance snapshots for sizing / tick math)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
@@ -175,6 +195,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenB.toString(),
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
@@ -194,6 +215,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             targetIsA,
         })
         const slippage = Decimal(envConfig().dexes.turbos.openPosition.slippage)
+        // Stage: state validation (abort if utilization implies slippage beyond tolerance)
         if (utilizationPercentage.lt(
             new Decimal(1)
                 .sub(slippage))

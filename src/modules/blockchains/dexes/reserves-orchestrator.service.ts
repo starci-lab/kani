@@ -77,6 +77,7 @@ export class ReservesOrchestratorService {
             liquidityPool,
         }: OrchestrateReservesParams,
     ): Promise<ReservesResult> {
+        // Stage: state/config validation (DEX must exist and be enabled)
         const dex =
             this.primaryMemoryStorageService.dexCollection.findOne(
                 {
@@ -85,9 +86,11 @@ export class ReservesOrchestratorService {
                     },
                 }
             )
-        if (!dex) throw new DexNotFoundException({
-            id: liquidityPool.dex.toString(),
-        })
+        if (!dex) {
+            throw new DexNotFoundException({
+                id: liquidityPool.dex.toString(),
+            })
+        }
         if (!this.options.dexIds?.includes(dex.displayId)) {
             throw new DexNotImplementedException(
                 {
@@ -95,9 +98,13 @@ export class ReservesOrchestratorService {
                 }
             )
         }
-        if (!bot.activePosition) throw new ActivePositionNotFoundException({
-            botId: bot.id,
-        })
+        // Stage: state validation (reserves require an active position)
+        if (!bot.activePosition) {
+            throw new ActivePositionNotFoundException({
+                botId: bot.id,
+            })
+        }
+        // Stage: on-chain/data fetch (load latest pool state from cache/on-chain sources)
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
         switch (dex.displayId) {
         case DexId.FlowX:

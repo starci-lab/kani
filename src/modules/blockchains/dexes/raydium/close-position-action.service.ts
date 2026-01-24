@@ -67,10 +67,23 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         private readonly winstonService: WinstonService,
     ) {}
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool/position state missing (throw immediately)
+     * - Transaction building: instruction/message/signing validation fails (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
@@ -88,6 +101,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                 $eq: state.static.tokenB.toString(),
             },
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,

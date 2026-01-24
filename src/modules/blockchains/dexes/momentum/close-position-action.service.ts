@@ -55,10 +55,23 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
         private readonly winstonService: WinstonService,
     ) {}
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool/position state missing (throw immediately)
+     * - Transaction building: build/sign failures (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (close requires an active position)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 {
@@ -91,6 +104,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         },
                     })
                 } else {
+                    // Stage: state validation (privy signing prerequisites)
                     if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
                             botId: bot.id,

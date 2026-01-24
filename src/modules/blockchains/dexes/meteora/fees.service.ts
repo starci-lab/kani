@@ -62,6 +62,7 @@ export class MeteoraFeesService implements IFeesService {
         }: FeesParams,
     ): Promise<FeesResult> {
         // get the bin array indexes
+        // Stage: state validation (fees require an active position with associated position data)
         if (!bot.activePosition ||
             !bot.activePosition.associatedPosition
         ) {
@@ -69,6 +70,7 @@ export class MeteoraFeesService implements IFeesService {
                 botId: bot.id,
             })
         }
+        // Stage: state validation (position must have DLMM state recorded)
         if (!bot.activePosition.associatedPosition.dlmmState) {
             throw new PositionDlmmStateNotFoundException({
                 positionId: bot.activePosition.associatedPosition.positionId,
@@ -97,6 +99,7 @@ export class MeteoraFeesService implements IFeesService {
         )
         const positionId = bot.activePosition.associatedPosition.positionId
         // fetch the bin array accounts
+        // Stage: on-chain/data fetch (batch fetch position + bin arrays)
         const [
             positionAccount,
             ...binArrayAccounts
@@ -113,6 +116,7 @@ export class MeteoraFeesService implements IFeesService {
             }
         )
         // validate the position account
+        // Stage: on-chain fetch validation (position account must exist)
         if (!positionAccount || !positionAccount.exists) {
             throw new SolanaAccountNotFoundException({
                 name: ErrorSolanaAccountName.PositionATA,

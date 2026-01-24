@@ -41,6 +41,7 @@ export class TurbosReservesService implements IReservesService {
             state,
             bot,
         }: ReservesParams): Promise<ReservesResult> {
+        // Stage: state validation (reserves require an active position with associated position data)
         if (!bot.activePosition ||
             !bot.activePosition?.associatedPosition
         ) {
@@ -51,6 +52,7 @@ export class TurbosReservesService implements IReservesService {
             )
         }
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -71,6 +73,7 @@ export class TurbosReservesService implements IReservesService {
             )
         }
 
+        // Stage: state validation (ensure we can resolve the liquidity pool record referenced by the active position)
         const liquidityPool =
             this.primaryMemoryStorageService
                 .liquidityPoolCollection
@@ -89,6 +92,7 @@ export class TurbosReservesService implements IReservesService {
                 }
             )
         }
+        // Stage: state validation (CLMM state must be present on the associated position)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException(
                 {

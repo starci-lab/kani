@@ -58,6 +58,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
+        // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -119,6 +120,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
         { bot, state, isRetry, signatureWithBytes, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {

@@ -38,6 +38,7 @@ export class CetusReservesService implements IReservesService {
             state,
             bot,
         }: ReservesParams): Promise<ReservesResult> {
+        // Stage: state validation (reserves require an active position)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 {
@@ -45,6 +46,7 @@ export class CetusReservesService implements IReservesService {
                 }
             )
         }
+        // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition?.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException(
                 {
@@ -53,6 +55,7 @@ export class CetusReservesService implements IReservesService {
             )
         }
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: state.static.tokenA.toString(),
         })
@@ -75,6 +78,7 @@ export class CetusReservesService implements IReservesService {
                         id: bot.activePosition.liquidityPool.toString(),
                     }
                 )
+        // Stage: state validation (liquidity pool referenced by active position must exist)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException(
                 {

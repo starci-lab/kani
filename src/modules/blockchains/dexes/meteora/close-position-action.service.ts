@@ -67,10 +67,23 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         private readonly winstonService: WinstonService,
     ) { }
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool/position state missing (throw immediately)
+     * - Transaction building: instruction/message/signing validation fails (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as DlmmLiquidityPoolState
+        // Stage: state validation (close requires an active position)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -82,6 +95,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: state.static.tokenB.toString(),
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: state.static.displayId,

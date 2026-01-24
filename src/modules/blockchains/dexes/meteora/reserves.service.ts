@@ -69,6 +69,7 @@ export class MeteoraReservesService implements IReservesService {
         state,
     }: ReservesParams): Promise<ReservesResult> {
         const _state = state as DlmmLiquidityPoolState
+        // Stage: state validation (reserves require an active position with associated position data)
         if (!bot.activePosition
             || !bot.activePosition.associatedPosition
         ) {
@@ -76,12 +77,14 @@ export class MeteoraReservesService implements IReservesService {
                 botId: bot.id,
             })
         }
+        // Stage: state validation (position must have DLMM state recorded)
         if (!bot.activePosition.associatedPosition.dlmmState) {
             throw new PositionDlmmStateNotFoundException({
                 positionId: bot.activePosition.associatedPosition.positionId,
                 botId: bot.id,
             })
         }
+        // Stage: state validation (pool must have DLMM static state)
         if (!_state.static.dlmmState) {
             throw new LiquidityPoolDlmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,

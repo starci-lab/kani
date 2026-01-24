@@ -61,17 +61,20 @@ export class OrcaFeesService implements IFeesService {
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        // Stage: state validation (fees require an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         const positionId = bot.activePosition.associatedPosition.positionId
+        // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new PositionClmmStateNotFoundException({
                 positionId: bot.activePosition.associatedPosition.positionId,

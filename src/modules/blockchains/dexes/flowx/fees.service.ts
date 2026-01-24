@@ -54,17 +54,20 @@ export class FlowXFeesService implements IFeesService {
 
     async fees({ state, bot }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (fees require an active position)
         if (!bot.activePosition
         ) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition?.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -85,7 +88,7 @@ export class FlowXFeesService implements IFeesService {
         const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
             i32Type)
         const { ticksId } = _state.static.metadata as FlowXLiquidityPoolMetadata
-        // get the tick lower data
+        // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -113,7 +116,7 @@ export class FlowXFeesService implements IFeesService {
             `${string}::tick::TickInfo`
         >
         const tickLowerData = parseFlowXTickInfo(_tickLowerData.content.fields.value.fields)
-        // get the tick upper data
+        // Stage: on-chain fetch (tick upper dynamic field)
         const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {

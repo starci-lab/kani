@@ -76,17 +76,33 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         private readonly winstonService: WinstonService,
     ) { }
     
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool/position state missing (throw immediately)
+     * - On-chain fetch: RPC account fetch fails or returns null (throw)
+     * - Transaction building: instruction/message/signing validation fails (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     * - Event parsing: required tx fields are missing (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare({
         state,
         bot,
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+        // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (requires balance snapshots for sizing)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
@@ -104,6 +120,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 $eq: _state.static.tokenB.toString(),
             },
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,

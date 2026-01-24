@@ -68,10 +68,24 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         private readonly winstonService: WinstonService,
     ) {}
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool/position state missing (throw immediately)
+     * - On-chain fetch: RPC calls fail or return null (throws/bubbles)
+     * - Transaction building: instruction/message/signing validation fails (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -87,6 +101,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 $eq: state.static.tokenB.toString(),
             },
         })
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
@@ -129,6 +144,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         },
                     })
                 } else {
+                    // Stage: state validation (privy signing prerequisites)
                     if (!bot.encryptedPrivySignerPrivateKeyPayload) {
                         throw new EncryptedPrivySignerPrivateKeyNotFoundException({
                             botId: bot.id,

@@ -85,6 +85,20 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     private readonly privySignService: PrivySignService,
     ) {}
 
+    /**
+     * === Error-handling convention (DEX action services) ===
+     *
+     * Stages in this service:
+     * - Input validation: required params missing/invalid (throw immediately)
+     * - State validation: required bot/pool state missing (throw immediately)
+     * - On-chain fetch: RPC returns missing/invalid objects (throw)
+     * - Transaction building/validation: dev-inspect/build/sign failures (throw)
+     * - Execution: tx not executed / retry checks fail (throw)
+     * - Event parsing: expected events missing/unparseable (throw)
+     *
+     * Business logic unchanged; comments + throw structure only.
+     */
+
     async confirm(
         { positionId, state }: 
         ConfirmOpenPositionParams
@@ -99,6 +113,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         showContent: true,
                     }
                 })
+                // Stage: on-chain fetch validation (position object must exist)
                 if (objectInfo.error || !objectInfo.data) {
                     throw new SuiObjectNotFoundException(
                         {
@@ -109,6 +124,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         }
                     )
                 }
+                // Stage: on-chain fetch validation (object must be a Move object)
                 if (objectInfo.data.content?.dataType !== "moveObject") {
                     throw new SuiObjectInvalidTypeException(
                         {

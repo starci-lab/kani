@@ -42,17 +42,20 @@ export class OrcaReservesService implements IReservesService {
             state,
             bot,
         }: ReservesParams): Promise<ReservesResult> {
+        // Stage: state validation (reserves require an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new PositionClmmStateNotFoundException({
                 positionId: bot.activePosition.associatedPosition.positionId,
@@ -67,6 +70,7 @@ export class OrcaReservesService implements IReservesService {
             id: _state.static.tokenB.toString(),
         })
 
+        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
@@ -80,6 +84,7 @@ export class OrcaReservesService implements IReservesService {
                 },
             })
 
+        // Stage: state validation (liquidity pool referenced by active position must exist)
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
                 displayId: _state.static.displayId,

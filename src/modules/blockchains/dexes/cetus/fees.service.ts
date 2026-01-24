@@ -55,12 +55,14 @@ export class CetusFeesService implements IFeesService {
 
     async fees({ state, bot }: FeesParams): Promise<FeesResult> {
         const _state = state as ClmmLiquidityPoolState
+        // Stage: state validation (fees require an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition
         ) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
+        // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException(
                 {
@@ -68,6 +70,7 @@ export class CetusFeesService implements IFeesService {
                 }
             )
         }
+        // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -89,7 +92,7 @@ export class CetusFeesService implements IFeesService {
         const lowerScore = this.tickScore(tickLower)
         const upperScore = this.tickScore(tickUpper)
         const { tickManagerId, positionManagerId } = _state.static.metadata as CetusLiquidityPoolMetadata
-        // get the tick lower data
+        // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
