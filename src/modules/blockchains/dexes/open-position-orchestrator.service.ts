@@ -57,6 +57,33 @@ import {
 import {
     MomentumOpenPositionActionService 
 } from "./momentum"
+// import {
+//     InjectQueue 
+// } from "@nestjs/bullmq"
+// import {
+//     bullData, BullQueueName 
+// } from "@modules/bullmq"
+// import {
+//     Queue 
+// } from "bullmq"
+import {
+    envConfig 
+} from "@modules/env"
+// import {
+//     v4 
+// } from "uuid"
+import {
+    Connection, 
+} from "mongoose"
+import {
+    DayjsService,
+    InjectSuperJson
+} from "@modules/mixin"
+import SuperJSON from "superjson"
+import _ from "lodash"
+import {
+    FlowXOpenPositionActionService 
+} from "./flowx"
 import {
     InjectQueue 
 } from "@nestjs/bullmq"
@@ -66,23 +93,6 @@ import {
 import {
     Queue 
 } from "bullmq"
-import {
-    envConfig 
-} from "@modules/env"
-import {
-    v4 
-} from "uuid"
-import {
-    Connection, 
-} from "mongoose"
-import {
-    InjectSuperJson, DayjsService
-} from "@modules/mixin"
-import SuperJSON from "superjson"
-import _ from "lodash"
-import {
-    FlowXOpenPositionActionService 
-} from "./flowx"
 import {
     OpenPositionPayload 
 } from "../types"
@@ -113,6 +123,8 @@ export class OpenPositionOrchestratorService {
         private readonly cetusOpenPositionActionService: CetusOpenPositionActionService,
         private readonly turbosOpenPositionActionService: TurbosOpenPositionActionService,
         private readonly momentumOpenPositionActionService: MomentumOpenPositionActionService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -120,8 +132,6 @@ export class OpenPositionOrchestratorService {
         private readonly openPositionQueue: Queue<string>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
     ) { }
 
     /**
@@ -264,11 +274,11 @@ export class OpenPositionOrchestratorService {
                 }
             )
         }
+        if (!isRetry) {
         // start a session
-        const session = await this.connection.startSession()
-        return await session.withTransaction(
-            async () => {
-                if (!isRetry) {
+            const session = await this.connection.startSession()
+            return await session.withTransaction(
+                async () => {   
                 /**
                 * Persist job record.
                 */
@@ -302,34 +312,32 @@ export class OpenPositionOrchestratorService {
                                 $set: {
                                     activeJob: {
                                         job: job.id,
-                                        queuedAt: this.dayjsService.now().toDate(),
                                         liquidityPool: liquidityPool.id,
                                         jobType: JobType.OpenPosition,
+                                        queuedAt: this.dayjsService.now().toDate(),
                                     },
                                 } 
                             },
                             {
                                 session 
                             }
-                        )
+                        )             
                 }
-                /**
-                    * Enqueue open-position job for async processing.
-                    */
-                const payload: OpenPositionPayload = {
-                    jobId,
-                    liquidityPoolId: liquidityPool.displayId,
-                    botId: bot.id,
-                    isRetry,
-                }
-                const bullmqJob = await this.openPositionQueue.add(
-                    v4(),
-                    this.superjson.stringify(payload),
-                    {
-                        jobId: bot.id,
-                    }
-                )
-                return bullmqJob
+            )
+        }
+        const payload: OpenPositionPayload = {
+            jobId,
+            botId: bot.id,
+            liquidityPoolId: liquidityPool.displayId,
+            isRetry,
+        }
+        await this.openPositionQueue.add(
+            jobId,
+            this.superjson.stringify(
+                payload
+            ),
+            {
+                jobId: bot.id,
             }
         )
     }

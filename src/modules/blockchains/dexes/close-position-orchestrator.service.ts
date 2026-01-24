@@ -39,21 +39,21 @@ import {
     ExecuteClosePositionParams,
     PrepareClosePositionParams, 
 } from "../interfaces"
-import {
-    InjectQueue 
-} from "@nestjs/bullmq"
-import {
-    bullData, BullQueueName 
-} from "@modules/bullmq"
-import {
-    Queue 
-} from "bullmq"
-import {
-    ClosePositionPayload 
-} from "../types"
-import {
-    v4 
-} from "uuid"
+// import {
+//     InjectQueue 
+// } from "@nestjs/bullmq"
+// import {
+//     bullData, BullQueueName 
+// } from "@modules/bullmq"
+// import {
+//     Queue 
+// } from "bullmq"
+// import {
+//     ClosePositionPayload 
+// } from "../types"
+// import {
+//     v4 
+// } from "uuid"
 import {
     Connection 
 } from "mongoose"
@@ -64,15 +64,24 @@ import {
     SettlementService 
 } from "../settlement"
 import {
-    WinstonLog, WinstonService 
-} from "@modules/winston"
+    v4 
+} from "uuid"
 import {
-    InjectSuperJson,
-} from "@modules/mixin"
+    ClosePositionPayload 
+} from "../types"
 import SuperJSON from "superjson"
 import {
-    DayjsService,
+    DayjsService, InjectSuperJson 
 } from "@modules/mixin"
+import {
+    InjectQueue 
+} from "@nestjs/bullmq"
+import {
+    bullData, BullQueueName 
+} from "@modules/bullmq"
+import {
+    Queue 
+} from "bullmq"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -86,17 +95,17 @@ export class ClosePositionOrchestratorService {
         private readonly cetusClosePositionActionService: CetusClosePositionActionService,
         private readonly turbosClosePositionActionService: TurbosClosePositionActionService,
         private readonly momentumClosePositionActionService: MomentumClosePositionActionService,
-        private readonly winstonService: WinstonService,
+        // private readonly winstonService: WinstonService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
-        @InjectQueue(bullData[BullQueueName.ClosePosition].name)
-        private readonly closePositionQueue: Queue<string>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly settlementService: SettlementService,
         @InjectSuperJson()
         private readonly superjson: SuperJSON,
         private readonly dayjsService: DayjsService,
+        @InjectQueue(bullData[BullQueueName.ClosePosition].name)
+        private readonly closePositionQueue: Queue<string>,
     ) {}
 
     /**
@@ -182,11 +191,11 @@ export class ClosePositionOrchestratorService {
         if (!settled) {
             return
         }
+        if (!isRetry) {
         // Persist job record + set bot activeJob + enqueue in one transaction (same pattern as open-position).
-        const session = await this.connection.startSession()
-        const bullmqJob = await session.withTransaction(
-            async () => {
-                if (!isRetry) {
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async () => {
                     const [jobRaw] = await this.connection.model<JobSchema>(
                         JobSchema.name
                     ).create(
@@ -213,9 +222,9 @@ export class ClosePositionOrchestratorService {
                             $set: {
                                 activeJob: {
                                     job: job.id,
-                                    queuedAt: this.dayjsService.now().toDate(),
                                     liquidityPool: liquidityPool.id,
                                     jobType: JobType.ClosePosition,
+                                    queuedAt: this.dayjsService.now().toDate(),
                                 },
                             },
                         },
@@ -224,34 +233,21 @@ export class ClosePositionOrchestratorService {
                         }
                     )
                 }
-                const payload: ClosePositionPayload = {
-                    jobId,
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                    isRetry,
-                }
-                return await this.closePositionQueue.add(
-                    v4(),
-                    this.superjson.stringify(payload),
-                    {
-                        jobId: bot.id,
-                    }
-                )
-            }
-        )
-        /**
-            * Structured logging for observability.
-            */
-        this.winstonService.log(
-            WinstonLog.ClosePositionEnqueued,
+            )
+        }
+        const payload: ClosePositionPayload = {
+            jobId,
+            botId: bot.id,
+            liquidityPoolId: liquidityPool.displayId,
+            isRetry,
+        }
+        return await this.closePositionQueue.add(
+            v4(),
+            this.superjson.stringify(payload),
             {
-                botId: bot.id,
-                liquidityPoolId: liquidityPool.displayId,
-                jobId,
-                bullmqJobId: bullmqJob?.id,
+                jobId: bot.id,
             }
         )
-        return bullmqJob
     }
 
     async prepare(params: PrepareClosePositionParams,

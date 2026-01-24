@@ -42,7 +42,8 @@ import {
     GasStatusService 
 } from "./gas-status.service"
 import {
-    GasStatus 
+    GasStatus, 
+    ReconcileBalancePayload
 } from "../types"
 import BN from "bn.js"
 import {
@@ -71,7 +72,7 @@ import {
     DayjsService 
 } from "@modules/mixin"
 import {
-    v4
+    v4 
 } from "uuid"
 
 @Injectable()
@@ -110,13 +111,13 @@ export class BalanceService implements IBalanceService {
         /**
          * Add reconcile balance job to the queue
          */
-        const session = await this.connection.startSession()
-        return await session.withTransaction(
-            async () => {
+        if (!isRetry) {
+            const session = await this.connection.startSession()
+            return await session.withTransaction(
+                async () => {
                 /**
                 * Persist job record.
                 */
-                if (!isRetry) {
                     const [ jobRaw ] = await this.connection.model<JobSchema>(
                         JobSchema.name
                     ).create(
@@ -156,25 +157,26 @@ export class BalanceService implements IBalanceService {
                             }
                         )
                 }
-                /**
-                * Enqueue reconcile balance job.
-                */
-                const bullmqJob = await this.reconcileBalanceQueue.add(
-                    v4(),
-                    this.superJson.stringify(
-                        {
-                            jobId,
-                            botId: bot.id,
-                            isRetry,
-                        }
-                    ),
-                    {
-                        jobId: bot.id,
-                    }
-                )
-                return bullmqJob
+            )   
+        }
+        /**
+        * Enqueue reconcile balance job.
+        */
+        const payload: ReconcileBalancePayload = {
+            jobId,
+            botId: bot.id,
+            isRetry,
+        }
+        const bullmqJob = await this.reconcileBalanceQueue.add(
+            v4(),
+            this.superJson.stringify(
+                payload
+            ),
+            {
+                jobId: bot.id,
             }
         )
+        return bullmqJob
     }   
 
     async determineReconcileBalancePlan({

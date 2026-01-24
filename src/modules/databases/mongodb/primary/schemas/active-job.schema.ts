@@ -64,7 +64,6 @@ export class ActiveJobSchema extends AbstractSchema {
         required: true,
     })
         jobType: JobType
-
     /**
      * When the snapshot values were recorded.
      */
@@ -74,7 +73,6 @@ export class ActiveJobSchema extends AbstractSchema {
         })
     @Prop({
         type: Date,
-        required: true,
     })
         queuedAt: Date
 }
