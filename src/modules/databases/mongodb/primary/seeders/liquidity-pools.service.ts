@@ -115,11 +115,17 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         chainId: ChainId.Sui,
         type: LiquidityPoolType.Clmm,
         clmmState: {
-            tickSpacing: 1000,
-            tickMultiplier: 1,
+            tickSpacing: 30,
+            tickMultiplier: 33,
         },
         url: "https://app.turbos.finance/pool/0xdaa881332a4f57fe3776e2d3003701b53f83a34dc0dd9192c42ba1557c9a95a8",
-        staleMs: ms("20s")
+        staleMs: ms("20s"),
+        metadata: {
+            packageId: "0xa5a0c25c79e428eba04fb98b3fb2a34db45ab26d4c8faf0d7e39d66a63891e64",
+            feeType: "0x38a236095cb5a4fec3bdf42cf3e9c80f7ef68f1a835290a6cd107f156f8747f4::fee1500bps::FEE1500BPS",
+            versionObject: "0xf1cf0e81048df168ebeb1b8030fad24b3e0b53ae827c25053fff0779c1445b6f",
+            positionsObject: "0xf5762ae5ae19a2016bb233c72d9a4b2cba5a302237a82724af66292ae43ae52d",
+        },
     },
     {
         _id: createObjectId(LiquidityPoolId.TurbosDeepUsdc015),
@@ -136,7 +142,13 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
             tickMultiplier: 1,
         },
         url: "https://app.turbos.finance/pool/0x198af6ff81028c6577e94465d534c4e2cfcbbab06a95724ece7011c55a9d1f5a",
-        staleMs: ms("20s")
+        staleMs: ms("20s"),
+        metadata: {
+            packageId: "0xa5a0c25c79e428eba04fb98b3fb2a34db45ab26d4c8faf0d7e39d66a63891e64",
+            feeType: "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::fee500bps::FEE500BPS",
+            versionObject: "0xf1cf0e81048df168ebeb1b8030fad24b3e0b53ae827c25053fff0779c1445b6f",
+            positionsObject: "0xf5762ae5ae19a2016bb233c72d9a4b2cba5a302237a82724af66292ae43ae52d",
+        },
     },
     {
         _id: createObjectId(LiquidityPoolId.FlowXSuiUsdc03),

@@ -40,12 +40,11 @@ import {
     PrivyPublicKeyNotFoundException,
     SuiObjectInvalidTypeException,
     ErrorSuiObjectName,
-    EnsureCalculationException,
-    EnsureRangeType,
     ErrorTransactionType,
     SuiObjectNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
+    SlippageToleranceExceededException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -58,14 +57,8 @@ import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    Network, TurbosSdk 
-} from "turbos-clmm-sdk"
-import {
     EnsureMathService 
 } from "../../math"
-import {
-    toScaledBN 
-} from "@modules/utils"
 import {
     AsyncService 
 } from "@modules/mixin"
@@ -81,9 +74,6 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
-import {
-    _TickMathService 
-} from "../../math/_tick.service"
         
 @Injectable()
 export class TurbosOpenPositionActionService implements IOpenActionService {
@@ -92,7 +82,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly openPositionTxbService: OpenPositionTxbService,
         private readonly tickMathService: TickMathService,
-        private readonly _tickMathService: _TickMathService,
         private readonly asyncService: AsyncService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly ensureMathService: EnsureMathService,
@@ -190,61 +179,32 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
             })
-        }       
+        }   
         const targetIsA = bot.targetToken.toString() === tokenA.id
-        const { tickLower: _tickLower, tickUpper: _tickUpper } = await this._tickMathService.getTickBounds({
-            state: _state,
-            bot,
-        })
-        console.log(`_tickLower: ${_tickLower.toString()}, _tickUpper: ${_tickUpper.toString()}`)
         const { 
             tickLower, 
             tickUpper,
-            utilizationPercentage
+            amountA,
+            amountB,
+            utilizationPercentage,
         } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: new BN(_state.dynamic.tickCurrent),
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetIsA,
         })
-        console.log(`tickLower: ${tickLower.toString()}, tickUpper: ${tickUpper.toString()}`)
-        console.log(`utilizationPercentage: ${utilizationPercentage.toString()}`)
-        let amountA = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
-        let amountB = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
-        const sdk = new TurbosSdk(Network.mainnet)
-        const [, actualAmountB] = sdk.pool.estimateAmountsFromOneAmount({
-            isAmountA: true,
-            amount: amountA.toString(),
-            sqrtPrice: sdk.math.tickIndexToSqrtPriceX64(new BN(_state.dynamic.tickCurrent).toNumber()).toString(),
-            tickLower: tickLower.toNumber(),
-            tickUpper: tickUpper.toNumber(),
-        })
-        const lowerBound = new Decimal(1).sub(new Decimal(envConfig().dexes.turbos.openPosition.slippage))
-        const upperBound = new Decimal(1).add(new Decimal(envConfig().dexes.turbos.openPosition.slippage))
-        const actual = new BN(actualAmountB)
-        const { isAcceptable, ratio } = this.ensureMathService.ensureBetween({
-            expected: amountB,
-            actual,
-            upperBound,
-            lowerBound,
-        })
-        if (!isAcceptable) {
-            throw new EnsureCalculationException(
-                {
-                    expected: amountB,
-                    actual,
-                    rangeType: EnsureRangeType.Between,
-                    lowerBound,
-                    upperBound,
-                }
-            )
+        const slippage = Decimal(envConfig().dexes.turbos.openPosition.slippage)
+        if (utilizationPercentage.lt(
+            new Decimal(1)
+                .sub(slippage))
+        ) {
+            throw new SlippageToleranceExceededException({
+                slippage: slippage.toNumber(),
+            })
         }
-        if (ratio.gt(new Decimal(1))) {
-            amountB = new BN(actualAmountB)
-            amountA = toScaledBN(amountA,
-                new Decimal(1).div(ratio))
-        }
+
         const { 
             txb: openPositionTxb,
             feeAmountA,

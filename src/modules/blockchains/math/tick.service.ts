@@ -43,9 +43,11 @@ export class TickMathService {
             tickCurrent,
             tickSpacing,
             tickMultiplier,
+            targetIsA,
         }: FindOptimalTickRangeParams
     ): Promise<FindOptimalTickRangeResult> {
-       
+        const _amountA = targetIsA ? targetBalanceAmount : quoteBalanceAmount
+        const _amountB = targetIsA ? quoteBalanceAmount : targetBalanceAmount
         // Calculate the tick range width (span) based on spacing and multiplier
         // tickSpan = tickSpacing * tickMultiplier
         const tickSpan = new Decimal(tickSpacing.toString()).mul(new Decimal(tickMultiplier.toString()))
@@ -72,8 +74,8 @@ export class TickMathService {
                     tickLower: new BN(tickLower.toString()),
                     tickUpper: new BN(tickUpper.toString()),
                     tickCurrent: tickCurrent,
-                    amountA: targetBalanceAmount,
-                    amountB: quoteBalanceAmount,
+                    amountA: _amountA,
+                    amountB: _amountB,
                 }
             )
             
@@ -92,9 +94,9 @@ export class TickMathService {
             )
             // calculate the percentage of the target and quote tokens that are used
             const usedAPercent = new Decimal(amountA.toString())
-                .div(targetBalanceAmount.toString())
+                .div(_amountA.toString())
             const usedBPercent = new Decimal(amountB.toString())
-                .div(quoteBalanceAmount.toString())
+                .div(_amountB.toString())
             // bottleneck principle: the score is the minimum of the used percentages
             const utilizationPercentage = Decimal.min(
                 usedAPercent,
@@ -106,6 +108,8 @@ export class TickMathService {
                     tickLower: new BN(tickLower.toString()),
                     tickUpper: new BN(tickUpper.toString()),
                     utilizationPercentage,
+                    amountA: new BN(amountA.toString()),
+                    amountB: new BN(amountB.toString()),
                 }
             )
         }
@@ -135,6 +139,8 @@ export interface FindOptimalTickRangeParams {
     tickSpacing: Decimal
     /** Multiplier used to determine the number of tick range candidates to evaluate */
     tickMultiplier: Decimal
+    /** Whether the target token is token A */
+    targetIsA: boolean
 }
 
 /**
@@ -147,10 +153,16 @@ export interface FindOptimalTickRangeResult {
     tickUpper: BN
     /** Score of the optimal tick range */
     utilizationPercentage: Decimal
+    /** Amount of target token used */
+    amountA: BN
+    /** Amount of quote token used */
+    amountB: BN
 }   
 
 export interface CandidateRangeScore {
     tickLower: BN
     tickUpper: BN
     utilizationPercentage: Decimal
+    amountA: BN
+    amountB: BN
 }

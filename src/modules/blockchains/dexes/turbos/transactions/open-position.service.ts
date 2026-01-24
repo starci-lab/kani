@@ -13,9 +13,6 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    Decimal 
-} from "decimal.js"
-import {
     BN 
 } from "turbos-clmm-sdk"
 import {
@@ -41,6 +38,13 @@ import {
 import {
     MountStorageService 
 } from "@modules/filesystem"
+import {
+    adjustSlippage 
+} from "@modules/utils"
+import Decimal from "decimal.js"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class OpenPositionTxbService {
@@ -152,16 +156,19 @@ export class OpenPositionTxbService {
             positionsObject,
             versionObject 
         } = state.static.metadata as TurbosLiquidityPoolMetadata
-        const coinAVec = txb.makeMoveVec({
-            elements: [
-                txb.object(sourceCoinA.coinArg),
-            ]
-        })
+        const coinAVec = txb.makeMoveVec(
+            {
+                elements: [
+                    txb.object(sourceCoinA.coinArg),
+                ]
+            }
+        )
         const coinBVec = txb.makeMoveVec({
             elements: [
                 txb.object(sourceCoinB.coinArg),
             ]
         })
+        const slippage = new Decimal(envConfig().dexes.turbos.openPosition.slippage)
         const deadline = this.dayjsService.now().add(5,
             "minute").utc().valueOf().toString()
         txb.moveCall({
@@ -183,22 +190,30 @@ export class OpenPositionTxbService {
                 // tick lower index
                 txb.pure.u32(Number(tickLower.abs().toNumber())),
                 // tick lower is negative
-                txb.pure.bool(tickLower.lt(0)),
+                txb.pure.bool(tickLower.lt(new BN(0))),
                 // tick upper index
                 txb.pure.u32(Number(tickUpper.abs().toNumber())),
                 // tick upper is negative
-                txb.pure.bool(tickUpper.lt(0)),
+                txb.pure.bool(tickUpper.lt(new BN(0))),
                 // remaining amount A
                 txb.pure.u64(remainingAmountA.toString()),
                 // remaining amount B
                 txb.pure.u64(remainingAmountB.toString()),
                 // minimum amount A
                 txb.pure.u64(
-                    remainingAmountA.toString()
+                    adjustSlippage({
+                        bn: remainingAmountA,
+                        slippage,
+                        isRoundUp: false,
+                    }).toString()
                 ),
                 // minimum amount B
                 txb.pure.u64(
-                    remainingAmountB.toString()
+                    adjustSlippage({
+                        bn: remainingAmountB,
+                        slippage,
+                        isRoundUp: false,
+                    }).toString()
                 ),
                 // bot account address
                 txb.pure.address(bot.accountAddress),
@@ -221,8 +236,8 @@ export class OpenPositionTxbService {
 export interface CreateOpenPositionTxbParams {
     txb?: Transaction
     state: ClmmLiquidityPoolState
-    tickLower: Decimal
-    tickUpper: Decimal
+    tickLower: BN
+    tickUpper: BN
     amountAMax: BN
     amountBMax: BN
     bot: BotSchema

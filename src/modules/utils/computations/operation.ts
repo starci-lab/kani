@@ -14,6 +14,8 @@ export interface BnMulDecimalParams {
     decimal: Decimal
     // the number of fraction digits to use
     fractionDigits?: Decimal
+    // round up or down
+    isRoundUp?: boolean
 }
 
 /**
@@ -29,6 +31,7 @@ export const bnMulDecimal = ({
     fractionDigits = new Decimal(
         envConfig().computation.operation.fractionDigits
     ),
+    isRoundUp = false,
 }: BnMulDecimalParams): BN => {
 
     // precision used to safely multiply Decimal
@@ -43,7 +46,7 @@ export const bnMulDecimal = ({
             .mul(precisionFactor)
             .toFixed(
                 0,
-                Decimal.ROUND_HALF_UP
+                isRoundUp ? Decimal.ROUND_HALF_UP : Decimal.ROUND_HALF_DOWN
             )
     )
 
