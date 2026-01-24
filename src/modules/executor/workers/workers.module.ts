@@ -10,14 +10,26 @@ import {
 import {
     OpenPositionModule,
 } from "./open-position"
+import {
+    ClosePositionModule,
+} from "./close-position"
 @Module({
     imports: [
-        ReconcileBalanceModule.register({
-            isGlobal: true,
-        }),
-        OpenPositionModule.register({
-            isGlobal: true,
-        }),
+        ReconcileBalanceModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        OpenPositionModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        ClosePositionModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
     ],
 })
 export class WorkersModule extends ConfigurableModuleClass {}

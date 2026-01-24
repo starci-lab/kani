@@ -311,6 +311,14 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     txHash,
                     state: _state,
                 })
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionFound,
+                    {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     positionId,
                 }

@@ -354,6 +354,14 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     txHash,
                     events: txBlock?.events || [],
                 })
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionFound,
+                    {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     positionId,
                 }

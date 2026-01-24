@@ -302,6 +302,14 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 },
             })
             if (transaction) {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionFound,
+                    {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     positionId: positionId.toString(),
                 }

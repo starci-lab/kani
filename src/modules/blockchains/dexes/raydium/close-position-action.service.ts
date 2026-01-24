@@ -25,7 +25,7 @@ import {
     InvalidPoolTokensException, 
     MissingSolanaTxParamException, 
     PrivyMetadataNotFoundException, 
-    TransactionNotExecutedException,
+    TransactionValidationFailedException,
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -50,7 +50,8 @@ import {
     assertIsTransactionWithinSizeLimit,
     signTransaction,
     createNoopSigner,
-    address
+    address,
+    getBase64EncodedWireTransaction
 } from "@solana/kit"
 import {
     PrivySignService 
@@ -173,9 +174,9 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
     }
 
     async execute(
-        { bot, state, isRetry, solanaTx, txHash }: ExecuteClosePositionParams
+        { bot, state, txCheck, stimulate, solanaTx, txHash }: ExecuteClosePositionParams
     ): Promise<void> {
-        if (isRetry) {
+        if (txCheck && !stimulate) {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
@@ -186,13 +187,16 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                         }
                     ).send()
                     if (transaction) {
+                        this.winstonService.log(
+                            WinstonLog.ClosePositionTransactionFound,
+                            {
+                                botId: bot.id,
+                                txHash,
+                                liquidityPoolId: state.static.displayId,
+                            }
+                        )
                         return
                     }
-                    throw new TransactionNotExecutedException({
-                        botId: bot.id,
-                        txHash,
-                        type: ErrorTransactionType.ClosePosition,
-                    })
                 },
             })
         }
@@ -205,6 +209,30 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
         await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc, rpcSubscriptions }) => {
+                if (stimulate) {
+                    const transaction = await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(solanaTx),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        }).send()
+                    if (transaction.value.err) {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash,
+                            type: ErrorTransactionType.ClosePosition,
+                        })
+                    }
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: state.static.displayId,
+                        }
+                    )
+                    return
+                }
                 const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                     rpc,
                     rpcSubscriptions,

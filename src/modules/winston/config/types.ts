@@ -218,6 +218,8 @@ export interface OpenPositionEnqueueFailedMessage {
 export interface ClosePositionEnqueuedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
+    jobId: string
+    bullmqJobId?: string
 }
 
 /**
@@ -755,6 +757,7 @@ export interface OpenPositionJobAlreadyConfirmedMessage {
 export interface ClosePositionJobAlreadyPreparedMessage {
     botId: string
     jobId: string
+    liquidityPoolId: LiquidityPoolId
 }
 
 /**
@@ -763,6 +766,7 @@ export interface ClosePositionJobAlreadyPreparedMessage {
 export interface ClosePositionJobAlreadyExecutedMessage {
     botId: string
     jobId: string
+    liquidityPoolId: LiquidityPoolId
 }
 
 /**
@@ -771,6 +775,58 @@ export interface ClosePositionJobAlreadyExecutedMessage {
 export interface ClosePositionJobAlreadyConfirmedMessage {
     botId: string
     jobId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Processing Failed Unrecoverable Message
+ */
+export interface ClosePositionProcessingFailedUnrecoverableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Processing Failed Permanent Failure Message
+ */
+export interface ClosePositionProcessingFailedPermanentFailureMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Processing Failed Retryable Message
+ */
+export interface ClosePositionProcessingFailedRetryableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    attemptsMade: number
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Processing Completed Message
+ */
+export interface ClosePositionProcessingCompletedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Requeue Failed Message
+ */
+export interface ClosePositionRequeueFailedMessage {
+    error: string
 }
 
 /**
@@ -865,4 +921,30 @@ export interface OpenPositionTransactionPreparedMessage {
     botId: string
     txHash: string
     liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Transaction Found Message
+ */
+export interface ClosePositionTransactionFoundMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Transaction Found Message
+ */
+export interface OpenPositionTransactionFoundMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Swap Transaction Found Message
+ */
+export interface SwapTransactionFoundMessage {
+    botId: string
+    txHash: string
 }

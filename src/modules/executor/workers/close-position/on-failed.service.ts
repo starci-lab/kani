@@ -5,9 +5,18 @@ import {
     UnrecoverableError,
 } from "bullmq"
 import {
+    InjectPrimaryMongoose,
+} from "@modules/databases"
+import {
+    DayjsService,
+} from "@modules/mixin"
+import {
     WinstonLog,
     WinstonService,
 } from "@modules/winston"
+import {
+    Connection,
+} from "mongoose"
 import {
     OnFailedParams,
 } from "./types"
@@ -15,11 +24,14 @@ import {
 @Injectable()
 export class OnFailedService {
     constructor(
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
     ) {}
 
     /**
-     * Failure handler for reconcile-balance processing.
+     * Failure handler for close-position processing.
      *
      * Classifies failures into:
      * - unrecoverable (BullMQ `UnrecoverableError`): mark job FAILED immediately
@@ -27,6 +39,7 @@ export class OnFailedService {
      * - retryable: log as retrying and let BullMQ retry
      *
      * Always rethrows the original error so BullMQ can apply its retry/failure behavior.
+     * Also logs contextual fields (e.g. `liquidityPoolId`) for faster debugging.
      */
     async process(
         {
@@ -34,6 +47,7 @@ export class OnFailedService {
             bot,
             bullmqJob,
             error,
+            liquidityPool,
         }: OnFailedParams
     ): Promise<never> {
         const maxAttempts = bullmqJob.opts.attempts ?? 1
@@ -42,33 +56,36 @@ export class OnFailedService {
 
         if (isUnrecoverable) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceProcessingFailedUnrecoverable,
+                WinstonLog.ClosePositionProcessingFailedUnrecoverable,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
                     error: error.message,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         } else if (isPermanentFailure) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure,
+                WinstonLog.ClosePositionProcessingFailedPermanentFailure,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
                     error: error.message,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         } else {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceProcessingFailedRetryable,
+                WinstonLog.ClosePositionProcessingFailedRetryable,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
                     error: error.message,
                     attemptsMade: bullmqJob.attemptsMade,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
         }

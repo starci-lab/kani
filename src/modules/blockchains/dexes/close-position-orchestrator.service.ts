@@ -66,6 +66,13 @@ import {
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
+import {
+    InjectSuperJson,
+} from "@modules/mixin"
+import SuperJSON from "superjson"
+import {
+    DayjsService,
+} from "@modules/mixin"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -83,10 +90,13 @@ export class ClosePositionOrchestratorService {
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
-        private readonly closePositionQueue: Queue<ClosePositionPayload>,
+        private readonly closePositionQueue: Queue<string>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly settlementService: SettlementService,
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -133,6 +143,8 @@ export class ClosePositionOrchestratorService {
         {
             liquidityPool,
             bot,
+            jobId,
+            isRetry,
         }: EnqueueClosePositionParams,
     ) {
         /**
@@ -161,38 +173,70 @@ export class ClosePositionOrchestratorService {
         /**
          * Check if the position can be closed
          */
-        const { settled } = await this.settlementService.settle({
-            bot,
-            state,
-        })
+        const { settled } = await this.settlementService.settle(
+            {
+                bot,
+                state,
+            }
+        )
         if (!settled) {
             return
         }
-        /**
-             * Persist job record.
-             */
-        const [ jobRaw ] = await this.connection.model<JobSchema>(
-            JobSchema.name
-        ).create(
-            [
-                {
-                    liquidityPool: liquidityPool.id,
-                    bot: bot.id,
-                    executor: envConfig().executor.id,
-                    type: JobType.ClosePosition,
-                    status: JobStatus.Pending,
+        // Persist job record + set bot activeJob + enqueue in one transaction (same pattern as open-position).
+        const session = await this.connection.startSession()
+        const bullmqJob = await session.withTransaction(
+            async () => {
+                if (!isRetry) {
+                    const [jobRaw] = await this.connection.model<JobSchema>(
+                        JobSchema.name
+                    ).create(
+                        [
+                            {
+                                _id: jobId,
+                                liquidityPool: liquidityPool.id,
+                                bot: bot.id,
+                                executor: envConfig().executor.id,
+                                type: JobType.ClosePosition,
+                                status: JobStatus.Pending,
+                            }
+                        ],
+                        {
+                            session,
+                        }
+                    )
+                    const job = jobRaw.toJSON<JobSchema>()
+                    await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                        {
+                            _id: bot.id,
+                        },
+                        {
+                            $set: {
+                                activeJob: {
+                                    job: job.id,
+                                    queuedAt: this.dayjsService.now().toDate(),
+                                    liquidityPool: liquidityPool.id,
+                                    jobType: JobType.ClosePosition,
+                                },
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
                 }
-            ]
-        )
-        /**
-            * Add close position job to the queue
-            */
-        await this.closePositionQueue.add(
-            v4(),
-            {
-                jobId: jobRaw.toJSON().id,
-                botId: bot.id,
-                liquidityPoolId: liquidityPool.displayId,
+                const payload: ClosePositionPayload = {
+                    jobId,
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    isRetry,
+                }
+                return await this.closePositionQueue.add(
+                    v4(),
+                    this.superjson.stringify(payload),
+                    {
+                        jobId: bot.id,
+                    }
+                )
             }
         )
         /**
@@ -203,8 +247,11 @@ export class ClosePositionOrchestratorService {
             {
                 botId: bot.id,
                 liquidityPoolId: liquidityPool.displayId,
+                jobId,
+                bullmqJobId: bullmqJob?.id,
             }
         )
+        return bullmqJob
     }
 
     async prepare(params: PrepareClosePositionParams,
@@ -296,4 +343,6 @@ export class ClosePositionOrchestratorService {
 export interface EnqueueClosePositionParams {
     bot: BotSchema
     liquidityPool: LiquidityPoolSchema
+    jobId: string
+    isRetry?: boolean
 }

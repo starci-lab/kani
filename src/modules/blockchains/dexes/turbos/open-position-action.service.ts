@@ -348,6 +348,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     state: _state,
                     events: txBlock?.events || [],
                 })
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionFound,
+                    {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     positionId,
                 }

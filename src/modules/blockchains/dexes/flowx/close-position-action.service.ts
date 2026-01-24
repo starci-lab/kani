@@ -9,6 +9,7 @@ import {
     PrepareClosePositionResult,
 } from "../../interfaces"
 import {
+    Transaction,
     TransactionDataBuilder 
 } from "@mysten/sui/transactions"
 import {
@@ -20,7 +21,6 @@ import {
 import {
     ActivePositionNotFoundException,
     TransactionNotPreparedException,
-    TransactionNotExecutedException,
     TransactionValidationFailedException,
     PrivyPublicKeyNotFoundException,
     ErrorTransactionType,
@@ -152,20 +152,14 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         {
             bot,
             state,
-            isRetry,
+            txCheck,
+            stimulate,
             signatureWithBytes,
             txHash,
         }: ExecuteClosePositionParams
     ): Promise<void> {
         const _state = state as ClmmLiquidityPoolState
-        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
-            throw new ActivePositionNotFoundException(
-                {
-                    botId: bot.id,
-                }
-            )
-        }
-        if (isRetry) {
+        if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
                     accessType: RpcAccessType.Http,
@@ -177,16 +171,16 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 })
             )
             if (txBlock !== null && !txBlock.errors) {
+                this.winstonService.log(
+                    WinstonLog.ClosePositionTransactionFound,
+                    {
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return
             }
-            throw new TransactionNotExecutedException(
-                {
-                    type: ErrorTransactionType.ClosePosition,
-                    botId: bot.id,
-                    txHash,
-                    liquidityPoolId: _state.static.displayId,
-                }
-            )
         }
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException(
@@ -201,6 +195,30 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
         await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
+                if (stimulate) {
+                    const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+                    const devInspect = await suiClient.devInspectTransactionBlock({
+                        transactionBlock,
+                        sender: bot.accountAddress,
+                    })
+                    if (devInspect.effects.status.status !== "success") {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            liquidityPoolId: _state.static.displayId,
+                            type: ErrorTransactionType.ClosePosition,
+                        })
+                    }
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
+                    return
+                }
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature

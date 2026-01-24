@@ -15,10 +15,11 @@ import {
 export interface ExecuteClosePositionParams {
   bot: BotSchema;
   state: LiquidityPoolState;
-  isRetry: boolean;
+  txCheck: boolean;
   signatureWithBytes?: SignatureWithBytes;
   solanaTx?: SolanaTx;
   txHash: string;
+  stimulate?: boolean;
 }
 
 export interface IClosePositionActionService {

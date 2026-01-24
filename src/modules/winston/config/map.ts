@@ -100,6 +100,11 @@ import {
     ClosePositionJobAlreadyExecutedMessage,
     ClosePositionJobAlreadyConfirmedMessage,
     OpenPositionJobAlreadyPreparedMessage,
+    ClosePositionProcessingFailedUnrecoverableMessage,
+    ClosePositionProcessingFailedPermanentFailureMessage,
+    ClosePositionProcessingFailedRetryableMessage,
+    ClosePositionProcessingCompletedMessage,
+    ClosePositionRequeueFailedMessage,
     OpenPositionProcessingFailedUnrecoverableMessage,
     OpenPositionProcessingFailedPermanentFailureMessage,
     OpenPositionProcessingFailedRetryableMessage,
@@ -109,7 +114,10 @@ import {
     DiagnosticsReadyMessage,
     ClosePositionTransactionStimulatedMessage,
     OpenPositionTransactionStimulatedMessage,
-    OpenPositionTransactionPreparedMessage
+    OpenPositionTransactionPreparedMessage,
+    ClosePositionTransactionFoundMessage,
+    OpenPositionTransactionFoundMessage,
+    SwapTransactionFoundMessage
 } from "./types"
 
 export const configMap = {
@@ -914,6 +922,38 @@ export const configMap = {
         messageType: {
         } as ClosePositionJobAlreadyConfirmedMessage,
     },
+    // Close Position Processing Failed Unrecoverable
+    [WinstonLog.ClosePositionProcessingFailedUnrecoverable]: {
+        name: WinstonLog.ClosePositionProcessingFailedUnrecoverable,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionProcessingFailedUnrecoverableMessage,
+    },
+    // Close Position Processing Failed Permanent Failure
+    [WinstonLog.ClosePositionProcessingFailedPermanentFailure]: {
+        name: WinstonLog.ClosePositionProcessingFailedPermanentFailure,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionProcessingFailedPermanentFailureMessage,
+    },
+    // Close Position Processing Failed Retryable
+    [WinstonLog.ClosePositionProcessingFailedRetryable]: {
+        name: WinstonLog.ClosePositionProcessingFailedRetryable,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionProcessingFailedRetryableMessage,
+    },
+    // Close Position Processing Completed
+    [WinstonLog.ClosePositionProcessingCompleted]: {
+        name: WinstonLog.ClosePositionProcessingCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as ClosePositionProcessingCompletedMessage,
+    },
     // Open Position Processing Failed Unrecoverable
     [WinstonLog.OpenPositionProcessingFailedUnrecoverable]: {
         name: WinstonLog.OpenPositionProcessingFailedUnrecoverable,
@@ -962,6 +1002,14 @@ export const configMap = {
         messageType: {
         } as OpenPositionRequeueFailedMessage,
     },
+    // Close Position Requeue Failed
+    [WinstonLog.ClosePositionRequeueFailed]: {
+        name: WinstonLog.ClosePositionRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionRequeueFailedMessage,
+    },
     // Diagnostics Ready
     [WinstonLog.DiagnosticsReady]: {
         name: WinstonLog.DiagnosticsReady,
@@ -993,5 +1041,29 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionTransactionPreparedMessage,
+    },
+    // Close Position Transaction Found
+    [WinstonLog.ClosePositionTransactionFound]: {
+        name: WinstonLog.ClosePositionTransactionFound,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionTransactionFoundMessage,
+    },
+    // Open Position Transaction Found
+    [WinstonLog.OpenPositionTransactionFound]: {
+        name: WinstonLog.OpenPositionTransactionFound,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionTransactionFoundMessage,
+    },
+    // Swap Transaction Found
+    [WinstonLog.SwapTransactionFound]: {
+        name: WinstonLog.SwapTransactionFound,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as SwapTransactionFoundMessage,
     },
 }
