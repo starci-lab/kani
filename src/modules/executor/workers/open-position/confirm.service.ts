@@ -29,6 +29,9 @@ import {
     BalanceSnapshotsNotFoundException, 
 } from "@exceptions"
 import BN from "bn.js"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class ConfirmService {
@@ -136,6 +139,7 @@ export class ConfirmService {
                             quoteToken,
                             gasToken,
                             session,
+                            stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
                         }
                     )
 

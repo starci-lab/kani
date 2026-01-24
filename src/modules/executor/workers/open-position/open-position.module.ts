@@ -19,15 +19,21 @@ import {
 import {
     ExecuteService,
 } from "./execute.service"
+import {
+    ConfirmService,
+} from "./confirm.service"
 
-@Module({
-    providers: [
-        OpenPositionWorker,
-        PrepareService,
-        SendHeartbeatService,
-        OnCompletedService,
-        OnFailedService,
-        ExecuteService,
-    ],
-})
+@Module(
+    {
+        providers: [
+            OpenPositionWorker,
+            PrepareService,
+            SendHeartbeatService,
+            OnCompletedService,
+            OnFailedService,
+            ExecuteService,
+            ConfirmService,
+        ],
+    }
+)
 export class OpenPositionModule {}

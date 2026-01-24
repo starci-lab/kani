@@ -16,6 +16,9 @@ import {
 import {
     JobSchema 
 } from "./job.schema"
+import {
+    LiquidityPoolSchema 
+} from "./liquidity-pool.schema"
 
 @ObjectType({
     description: "Represents a bot assigned to an executor",
@@ -34,6 +37,18 @@ export class ActiveJobSchema extends AbstractSchema {
         required: true,
     })
         job: JobSchema | Types.ObjectId
+
+    @Field(() => ID,
+        {
+            description: "The liquidity pool id",
+            nullable: true,
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.LiquidityPool,
+        required: false,
+    })
+        liquidityPool: LiquidityPoolSchema | Types.ObjectId
 
     /**
      * When the snapshot values were recorded.

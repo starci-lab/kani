@@ -24,6 +24,9 @@ import {
     AddTransactionRecordParams,
     OpenPositionOrchestratorService 
 } from "@modules/blockchains"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class ExecuteService {
@@ -79,7 +82,7 @@ export class ExecuteService {
                 solanaTx: openPositionTransaction.solanaTx,
                 state,
                 txCheck: isRetry || (payload.isRetry ?? false),
-                stimulate: true,
+                stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
             }
         )
         const transactionRecord: AddTransactionRecordParams = {

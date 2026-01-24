@@ -300,6 +300,14 @@ export const envConfig = () => ({
                     "10s"),
             },
             operation: {
+                openPosition: {
+                    requeue: {
+                        interval: parseEnvMs("EXECUTOR_OPERATION_OPEN_POSITION_REQUEUE_INTERVAL",
+                            "10s"),
+                    },
+                    stimulate: parseEnvBoolean("EXECUTOR_OPERATION_OPEN_POSITION_STIMULATE",
+                        false),
+                },
                 reconcileBalance: {
                     interval: {
                         poll: parseEnvMs("EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL_POLL",
@@ -315,6 +323,8 @@ export const envConfig = () => ({
                         interval: parseEnvMs("EXECUTOR_OPERATION_REQUEUE_INTERVAL",
                             "10s"),
                     },
+                    stimulate: parseEnvBoolean("EXECUTOR_OPERATION_RECONCILE_BALANCE_STIMULATE",
+                        false),
                 },
                 
             },

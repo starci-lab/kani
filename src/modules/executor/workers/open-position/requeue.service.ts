@@ -4,6 +4,7 @@ import {
 } from "@nestjs/common"
 import {
     ActiveJobSchema,
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     DayjsService 
@@ -34,11 +35,14 @@ import {
     BalanceService 
 } from "@modules/blockchains"
 import {
+    OpenPositionOrchestratorService 
+} from "@modules/blockchains/dexes"
+import {
     BotsLoaderService 
 } from "../../loaders"
 import {
     LockAuthorityService 
-} from "../../runtimes/core"
+} from "../../bussiness"
 
 @Injectable()
 export class RequeueService implements OnApplicationBootstrap {
@@ -51,6 +55,8 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly balanceService: BalanceService,
         private readonly lockAuthorityService: LockAuthorityService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
     ) {
     }
 
@@ -65,7 +71,7 @@ export class RequeueService implements OnApplicationBootstrap {
             /**
              * Get the ttl for the requeue interval
              */
-            const ttl = envConfig().executor.runtime.operation.requeue.interval
+            const ttl = envConfig().executor.runtime.operation.openPosition.requeue.interval
             /**
              * Get the bots that have an active job and the queuedAt is older than the ttl
              */
@@ -90,6 +96,14 @@ export class RequeueService implements OnApplicationBootstrap {
              */
             const promises = bots.map(
                 async (bot) => {
+                    const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+                        id: {
+                            $eq: bot.activeJob?.liquidityPool?.toString() ?? "",
+                        }
+                    })
+                    if (!liquidityPool) {
+                        return
+                    }
                     const bullmqJob = await this.openPositionQueue.getJob(bot.id)
                     if (bullmqJob) {
                     // we can add additional logic here
@@ -102,26 +116,29 @@ export class RequeueService implements OnApplicationBootstrap {
                     )
                     if (!acquired) return
                     try {
-                        const bullmqJob = await this.balanceService.enqueue(
+                        const bullmqJob = await this.openPositionOrchestratorService.enqueue(
                             {
                                 bot,
+                                liquidityPool,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 isRetry: true,
                             }
                         )
                         this.winstonService.log(
-                            WinstonLog.ReconcileBalanceEnqueued,
+                            WinstonLog.OpenPositionEnqueued,
                             {
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
                                 bullmqJobId: bullmqJob?.id,
                             }
                         )
                     } catch (error) {
                         this.winstonService.log(
-                            WinstonLog.ReconcileBalanceEnqueueFailed,
+                            WinstonLog.OpenPositionEnqueueFailed,
                             {
                                 botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
                                 error: error.message,
                             }
                         )
@@ -136,7 +153,7 @@ export class RequeueService implements OnApplicationBootstrap {
             await this.asyncService.allIgnoreError(promises)
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceRequeueFailed,
+                WinstonLog.OpenPositionRequeueFailed,
                 {
                     error: error.message,
                 }
@@ -144,7 +161,7 @@ export class RequeueService implements OnApplicationBootstrap {
         }
     }
 
-    @Interval(envConfig().executor.runtime.operation.requeue.interval)
+    @Interval(envConfig().executor.runtime.operation.openPosition.requeue.interval)
     handleInterval() {
         this.process()
     }

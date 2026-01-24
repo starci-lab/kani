@@ -289,6 +289,7 @@ export class OpenPositionOrchestratorService {
                                 activeJob: {
                                     job: job.id,
                                     queuedAt: this.dayjsService.now().toDate(),
+                                    liquidityPool: liquidityPool.id,
                                 },
                             } 
                         },

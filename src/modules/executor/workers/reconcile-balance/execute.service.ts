@@ -23,6 +23,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class ExecuteService {
@@ -79,6 +82,7 @@ export class ExecuteService {
                     solanaTx: swapTransaction.solanaTx,
                     // only check the transaction if it is a retry
                     txCheck: isRetry || (payload.isRetry ?? false),
+                    stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                 }
             )
             transactionRecords.push(
