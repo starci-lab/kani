@@ -26,6 +26,8 @@ import {
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,
+    LiquidityPoolClmmStateNotFoundException,
+    PositionClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     u128, u64, BeetArgsStruct 
@@ -58,6 +60,7 @@ export class ClosePositionInstructionService {
         bot,
         state,
     }: CreateCloseInstructionsParams): Promise<Array<Instruction>> {
+        const _state = state as ClmmLiquidityPoolState
         const instructions: Array<Instruction> = []
         const endInstructions: Array<Instruction> = []
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -65,23 +68,34 @@ export class ClosePositionInstructionService {
                 botId: bot.id,
             })
         }
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const { ataAddress, nftMintAddress } = bot.activePosition.associatedPosition.metadata as OrcaPositionMetadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenA.toString(),
+                $eq: _state.static.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenB.toString(),
+                $eq: _state.static.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
-                liquidityPoolId: state.static.displayId,
+                liquidityPoolId: _state.static.displayId,
             })
         }
-        const { programAddress, tokenVault0, tokenVault1 } = state.static
+        const { programAddress, tokenVault0, tokenVault1 } = _state.static
             .metadata as RaydiumLiquidityPoolMetadata 
         const { pda: positionPda } = await this.positionService.getPda({
             nftMintAddress: address(nftMintAddress),
@@ -119,21 +133,21 @@ export class ClosePositionInstructionService {
         }
         const { pda: tickArrayLowerPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.associatedPosition.tickLower ?? 0,
-            tickSpacing: state.static.tickSpacing,
+            tickIndex: new BN(bot.activePosition.associatedPosition.clmmState.tickLower),
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
             bot,
             pdaOnly: true,
         })
         const { pda: tickArrayUpperPda } = await this.tickArrayService.getPda({
             poolStateAddress: address(state.static.poolAddress),
-            tickIndex: bot.activePosition.associatedPosition.tickUpper ?? 0,
-            tickSpacing: state.static.tickSpacing,
+            tickIndex: new BN(bot.activePosition.associatedPosition.clmmState.tickUpper),
+            tickSpacing: new BN(_state.static.clmmState.tickSpacing),
             programAddress: address(programAddress),
             pdaOnly: true,
         })
         const [decreaseLiquidityArgs] = DecreaseLiquidityArgs.serialize({
-            liquidityAmount: bot.activePosition.associatedPosition.liquidity?.toString(),
+            liquidityAmount: new BN(bot.activePosition.associatedPosition.clmmState.liquidity).toString(),
             tokenMinA: new BN(0).toString(),
             tokenMinB: new BN(0).toString(),
         })
