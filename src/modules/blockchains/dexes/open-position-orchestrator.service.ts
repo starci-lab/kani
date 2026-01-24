@@ -268,54 +268,56 @@ export class OpenPositionOrchestratorService {
         const session = await this.connection.startSession()
         return await session.withTransaction(
             async () => {
+                if (!isRetry) {
                 /**
                 * Persist job record.
                 */
-                const [jobRaw] = await this.connection.model<JobSchema>(
-                    JobSchema.name
-                ).create(
-                    [
-                        {
-                            _id: jobId,
-                            liquidityPool: liquidityPool.id,
-                            bot: bot.id,
-                            executor: envConfig().executor.id,
-                            type: JobType.OpenPosition,
-                            status: JobStatus.Pending,
-                        }
-                    ]
-                )
-                const job = jobRaw.toJSON()
-                /**
+                    const [jobRaw] = await this.connection.model<JobSchema>(
+                        JobSchema.name
+                    ).create(
+                        [
+                            {
+                                _id: jobId,
+                                liquidityPool: liquidityPool.id,
+                                bot: bot.id,
+                                executor: envConfig().executor.id,
+                                type: JobType.OpenPosition,
+                                status: JobStatus.Pending,
+                            }
+                        ]
+                    )
+                    const job = jobRaw.toJSON()
+                    /**
                  * Update the balance snapshots snapshotAt
                  */
-                /**
+                    /**
                     * Update the bot with the active job id.
                     */
-                await this.connection.model<BotSchema>(BotSchema.name)
-                    .updateOne(
-                        {
-                            _id: bot.id 
-                        },
-                        {
-                            $set: {
-                                activeJob: {
-                                    job: job.id,
-                                    queuedAt: this.dayjsService.now().toDate(),
-                                    liquidityPool: liquidityPool.id,
-                                    jobType: JobType.OpenPosition,
-                                },
-                            } 
-                        },
-                        {
-                            session 
-                        }
-                    )
+                    await this.connection.model<BotSchema>(BotSchema.name)
+                        .updateOne(
+                            {
+                                _id: bot.id 
+                            },
+                            {
+                                $set: {
+                                    activeJob: {
+                                        job: job.id,
+                                        queuedAt: this.dayjsService.now().toDate(),
+                                        liquidityPool: liquidityPool.id,
+                                        jobType: JobType.OpenPosition,
+                                    },
+                                } 
+                            },
+                            {
+                                session 
+                            }
+                        )
+                }
                 /**
                     * Enqueue open-position job for async processing.
                     */
                 const payload: OpenPositionPayload = {
-                    jobId: job.id,
+                    jobId,
                     liquidityPoolId: liquidityPool.displayId,
                     botId: bot.id,
                     isRetry,

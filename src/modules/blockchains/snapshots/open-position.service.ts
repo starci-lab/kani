@@ -118,7 +118,7 @@ export class OpenPositionSnapshotService {
             }
         )
         const position = positionRaw.toJSON<PositionSchema>()
-        this.connection.model<BotSchema>(BotSchema.name).updateOne(
+        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             {
                 _id: bot.id
             },

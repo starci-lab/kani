@@ -170,6 +170,14 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHash,
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 txHash,
                                 solanaTx: signedTransaction,
@@ -207,6 +215,14 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash: signedTransaction.txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash: signedTransaction.txHash,
                         solanaTx: signedTransaction.signedTransaction,

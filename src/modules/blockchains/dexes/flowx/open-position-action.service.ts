@@ -246,6 +246,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash,
                         signatureWithBytes,
@@ -282,7 +290,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 const { positionId } = this.parseIncreaseLiquidityEvent({
                     state: _state,
                     bot,
@@ -325,6 +333,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                             type: ErrorTransactionType.OpenPosition,
                         })
                     }
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     const { positionId } = this.parseIncreaseLiquidityEvent({
                         state: _state,
                         bot,

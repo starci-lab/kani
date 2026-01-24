@@ -257,7 +257,6 @@ export class OpenPositionWorker extends WorkerHost {
                 }
             })())
         if (error) {
-            console.error(error)
             await this.clearService.process(
                 {
                     botId: payload.botId,

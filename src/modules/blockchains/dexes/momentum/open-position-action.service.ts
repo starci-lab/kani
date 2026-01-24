@@ -221,6 +221,14 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHash,
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 txHash,
                                 signatureWithBytes,
@@ -251,6 +259,14 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash,
                         signatureWithBytes,
@@ -289,7 +305,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 const { positionId } = this.parseAddLiquidityEvent({
                     events: txBlock?.events || [],
                     bot,

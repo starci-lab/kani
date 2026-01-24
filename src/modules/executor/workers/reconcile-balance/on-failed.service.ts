@@ -6,8 +6,6 @@ import {
 } from "bullmq"
 import {
     InjectPrimaryMongoose,
-    JobSchema,
-    JobStatus,
 } from "@modules/databases"
 import {
     DayjsService,
@@ -64,17 +62,6 @@ export class OnFailedService {
                     error: error.message,
                 }
             )
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id,
-                },
-                {
-                    $set: {
-                        status: JobStatus.Failed,
-                        processedAt: this.dayjsService.now().toDate(),
-                    },
-                }
-            )
         } else if (isPermanentFailure) {
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure,
@@ -83,21 +70,6 @@ export class OnFailedService {
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
                     error: error.message,
-                }
-            )
-
-            await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                {
-                    _id: job.id,
-                },
-                {
-                    $set: {
-                        status: JobStatus.Failed,
-                        processedAt: this.dayjsService.now().toDate(),
-                    },
-                    $inc: {
-                        retryCount: 1,
-                    },
                 }
             )
         } else {

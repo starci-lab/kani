@@ -857,3 +857,12 @@ export interface ClosePositionTransactionStimulatedMessage {
     txHash: string
     liquidityPoolId: LiquidityPoolId
 }
+
+/**
+ * Open Position Transaction Prepared Message
+ */
+export interface OpenPositionTransactionPreparedMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
+}

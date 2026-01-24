@@ -28,6 +28,9 @@ import {
 import {
     ConfigurableModuleClass,
 } from "./open-position.module-definition"
+import {
+    RequeueService,
+} from "./requeue.service"
 
 @Module(
     {
@@ -40,6 +43,7 @@ import {
             ExecuteService,
             ConfirmService,
             ClearService,
+            RequeueService,
         ],
     }
 )

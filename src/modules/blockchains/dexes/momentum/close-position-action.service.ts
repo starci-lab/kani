@@ -153,7 +153,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 return
             }
             throw new TransactionNotExecutedException({

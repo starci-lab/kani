@@ -260,6 +260,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHash,
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 txHash,
                                 signatureWithBytes,
@@ -288,6 +296,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash,
                         signatureWithBytes,
@@ -326,7 +342,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 const { positionId } = this.parseMintEvents({
                     bot,
                     txHash,
@@ -369,6 +385,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                             type: ErrorTransactionType.OpenPosition,
                         })
                     }
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     const { positionId } = this.parseMintEvents({
                         bot,
                         txHash,

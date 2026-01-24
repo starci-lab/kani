@@ -108,7 +108,8 @@ import {
     OpenPositionProcessingStartedMessage,
     DiagnosticsReadyMessage,
     ClosePositionTransactionStimulatedMessage,
-    OpenPositionTransactionStimulatedMessage
+    OpenPositionTransactionStimulatedMessage,
+    OpenPositionTransactionPreparedMessage
 } from "./types"
 
 export const configMap = {
@@ -984,5 +985,13 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ClosePositionTransactionStimulatedMessage,
+    },
+    // Open Position Transaction Prepared
+    [WinstonLog.OpenPositionTransactionPrepared]: {
+        name: WinstonLog.OpenPositionTransactionPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionTransactionPreparedMessage,
     },
 }

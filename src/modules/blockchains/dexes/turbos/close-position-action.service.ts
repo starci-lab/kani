@@ -139,7 +139,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 return
             }
             throw new TransactionNotExecutedException({

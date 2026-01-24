@@ -304,6 +304,14 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         }
                     )
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash,
                         signatureWithBytes,
@@ -340,7 +348,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 const { positionId } = this.parseAddLiquidityEvent({
                     state: _state,
                     bot,
@@ -383,6 +391,14 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             type: ErrorTransactionType.OpenPosition,
                         })
                     }
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     const { positionId } = this.parseAddLiquidityEvent({
                         state: _state,
                         bot,

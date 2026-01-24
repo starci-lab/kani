@@ -221,6 +221,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                                 nftMintAddress: mintKeyPair.address.toString(),
                                 ataAddress: ataAddress.toString(),
                             }
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHash,
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 txHash,
                                 feeAmountA,
@@ -261,6 +269,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash: signedTransaction.txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash: signedTransaction.txHash,
                         solanaTx: signedTransaction.signedTransaction,

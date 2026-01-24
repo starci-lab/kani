@@ -177,7 +177,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     },
                 })
             )
-            if (txBlock !== null) {
+            if (txBlock !== null && !txBlock.errors) {
                 return
             }
             throw new TransactionNotExecutedException(

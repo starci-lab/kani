@@ -108,4 +108,5 @@ export enum WinstonLog {
     DiagnosticsReady = "Diagnostics.Ready",
     OpenPositionTransactionStimulated = "Open.Position.Transaction.Stimulated",
     ClosePositionTransactionStimulated = "Close.Position.Transaction.Stimulated",
+    OpenPositionTransactionPrepared = "Open.Position.Transaction.Prepared",
 }
