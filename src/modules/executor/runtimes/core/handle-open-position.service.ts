@@ -22,6 +22,12 @@ import {
     ClmmPositionOpenRequestedEventPayload,
     DlmmPositionOpenRequestedEventPayload 
 } from "@modules/event"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class HandleOpenPositionService {
@@ -43,6 +49,7 @@ export class HandleOpenPositionService {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -63,6 +70,16 @@ export class HandleOpenPositionService {
         // we do nothing if the bot has an active position
         if (bot.activePosition) return
         if (bot.activeJob) {
+            return
+        }
+        if (!bot.balanceSnapshots) {
+            return
+        }
+        const diffMs = this.dayjsService.now().diff(
+            this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
+            "millisecond"
+        )
+        if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
             return
         }
         const jobId = new Types.ObjectId().toString()

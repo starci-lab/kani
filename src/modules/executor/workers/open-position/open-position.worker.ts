@@ -37,6 +37,7 @@ import {
     BotNotFoundException,
     JobNotFoundException,
     LiquidityPoolNotFoundException,
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import {
     Job,
@@ -81,6 +82,15 @@ import {
 import {
     ProcessParams 
 } from "./types"
+import {
+    ExecuteService 
+} from "./execute.service"
+import {
+    TokenType 
+} from "@modules/typedefs"
+import {
+    ConfirmService 
+} from "./confirm.service"
 
 @Worker(
     bullData[BullQueueName.OpenPosition].name,
@@ -101,8 +111,10 @@ export class OpenPositionWorker extends WorkerHost {
         private readonly sendHeartbeatService: SendHeartbeatService,
         private readonly onCompletedService: OnCompletedService,
         private readonly onFailedService: OnFailedService,
+        private readonly confirmService: ConfirmService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly executeService: ExecuteService,
     ) {
         super()
     }
@@ -192,6 +204,42 @@ export class OpenPositionWorker extends WorkerHost {
                 ).toJSON()
             )
         }
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken.toString()
+            }
+        })
+        if (!targetToken) {
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken.toString()
+            }
+        })
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            })
+        }
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: TokenType.Native
+            },
+            chainId: {
+                $eq: bot.chainId
+            }
+        })
+        if (!gasToken) {
+            throw new TokenNotFoundException({
+                conditions: {
+                    type: TokenType.Native,
+                    chainId: bot.chainId
+                }
+            })
+        }
         const state = await this.liquidityPoolStateService.getState(liquidityPool)
         // Record initial progress so retry guards can distinguish "started" vs "never started".
         await bullmqJob.updateProgress(1)
@@ -209,15 +257,40 @@ export class OpenPositionWorker extends WorkerHost {
             liquidityPool,
             // Liquidity pool state.
             state,
+            // Target token.
+            targetToken,
+            // Quote token.
+            quoteToken,
+            // Gas token.
+            gasToken,
         }
         // Execute the open-position pipeline; failures are delegated to the FAILED phase.
         try {
             // PREPARE phase
             // Prepare open-position transaction + persist Prepared status/metadata.
             const { result: prepareResult } = await this.prepareService.process(baseParams)
-            console.log(prepareResult)
             // HEARTBEAT phase (before any side-effecting continuation)
-            this.sendHeartbeatService.process(baseParams)
+            await this.sendHeartbeatService.process(baseParams)
+            // EXECUTE phase
+            // Execute open-position transaction + persist Executed status/metadata.
+            const { result: executeResult } = await this.executeService.process(
+                {
+                    ...baseParams,
+                    prepareResult,
+                }
+            )
+            // HEARTBEAT phase (before post-transaction persistence)
+            await this.sendHeartbeatService.process(baseParams)
+            // CONFIRM phase
+            // Confirm open-position transaction + persist Confirmed status/metadata.
+            await this.confirmService.process(
+                {
+                    ...baseParams,
+                    executeResult,
+                }
+            )
+            // HEARTBEAT phase (before finalization + unlock)
+            await this.sendHeartbeatService.process(baseParams)
             // ON COMPLETED phase
             // Mark job completed, clear bot activeJob, release lock authority.
             this.onCompletedService.process(baseParams)

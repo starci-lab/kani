@@ -1,12 +1,13 @@
 import {
-    AddTransactionRecordParams, LiquidityPoolState, OpenPositionPayload, PrepareOpenPositionResult 
+    AddTransactionRecordParams, ExecuteOpenPositionResult, LiquidityPoolState, OpenPositionPayload, PrepareOpenPositionResult
 } from "@modules/blockchains"
 import {
-    BotSchema, JobSchema, 
-    LiquidityPoolSchema
+    BotSchema, JobSchema,
+    LiquidityPoolSchema,
+    TokenSchema
 } from "@modules/databases"
 import {
-    Job 
+    Job
 } from "bullmq"
 
 /**
@@ -17,7 +18,8 @@ import {
  */
 export interface OpenPositionJobMetadata {
     openPositionTransaction: PrepareOpenPositionResult
-    transactionRecords?: AddTransactionRecordParams
+    transactionRecord?: AddTransactionRecordParams
+    executeResult?: ExecuteOpenPositionResult
 }
 
 export interface ProcessParams {
@@ -41,6 +43,15 @@ export interface ProcessParams {
 
     /** Liquidity pool state. */
     state: LiquidityPoolState
+
+    /** Target token. */
+    targetToken: TokenSchema
+
+    /** Quote token. */
+    quoteToken: TokenSchema
+
+    /** Gas token. */
+    gasToken: TokenSchema
 }
 
 export interface ProcessResult {
@@ -60,3 +71,21 @@ export type OnCompletedParams = ProcessParams
 
 /** Parameters for sendHeartbeat() (same shape as ProcessParams). */
 export type SendHeartbeatParams = ProcessParams
+
+export interface ExecuteParams extends ProcessParams {
+    /** Output of prepare() (prepared open-position transaction + optional metadata). */
+    prepareResult: OpenPositionJobMetadata
+}
+
+export interface ExecuteResult {
+    result: OpenPositionJobMetadata
+}
+
+export interface ConfirmParams extends ProcessParams {
+    /** Output of execute() (includes transactionRecords for snapshotting). */
+    executeResult: OpenPositionJobMetadata
+}
+
+export interface ConfirmResult {
+    result: OpenPositionJobMetadata
+}

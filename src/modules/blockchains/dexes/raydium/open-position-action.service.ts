@@ -31,6 +31,7 @@ import {
     ActivePositionNotFoundException,
     PositionClmmStateNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
+    TransactionValidationFailedException,
 } from "@modules/exceptions"
 import {
     TickMathService 
@@ -52,6 +53,7 @@ import {
     signature,
     fetchEncodedAccount,
     partiallySignTransaction,
+    getBase64EncodedWireTransaction,
 } from "@solana/kit"
 import BN from "bn.js"
 import { 
@@ -277,7 +279,8 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     }
 
     async execute({
-        isRetry,
+        txCheck,
+        stimulate,
         txHash,
         solanaTx,
         positionId,
@@ -290,7 +293,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: state.static.displayId,
             })
         }
-        if (isRetry) {
+        if (txCheck && !stimulate) {
             return await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
@@ -324,7 +327,33 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         }
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
-            callback: async ({ rpc, rpcSubscriptions }) => {    
+            callback: async ({ rpc, rpcSubscriptions }) => { 
+                if (stimulate) {
+                    const transaction = await rpc.simulateTransaction(
+                        getBase64EncodedWireTransaction(solanaTx),
+                        {
+                            encoding: "base64",
+                            commitment: "confirmed",
+                        }).send()
+                    if (transaction.value.err) {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash,
+                            type: ErrorTransactionType.OpenPosition,
+                        })
+                    }
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: state.static.displayId,
+                        }
+                    )
+                    return {
+                        positionId: positionId.toString(),
+                    }
+                }
                 const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                     rpc,
                     rpcSubscriptions,

@@ -267,11 +267,7 @@ export class SolanaBalanceService implements IBalanceService {
             stimulate,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        if (txCheck) {
-            // we don't need to check the transaction if we are stimulating
-            if (stimulate) {
-                return
-            }
+        if (txCheck && !stimulate) {
             const transaction = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {

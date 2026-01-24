@@ -37,13 +37,12 @@ export interface PrepareOpenPositionResult {
 export interface ExecuteOpenPositionParams {
     bot: BotSchema;
     state: LiquidityPoolState;
-    isRetry: boolean;
+    txCheck: boolean;
     signatureWithBytes?: SignatureWithBytes
     solanaTx?: SolanaTx;
     txHash: string;
-    feeAmountA: BN;
-    feeAmountB: BN;
     positionId?: string;
+    stimulate?: boolean;
 }
 
 export interface ExecuteOpenPositionResult {

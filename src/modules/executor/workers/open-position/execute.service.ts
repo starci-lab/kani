@@ -4,11 +4,8 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
-    ReconcileBalanceJobMetadata,
+    OpenPositionJobMetadata,
 } from "./types"
-import {
-    BalanceService
-} from "@modules/blockchains"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
@@ -23,11 +20,15 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    AddTransactionRecordParams,
+    OpenPositionOrchestratorService 
+} from "@modules/blockchains"
 
 @Injectable()
 export class ExecuteService {
     constructor(
-        private readonly balanceService: BalanceService,
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
@@ -48,6 +49,8 @@ export class ExecuteService {
             bullmqJob,
             prepareResult,
             payload,
+            state,
+            liquidityPool,
         }: ExecuteParams
     ): Promise<ExecuteResult> {
         const isRetry = bullmqJob.attemptsMade > 0
@@ -56,39 +59,37 @@ export class ExecuteService {
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceJobAlreadyExecuted,
+                WinstonLog.OpenPositionJobAlreadyExecuted,
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
             return {
-                result: job.metadata as ReconcileBalanceJobMetadata
+                result: job.metadata as OpenPositionJobMetadata
             }
         }
-
-        const transactionRecords: ReconcileBalanceJobMetadata["transactionRecords"] = []
-        const { swapTransactions } = prepareResult
-
-        for (const swapTransaction of swapTransactions) {
-            await this.balanceService.executeSwapTransaction(
-                {
-                    bot,
-                    txHash: swapTransaction.txHash,
-                    signatureWithBytes: swapTransaction.signatureWithBytes,
-                    // only check the transaction if it is a retry
-                    txCheck: isRetry || (payload.isRetry ?? false),
-                }
-            )
-            transactionRecords.push(
-                {
-                    bot,
-                    txHash: swapTransaction.txHash,
-                    chainId: bot.chainId,
-                    type: TransactionType.Swap,
-                }
-            )
+        const { openPositionTransaction } = prepareResult
+        const executeResult = await this.openPositionOrchestratorService.execute(
+            {
+                bot,
+                txHash: openPositionTransaction.txHash,
+                signatureWithBytes: openPositionTransaction.signatureWithBytes,
+                solanaTx: openPositionTransaction.solanaTx,
+                state,
+                txCheck: isRetry || (payload.isRetry ?? false),
+                stimulate: true,
+            }
+        )
+        const transactionRecord: AddTransactionRecordParams = {
+            bot,
+            txHash: openPositionTransaction.txHash,
+            chainId: bot.chainId,
+            type: TransactionType.OpenPosition,
+            isStimulated: true,
         }
+
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -98,13 +99,16 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
+                        "metadata.executeResult": executeResult,
+                        "metadata.transactionRecord": transactionRecord,
                     },
                 }
             )
         return {
             result: {
                 ...prepareResult,
-                transactionRecords,
+                transactionRecord,
+                executeResult,
             }
         }
     }

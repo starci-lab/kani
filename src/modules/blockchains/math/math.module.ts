@@ -20,7 +20,7 @@ import {
     QuoteRatioService 
 } from "./quote-ratio.service"
 import {
-    PositionValueMathService 
+    PositionValueService 
 } from "./position-value.service"
 import {
     PriceService 
@@ -32,7 +32,7 @@ import {
         FeeService,
         SwapMathService,
         QuoteRatioService,
-        PositionValueMathService,
+        PositionValueService,
         PriceService,
     ],
     exports: [
@@ -41,7 +41,7 @@ import {
         FeeService,
         SwapMathService,
         QuoteRatioService,
-        PositionValueMathService,
+        PositionValueService,
         PriceService,
     ],
 })

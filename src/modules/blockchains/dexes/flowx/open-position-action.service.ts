@@ -262,12 +262,13 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
     async execute({
         bot,
         state,
-        isRetry,
+        txCheck,
+        stimulate,
         txHash,
         signatureWithBytes,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (isRetry) {
+        if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
                     accessType: RpcAccessType.Http,
@@ -310,6 +311,38 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
+                if (stimulate) {
+                    const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+                    const devInspect = await suiClient.devInspectTransactionBlock({
+                        transactionBlock,
+                        sender: bot.accountAddress,
+                    })
+                    if (devInspect.effects.status.status !== "success") {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            liquidityPoolId: _state.static.displayId,
+                            type: ErrorTransactionType.OpenPosition,
+                        })
+                    }
+                    const { positionId } = this.parseIncreaseLiquidityEvent({
+                        state: _state,
+                        bot,
+                        txHash,
+                        events: devInspect.events || [],
+                    })
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionStimulated,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
+                    return {
+                        positionId,
+                    }
+                }
                 const { digest, events } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,

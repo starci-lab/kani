@@ -76,6 +76,7 @@ export class ExecuteService {
                     bot,
                     txHash: swapTransaction.txHash,
                     signatureWithBytes: swapTransaction.signatureWithBytes,
+                    solanaTx: swapTransaction.solanaTx,
                     // only check the transaction if it is a retry
                     txCheck: isRetry || (payload.isRetry ?? false),
                 }

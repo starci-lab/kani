@@ -1,16 +1,25 @@
-import { Injectable } from "@nestjs/common"
-import { ClientSession, Connection } from "mongoose"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    ClientSession, Connection 
+} from "mongoose"
 import { 
     BotSchema, 
     InjectPrimaryMongoose, 
-    PositionSchema 
+    LiquidityPoolSchema, 
+    PositionFeesSchema, 
+    PositionSchema, 
+    PositionSnapshotsSchema,
+    TokenSchema
 } from "@modules/databases"
 import BN from "bn.js"
-import { createObjectId } from "@modules/utils"
-import { ChainId } from "@modules/typedefs"
-import { DayjsService } from "@modules/mixin"
-import { LiquidityPoolId } from "@modules/databases"
-import { Decimal } from "decimal.js"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    PositionValueService 
+} from "../math"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -18,86 +27,134 @@ export class OpenPositionSnapshotService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
+        private readonly positionValueService: PositionValueService,
     ) {}
 
     async addOpenPositionRecord(
         {
-            snapshotTargetBalanceAmountBeforeOpen,
-            snapshotQuoteBalanceAmountBeforeOpen,
-            snapshotGasBalanceAmountBeforeOpen,
-            liquidity,
-            amountA,
-            amountB,
-            minBinId,
-            maxBinId,
+            before,
+            after,
+            clmmParams,
+            dlmmParams,
             bot,
-            targetIsA,
-            tickLower,
-            tickUpper,
-            chainId,
-            liquidityPoolId,
+            liquidityPool,
             positionId,
             openTxHash,
             metadata,
             session,
             feeAmountTarget,
             feeAmountQuote,
-            positionValueAtOpen,
+            targetToken,
+            quoteToken,
+            gasToken,
+            stimulate,
         }: AddOpenPositionRecordParams
     ) {
-        await this.connection.model<PositionSchema>(
-            PositionSchema.name
-        ).create([{
-            liquidity: liquidity?.toString(),
-            amountA: amountA?.toString(),
-            amountB: amountB?.toString(),
-            minBinId,
-            maxBinId,
-            snapshotGasBalanceAmountBeforeOpen: snapshotGasBalanceAmountBeforeOpen?.toString(),
-            snapshotQuoteBalanceAmountBeforeOpen: snapshotQuoteBalanceAmountBeforeOpen?.toString(),
-            snapshotTargetBalanceAmountBeforeOpen: snapshotTargetBalanceAmountBeforeOpen?.toString(),
-            bot: bot.id,
-            chainId,
-            targetIsA,
-            tickLower,
-            tickUpper,
-            liquidityPool: createObjectId(liquidityPoolId),
-            positionId,
-            positionOpenedAt: this.dayjsService.now().toDate(),
-            openTxHash,
-            isActive: true,
-            metadata,
+        const now = this.dayjsService.now().toDate()
+        // Build CLMM state if applicable
+        const clmmState = clmmParams
+            ? {
+                liquidity: clmmParams.liquidity.toString(),
+                tickLower: clmmParams.tickLower.toNumber(),
+                tickUpper: clmmParams.tickUpper.toNumber(),
+            }
+            : undefined
+        // Build DLMM state if applicable
+        const dlmmState = dlmmParams
+            ? {
+                minBinId: dlmmParams.minBinId.toNumber(),
+                maxBinId: dlmmParams.maxBinId.toNumber(),
+            }
+            : undefined
+        // Build open snapshot using before snapshot (snapshot before opening position)
+        const { positionValue, positionValueInUsd } = await this.positionValueService.calculatePositionValue({
+            before,
+            after: stimulate ? {
+                targetBalanceAmount: new BN(0),
+                quoteBalanceAmount: new BN(0),
+                gasBalanceAmount: new BN(0),
+            } : after,
+            targetToken,
+            quoteToken,
+            gasToken,
+        })
+        const openSnapshot: Partial<PositionSnapshotsSchema> = {
+            targetBalanceAmount: before.targetBalanceAmount.toString(),
+            quoteBalanceAmount: before.quoteBalanceAmount.toString(),
+            gasBalanceAmount: before.gasBalanceAmount.toString(),
+            positionValue: positionValue.toNumber(),
+            positionValueInUsd: positionValueInUsd.toNumber(),
+            snapshotAt: now,
+        }
+
+        // Build fees object (required field)
+        const fees: Partial<PositionFeesSchema> = {
             feeAmountTarget: feeAmountTarget.toString(),
             feeAmountQuote: feeAmountQuote.toString(),
-            positionValueAtOpen: positionValueAtOpen?.toString(),
-        }], {
-            session,
-        })
+        }
+
+        const targetIsA = liquidityPool.tokenA.toString() === targetToken.id.toString()
+        await this.connection.model<PositionSchema>(
+            PositionSchema.name
+        ).create(
+            [
+                {
+                    bot: bot.id,
+                    chainId: bot.chainId,
+                    targetIsA,
+                    liquidityPool: liquidityPool.id,
+                    positionId,
+                    openTxHash,
+                    isActive: true,
+                    metadata,
+                    clmmState,
+                    dlmmState,
+                    openSnapshot,
+                    fees,
+                }
+            ],
+            {
+                session,
+            }
+        )
     }
 }
 
 export interface AddOpenPositionRecordParams {
-    // clmm
-    tickUpper?: number
-    tickLower?: number
-    liquidity?: BN
-    // dlmm
-    amountA?: BN
-    amountB?: BN
-    minBinId?: number
-    maxBinId?: number
-    snapshotTargetBalanceAmountBeforeOpen: BN
-    snapshotQuoteBalanceAmountBeforeOpen: BN
-    snapshotGasBalanceAmountBeforeOpen: BN
+    // Protocol-specific params
+    clmmParams?: ClmmSnapshotParams
+    dlmmParams?: DlmmSnapshotParams
+    // Snapshot fields
+    before: BalanceSnapshotParams
+    after: BalanceSnapshotParams
+    // Common fields
     bot: BotSchema
-    chainId: ChainId
-    liquidityPoolId: LiquidityPoolId
-    targetIsA: boolean
+    liquidityPool: LiquidityPoolSchema
     positionId: string
     openTxHash: string
     metadata?: unknown
     feeAmountTarget: BN
     feeAmountQuote: BN
     session?: ClientSession
-    positionValueAtOpen: Decimal
+    targetToken: TokenSchema
+    quoteToken: TokenSchema
+    gasToken: TokenSchema
+    stimulate?: boolean
+}
+
+export interface BalanceSnapshotParams {
+    targetBalanceAmount: BN
+    quoteBalanceAmount: BN
+    gasBalanceAmount: BN
+}
+
+export interface ClmmSnapshotParams {
+    liquidity: BN
+    tickLower: BN
+    tickUpper: BN
+}
+
+export interface DlmmSnapshotParams {
+    minBinId: BN
+    maxBinId: BN
 }

@@ -16,6 +16,9 @@ import {
 import {
     OpenPositionWorker 
 } from "./open-position.worker"
+import {
+    ExecuteService,
+} from "./execute.service"
 
 @Module({
     providers: [
@@ -24,6 +27,7 @@ import {
         SendHeartbeatService,
         OnCompletedService,
         OnFailedService,
+        ExecuteService,
     ],
 })
 export class OpenPositionModule {}

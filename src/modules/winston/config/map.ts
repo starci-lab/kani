@@ -105,7 +105,10 @@ import {
     OpenPositionProcessingFailedRetryableMessage,
     OpenPositionProcessingCompletedMessage,
     OpenPositionRequeueFailedMessage,
-    OpenPositionProcessingStartedMessage
+    OpenPositionProcessingStartedMessage,
+    DiagnosticsReadyMessage,
+    ClosePositionTransactionStimulatedMessage,
+    OpenPositionTransactionStimulatedMessage
 } from "./types"
 
 export const configMap = {
@@ -761,7 +764,7 @@ export const configMap = {
     // Price Diagnostic Success
     [WinstonLog.PriceDiagnosticSuccess]: {
         name: WinstonLog.PriceDiagnosticSuccess,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as PriceDiagnosticSuccessMessage,
@@ -809,7 +812,7 @@ export const configMap = {
     // Dynamic Liquidity Pool Info Diagnostic Success
     [WinstonLog.DynamicLiquidityPoolInfoDiagnosticSuccess]: {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticSuccess,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticSuccessMessage,
@@ -957,5 +960,29 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionRequeueFailedMessage,
+    },
+    // Diagnostics Ready
+    [WinstonLog.DiagnosticsReady]: {
+        name: WinstonLog.DiagnosticsReady,
+        level: WinstonLevel.Info,
+        loki: false,
+        messageType: {
+        } as DiagnosticsReadyMessage,
+    },
+    // Open Position Transaction Stimulated
+    [WinstonLog.OpenPositionTransactionStimulated]: {
+        name: WinstonLog.OpenPositionTransactionStimulated,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionTransactionStimulatedMessage,
+    },
+    // Close Position Transaction Stimulated
+    [WinstonLog.ClosePositionTransactionStimulated]: {
+        name: WinstonLog.ClosePositionTransactionStimulated,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionTransactionStimulatedMessage,
     },
 }

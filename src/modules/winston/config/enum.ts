@@ -105,4 +105,7 @@ export enum WinstonLog {
     OpenPositionProcessingCompleted = "Open.Position.Processing.Completed",
     OpenPositionProcessingStarted = "Open.Position.Processing.Started",
     OpenPositionRequeueFailed = "Open.Position.Requeue.Failed",
+    DiagnosticsReady = "Diagnostics.Ready",
+    OpenPositionTransactionStimulated = "Open.Position.Transaction.Stimulated",
+    ClosePositionTransactionStimulated = "Close.Position.Transaction.Stimulated",
 }

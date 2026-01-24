@@ -74,7 +74,7 @@ import {
     Connection, 
 } from "mongoose"
 import {
-    InjectSuperJson 
+    InjectSuperJson, DayjsService
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import _ from "lodash"
@@ -111,6 +111,7 @@ export class OpenPositionOrchestratorService {
         private readonly cetusOpenPositionActionService: CetusOpenPositionActionService,
         private readonly turbosOpenPositionActionService: TurbosOpenPositionActionService,
         private readonly momentumOpenPositionActionService: MomentumOpenPositionActionService,
+        private readonly dayjsService: DayjsService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
@@ -272,6 +273,29 @@ export class OpenPositionOrchestratorService {
                     ]
                 )
                 const job = jobRaw.toJSON()
+                /**
+                 * Update the balance snapshots snapshotAt
+                 */
+                /**
+                    * Update the bot with the active job id.
+                    */
+                await this.connection.model<BotSchema>(BotSchema.name)
+                    .updateOne(
+                        {
+                            _id: bot.id 
+                        },
+                        {
+                            $set: {
+                                activeJob: {
+                                    job: job.id,
+                                    queuedAt: this.dayjsService.now().toDate(),
+                                },
+                            } 
+                        },
+                        {
+                            session 
+                        }
+                    )
                 /**
                     * Enqueue open-position job for async processing.
                     */

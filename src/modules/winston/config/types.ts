@@ -728,6 +728,7 @@ export interface ReconcileBalanceJobAlreadyConfirmedMessage {
 export interface OpenPositionJobAlreadyPreparedMessage {
     botId: string
     jobId: string
+    liquidityPoolId: LiquidityPoolId
 }
 
 /**
@@ -736,6 +737,7 @@ export interface OpenPositionJobAlreadyPreparedMessage {
 export interface OpenPositionJobAlreadyExecutedMessage {
     botId: string
     jobId: string
+    liquidityPoolId: LiquidityPoolId
 }
 
 /**
@@ -744,6 +746,7 @@ export interface OpenPositionJobAlreadyExecutedMessage {
 export interface OpenPositionJobAlreadyConfirmedMessage {
     botId: string
     jobId: string
+    liquidityPoolId: LiquidityPoolId
 }
 
 /**
@@ -828,4 +831,29 @@ export interface OpenPositionProcessingStartedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
+}
+
+/**
+ * Diagnostics Ready Message
+ */
+export interface DiagnosticsReadyMessage {
+    bootstrapTimeMs: number
+}
+
+/**
+ * Open Position Transaction Stimulated Message
+ */
+export interface OpenPositionTransactionStimulatedMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Transaction Stimulated Message
+ */
+export interface ClosePositionTransactionStimulatedMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
 }

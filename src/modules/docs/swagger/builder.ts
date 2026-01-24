@@ -1,6 +1,12 @@
-import { INestApplication, VersioningType } from "@nestjs/common"
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
-import { apiReference } from "@scalar/nestjs-api-reference"
+import {
+    INestApplication, VersioningType 
+} from "@nestjs/common"
+import {
+    DocumentBuilder, SwaggerModule 
+} from "@nestjs/swagger"
+import {
+    apiReference 
+} from "@scalar/nestjs-api-reference"
 
 export interface SwaggerBuilderParams {
   app: INestApplication
@@ -50,27 +56,34 @@ export const swaggerBuilder = (params: SwaggerBuilderParams) => {
 
     if (enableAuthentication) {
         if (authenticationType === "bearer") {
-            builder.addBearerAuth(undefined, authenticationName)
+            builder.addBearerAuth(undefined,
+                authenticationName)
         } else if (authenticationType === "apiKey") {
             builder.addApiKey(
-                { type: "apiKey", name: authenticationName, in: "header" },
+                {
+                    type: "apiKey", name: authenticationName, in: "header" 
+                },
                 authenticationName,
             )
         }
     }
 
     if (useScalarDocs) {
-        builder.addBearerAuth(undefined, authenticationName)
+        builder.addBearerAuth(undefined,
+            authenticationName)
     }
 
     const options = builder.build()
 
     // Create swagger document
-    const document = SwaggerModule.createDocument(app, options)
+    const document = SwaggerModule.createDocument(app,
+        options)
 
     // Serve Swagger UI (default: /swagger)
     if (swaggerEndpoint) {
-        SwaggerModule.setup(swaggerEndpoint, app, document)
+        SwaggerModule.setup(swaggerEndpoint,
+            app,
+            document)
     }
 
     // Serve Scalar Docs (default: /scalar)

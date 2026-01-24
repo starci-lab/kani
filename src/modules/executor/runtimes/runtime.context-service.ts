@@ -162,7 +162,7 @@ export class RuntimeContextService {
                     })
                     // invoke and schedule the reconcile balance service
                     this.invokeAndSchedule(
-                        envConfig().executor.runtime.operation.reconcileBalance.interval,
+                        envConfig().executor.runtime.operation.reconcileBalance.interval.poll,
                         (bot) => this.handleReconcileBalanceService.process(bot),
                     )
                     // gradually load the initial executor state

@@ -56,6 +56,7 @@ export class PrepareService {
             job,
             bot, 
             state,
+            liquidityPool,
         }: PrepareParams
     ): Promise<PrepareResult> {
         // Guard: if job already passed PENDING phase, do nothing
@@ -68,6 +69,7 @@ export class PrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
             return {

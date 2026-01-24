@@ -17,6 +17,12 @@ import {
 import {
     Types 
 } from "mongoose"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class HandleReconcileBalanceService {
@@ -33,6 +39,7 @@ export class HandleReconcileBalanceService {
         private readonly balanceService: BalanceService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -53,6 +60,15 @@ export class HandleReconcileBalanceService {
         if (bot.activePosition) return
         if (bot.activeJob) {
             return
+        }
+        if (bot.balanceSnapshots?.snapshotAt) {
+            const diffMs = this.dayjsService.now().diff(
+                this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
+                "millisecond"
+            )
+            if (diffMs <= envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
+                return
+            }
         }
         const jobId = new Types.ObjectId().toString()
         // check if the bot has an active job

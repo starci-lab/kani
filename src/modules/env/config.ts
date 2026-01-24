@@ -301,13 +301,22 @@ export const envConfig = () => ({
             },
             operation: {
                 reconcileBalance: {
-                    interval: parseEnvMs("EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL",
-                        "30s"),
+                    interval: {
+                        poll: parseEnvMs("EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL_POLL",
+                            "30s"),
+                    },
+                    cooldown: {
+                        rescan: parseEnvMs(
+                            "EXECUTOR_OPERATION_RECONCILE_BALANCE_COOLDOWN_RESCAN",
+                            "5m"
+                        ),
+                    },
+                    requeue: {
+                        interval: parseEnvMs("EXECUTOR_OPERATION_REQUEUE_INTERVAL",
+                            "10s"),
+                    },
                 },
-                requeue: {
-                    interval: parseEnvMs("EXECUTOR_OPERATION_REQUEUE_INTERVAL",
-                        "10s"),
-                },
+                
             },
         },
         lockAuthority: {

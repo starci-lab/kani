@@ -65,7 +65,7 @@ export class RequeueService implements OnApplicationBootstrap {
             /**
              * Get the ttl for the requeue interval
              */
-            const ttl = envConfig().executor.runtime.operation.requeue.interval
+            const ttl = envConfig().executor.runtime.operation.reconcileBalance.requeue.interval
             /**
              * Get the bots that have an active job and the queuedAt is older than the ttl
              */
@@ -144,7 +144,7 @@ export class RequeueService implements OnApplicationBootstrap {
         }
     }
 
-    @Interval(envConfig().executor.runtime.operation.requeue.interval)
+    @Interval(envConfig().executor.runtime.operation.reconcileBalance.requeue.interval)
     handleInterval() {
         this.process()
     }

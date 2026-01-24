@@ -148,11 +148,8 @@ export class SuiBalanceService implements IBalanceService {
             stimulate,
         }: ExecuteSwapTransactionParams
     ): Promise<void> {
-        if (txCheck) {
+        if (txCheck && !stimulate) {
             // we don't need to check the transaction if we are stimulating
-            if (stimulate) {
-                return
-            }
             const transaction = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {

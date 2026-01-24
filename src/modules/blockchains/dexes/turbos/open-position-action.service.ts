@@ -12,6 +12,7 @@ import {
     ConfirmOpenPositionResult,
 } from "../../interfaces"
 import {
+    Transaction,
     TransactionDataBuilder 
 } from "@mysten/sui/transactions"
 import {
@@ -304,13 +305,14 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         {
             bot,
             state,
-            isRetry,
+            txCheck,
             txHash,
             signatureWithBytes,
+            stimulate,
         }: ExecuteOpenPositionParams
     ): Promise<ExecuteOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
-        if (isRetry) {
+        if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
                     accessType: RpcAccessType.Http,
@@ -353,6 +355,30 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
+                if (stimulate) {
+                    const transactionBlock = Transaction.from(signatureWithBytes.bytes)
+                    const devInspect = await suiClient.devInspectTransactionBlock({
+                        transactionBlock,
+                        sender: bot.accountAddress,
+                    })
+                    if (devInspect.effects.status.status !== "success") {
+                        throw new TransactionValidationFailedException({
+                            botId: bot.id,
+                            txHash: devInspect.effects.transactionDigest,
+                            liquidityPoolId: _state.static.displayId,
+                            type: ErrorTransactionType.OpenPosition,
+                        })
+                    }
+                    const { positionId } = this.parseMintEvents({
+                        bot,
+                        txHash,
+                        state: _state,
+                        events: devInspect.events || [],
+                    })
+                    return {
+                        positionId,
+                    }
+                }
                 const { digest, events } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,

@@ -22,6 +22,13 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    OpenPositionSnapshotService,
+} from "@modules/blockchains"
+import {
+    BalanceSnapshotsNotFoundException, 
+} from "@exceptions"
+import BN from "bn.js"
 
 @Injectable()
 export class ConfirmService {
@@ -29,6 +36,7 @@ export class ConfirmService {
         private readonly balanceService: BalanceService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly openPositionSnapshotService: OpenPositionSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
@@ -50,23 +58,26 @@ export class ConfirmService {
             bot,
             job,
             executeResult,
+            liquidityPool,
+            targetToken,
+            quoteToken,
+            gasToken,
         }: ConfirmParams
     ) {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Confirmed)
         ) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceJobAlreadyConfirmed,
+                WinstonLog.OpenPositionJobAlreadyConfirmed,
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
                 }
             )
             return
         }
-
-        const { transactionRecords } = executeResult
-
+        const { transactionRecord, openPositionTransaction, executeResult: _executeResult } = executeResult
         // re-fetch balances post execution
         const {
             targetBalanceAmount,
@@ -75,12 +86,18 @@ export class ConfirmService {
         } = await this.balanceService.fetchBalances({
             bot 
         })
-
         const session = await this.connection.startSession()
         try {
             await session.withTransaction(
                 async () => {
-                    for (const transactionRecord of transactionRecords || []) {
+                    if (!bot.balanceSnapshots) {
+                        throw new BalanceSnapshotsNotFoundException(
+                            {
+                                botId: bot.id,
+                            }
+                        )
+                    }
+                    if (transactionRecord) {
                         await this.transactionSnapshotService.addTransactionRecord(
                             {
                                 ...transactionRecord,
@@ -88,13 +105,36 @@ export class ConfirmService {
                             }
                         )
                     }
-
                     await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                         {
                             bot,
                             targetBalanceAmount,
                             quoteBalanceAmount,
                             gasBalanceAmount,
+                            session,
+                        }
+                    )
+                    await this.openPositionSnapshotService.addOpenPositionRecord(
+                        {
+                            bot,
+                            before: {
+                                targetBalanceAmount: new BN(bot.balanceSnapshots.targetBalanceAmount),
+                                quoteBalanceAmount: new BN(bot.balanceSnapshots.quoteBalanceAmount),
+                                gasBalanceAmount: new BN(bot.balanceSnapshots.gasBalanceAmount),
+                            },
+                            after: {
+                                targetBalanceAmount,
+                                quoteBalanceAmount,
+                                gasBalanceAmount,
+                            },
+                            openTxHash: openPositionTransaction.txHash,
+                            positionId: _executeResult?.positionId ?? "",
+                            feeAmountQuote: openPositionTransaction.feeAmountA,
+                            feeAmountTarget: openPositionTransaction.feeAmountB,
+                            liquidityPool,
+                            targetToken,
+                            quoteToken,
+                            gasToken,
                             session,
                         }
                     )
