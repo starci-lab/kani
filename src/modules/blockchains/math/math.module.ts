@@ -7,12 +7,6 @@ import {
 import {
     TickMathService 
 } from "./tick.service"
-// import {
-//     _TickMathService 
-// } from "./_tick.service"
-import {
-    PoolMathService 
-} from "./pool.service"
 import {
     EnsureMathService 
 } from "./ensure.service"
@@ -34,8 +28,6 @@ import {
 @Module({
     providers: [
         TickMathService,
-        //_TickMathService,
-        PoolMathService,
         EnsureMathService,
         FeeService,
         SwapMathService,
@@ -45,8 +37,6 @@ import {
     ],
     exports: [
         TickMathService,
-        //_TickMathService,
-        PoolMathService,
         EnsureMathService,
         FeeService,
         SwapMathService,

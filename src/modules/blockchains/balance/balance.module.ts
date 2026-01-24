@@ -20,9 +20,6 @@ import {
     SuiBalanceService 
 } from "./sui.service"
 import {
-    BalanceEligibilityService 
-} from "./eligibility.service"
-import {
     SolanaBalanceService 
 } from "./solana.service"
 
@@ -31,19 +28,14 @@ import {
 export class BalanceModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = []
-        if (!options.utilitiesOnly) {
-            providers.push(
-                SolanaBalanceService,
-                SuiBalanceService,
-                BalanceService,
-                SwapMathService,
-                GasStatusService,
-                QuoteRatioService,
-                BalanceEligibilityService,
-            )
-        }
-        providers.push(BalanceEligibilityService)
+        const providers: Array<Provider> = [
+            SolanaBalanceService,
+            SuiBalanceService,
+            BalanceService,
+            SwapMathService,
+            GasStatusService,
+            QuoteRatioService,
+        ]
         return {
             ...dynamicModule,
             providers: [

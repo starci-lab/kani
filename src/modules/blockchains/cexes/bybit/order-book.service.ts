@@ -18,14 +18,12 @@ import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 import {
-    chunkArray 
-} from "@modules/utils"
-import {
     BybitTokenRegistryService 
 } from "./token-registry.service"
 import {
     WebSocketStreamConnection, StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
+import _ from "lodash"
 
 @Injectable()
 export class BybitOrderBookService implements OnApplicationBootstrap {
@@ -41,8 +39,10 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
         if (!symbols.length) return
     
         // Split symbols into chunks (Bybit has a limit on subscription args)
-        const symbolChunks = chunkArray(symbols,
-            envConfig().cexes.bybit.chunks.orderBook)
+        const symbolChunks = _.chunk(
+            symbols,
+            envConfig().cexes.bybit.chunks.orderBook
+        )
 
         this.retryService.retry({
             options: {

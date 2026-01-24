@@ -1,5 +1,6 @@
 export const httpsToWss = (httpsUrl: string): string => {
-    return httpsUrl.replace("https://", "wss://")
+    return httpsUrl.replace("https://",
+        "wss://")
 }
 
 export const isSuiCoin = (type: string): boolean => {

@@ -1,12 +1,9 @@
 import {
     ConfigurableModuleBuilder 
 } from "@nestjs/common"
-import {
-    BalanceOptions 
-} from "./types"
 
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
-  new ConfigurableModuleBuilder<BalanceOptions>().setExtras(
+  new ConfigurableModuleBuilder().setExtras(
       {
           isGlobal: false
       },

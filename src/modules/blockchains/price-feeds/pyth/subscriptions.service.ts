@@ -15,7 +15,7 @@ import {
 } from "@modules/databases"
 import BN from "bn.js"
 import {
-    computeDenomination 
+    toDecimalAmount 
 } from "@modules/utils"
 import {
     AsyncService,
@@ -41,6 +41,7 @@ import {
 import {
     PYTH_SUBSCRIPTIONS_STREAM_NAME 
 } from "./constants"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class PythSubscriptionsService implements OnApplicationBootstrap {
@@ -107,16 +108,18 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                     for await (const data of stream) {
                         try {
                             const update: PriceUpdate = JSON.parse(data.data)
-                            const priceData = update.parsed?.map<PythTokenPriceData>(data => {
-                                const price = computeDenomination(
-                                    new BN(data?.ema_price?.price ?? 0), 
-                                    data?.ema_price?.expo ?? 8
-                                )
-                                return {
-                                    feedId: data?.id ?? "",
-                                    price: price.toNumber(),
+                            const priceData = update.parsed?.map<PythTokenPriceData>(
+                                data => {
+                                    const price = toDecimalAmount({
+                                        amount: new BN(data?.ema_price?.price ?? 0),
+                                        decimals: new Decimal(data?.ema_price?.expo ?? 8),
+                                    })
+                                    return {
+                                        feedId: data?.id ?? "",
+                                        price: price.toNumber(),
+                                    }
                                 }
-                            }) 
+                            ) 
                             const pythTokenPrices = this.pythTokenRegistryService.resolvePythTokenPrices(priceData ?? [])
                             // mark message received if there are token prices
                             if (!pythTokenPrices.length) {

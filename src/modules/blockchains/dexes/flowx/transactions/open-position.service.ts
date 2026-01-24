@@ -21,7 +21,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    adjustSlippage, decimalToBips 
+    adjustSlippage, decimalToBps 
 } from "@modules/utils"
 import Decimal from "decimal.js"
 import BN from "bn.js"
@@ -180,7 +180,7 @@ export class OpenPositionTxbService {
             arguments: [
                 txb.object(positionRegistryObject),
                 txb.object(poolRegistryObject),
-                txb.pure.u64(decimalToBips(state.static.fee)),
+                txb.pure.u64(decimalToBps(new Decimal(state.static.fee)).toNumber()),
                 tickLowerI32,
                 tickUpperI32,
                 txb.object(versionObject),

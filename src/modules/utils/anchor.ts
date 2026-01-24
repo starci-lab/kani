@@ -1,8 +1,16 @@
 // anchor-utils.ts
-import { sha256 } from "@noble/hashes/sha2"
-import { AccountMeta as SolanaWeb3JsAccountMeta } from "@solana/web3.js"
-import { AccountMeta, AccountRole, Address, address } from "@solana/kit"
-import { TransactionMessage } from "@solana/kit"
+import {
+    sha256 
+} from "@noble/hashes/sha2"
+import {
+    AccountMeta as SolanaWeb3JsAccountMeta 
+} from "@solana/web3.js"
+import {
+    AccountMeta, AccountRole, Address, address 
+} from "@solana/kit"
+import {
+    TransactionMessage 
+} from "@solana/kit"
 import BN from "bn.js"
 
 /* ------------------------------------------
@@ -11,7 +19,8 @@ import BN from "bn.js"
 export const anchorDiscriminator = (instructionName: string): Uint8Array => {
     const preimage = `global:${instructionName}`
     const hash = sha256(new TextEncoder().encode(preimage))
-    return hash.slice(0, 8) // 8-byte discriminator
+    return hash.slice(0,
+        8) // 8-byte discriminator
 }
 
 /* ------------------------------------------
@@ -19,12 +28,16 @@ export const anchorDiscriminator = (instructionName: string): Uint8Array => {
  * ------------------------------------------ */
 export const u64LE = (n: BN | number | string): Uint8Array => {
     const bn = BN.isBN(n) ? n : new BN(n)
-    return bn.toArrayLike(Buffer, "le", 8)
+    return bn.toArrayLike(Buffer,
+        "le",
+        8)
 }
 
 export const u128LE = (n: BN | number | string): Uint8Array => {
     const bn = BN.isBN(n) ? n : new BN(n)
-    return bn.toArrayLike(Buffer, "le", 16)
+    return bn.toArrayLike(Buffer,
+        "le",
+        16)
 }
 
 /* ------------------------------------------
@@ -42,11 +55,13 @@ export const encodeAnchorIx = (
     for (const comp of components) totalLength += comp.length
 
     const out = new Uint8Array(totalLength)
-    out.set(disc, 0)
+    out.set(disc,
+        0)
 
     let offset = disc.length
     for (const comp of components) {
-        out.set(comp, offset)
+        out.set(comp,
+            offset)
         offset += comp.length
     }
 

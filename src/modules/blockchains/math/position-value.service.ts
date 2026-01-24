@@ -12,7 +12,7 @@ import {
     TokenNotFoundException 
 } from "@modules/exceptions"
 import {
-    computeDenomination 
+    toDecimalAmount 
 } from "@modules/utils"
 import BN from "bn.js"
 import {
@@ -90,33 +90,33 @@ export class PositionValueMathService {
         const gasTargetPrice = beforeGasPrice.div(beforeTargetPrice)
         
         // priceA/priceB
-        const beforeTargetBalanceAmountInTarget = computeDenomination(
-            before.targetBalanceAmount, 
-            targetToken.decimals
-        )
-        const beforeQuoteBalanceAmountInTarget = computeDenomination(
-            before.quoteBalanceAmount, 
-            quoteToken.decimals
-        ).mul(quoteTargetPrice)
-        const beforeGasBalanceAmountInTarget = computeDenomination(
-            before.gasBalanceAmount, 
-            gasToken.decimals
-        ).mul(gasTargetPrice)
+        const beforeTargetBalanceAmountInTarget = toDecimalAmount({
+            amount: before.targetBalanceAmount,
+            decimals: new Decimal(targetToken.decimals),
+        }).mul(quoteTargetPrice)
+        const beforeQuoteBalanceAmountInTarget = toDecimalAmount({
+            amount: before.quoteBalanceAmount,
+            decimals: new Decimal(quoteToken.decimals),
+        })
+        const beforeGasBalanceAmountInTarget = toDecimalAmount({
+            amount: before.gasBalanceAmount,
+            decimals: new Decimal(gasToken.decimals),
+        })
         const beforeTotalBalanceAmountInTarget = beforeTargetBalanceAmountInTarget.add(
             beforeQuoteBalanceAmountInTarget
         ).add(beforeGasBalanceAmountInTarget)
-        const afterTargetBalanceAmountInTarget = computeDenomination(
-            after.targetBalanceAmount, 
-            targetToken.decimals
-        )
-        const afterQuoteBalanceAmountInTarget = computeDenomination(
-            after.quoteBalanceAmount, 
-            quoteToken.decimals
-        ).mul(quoteTargetPrice)
-        const afterGasBalanceAmountInTarget = computeDenomination(
-            after.gasBalanceAmount, 
-            gasToken.decimals
-        ).mul(gasTargetPrice)
+        const afterTargetBalanceAmountInTarget = toDecimalAmount({
+            amount: after.targetBalanceAmount,
+            decimals: new Decimal(targetToken.decimals),
+        }).mul(quoteTargetPrice)
+        const afterQuoteBalanceAmountInTarget = toDecimalAmount({
+            amount: after.quoteBalanceAmount,
+            decimals: new Decimal(quoteToken.decimals),
+        }).mul(quoteTargetPrice)
+        const afterGasBalanceAmountInTarget = toDecimalAmount({
+            amount: after.gasBalanceAmount,
+            decimals: new Decimal(gasToken.decimals),
+        }).mul(gasTargetPrice)
         const afterTotalBalanceAmountInTarget = afterTargetBalanceAmountInTarget.add(
             afterQuoteBalanceAmountInTarget
         ).add(afterGasBalanceAmountInTarget)      

@@ -1,5 +1,4 @@
 export * from "./balance.module"
 export * from "./balance.service"
 export * from "./gas-status.service"
-export * from "./eligibility.service"
 export * from "./balance.interface"

@@ -12,7 +12,7 @@ import {
 } from "@modules/databases"
 import BN from "bn.js"
 import {
-    computeDenomination 
+    toDecimalAmount 
 } from "@modules/utils"
 import {
     AsyncService, 
@@ -38,6 +38,7 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class PythRestService implements OnApplicationBootstrap {
@@ -85,16 +86,17 @@ export class PythRestService implements OnApplicationBootstrap {
                         )
                         return prices.parsed
                     }))
-            const priceData = prices.flat().map<PythTokenPriceData>(data => {
-                const price = computeDenomination(
-                    new BN(data?.ema_price?.price ?? 0), 
-                    data?.ema_price?.expo ?? 8
-                )
-                return {
-                    feedId: data?.id ?? "",
-                    price: price.toNumber(),
-                }
-            }) 
+            const priceData = prices.flat().map<PythTokenPriceData>(
+                data => {
+                    const price = toDecimalAmount({
+                        amount: new BN(data?.ema_price?.price ?? 0),
+                        decimals: new Decimal(data?.ema_price?.expo ?? 8),
+                    })
+                    return {
+                        feedId: data?.id ?? "",
+                        price: price.toNumber() ?? 0,
+                    }
+                }) 
             if (!priceData.length) return
             this.winstonService.log(
                 WinstonLog.PythRestPricesFetched,
