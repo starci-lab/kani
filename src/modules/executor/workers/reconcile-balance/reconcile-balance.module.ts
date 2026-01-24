@@ -25,6 +25,12 @@ import {
 import {
     RequeueService,
 } from "./requeue.service"
+import {
+    ClearService,
+} from "./clear.service"
+import {
+    ConfigurableModuleClass,
+} from "./reconcile-balance.module-definition"
 
 @Module({
     providers: [
@@ -36,6 +42,7 @@ import {
         OnCompletedService,
         OnFailedService,
         RequeueService,
+        ClearService,
     ],
 })
-export class ReconcileBalanceModule {}
+export class ReconcileBalanceModule extends ConfigurableModuleClass {}

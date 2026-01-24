@@ -94,7 +94,7 @@ export class OpenPositionSnapshotService {
         }
 
         const targetIsA = liquidityPool.tokenA.toString() === targetToken.id.toString()
-        await this.connection.model<PositionSchema>(
+        const [positionRaw] = await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).create(
             [
@@ -113,6 +113,24 @@ export class OpenPositionSnapshotService {
                     fees,
                 }
             ],
+            {
+                session,
+            }
+        )
+        const position = positionRaw.toJSON<PositionSchema>()
+        this.connection.model<BotSchema>(BotSchema.name).updateOne(
+            {
+                _id: bot.id
+            },
+            {
+                $set: {
+                    activePosition: {
+                        liquidityPool: liquidityPool.id,
+                        position: position.id,
+                        type: liquidityPool.type,
+                    },
+                },
+            },
             {
                 session,
             }

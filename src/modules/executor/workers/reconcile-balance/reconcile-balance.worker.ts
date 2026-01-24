@@ -82,6 +82,9 @@ import {
     OnFailedService,
 } from "./on-failed.service"
 import {
+    ClearService,
+} from "./clear.service"
+import {
     ProcessParams,
 } from "./types"
 import {
@@ -90,6 +93,9 @@ import {
 import {
     EventName, LockAuthorityTimeoutEventPayload 
 } from "@modules/event"
+import {
+    AsyncService,
+} from "@modules/mixin"
 
 @Worker(
     bullData[BullQueueName.ReconcileBalance].name,
@@ -112,6 +118,8 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly confirmService: ConfirmService,
         private readonly onCompletedService: OnCompletedService,
         private readonly onFailedService: OnFailedService,
+        private readonly clearService: ClearService,
+        private readonly asyncService: AsyncService,
     ) {
         super()
     }
@@ -136,60 +144,69 @@ export class ReconcileBalanceWorker extends WorkerHost {
     ): Promise<void> {
         // Deserialize the job payload (SuperJSON) into a typed reconcile-balance payload.
         const payload = this.superJson.parse<ReconcileBalancePayload>(bullmqJob.data)
-        // Determine whether this BullMQ execution is a retry attempt.
-        const isRetry = bullmqJob.attemptsMade > 0
-        // On retries, if the job never recorded any progress, exit early to avoid reprocessing.
-        if (isRetry && !bullmqJob.progress) {
-            // No-op: nothing to do if progress was never set on a retry.
+        const { botId, jobId } = payload
+        const [result,
+            error] = await this.asyncService.resolveTuple(
+            (async () => {
+                // Load the Bot document from MongoDB (required for all phases).
+                const bot = await this.connection
+                // Use the Bot model from the primary mongoose connection.
+                    .model<BotSchema>(BotSchema.name)
+                // Find the bot by id provided by the payload.
+                    .findById(payload.botId)
+
+                // If bot is missing, fail permanently (unrecoverable) because the job cannot proceed.
+                if (!bot) {
+                    // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
+                    throw new UnrecoverableError(
+                        // Produce a structured error payload for consistent logging/handling.
+                        new BotNotFoundException(
+                            // Include the botId for diagnostics.
+                            {
+                                botId: payload.botId,
+                            }
+                            // Serialize to JSON for UnrecoverableError consumption.
+                        ).toJSON()
+                    )
+                }
+
+                // Load the Job document from MongoDB (used for status transitions + stored metadata).
+                const job = await this.connection
+                // Use the Job model from the primary mongoose connection.
+                    .model<JobSchema>(JobSchema.name)
+                // Find the job by id provided by the payload.
+                    .findById(payload.jobId)
+
+                // If job is missing, fail permanently (unrecoverable) because we cannot track status/metadata.
+                if (!job) {
+                    // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
+                    throw new UnrecoverableError(
+                        // Produce a structured error payload for consistent logging/handling.
+                        new JobNotFoundException(
+                            // Include the jobId for diagnostics.
+                            {
+                                jobId: payload.jobId,
+                            }
+                            // Serialize to JSON for UnrecoverableError consumption.
+                        ).toJSON()
+                    )
+                }
+                return {
+                    bot,
+                    job,
+                }
+            })())
+
+        if (error) {
+            await this.clearService.process(
+                {
+                    botId,
+                    jobId,
+                }
+            )
             return
         }
-        // Load the Bot document from MongoDB (required for all phases).
-        const bot = await this.connection
-            // Use the Bot model from the primary mongoose connection.
-            .model<BotSchema>(BotSchema.name)
-            // Find the bot by id provided by the payload.
-            .findById(payload.botId)
-
-        // If bot is missing, fail permanently (unrecoverable) because the job cannot proceed.
-        if (!bot) {
-            // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
-            throw new UnrecoverableError(
-                // Produce a structured error payload for consistent logging/handling.
-                new BotNotFoundException(
-                    // Include the botId for diagnostics.
-                    {
-                        botId: payload.botId,
-                    }
-                // Serialize to JSON for UnrecoverableError consumption.
-                ).toJSON()
-            )
-        }
-
-        // Load the Job document from MongoDB (used for status transitions + stored metadata).
-        const job = await this.connection
-            // Use the Job model from the primary mongoose connection.
-            .model<JobSchema>(JobSchema.name)
-            // Find the job by id provided by the payload.
-            .findById(payload.jobId)
-
-        // If job is missing, fail permanently (unrecoverable) because we cannot track status/metadata.
-        if (!job) {
-            // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
-            throw new UnrecoverableError(
-                // Produce a structured error payload for consistent logging/handling.
-                new JobNotFoundException(
-                    // Include the jobId for diagnostics.
-                    {
-                        jobId: payload.jobId,
-                    }
-                // Serialize to JSON for UnrecoverableError consumption.
-                ).toJSON()
-            )
-        }
-
-        // Record initial progress so retry guards can distinguish "started" vs "never started".
-        await bullmqJob.updateProgress(1)
-
+        const { bot, job } = result
         // Assemble a shared parameter object passed to all phase services.
         const baseParams: ProcessParams = {
             // BullMQ job context (attempts, progress, ids, etc.).

@@ -16,7 +16,9 @@ import {
     DexNotFoundException,
     DexNotImplementedException,
     BalanceSnapshotsNotFoundException,
-    TokenNotFoundException
+    TokenNotFoundException,
+    LiquidityPoolNotOwnedByBotException,
+    QuoteRatioNotGoodException
 } from "@modules/exceptions"
 import {
     RaydiumOpenPositionActionService 
@@ -209,7 +211,12 @@ export class OpenPositionOrchestratorService {
                 _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
             )
         ) {
-            return null
+            throw new LiquidityPoolNotOwnedByBotException(
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
         }
         // Stage: state validation (balance snapshots required for quote-ratio computation)
         if (!bot.balanceSnapshots) {
@@ -249,7 +256,13 @@ export class OpenPositionOrchestratorService {
                 }
             ) !== QuoteRatioStatus.Good
         ) {
-            return null
+            throw new QuoteRatioNotGoodException(
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    quoteRatio: quoteRatio.toNumber(),
+                }
+            )
         }
         // start a session
         const session = await this.connection.startSession()
@@ -290,6 +303,7 @@ export class OpenPositionOrchestratorService {
                                     job: job.id,
                                     queuedAt: this.dayjsService.now().toDate(),
                                     liquidityPool: liquidityPool.id,
+                                    jobType: JobType.OpenPosition,
                                 },
                             } 
                         },

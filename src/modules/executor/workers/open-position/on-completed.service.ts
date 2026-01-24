@@ -49,60 +49,50 @@ export class OnCompletedService {
         }: OnCompletedParams
     ): Promise<void> {
         const session = await this.connection.startSession()
-
-        try {
-            await session.withTransaction(
-                async () => {
-                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                        {
-                            _id: job.id,
+        await session.withTransaction(
+            async () => {
+                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                    {
+                        _id: job.id,
+                    },
+                    {
+                        $set: {
+                            status: JobStatus.Completed,
+                            processedAt: this.dayjsService.now().toDate(),
                         },
-                        {
-                            $set: {
-                                status: JobStatus.Completed,
-                                processedAt: this.dayjsService.now().toDate(),
-                            },
+                    },
+                    {
+                        session,
+                    }
+                )
+                await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                    {
+                        _id: bot.id,
+                    },
+                    {
+                        $unset: {
+                            activeJob: null,
                         },
-                        {
-                            session,
-                        }
-                    )
-
-                    await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                        {
-                            _id: bot.id,
-                        },
-                        {
-                            $unset: {
-                                activeJob: null,
-                            },
-                        },
-                        {
-                            session,
-                        }
-                    )
-
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionProcessingCompleted,
-                        {
-                            botId: bot.id,
-                            jobId: job.id,
-                            bullmqJobId: bullmqJob.id,
-                            liquidityPoolId: liquidityPool.displayId,
-                        }
-                    )
-
-                    await this.lockAuthorityService.release(
-                        {
-                            botId: bot.id,
-                        }
-                    )
-                }
-            )
-        } finally {
-            await session.endSession()
-        }
+                    },
+                    {
+                        session,
+                    }
+                )
+                this.winstonService.log(
+                    WinstonLog.OpenPositionProcessingCompleted,
+                    {
+                        botId: bot.id,
+                        jobId: job.id,
+                        bullmqJobId: bullmqJob.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            }
+        )
+        await this.lockAuthorityService.release(
+            {
+                botId: bot.id,
+            }
+        )
     }
 }
-
-

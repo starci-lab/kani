@@ -80,6 +80,9 @@ import {
     OnFailedService 
 } from "./on-failed.service"
 import {
+    ClearService 
+} from "./clear.service"
+import {
     ProcessParams 
 } from "./types"
 import {
@@ -91,6 +94,9 @@ import {
 import {
     ConfirmService 
 } from "./confirm.service"
+import {
+    AsyncService
+} from "@modules/mixin"
 
 @Worker(
     bullData[BullQueueName.OpenPosition].name,
@@ -115,6 +121,8 @@ export class OpenPositionWorker extends WorkerHost {
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly executeService: ExecuteService,
+        private readonly clearService: ClearService,
+        private readonly asyncService: AsyncService,
     ) {
         super()
     }
@@ -123,8 +131,8 @@ export class OpenPositionWorker extends WorkerHost {
     async onLockAuthorityReleased(
         payload: LockAuthorityTimeoutEventPayload
     ) {
-        console.log(payload)
-        //this.worker.cancelJob(payload.botId)
+        console.log("onLockAuthorityReleased",
+            payload)
     }
     /**
      * BullMQ entrypoint for the `open-position` queue.
@@ -139,110 +147,126 @@ export class OpenPositionWorker extends WorkerHost {
     ): Promise<void> {
         // Deserialize the job payload (SuperJSON) into a typed open-position payload.
         const payload = this.superJson.parse<OpenPositionPayload>(bullmqJob.data)
-        // Determine whether this BullMQ execution is a retry attempt.
-        const isRetry = bullmqJob.attemptsMade > 0
-        // On retries, if the job never recorded any progress, exit early to avoid reprocessing.
-        if (isRetry && !bullmqJob.progress) {
-            // No-op: nothing to do if progress was never set on a retry.
+        const { botId, jobId, liquidityPoolId } = payload
+        const [result,
+            error] = await this.asyncService.resolveTuple(
+            (async () => {
+                // On retries, if the job never recorded any progress, exit early to avoid reprocessing.
+                // Load the Bot document from MongoDB (required for all phases).
+                const bot = await this.connection
+                // Use the Bot model from the primary mongoose connection.
+                    .model<BotSchema>(BotSchema.name)
+                // Find the bot by id provided by the payload.
+                    .findById(botId)
+
+                // If bot is missing, fail permanently (unrecoverable) because the job cannot proceed.
+                if (!bot) {
+                    // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
+                    throw new UnrecoverableError(
+                        // Produce a structured error payload for consistent logging/handling.
+                        new BotNotFoundException(
+                            // Include the botId for diagnostics.
+                            {
+                                botId,
+                            }
+                            // Serialize to JSON for UnrecoverableError consumption.
+                        ).toJSON()
+                    )
+                }
+
+                // Load the Job document from MongoDB (used for status transitions + stored metadata).
+                const job = await this.connection
+                // Use the Job model from the primary mongoose connection.
+                    .model<JobSchema>(JobSchema.name)
+                // Find the job by id provided by the payload.
+                    .findById(jobId)
+
+                // If job is missing, fail permanently (unrecoverable) because we cannot track status/metadata.
+                if (!job) {
+                    // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
+                    throw new UnrecoverableError(
+                        // Produce a structured error payload for consistent logging/handling.
+                        new JobNotFoundException(
+                            // Include the jobId for diagnostics.
+                            {
+                                jobId,
+                            }
+                            // Serialize to JSON for UnrecoverableError consumption.
+                        ).toJSON()
+                    )
+                }
+                const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+                    displayId: {
+                        $eq: liquidityPoolId,
+                    }
+                })
+                if (!liquidityPool) {
+                    throw new UnrecoverableError(
+                        new LiquidityPoolNotFoundException(
+                            {
+                                displayId: liquidityPoolId,
+                            }
+                        ).toJSON()
+                    )
+                }
+                const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    id: {
+                        $eq: bot.targetToken.toString()
+                    }
+                })
+                if (!targetToken) {
+                    throw new TokenNotFoundException({
+                        id: bot.targetToken.toString(),
+                    })
+                }
+                const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    id: {
+                        $eq: bot.quoteToken.toString()
+                    }
+                })
+                if (!quoteToken) {
+                    throw new TokenNotFoundException({
+                        id: bot.quoteToken.toString(),
+                    })
+                }
+                const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    type: {
+                        $eq: TokenType.Native
+                    },
+                    chainId: {
+                        $eq: bot.chainId
+                    }
+                })
+                if (!gasToken) {
+                    throw new TokenNotFoundException({
+                        conditions: {
+                            type: TokenType.Native,
+                            chainId: bot.chainId
+                        }
+                    })
+                }
+                const state = await this.liquidityPoolStateService.getState(liquidityPool)
+                return {
+                    bot,
+                    job,
+                    liquidityPool,
+                    state,
+                    targetToken,
+                    quoteToken,
+                    gasToken,
+                }
+            })())
+        if (error) {
+            console.error(error)
+            await this.clearService.process(
+                {
+                    botId: payload.botId,
+                    jobId: payload.jobId,
+                }
+            )
             return
         }
-        // Load the Bot document from MongoDB (required for all phases).
-        const bot = await this.connection
-            // Use the Bot model from the primary mongoose connection.
-            .model<BotSchema>(BotSchema.name)
-            // Find the bot by id provided by the payload.
-            .findById(payload.botId)
-
-        // If bot is missing, fail permanently (unrecoverable) because the job cannot proceed.
-        if (!bot) {
-            // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
-            throw new UnrecoverableError(
-                // Produce a structured error payload for consistent logging/handling.
-                new BotNotFoundException(
-                    // Include the botId for diagnostics.
-                    {
-                        botId: payload.botId,
-                    }
-                // Serialize to JSON for UnrecoverableError consumption.
-                ).toJSON()
-            )
-        }
-
-        // Load the Job document from MongoDB (used for status transitions + stored metadata).
-        const job = await this.connection
-            // Use the Job model from the primary mongoose connection.
-            .model<JobSchema>(JobSchema.name)
-            // Find the job by id provided by the payload.
-            .findById(payload.jobId)
-
-        // If job is missing, fail permanently (unrecoverable) because we cannot track status/metadata.
-        if (!job) {
-            // Wrap in UnrecoverableError so BullMQ won't keep retrying a job that can never succeed.
-            throw new UnrecoverableError(
-                // Produce a structured error payload for consistent logging/handling.
-                new JobNotFoundException(
-                    // Include the jobId for diagnostics.
-                    {
-                        jobId: payload.jobId,
-                    }
-                // Serialize to JSON for UnrecoverableError consumption.
-                ).toJSON()
-            )
-        }
-
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-            displayId: {
-                $eq: payload.liquidityPoolId,
-            }
-        })
-        if (!liquidityPool) {
-            throw new UnrecoverableError(
-                new LiquidityPoolNotFoundException(
-                    {
-                        displayId: payload.liquidityPoolId,
-                    }
-                ).toJSON()
-            )
-        }
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
-            }
-        })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                id: bot.targetToken.toString(),
-            })
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
-            }
-        })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                id: bot.quoteToken.toString(),
-            })
-        }
-        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: TokenType.Native
-            },
-            chainId: {
-                $eq: bot.chainId
-            }
-        })
-        if (!gasToken) {
-            throw new TokenNotFoundException({
-                conditions: {
-                    type: TokenType.Native,
-                    chainId: bot.chainId
-                }
-            })
-        }
-        const state = await this.liquidityPoolStateService.getState(liquidityPool)
-        // Record initial progress so retry guards can distinguish "started" vs "never started".
-        await bullmqJob.updateProgress(1)
+        const { bot, job, liquidityPool, state, targetToken, quoteToken, gasToken } = result
         // Assemble a shared parameter object passed to all phase services.
         const baseParams: ProcessParams = {
             // BullMQ job context (attempts, progress, ids, etc.).

@@ -19,6 +19,10 @@ import {
 import {
     LiquidityPoolSchema 
 } from "./liquidity-pool.schema"
+import {
+    GraphQLTypeJobType,
+    JobType,
+} from "../enums"
 
 @ObjectType({
     description: "Represents a bot assigned to an executor",
@@ -49,6 +53,17 @@ export class ActiveJobSchema extends AbstractSchema {
         required: false,
     })
         liquidityPool: LiquidityPoolSchema | Types.ObjectId
+
+    @Field(() => GraphQLTypeJobType,
+        {
+            description: "The type of the job",
+        })
+    @Prop({
+        type: String,
+        enum: JobType,
+        required: true,
+    })
+        jobType: JobType
 
     /**
      * When the snapshot values were recorded.

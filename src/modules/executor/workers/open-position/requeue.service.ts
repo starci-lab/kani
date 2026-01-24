@@ -4,6 +4,7 @@ import {
 } from "@nestjs/common"
 import {
     ActiveJobSchema,
+    JobType,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
@@ -32,9 +33,6 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    BalanceService 
-} from "@modules/blockchains"
-import {
     OpenPositionOrchestratorService 
 } from "@modules/blockchains/dexes"
 import {
@@ -53,7 +51,6 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly winstonService: WinstonService,
         private readonly botsLoaderService: BotsLoaderService,
         private readonly asyncService: AsyncService,
-        private readonly balanceService: BalanceService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
@@ -81,6 +78,7 @@ export class RequeueService implements OnApplicationBootstrap {
                         $where: (activeJob: ActiveJobSchema) => {
                             return (
                                 activeJob &&
+                                activeJob.jobType === JobType.OpenPosition &&
                                 activeJob.queuedAt &&
                                 this.dayjsService.now().diff(
                                     activeJob.queuedAt,

@@ -22,6 +22,12 @@ import {
 import {
     ConfirmService,
 } from "./confirm.service"
+import {
+    ClearService,
+} from "./clear.service"
+import {
+    ConfigurableModuleClass,
+} from "./open-position.module-definition"
 
 @Module(
     {
@@ -33,7 +39,8 @@ import {
             OnFailedService,
             ExecuteService,
             ConfirmService,
+            ClearService,
         ],
     }
 )
-export class OpenPositionModule {}
+export class OpenPositionModule extends ConfigurableModuleClass {}

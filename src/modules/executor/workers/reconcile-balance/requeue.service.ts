@@ -4,6 +4,7 @@ import {
 } from "@nestjs/common"
 import {
     ActiveJobSchema,
+    JobType,
 } from "@modules/databases"
 import {
     DayjsService 
@@ -75,6 +76,7 @@ export class RequeueService implements OnApplicationBootstrap {
                         $where: (activeJob: ActiveJobSchema) => {
                             return (
                                 activeJob &&
+                                activeJob.jobType === JobType.ReconcileBalance &&
                                 activeJob.queuedAt &&
                                 this.dayjsService.now().diff(
                                     activeJob.queuedAt,

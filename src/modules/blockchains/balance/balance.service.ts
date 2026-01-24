@@ -147,6 +147,7 @@ export class BalanceService implements IBalanceService {
                                     activeJob: {
                                         job: job.id,
                                         queuedAt: this.dayjsService.now().toDate(),
+                                        jobType: JobType.ReconcileBalance,
                                     },
                                 } 
                             },

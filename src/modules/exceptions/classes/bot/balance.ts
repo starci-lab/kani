@@ -35,3 +35,29 @@ export class InsufficientMinGasBalanceAmountException extends AbstractException 
         )
     }  
 }
+
+/** Thrown when the quote ratio is not good */
+export interface QuoteRatioNotGoodExceptionMetadata extends AbstractExceptionMetadata {
+    botId: string
+    liquidityPoolId: string
+    quoteRatio: number
+}
+export class QuoteRatioNotGoodException extends AbstractException {
+    constructor(
+        {
+            botId,
+            liquidityPoolId,
+            quoteRatio,
+        }: QuoteRatioNotGoodExceptionMetadata
+    ) {
+        super(
+            "Quote ratio not good",
+            "QUOTE_RATIO_NOT_GOOD_EXCEPTION",
+            {
+                botId,
+                liquidityPoolId,
+                quoteRatio,
+            }
+        )
+    }
+}

@@ -12,8 +12,12 @@ import {
 } from "./open-position"
 @Module({
     imports: [
-        ReconcileBalanceModule,
-        OpenPositionModule,
+        ReconcileBalanceModule.register({
+            isGlobal: true,
+        }),
+        OpenPositionModule.register({
+            isGlobal: true,
+        }),
     ],
 })
 export class WorkersModule extends ConfigurableModuleClass {}
