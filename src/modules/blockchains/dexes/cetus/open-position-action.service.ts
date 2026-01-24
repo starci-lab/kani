@@ -24,7 +24,7 @@ import {
     OpenPositionTxbService 
 } from "./transactions"
 import { 
-    EnsureMathService, TickMathService 
+    TickMathService 
 } from "../../math"
 import { 
     InvalidPoolTokensException, 
@@ -80,7 +80,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
     private readonly tickMathService: TickMathService,
     private readonly asyncService: AsyncService,
     private readonly rpcExecutorService: RpcExecutorService,
-    private readonly ensureMathService: EnsureMathService,
     private readonly winstonService: WinstonService,
     private readonly privySignService: PrivySignService,
     ) {}

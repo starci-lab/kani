@@ -40,6 +40,7 @@ import {
     SuiObjectInvalidTypeException,
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
+    LiquidityPoolClmmStateNotFoundException,
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -149,6 +150,11 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
             })
         }
+        if (!_state.static.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
         const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
         const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -167,8 +173,8 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
         const { tickLower, tickUpper } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.dynamic.tickCurrent,
-            tickSpacing: new Decimal(_state.static.clmmState?.tickSpacing ?? 0),
-            tickMultiplier: new Decimal(_state.static.clmmState?.tickMultiplier ?? 0),
+            tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
+            tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
             targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
             targetIsA,
