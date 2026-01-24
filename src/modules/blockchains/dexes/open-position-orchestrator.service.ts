@@ -298,8 +298,8 @@ export class OpenPositionOrchestratorService {
                     )
                     const job = jobRaw.toJSON()
                     /**
-                 * Update the balance snapshots snapshotAt
-                 */
+                    * Update the balance snapshots snapshotAt
+                    */
                     /**
                     * Update the bot with the active job id.
                     */
