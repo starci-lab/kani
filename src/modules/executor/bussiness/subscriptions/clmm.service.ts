@@ -49,10 +49,7 @@ export class ClmmSubscriptionService {
                 {
                     event: EventName.ClmmPositionOpenRequested,
                     args: [bot.id],
-                    payload: {
-                        bot,
-                        payload: event
-                    },
+                    payload: event,
                 }
             )
         }

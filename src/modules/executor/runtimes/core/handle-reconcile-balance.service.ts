@@ -102,7 +102,7 @@ export class HandleReconcileBalanceService {
                     error: error.message,
                 }
             )
-            this.lockAuthorityService.release(
+            await this.lockAuthorityService.release(
                 {
                     botId: bot.id,
                 }

@@ -10,6 +10,9 @@ import {
 import {
     HandleOpenPositionService 
 } from "./handle-open-position.service"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
 
 @Injectable()
 export class HandleDlmmPositionOpenRequestedEventService {
@@ -22,6 +25,7 @@ export class HandleDlmmPositionOpenRequestedEventService {
      */
     constructor(
         private readonly handleOpenPositionService: HandleOpenPositionService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -31,9 +35,19 @@ export class HandleDlmmPositionOpenRequestedEventService {
         bot: BotSchema,
         event: DlmmPositionOpenRequestedEventPayload,
     ) {
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+            {
+                id: {
+                    $eq: event.id,
+                }
+            }
+        )
+        if (!liquidityPool) {
+            return
+        }   
         this.handleOpenPositionService.process(
             bot,
-            event
+            liquidityPool
         )
     }
 }

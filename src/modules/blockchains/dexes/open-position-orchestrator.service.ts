@@ -331,7 +331,7 @@ export class OpenPositionOrchestratorService {
             liquidityPoolId: liquidityPool.displayId,
             isRetry,
         }
-        await this.openPositionQueue.add(
+        return await this.openPositionQueue.add(
             jobId,
             this.superjson.stringify(
                 payload

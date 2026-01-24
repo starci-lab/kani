@@ -3,6 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     BotSchema, 
+    LiquidityPoolSchema,
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
@@ -18,10 +19,6 @@ import {
 import {
     OpenPositionOrchestratorService 
 } from "@modules/blockchains"
-import {
-    ClmmPositionOpenRequestedEventPayload,
-    DlmmPositionOpenRequestedEventPayload 
-} from "@modules/event"
 import {
     envConfig 
 } from "@modules/env"
@@ -63,7 +60,7 @@ export class HandleOpenPositionService {
      */
     async process(
         bot: BotSchema,
-        event: ClmmPositionOpenRequestedEventPayload | DlmmPositionOpenRequestedEventPayload
+        liquidityPool: LiquidityPoolSchema
     ) {
         // we do nothing if the bot is not running
         if (!bot.running) return
@@ -91,16 +88,6 @@ export class HandleOpenPositionService {
         )
         if (!acquired) return
         // enqueue the balance rebalancing
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
-            {
-                id: {
-                    $eq: event.payload.id,
-                }
-            }
-        )
-        if (!liquidityPool) {
-            return
-        }
         try {
             const bullmqJob = await this.openPositionOrchestratorService.enqueue(
                 {
@@ -128,7 +115,7 @@ export class HandleOpenPositionService {
                     error: error.message,
                 }
             )
-            this.lockAuthorityService.release(
+            await this.lockAuthorityService.release(
                 {
                     botId: bot.id,
                 }

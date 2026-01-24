@@ -144,8 +144,10 @@ export class RuntimeContextService {
                             if (!this.bot) {
                                 return
                             }
-                            this.handleClmmPositionOpenRequestedEventService.process(this.bot,
-                                event)
+                            this.handleClmmPositionOpenRequestedEventService.process(
+                                this.bot,
+                                event
+                            )
                         },
                     })
                     // subscribe to dlmm position open requested events

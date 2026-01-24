@@ -167,7 +167,7 @@ export class BalanceService implements IBalanceService {
             botId: bot.id,
             isRetry,
         }
-        const bullmqJob = await this.reconcileBalanceQueue.add(
+        return await this.reconcileBalanceQueue.add(
             v4(),
             this.superJson.stringify(
                 payload
@@ -176,7 +176,6 @@ export class BalanceService implements IBalanceService {
                 jobId: bot.id,
             }
         )
-        return bullmqJob
     }   
 
     async determineReconcileBalancePlan({

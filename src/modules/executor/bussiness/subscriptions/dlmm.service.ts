@@ -49,10 +49,7 @@ export class DlmmSubscriptionService {
                 {
                     event: EventName.DlmmPositionCloseRequested,
                     args: [bot.id],
-                    payload: {
-                        bot,
-                        payload: event
-                    },
+                    payload: event,
                 }
             )
         }

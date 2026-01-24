@@ -23,25 +23,10 @@ export interface CoordinatorExecutorDeletedEventPayload {
 }
 export type CoordinatorExecutorUpdatedEventPayload = ExecutorSchema
 
-export interface ClmmPositionOpenRequestedEventPayload {
-    payload: ClmmLiquidityPoolsSyncedEventPayload
-    bot: BotSchema
-}
-
-export interface ClmmPositionCloseRequestedEventPayload {
-    payload: ClmmLiquidityPoolsSyncedEventPayload
-    bot: BotSchema
-}
-
-export interface DlmmPositionOpenRequestedEventPayload {
-    payload: DlmmLiquidityPoolsSyncedEventPayload
-    bot: BotSchema
-}
-
-export interface DlmmPositionCloseRequestedEventPayload {
-    payload: DlmmLiquidityPoolsSyncedEventPayload
-    bot: BotSchema
-}
+export type ClmmPositionOpenRequestedEventPayload = ClmmLiquidityPoolsSyncedEventPayload
+export type ClmmPositionCloseRequestedEventPayload = ClmmLiquidityPoolsSyncedEventPayload
+export type DlmmPositionOpenRequestedEventPayload = DlmmLiquidityPoolsSyncedEventPayload
+export type DlmmPositionCloseRequestedEventPayload = DlmmLiquidityPoolsSyncedEventPayload
 
 export type ExecutorBotUpdatedEventPayload = BotSchema
 export interface ExecutorBotCreatedEventPayload {

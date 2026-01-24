@@ -5,7 +5,8 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    BotSchema 
+    BotSchema,
+    PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     HandleOpenPositionService 
@@ -22,6 +23,7 @@ export class HandleClmmPositionOpenRequestedEventService {
      */
     constructor(
         private readonly handleOpenPositionService: HandleOpenPositionService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -31,9 +33,19 @@ export class HandleClmmPositionOpenRequestedEventService {
         bot: BotSchema,
         event: ClmmPositionOpenRequestedEventPayload,
     ) {
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+            {
+                id: {
+                    $eq: event.id,
+                }
+            }
+        )
+        if (!liquidityPool) {
+            return
+        }   
         this.handleOpenPositionService.process(
             bot,
-            event
+            liquidityPool
         )
     }
 }
