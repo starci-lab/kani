@@ -349,6 +349,18 @@ export const envConfig = () => ({
             ttl: parseEnvMs("EXECUTOR_LOCK_AUTHORITY_TTL",
                 "10s"),
         },
+        workers: {
+            /**
+             * Job retention policy:
+             * 0 = keep job data + metadata
+             * 1 = keep job data, remove metadata
+             * 2 = remove job completely
+             */
+            job: {
+                level: parseEnvInt("EXECUTOR_WORKERS_JOB_LEVEL",
+                    0),
+            },
+        },
     },
     // quote config
     quote: {

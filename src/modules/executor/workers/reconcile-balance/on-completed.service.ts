@@ -23,6 +23,9 @@ import {
 import {
     OnCompletedParams,
 } from "./types"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class OnCompletedService {
@@ -50,21 +53,35 @@ export class OnCompletedService {
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
-                await this.connection.model<JobSchema>(JobSchema.name).updateOne(
-                    {
-                        _id: job.id,
-                    },
-                    {
-                        $set: {
-                            status: JobStatus.Completed,
-                            processedAt: this.dayjsService.now().toDate(),
+                if (envConfig().executor.workers.job.level === 2) {
+                    await this.connection.model<JobSchema>(JobSchema.name).deleteOne(
+                        {
+                            _id: job.id,
                         },
-                    },
-                    {
-                        session,
-                    }
-                )
-
+                    )
+                } else {
+                    await this.connection.model<JobSchema>(JobSchema.name).updateOne(
+                        {
+                            _id: job.id,
+                        },
+                        {
+                            $set: {
+                                status: JobStatus.Completed,
+                                processedAt: this.dayjsService.now().toDate(),
+                                ...(
+                                    envConfig().executor.workers.job.level === 1 ? {
+                                        $unset: {
+                                            metadata: null,
+                                        },
+                                    } : undefined
+                                ),
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
+                }
                 await this.connection.model<BotSchema>(BotSchema.name).updateOne(
                     {
                         _id: bot.id,
