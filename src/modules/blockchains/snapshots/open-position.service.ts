@@ -2,16 +2,14 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    ClientSession, Connection 
+    Connection 
 } from "mongoose"
 import { 
     BotSchema, 
     InjectPrimaryMongoose, 
-    LiquidityPoolSchema, 
     PositionFeesSchema, 
     PositionSchema, 
-    PositionSnapshotsSchema,
-    TokenSchema
+    PositionSnapshotsSchema
 } from "@modules/databases"
 import BN from "bn.js"
 import {
@@ -20,6 +18,9 @@ import {
 import {
     PositionValueService 
 } from "../math"
+import {
+    AddOpenPositionRecordParams
+} from "./types"
 
 @Injectable()
 export class OpenPositionSnapshotService {
@@ -55,15 +56,15 @@ export class OpenPositionSnapshotService {
         const clmmState = clmmParams
             ? {
                 liquidity: clmmParams.liquidity.toString(),
-                tickLower: clmmParams.tickLower.toNumber(),
-                tickUpper: clmmParams.tickUpper.toNumber(),
+                tickLower: clmmParams.tickLower.toString(),
+                tickUpper: clmmParams.tickUpper.toString(),
             }
             : undefined
         // Build DLMM state if applicable
         const dlmmState = dlmmParams
             ? {
-                minBinId: dlmmParams.minBinId.toNumber(),
-                maxBinId: dlmmParams.maxBinId.toNumber(),
+                minBinId: dlmmParams.minBinId.toString(),
+                maxBinId: dlmmParams.maxBinId.toString(),
             }
             : undefined
         // Build open snapshot using before snapshot (snapshot before opening position)
@@ -134,43 +135,4 @@ export class OpenPositionSnapshotService {
             }
         )
     }
-}
-
-export interface AddOpenPositionRecordParams {
-    // Protocol-specific params
-    clmmParams?: ClmmSnapshotParams
-    dlmmParams?: DlmmSnapshotParams
-    // Snapshot fields
-    before: BalanceSnapshotParams
-    after: BalanceSnapshotParams
-    // Common fields
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
-    positionId: string
-    openTxHash: string
-    metadata?: unknown
-    feeTargetAmount: BN
-    feeQuoteAmount: BN
-    session?: ClientSession
-    targetToken: TokenSchema
-    quoteToken: TokenSchema
-    gasToken: TokenSchema
-    stimulate?: boolean
-}
-
-export interface BalanceSnapshotParams {
-    targetBalanceAmount: BN
-    quoteBalanceAmount: BN
-    gasBalanceAmount: BN
-}
-
-export interface ClmmSnapshotParams {
-    liquidity: BN
-    tickLower: BN
-    tickUpper: BN
-}
-
-export interface DlmmSnapshotParams {
-    minBinId: BN
-    maxBinId: BN
 }

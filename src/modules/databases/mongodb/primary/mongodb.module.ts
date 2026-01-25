@@ -56,6 +56,8 @@ import {
     PositionDlmmStateSchema,
     ActiveJobSchemaClass,
     ActiveJobSchema,
+    PositionPerformanceSchema,
+    PositionPerformanceSchemaClass,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -277,6 +279,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: ActiveJobSchema.name,
                         useFactory: () => ActiveJobSchemaClass,
+                    },
+                    {
+                        name: PositionPerformanceSchema.name,
+                        useFactory: () => PositionPerformanceSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

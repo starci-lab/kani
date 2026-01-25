@@ -12,7 +12,7 @@ import {
     JobStatus,
 } from "@modules/databases"
 import {
-    JobSchema
+    JobSchema,
 } from "@modules/databases"
 import {
     WinstonLog, WinstonService
@@ -21,8 +21,18 @@ import {
     Connection 
 } from "mongoose"
 import {
-    OpenPositionOrchestratorService 
+    OpenPositionOrchestratorService, 
+    PrepareOpenPositionResult
 } from "@modules/blockchains"
+import {
+    SuperJSON
+} from "superjson"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
 
 @Injectable()
 export class PrepareService {
@@ -31,6 +41,8 @@ export class PrepareService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     // Phase: PREPARE
@@ -72,8 +84,11 @@ export class PrepareService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
+            const { openPositionTransaction } = job.metadata as ToStringObject<OpenPositionJobMetadata>
             return {
-                result: job.metadata as OpenPositionJobMetadata
+                result: {
+                    openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
+                }
             }
         }
         const openPositionTransaction = await this.openPositionOrchestratorService.prepare(
@@ -94,7 +109,7 @@ export class PrepareService {
             {
                 $set: {
                     status: JobStatus.Prepared,
-                    "metadata.openPositionTransaction": openPositionTransaction,
+                    "metadata.openPositionTransaction": this.superJson.stringify(openPositionTransaction),
                 },
             }
         )

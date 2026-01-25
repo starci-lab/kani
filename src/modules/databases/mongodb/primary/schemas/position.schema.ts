@@ -1,6 +1,5 @@
 import {
     Field,
-    Float,
 } from "@nestjs/graphql"
 import {
     Prop,
@@ -57,6 +56,10 @@ import {
     PositionSnapshotsSchema,
     PositionSnapshotsSchemaClass,
 } from "./position-snapshots.schema"
+import {
+    PositionPerformanceSchema,
+    PositionPerformanceSchemaClass,
+} from "./position-performance.schema"
 
 /**
  * PositionSchema
@@ -236,8 +239,6 @@ export class PositionSchema extends AbstractSchema {
 
     /**
      * Snapshot captured at the time the position was closed.
-     *
-     * Used to finalize ROI, PnL and settlement values.
      */
     @Field(() => PositionSnapshotsSchema,
         {
@@ -251,34 +252,22 @@ export class PositionSchema extends AbstractSchema {
         closeSnapshot?: PositionSnapshotsSchema
 
     /**
-     * Return on investment (ROI) percentage.
-     * Computed off-chain from open and close snapshots.
+     * Performance metrics computed from open and close snapshots.
+     *
+     * Includes:
+     * - ROI and PnL in token units
+     * - ROI and PnL in USD
      */
-    @Field(() => Float,
+    @Field(() => PositionPerformanceSchema,
         {
-            description: "The return on investment (ROI) percentage of the position",
+            description: "Performance metrics for this position",
             nullable: true,
         })
     @Prop({
-        type: Number,
+        type: PositionPerformanceSchemaClass,
         required: false,
     })
-        roi?: number
-
-    /**
-     * Profit and loss (PnL) percentage.
-     * Computed off-chain from snapshot deltas.
-     */
-    @Field(() => Float,
-        {
-            description: "The profit or loss in percentage of the position",
-            nullable: true,
-        })
-    @Prop({
-        type: Number,
-        required: false,
-    })
-        pnl?: number
+        performance?: PositionPerformanceSchema
 
     /**
      * Protocol-specific metadata stored as a flexible JSON object.

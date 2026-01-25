@@ -12,8 +12,12 @@ import {
 } from "./out-of-range-settlement.service"    
 
 @Module({
-    providers: [SettlementService,
-        OutOfRangeSettlementService],
-    exports: [SettlementService],
+    providers: [
+        SettlementService,
+        OutOfRangeSettlementService
+    ],
+    exports: [
+        SettlementService
+    ],
 })
 export class SettlementModule extends ConfigurableModuleClass {}

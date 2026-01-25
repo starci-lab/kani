@@ -97,7 +97,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state }: ConfirmOpenPositionParams
+        { positionId, state, bot }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
@@ -128,6 +128,14 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     })
                 }
                 const fields = objectInfo.data.content.fields as unknown as MomentumClmmPosition
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     liquidity: new BN(fields.liquidity),
                 }

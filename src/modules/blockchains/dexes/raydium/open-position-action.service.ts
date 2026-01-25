@@ -400,6 +400,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         {
             positionId,
             state,
+            bot,
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
@@ -421,6 +422,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 }
                 const [personalPositionState] = PersonalPositionState.struct.deserialize(Buffer.from(positionInfo.data),
                     8)
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: state.static.displayId,
+                    }
+                )
                 return {
                     liquidity: new BN(personalPositionState.liquidity.toString()),
                 }

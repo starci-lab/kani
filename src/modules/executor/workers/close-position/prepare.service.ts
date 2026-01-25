@@ -22,7 +22,17 @@ import {
 } from "mongoose"
 import {
     ClosePositionOrchestratorService,
+    PrepareClosePositionResult,
 } from "@modules/blockchains"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import {
+    SuperJSON 
+} from "superjson"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
 
 @Injectable()
 export class PrepareService {
@@ -31,6 +41,8 @@ export class PrepareService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     // Phase: PREPARE
@@ -72,8 +84,11 @@ export class PrepareService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
+            const { closePositionTransaction } = job.metadata as ToStringObject<ClosePositionJobMetadata>
             return {
-                result: job.metadata as ClosePositionJobMetadata
+                result: {
+                    closePositionTransaction: this.superJson.parse<PrepareClosePositionResult>(closePositionTransaction),
+                }
             }
         }
         const closePositionTransaction = await this.closePositionOrchestratorService.prepare(
@@ -94,7 +109,7 @@ export class PrepareService {
             {
                 $set: {
                     status: JobStatus.Prepared,
-                    "metadata.closePositionTransaction": closePositionTransaction,
+                    "metadata.closePositionTransaction": this.superJson.stringify(closePositionTransaction),
                 },
             }
         )

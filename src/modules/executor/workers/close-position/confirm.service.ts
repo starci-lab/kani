@@ -4,6 +4,7 @@ import {
 import {
     BalanceService,
     BalanceSnapshotService,
+    ClosePositionSnapshotService,
     TransactionSnapshotService,
 } from "@modules/blockchains"
 import {
@@ -12,7 +13,6 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
-    PositionSchema,
 } from "@modules/databases"
 import {
     Connection,
@@ -26,10 +26,12 @@ import {
 } from "@modules/winston"
 import {
     ActivePositionNotFoundException,
+    BalanceSnapshotsNotFoundException,
 } from "@modules/exceptions"
 import {
     envConfig,
 } from "@modules/env"
+import BN from "bn.js"
 
 @Injectable()
 export class ConfirmService {
@@ -37,6 +39,7 @@ export class ConfirmService {
         private readonly balanceService: BalanceService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
+        private readonly closePositionSnapshotService: ClosePositionSnapshotService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
@@ -61,6 +64,9 @@ export class ConfirmService {
             job,
             executeResult,
             liquidityPool,
+            targetToken,
+            quoteToken,
+            gasToken,
         }: ConfirmParams
     ) {
         if (
@@ -76,15 +82,17 @@ export class ConfirmService {
             )
             return
         }
-
-        if (!bot.activePosition?.position) {
+        if (!bot.activePosition?.position || !bot.activePosition?.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-
-        const { transactionRecord, closePositionTransaction } = executeResult
-
+        if (!bot.balanceSnapshots) {
+            throw new BalanceSnapshotsNotFoundException({
+                botId: bot.id,
+            })
+        }
+        const { transactionRecord } = executeResult
         const {
             targetBalanceAmount,
             quoteBalanceAmount,
@@ -94,47 +102,29 @@ export class ConfirmService {
                 bot,
             }
         )
-
+        const stimulate = envConfig().executor.runtime.operation.closePosition.stimulate
         const session = await this.connection.startSession()
-        try {
-            await session.withTransaction(
-                async () => {
-                    if (transactionRecord) {
-                        await this.transactionSnapshotService.addTransactionRecord(
-                            {
-                                ...transactionRecord,
-                                session,
-                            }
-                        )
+        await session.withTransaction(
+            async (session) => {
+                if (transactionRecord) {
+                    await this.transactionSnapshotService.addTransactionRecord(
+                        {
+                            ...transactionRecord,
+                            session,
+                        }
+                    )
+                }
+                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                    {
+                        bot,
+                        targetBalanceAmount,
+                        quoteBalanceAmount,
+                        gasBalanceAmount,
+                        session,
                     }
-
-                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                        {
-                            bot,
-                            targetBalanceAmount,
-                            quoteBalanceAmount,
-                            gasBalanceAmount,
-                            session,
-                        }
-                    )
-
-                    // Mark position as closed.
-                    await this.connection.model<PositionSchema>(PositionSchema.name).updateOne(
-                        {
-                            _id: bot.activePosition!.position,
-                        },
-                        {
-                            $set: {
-                                closeTxHash: closePositionTransaction.txHash,
-                                isActive: false,
-                            },
-                        },
-                        {
-                            session,
-                        }
-                    )
-
-                    // Clear bot.activePosition so subsequent reconcile-balance can run.
+                )
+                // only update bot only if the operation is not stimulated
+                if (!stimulate) {
                     await this.connection.model<BotSchema>(BotSchema.name).updateOne(
                         {
                             _id: bot.id,
@@ -148,27 +138,44 @@ export class ConfirmService {
                             session,
                         }
                     )
-
-                    await this.connection
-                        .model<JobSchema>(JobSchema.name)
-                        .updateOne(
-                            {
-                                _id: job.id,
-                            },
-                            {
-                                $set: {
-                                    status: JobStatus.Confirmed,
-                                    "metadata.isStimulated": envConfig().executor.runtime.operation.closePosition.stimulate,
-                                },
-                            },
-                            {
-                                session,
-                            }
-                        )
                 }
-            )
-        } finally {
-            await session.endSession()
-        }
+                await this.closePositionSnapshotService.updateClosePositionRecord(
+                    {
+                        before: {
+                            targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
+                            quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
+                            gasBalanceAmount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0),
+                        },
+                        after: {
+                            targetBalanceAmount,
+                            quoteBalanceAmount,
+                            gasBalanceAmount,
+                        },
+                        positionId: bot.activePosition?.associatedPosition?.id ?? "",
+                        closeTxHash: transactionRecord?.txHash ?? "",
+                        targetToken,
+                        quoteToken,
+                        gasToken,
+                        session,
+                        stimulate,
+                    }
+                )
+                await this.connection
+                    .model<JobSchema>(JobSchema.name)
+                    .updateOne(
+                        {
+                            _id: job.id,
+                        },
+                        {
+                            $set: {
+                                status: JobStatus.Confirmed,
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
+            }
+        )
     }
 }

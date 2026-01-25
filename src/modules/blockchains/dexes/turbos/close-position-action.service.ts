@@ -76,20 +76,30 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (bot.version === AppVersion.V1) {
-                    return await this.signerService.withSuiSigner({
-                        bot,
-                        action: async (signer) => {
-                            const bytes = await closePositionTxb.build({
-                                client: suiClient,
-                            })
-                            const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
-                            const signatureWithBytes = await signer.signTransaction(bytes)
-                            return {
-                                txHash,
-                                signatureWithBytes,
-                            }
-                        },
-                    })
+                    return await this.signerService.withSuiSigner(
+                        {
+                            bot,
+                            action: async (signer) => {
+                                const bytes = await closePositionTxb.build({
+                                    client: suiClient,
+                                })
+                                const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
+                                const signatureWithBytes = await signer.signTransaction(bytes)
+                                this.winstonService.log(
+                                    WinstonLog.ClosePositionTransactionPrepared,
+                                    {
+                                        botId: bot.id,
+                                        txHash,
+                                        liquidityPoolId: _state.static.displayId,
+                                    }
+                                )
+                                return {
+                                    txHash,
+                                    signatureWithBytes,
+                                }
+                            },
+                        }
+                    )
                 } else {
                     if (!bot.privyMetadata?.walletPublicKey) {
                         throw new PrivyPublicKeyNotFoundException({
@@ -108,6 +118,14 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         transaction: closePositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload!,
                     })
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHash,
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         txHash,
                         signatureWithBytes,

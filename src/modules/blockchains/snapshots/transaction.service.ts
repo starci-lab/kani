@@ -16,6 +16,9 @@ import {
 import {
     DayjsService 
 } from "@modules/mixin"
+import {
+    AddTransactionRecordParams
+} from "./types"
 
 @Injectable()
 export class TransactionSnapshotService {
@@ -52,13 +55,4 @@ export class TransactionSnapshotService {
                 }
             )
     }
-}   
-
-export interface AddTransactionRecordParams {
-    bot: BotSchema
-    session?: ClientSession
-    txHash: string
-    chainId: ChainId
-    type: TransactionType
-    isStimulated?: boolean
 }

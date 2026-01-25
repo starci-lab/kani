@@ -124,4 +124,6 @@ export enum WinstonLog {
     ClosePositionJobAlreadyEnqueued = "Close.Position.Job.Already.Enqueued",
     ReconcileBalanceJobAlreadyEnqueued = "Reconcile.Balance.Job.Already.Enqueued",
     CannotSettlePosition = "Cannot.Settle.Position",
+    ClosePositionTransactionPrepared = "Close.Position.Transaction.Prepared",
+    OpenPositionTransactionConfirmed = "Open.Position.Transaction.Confirmed",
 }

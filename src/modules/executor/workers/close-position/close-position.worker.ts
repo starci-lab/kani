@@ -24,6 +24,7 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     PrimaryMemoryStorageService,
+    PositionAssociateService,
 } from "@modules/databases"
 import {
     BotNotFoundException,
@@ -109,6 +110,7 @@ export class ClosePositionWorker extends WorkerHost {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly clearService: ClearService,
         private readonly asyncService: AsyncService,
+        private readonly positionAssociateService: PositionAssociateService
     ) {
         super()
     }
@@ -124,7 +126,6 @@ export class ClosePositionWorker extends WorkerHost {
                 const bot = await this.connection
                     .model<BotSchema>(BotSchema.name)
                     .findById(botId)
-
                 if (!bot) {
                     throw new UnrecoverableError(
                         new BotNotFoundException({
@@ -132,7 +133,9 @@ export class ClosePositionWorker extends WorkerHost {
                         }).toJSON()
                     )
                 }
-
+                // associate the active position
+                await this.positionAssociateService.associateActivePosition(bot)
+                // get the job
                 const job = await this.connection
                     .model<JobSchema>(JobSchema.name)
                     .findById(jobId)
@@ -226,21 +229,18 @@ export class ClosePositionWorker extends WorkerHost {
         try {
             const { result: prepareResult } = await this.prepareService.process(baseParams)
             await this.sendHeartbeatService.process(baseParams)
-            console.log(prepareResult)
-            // const { result: executeResult } = await this.executeService.process({
-            //     ...baseParams,
-            //     prepareResult,
-            // })
-
-            // await this.sendHeartbeatService.process(baseParams)
-
-            // await this.confirmService.process({
-            //     ...baseParams,
-            //     executeResult,
-            // })
-
-            // await this.sendHeartbeatService.process(baseParams)
-
+            const { result: executeResult } = await this.executeService.process({
+                ...baseParams,
+                prepareResult,
+            })
+            await this.sendHeartbeatService.process(baseParams)
+            await this.confirmService.process(
+                {
+                    ...baseParams,
+                    executeResult,
+                }
+            )
+            await this.sendHeartbeatService.process(baseParams)
             await this.onCompletedService.process(baseParams)
         } catch (error) {
             await this.onFailedService.process({

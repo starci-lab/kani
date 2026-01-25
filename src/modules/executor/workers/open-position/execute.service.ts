@@ -22,11 +22,22 @@ import {
 } from "@modules/winston"
 import {
     AddTransactionRecordParams,
-    OpenPositionOrchestratorService 
+    OpenPositionOrchestratorService,
+    PrepareOpenPositionResult,
+    ExecuteOpenPositionResult,
 } from "@modules/blockchains"
 import {
     envConfig 
 } from "@modules/env"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import {
+    SuperJSON 
+} from "superjson"
 
 @Injectable()
 export class ExecuteService {
@@ -35,6 +46,8 @@ export class ExecuteService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -69,8 +82,17 @@ export class ExecuteService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
+            const { 
+                openPositionTransaction, 
+                executeResult, 
+                transactionRecord 
+            } = job.metadata as ToStringObject<OpenPositionJobMetadata>
             return {
-                result: job.metadata as OpenPositionJobMetadata
+                result: {
+                    openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
+                    executeResult: executeResult ? this.superJson.parse<ExecuteOpenPositionResult>(executeResult) : undefined,
+                    transactionRecord: transactionRecord ? this.superJson.parse<AddTransactionRecordParams>(transactionRecord) : undefined,
+                }
             }
         }
         const { openPositionTransaction } = prepareResult
@@ -105,8 +127,8 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
-                        "metadata.executeResult": executeResult,
-                        "metadata.transactionRecord": transactionRecord,
+                        "metadata.executeResult": this.superJson.stringify(executeResult),
+                        "metadata.transactionRecord": this.superJson.stringify(transactionRecord),
                     },
                 }
             )

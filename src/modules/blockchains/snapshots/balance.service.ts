@@ -11,6 +11,9 @@ import BN from "bn.js"
 import {
     DayjsService 
 } from "@modules/mixin"
+import {
+    UpdateBotSnapshotBalancesRecordParams
+} from "./types"
 
 @Injectable()
 export class BalanceSnapshotService {
@@ -48,12 +51,4 @@ export class BalanceSnapshotService {
             }
         )
     }
-}
-
-export interface UpdateBotSnapshotBalancesRecordParams {
-    bot: BotSchema
-    targetBalanceAmount: BN
-    quoteBalanceAmount: BN
-    gasBalanceAmount: BN
-    session?: ClientSession
 }

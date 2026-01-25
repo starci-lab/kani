@@ -22,11 +22,21 @@ import {
 } from "@modules/winston"
 import {
     AddTransactionRecordParams,
-    ClosePositionOrchestratorService 
+    ClosePositionOrchestratorService,
+    PrepareClosePositionResult,
 } from "@modules/blockchains"
 import {
     envConfig 
 } from "@modules/env"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import {
+    SuperJSON 
+} from "superjson"
 
 @Injectable()
 export class ExecuteService {
@@ -35,6 +45,8 @@ export class ExecuteService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -69,8 +81,12 @@ export class ExecuteService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
+            const { closePositionTransaction, transactionRecord } = job.metadata as ToStringObject<ClosePositionJobMetadata>
             return {
-                result: job.metadata as ClosePositionJobMetadata
+                result: {
+                    closePositionTransaction: this.superJson.parse<PrepareClosePositionResult>(closePositionTransaction),
+                    transactionRecord: transactionRecord ? this.superJson.parse<AddTransactionRecordParams>(transactionRecord) : undefined,
+                }
             }
         }
         const { closePositionTransaction } = prepareResult
@@ -105,7 +121,7 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
-                        "metadata.transactionRecord": transactionRecord,
+                        "metadata.transactionRecord": this.superJson.stringify(transactionRecord),
                     },
                 }
             )

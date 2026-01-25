@@ -67,19 +67,19 @@ export class PositionValueService {
         // Calculate balance differences and convert to target token equivalent
         // Target token difference (already in target token, no conversion needed)
         const targetBalanceAmountDiff = toDecimalAmount({
-            amount: before.targetBalanceAmount.sub(after.targetBalanceAmount),
+            amount: before.targetBalanceAmount.sub(after.targetBalanceAmount).abs(),
             decimals: new Decimal(targetToken.decimals),
         })
         
         // Quote token difference converted to target token equivalent
         const quoteBalanceAmountDiffInTarget = toDecimalAmount({
-            amount: before.quoteBalanceAmount.sub(after.quoteBalanceAmount),
+            amount: before.quoteBalanceAmount.sub(after.quoteBalanceAmount).abs(),
             decimals: new Decimal(quoteToken.decimals),
         }).mul(relativeQuotePrice)
         
         // Gas token difference converted to target token equivalent
         const gasBalanceAmountDiff = toDecimalAmount({
-            amount: before.gasBalanceAmount.sub(after.gasBalanceAmount),
+            amount: before.gasBalanceAmount.sub(after.gasBalanceAmount).abs(),
             decimals: new Decimal(gasToken.decimals),
         }).mul(relativeGasPrice)
         
@@ -91,7 +91,7 @@ export class PositionValueService {
             token: targetToken,
         })
         const positionValueInUsd = positionValue.mul(targetPrice)
-        
+          
         return {
             positionValue,
             positionValueInUsd,

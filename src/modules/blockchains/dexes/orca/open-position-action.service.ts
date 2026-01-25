@@ -377,6 +377,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
 
     async confirm(
         {
+            bot,
             state,
             positionId,
         }: ConfirmOpenPositionParams
@@ -400,6 +401,14 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 }
                 const [positionState] = Position.struct.deserialize(Buffer.from(positionInfo.data),
                     8)
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: state.static.displayId,
+                    }
+                )
                 return {
                     liquidity: new BN(positionState.liquidity.toString()),
                 }

@@ -88,6 +88,7 @@ export interface CreateExecuteResult {
 }
 
 export interface ConfirmOpenPositionParams {
+  bot: BotSchema;
   positionId: string;
   state: LiquidityPoolState;
 }

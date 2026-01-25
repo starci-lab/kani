@@ -124,7 +124,9 @@ import {
     OpenPositionJobAlreadyEnqueuedMessage,
     ReconcileBalanceJobAlreadyEnqueuedMessage,
     ClosePositionJobAlreadyEnqueuedMessage,
-    CannotSettlePositionMessage
+    CannotSettlePositionMessage,
+    ClosePositionTransactionPreparedMessage,
+    OpenPositionTransactionConfirmedMessage
 } from "./types"
 
 export const configMap = {
@@ -172,7 +174,7 @@ export const configMap = {
     // Close Position Transaction
     [WinstonLog.ClosePositionTransactionExecuted]: {
         name: WinstonLog.ClosePositionTransactionExecuted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ClosePositionTransactionExecutedMessage,
@@ -196,7 +198,7 @@ export const configMap = {
     // Open Position Executed
     [WinstonLog.OpenPositionTransactionExecuted]: {
         name: WinstonLog.OpenPositionTransactionExecuted,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as OpenPositionTransactionExecutedMessage,
@@ -364,7 +366,7 @@ export const configMap = {
     // Close Position Enqueued
     [WinstonLog.ClosePositionEnqueued]: {
         name: WinstonLog.ClosePositionEnqueued,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {  
         } as ClosePositionEnqueuedMessage,
@@ -1129,5 +1131,20 @@ export const configMap = {
         messageType: {
         } as CannotSettlePositionMessage,
     },
-
+    // Close Position Transaction Prepared
+    [WinstonLog.ClosePositionTransactionPrepared]: {
+        name: WinstonLog.ClosePositionTransactionPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionTransactionPreparedMessage,
+    },
+    // Open Position Transaction Confirmed
+    [WinstonLog.OpenPositionTransactionConfirmed]: {
+        name: WinstonLog.OpenPositionTransactionConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionTransactionConfirmedMessage,
+    },
 }

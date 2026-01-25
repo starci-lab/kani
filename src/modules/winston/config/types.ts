@@ -1017,3 +1017,21 @@ export interface CannotSettlePositionMessage {
     liquidityPoolId: LiquidityPoolId
     strategyResults: unknown
 }
+
+/**
+ * Close Position Transaction Prepared Message
+ */
+export interface ClosePositionTransactionPreparedMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Transaction Confirmed Message
+ */
+export interface OpenPositionTransactionConfirmedMessage {
+    botId: string
+    txHash: string
+    liquidityPoolId: LiquidityPoolId
+}

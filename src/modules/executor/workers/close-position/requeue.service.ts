@@ -129,7 +129,7 @@ export class RequeueService implements OnApplicationBootstrap {
                             },
                         }
                     )
-                    if (!settled) {
+                    if (!settled && envConfig().executor.runtime.operation.closePosition.settle.enabled) {
                         this.winstonService.log(
                             WinstonLog.CannotSettlePosition,
                             {

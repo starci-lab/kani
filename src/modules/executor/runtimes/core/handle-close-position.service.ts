@@ -28,6 +28,9 @@ import {
 import {
     PositionAssociateService 
 } from "@modules/databases"
+import {
+    envConfig 
+} from "@modules/env"
 
 export interface HandleClosePositionParams {
     bot: BotSchema
@@ -95,7 +98,7 @@ export class HandleClosePositionService {
                 },
             }
         )
-        if (!settled) {
+        if (!settled && envConfig().executor.runtime.operation.closePosition.settle.enabled) {
             this.winstonService.log(
                 WinstonLog.CannotSettlePosition,
                 {

@@ -342,6 +342,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
 
     async confirm(
         {   
+            bot,
             state,
             positionId,
         }: ConfirmOpenPositionParams
@@ -363,6 +364,14 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: state.static.displayId,    
                     })
                 }
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: state.static.displayId,
+                    }
+                )
                 return {
                     // temporary empty, will need other logic to get liquidity
                 }

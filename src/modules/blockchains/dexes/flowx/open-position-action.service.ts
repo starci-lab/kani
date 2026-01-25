@@ -92,7 +92,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state  }: ConfirmOpenPositionParams
+        { positionId, state, bot }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
@@ -127,6 +127,14 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     )
                 }
                 const fields = objectInfo.data.content.fields as unknown as FlowXClmmPosition
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     liquidity: new BN(fields.liquidity),
                 }

@@ -99,7 +99,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state }: 
+        { positionId, state, bot }: 
         ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
@@ -135,6 +135,14 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     )
                 }
                 const fields = objectInfo.data.content.fields as unknown as CetusLiquidityPosition
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: _state.static.displayId,
+                    }
+                )
                 return {
                     liquidity: new BN(fields.liquidity),
                 }
