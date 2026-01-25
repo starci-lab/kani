@@ -1124,8 +1124,8 @@ export const configMap = {
     // Cannot Settle Position
     [WinstonLog.CannotSettlePosition]: {
         name: WinstonLog.CannotSettlePosition,
-        level: WinstonLevel.Error,
-        loki: true,
+        level: WinstonLevel.Verbose,
+        loki: false,
         messageType: {
         } as CannotSettlePositionMessage,
     },

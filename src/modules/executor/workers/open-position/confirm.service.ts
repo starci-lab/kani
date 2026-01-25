@@ -24,6 +24,7 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
+    OpenPositionOrchestratorService,
     OpenPositionSnapshotService,
 } from "@modules/blockchains"
 import {
@@ -44,6 +45,7 @@ export class ConfirmService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
     ) {}
 
     /**
@@ -66,6 +68,7 @@ export class ConfirmService {
             targetToken,
             quoteToken,
             gasToken,
+            dynamicLiquidityPoolInfo
         }: ConfirmParams
     ) {
         if (
@@ -82,6 +85,14 @@ export class ConfirmService {
             return
         }
         const { transactionRecord, openPositionTransaction, executeResult: _executeResult } = executeResult
+        // confirm the position
+        const { liquidity } = await this.openPositionOrchestratorService.confirm({
+            positionId: _executeResult?.positionId ?? "",
+            state: {
+                static: liquidityPool,
+                dynamic: dynamicLiquidityPoolInfo,
+            }
+        })
         // re-fetch balances post execution
         const {
             targetBalanceAmount,
@@ -143,17 +154,16 @@ export class ConfirmService {
                             session,
                             stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
                             clmmParams: liquidityPool.type === LiquidityPoolType.Clmm ? {
-                                liquidity: new BN(_executeResult ?? 0),
-                                tickLower: new BN(openPositionTransaction.tickLower ?? 0),
-                                tickUpper: new BN(openPositionTransaction.tickUpper ?? 0),
+                                liquidity: liquidity ?? new BN(0),
+                                tickLower: openPositionTransaction.tickLower ?? new BN(0),
+                                tickUpper: openPositionTransaction.tickUpper ?? new BN(0),
                             } : undefined,
                             dlmmParams: liquidityPool.type === LiquidityPoolType.Dlmm ? {
-                                minBinId: new BN(openPositionTransaction?.minBinId ?? 0),
-                                maxBinId: new BN(openPositionTransaction?.maxBinId ?? 0),
+                                minBinId: openPositionTransaction?.minBinId ?? new BN(0),
+                                maxBinId: openPositionTransaction?.maxBinId ?? new BN(0),
                             } : undefined,
                         }
                     )
-
                     await this.connection
                         .model<JobSchema>(JobSchema.name)
                         .updateOne(

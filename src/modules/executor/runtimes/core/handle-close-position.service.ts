@@ -86,7 +86,6 @@ export class HandleClosePositionService {
         await this.positionAssociateService.associateActivePosition(bot)
         const jobId = new Types.ObjectId().toString()
         // settle the position
-        console.log(eventPayload)
         const { settled } = await this.settlementService.settle(
             {
                 bot,
