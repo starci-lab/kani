@@ -28,7 +28,6 @@ export class HandleClmmPositionOpenRequestedEventService {
         private readonly handleOpenPositionService: HandleOpenPositionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
-
     /**
      * Routes the CLMM open-position event to the generic open-position handler.
      */
