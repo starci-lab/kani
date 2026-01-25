@@ -55,7 +55,7 @@ export class PrepareService {
         {
             job,
             bot, 
-            state,
+            dynamicLiquidityPoolInfo,
             liquidityPool,
         }: PrepareParams
     ): Promise<PrepareResult> {
@@ -79,7 +79,10 @@ export class PrepareService {
         const openPositionTransaction = await this.openPositionOrchestratorService.prepare(
             {
                 bot,
-                state,
+                state: {
+                    static: liquidityPool,
+                    dynamic: dynamicLiquidityPoolInfo,
+                },
             }
         )
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(

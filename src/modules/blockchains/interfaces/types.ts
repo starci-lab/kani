@@ -55,11 +55,14 @@ export interface DlmmLiquidityPoolState {
     dynamic: DynamicDlmmLiquidityPoolInfoCacheResult;
 }
 
-export type LiquidityPoolState = ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+export interface LiquidityPoolState {
+    static: LiquidityPoolSchema;
+    dynamic: DynamicClmmLiquidityPoolInfoCacheResult | DynamicDlmmLiquidityPoolInfoCacheResult;
+}
 
 export interface PrepareOpenPositionParams {
     bot: BotSchema;
-    state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+    state: LiquidityPoolState;
 }
 
 

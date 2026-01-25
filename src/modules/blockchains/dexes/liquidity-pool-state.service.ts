@@ -3,14 +3,14 @@ import {
 } from "@modules/databases"
 import {
     CacheService, 
-    CacheKey
+    CacheKey,
+    DynamicClmmLiquidityPoolInfoCacheResult,
+    DynamicDlmmLiquidityPoolInfoCacheResult,
+    DynamicLiquidityPoolStateCacheResult
 } from "@modules/cache"
 import {
     Injectable 
 } from "@nestjs/common"
-import {
-    DlmmLiquidityPoolState, ClmmLiquidityPoolState 
-} from "../interfaces"
 import { 
     CacheNotFoundException,
 } from "@modules/exceptions"
@@ -29,9 +29,9 @@ export class LiquidityPoolStateService {
      * Throws:
      * - CacheNotFoundException: when the required dynamic cache entry is missing
      */
-    private async getClmmState(
+    private async getDynamicClmmLiquidityPoolInfo(
         liquidityPool: LiquidityPoolSchema,
-    ): Promise<ClmmLiquidityPoolState> {
+    ): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
         const dynamicLiquidityPoolInfoCacheResult = await this.cacheService.get(
             {
                 key: CacheKey.DynamicClmmLiquidityPoolInfo,
@@ -44,10 +44,7 @@ export class LiquidityPoolStateService {
                 args: [liquidityPool.id.toString()],
             })
         }
-        return {
-            static: liquidityPool,
-            dynamic: dynamicLiquidityPoolInfoCacheResult,
-        }
+        return dynamicLiquidityPoolInfoCacheResult
     }
 
     /**
@@ -58,9 +55,9 @@ export class LiquidityPoolStateService {
      * Throws:
      * - CacheNotFoundException: when the required dynamic cache entry is missing
      */
-    private async getDlmmState(
+    private async getDynamicDlmmLiquidityPoolInfo(
         liquidityPool: LiquidityPoolSchema,
-    ): Promise<DlmmLiquidityPoolState> {
+    ): Promise<DynamicDlmmLiquidityPoolInfoCacheResult> {
         const dynamicLiquidityPoolInfoCacheResult = await this.cacheService.get(
             {
                 key: CacheKey.DynamicDlmmLiquidityPoolInfo,
@@ -73,10 +70,7 @@ export class LiquidityPoolStateService {
                 args: [liquidityPool.id.toString()],
             })
         }
-        return {
-            static: liquidityPool,
-            dynamic: dynamicLiquidityPoolInfoCacheResult,
-        }
+        return dynamicLiquidityPoolInfoCacheResult
     }   
 
     /**
@@ -87,16 +81,16 @@ export class LiquidityPoolStateService {
      * Throws:
      * - CacheNotFoundException: when required dynamic cache entry is missing (from helpers)
      */
-    async getState(
+    async getDynamicLiquidityPoolInfo(
         liquidityPool: LiquidityPoolSchema,
     ): Promise<
-    ClmmLiquidityPoolState | DlmmLiquidityPoolState
+    DynamicLiquidityPoolStateCacheResult
     > {
         switch (liquidityPool.type) {
         case LiquidityPoolType.Clmm:
-            return await this.getClmmState(liquidityPool)
+            return await this.getDynamicClmmLiquidityPoolInfo(liquidityPool)
         case LiquidityPoolType.Dlmm:
-            return await this.getDlmmState(liquidityPool)
+            return await this.getDynamicDlmmLiquidityPoolInfo(liquidityPool)
         }
     }
 }

@@ -1,6 +1,9 @@
 import {
-    AddTransactionRecordParams, ExecuteOpenPositionResult, LiquidityPoolState, OpenPositionPayload, PrepareOpenPositionResult
+    AddTransactionRecordParams, ExecuteOpenPositionResult, OpenPositionPayload, PrepareOpenPositionResult
 } from "@modules/blockchains"
+import {
+    DynamicLiquidityPoolStateCacheResult 
+} from "@modules/cache"
 import {
     BotSchema, JobSchema,
     LiquidityPoolSchema,
@@ -42,7 +45,7 @@ export interface ProcessParams {
     liquidityPool: LiquidityPoolSchema
 
     /** Liquidity pool state. */
-    state: LiquidityPoolState
+    dynamicLiquidityPoolInfo: DynamicLiquidityPoolStateCacheResult
 
     /** Target token. */
     targetToken: TokenSchema

@@ -10,6 +10,9 @@ import {
 import {
     sendAndConfirmTransactionFactory, signTransaction 
 } from "@solana/kit"
+import {
+    LiquidityPoolsSyncedEventPayload 
+} from "@modules/event"
 
 // to ensure the amount is correct
 export interface CoinAsset {
@@ -42,6 +45,7 @@ export interface BasePayload {
 
 export interface OpenPositionPayload extends BasePayload {
     liquidityPoolId: LiquidityPoolId
+    eventPayload?: LiquidityPoolsSyncedEventPayload
 }
 
 export interface ClosePositionPayload extends BasePayload {

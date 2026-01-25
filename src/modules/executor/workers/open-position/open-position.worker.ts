@@ -147,7 +147,7 @@ export class OpenPositionWorker extends WorkerHost {
     ): Promise<void> {
         // Deserialize the job payload (SuperJSON) into a typed open-position payload.
         const payload = this.superJson.parse<OpenPositionPayload>(bullmqJob.data)
-        const { botId, jobId, liquidityPoolId } = payload
+        const { botId, jobId, liquidityPoolId, eventPayload } = payload
         const [result,
             error] = await this.asyncService.resolveTuple(
             (async () => {
@@ -245,12 +245,12 @@ export class OpenPositionWorker extends WorkerHost {
                         }
                     })
                 }
-                const state = await this.liquidityPoolStateService.getState(liquidityPool)
+                const dynamicLiquidityPoolInfo = eventPayload ? eventPayload : await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
                 return {
                     bot,
                     job,
                     liquidityPool,
-                    state,
+                    dynamicLiquidityPoolInfo,
                     targetToken,
                     quoteToken,
                     gasToken,
@@ -265,7 +265,7 @@ export class OpenPositionWorker extends WorkerHost {
             )
             return
         }
-        const { bot, job, liquidityPool, state, targetToken, quoteToken, gasToken } = result
+        const { bot, job, liquidityPool, dynamicLiquidityPoolInfo, targetToken, quoteToken, gasToken } = result
         // Assemble a shared parameter object passed to all phase services.
         const baseParams: ProcessParams = {
             // BullMQ job context (attempts, progress, ids, etc.).
@@ -279,7 +279,7 @@ export class OpenPositionWorker extends WorkerHost {
             // Liquidity pool.
             liquidityPool,
             // Liquidity pool state.
-            state,
+            dynamicLiquidityPoolInfo,
             // Target token.
             targetToken,
             // Quote token.

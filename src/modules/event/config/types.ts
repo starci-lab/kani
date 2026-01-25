@@ -14,6 +14,7 @@ export type WithId<T> = T & {
 }
 export type ClmmLiquidityPoolsSyncedEventPayload = WithId<DynamicClmmLiquidityPoolInfoCacheResult>
 export type DlmmLiquidityPoolsSyncedEventPayload = WithId<DynamicDlmmLiquidityPoolInfoCacheResult>
+export type LiquidityPoolsSyncedEventPayload = ClmmLiquidityPoolsSyncedEventPayload | DlmmLiquidityPoolsSyncedEventPayload
 export type ReinitializeBalancersEventPayload = Array<RpcEjection>
 export interface CoordinatorExecutorCreatedEventPayload {
     id: string

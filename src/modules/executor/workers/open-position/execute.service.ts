@@ -52,7 +52,7 @@ export class ExecuteService {
             bullmqJob,
             prepareResult,
             payload,
-            state,
+            dynamicLiquidityPoolInfo,
             liquidityPool,
         }: ExecuteParams
     ): Promise<ExecuteResult> {
@@ -80,7 +80,10 @@ export class ExecuteService {
                 txHash: openPositionTransaction.txHash,
                 signatureWithBytes: openPositionTransaction.signatureWithBytes,
                 solanaTx: openPositionTransaction.solanaTx,
-                state,
+                state: {
+                    static: liquidityPool,
+                    dynamic: dynamicLiquidityPoolInfo,
+                },
                 txCheck: isRetry || (payload.isRetry ?? false),
                 stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
             }

@@ -39,6 +39,7 @@ import {
     DlmmLiquidityPoolState,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
+    LiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
 } from "../interfaces"
@@ -96,6 +97,9 @@ import {
 import {
     OpenPositionPayload 
 } from "../types"
+import {
+    LiquidityPoolsSyncedEventPayload 
+} from "@modules/event"
 
 /**
  * OpenPositionOrchestratorService
@@ -206,6 +210,7 @@ export class OpenPositionOrchestratorService {
             bot,
             jobId,
             isRetry,
+            eventPayload,
         }: EnqueueOpenPositionParams,
     ) {
         // Stage: state validation (token metadata required for quote-ratio computation)
@@ -330,6 +335,7 @@ export class OpenPositionOrchestratorService {
             botId: bot.id,
             liquidityPoolId: liquidityPool.displayId,
             isRetry,
+            eventPayload,
         }
         return await this.openPositionQueue.add(
             jobId,
@@ -443,7 +449,7 @@ export class OpenPositionOrchestratorService {
     async confirm(
         params: ConfirmOpenPositionParams,
     ): Promise<ConfirmOpenPositionResult> {
-        const _state = params.state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
+        const _state = params.state as LiquidityPoolState
 
         // Stage: state/config validation (DEX must exist and be enabled for confirmation)
         const dexId = _state.static.dex.toString()
@@ -481,4 +487,5 @@ export interface EnqueueOpenPositionParams {
     liquidityPool: LiquidityPoolSchema
     jobId: string
     isRetry?: boolean
+    eventPayload?: LiquidityPoolsSyncedEventPayload
 }
