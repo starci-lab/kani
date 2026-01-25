@@ -120,7 +120,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     }
                     const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
                     // check settlement status
-                    const { settled } = await this.settlementService.settle(
+                    const { settled, strategyResults } = await this.settlementService.settle(
                         {
                             bot,
                             state: {
@@ -136,6 +136,7 @@ export class RequeueService implements OnApplicationBootstrap {
                                 botId: bot.id,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 liquidityPoolId: liquidityPool.displayId,
+                                strategyResults,
                             }
                         )
                         return

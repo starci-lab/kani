@@ -86,7 +86,7 @@ export class HandleClosePositionService {
         await this.positionAssociateService.associateActivePosition(bot)
         const jobId = new Types.ObjectId().toString()
         // settle the position
-        const { settled } = await this.settlementService.settle(
+        const { settled, strategyResults } = await this.settlementService.settle(
             {
                 bot,
                 state: {
@@ -102,6 +102,7 @@ export class HandleClosePositionService {
                     botId: bot.id,
                     jobId,
                     liquidityPoolId: liquidityPool.displayId,
+                    strategyResults,
                 }
             )
             return

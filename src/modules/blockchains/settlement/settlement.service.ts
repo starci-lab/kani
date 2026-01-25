@@ -5,11 +5,9 @@ import {
     OutOfRangeSettlementService 
 } from "./out-of-range-settlement.service"
 import {
-    SettleParams 
+    SettleParams, 
+    SettleStrategyResult
 } from "./settlement.interface"
-import {
-    PositionSettlementReason 
-} from "@modules/databases"
 
 @Injectable()
 export class SettlementService {
@@ -22,24 +20,22 @@ export class SettlementService {
             bot, 
             state 
         }: SettleParams
-    ): Promise<SettlementOutput> {
+    ): Promise<SettleResult> {
+        const strategyResults: Array<SettleStrategyResult> = []
         // check if the position is out of range
-        const isOutOfRange = await this.outOfRangeSettlementService.settle({
+        const outOfRangeSettleStrategyResult = await this.outOfRangeSettlementService.settle({
             bot, state 
         })
-        if (isOutOfRange) {
-            return {
-                reason: PositionSettlementReason.OutOfRange,
-                settled: true,
-            }
-        }
+        strategyResults.push(outOfRangeSettleStrategyResult)
+        const settled = strategyResults.some(result => result.settled)
         return {
-            settled: false,
+            settled,
+            strategyResults,
         }
     }
 }
     
-export interface SettlementOutput {
-    reason?: PositionSettlementReason
+export interface SettleResult {
     settled: boolean
+    strategyResults: Array<SettleStrategyResult>
 }

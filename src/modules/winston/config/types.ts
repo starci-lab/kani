@@ -1,6 +1,6 @@
 import {
     LiquidityPoolId, 
-    TokenId
+    TokenId 
 } from "@modules/databases"
 import {
     RpcAccessType 
@@ -1015,4 +1015,5 @@ export interface CannotSettlePositionMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    strategyResults: unknown
 }

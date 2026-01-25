@@ -7,11 +7,13 @@ import {
     PositionDlmmStateNotFoundException
 } from "@modules/exceptions"
 import {
-    LiquidityPoolType 
+    LiquidityPoolType, 
+    PositionSettlementReason
 } from "@modules/databases"
 import {
     ISettlementStrategyService, 
-    SettleParams
+    SettleParams,
+    SettleStrategyResult
 } from "./settlement.interface"
 import {
     DynamicClmmLiquidityPoolInfoCacheResult,
@@ -27,7 +29,7 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
             bot, 
             state 
         }: SettleParams
-    ): Promise<boolean> {
+    ): Promise<SettleStrategyResult> {
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException(
                 {
@@ -36,6 +38,7 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
             )
         }
         const isClmm = state.static.type === LiquidityPoolType.Clmm
+        let settled = false
         if (isClmm) {
             const _state = state.dynamic as DynamicClmmLiquidityPoolInfoCacheResult
             if (!bot.activePosition.associatedPosition.clmmState) {
@@ -48,7 +51,16 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
                 _state.tickCurrent.lt(new BN(bot.activePosition.associatedPosition.clmmState.tickLower)) 
                 || _state.tickCurrent.gt(new BN(bot.activePosition.associatedPosition.clmmState.tickUpper))
             ) {
-                return true
+                settled = true
+            }
+            return {
+                settled,
+                reason: PositionSettlementReason.OutOfRange,
+                metadata: {
+                    tickCurrent: _state.tickCurrent.toNumber(),
+                    tickLower: bot.activePosition.associatedPosition.clmmState.tickLower,
+                    tickUpper: bot.activePosition.associatedPosition.clmmState.tickUpper,
+                },
             }
         } else {
             const _state = state.dynamic as DynamicDlmmLiquidityPoolInfoCacheResult
@@ -62,9 +74,17 @@ export class OutOfRangeSettlementService implements ISettlementStrategyService {
                 new BN(_state.activeId).lt(new BN(bot.activePosition.associatedPosition.dlmmState.minBinId)) 
                 || new BN(_state.activeId).gt(new BN(bot.activePosition.associatedPosition.dlmmState.maxBinId))
             ) {
-                return true
+                settled = true
+            }
+            return {
+                settled,
+                reason: PositionSettlementReason.OutOfRange,
+                metadata: {
+                    activeId: _state.activeId,
+                    minBinId: bot.activePosition.associatedPosition.dlmmState.minBinId,
+                    maxBinId: bot.activePosition.associatedPosition.dlmmState.maxBinId,
+                },
             }
         }
-        return false
     }
 }

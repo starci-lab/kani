@@ -1,15 +1,22 @@
 import {
-    BotSchema 
+    BotSchema,
+    PositionSettlementReason, 
 } from "@modules/databases"
 import {
     LiquidityPoolState 
 } from "../interfaces"
 
 export interface ISettlementStrategyService {
-    settle(params: SettleParams): Promise<boolean>
+    settle(params: SettleParams): Promise<SettleStrategyResult>
 }
 
 export interface SettleParams {
     bot: BotSchema
     state: LiquidityPoolState
+}
+
+export interface SettleStrategyResult {
+    reason: PositionSettlementReason
+    settled: boolean
+    metadata?: unknown
 }

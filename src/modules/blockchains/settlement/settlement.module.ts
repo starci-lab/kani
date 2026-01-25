@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass 
-} from "./keypairs.module-definition"
+} from "./settlement.module-definition"
 import {
     OutOfRangeSettlementService 
 } from "./out-of-range-settlement.service"    
