@@ -33,7 +33,7 @@ export class PositionFeesSchema {
         type: String,
         required: true,
     })
-        feeAmountTarget: string
+        targetAmount: string
 
     /**
      * Fees paid in the quote token for opening/closing this position.
@@ -47,7 +47,7 @@ export class PositionFeesSchema {
         type: String,
         required: true,
     })
-        feeAmountQuote: string
+        quoteAmount: string
 }
 
 export const PositionFeesSchemaClass = SchemaFactory.createForClass(PositionFeesSchema)

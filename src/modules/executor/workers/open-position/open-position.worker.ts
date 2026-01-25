@@ -97,6 +97,10 @@ import {
 import {
     AsyncService
 } from "@modules/mixin"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 @Worker(
     bullData[BullQueueName.OpenPosition].name,
@@ -123,6 +127,7 @@ export class OpenPositionWorker extends WorkerHost {
         private readonly executeService: ExecuteService,
         private readonly clearService: ClearService,
         private readonly asyncService: AsyncService,
+        private readonly winstonService: WinstonService,
     ) {
         super()
     }
@@ -257,6 +262,15 @@ export class OpenPositionWorker extends WorkerHost {
                 }
             })())
         if (error) {
+            this.winstonService.log(
+                WinstonLog.OpenPositionBootstrappingFailed,
+                {
+                    botId: botId,
+                    jobId: jobId,
+                    bullmqJobId: bullmqJob.id,
+                    error: error.message,
+                }
+            )
             await this.clearService.process(
                 {
                     botId: payload.botId,
@@ -265,7 +279,15 @@ export class OpenPositionWorker extends WorkerHost {
             )
             return
         }
-        const { bot, job, liquidityPool, dynamicLiquidityPoolInfo, targetToken, quoteToken, gasToken } = result
+        const { 
+            bot, 
+            job, 
+            liquidityPool, 
+            dynamicLiquidityPoolInfo, 
+            targetToken, 
+            quoteToken, 
+            gasToken 
+        } = result
         // Assemble a shared parameter object passed to all phase services.
         const baseParams: ProcessParams = {
             // BullMQ job context (attempts, progress, ids, etc.).

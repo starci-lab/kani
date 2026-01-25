@@ -89,6 +89,7 @@ export class ConfirmService {
         } = await this.balanceService.fetchBalances({
             bot 
         })
+        const targetIsA = liquidityPool.tokenA.toString() === targetToken.id.toString()
         const session = await this.connection.startSession()
         try {
             await session.withTransaction(
@@ -132,8 +133,8 @@ export class ConfirmService {
                             },
                             openTxHash: openPositionTransaction.txHash,
                             positionId: _executeResult?.positionId ?? "",
-                            feeAmountQuote: openPositionTransaction.feeAmountA,
-                            feeAmountTarget: openPositionTransaction.feeAmountB,
+                            feeTargetAmount: targetIsA ? openPositionTransaction.feeAmountA : openPositionTransaction.feeAmountB,
+                            feeQuoteAmount: targetIsA ? openPositionTransaction.feeAmountB : openPositionTransaction.feeAmountA,
                             liquidityPool,
                             targetToken,
                             quoteToken,

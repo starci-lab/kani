@@ -168,20 +168,6 @@ export class PositionSchema extends AbstractSchema {
         chainId: ChainId
 
     /**
-     * Indicates whether the target asset corresponds to token A
-     * in the associated liquidity pool.
-     */
-    @Field(() => Boolean,
-        {
-            description: "Whether the target token is token A in the liquidity pool",
-        })
-    @Prop({
-        type: Boolean,
-        default: true,
-    })
-        targetIsA: boolean
-
-    /**
      * Protocol-specific on-chain identifier of the position.
      *
      * Examples:

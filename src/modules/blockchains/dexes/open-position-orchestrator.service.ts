@@ -18,7 +18,9 @@ import {
     BalanceSnapshotsNotFoundException,
     TokenNotFoundException,
     LiquidityPoolNotOwnedByBotException,
-    QuoteRatioNotGoodException
+    QuoteRatioNotGoodException,
+    CannotEnqueueOpenPositionJobException,
+    CannotOpenPositionEnqueueJobReason
 } from "@modules/exceptions"
 import {
     RaydiumOpenPositionActionService 
@@ -92,6 +94,7 @@ import {
     bullData, BullQueueName 
 } from "@modules/bullmq"
 import {
+    Job,
     Queue 
 } from "bullmq"
 import {
@@ -100,6 +103,10 @@ import {
 import {
     LiquidityPoolsSyncedEventPayload 
 } from "@modules/event"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 /**
  * OpenPositionOrchestratorService
@@ -136,6 +143,7 @@ export class OpenPositionOrchestratorService {
         private readonly openPositionQueue: Queue<string>,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly winstonService: WinstonService,
     ) { }
 
     /**
@@ -212,47 +220,51 @@ export class OpenPositionOrchestratorService {
             isRetry,
             eventPayload,
         }: EnqueueOpenPositionParams,
-    ) {
-        // Stage: state validation (token metadata required for quote-ratio computation)
-        const targetToken = this.getTokenOrThrow(bot.targetToken.toString())
-        const quoteToken = this.getTokenOrThrow(bot.quoteToken.toString())
+    ): Promise<Job<string>> {
         /**
+         * Add open position job to the queue
+         */
+        try {
+        // Stage: state validation (token metadata required for quote-ratio computation)
+            const targetToken = this.getTokenOrThrow(bot.targetToken.toString())
+            const quoteToken = this.getTokenOrThrow(bot.quoteToken.toString())
+            /**
          * Ownership check:
          * Ensure the liquidity pool is associated with this bot.
          */
-        if (
-            !_.some(
-                bot.liquidityPools,
-                _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
-            )
-        ) {
-            throw new LiquidityPoolNotOwnedByBotException(
-                {
+            if (
+                !_.some(
+                    bot.liquidityPools,
+                    _liquidityPool => _liquidityPool.toString() === liquidityPool.id.toString()
+                )
+            ) {
+                throw new LiquidityPoolNotOwnedByBotException(
+                    {
+                        botId: bot.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+            }
+            // Stage: state validation (balance snapshots required for quote-ratio computation)
+            if (!bot.balanceSnapshots) {
+                throw new BalanceSnapshotsNotFoundException({
                     botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                }
-            )
-        }
-        // Stage: state validation (balance snapshots required for quote-ratio computation)
-        if (!bot.balanceSnapshots) {
-            throw new BalanceSnapshotsNotFoundException({
-                botId: bot.id,
-            })
-        }
-        /**
+                })
+            }
+            /**
          * Convert snapshot balances to BN for precise arithmetic.
          */
-        const snapshotTargetBalanceAmount = new BN(
-            bot.balanceSnapshots.targetBalanceAmount,
-        )
-        const snapshotQuoteBalanceAmount = new BN(
-            bot.balanceSnapshots.quoteBalanceAmount,
-        )
-        /**
+            const snapshotTargetBalanceAmount = new BN(
+                bot.balanceSnapshots.targetBalanceAmount,
+            )
+            const snapshotQuoteBalanceAmount = new BN(
+                bot.balanceSnapshots.quoteBalanceAmount,
+            )
+            /**
          * Quote ratio computation:
          * Determines whether market conditions are favorable.
          */
-        const { quoteRatio } =
+            const { quoteRatio } =
             await this.quoteRatioService.computeQuoteRatio(
                 {
                     targetToken,
@@ -261,91 +273,118 @@ export class OpenPositionOrchestratorService {
                     quoteBalanceAmount: snapshotQuoteBalanceAmount,
                 }
             )
-        /**
+            /**
          * Abort if quote ratio is not in a Good state.
          */
-        if (
-            this.quoteRatioService.checkQuoteRatioStatus(
-                {
-                    quoteRatio 
-                }
-            ) !== QuoteRatioStatus.Good
-        ) {
-            throw new QuoteRatioNotGoodException(
-                {
-                    botId: bot.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                    quoteRatio: quoteRatio.toNumber(),
-                }
-            )
-        }
-        if (!isRetry) {
-        // start a session
-            const session = await this.connection.startSession()
-            return await session.withTransaction(
-                async () => {   
-                /**
+            if (
+                this.quoteRatioService.checkQuoteRatioStatus(
+                    {
+                        quoteRatio 
+                    }
+                ) !== QuoteRatioStatus.Good
+            ) {
+                throw new QuoteRatioNotGoodException(
+                    {
+                        botId: bot.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                        quoteRatio: quoteRatio.toNumber(),
+                    }
+                )
+            }
+            if (!isRetry) {
+                // start a session
+                const session = await this.connection.startSession()
+                await session.withTransaction(
+                    async () => {   
+                        /**
                 * Persist job record.
                 */
-                    const [jobRaw] = await this.connection.model<JobSchema>(
-                        JobSchema.name
-                    ).create(
-                        [
-                            {
-                                _id: jobId,
-                                liquidityPool: liquidityPool.id,
-                                bot: bot.id,
-                                executor: envConfig().executor.id,
-                                type: JobType.OpenPosition,
-                                status: JobStatus.Pending,
-                            }
-                        ]
-                    )
-                    const job = jobRaw.toJSON()
-                    /**
+                        const [jobRaw] = await this.connection.model<JobSchema>(
+                            JobSchema.name
+                        ).create(
+                            [
+                                {
+                                    _id: jobId,
+                                    liquidityPool: liquidityPool.id,
+                                    bot: bot.id,
+                                    executor: envConfig().executor.id,
+                                    type: JobType.OpenPosition,
+                                    status: JobStatus.Pending,
+                                }
+                            ]
+                        )
+                        const job = jobRaw.toJSON()
+                        /**
                     * Update the balance snapshots snapshotAt
                     */
-                    /**
+                        /**
                     * Update the bot with the active job id.
                     */
-                    await this.connection.model<BotSchema>(BotSchema.name)
-                        .updateOne(
-                            {
-                                _id: bot.id 
-                            },
-                            {
-                                $set: {
-                                    activeJob: {
-                                        job: job.id,
-                                        liquidityPool: liquidityPool.id,
-                                        jobType: JobType.OpenPosition,
-                                        queuedAt: this.dayjsService.now().toDate(),
-                                    },
-                                } 
-                            },
-                            {
-                                session 
-                            }
-                        )             
-                }
-            )
-        }
-        const payload: OpenPositionPayload = {
-            jobId,
-            botId: bot.id,
-            liquidityPoolId: liquidityPool.displayId,
-            isRetry,
-            eventPayload,
-        }
-        return await this.openPositionQueue.add(
-            jobId,
-            this.superjson.stringify(
-                payload
-            ),
-            {
-                jobId: bot.id,
+                        await this.connection.model<BotSchema>(BotSchema.name)
+                            .updateOne(
+                                {
+                                    _id: bot.id 
+                                },
+                                {
+                                    $set: {
+                                        activeJob: {
+                                            job: job.id,
+                                            liquidityPool: liquidityPool.id,
+                                            jobType: JobType.OpenPosition,
+                                            queuedAt: this.dayjsService.now().toDate(),
+                                        },
+                                    } 
+                                },
+                                {
+                                    session 
+                                }
+                            )             
+                    }
+                )
             }
-        )
+            // check if the job is already in the queue
+            const jobInQueue = await this.openPositionQueue.getJob(bot.id)
+            if (jobInQueue) {
+                this.winstonService.log(
+                    WinstonLog.OpenPositionJobAlreadyEnqueued,
+                    {
+                        jobId,
+                        botId: bot.id,
+                        liquidityPoolId: liquidityPool.displayId,
+                    }
+                )
+                throw new CannotEnqueueOpenPositionJobException({
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    reason: CannotOpenPositionEnqueueJobReason.AlreadyInQueue,
+                    jobId,
+                })
+            }
+            const payload: OpenPositionPayload = {
+                jobId,
+                botId: bot.id,
+                liquidityPoolId: liquidityPool.displayId,
+                isRetry,
+                eventPayload,
+            }
+            return await this.openPositionQueue.add(
+                jobId,
+                this.superjson.stringify(
+                    payload
+                ),
+                {
+                    jobId: bot.id,
+                }
+            ) 
+        } catch (error) {
+            throw new CannotEnqueueOpenPositionJobException({
+                botId: bot.id,
+                liquidityPoolId: liquidityPool.displayId,
+                reason: CannotOpenPositionEnqueueJobReason.RuntimeError,
+                jobId,
+                error: error.message,
+            })
+        }
     }
 
     /**

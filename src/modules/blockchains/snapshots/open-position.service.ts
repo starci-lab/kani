@@ -42,8 +42,8 @@ export class OpenPositionSnapshotService {
             openTxHash,
             metadata,
             session,
-            feeAmountTarget,
-            feeAmountQuote,
+            feeTargetAmount,
+            feeQuoteAmount,
             targetToken,
             quoteToken,
             gasToken,
@@ -67,17 +67,19 @@ export class OpenPositionSnapshotService {
             }
             : undefined
         // Build open snapshot using before snapshot (snapshot before opening position)
-        const { positionValue, positionValueInUsd } = await this.positionValueService.calculatePositionValue({
-            before,
-            after: stimulate ? {
-                targetBalanceAmount: new BN(0),
-                quoteBalanceAmount: new BN(0),
-                gasBalanceAmount: new BN(0),
-            } : after,
-            targetToken,
-            quoteToken,
-            gasToken,
-        })
+        const { positionValue, positionValueInUsd } = await this.positionValueService.calculatePositionValue(
+            {
+                before,
+                after: stimulate ? {
+                    targetBalanceAmount: new BN(0),
+                    quoteBalanceAmount: new BN(0),
+                    gasBalanceAmount: new BN(0),
+                } : after,
+                targetToken,
+                quoteToken,
+                gasToken,
+            }
+        )
         const openSnapshot: Partial<PositionSnapshotsSchema> = {
             targetBalanceAmount: before.targetBalanceAmount.toString(),
             quoteBalanceAmount: before.quoteBalanceAmount.toString(),
@@ -86,14 +88,11 @@ export class OpenPositionSnapshotService {
             positionValueInUsd: positionValueInUsd.toNumber(),
             snapshotAt: now,
         }
-
         // Build fees object (required field)
         const fees: Partial<PositionFeesSchema> = {
-            feeAmountTarget: feeAmountTarget.toString(),
-            feeAmountQuote: feeAmountQuote.toString(),
+            targetAmount: feeTargetAmount.toString(),
+            quoteAmount: feeQuoteAmount.toString(),
         }
-
-        const targetIsA = liquidityPool.tokenA.toString() === targetToken.id.toString()
         const [positionRaw] = await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).create(
@@ -101,7 +100,6 @@ export class OpenPositionSnapshotService {
                 {
                     bot: bot.id,
                     chainId: bot.chainId,
-                    targetIsA,
                     liquidityPool: liquidityPool.id,
                     positionId,
                     openTxHash,
@@ -151,8 +149,8 @@ export interface AddOpenPositionRecordParams {
     positionId: string
     openTxHash: string
     metadata?: unknown
-    feeAmountTarget: BN
-    feeAmountQuote: BN
+    feeTargetAmount: BN
+    feeQuoteAmount: BN
     session?: ClientSession
     targetToken: TokenSchema
     quoteToken: TokenSchema

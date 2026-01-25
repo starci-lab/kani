@@ -117,7 +117,13 @@ import {
     OpenPositionTransactionPreparedMessage,
     ClosePositionTransactionFoundMessage,
     OpenPositionTransactionFoundMessage,
-    SwapTransactionFoundMessage
+    SwapTransactionFoundMessage,
+    ClosePositionBootstrappingFailedMessage,
+    OpenPositionBootstrappingFailedMessage,
+    ReconcileBalanceBootstrappingFailedMessage,
+    OpenPositionJobAlreadyEnqueuedMessage,
+    ReconcileBalanceJobAlreadyEnqueuedMessage,
+    ClosePositionJobAlreadyEnqueuedMessage
 } from "./types"
 
 export const configMap = {
@@ -1065,5 +1071,53 @@ export const configMap = {
         loki: true,
         messageType: {
         } as SwapTransactionFoundMessage,
+    },
+    // Open Position Bootstrapping Failed
+    [WinstonLog.OpenPositionBootstrappingFailed]: {
+        name: WinstonLog.OpenPositionBootstrappingFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionBootstrappingFailedMessage,
+    },
+    // Close Position Bootstrapping Failed
+    [WinstonLog.ClosePositionBootstrappingFailed]: {
+        name: WinstonLog.ClosePositionBootstrappingFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionBootstrappingFailedMessage,
+    },
+    // Reconcile Balance Bootstrapping Failed
+    [WinstonLog.ReconcileBalanceBootstrappingFailed]: {
+        name: WinstonLog.ReconcileBalanceBootstrappingFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceBootstrappingFailedMessage,
+    },
+    // Open Position Job Already Enqueued
+    [WinstonLog.OpenPositionJobAlreadyEnqueued]: {
+        name: WinstonLog.OpenPositionJobAlreadyEnqueued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobAlreadyEnqueuedMessage,
+    },
+    // Close Position Job Already Enqueued
+    [WinstonLog.ClosePositionJobAlreadyEnqueued]: {
+        name: WinstonLog.ClosePositionJobAlreadyEnqueued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobAlreadyEnqueuedMessage,
+    },
+    // Reconcile Balance Job Already Enqueued
+    [WinstonLog.ReconcileBalanceJobAlreadyEnqueued]: {
+        name: WinstonLog.ReconcileBalanceJobAlreadyEnqueued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobAlreadyEnqueuedMessage,
     },
 }

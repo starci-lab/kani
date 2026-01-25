@@ -948,3 +948,62 @@ export interface SwapTransactionFoundMessage {
     botId: string
     txHash: string
 }
+
+/**
+ * Open Position Bootstrapping Failed Message
+ */
+export interface OpenPositionBootstrappingFailedMessage {
+    botId: string
+    error: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Close Position Bootstrapping Failed Message
+ */
+export interface ClosePositionBootstrappingFailedMessage {
+    botId: string
+    error: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Reconcile Balance Bootstrapping Failed Message
+ */
+export interface ReconcileBalanceBootstrappingFailedMessage {
+    botId: string
+    error: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Open Position Job Already Enqueued Message
+ */
+export interface OpenPositionJobAlreadyEnqueuedMessage {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+    bullmqJobId?: string
+}
+
+/**
+ * Close Position Job Already Enqueued Message
+ */
+export interface ClosePositionJobAlreadyEnqueuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Reconcile Balance Job Already Enqueued Message
+ */
+export interface ReconcileBalanceJobAlreadyEnqueuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}

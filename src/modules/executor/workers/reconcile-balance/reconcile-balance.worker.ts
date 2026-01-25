@@ -96,6 +96,10 @@ import {
 import {
     AsyncService,
 } from "@modules/mixin"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 @Worker(
     bullData[BullQueueName.ReconcileBalance].name,
@@ -120,6 +124,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
         private readonly onFailedService: OnFailedService,
         private readonly clearService: ClearService,
         private readonly asyncService: AsyncService,
+        private readonly winstonService: WinstonService,
     ) {
         super()
     }
@@ -196,8 +201,16 @@ export class ReconcileBalanceWorker extends WorkerHost {
                     job,
                 }
             })())
-
         if (error) {
+            this.winstonService.log(
+                WinstonLog.ReconcileBalanceBootstrappingFailed,
+                {
+                    botId: botId,
+                    jobId: jobId,
+                    bullmqJobId: bullmqJob.id,
+                    error: error.message,
+                }
+            )
             await this.clearService.process(
                 {
                     botId,

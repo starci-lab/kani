@@ -117,4 +117,10 @@ export enum WinstonLog {
     ClosePositionTransactionFound = "Close.Position.Transaction.Found",
     OpenPositionTransactionFound = "Open.Position.Transaction.Found",
     SwapTransactionFound = "Swap.Transaction.Found",
+    OpenPositionBootstrappingFailed = "Open.Position.Bootstrapping.Failed",
+    ClosePositionBootstrappingFailed = "Close.Position.Bootstrapping.Failed",
+    ReconcileBalanceBootstrappingFailed = "Reconcile.Balance.Bootstrapping.Failed",
+    OpenPositionJobAlreadyEnqueued = "Open.Position.Job.Already.Enqueued",
+    ClosePositionJobAlreadyEnqueued = "Close.Position.Job.Already.Enqueued",
+    ReconcileBalanceJobAlreadyEnqueued = "Reconcile.Balance.Job.Already.Enqueued",
 }

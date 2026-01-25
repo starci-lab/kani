@@ -82,6 +82,12 @@ import {
 import {
     Queue 
 } from "bullmq"
+import {
+    WinstonLog 
+} from "@modules/winston"
+import {
+    WinstonService 
+} from "@modules/winston"
 
 @Injectable()
 export class ClosePositionOrchestratorService {
@@ -106,6 +112,7 @@ export class ClosePositionOrchestratorService {
         private readonly dayjsService: DayjsService,
         @InjectQueue(bullData[BullQueueName.ClosePosition].name)
         private readonly closePositionQueue: Queue<string>,
+        private readonly winstonService: WinstonService,
     ) {}
 
     /**
@@ -235,6 +242,19 @@ export class ClosePositionOrchestratorService {
                 }
             )
         }
+        // check if the job is already in the queue
+        const jobInQueue = await this.closePositionQueue.getJob(bot.id)
+        if (jobInQueue) {
+            this.winstonService.log(
+                WinstonLog.ClosePositionJobAlreadyEnqueued,
+                {
+                    jobId,
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
+            return null
+        }   
         const payload: ClosePositionPayload = {
             jobId,
             botId: bot.id,

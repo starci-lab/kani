@@ -63,7 +63,9 @@ export class HandleOpenPositionService {
         liquidityPool: LiquidityPoolSchema
     ) {
         // we do nothing if the bot is not running
-        if (!bot.running) return
+        if (!bot.running) {
+            return
+        }
         // we do nothing if the bot has an active position
         if (bot.activePosition) return
         if (bot.activeJob) {
