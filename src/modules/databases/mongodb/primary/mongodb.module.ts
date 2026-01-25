@@ -82,6 +82,9 @@ import {
 import {
     normalizeMongoose 
 } from "../plugins"
+import {
+    AssociateModule 
+} from "./associate"
 
 @Module({
 })
@@ -118,6 +121,17 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                 MemoryModule.register({
                     isGlobal: options.isGlobal,
                     manualLoad: !(typeof options.memoryStorage === "object" ? options.memoryStorage.manualLoad : true),
+                }),
+            )
+        }
+        // If associate is a boolean, use it as the manualAssociate value
+        if (
+            typeof options.associate === "undefined" 
+            || options.associate
+        ) {
+            extraModules.push(
+                AssociateModule.register({
+                    isGlobal: options.isGlobal,
                 }),
             )
         }

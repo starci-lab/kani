@@ -16,6 +16,7 @@ import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
 } from "./dexes.module-definition"
 import {
+    LiquidityPoolState,
     ReservesResult,
 } from "../interfaces"
 import {
@@ -105,14 +106,18 @@ export class ReservesOrchestratorService {
             })
         }
         // Stage: on-chain/data fetch (load latest pool state from cache/on-chain sources)
-        const state = await this.liquidityPoolStateService.getState(liquidityPool)
+        const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+        const state: LiquidityPoolState = {
+            static: liquidityPool,
+            dynamic: dynamicLiquidityPoolInfo,
+        }
         switch (dex.displayId) {
         case DexId.FlowX:
         {
             return await this.flowxReservesService.reserves(
                 { 
                     bot, 
-                    state 
+                    state
                 }
             )
         }

@@ -1007,3 +1007,12 @@ export interface ReconcileBalanceJobAlreadyEnqueuedMessage {
     jobId: string
     bullmqJobId?: string
 }
+
+/**
+ * Cannot Settle Position Message
+ */
+export interface CannotSettlePositionMessage {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+}

@@ -66,3 +66,38 @@ export class CannotEnqueueReconcileBalanceJobException extends AbstractException
         )
     }
 }
+
+/**
+ * Cannot Enqueue Close Position Job Exception
+ */
+export enum CannotClosePositionEnqueueJobReason {
+    CannotSettlePosition = "cannotSettlePosition",
+    AlreadyInQueue = "alreadyInQueue",
+    RuntimeError = "runtimeError",
+}
+export interface CannotClosePositionEnqueueJobExceptionMetadata {
+    jobId: string
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    reason: CannotClosePositionEnqueueJobReason
+    error?: string
+    settleReason?: string
+}
+export class CannotEnqueueClosePositionJobException extends AbstractException {
+    constructor(
+        { jobId, botId, liquidityPoolId, reason, error, settleReason }: CannotClosePositionEnqueueJobExceptionMetadata
+    ) {
+        super(
+            "Cannot enqueue close position job", 
+            "CANNOT_ENQUEUE_CLOSE_POSITION_JOB", 
+            {
+                jobId,
+                botId,
+                liquidityPoolId,
+                reason,
+                error,
+                settleReason,
+            }
+        )
+    }
+}

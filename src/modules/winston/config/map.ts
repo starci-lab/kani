@@ -123,7 +123,8 @@ import {
     ReconcileBalanceBootstrappingFailedMessage,
     OpenPositionJobAlreadyEnqueuedMessage,
     ReconcileBalanceJobAlreadyEnqueuedMessage,
-    ClosePositionJobAlreadyEnqueuedMessage
+    ClosePositionJobAlreadyEnqueuedMessage,
+    CannotSettlePositionMessage
 } from "./types"
 
 export const configMap = {
@@ -1120,4 +1121,13 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceJobAlreadyEnqueuedMessage,
     },
+    // Cannot Settle Position
+    [WinstonLog.CannotSettlePosition]: {
+        name: WinstonLog.CannotSettlePosition,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as CannotSettlePositionMessage,
+    },
+
 }

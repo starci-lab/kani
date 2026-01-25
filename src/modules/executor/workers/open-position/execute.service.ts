@@ -74,6 +74,7 @@ export class ExecuteService {
             }
         }
         const { openPositionTransaction } = prepareResult
+        const stimulate = envConfig().executor.runtime.operation.openPosition.stimulate
         const executeResult = await this.openPositionOrchestratorService.execute(
             {
                 bot,
@@ -85,7 +86,7 @@ export class ExecuteService {
                     dynamic: dynamicLiquidityPoolInfo,
                 },
                 txCheck: isRetry || (payload.isRetry ?? false),
-                stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
+                stimulate,
             }
         )
         const transactionRecord: AddTransactionRecordParams = {
@@ -93,9 +94,8 @@ export class ExecuteService {
             txHash: openPositionTransaction.txHash,
             chainId: bot.chainId,
             type: TransactionType.OpenPosition,
-            isStimulated: true,
+            isStimulated: stimulate,
         }
-
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(

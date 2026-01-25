@@ -20,7 +20,8 @@ import {
     LiquidityPoolNotOwnedByBotException,
     QuoteRatioNotGoodException,
     CannotEnqueueOpenPositionJobException,
-    CannotOpenPositionEnqueueJobReason
+    CannotOpenPositionEnqueueJobReason,
+    AbstractException
 } from "@modules/exceptions"
 import {
     RaydiumOpenPositionActionService 
@@ -101,12 +102,12 @@ import {
     OpenPositionPayload 
 } from "../types"
 import {
-    LiquidityPoolsSyncedEventPayload 
-} from "@modules/event"
-import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    DynamicLiquidityPoolStateCacheResult 
+} from "@modules/cache"
 
 /**
  * OpenPositionOrchestratorService
@@ -218,7 +219,7 @@ export class OpenPositionOrchestratorService {
             bot,
             jobId,
             isRetry,
-            eventPayload,
+            dynamicLiquidityPoolInfo,
         }: EnqueueOpenPositionParams,
     ): Promise<Job<string>> {
         /**
@@ -365,7 +366,7 @@ export class OpenPositionOrchestratorService {
                 botId: bot.id,
                 liquidityPoolId: liquidityPool.displayId,
                 isRetry,
-                eventPayload,
+                dynamicLiquidityPoolInfo,
             }
             return await this.openPositionQueue.add(
                 jobId,
@@ -377,13 +378,20 @@ export class OpenPositionOrchestratorService {
                 }
             ) 
         } catch (error) {
-            throw new CannotEnqueueOpenPositionJobException({
-                botId: bot.id,
-                liquidityPoolId: liquidityPool.displayId,
-                reason: CannotOpenPositionEnqueueJobReason.RuntimeError,
-                jobId,
-                error: error.message,
-            })
+            // if the error is an abstract exception, throw it
+            if (error instanceof AbstractException) {
+                throw error
+            }
+            // otherwise, throw a new cannot enqueue open position job exception
+            throw new CannotEnqueueOpenPositionJobException(
+                {
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                    reason: CannotOpenPositionEnqueueJobReason.RuntimeError,
+                    jobId,
+                    error: error.message,
+                }
+            )
         }
     }
 
@@ -526,5 +534,5 @@ export interface EnqueueOpenPositionParams {
     liquidityPool: LiquidityPoolSchema
     jobId: string
     isRetry?: boolean
-    eventPayload?: LiquidityPoolsSyncedEventPayload
+    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolStateCacheResult
 }

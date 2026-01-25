@@ -8,7 +8,9 @@ export const parseEnvFloat = (value: string, defaultValue: number = 0): number =
     return parseFloat(process.env[value] || defaultValue.toString())
 }
 export const parseEnvBoolean = (value: string, defaultValue: boolean = false): boolean => {
-    return Boolean(process.env[value] || defaultValue)
+    const envValue = process.env[value]
+    if (envValue === undefined) return defaultValue
+    return envValue.trim().toLowerCase() === "true"
 }
 export const parseEnvString = (value: string, defaultValue: string = ""): string => {
     return process.env[value] || defaultValue

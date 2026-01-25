@@ -1,58 +1,60 @@
 import {
-    ClmmPositionOpenRequestedEventPayload 
+    DlmmPositionCloseRequestedEventPayload 
 } from "@modules/event"
 import {
     Injectable 
 } from "@nestjs/common"
 import {
-    BotSchema,
-    PrimaryMemoryStorageService
+    BotSchema 
 } from "@modules/databases"
 import {
-    HandleOpenPositionService 
-} from "./handle-open-position.service"
+    HandleClosePositionService 
+} from "./handle-close-position.service"
+import {
+    PrimaryMemoryStorageService 
+} from "@modules/databases"
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 
 @Injectable()
-export class HandleClmmPositionOpenRequestedEventService {
+export class HandleDlmmPositionCloseRequestedEventService {
     /**
-     * Adapter for CLMM "position open requested" events.
+     * Adapter for DLMM "position close requested" events.
      *
      * Responsibility:
-     * - Bridge the CLMM-specific event type into the shared `HandleOpenPositionService`.
+     * - Bridge the DLMM-specific event type into the shared `HandleClosePositionService`.
      * - Keep this handler thin (no business logic here).
      */
     constructor(
-        private readonly handleOpenPositionService: HandleOpenPositionService,
+        private readonly handleClosePositionService: HandleClosePositionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
-     * Routes the CLMM open-position event to the generic open-position handler.
+     * Routes the DLMM close-position event to the generic close-position handler.
      */
     process(
         bot: BotSchema,
-        eventPayload: ClmmPositionOpenRequestedEventPayload,
+        event: DlmmPositionCloseRequestedEventPayload,
     ) {
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
             {
                 id: {
-                    $eq: eventPayload.id,
+                    $eq: event.id,
                 }
             }
         )
         if (!liquidityPool) {
             throw new LiquidityPoolNotFoundException({
-                id: eventPayload.id,
+                id: event.id,
             })
         }   
-        this.handleOpenPositionService.process(
+        this.handleClosePositionService.process(
             {
                 bot,
                 liquidityPool,
-                eventPayload,
+                eventPayload: event,
             }
         )
     }

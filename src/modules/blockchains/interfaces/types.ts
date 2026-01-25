@@ -68,7 +68,7 @@ export interface PrepareOpenPositionParams {
 
 export interface PrepareClosePositionParams {
     bot: BotSchema;
-    state: ClmmLiquidityPoolState | DlmmLiquidityPoolState;
+    state: LiquidityPoolState;
 }
 
 export interface PrepareClosePositionResult {

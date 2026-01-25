@@ -17,6 +17,7 @@ import {
 } from "./dexes.module-definition"
 import {
     FeesResult,
+    LiquidityPoolState,
 } from "../interfaces"
 import {
     OrcaFeesService 
@@ -78,7 +79,11 @@ export class FeesOrchestratorService {
         }: OrchestrateFeesParams,
     ): Promise<FeesResult> {
         // Stage: on-chain/data fetch (load latest pool state from cache/on-chain sources)
-        const state = await this.liquidityPoolStateService.getState(liquidityPool)
+        const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+        const state: LiquidityPoolState = {
+            static: liquidityPool,
+            dynamic: dynamicLiquidityPoolInfo,
+        }
         // Stage: state/config validation (DEX must exist and be enabled)
         const dex =
             this.primaryMemoryStorageService.dexCollection.findOne(

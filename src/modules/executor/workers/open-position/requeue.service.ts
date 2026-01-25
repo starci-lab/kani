@@ -33,7 +33,7 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    OpenPositionOrchestratorService 
+    OpenPositionOrchestratorService, LiquidityPoolStateService 
 } from "@modules/blockchains/dexes"
 import {
     BotsLoaderService 
@@ -54,6 +54,7 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
     ) {
     }
 
@@ -86,7 +87,13 @@ export class RequeueService implements OnApplicationBootstrap {
                                 ) > ttl
                             )
                         }
-                    }
+                    },
+                    running: {
+                        $eq: true,
+                    },
+                    activePosition: {
+                        $eq: undefined,
+                    },
                 }
             ).data()
             /**
@@ -120,6 +127,7 @@ export class RequeueService implements OnApplicationBootstrap {
                                 liquidityPool,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 isRetry: true,
+                                dynamicLiquidityPoolInfo: await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
                             }
                         )
                         this.winstonService.log(

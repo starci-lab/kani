@@ -11,6 +11,7 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
+    LiquidityPoolType,
 } from "@modules/databases"
 import {
     Connection,
@@ -141,6 +142,15 @@ export class ConfirmService {
                             gasToken,
                             session,
                             stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
+                            clmmParams: liquidityPool.type === LiquidityPoolType.Clmm ? {
+                                liquidity: new BN(_executeResult ?? 0),
+                                tickLower: new BN(openPositionTransaction.tickLower ?? 0),
+                                tickUpper: new BN(openPositionTransaction.tickUpper ?? 0),
+                            } : undefined,
+                            dlmmParams: liquidityPool.type === LiquidityPoolType.Dlmm ? {
+                                minBinId: new BN(openPositionTransaction?.minBinId ?? 0),
+                                maxBinId: new BN(openPositionTransaction?.maxBinId ?? 0),
+                            } : undefined,
                         }
                     )
 

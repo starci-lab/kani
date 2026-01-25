@@ -152,7 +152,7 @@ export class OpenPositionWorker extends WorkerHost {
     ): Promise<void> {
         // Deserialize the job payload (SuperJSON) into a typed open-position payload.
         const payload = this.superJson.parse<OpenPositionPayload>(bullmqJob.data)
-        const { botId, jobId, liquidityPoolId, eventPayload } = payload
+        const { botId, jobId, liquidityPoolId, dynamicLiquidityPoolInfo } = payload
         const [result,
             error] = await this.asyncService.resolveTuple(
             (async () => {
@@ -250,7 +250,6 @@ export class OpenPositionWorker extends WorkerHost {
                         }
                     })
                 }
-                const dynamicLiquidityPoolInfo = eventPayload ? eventPayload : await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
                 return {
                     bot,
                     job,
@@ -283,7 +282,6 @@ export class OpenPositionWorker extends WorkerHost {
             bot, 
             job, 
             liquidityPool, 
-            dynamicLiquidityPoolInfo, 
             targetToken, 
             quoteToken, 
             gasToken 
@@ -301,7 +299,7 @@ export class OpenPositionWorker extends WorkerHost {
             // Liquidity pool.
             liquidityPool,
             // Liquidity pool state.
-            dynamicLiquidityPoolInfo,
+            dynamicLiquidityPoolInfo: dynamicLiquidityPoolInfo ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
             // Target token.
             targetToken,
             // Quote token.

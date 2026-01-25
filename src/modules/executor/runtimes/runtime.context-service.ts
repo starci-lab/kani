@@ -30,6 +30,8 @@ import {
     HandleClmmPositionOpenRequestedEventService,
     HandleDlmmPositionOpenRequestedEventService,
     HandleReconcileBalanceService,
+    HandleClmmPositionCloseRequestedEventService,
+    HandleDlmmPositionCloseRequestedEventService,
 } from "./core"
 
 @Injectable(
@@ -58,6 +60,8 @@ export class RuntimeContextService {
         private readonly handleClmmPositionOpenRequestedEventService: HandleClmmPositionOpenRequestedEventService,
         private readonly handleDlmmPositionOpenRequestedEventService: HandleDlmmPositionOpenRequestedEventService,
         private readonly handleReconcileBalanceService: HandleReconcileBalanceService,
+        private readonly handleClmmPositionCloseRequestedEventService: HandleClmmPositionCloseRequestedEventService,
+        private readonly handleDlmmPositionCloseRequestedEventService: HandleDlmmPositionCloseRequestedEventService,
     ) { }
 
     private readonly executorBotUpdatedHandler = (
@@ -159,6 +163,30 @@ export class RuntimeContextService {
                                 return
                             }
                             this.handleDlmmPositionOpenRequestedEventService.process(this.bot,
+                                event)
+                        },
+                    })
+                    // subscribe to clmm position close requested events
+                    this.eventEmitterService.on({
+                        event: EventName.ClmmPositionCloseRequested,
+                        args: [this.context.id],
+                        listener: (event) => {
+                            if (!this.bot) {
+                                return
+                            }
+                            this.handleClmmPositionCloseRequestedEventService.process(this.bot,
+                                event)
+                        },
+                    })
+                    // subscribe to dlmm position close requested events
+                    this.eventEmitterService.on({
+                        event: EventName.DlmmPositionCloseRequested,
+                        args: [this.context.id],
+                        listener: (event) => {
+                            if (!this.bot) {
+                                return
+                            }
+                            this.handleDlmmPositionCloseRequestedEventService.process(this.bot,
                                 event)
                         },
                     })

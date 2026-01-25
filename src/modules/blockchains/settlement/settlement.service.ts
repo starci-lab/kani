@@ -6,7 +6,7 @@ import {
 } from "./out-of-range-settlement.service"
 import {
     SettleParams 
-} from "./strategy.interface"
+} from "./settlement.interface"
 import {
     PositionSettlementReason 
 } from "@modules/databases"

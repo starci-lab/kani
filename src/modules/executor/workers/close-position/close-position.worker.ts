@@ -116,7 +116,7 @@ export class ClosePositionWorker extends WorkerHost {
     async process(bullmqJob: Job<string>): Promise<void> {
         // Payload is stored as SuperJSON string (same convention as open-position).
         const payload = this.superJson.parse<ClosePositionPayload>(bullmqJob.data)
-        const { botId, jobId, liquidityPoolId } = payload
+        const { botId, jobId, liquidityPoolId, dynamicLiquidityPoolInfo } = payload
 
         const [result,
             error] = await this.asyncService.resolveTuple(
@@ -198,10 +198,8 @@ export class ClosePositionWorker extends WorkerHost {
                     })
                 }
 
-                const state = await this.liquidityPoolStateService.getState(liquidityPool)
-
                 return {
-                    bot, job, liquidityPool, state, targetToken, quoteToken, gasToken 
+                    bot, job, liquidityPool, dynamicLiquidityPoolInfo, targetToken, quoteToken, gasToken 
                 }
             })()
         )
@@ -213,14 +211,14 @@ export class ClosePositionWorker extends WorkerHost {
             })
             return
         }
-        const { bot, job, liquidityPool, state, targetToken, quoteToken, gasToken } = result
+        const { bot, job, liquidityPool, targetToken, quoteToken, gasToken } = result
         const baseParams: ProcessParams = {
             bullmqJob,
             bot,
             job,
             payload,
             liquidityPool,
-            state,
+            dynamicLiquidityPoolInfo: dynamicLiquidityPoolInfo ?? await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool),
             targetToken,
             quoteToken,
             gasToken,
@@ -228,20 +226,20 @@ export class ClosePositionWorker extends WorkerHost {
         try {
             const { result: prepareResult } = await this.prepareService.process(baseParams)
             await this.sendHeartbeatService.process(baseParams)
+            console.log(prepareResult)
+            // const { result: executeResult } = await this.executeService.process({
+            //     ...baseParams,
+            //     prepareResult,
+            // })
 
-            const { result: executeResult } = await this.executeService.process({
-                ...baseParams,
-                prepareResult,
-            })
+            // await this.sendHeartbeatService.process(baseParams)
 
-            await this.sendHeartbeatService.process(baseParams)
+            // await this.confirmService.process({
+            //     ...baseParams,
+            //     executeResult,
+            // })
 
-            await this.confirmService.process({
-                ...baseParams,
-                executeResult,
-            })
-
-            await this.sendHeartbeatService.process(baseParams)
+            // await this.sendHeartbeatService.process(baseParams)
 
             await this.onCompletedService.process(baseParams)
         } catch (error) {

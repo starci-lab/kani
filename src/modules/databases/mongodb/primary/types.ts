@@ -5,4 +5,7 @@ export interface PrimaryMongoDbOptions {
     withSeeders?: {
         manualSeed?: boolean
     } | boolean,
+    associate?: {
+        manualAssociate?: boolean
+    } | boolean,
 }

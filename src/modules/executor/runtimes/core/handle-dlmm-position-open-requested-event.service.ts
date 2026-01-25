@@ -13,7 +13,9 @@ import {
 import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
-
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
 @Injectable()
 export class HandleDlmmPositionOpenRequestedEventService {
     /**
@@ -43,11 +45,16 @@ export class HandleDlmmPositionOpenRequestedEventService {
             }
         )
         if (!liquidityPool) {
-            return
+            throw new LiquidityPoolNotFoundException({
+                id: event.id,
+            })
         }   
         this.handleOpenPositionService.process(
-            bot,
-            liquidityPool
+            {
+                bot,
+                liquidityPool,
+                eventPayload: event,
+            }
         )
     }
 }

@@ -12,7 +12,7 @@ import {
 import {
     ISettlementStrategyService, 
     SettleParams
-} from "./strategy.interface"
+} from "./settlement.interface"
 import {
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult 

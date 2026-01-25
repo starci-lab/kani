@@ -14,6 +14,9 @@ import {
     HandleClmmPositionOpenRequestedEventService, 
     HandleDlmmPositionOpenRequestedEventService,
     HandleOpenPositionService,
+    HandleClmmPositionCloseRequestedEventService,
+    HandleDlmmPositionCloseRequestedEventService,
+    HandleClosePositionService,
     HandleReconcileBalanceService,
 } from "./core"
 
@@ -37,6 +40,9 @@ export class RuntimesModule extends ConfigurableModuleClass {
                 HandleDlmmPositionOpenRequestedEventService,
                 HandleReconcileBalanceService,
                 HandleOpenPositionService,
+                HandleClosePositionService,
+                HandleClmmPositionCloseRequestedEventService,
+                HandleDlmmPositionCloseRequestedEventService,
             ],
             exports: [
                 RuntimesFactoryService,

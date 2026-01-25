@@ -1,5 +1,5 @@
 import {
-    ClmmPositionOpenRequestedEventPayload 
+    ClmmPositionCloseRequestedEventPayload 
 } from "@modules/event"
 import {
     Injectable 
@@ -9,32 +9,32 @@ import {
     PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
-    HandleOpenPositionService 
-} from "./handle-open-position.service"
+    HandleClosePositionService 
+} from "./handle-close-position.service"
 import {
     LiquidityPoolNotFoundException 
 } from "@modules/exceptions"
 
 @Injectable()
-export class HandleClmmPositionOpenRequestedEventService {
+export class HandleClmmPositionCloseRequestedEventService {
     /**
-     * Adapter for CLMM "position open requested" events.
+     * Adapter for CLMM "position close requested" events.
      *
      * Responsibility:
-     * - Bridge the CLMM-specific event type into the shared `HandleOpenPositionService`.
+     * - Bridge the CLMM-specific event type into the shared `HandleClosePositionService`.
      * - Keep this handler thin (no business logic here).
      */
     constructor(
-        private readonly handleOpenPositionService: HandleOpenPositionService,
+        private readonly handleClosePositionService: HandleClosePositionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
-     * Routes the CLMM open-position event to the generic open-position handler.
+     * Routes the CLMM close-position event to the generic close-position handler.
      */
     process(
         bot: BotSchema,
-        eventPayload: ClmmPositionOpenRequestedEventPayload,
+        eventPayload: ClmmPositionCloseRequestedEventPayload,
     ) {
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
             {
@@ -48,7 +48,7 @@ export class HandleClmmPositionOpenRequestedEventService {
                 id: eventPayload.id,
             })
         }   
-        this.handleOpenPositionService.process(
+        this.handleClosePositionService.process(
             {
                 bot,
                 liquidityPool,

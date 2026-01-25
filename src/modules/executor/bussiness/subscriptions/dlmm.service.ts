@@ -38,16 +38,41 @@ export class DlmmSubscriptionService {
         event: DlmmLiquidityPoolsSyncedEventPayload
     ) {
         // Select bots that are currently idle and associated with THIS DLMM pool
-        const idleDlmmBots =
-            this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find()
-                .filter((bot) => !bot.activePosition)
-                .filter((bot) => bot.liquidityPools.some((liquidityPool) => liquidityPool?.toString() === event.id))
+        const idleDlmmBots = this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find(
+            {
+                activePosition: {
+                    $eq: undefined,
+                },
+                liquidityPools: {
+                    $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),
+                },
+            }
+        )
+        const activeDlmmBots = this.liquidityPoolAssignmentsRotationService.botAssignmentsCollection.find(
+            {
+                liquidityPools: {
+                    $where: (liquidityPools: Array<string>) => liquidityPools.includes(event.id),
+                },
+                activePosition: {
+                    $ne: undefined,
+                },
+            }
+        )
         // Broadcast close-position request to all idle bots on this pool.
         // No round-robin: each bot owns and closes its own position.
         for (const bot of idleDlmmBots) {
             this.eventEmitterService.emit(
                 {
                     event: EventName.DlmmPositionCloseRequested,
+                    args: [bot.id],
+                    payload: event,
+                }
+            )
+        }
+        for (const bot of activeDlmmBots) {
+            this.eventEmitterService.emit(
+                {
+                    event: EventName.DlmmPositionOpenRequested,
                     args: [bot.id],
                     payload: event,
                 }

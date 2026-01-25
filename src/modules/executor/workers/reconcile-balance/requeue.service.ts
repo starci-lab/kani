@@ -84,7 +84,13 @@ export class RequeueService implements OnApplicationBootstrap {
                                 ) > ttl
                             )
                         }
-                    }
+                    },
+                    running: {
+                        $eq: true,
+                    },
+                    activePosition: {
+                        $eq: undefined,
+                    },
                 }
             ).data()
             /**

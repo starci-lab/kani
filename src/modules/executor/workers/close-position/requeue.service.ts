@@ -6,6 +6,7 @@ import {
     ActiveJobSchema,
     JobType,
     PrimaryMemoryStorageService,
+    PositionAssociateService
 } from "@modules/databases"
 import {
     DayjsService 
@@ -33,8 +34,8 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    ClosePositionOrchestratorService 
-} from "@modules/blockchains/dexes"
+    ClosePositionOrchestratorService, LiquidityPoolStateService, SettlementService
+} from "@modules/blockchains"
 import {
     BotsLoaderService 
 } from "../../loaders"
@@ -54,6 +55,9 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
+        private readonly settlementService: SettlementService,
+        private readonly positionAssociateService: PositionAssociateService,
     ) {
     }
 
@@ -86,7 +90,13 @@ export class RequeueService implements OnApplicationBootstrap {
                                 ) > ttl
                             )
                         }
-                    }
+                    },
+                    running: {
+                        $eq: true,
+                    },
+                    activePosition: {
+                        $ne: null,
+                    },
                 }
             ).data()
             /**
@@ -94,6 +104,7 @@ export class RequeueService implements OnApplicationBootstrap {
              */
             const promises = bots.map(
                 async (bot) => {
+                    await this.positionAssociateService.associateActivePosition(bot)
                     const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
                         id: {
                             $eq: bot.activeJob?.liquidityPool?.toString() ?? "",
@@ -105,6 +116,28 @@ export class RequeueService implements OnApplicationBootstrap {
                     const bullmqJob = await this.closePositionQueue.getJob(bot.id)
                     if (bullmqJob) {
                     // we can add additional logic here
+                        return
+                    }
+                    const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+                    // check settlement status
+                    const { settled } = await this.settlementService.settle(
+                        {
+                            bot,
+                            state: {
+                                static: liquidityPool,
+                                dynamic: dynamicLiquidityPoolInfo,
+                            },
+                        }
+                    )
+                    if (!settled) {
+                        this.winstonService.log(
+                            WinstonLog.CannotSettlePosition,
+                            {
+                                botId: bot.id,
+                                jobId: bot.activeJob?.job?.toString() ?? "",
+                                liquidityPoolId: liquidityPool.displayId,
+                            }
+                        )
                         return
                     }
                     const acquired = await this.lockAuthorityService.acquire(
@@ -120,6 +153,7 @@ export class RequeueService implements OnApplicationBootstrap {
                                 liquidityPool,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 isRetry: true,
+                                dynamicLiquidityPoolInfo,
                             }
                         )
                         this.winstonService.log(
