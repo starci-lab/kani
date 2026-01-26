@@ -1,17 +1,29 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     UserSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
-import { EnableMFAResponseData } from "./enable-mfa.dto"
-import { JwtAuthService, UserJwtLike } from "@modules/passport"
+import {
+    Connection 
+} from "mongoose"
+import {
+    EnableMFAResponseData 
+} from "./enable-mfa.dto"
+import {
+    JwtAuthService, UserJwtLike 
+} from "@modules/passport"
 import {
     UserNotFoundException,
     UserTotpSecretNotFoundException,
 } from "@modules/exceptions"
-import { CookieService } from "@modules/cookie"
-import { Response } from "express"
+import {
+    CookieService 
+} from "@modules/cookie"
+import {
+    Response 
+} from "express"
 
 @Injectable()
 export class EnableMFAService {
@@ -30,10 +42,14 @@ export class EnableMFAService {
             .model<UserSchema>(UserSchema.name)
             .findById(userLike.id)
         if (!user) {
-            throw new UserNotFoundException()
+            throw new UserNotFoundException({
+                userId: userLike.id,
+            })
         }
         if (!user.encryptedTotpSecretPayload) {
-            throw new UserTotpSecretNotFoundException("User totp secret not found")
+            throw new UserTotpSecretNotFoundException({
+                userId: user.id,
+            })
         }
         // if the user not verified, set the totpVerified to true
         const session = await this.connection.startSession()
@@ -61,9 +77,13 @@ export class EnableMFAService {
                 })
                 // set the refresh token in the cookie
                 if (refreshToken) {
-                    this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)
+                    this.cookieService.attachHttpOnlyCookie(res,
+                        "refresh_token",
+                        refreshToken)
                 }
-                return { accessToken }
+                return {
+                    accessToken 
+                }
             })
     }
 }

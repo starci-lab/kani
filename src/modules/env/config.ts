@@ -280,6 +280,10 @@ export const envConfig = () => ({
     },
     // executor config
     executor: {
+        capacity: {
+            maxBots: parseEnvInt("EXECUTOR_CAPACITY_MAX_BOTS",
+                1000),
+        },
         id: parseEnvString("EXECUTOR_ID",
             "6956717486b425cf9938c665"),
         streams: {
@@ -419,6 +423,9 @@ export const envConfig = () => ({
     // cache config
     cache: {
         ttl: {
+            sendOtpCode: parseEnvMs(
+                "CACHE_TTL_SEND_OTP_CODE",
+                "10m"),
             sessionId: parseEnvMs(
                 "CACHE_TTL_SESSION_ID",
                 "15m"),

@@ -1,12 +1,20 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     SessionSchema,
     UserSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
-import { RefreshResponseData } from "./refresh.dto"
-import { JwtAuthService, UserJwtLike } from "@modules/passport"
+import {
+    Connection 
+} from "mongoose"
+import {
+    RefreshResponseData 
+} from "./refresh.dto"
+import {
+    JwtAuthService, UserJwtLike 
+} from "@modules/passport"
 import {
     SessionNotFoundException,
     UserNotFoundException,
@@ -27,17 +35,25 @@ export class RefreshService {
             .model<UserSchema>(UserSchema.name)
             .findById(userLike.id)
         if (!user) {
-            throw new UserNotFoundException("User not found")
+            throw new UserNotFoundException({
+                userId: userLike.id,
+            })
         }
         // if not found, try in database
         if (!user.encryptedTotpSecretPayload) {
-            throw new UserTotpSecretNotFoundException("User totp secret not found")
+            throw new UserTotpSecretNotFoundException({
+                userId: user.id,
+            })
         }
-        const sessionExists = await this.connection
+        const session = await this.connection
             .model<SessionSchema>(SessionSchema.name)
-            .exists({ user: userLike.id })
-        if (!sessionExists) {
-            throw new SessionNotFoundException("Session not found")
+            .findOne({
+                user: userLike.id 
+            })
+        if (!session) {
+            throw new SessionNotFoundException({
+                userId: user.id,
+            })
         }
         return this.jwtAuthService.generate({
             id: user.id,

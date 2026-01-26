@@ -65,3 +65,7 @@ export type LiquidityPoolSyncedDiagnosticReadinessResult = SnapshotCacheResult
 export interface LiquidityPoolsSyncedDiagnosticReadinessResult extends SnapshotCacheResult {
     results: Partial<Record<string, LiquidityPoolSyncedDiagnosticReadinessResult>>
 }
+
+export interface SendOtpCodeCacheResult {
+    otp: string
+}

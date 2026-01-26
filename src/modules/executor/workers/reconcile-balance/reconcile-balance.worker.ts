@@ -168,7 +168,7 @@ export class ReconcileBalanceWorker extends WorkerHost {
                         new BotNotFoundException(
                             // Include the botId for diagnostics.
                             {
-                                botId: payload.botId,
+                                id: payload.botId,
                             }
                             // Serialize to JSON for UnrecoverableError consumption.
                         ).toJSON()

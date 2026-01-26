@@ -76,3 +76,22 @@ export class LiquidityPoolDlmmStateNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Thrown when some liquidity pools are not found */
+export interface SomeLiquidityPoolsNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    actualCount: number
+    expectedCount: number
+}
+export class SomeLiquidityPoolsNotFoundException extends AbstractException {
+    constructor(
+        { actualCount, expectedCount, originalError }: SomeLiquidityPoolsNotFoundExceptionMetadata
+    ) {
+        super(
+            "Some liquidity pools are not found",
+            "SOME_LIQUIDITY_POOLS_NOT_FOUND_EXCEPTION",
+            {
+                actualCount, expectedCount, originalError 
+            }
+        )
+    }
+}

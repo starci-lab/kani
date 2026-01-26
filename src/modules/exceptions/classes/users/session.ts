@@ -10,13 +10,13 @@ import {
 
 /** Thrown when session cannot be found */
 export interface SessionNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    sessionId: string
+    userId: string
 }
 
 export class SessionNotFoundException extends AbstractException {
     constructor(
         {
-            sessionId,
+            userId,
             originalError,
         }: SessionNotFoundExceptionMetadata
     ) {
@@ -24,7 +24,7 @@ export class SessionNotFoundException extends AbstractException {
             "Session not found",
             "SESSION_NOT_FOUND_EXCEPTION",
             {
-                sessionId,
+                userId,
                 originalError,
             }
         )

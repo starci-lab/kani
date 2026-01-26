@@ -1,8 +1,18 @@
-import { Injectable } from "@nestjs/common"
-import { AppVersion, InjectPrimaryMongoose, UserSchema } from "@modules/databases"
-import { Connection } from "mongoose"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { CodeGeneratorService } from "@modules/code"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    AppVersion, InjectPrimaryMongoose, UserSchema 
+} from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
+import {
+    CodeGeneratorService 
+} from "@modules/code"
 
 @Injectable()
 export class UserV2Service {
@@ -17,7 +27,9 @@ export class UserV2Service {
     ): Promise<UserSchema> {
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
             // create the user
             const [userRaw] = await this.connection

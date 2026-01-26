@@ -10,13 +10,13 @@ import {
 
 /** Thrown when sign-in OTP is not found */
 export interface SignInOtpNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    signInOtpId: string
+    email: string
 }
 
 export class SignInOtpNotFoundException extends AbstractException {
     constructor(
         {
-            signInOtpId,
+            email,
             originalError,
         }: SignInOtpNotFoundExceptionMetadata
     ) {
@@ -24,7 +24,7 @@ export class SignInOtpNotFoundException extends AbstractException {
             "Sign in OTP not found",
             "SIGN_IN_OTP_NOT_FOUND_EXCEPTION",
             {
-                signInOtpId,
+                email,
                 originalError,
             }
         )
@@ -33,13 +33,13 @@ export class SignInOtpNotFoundException extends AbstractException {
 
 /** Thrown when sign-in OTP does not match */
 export interface SignInOtpMismatchExceptionMetadata extends AbstractExceptionMetadata {
-    signInOtpId: string
+    email: string
 }
 
 export class SignInOtpMismatchException extends AbstractException {
     constructor(
         {
-            signInOtpId,
+            email,
             originalError,
         }: SignInOtpMismatchExceptionMetadata
     ) {
@@ -47,7 +47,7 @@ export class SignInOtpMismatchException extends AbstractException {
             "Sign in OTP mismatch",
             "SIGN_IN_OTP_MISMATCH_EXCEPTION",
             {
-                signInOtpId,
+                email,
                 originalError,
             }
         )

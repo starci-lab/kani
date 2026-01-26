@@ -1,7 +1,15 @@
-import { Args, Mutation, Resolver } from "@nestjs/graphql"
-import { UseGuards, UseInterceptors } from "@nestjs/common"
-import { ThrottlerConfig, UseThrottler } from "@modules/throttler"
-import { GraphQLJwtPrivyAuthGuard } from "@modules/privy"
+import {
+    Args, Mutation, Resolver 
+} from "@nestjs/graphql"
+import {
+    UseGuards, UseInterceptors 
+} from "@nestjs/common"
+import {
+    ThrottlerConfig, UseThrottler 
+} from "@modules/throttler"
+import {
+    GraphQLJwtPrivyAuthGuard 
+} from "@modules/privy"
 import {
     GraphQLSuccessMessage,
     GraphQLTransformInterceptor,
@@ -13,8 +21,12 @@ import {
     UpdateBotLiquidityPoolsV2Request, 
     UpdateBotLiquidityPoolsV2Response,
 } from "./update-bot-liquidity-pools-v2.dto"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { PrivyResponse } from "@modules/privy"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
+import {
+    PrivyResponse 
+} from "@modules/privy"
 
 @Resolver()
 export class UpdateBotLiquidityPoolsV2Resolver {
@@ -30,18 +42,22 @@ export class UpdateBotLiquidityPoolsV2Resolver {
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
     @UseGuards(GraphQLJwtPrivyAuthGuard)
-    @Mutation(() => UpdateBotLiquidityPoolsV2Response, {
-        description: "Updates the liquidity pools of a bot (v2 with Privy authentication).",
-    })
+    @Mutation(() => UpdateBotLiquidityPoolsV2Response,
+        {
+            description: "Updates the liquidity pools of a bot (v2 with Privy authentication).",
+        })
     async updateBotLiquidityPoolsV2(
         @PrivyResponse() response: VerifyAccessTokenResponse,
         @Args(
             "request", 
-            { description: "The request payload for updating the liquidity pools of a bot." }
+            {
+                description: "The request payload for updating the liquidity pools of a bot." 
+            }
         )
             request: UpdateBotLiquidityPoolsV2Request,
     ) {
-        return await this.updateBotLiquidityPoolsV2Service.updateBotLiquidityPoolsV2(request, response)
+        return await this.updateBotLiquidityPoolsV2Service.updateBotLiquidityPoolsV2(request,
+            response)
     }
 }
 

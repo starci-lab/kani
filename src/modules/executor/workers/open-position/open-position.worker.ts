@@ -172,7 +172,7 @@ export class OpenPositionWorker extends WorkerHost {
                         new BotNotFoundException(
                             // Include the botId for diagnostics.
                             {
-                                botId,
+                                id: botId,
                             }
                             // Serialize to JSON for UnrecoverableError consumption.
                         ).toJSON()

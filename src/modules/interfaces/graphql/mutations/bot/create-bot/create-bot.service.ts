@@ -1,27 +1,51 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     InjectPrimaryMongoose, 
     BotSchema,
     UserSchema, 
     PrimaryMemoryStorageService,
+    AppVersion,
+    ExecutorSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import { 
     CreateBotRequest, 
     CreateBotResponseData, 
 } from "./create-bot.dto"
-import { UserJwtLike } from "@modules/passport"
+import {
+    UserJwtLike 
+} from "@modules/passport"
 import {
     UserNotFoundException,
-    TokenNotFoundException
+    TokenNotFoundException,
 } from "@modules/exceptions"
-import { KeypairsService } from "@modules/blockchains"
-import { chainIdToPlatformId } from "@modules/typedefs"
-import { Decimal } from "decimal.js"
-import { GoogleDriveFolderId, GoogleDriveService } from "@modules/gcp"
-import { InjectSuperJson } from "@modules/mixin"
+import {
+    KeypairsService 
+} from "@modules/blockchains"
+import {
+    chainIdToPlatformId 
+} from "@modules/typedefs"
+import _ from "lodash"
+import {
+    GoogleDriveService 
+} from "@modules/gcp"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
 import SuperJson from "superjson"
-import { Readable } from "stream"
+import {
+    Readable 
+} from "stream"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    GoogleDriveFolderName 
+} from "@modules/typedefs"
 
 @Injectable()
 export class CreateBotService {
@@ -46,57 +70,77 @@ export class CreateBotService {
             isExitToUsdc,
         }: CreateBotRequest,
     ): Promise<CreateBotResponseData> {
-        const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.displayId.toString() === targetTokenId.toString())
-        if (!targetTokenInstance) {
-            throw new TokenNotFoundException("Target token not found with display id: " + targetTokenId)
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: targetTokenId 
+            } 
+        })
+        if (!targetToken) {
+            throw new TokenNotFoundException({
+                id: targetTokenId,
+            })
         }
-        const quoteTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.displayId.toString() === quoteTokenId.toString())
-        if (!quoteTokenInstance) {
-            throw new TokenNotFoundException("Quote token not found with display id: " + quoteTokenId)
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: quoteTokenId 
+            } 
+        })
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: quoteTokenId,
+            })
         }
         // if user do not pass any liquidity pool ids, 
         // we have to select random liquidity pools (3 at most)
         // TO DO: we will find the most recommended liquidity pools for the user
-        if (!liquidityPoolIds || liquidityPoolIds.length === 0) {
-            liquidityPoolIds = this.primaryMemoryStorageService.liquidityPools
-                // this condition is to ensure the liquidity pool is on the same chain as the bot
-                .filter((liquidityPool) => liquidityPool.chainId === chainId)
-                // this condition is to ensure the liquidity pool contains the target token
-                .filter(
-                    (liquidityPool) => (
-                        // this condition is to ensure the liquidity pool contains the target token
-                        liquidityPool.tokenA.toString() === targetTokenInstance.id
-                    && liquidityPool.tokenB.toString() === quoteTokenInstance.id
+        if (!liquidityPoolIds || liquidityPoolIds.length === 0) { 
+            const selectedPoolIds = _
+                .chain(this.primaryMemoryStorageService.liquidityPoolCollection.find({
+                    chainId: {
+                        $eq: chainId 
+                    },
+                }))
+                .filter((liquidityPool) => {
+                    const tokenA = liquidityPool.tokenA.toString()
+                    const tokenB = liquidityPool.tokenB.toString()
+                    return (
+                        (tokenA === targetToken.id && tokenB === quoteToken.id) ||
+                    (tokenA === quoteToken.id && tokenB === targetToken.id)
                     )
-                    || (
-                        // this condition is to ensure the liquidity pool contains the quote token
-                        liquidityPool.tokenA.toString() === quoteTokenInstance.id
-                    && liquidityPool.tokenB.toString() === targetTokenInstance.id
-                    )
-                )
-                // we sort the liquidity pools by a random number
-                .sort(() => Decimal.random().sub(0.5).toNumber())
-                // we take the top 3 liquidity pools
-                .slice(0, 3)
-                // we map the liquidity pools to their display ids
-                .map((liquidityPool) => liquidityPool.displayId)     
+                })
+                .sampleSize(3)
+                .map((liquidityPool) => liquidityPool.id)
+                .value()
+            liquidityPoolIds = selectedPoolIds as typeof liquidityPoolIds
         }
         // we try to find the user in the database
-        const exists = await this.connection.model<UserSchema>(UserSchema.name)
-            .exists({ _id: userLike.id })
-        if (!exists) {
-            throw new UserNotFoundException("User not found with id: " + userLike.id)
+        const user = await this.connection.model<UserSchema>(UserSchema.name)
+            .findOne({
+                _id: userLike.id 
+            })
+        if (!user) {
+            throw new UserNotFoundException(
+                {
+                    userId: userLike.id,
+                }
+            )
         }
+        // retrieve the liquidity pools from the cache
+        const liquidityPools = this.primaryMemoryStorageService
+            .liquidityPoolCollection.find(
+                {
+                    id: {
+                        $in: liquidityPoolIds 
+                    }
+                }
+            )
         // create embedded wallet for the bot
         const platformId = chainIdToPlatformId(chainId)
         const generatedKeypair = await this.keypairsService.generateKeypair(platformId)
-        // retrieve the liquidity pools from the cache
-        const liquidityPools = this.primaryMemoryStorageService
-            .liquidityPools
-            .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.displayId))
-        // create bot
+        // encrypt the private key
+        const encryptedPrivateKeyPayload = generatedKeypair.encryptedPrivateKeyPayload
         const session = await this.connection.startSession()
-        return await session.withTransaction(
+        const result = await session.withTransaction(
             async () => {
                 // create the bot
                 const [
@@ -106,51 +150,99 @@ export class CreateBotService {
                     .create(
                         [
                             {
-                                user: userLike.id,
+                                user: user.id,
                                 name,
                                 chainId,
-                                targetToken: targetTokenInstance.id,
-                                quoteToken: quoteTokenInstance.id,
+                                targetToken: targetToken.id,
+                                quoteToken: quoteToken.id,
                                 liquidityPools: liquidityPools.map((liquidityPool) => liquidityPool.id),
                                 accountAddress: generatedKeypair.accountAddress,
-                                encryptedPrivateKeyPayload: generatedKeypair.encryptedPrivateKeyPayload,
+                                encryptedPrivateKeyPayload,
+                                version: AppVersion.V1,
                                 isExitToUsdc,
                             }
                         ],
-                        { session }
-                    )
-                // upload the bot private key to google drive
-                const content = Buffer.from(
-                    this
-                        .superJson
-                        .stringify(generatedKeypair.encryptedPrivateKeyPayload),
-                    "utf8"
-                )
-                const fileName = `${botRaw.accountAddress}.json`
-                await this.googleDriveService.uploadFiles({
-                    files: [
                         {
-                            buffer: content,
-                            originalname: fileName,
-                            mimetype: "application/octet-stream",
-                            fieldname: "",
-                            encoding: "utf8",
-                            size: content.length,
-                            stream: Readable.from(content),
-                            filename: fileName,
-                            path: "",
-                            destination: "",
+                            session 
                         }
-                    ],
-                    folderEnum: GoogleDriveFolderId.Keys,
-                })
-                // return the bot
+                    )
+                    // return the bot
                 const bot = botRaw.toJSON()
+                // find the executor with the lowest bot count
+                const executor = await this.connection
+                    .model<ExecutorSchema>(ExecutorSchema.name)
+                    .findOneAndUpdate(
+                        {
+                            botCount: {
+                                $lt: envConfig().executor.capacity.maxBots 
+                            },
+                        },
+                        {
+                            $inc: {
+                                botCount: 1 
+                            },
+                        },
+                        {
+                            sort: {
+                                botCount: 1 
+                            },
+                            new: true, // return the document after the update
+                            session,
+                        }
+                    )
+                    // return the bot
+                if (!executor) {
+                    // create a new executor
+                    await this.connection
+                        .model<ExecutorSchema>(ExecutorSchema.name)
+                        .create(
+                            [
+                                {
+                                    assignedBots: [
+                                        {
+                                            bot: bot.id,
+                                        }
+                                    ],
+                                    botCount: 1 
+                                }
+                            ],
+                            {
+                                session 
+                            }
+                        )      
+                }
                 return {
+                    bot,
                     id: bot.id,
                     accountAddress: generatedKeypair.accountAddress,
                 }
-            })
+            }
+        )
+        const content = Buffer.from(
+            this
+                .superJson
+                .stringify(encryptedPrivateKeyPayload),
+            "utf8"
+        )
+        const fileName = `${result.bot.id}.json`
+        await this.googleDriveService.uploadFiles({
+            files: [
+                {
+                    buffer: content,
+                    originalname: fileName,
+                    mimetype: "application/octet-stream",
+                    fieldname: "",
+                    encoding: "utf8",
+                    size: content.length,
+                    stream: Readable.from(content),
+                    filename: fileName,
+                    path: "",
+                    destination: "",
+                }
+            ],
+            folderName: GoogleDriveFolderName.Keys,
+        })
+        return result
     }
 }
 

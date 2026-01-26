@@ -10,13 +10,15 @@ import {
 
 /** Thrown when user cannot be found */
 export interface UserNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    userId: string
+    userId?: string
+    privyUserId?: string
 }
 
 export class UserNotFoundException extends AbstractException {
     constructor(
         {
             userId,
+            privyUserId,
             originalError,
         }: UserNotFoundExceptionMetadata
     ) {
@@ -25,6 +27,7 @@ export class UserNotFoundException extends AbstractException {
             "USER_NOT_FOUND_EXCEPTION",
             {
                 userId,
+                privyUserId,
                 originalError,
             }
         )
@@ -79,13 +82,13 @@ export class UserMfaAlreadyEnabledException extends AbstractException {
 
 /** Thrown when failed to generate referral code */
 export interface FailedToGenerateReferralCodeExceptionMetadata extends AbstractExceptionMetadata {
-    userId: string
+    email: string
 }
 
 export class FailedToGenerateReferralCodeException extends AbstractException {
     constructor(
         {
-            userId,
+            email,
             originalError,
         }: FailedToGenerateReferralCodeExceptionMetadata
     ) {
@@ -93,7 +96,7 @@ export class FailedToGenerateReferralCodeException extends AbstractException {
             "Failed to generate referral code",
             "FAILED_TO_GENERATE_REFERRAL_CODE_EXCEPTION",
             {
-                userId,
+                email,
                 originalError,
             }
         )

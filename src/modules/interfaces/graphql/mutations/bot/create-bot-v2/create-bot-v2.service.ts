@@ -1,24 +1,51 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     InjectPrimaryMongoose, 
     BotSchema,
     UserSchema, 
     PrimaryMemoryStorageService,
     AppVersion,
+    ExecutorSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import { 
     CreateBotV2Request, 
     CreateBotV2ResponseData, 
 } from "./create-bot-v2.dto"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
 import {
     UserNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
-import { Decimal } from "decimal.js"
-import { PrivyCoreService } from "@modules/privy"
-import { DerivedAesKeyService } from "@modules/derived"
+import {
+    PrivyCoreService 
+} from "@modules/privy"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
+import _ from "lodash"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    GoogleDriveService 
+} from "@modules/gcp"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import SuperJson from "superjson"
+import {
+    Readable 
+} from "stream"
+import {
+    GoogleDriveFolderName 
+} from "@modules/typedefs"
 
 @Injectable()
 export class CreateBotV2Service {
@@ -28,6 +55,9 @@ export class CreateBotV2Service {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly privyCoreService: PrivyCoreService,
         private readonly derivedAesKeyService: DerivedAesKeyService,
+        private readonly googleDriveService: GoogleDriveService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJson,
     ) { }
 
     async createBotV2(
@@ -41,52 +71,71 @@ export class CreateBotV2Service {
             isExitToUsdc
         }: CreateBotV2Request,
     ): Promise<CreateBotV2ResponseData> {
-        const targetTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.id === targetTokenId)
-        if (!targetTokenInstance) {
-            throw new TokenNotFoundException("Target token not found with id: " + targetTokenId)
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: targetTokenId 
+            } 
+        })
+        if (!targetToken) {
+            throw new TokenNotFoundException({
+                id: targetTokenId,
+            })
         }
-        const quoteTokenInstance = this.primaryMemoryStorageService.tokens.find((token) => token.id === quoteTokenId)
-        if (!quoteTokenInstance) {
-            throw new TokenNotFoundException("Quote token not found with id: " + quoteTokenId)
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: quoteTokenId 
+            } 
+        })
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: quoteTokenId,
+            })
         }
         // if user do not pass any liquidity pool ids, 
         // we have to select random liquidity pools (3 at most)
         // TO DO: we will find the most recommended liquidity pools for the user
-        if (!liquidityPoolIds || liquidityPoolIds.length === 0) {
-            liquidityPoolIds = this.primaryMemoryStorageService.liquidityPools
-                // this condition is to ensure the liquidity pool is on the same chain as the bot
-                .filter((liquidityPool) => liquidityPool.chainId === chainId)
-                // this condition is to ensure the liquidity pool contains the target token
-                .filter(
-                    (liquidityPool) => (
-                        // this condition is to ensure the liquidity pool contains the target token
-                        liquidityPool.tokenA.toString() === targetTokenInstance.id
-                    && liquidityPool.tokenB.toString() === quoteTokenInstance.id
+        if (!liquidityPoolIds || liquidityPoolIds.length === 0) { 
+            liquidityPoolIds = _
+                .chain(this.primaryMemoryStorageService.liquidityPoolCollection.find({
+                    chainId: {
+                        $eq: chainId 
+                    },
+                }))
+                .filter((liquidityPool) => {
+                    const tokenA = liquidityPool.tokenA.toString()
+                    const tokenB = liquidityPool.tokenB.toString()
+                    return (
+                        (tokenA === targetToken.id && tokenB === quoteToken.id) ||
+                    (tokenA === quoteToken.id && tokenB === targetToken.id)
                     )
-                    || (
-                        // this condition is to ensure the liquidity pool contains the quote token
-                        liquidityPool.tokenA.toString() === quoteTokenInstance.id
-                    && liquidityPool.tokenB.toString() === targetTokenInstance.id
-                    )
-                )
-                // we sort the liquidity pools by a random number
-                .sort(() => Decimal.random().sub(0.5).toNumber())
-                // we take the top 3 liquidity pools
-                .slice(0, 3)
-                // we map the liquidity pools to their display ids
-                .map((liquidityPool) => liquidityPool.displayId)     
+                })
+                .sampleSize(3)
+                .map((liquidityPool) => liquidityPool.id)
+                .value()
         }
         // we try to find the user in the database
         const user = await this.connection.model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
-            throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
+            throw new UserNotFoundException(
+                {
+                    privyUserId: response.user_id,
+                }
+            )
         }
+        // we retrieve t
         // retrieve the liquidity pools from the cache
         const liquidityPools = this.primaryMemoryStorageService
-            .liquidityPools
-            .filter((liquidityPool) => liquidityPoolIds.includes(liquidityPool.id))
-        // create the signer
+            .liquidityPoolCollection.find(
+                {
+                    id: {
+                        $in: liquidityPoolIds 
+                    }
+                }
+            )
+            // create the signer
         const { keyPair, keyQuorum } = await this.privyCoreService.createSigner()
         // create the wallet
         const wallet = await this.privyCoreService.createWallet({
@@ -101,7 +150,7 @@ export class CreateBotV2Service {
         // encrypt the signer private key
         const encryptedPrivySignerPrivateKeyPayload = this.derivedAesKeyService.encrypt(keyPair.privateKey)
         const session = await this.connection.startSession()
-        return await session.withTransaction(
+        const result = await session.withTransaction(
             async () => {
                 // create the bot
                 const [
@@ -114,8 +163,8 @@ export class CreateBotV2Service {
                                 user: user.id,
                                 name,
                                 chainId,
-                                targetToken: targetTokenInstance.id,
-                                quoteToken: quoteTokenInstance.id,
+                                targetToken: targetToken.id,
+                                quoteToken: quoteToken.id,
                                 liquidityPools: liquidityPools.map((liquidityPool) => liquidityPool.id),
                                 accountAddress: wallet.address,
                                 encryptedPrivySignerPrivateKeyPayload,
@@ -128,16 +177,86 @@ export class CreateBotV2Service {
                                 isExitToUsdc,
                             }
                         ],
-                        { session }
+                        {
+                            session 
+                        }
                     )
-                // return the bot
+                    // return the bot
                 const bot = botRaw.toJSON()
-                // return the bot
+                // find the executor with the lowest bot count
+                const executor = await this.connection
+                    .model<ExecutorSchema>(ExecutorSchema.name)
+                    .findOneAndUpdate(
+                        {
+                            botCount: {
+                                $lt: envConfig().executor.capacity.maxBots 
+                            },
+                        },
+                        {
+                            $inc: {
+                                botCount: 1 
+                            },
+                        },
+                        {
+                            sort: {
+                                botCount: 1 
+                            },
+                            new: true, // return the document after the update
+                            session,
+                        }
+                    )
+                    // return the bot
+                if (!executor) {
+                    // create a new executor
+                    await this.connection
+                        .model<ExecutorSchema>(ExecutorSchema.name)
+                        .create(
+                            [
+                                {
+                                    assignedBots: [
+                                        {
+                                            bot: bot.id,
+                                        }
+                                    ],
+                                    botCount: 1 
+                                }
+                            ],
+                            {
+                                session 
+                            }
+                        )      
+                }
                 return {
+                    bot,
                     id: bot.id,
                     accountAddress: wallet.address
                 }
-            })
+            }
+        )
+        const content = Buffer.from(
+            this
+                .superJson
+                .stringify(encryptedPrivySignerPrivateKeyPayload),
+            "utf8"
+        )
+        const fileName = `${result.bot.id}.json`
+        await this.googleDriveService.uploadFiles({
+            files: [
+                {
+                    buffer: content,
+                    originalname: fileName,
+                    mimetype: "application/octet-stream",
+                    fieldname: "",
+                    encoding: "utf8",
+                    size: content.length,
+                    stream: Readable.from(content),
+                    filename: fileName,
+                    path: "",
+                    destination: "",
+                }
+            ],
+            folderName: GoogleDriveFolderName.Keys,
+        })
+        return result
     }
 }
-

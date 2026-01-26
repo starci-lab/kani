@@ -129,7 +129,7 @@ export class ClosePositionWorker extends WorkerHost {
                 if (!bot) {
                     throw new UnrecoverableError(
                         new BotNotFoundException({
-                            botId 
+                            id: botId,
                         }).toJSON()
                     )
                 }

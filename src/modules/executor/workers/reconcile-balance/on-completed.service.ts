@@ -95,7 +95,6 @@ export class OnCompletedService {
                         session,
                     }
                 )
-
                 this.winstonService.log(
                     WinstonLog.ReconcileBalanceProcessingCompleted,
                     {

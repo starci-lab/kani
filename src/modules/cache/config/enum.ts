@@ -1,4 +1,5 @@
 export enum CacheKey {
+    SendOtpCode = "send.otp.code",
     AggregatedTokenPrice = "aggregated.token.price",
     DynamicClmmLiquidityPoolInfo = "dynamic.clmm.liquidity.pool.info",
     DynamicDlmmLiquidityPoolInfo = "dynamic.dlmm.liquidity.pool.info",

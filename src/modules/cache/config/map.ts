@@ -10,7 +10,8 @@ import {
     DynamicDlmmLiquidityPoolInfoCacheResult, 
     LiquidityPoolsSyncedDiagnosticReadinessResult, 
     PoolAnalyticsCacheResult,
-    SessionIdCacheResult
+    SessionIdCacheResult,
+    SendOtpCodeCacheResult
 } from "./types"
 
 export const configMap = {
@@ -42,5 +43,10 @@ export const configMap = {
         ttl: envConfig().cache.ttl.liquidityPoolsSyncedDiagnosticReadiness,
         cacheResult: {    
         } as LiquidityPoolsSyncedDiagnosticReadinessResult
+    },
+    [CacheKey.SendOtpCode]: {
+        ttl: envConfig().cache.ttl.sendOtpCode,
+        cacheResult: {    
+        } as SendOtpCodeCacheResult
     },
 }

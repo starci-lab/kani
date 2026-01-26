@@ -1,13 +1,18 @@
-import { Field, ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
+import {
+    Field, ObjectType 
+} from "@nestjs/graphql"
+import {
+    AbstractGraphQLResponse, IAbstractGraphQLResponse 
+} from "../../../abstracts"
 
 @ObjectType({
     description: "Response data returned after successfully enabling MFA.",
 })
 export class EnableMFAResponseData {
-    @Field(() => String, {
-        description: "A short-lived JWT access token issued upon successful MFA enablement.",
-    })
+    @Field(() => String,
+        {
+            description: "A short-lived JWT access token issued upon successful MFA enablement.",
+        })
         accessToken: string
 }
 
@@ -17,10 +22,11 @@ export class EnableMFAResponseData {
 export class EnableMFAResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<EnableMFAResponseData> {
-    @Field(() => EnableMFAResponseData, {
-        nullable: true,
-        description: "The data returned after successfully enabling MFA.",
-    })
+    @Field(() => EnableMFAResponseData,
+        {
+            nullable: true,
+            description: "The data returned after successfully enabling MFA.",
+        })
         data?: EnableMFAResponseData
 }
 

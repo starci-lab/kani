@@ -1,20 +1,26 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     InjectPrimaryMongoose, 
     BotSchema,
     UserSchema,
     AppVersion,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import { 
     ToggleBotV2Request, 
 } from "./toggle-bot-v2.dto"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
-    UserNotFoundException,
     BotNotV2Exception,
+    UserNotFoundException,
 } from "@modules/exceptions"
 
 @Injectable()
@@ -34,27 +40,44 @@ export class ToggleBotV2Service {
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
-            throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
+            throw new UserNotFoundException({
+                privyUserId: response.user_id,
+            })
         }
         // we try to find the bot in the database
         const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(id)
         if (!bot) {
-            throw new BotNotFoundException("Bot not found with id: " + id)
+            throw new BotNotFoundException({
+                id,
+            })
         }
         // check whether the user is the owner of the bot
         if (bot.user.toString() !== user.id) {
-            throw new BotNotOwnedByUserException("User is not the owner of the bot")
+            throw new BotNotOwnedByUserException({
+                id,
+                userId: user.id,
+            })
         }
         // check if bot is v2
         if (bot.version !== AppVersion.V2) {
-            throw new BotNotV2Exception("Bot is not v2. Please use toggleBotV2 mutation for v2 bots.")
+            throw new BotNotV2Exception({
+                id,
+            })
         }
         // we toggle the bot running state
         await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-            { _id: id },
-            { $set: { running } }
+            {
+                _id: id 
+            },
+            {
+                $set: {
+                    running 
+                } 
+            }
         )
     }
 }

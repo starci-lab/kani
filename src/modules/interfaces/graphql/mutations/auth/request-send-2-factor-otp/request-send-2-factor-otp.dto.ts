@@ -1,5 +1,9 @@
-import { ObjectType } from "@nestjs/graphql"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
+import {
+    ObjectType 
+} from "@nestjs/graphql"
+import {
+    AbstractGraphQLResponse, IAbstractGraphQLResponse 
+} from "../../../abstracts"
 
 @ObjectType({
     description: "Response returned after successfully requesting a send 2-factor OTP.",

@@ -1,17 +1,26 @@
-import { Injectable } from "@nestjs/common"
-import { RequestSignInOtpRequest } from "./request-sign-in-otp.dto"
-import { SendSignInOtpMailService } from "@modules/mail"
-import { CodeGeneratorService } from "@modules/code"
-import { createCacheKey, InjectRedisCache, SignInOtpCacheResult } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { CacheKey } from "@modules/cache"
-import ms from "ms"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    RequestSignInOtpRequest 
+} from "./request-sign-in-otp.dto"
+import {
+    SendSignInOtpMailService 
+} from "@modules/mail"
+import {
+    CodeGeneratorService 
+} from "@modules/code"
+import {
+    CacheService 
+} from "@modules/cache"
+import {
+    CacheKey 
+} from "@modules/cache"
 
 @Injectable()
 export class RequestSignInOtpService {
     constructor(
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
+        private readonly cacheService: CacheService,
         private readonly sendSignInOtpMailService: SendSignInOtpMailService,
         private readonly codeGeneratorService: CodeGeneratorService,
     ) {}
@@ -22,13 +31,14 @@ export class RequestSignInOtpService {
         }: RequestSignInOtpRequest
     ): Promise<void> {
         const otp = this.codeGeneratorService.generateOtpCode()
-        await this.cacheManager.set<SignInOtpCacheResult>(
-            createCacheKey(CacheKey.SignInOtpCode, email),
+        await this.cacheService.set(
             {
-                otp,
-            },
-            // temporatory hardcoded to 10 minutes
-            ms("10m"),
+                key: CacheKey.SendOtpCode,
+                args: [email],
+                cacheResult: {
+                    otp,
+                },
+            }
         )
         await this.sendSignInOtpMailService.send({
             email,
