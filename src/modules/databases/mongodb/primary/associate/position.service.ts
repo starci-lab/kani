@@ -13,12 +13,19 @@ import {
 import {
     ActivePositionNotFoundException, AssociatedPositionNotFoundException 
 } from "@exceptions"
+import {
+    LiquidityPoolNotFoundException 
+} from "@modules/exceptions"
+import {
+    PrimaryMemoryStorageService 
+} from "../memory"
 
 @Injectable()
 export class PositionAssociateService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async associateActivePosition(
@@ -40,6 +47,22 @@ export class PositionAssociateService {
             })
         }
         bot.activePosition.associatedPosition = position.toJSON<PositionSchema>()
+    }
+    
+    async associateLiquidityPool(
+        position: PositionSchema
+    ) {
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+            id: {
+                $eq: position.liquidityPool.toString(),
+            },
+        })
+        if (!liquidityPool) {
+            throw new LiquidityPoolNotFoundException({
+                id: position.liquidityPool.toString(),
+            })
+        }
+        position.associatedLiquidityPool = liquidityPool
     }
 }
 

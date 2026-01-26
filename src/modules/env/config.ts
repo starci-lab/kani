@@ -393,6 +393,14 @@ export const envConfig = () => ({
             },
         },
     },
+    socketIo: {
+        price: {
+            broadcast: {
+                interval: parseEnvMs("SOCKET_IO_PRICE_BROADCAST_INTERVAL",
+                    "5s"),
+            },
+        },
+    },
     // quote config
     quote: {
         ratio: {

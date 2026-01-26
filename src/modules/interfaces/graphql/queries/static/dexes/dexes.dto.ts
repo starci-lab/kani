@@ -1,6 +1,12 @@
-import { ObjectType, Field } from "@nestjs/graphql"
-import { DexSchema } from "@modules/databases"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
+import {
+    ObjectType, Field 
+} from "@nestjs/graphql"
+import {
+    DexSchema 
+} from "@modules/databases"
+import {
+    AbstractGraphQLResponse, IAbstractGraphQLResponse 
+} from "../../../abstracts"
 /**
  * GraphQL response type for the dexes query.
  */
@@ -11,9 +17,10 @@ export class DexesResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<Array<DexSchema>>
 {
-    @Field(() => [DexSchema], {
-        description: "List of dexes returned by the query.",
-    })
+    @Field(() => [DexSchema],
+        {
+            description: "List of dexes returned by the query.",
+        })
         data: Array<DexSchema>
 }
 

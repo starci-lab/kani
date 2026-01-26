@@ -121,7 +121,7 @@ export class CreateBotService {
         if (!user) {
             throw new UserNotFoundException(
                 {
-                    userId: userLike.id,
+                    id: userLike.id,
                 }
             )
         }

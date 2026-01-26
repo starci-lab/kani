@@ -1,13 +1,16 @@
-import { Field, InputType, Int, ObjectType } from "@nestjs/graphql"
+import {
+    Field, InputType, Int, ObjectType 
+} from "@nestjs/graphql"
 
 @InputType({
     isAbstract: true,
     description: "Input fields required to paginate results.",
 })
 export class PaginationCursorRequest {
-    @Field(() => String, {
-        description: "The request id for the pagination.",
-    })
+    @Field(() => String,
+        {
+            description: "The request id for the pagination.",
+        })
         requestId: string
 }
 
@@ -22,10 +25,11 @@ export class PaginationCursorFilters {
             "Cursor of the last item from previous page (e.g., ID or timestamp)",
     })
         cursor?: string
-    @Field(() => Int, {
-        defaultValue: 10,
-        description: "Number of items to fetch per page",
-    })
+    @Field(() => Int,
+        {
+            defaultValue: 10,
+            description: "Number of items to fetch per page",
+        })
         limit?: number
 }
 
@@ -34,10 +38,11 @@ export class PaginationCursorFilters {
     description: "The response for pagination.",
 })
 export class PaginationCursorResponseData {
-    @Field(() => String, {
-        nullable: true,
-        description: "The cursor of the last item from the previous page.",
-    })
+    @Field(() => String,
+        {
+            nullable: true,
+            description: "The cursor of the last item from the previous page.",
+        })
         cursor?: string
 }
 

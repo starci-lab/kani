@@ -71,7 +71,7 @@ export class OnCompletedService {
                                 processedAt: this.dayjsService.now().toDate(),
                                 ...(envConfig().executor.workers.job.level === 1 ? {
                                     $unset: {
-                                        metadata: null,
+                                        data: null,
                                     },
                                 } : undefined),
                             },

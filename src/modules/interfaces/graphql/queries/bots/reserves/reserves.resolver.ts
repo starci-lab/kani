@@ -1,5 +1,9 @@
-import { Args, Query, Resolver } from "@nestjs/graphql"
-import { UseGuards, UseInterceptors } from "@nestjs/common"
+import {
+    Args, Query, Resolver 
+} from "@nestjs/graphql"
+import {
+    UseGuards, UseInterceptors 
+} from "@nestjs/common"
 import {
     GraphQLJwtOnlyMFAEnabledAuthGuard,
     GraphQLUser,
@@ -10,9 +14,15 @@ import {
     ReservesResponse,
     ReservesResponseData,
 } from "./reserves.dto"
-import { UseThrottler, ThrottlerConfig } from "@modules/throttler"
-import { GraphQLSuccessMessage, GraphQLTransformInterceptor } from "../../../interceptors"
-import { ReservesService } from "./reserves.service"
+import {
+    UseThrottler, ThrottlerConfig 
+} from "@modules/throttler"
+import {
+    GraphQLSuccessMessage, GraphQLTransformInterceptor 
+} from "../../../interceptors"
+import {
+    ReservesService 
+} from "./reserves.service"
 
 @Resolver()
 export class ReservesResolver {
@@ -24,20 +34,23 @@ export class ReservesResolver {
     @GraphQLSuccessMessage("Reserves fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
-    @Query(() => ReservesResponse, {
-        description:
+    @Query(() => ReservesResponse,
+        {
+            description:
             "Returns the reserves associated with a bot.",
-        deprecationReason: "Use v2 instead",
-    })
+            deprecationReason: "Use v2 instead",
+        })
     async reserves(
         @GraphQLUser() user: UserJwtLike,   
-        @Args("request", {
-            description:
+        @Args("request",
+            {
+                description:
                 "Input parameters required to identify which bot's reserves should be fetched.",
-        })
+            })
             request: ReservesRequest,
     ): Promise<ReservesResponseData> {
-        return this.reservesService.reserves(request, user)
+        return this.reservesService.reserves(request,
+            user)
     }
 }
 

@@ -10,14 +10,14 @@ import {
 
 /** Thrown when user cannot be found */
 export interface UserNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    userId?: string
+    id?: string
     privyUserId?: string
 }
 
 export class UserNotFoundException extends AbstractException {
     constructor(
         {
-            userId,
+            id,
             privyUserId,
             originalError,
         }: UserNotFoundExceptionMetadata
@@ -26,7 +26,7 @@ export class UserNotFoundException extends AbstractException {
             "User not found",
             "USER_NOT_FOUND_EXCEPTION",
             {
-                userId,
+                id,
                 privyUserId,
                 originalError,
             }
@@ -36,13 +36,13 @@ export class UserNotFoundException extends AbstractException {
 
 /** Thrown when user TOTP secret is not found */
 export interface UserTotpSecretNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    userId: string
+    id: string
 }
 
 export class UserTotpSecretNotFoundException extends AbstractException {
     constructor(
         {
-            userId,
+            id,
             originalError,
         }: UserTotpSecretNotFoundExceptionMetadata
     ) {
@@ -50,7 +50,7 @@ export class UserTotpSecretNotFoundException extends AbstractException {
             "User totp secret not found",
             "USER_TOTP_SECRET_NOT_FOUND_EXCEPTION",
             {
-                userId,
+                id,
                 originalError,
             }
         )
@@ -59,13 +59,13 @@ export class UserTotpSecretNotFoundException extends AbstractException {
 
 /** Thrown when user MFA is already enabled */
 export interface UserMfaAlreadyEnabledExceptionMetadata extends AbstractExceptionMetadata {
-    userId: string
+    id: string
 }
 
 export class UserMfaAlreadyEnabledException extends AbstractException {
     constructor(
         {
-            userId,
+            id,
             originalError,
         }: UserMfaAlreadyEnabledExceptionMetadata
     ) {
@@ -73,7 +73,7 @@ export class UserMfaAlreadyEnabledException extends AbstractException {
             "User MFA already enabled",
             "USER_MFA_ALREADY_ENABLED_EXCEPTION",
             {
-                userId,
+                id,
                 originalError,
             }
         )

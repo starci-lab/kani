@@ -4,7 +4,7 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
-    ReconcileBalanceJobMetadata,
+    ReconcileBalanceJobData
 } from "./types"
 import {
     BalanceService
@@ -66,11 +66,11 @@ export class ExecuteService {
                 }
             )
             return {
-                result: job.metadata as ReconcileBalanceJobMetadata
+                result: job.data as ReconcileBalanceJobData
             }
         }
 
-        const transactionRecords: ReconcileBalanceJobMetadata["transactionRecords"] = []
+        const transactionRecords: ReconcileBalanceJobData["transactionRecords"] = []
         const { swapTransactions } = prepareResult
 
         for (const swapTransaction of swapTransactions) {

@@ -13,8 +13,8 @@ export class AggregatedTokenPriceNotFoundException extends AbstractException {
         { tokenId, originalError }: AggregatedTokenPriceNotFoundExceptionMetadata
     ) {
         super(
-            "Oracle token price not found",
-            "ORACLE_TOKEN_PRICE_NOT_FOUND_EXCEPTION",
+            "Aggregated token price not found",
+            "AGGREGATED_TOKEN_PRICE_NOT_FOUND_EXCEPTION",
             {
                 tokenId,
                 originalError,

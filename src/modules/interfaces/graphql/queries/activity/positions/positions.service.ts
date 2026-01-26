@@ -1,21 +1,29 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     BotSchema,
     PositionSchema
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     PositionsRequest,
     PositionsResponseData,
 } from "./positions.dto"
-import { UserJwtLike } from "@modules/passport"
+import {
+    UserJwtLike 
+} from "@modules/passport"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
-import { envConfig } from "@modules/env"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class PositionsService {
@@ -41,11 +49,16 @@ export class PositionsService {
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
         if (!bot) {
-            throw new BotNotFoundException("Bot not found")
+            throw new BotNotFoundException({
+                id: botId,
+            })
         }
         // check if the bot is owned by the user
         if (bot.user.toString() !== userLike.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: userLike.id,
+            })
         }
         // create the query to get the positions
         const query = this.connection
@@ -58,7 +71,9 @@ export class PositionsService {
         // get the sort order
         const sortOrder = asc ? 1 : -1
         // sort the positions by positionOpenedAt
-        query.sort({ createdAt: sortOrder })
+        query.sort({
+            "closeSnapshot.snapshotAt": sortOrder 
+        })
         // If there is a cursor, get the previous/next cursor
         const _limit = limit ?? envConfig().pagination.positions.limit.default
         const _pageNumber = pageNumber ?? 1

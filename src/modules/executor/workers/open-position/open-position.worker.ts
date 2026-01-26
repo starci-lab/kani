@@ -12,7 +12,7 @@
  * Phases (services) and guarantees:
  * - PREPARE (`PrepareService.process`)
  *   - Builds an open-position transaction (no execution here).
- *   - Persists Job status → `Prepared` and `metadata.openPositionTransaction`.
+ *   - Persists Job status → `Prepared` and `data.openPositionTransaction`.
  * - HEARTBEAT (`SendHeartbeatService.process`)
  *   - Proves we still hold the bot lock authority; throws `UnrecoverableError` if not.
  * - COMPLETED (`OnCompletedService.process`)

@@ -1,5 +1,9 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./http.module-definition"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./http.module-definition"
 
 @Module({
     imports: [],

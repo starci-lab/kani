@@ -22,9 +22,10 @@ export class HistoryV2ChartSerie
     extends ChartSerie
     implements IChartSerie<number>
 {
-    @Field(() => Float, {
-        description: "Aggregated position value snapshot at the series timestamp.",
-    })
+    @Field(() => Float,
+        {
+            description: "Aggregated position value snapshot at the series timestamp.",
+        })
         value: number
 }
 
@@ -35,9 +36,10 @@ export class HistoryV2ResponseData
     extends LineChartResponseData
     implements ILineChartResponseData<number>
 {
-    @Field(() => [HistoryV2ChartSerie], {
-        description: "Chronologically ordered time-series data points covering the requested range.",
-    })
+    @Field(() => [HistoryV2ChartSerie],
+        {
+            description: "Chronologically ordered time-series data points covering the requested range.",
+        })
         series: Array<HistoryV2ChartSerie>
 }
 
@@ -50,14 +52,16 @@ export class HistoryV2RequestFilters extends LineChartRequestFilters {}
     description: "Request payload for fetching historical chart data of a specific bot v2.",
 })
 export class HistoryV2Request {
-    @Field(() => HistoryV2RequestFilters, {
-        description: "Time range and interval configuration for fetching history chart data.",
-    })
+    @Field(() => HistoryV2RequestFilters,
+        {
+            description: "Time range and interval configuration for fetching history chart data.",
+        })
         filters: HistoryV2RequestFilters
 
-    @Field(() => ID, {
-        description: "Unique identifier of the bot whose history data is requested.",
-    })
+    @Field(() => ID,
+        {
+            description: "Unique identifier of the bot whose history data is requested.",
+        })
         botId: string
 }
 
@@ -68,10 +72,11 @@ export class HistoryV2Response
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<HistoryV2ResponseData>
 {
-    @Field(() => HistoryV2ResponseData, {
-        description: "Time-series history data of the bot.",
-        nullable: true,
-    })
+    @Field(() => HistoryV2ResponseData,
+        {
+            description: "Time-series history data of the bot.",
+            nullable: true,
+        })
         data?: HistoryV2ResponseData
 }
 

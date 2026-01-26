@@ -1,11 +1,16 @@
-import { Injectable } from "@nestjs/common"
-import { CookieOptions, Response } from "express"
-import { MsService } from "@modules/mixin"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    CookieOptions, Response 
+} from "express"
 
 @Injectable()
 export class CookieService {
     constructor(
-        private readonly msService: MsService
     ) {}
 
     /**
@@ -23,24 +28,27 @@ export class CookieService {
             secure: process.env.NODE_ENV === "production", // Only send over HTTPS in production
             sameSite: "strict",                            // Protects against CSRF
             path: "/",                                     // Cookie is valid for the entire site
-            maxAge: this.msService.fromString("30d"),      // 30 days
+            maxAge: envConfig().jwt.refreshToken.expiration,      // 30 days
         }
 
-        res.cookie(name, value, {
-            ...defaultOptions,
-            ...options,
-        })
+        res.cookie(name,
+            value,
+            {
+                ...defaultOptions,
+                ...options,
+            })
     }
 
     /**
      * Clear a cookie by name. Commonly used on logout.
      */
     clearCookie(res: Response, name: string, options?: CookieOptions): void {
-        res.clearCookie(name, {
-            httpOnly: true,
-            sameSite: "strict",
-            path: "/",
-            ...options,
-        })
+        res.clearCookie(name,
+            {
+                httpOnly: true,
+                sameSite: "strict",
+                path: "/",
+                ...options,
+            })
     }
 }

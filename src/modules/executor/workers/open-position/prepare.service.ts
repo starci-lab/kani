@@ -4,7 +4,7 @@ import {
 import {
     PrepareParams,
     PrepareResult,
-    OpenPositionJobMetadata,
+    OpenPositionJobData,
 } from "./types"
 import {
     getJobStatusOrder,
@@ -84,7 +84,7 @@ export class PrepareService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
-            const { openPositionTransaction } = job.metadata as ToStringObject<OpenPositionJobMetadata>
+            const { openPositionTransaction } = job.data as ToStringObject<OpenPositionJobData>
             return {
                 result: {
                     openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
@@ -109,7 +109,7 @@ export class PrepareService {
             {
                 $set: {
                     status: JobStatus.Prepared,
-                    "metadata.openPositionTransaction": this.superJson.stringify(openPositionTransaction),
+                    "data.openPositionTransaction": this.superJson.stringify(openPositionTransaction),
                 },
             }
         )

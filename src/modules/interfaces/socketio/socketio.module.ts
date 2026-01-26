@@ -1,16 +1,18 @@
-import { Module } from "@nestjs/common"
-import { PythModule } from "./pyth"
-import { ConfigurableModuleClass } from "./socketio.module-definition"
-import { CoreModule } from "./core"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    PriceModule 
+} from "./price"
+import {
+    ConfigurableModuleClass 
+} from "./socketio.module-definition"
 
 @Module({
     imports: [
-        PythModule.register({
+        PriceModule.register({
             isGlobal: true,
         }),
-        CoreModule.register({
-            isGlobal: true,
-        })
     ],
 })
 export class SocketIoModule extends ConfigurableModuleClass {}

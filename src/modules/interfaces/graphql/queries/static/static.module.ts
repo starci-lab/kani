@@ -1,11 +1,27 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./static.module-definition"
-import { TokensModule } from "./tokens"
-import { LiquidityPoolsModule } from "./liquidity-pools"
-import { DexesModule } from "./dexes"
-import { AccountLimitsModule } from "./account-limits"
-import { GasConfigModule } from "./gas-config"
-import { BalanceConfigModule } from "./balance-config"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./static.module-definition"
+import {
+    TokensModule 
+} from "./tokens"
+import {
+    LiquidityPoolsModule 
+} from "./liquidity-pools"
+import {
+    DexesModule 
+} from "./dexes"
+import {
+    AccountLimitsModule 
+} from "./account-limits"
+import {
+    GasConfigModule 
+} from "./gas-config"
+import {
+    BalanceConfigModule 
+} from "./balance-config"
 
 @Module({
     imports: [

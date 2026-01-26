@@ -14,13 +14,10 @@ import {
     DexId, PrimaryMongoDbModule 
 } from "@modules/databases"
 import {
-    HttpModule 
-} from "@modules/interfaces/http"
-import {
     PassportModule 
 } from "@modules/passport"
 import {
-    BalanceModule, DexesModule, FormulasModule, KeypairsModule, MathModule 
+    DexesModule, FormulasModule, KeypairsModule, MathModule 
 } from "@modules/blockchains"
 import {
     CryptoModule 
@@ -38,7 +35,9 @@ import {
     CacheModule 
 } from "@modules/cache"
 import {
-    GraphQLModule 
+    GraphQLModule, 
+    HttpModule,
+    SocketIoModule
 } from "@modules/interfaces"
 import {
     ThrottlerModule 
@@ -52,9 +51,6 @@ import {
 import {
     MailModule 
 } from "@modules/mail"
-import {
-    SocketIoModule 
-} from "@modules/interfaces"
 import {
     ScheduleModule 
 } from "@nestjs/schedule"
@@ -100,6 +96,12 @@ import {
             isGlobal: true,
             instanceKey: IoRedisInstanceKey.Adapter,
         }),
+        PrimaryMongoDbModule.register({
+            isGlobal: true,
+            memoryStorage: true,
+            withSeeders: true,
+            associate: true,
+        }),
         FormulasModule.register({
             isGlobal: true,
         }),
@@ -127,10 +129,6 @@ import {
         ClientsModule.register({
             isGlobal: true,
         }),
-        BalanceModule.register({
-            isGlobal: true,
-            utilitiesOnly: true,
-        }),
         DexesModule.register({
             isGlobal: true,
             dexIds: [
@@ -153,7 +151,7 @@ import {
         }),
         WinstonModule.register({
             isGlobal: true,
-            appName: "kani-interface",
+            appName: "Kani Interface",
             level: WinstonLevel.Info,
         }),
         SentryModule.register({
@@ -202,11 +200,6 @@ import {
         ScheduleModule.forRoot(),
         MailModule.register({
             isGlobal: true,
-        }),
-        PrimaryMongoDbModule.register({
-            isGlobal: true,
-            memoryStorage: true,
-            withSeeders: true,
         }),
         HttpModule.register({
             isGlobal: true,

@@ -1,7 +1,15 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./fees.module-definition"
-import { FeesService } from "./fees.service"
-import { FeesResolver } from "./fees.resolver"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./fees.module-definition"
+import {
+    FeesService 
+} from "./fees.service"
+import {
+    FeesResolver 
+} from "./fees.resolver"
 
 @Module({
     providers: [

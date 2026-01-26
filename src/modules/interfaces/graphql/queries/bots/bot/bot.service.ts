@@ -1,12 +1,23 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 
-import { InjectPrimaryMongoose, BotSchema, PositionSchema } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    InjectPrimaryMongoose, BotSchema, PositionSchema, 
+    BotActivePositionSchema
+} from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
 import { 
     BotRequest,
 } from "./bot.dto"
-import { BotNotFoundException } from "@modules/exceptions"
-import { UserJwtLike } from "@modules/passport"
+import {
+    BotNotFoundException 
+} from "@modules/exceptions"
+import {
+    UserJwtLike 
+} from "@modules/passport"
 
 @Injectable()
 export class BotService {
@@ -26,7 +37,9 @@ export class BotService {
                 _id: id,
             })
         if (!bot) {
-            throw new BotNotFoundException()
+            throw new BotNotFoundException({
+                id,
+            })
         }
         const botJson = bot.toJSON<BotSchema>()
         const activePosition = await this.connection
@@ -35,7 +48,7 @@ export class BotService {
                 isActive: true,
             })
         if (activePosition) {
-            botJson.activePosition = activePosition.toJSON<PositionSchema>()
+            botJson.activePosition = activePosition.toJSON<BotActivePositionSchema>()
         }
         return botJson
     }

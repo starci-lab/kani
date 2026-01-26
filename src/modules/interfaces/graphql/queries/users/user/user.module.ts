@@ -1,7 +1,15 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./user.module-definition"
-import { UserService } from "./user.service"
-import { UserResolver } from "./user.resolver"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./user.module-definition"
+import {
+    UserService 
+} from "./user.service"
+import {
+    UserResolver 
+} from "./user.resolver"
 
 @Module({
     providers: [

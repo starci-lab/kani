@@ -1,24 +1,34 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     TransactionSchema,
     BotSchema,
     UserSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     TransactionsV2Request,
     TransactionsV2ResponseData,
 } from "./transactions-v2.dto"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
     UserNotFoundException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
-import { envConfig } from "@modules/env"
-import { ValidateService } from "../../../services"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    ValidateService 
+} from "../../../services"
 
 @Injectable()
 export class TransactionsV2Service {
@@ -40,15 +50,23 @@ export class TransactionsV2Service {
         response: VerifyAccessTokenResponse,
     ): Promise<TransactionsV2ResponseData> {
         // validate the limit
-        this.validateService.validateLimit({ limit, min: envConfig().pagination.transactions.limit.min, max: envConfig().pagination.transactions.limit.max })
+        this.validateService.validateLimit({
+            limit, min: envConfig().pagination.transactions.limit.min, max: envConfig().pagination.transactions.limit.max 
+        })
         // validate the page number
-        this.validateService.validatePageNumber({ pageNumber, max: envConfig().pagination.transactions.pageNumber.max })
+        this.validateService.validatePageNumber({
+            pageNumber, max: envConfig().pagination.transactions.pageNumber.max 
+        })
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
-            throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
+            throw new UserNotFoundException({
+                privyUserId: response.user_id,
+            })
         }
         // retrieve the cursor from the filters
         // check if the bot exists
@@ -56,20 +74,29 @@ export class TransactionsV2Service {
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
         if (!bot) {
-            throw new BotNotFoundException("Bot not found")
+            throw new BotNotFoundException({
+                id: botId,
+            })
         }
         // check if the bot is owned by the user
         if (bot.user.toString() !== user.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: user.id,
+            })
         }
         // create the query to get the transactions
         const query = this.connection
             .model<TransactionSchema>(TransactionSchema.name)
-            .find({ bot: botId })
+            .find({
+                bot: botId 
+            })
         // get the sort order
         const sortOrder = asc ? 1 : -1
         // sort the transactions by createdAt
-        query.sort({ createdAt: sortOrder })
+        query.sort({
+            createdAt: sortOrder 
+        })
         // limit the number of transactions to return
         query.limit(limit)
         // limit the number of transactions to return

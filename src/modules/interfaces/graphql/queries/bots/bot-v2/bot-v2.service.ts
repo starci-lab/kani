@@ -1,13 +1,26 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 
-import { InjectPrimaryMongoose, BotSchema, PositionSchema, UserSchema } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    InjectPrimaryMongoose, BotSchema, PositionSchema, UserSchema, 
+    BotActivePositionSchema
+} from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
 import { 
     BotV2Request,
 } from "./bot-v2.dto"
-import { BotNotFoundException } from "@modules/exceptions"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { UserNotFoundException } from "@modules/exceptions"
+import {
+    BotNotFoundException 
+} from "@modules/exceptions"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
+import {
+    UserNotFoundException 
+} from "@modules/exceptions"
 
 @Injectable()
 export class BotV2Service {
@@ -23,9 +36,13 @@ export class BotV2Service {
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
-            throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
+            throw new UserNotFoundException({
+                privyUserId: response.user_id,
+            })
         }
         const bot = await this.connection
             .model<BotSchema>(
@@ -34,7 +51,9 @@ export class BotV2Service {
                 _id: id,
             })
         if (!bot) {
-            throw new BotNotFoundException()
+            throw new BotNotFoundException({
+                id,
+            })
         }
         const botJson = bot.toJSON<BotSchema>()
         const activePosition = await this.connection
@@ -43,7 +62,7 @@ export class BotV2Service {
                 isActive: true,
             })
         if (activePosition) {
-            botJson.activePosition = activePosition.toJSON<PositionSchema>()
+            botJson.activePosition = activePosition.toJSON<BotActivePositionSchema>()
         }
         return botJson
     }

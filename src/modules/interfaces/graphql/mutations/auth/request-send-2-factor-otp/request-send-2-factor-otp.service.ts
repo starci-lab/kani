@@ -43,7 +43,7 @@ export class RequestSend2FactorOtpService {
             .findById(userLike.id)
         if (!user) {
             throw new UserNotFoundException({
-                userId: userLike.id,
+                id: userLike.id,
             })
         }
         const otp = this.codeGeneratorService.generateOtpCode()

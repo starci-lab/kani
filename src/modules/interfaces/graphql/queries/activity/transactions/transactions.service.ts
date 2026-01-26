@@ -1,21 +1,29 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     TransactionSchema,
     BotSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     TransactionsRequest,
     TransactionsResponseData,
 } from "./transactions.dto"
-import { UserJwtLike } from "@modules/passport"
+import {
+    UserJwtLike 
+} from "@modules/passport"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
-import { envConfig } from "@modules/env"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class TransactionsService {
@@ -41,20 +49,29 @@ export class TransactionsService {
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
         if (!bot) {
-            throw new BotNotFoundException("Bot not found")
+            throw new BotNotFoundException({
+                id: botId,
+            })
         }
         // check if the bot is owned by the user
         if (bot.user.toString() !== userLike.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: userLike.id,
+            })
         }
         // create the query to get the transactions
         const query = this.connection
             .model<TransactionSchema>(TransactionSchema.name)
-            .find({ bot: botId })
+            .find({
+                bot: botId 
+            })
         // get the sort order
         const sortOrder = asc ? 1 : -1
         // sort the transactions by createdAt
-        query.sort({ createdAt: sortOrder })
+        query.sort({
+            createdAt: sortOrder 
+        })
         // limit the number of transactions to return
         query.limit(limit)
         // skip the number of items

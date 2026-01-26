@@ -27,7 +27,7 @@ export class DayjsService {
         return dayjs(config).utc()
     }
 
-    getNearestBucketUTC(
+    getBucketStartUtcByTimezone(
         date: Date,
         intervalMs: number,
         timeZone: string

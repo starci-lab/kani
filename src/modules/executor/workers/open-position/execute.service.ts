@@ -4,7 +4,7 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
-    OpenPositionJobMetadata,
+    OpenPositionJobData,
 } from "./types"
 import {
     getJobStatusOrder,
@@ -86,7 +86,7 @@ export class ExecuteService {
                 openPositionTransaction, 
                 executeResult, 
                 transactionRecord 
-            } = job.metadata as ToStringObject<OpenPositionJobMetadata>
+            } = job.data as ToStringObject<OpenPositionJobData>
             return {
                 result: {
                     openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
@@ -127,8 +127,8 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
-                        "metadata.executeResult": this.superJson.stringify(executeResult),
-                        "metadata.transactionRecord": this.superJson.stringify(transactionRecord),
+                        "data.executeResult": this.superJson.stringify(executeResult),
+                        "data.transactionRecord": this.superJson.stringify(transactionRecord),
                     },
                 }
             )

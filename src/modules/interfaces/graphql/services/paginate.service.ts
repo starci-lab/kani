@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import Decimal from "decimal.js"
 
 /**
@@ -15,7 +17,8 @@ export class PaginateService {
         limit: number,
     ): Array<T> {
         const start = new Decimal(pageNumber).sub(1).mul(limit).toNumber()
-        return items.slice(start, start + limit)
+        return items.slice(start,
+            start + limit)
     }
 }
 

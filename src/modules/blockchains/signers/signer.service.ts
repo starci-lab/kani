@@ -48,7 +48,7 @@ export class SignerService {
         let privateKey: string | null = null
         if (!bot.encryptedPrivateKeyPayload) {
             throw new BotEncryptedPrivateKeyNotFoundException({
-                botId: bot.id,
+                id: bot.id,
             })
         }
         try {

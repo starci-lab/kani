@@ -37,9 +37,10 @@ export class HistoryChartSerie
      * This value represents the bot's position value snapshot
      * after the most recent closed position within the interval.
      */
-    @Field(() => Float, {
-        description: "Aggregated position value snapshot at the series timestamp.",
-    })
+    @Field(() => Float,
+        {
+            description: "Aggregated position value snapshot at the series timestamp.",
+        })
         value: number
 }
 
@@ -63,9 +64,10 @@ export class HistoryResponseData
      * Each item represents the bot's aggregated position value
      * at a specific point in time.
      */
-    @Field(() => [HistoryChartSerie], {
-        description: "Chronologically ordered time-series data points covering the requested range.",
-    })
+    @Field(() => [HistoryChartSerie],
+        {
+            description: "Chronologically ordered time-series data points covering the requested range.",
+        })
         series: Array<HistoryChartSerie>
 }
 
@@ -98,17 +100,19 @@ export class HistoryRequest {
     /**
      * Time range and interval configuration used to sample the history series.
      */
-    @Field(() => HistoryRequestFilters, {
-        description: "Time range and interval configuration for fetching history chart data.",
-    })
+    @Field(() => HistoryRequestFilters,
+        {
+            description: "Time range and interval configuration for fetching history chart data.",
+        })
         filters: HistoryRequestFilters
 
     /**
      * Unique identifier of the bot whose historical data is requested.
      */
-    @Field(() => ID, {
-        description: "Unique identifier of the bot whose history data is requested.",
-    })
+    @Field(() => ID,
+        {
+            description: "Unique identifier of the bot whose history data is requested.",
+        })
         botId: string
 }
 
@@ -129,9 +133,10 @@ export class HistoryResponse
     /**
      * Time-series history data of the requested bot.
      */
-    @Field(() => HistoryResponseData, {
-        description: "Time-series history data of the bot.",
-        nullable: true,
-    })
+    @Field(() => HistoryResponseData,
+        {
+            description: "Time-series history data of the bot.",
+            nullable: true,
+        })
         data?: HistoryResponseData
 }

@@ -130,7 +130,9 @@ import {
     DlmmLiquidityPoolsSyncedDiagnosticMessage,
     ClmmLiquidityPoolsSyncedDiagnosticMessage,
     LiquidityPoolsBecameNotReadyMessage,
-    LiquidityPoolsBecameReadyMessage
+    LiquidityPoolsBecameReadyMessage,
+    SocketIoClientConnectedMessage,
+    SocketIoClientDisconnectedMessage
 } from "./types"
 
 export const configMap = {
@@ -1182,5 +1184,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as LiquidityPoolsBecameNotReadyMessage,
+    },
+    // Socket Io Client Connected
+    [WinstonLog.SocketIoClientConnected]: {
+        name: WinstonLog.SocketIoClientConnected,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as SocketIoClientConnectedMessage,
+    },
+    // Socket Io Client Disconnected
+    [WinstonLog.SocketIoClientDisconnected]: {
+        name: WinstonLog.SocketIoClientDisconnected,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as SocketIoClientDisconnectedMessage,
     },
 }

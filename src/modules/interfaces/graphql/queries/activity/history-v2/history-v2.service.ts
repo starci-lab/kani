@@ -1,35 +1,47 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     BotSchema,
     HistorySchema,
     PositionSchema,
     HistorySerieSchema,
-    HISTORY_SERIE_COUNT,
     UserSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     HistoryV2ChartSerie,
     HistoryV2Request,
     HistoryV2RequestFilters,
     HistoryV2ResponseData,
 } from "./history-v2.dto"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
-import { DayjsService, MsService } from "@modules/mixin"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
+import {
+    DayjsService 
+} from "@modules/mixin"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
     UserNotFoundException,
 } from "@modules/exceptions"
-import { ChartInterval, chartIntervalToMsString } from "../../../abstracts"
+import {
+    ChartInterval, chartIntervalToMsString 
+} from "../../../abstracts"
+import {
+    envConfig 
+} from "@modules/env"
+import ms from "ms"
 
 @Injectable()
 export class HistoryV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly msService: MsService,
         private readonly dayjsService: DayjsService,
     ) {}
 
@@ -40,24 +52,35 @@ export class HistoryV2Service {
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
-            throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
+            throw new UserNotFoundException({
+                privyUserId: response.user_id,
+            })
         }
         // Validate bot
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
 
-        if (!bot) throw new BotNotFoundException("Bot not found")
+        if (!bot) throw new BotNotFoundException({
+            id: botId,
+        })
         if (bot.user.toString() !== user.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: user.id,
+            })
         }
 
         // Load history
         const history = await this.connection
             .model<HistorySchema>(HistorySchema.name)
-            .findOne({ bot: botId })
+            .findOne({
+                bot: botId 
+            })
 
         let fullSeries: Array<HistorySerieSchema> = []
         let seriesAppended: Array<HistorySerieSchema> = []
@@ -67,22 +90,28 @@ export class HistoryV2Service {
             seriesAppended = result.seriesAppended
             fullSeries = seriesAppended
         } else {
-            const result = await this.appendHistorySeries(bot, history)
+            const result = await this.appendHistorySeries(bot,
+                history)
             seriesAppended = result.seriesAppended
-            fullSeries = [...history.series, ...seriesAppended]
+            fullSeries = [...history.series,
+                ...seriesAppended]
         }
 
         // Persist history
         await this.connection
             .model<HistorySchema>(HistorySchema.name)
             .updateOne(
-                { bot: botId },
                 {
-                    $setOnInsert: { bot: botId },
+                    bot: botId 
+                },
+                {
+                    $setOnInsert: {
+                        bot: botId 
+                    },
                     $push: {
                         series: {
                             $each: seriesAppended,
-                            $slice: -HISTORY_SERIE_COUNT,
+                            $slice: -envConfig().history.serieCount,
                         },
                     },
                     $inc: {
@@ -92,10 +121,13 @@ export class HistoryV2Service {
                         lastSeriesUpdatedAt: this.dayjsService.now().toDate(),
                     },
                 },
-                { upsert: true },
+                {
+                    upsert: true 
+                },
             )
 
-        return this.getHistoryResponseData(fullSeries, filters)
+        return this.getHistoryResponseData(fullSeries,
+            filters)
     }
 
     private async getHistoryResponseData(
@@ -109,24 +141,25 @@ export class HistoryV2Service {
             timeZone = "UTC",
         } = filters
 
-        const intervalMs = this.msService.fromString(
+        const intervalMs = ms(
             chartIntervalToMsString(interval),
         )
 
         const fromDate = from
             ? this.dayjsService.from(from).tz(timeZone)
-            : this.dayjsService.now().tz(timeZone).subtract(1, "week")
+            : this.dayjsService.now().tz(timeZone).subtract(1,
+                "week")
 
         const toDate = to
             ? this.dayjsService.from(to).tz(timeZone)
             : this.dayjsService.now().tz(timeZone)
 
-        const fromBucketDate = this.dayjsService.getNearestBucketUTC(
+        const fromBucketDate = this.dayjsService.getBucketStartUtcByTimezone(
             fromDate.toDate(),
             intervalMs,
             timeZone,
         )
-        const toBucketDate = this.dayjsService.getNearestBucketUTC(
+        const toBucketDate = this.dayjsService.getBucketStartUtcByTimezone(
             toDate.toDate(),
             intervalMs,
             timeZone,
@@ -137,7 +170,8 @@ export class HistoryV2Service {
         for (
             let date = fromBucketDate;
             date.isSameOrBefore(toBucketDate);
-            date = date.add(intervalMs, "millisecond")
+            date = date.add(intervalMs,
+                "millisecond")
         ) {
             timestamps.push(date.valueOf())
         }
@@ -179,18 +213,20 @@ export class HistoryV2Service {
                 bot: bot.id,
                 isActive: false,
             })
-            .sort({ positionClosedAt: 1 }) // ASC
-            .limit(HISTORY_SERIE_COUNT)
+            .sort({
+                positionClosedAt: 1 
+            }) // ASC
+            .limit(envConfig().history.serieCount)
 
         const series: Array<HistorySerieSchema> = []
 
         for (const position of positions) {
-            if (!position.positionClosedAt || !position.positionValueAtClose)
+            if (!position.closeSnapshot)
                 continue
 
             series.push({
-                positionClosedAt: position.positionClosedAt,
-                positionValueAtClose: position.positionValueAtClose,
+                positionClosedAt: position.closeSnapshot.snapshotAt,
+                positionValueAtClose: position.closeSnapshot.positionValue,
             })
         }
 
@@ -209,31 +245,36 @@ export class HistoryV2Service {
             .find({
                 bot: bot.id,
                 isActive: false,
-                positionClosedAt: { $gt: history.lastSeriesUpdatedAt },
+                positionClosedAt: {
+                    $gt: history.lastSeriesUpdatedAt 
+                },
             })
-            .sort({ positionClosedAt: 1 }) // ASC
-            .limit(HISTORY_SERIE_COUNT)
+            .sort({
+                positionClosedAt: 1 
+            }) // ASC
+            .limit(envConfig().history.serieCount)
 
         const seriesAppended: Array<HistorySerieSchema> = []
 
         for (const position of positions) {
-            if (!position.positionClosedAt || !position.positionValueAtClose)
+            if (!position.closeSnapshot)
                 continue
 
             seriesAppended.push({
-                positionClosedAt: position.positionClosedAt,
-                positionValueAtClose: position.positionValueAtClose,
+                positionClosedAt: position.closeSnapshot.snapshotAt,
+                positionValueAtClose: position.closeSnapshot.positionValue,
             })
         }
 
         const overflow =
             history.seriesCount +
             seriesAppended.length -
-            HISTORY_SERIE_COUNT
+            envConfig().history.serieCount
 
         return {
             seriesAppended,
-            discardCount: Math.max(overflow, 0),
+            discardCount: Math.max(overflow,
+                0),
         }
     }
 }

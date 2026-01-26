@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     TokenSchema,
     PrimaryMemoryStorageService
@@ -20,7 +22,9 @@ export class TokensService {
      * and typically represent static registry data.
      */
     tokens(): Array<TokenSchema> {
-        return this.memoryStorageService.tokens
+        return this.memoryStorageService.tokenCollection.chain().find().data({
+            removeMeta: true,
+        })
     }
 }
 

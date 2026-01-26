@@ -1,21 +1,38 @@
 // we need to initialize sentry before anything else
 import "@modules/sentry/instrument"
 
-import { NestFactory } from "@nestjs/core"
-import { AppModule } from "./app.module"
-import { envConfig } from "@modules/env"
+import {
+    NestFactory 
+} from "@nestjs/core"
+import {
+    AppModule 
+} from "./app.module"
+import {
+    envConfig 
+} from "@modules/env"
 import compression from "compression"
-import { setupCors } from "@modules/cors"
-import { swaggerBuilder } from "@modules/docs"
-import { AuthenticatedRedisIoAdapter } from "@modules/socketio"
-import { createIoRedisKey } from "@modules/native"
-import { SOCKETIO_ADAPTER_KEY } from "@modules/socketio"
-import { ContextLoggerService } from "@modules/logger"
+import {
+    setupCors 
+} from "@modules/cors"
+import {
+    swaggerBuilder 
+} from "@modules/docs"
+import {
+    AuthenticatedRedisIoAdapter 
+} from "@modules/socketio"
+import {
+    createIoRedisKey, 
+    IoRedisInstanceKey
+} from "@modules/native"
+import {
+    ContextLoggerService 
+} from "@modules/logger"
 
 const bootstrap = async () => {
-    const app = await NestFactory.create(AppModule, {
-        logger: new ContextLoggerService(),
-    })
+    const app = await NestFactory.create(AppModule,
+        {
+            logger: new ContextLoggerService(),
+        })
     // set the app to the globalThis object
     globalThis.__APP__ = app
     setupCors(app)
@@ -37,8 +54,10 @@ for powering Kani's applications and integrations.",
     })
     app.use(compression())
     const redis = await app.get(
-        createIoRedisKey(SOCKETIO_ADAPTER_KEY), 
-        { strict: false }
+        createIoRedisKey(IoRedisInstanceKey.Adapter), 
+        {
+            strict: false 
+        }
     )
     const redisIoAdapter = new AuthenticatedRedisIoAdapter(app)
     redisIoAdapter.setClient(redis)

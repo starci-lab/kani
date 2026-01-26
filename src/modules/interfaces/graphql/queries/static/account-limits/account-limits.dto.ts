@@ -1,6 +1,12 @@
-import { ObjectType, Field } from "@nestjs/graphql"
-import { AccountLimitsConfig } from "@modules/databases"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
+import {
+    ObjectType, Field 
+} from "@nestjs/graphql"
+import {
+    AccountLimitsConfig 
+} from "@modules/databases"
+import {
+    AbstractGraphQLResponse, IAbstractGraphQLResponse 
+} from "../../../abstracts"
 import GraphQLJSON from "graphql-type-json"
 /**
  * GraphQL response type for the dexes query.
@@ -11,8 +17,9 @@ import GraphQLJSON from "graphql-type-json"
 export class AccountLimitsResponse extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<AccountLimitsConfig>
 {
-    @Field(() => GraphQLJSON, {
-        description: "Account limits returned by the query.",
-    })
+    @Field(() => GraphQLJSON,
+        {
+            description: "Account limits returned by the query.",
+        })
         data: AccountLimitsConfig
 }

@@ -1,8 +1,18 @@
-import { Module } from "@nestjs/common"
-import { ConfigurableModuleClass } from "./bots.module-definition"
-import { BotsService } from "./bots.service"
-import { BotsResolver } from "./bots.resolver"
-import { ProfitService, ValidateService } from "../../../services"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass 
+} from "./bots.module-definition"
+import {
+    BotsService 
+} from "./bots.service"
+import {
+    BotsResolver 
+} from "./bots.resolver"
+import {
+    ProfitService, ValidateService 
+} from "../../../services"
 
 @Module({
     providers: [

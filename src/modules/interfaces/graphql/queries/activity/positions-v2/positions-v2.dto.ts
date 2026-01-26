@@ -1,21 +1,28 @@
-import { Field, ID, InputType, ObjectType } from "@nestjs/graphql"
-import { PositionSchema } from "@modules/databases"
+import {
+    Field, ID, InputType, ObjectType 
+} from "@nestjs/graphql"
+import {
+    PositionSchema 
+} from "@modules/databases"
 import { 
     AbstractGraphQLResponse, 
     IAbstractGraphQLResponse, 
     IPaginationPageResponseData, 
     PaginationPageResponseData
 } from "../../../abstracts"
-import { PaginationPageFilters } from "../../../abstracts"
+import {
+    PaginationPageFilters 
+} from "../../../abstracts"
 
 @InputType({
     description: "The request for fetching positions v2.",
 })
 export class PositionsV2PaginationFilters extends PaginationPageFilters {
-    @Field(() => Boolean, {
-        nullable: true,
-        description: "Whether to sort the positions by createdAt in ascending order.",
-    })
+    @Field(() => Boolean,
+        {
+            nullable: true,
+            description: "Whether to sort the positions by createdAt in ascending order.",
+        })
         asc?: boolean
 }
 
@@ -23,13 +30,15 @@ export class PositionsV2PaginationFilters extends PaginationPageFilters {
     description: "The input type for the cursor for fetching positions v2.",
 })
 export class PositionsV2Request {
-    @Field(() => PositionsV2PaginationFilters, {
-        description: "The filters for pagination.",
-    })
+    @Field(() => PositionsV2PaginationFilters,
+        {
+            description: "The filters for pagination.",
+        })
         filters: PositionsV2PaginationFilters
-    @Field(() => ID, {
-        description: "The ID of the bot to fetch positions for.",
-    })
+    @Field(() => ID,
+        {
+            description: "The ID of the bot to fetch positions for.",
+        })
         botId: string
 }
 
@@ -39,9 +48,10 @@ export class PositionsV2Request {
 export class PositionsV2ResponseData
     extends PaginationPageResponseData
     implements IPaginationPageResponseData<PositionSchema> {
-    @Field(() => [PositionSchema], {
-        description: "Positions.",
-    })
+    @Field(() => [PositionSchema],
+        {
+            description: "Positions.",
+        })
         data: Array<PositionSchema>
 }   
 
@@ -51,9 +61,10 @@ export class PositionsV2ResponseData
 export class PositionsV2Response
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<PositionsV2ResponseData> {
-    @Field(() => PositionsV2ResponseData, {
-        description: "The data for the positions.",
-    })
+    @Field(() => PositionsV2ResponseData,
+        {
+            description: "The data for the positions.",
+        })
         data: PositionsV2ResponseData
 }
 

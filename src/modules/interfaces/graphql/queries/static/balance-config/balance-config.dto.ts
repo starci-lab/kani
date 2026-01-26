@@ -1,6 +1,12 @@
-import { ObjectType, Field } from "@nestjs/graphql"
-import { BalanceConfig } from "@modules/databases"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
+import {
+    ObjectType, Field 
+} from "@nestjs/graphql"
+import {
+    BalanceConfig 
+} from "@modules/databases"
+import {
+    AbstractGraphQLResponse, IAbstractGraphQLResponse 
+} from "../../../abstracts"
 import GraphQLJSON from "graphql-type-json"
 /**
  * GraphQL response type for the dexes query.
@@ -11,8 +17,9 @@ import GraphQLJSON from "graphql-type-json"
 export class BalanceConfigResponse extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<BalanceConfig>
 {
-    @Field(() => GraphQLJSON, {
-        description: "Balance config returned by the query.",
-    })
+    @Field(() => GraphQLJSON,
+        {
+            description: "Balance config returned by the query.",
+        })
         data: BalanceConfig
 }

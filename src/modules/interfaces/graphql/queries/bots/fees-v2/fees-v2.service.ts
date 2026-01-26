@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     BotSchema,
@@ -6,12 +8,16 @@ import {
     PrimaryMemoryStorageService,
     UserSchema,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     FeesV2Request,
     FeesV2ResponseData,
 } from "./fees-v2.dto"
-import { VerifyAccessTokenResponse } from "@privy-io/node"
+import {
+    VerifyAccessTokenResponse 
+} from "@privy-io/node"
 import { 
     ActivePositionNotFoundException, 
     BotNotFoundException, 
@@ -19,12 +25,9 @@ import {
     LiquidityPoolNotFoundException,
     UserNotFoundException,
 } from "@modules/exceptions"
-import { FeesOrchestratorService } from "@modules/blockchains"
-import { CacheKey, createCacheKey, InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { InjectSuperJson, DayjsService } from "@modules/mixin"
-import SuperJSON from "superjson"
-import { envConfig } from "@modules/env"
+import {
+    FeesOrchestratorService 
+} from "@modules/blockchains"
 
 @Injectable()
 export class FeesV2Service {
@@ -33,53 +36,40 @@ export class FeesV2Service {
         private readonly connection: Connection,
         private readonly feesOrchestratorService: FeesOrchestratorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly dayjsService: DayjsService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
     ) { }
 
     async feesV2(
         {
             botId,
-            activePositionId,
         }: FeesV2Request,
         response: VerifyAccessTokenResponse,
     ): Promise<FeesV2ResponseData> {
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
-            .findOne({ privyUserId: response.user_id })
+            .findOne({
+                privyUserId: response.user_id 
+            })
         if (!user) {
-            throw new UserNotFoundException("User not found with privy user id: " + response.user_id)
+            throw new UserNotFoundException({
+                privyUserId: response.user_id,
+            })
         }
-        // check if the fees are cached
-        const cachedResult = await this.cacheManager.get<string>
-        (
-            createCacheKey(
-                CacheKey.FeesResponse, 
-                {
-                    botId,
-                    activePositionId,
-                    userId: user.id,
-                }
-            )
-        )
-        // if the fees are cached, return them
-        // if (cachedResult) {
-        //     return this.superjson.parse<FeesV2ResponseData>(cachedResult)
-        // }
         // check if the bot exists
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
         if (!bot) {
-            throw new BotNotFoundException("Bot not found")
+            throw new BotNotFoundException({
+                id: botId,
+            })
         }
         // check if the bot is owned by the user
         if (bot.user.toString() !== user.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: user.id,
+            })
         }
         // get the active position
         const activePosition = await this.connection
@@ -88,40 +78,34 @@ export class FeesV2Service {
                 bot: botId,
                 isActive: true,
             })
-        if (!activePosition || activePosition.id.toString() !== activePositionId) {
-            throw new ActivePositionNotFoundException("Active position not found")
+        if (!activePosition 
+            || activePosition.bot.toString() !== botId 
+            || !activePosition.isActive
+        ) {
+            throw new ActivePositionNotFoundException({
+                botId,
+            })
         }
-        // set the active position on the bot
-        bot.activePosition = activePosition
         // get the liquidity pool
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.id === activePosition.liquidityPool.toString())
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
+            id: {
+                $eq: activePosition.liquidityPool.toString(),
+            },
+        })
         if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException("Liquidity pool not found")
+            throw new LiquidityPoolNotFoundException({
+                id: activePosition.liquidityPool.toString(),
+            })
         }
         // get the fees for the bot
-        const fees = await this.feesOrchestratorService.fees({ bot, liquidityPoolId: liquidityPool.displayId })
-        // cache the fees
-        const lastFetchedAt = this.dayjsService.now()
-        const feesResponse: FeesV2ResponseData = {
-            tokenA: fees.tokenA.toNumber(),
-            tokenB: fees.tokenB.toNumber(),
-            lastFetchedAt: lastFetchedAt.toDate(),
-            lastSnapshotAt: fees.snapshotAt.toDate(),
+        const { feeA, feeB, snapshotAt } = await this.feesOrchestratorService.fees({
+            bot, liquidityPool 
+        })
+        return {
+            feeA: feeA.toNumber(),
+            feeB: feeB.toNumber(),
+            snapshotAt: snapshotAt.toDate(),
         }
-        await this.cacheManager.set(
-            createCacheKey(
-                CacheKey.FeesResponse, 
-                {
-                    botId,
-                    activePositionId,
-                    userId: user.id,
-                }
-            ),
-            this.superjson.stringify(feesResponse),
-            envConfig().cache.ttl.responses.fees,
-        )
-        return feesResponse
     }
 }
 

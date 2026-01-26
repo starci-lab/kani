@@ -9,21 +9,29 @@ import {
     LiquidityPoolsResponseData,
     LiquidityPoolsSortBy,
 } from "./liquidity-pools.dto"
-import { envConfig } from "@modules/env"
-import { AsyncService } from "@modules/mixin"
 import {
-    AttachDynamicInfoService,
+    envConfig 
+} from "@modules/env"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
     PaginateService,
     ValidateService,
 } from "../../../services"
 import BN from "bn.js"
-import { OnlyTwoTokenIdsAllowedException } from "@modules/exceptions"
+import {
+    ExactlyTwoTokensRequiredException 
+} from "@modules/exceptions"
+import {
+    PositionAssociateService 
+} from "@modules/databases"
 
 @Injectable()
 export class LiquidityPoolsService {
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
-        private readonly attachDynamicInfoService: AttachDynamicInfoService,
+        private readonly positionAssociateService: PositionAssociateService,
         private readonly asyncService: AsyncService,
         private readonly validateService: ValidateService,
         private readonly paginateService: PaginateService,
@@ -47,7 +55,9 @@ export class LiquidityPoolsService {
         // require paginate
         const isRequiredPaginate = ids?.length || addresses?.length
         // get the liquidity pools
-        let liquidityPools = this.memoryStorageService.liquidityPools
+        let liquidityPools = this.memoryStorageService.liquidityPoolCollection.chain().find().data({
+            removeMeta: true,
+        })
         // filter by dex ids
         if (dexIds?.length) {
             liquidityPools = liquidityPools.filter(
@@ -100,7 +110,9 @@ export class LiquidityPoolsService {
                 // if token ids are provided, filter by token ids
                 // if the length > 2, throw an error
                 if (tokenIds.length > 2) {
-                    throw new OnlyTwoTokenIdsAllowedException("Only 2 token ids are allowed")
+                    throw new ExactlyTwoTokensRequiredException({
+                        tokenIds,
+                    })
                 }
                 // if tokenIds length is 2, require both token ids to be present
                 if (tokenIds.length === 2) {
@@ -124,12 +136,6 @@ export class LiquidityPoolsService {
                 )
             }
         }
-        // attach dynamic info
-        await this.asyncService.allIgnoreError(
-            liquidityPools.map((liquidityPool) =>
-                this.attachDynamicInfoService.attachDynamicInfo(liquidityPool),
-            ),
-        )
         // sort
         if (sortBy) {
             switch (sortBy) {

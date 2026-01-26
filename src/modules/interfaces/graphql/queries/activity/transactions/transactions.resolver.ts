@@ -1,5 +1,9 @@
-import { Args, Query, Resolver } from "@nestjs/graphql"
-import { UseGuards, UseInterceptors } from "@nestjs/common"
+import {
+    Args, Query, Resolver 
+} from "@nestjs/graphql"
+import {
+    UseGuards, UseInterceptors 
+} from "@nestjs/common"
 import {
     GraphQLJwtAccessTokenAuthGuard,
     GraphQLUser,
@@ -10,9 +14,15 @@ import {
     TransactionsResponse,
     TransactionsResponseData,
 } from "./transactions.dto"
-import { UseThrottler, ThrottlerConfig } from "@modules/throttler"
-import { GraphQLSuccessMessage, GraphQLTransformInterceptor } from "../../../interceptors"
-import { TransactionsService } from "./transactions.service"
+import {
+    UseThrottler, ThrottlerConfig 
+} from "@modules/throttler"
+import {
+    GraphQLSuccessMessage, GraphQLTransformInterceptor 
+} from "../../../interceptors"
+import {
+    TransactionsService 
+} from "./transactions.service"
 
 @Resolver()
 export class TransactionsResolver {
@@ -24,20 +34,23 @@ export class TransactionsResolver {
     @GraphQLSuccessMessage("Transactions fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtAccessTokenAuthGuard)
-    @Query(() => TransactionsResponse, {
-        description:
+    @Query(() => TransactionsResponse,
+        {
+            description:
             "Returns the transactions associated with the current user.",
-        deprecationReason: "Use v2 instead",
-    })
+            deprecationReason: "Use v2 instead",
+        })
     async transactions(
         @GraphQLUser() user: UserJwtLike,
-        @Args("request", {
-            description:
+        @Args("request",
+            {
+                description:
                 "Input parameters required to identify which transactions should be fetched.",
-        })
+            })
             request: TransactionsRequest,
     ): Promise<TransactionsResponseData> {
-        return this.transactionsService.transactions(request, user)
+        return this.transactionsService.transactions(request,
+            user)
     }
 }
 

@@ -2,8 +2,12 @@ import {
     PaginationLimitOutOfRangeException, 
     PaginationPageNumberOutOfRangeException 
 } from "@modules/exceptions"
-import { Injectable } from "@nestjs/common"
-import { Decimal } from "decimal.js"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Decimal 
+} from "decimal.js"
 
 /**
  * Service to validate the limit of the pagination
@@ -21,7 +25,11 @@ export class ValidateService {
         }
         if (new Decimal(limit).lt(min) || new Decimal(limit).gt(max)) {
             throw new PaginationLimitOutOfRangeException(
-                `Limit must be between ${min} and ${max}`,
+                {
+                    limit,
+                    min,
+                    max,
+                }
             )
         }
     }
@@ -34,7 +42,10 @@ export class ValidateService {
     ): void {
         if (new Decimal(pageNumber).lt(1) || new Decimal(pageNumber).gt(max)) {
             throw new PaginationPageNumberOutOfRangeException(
-                `Page number must be between 1 and ${max}`,
+                {
+                    pageNumber,
+                    max,
+                }
             )
         }
     }

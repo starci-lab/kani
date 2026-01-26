@@ -43,12 +43,12 @@ export class EnableMFAService {
             .findById(userLike.id)
         if (!user) {
             throw new UserNotFoundException({
-                userId: userLike.id,
+                id: userLike.id,
             })
         }
         if (!user.encryptedTotpSecretPayload) {
             throw new UserTotpSecretNotFoundException({
-                userId: user.id,
+                id: user.id,
             })
         }
         // if the user not verified, set the totpVerified to true

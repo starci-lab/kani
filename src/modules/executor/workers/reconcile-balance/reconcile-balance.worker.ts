@@ -11,7 +11,7 @@
  * Phases (services) and guarantees:
  * - PREPARE (`PrepareService.process`)
  *   - Computes reconcile plan + prepares swap transactions.
- *   - Persists Job status → `Prepared` and `metadata.swapTransactions`.
+ *   - Persists Job status → `Prepared` and `data.swapTransactions`.
  * - HEARTBEAT (`SendHeartbeatService.process`)
  *   - Proves we still hold the bot lock authority; throws `UnrecoverableError` if not.
  * - EXECUTE (`ExecuteService.process`)

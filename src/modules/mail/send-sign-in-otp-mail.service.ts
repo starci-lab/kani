@@ -1,6 +1,12 @@
-import { Injectable } from "@nestjs/common"
-import { MailerService } from "@nestjs-modules/mailer"
-import { MountStorageService } from "@modules/filesystem"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    MailerService 
+} from "@nestjs-modules/mailer"
+import {
+    MountStorageService 
+} from "@modules/filesystem"
 
 @Injectable()
 export class SendSignInOtpMailService {

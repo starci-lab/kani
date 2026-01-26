@@ -1065,7 +1065,26 @@ export interface LiquidityPoolsBecameNotReadyMessage {
     syncAges: Array<LiquidityPoolSyncAge>
 }
 
+/**
+ * Liquidity Pool Sync Age Message
+ */
 export interface LiquidityPoolSyncAge {
     liquidityPoolId: LiquidityPoolId
     ageMs: number
+}
+
+/**
+ * Socket Io Client Connected Message
+ */
+export interface SocketIoClientConnectedMessage {
+    clientId: string
+    userId: string
+}
+
+/**
+ * Socket Io Client Disconnected Message
+ */
+export interface SocketIoClientDisconnectedMessage {
+    clientId: string
+    userId: string
 }

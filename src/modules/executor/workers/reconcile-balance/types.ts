@@ -11,12 +11,12 @@ import {
 } from "@modules/blockchains"
 
 /**
- * Metadata persisted/returned by reconcile-balance phases.
+ * Data persisted/returned by reconcile-balance phases.
  *
  * - `swapTransactions` is produced by PREPARE and persisted on the Job document.
  * - `transactionRecords` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
-export interface ReconcileBalanceJobMetadata {
+export interface ReconcileBalanceJobData {
     swapTransactions: Array<PrepareSwapTransactionResult>
     transactionRecords?: Array<AddTransactionRecordParams>
 }
@@ -39,7 +39,7 @@ export interface ProcessParams {
 }
 
 export interface ProcessResult {
-    result: ReconcileBalanceJobMetadata
+    result: ReconcileBalanceJobData
 }
 
 /** Parameters for the PREPARE phase (same shape as ProcessParams). */
@@ -47,7 +47,7 @@ export type PrepareParams = ProcessParams
 export type PrepareResult = ProcessResult
 export interface ExecuteParams extends ProcessParams {
     /** Output of prepare() (prepared swap transactions + optional metadata). */
-    prepareResult: ReconcileBalanceJobMetadata
+    prepareResult: ReconcileBalanceJobData
 }
 export type ExecuteResult = ProcessResult
 
@@ -56,7 +56,7 @@ export type SendHeartbeatParams = ProcessParams
 
 export interface ConfirmParams extends ProcessParams {
     /** Output of execute() (includes transactionRecords for snapshotting). */
-    executeResult: ReconcileBalanceJobMetadata
+    executeResult: ReconcileBalanceJobData
 }
 
 export interface OnFailedParams extends ProcessParams {

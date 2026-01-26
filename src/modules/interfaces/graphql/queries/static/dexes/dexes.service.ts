@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import { 
     DexSchema,
     PrimaryMemoryStorageService
@@ -20,7 +22,9 @@ export class DexesService {
      * used for routing and liquidity aggregation.
      */
     dexes(): Array<DexSchema> {
-        return this.memoryStorageService.dexes
+        return this.memoryStorageService.dexCollection.chain().find().data({
+            removeMeta: true,
+        })
     }
 }
 

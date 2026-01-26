@@ -1,28 +1,31 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     BotSchema,
     PositionSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     ReservesRequest,
     ReservesResponseData,
 } from "./reserves.dto"
-import { UserJwtLike } from "@modules/passport"
-import { InjectRedisCache } from "@modules/cache"
-import { Cache } from "cache-manager"
-import { InjectSuperJson, DayjsService } from "@modules/mixin"
-import SuperJSON from "superjson"
+import {
+    UserJwtLike 
+} from "@modules/passport"
 import { 
     ActivePositionNotFoundException, 
     BotNotFoundException, 
     BotNotOwnedByUserException, 
-    LiquidityPoolNotFoundException 
+    LiquidityPoolNotFoundException,
 } from "@modules/exceptions"
-import { LiquidityPoolStateService } from "@modules/blockchains"
-import { ReservesOrchestratorService } from "@modules/blockchains/dexes"
+import {
+    ReservesOrchestratorService 
+} from "@modules/blockchains"
 
 @Injectable()
 export class ReservesService {
@@ -30,12 +33,6 @@ export class ReservesService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly dayjsService: DayjsService,
-        @InjectRedisCache()
-        private readonly cacheManager: Cache,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
-        private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly reservesOrchestratorService: ReservesOrchestratorService,
     ) { }
 
@@ -48,37 +45,55 @@ export class ReservesService {
     ): Promise<ReservesResponseData> {
         const bot = await this.connection.model<BotSchema>(BotSchema.name).findById(botId)
         if (!bot) {
-            throw new BotNotFoundException(`Bot not found with id: ${botId}`)
+            throw new BotNotFoundException({
+                id: botId,
+            })
         }
         // check if the bot is owned by the user
         if (bot.user.toString() !== userLike.id) {
-            throw new BotNotOwnedByUserException(`Bot not owned by user with id: ${userLike.id}`)
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: userLike.id,
+            })
         }
         // check if the active position exists and is owned by the bot
-        const activePosition = await this.connection.model<PositionSchema>(PositionSchema.name).findById(activePositionId)
+        const activePosition = await this.connection
+            .model<PositionSchema>(PositionSchema.name)
+            .findById(activePositionId)
         if (
             !activePosition 
             || activePosition.bot.toString() !== botId
             || !activePosition.isActive
         ) {
-            throw new ActivePositionNotFoundException("Active position not found")
+            throw new ActivePositionNotFoundException({
+                botId,
+            })
         }
-        bot.activePosition = activePosition
         // retrieve the liquidity pool
-        const liquidityPool = this.primaryMemoryStorageService.liquidityPools.find(
-            liquidityPool => liquidityPool.id === activePosition.liquidityPool.toString(),
+        const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne(
+            {
+                id: {
+                    $eq: activePosition.liquidityPool.toString(),
+                },
+            }
         )
         if (!liquidityPool) {
-            throw new LiquidityPoolNotFoundException("Liquidity pool not found")
+            throw new LiquidityPoolNotFoundException({
+                id: activePosition.liquidityPool.toString(),
+            })
         }
-        const reserves = await this.reservesOrchestratorService.reserves({
-            bot,
-            liquidityPoolId: liquidityPool.displayId,
-        })
+        const { reserveA, reserveB, snapshotAt } = await this
+            .reservesOrchestratorService
+            .reserves(
+                {
+                    bot,
+                    liquidityPool,
+                }
+            )
         return {
-            tokenA: reserves.tokenA.toNumber(),
-            tokenB: reserves.tokenB.toNumber(),
-            lastSnapshotAt: reserves.snapshotAt.toDate(),
+            reserveA: reserveA.toNumber(),
+            reserveB: reserveB.toNumber(),
+            snapshotAt: snapshotAt.toDate(),
         }
     }
 }

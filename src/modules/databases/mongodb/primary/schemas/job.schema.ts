@@ -22,7 +22,7 @@ import {
 import {
     ExecutorSchema 
 } from "./executor.schema"
-import GraphQLJSON from "graphql-type-json"
+
 import {
     Types 
 } from "mongoose"
@@ -97,19 +97,6 @@ export class JobSchema extends AbstractSchema {
     })
         txHash?: string
 
-    @Field(() => GraphQLJSON,
-        {
-            description: "The transaction hash of the job metadata" 
-        })
-    @Prop({
-        type: MongooseSchema.Types.Mixed, required: false 
-    })
-        metadata?: unknown
-
-    @Field(() => String,
-        {
-            description: "The additional data of the job" 
-        })
     @Prop({
         type: MongooseSchema.Types.Mixed, required: false 
     })

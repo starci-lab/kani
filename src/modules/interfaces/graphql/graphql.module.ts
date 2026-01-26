@@ -1,13 +1,30 @@
-import { DynamicModule, Module } from "@nestjs/common"
-import { ConfigurableModuleClass, OPTIONS_TYPE } from "./graphql.module-definition"
-import { GraphQLModule as NestGraphQLModule } from "@nestjs/graphql"
-import { ApolloDriver, ApolloDriverConfig } from "@nestjs/apollo"
-import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default"
-import { GraphQLJSON } from "graphql-type-json"
-import { QueriesModule } from "./queries"
-import { MutationsModule } from "./mutations"
+import {
+    DynamicModule, Module 
+} from "@nestjs/common"
+import {
+    ConfigurableModuleClass, OPTIONS_TYPE 
+} from "./graphql.module-definition"
+import {
+    GraphQLModule as NestGraphQLModule 
+} from "@nestjs/graphql"
+import {
+    ApolloDriver, ApolloDriverConfig 
+} from "@nestjs/apollo"
+import {
+    ApolloServerPluginLandingPageLocalDefault 
+} from "@apollo/server/plugin/landingPage/default"
+import {
+    GraphQLJSON 
+} from "graphql-type-json"
+import {
+    QueriesModule 
+} from "./queries"
+import {
+    MutationsModule 
+} from "./mutations"
 
-@Module({})
+@Module({
+})
 export class GraphQLModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE) {
         // register the module
@@ -28,8 +45,12 @@ export class GraphQLModule extends ConfigurableModuleClass {
                     playground: false,
                     autoSchemaFile: true,
                     plugins: [ApolloServerPluginLandingPageLocalDefault()],
-                    resolvers: { JSON: GraphQLJSON },
-                    context: ({ req, res }) => ({ req, res }),
+                    resolvers: {
+                        JSON: GraphQLJSON 
+                    },
+                    context: ({ req, res }) => ({
+                        req, res 
+                    }),
                 }),)
         }
         // register all resolvers

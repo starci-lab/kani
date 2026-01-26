@@ -1,7 +1,15 @@
-import { InjectPrimaryMongoose, PositionSchema } from "@modules/databases"
-import { Injectable } from "@nestjs/common"
-import { Connection, Types } from "mongoose"
-import { DayjsService } from "@modules/mixin"
+import {
+    InjectPrimaryMongoose, PositionSchema 
+} from "@modules/databases"
+import {
+    Injectable 
+} from "@nestjs/common"
+import {
+    Connection, Types 
+} from "mongoose"
+import {
+    DayjsService 
+} from "@modules/mixin"
 import Decimal from "decimal.js"
 
 @Injectable()
@@ -19,7 +27,8 @@ export class ProfitService {
     ): Promise<Profit24Response> {
         const botObjectIds = botIds.map(id => new Types.ObjectId(id))
         // roi is computed over 1 day
-        const oneDayAgo = this.dayjsService.now().subtract(1, "day").toDate()
+        const oneDayAgo = this.dayjsService.now().subtract(1,
+            "day").toDate()
         // get the positions
         const positions = await this.connection
             .model<PositionSchema>(PositionSchema.name)
@@ -27,8 +36,12 @@ export class ProfitService {
                 [
                     {
                         $match: {
-                            bot: { $in: botObjectIds },
-                            positionClosedAt: { $ne: null },
+                            bot: {
+                                $in: botObjectIds 
+                            },
+                            positionClosedAt: {
+                                $ne: null 
+                            },
                         },
                     },
                     {
@@ -51,10 +64,12 @@ export class ProfitService {
                                 $push: {
                                     positionOpenedAt: "$positionOpenedAt",
                                     positionValueAtClose: {
-                                        $ifNull: ["$positionValueAtClose", 0],
+                                        $ifNull: ["$positionValueAtClose",
+                                            0],
                                     },
                                     positionValueAtOpen: {
-                                        $ifNull: ["$positionValueAtOpen", 0],
+                                        $ifNull: ["$positionValueAtOpen",
+                                            0],
                                     },
                                 },
                             },
@@ -62,14 +77,20 @@ export class ProfitService {
                     },
                     {
                         $project: {
-                            latest: { $arrayElemAt: ["$positions", 0] },
+                            latest: {
+                                $arrayElemAt: ["$positions",
+                                    0] 
+                            },
                             prev: {
                                 $arrayElemAt: [
                                     {
                                         $filter: {
                                             input: "$positions",
                                             as: "p",
-                                            cond: { $lte: ["$$p.positionOpenedAt", oneDayAgo] },
+                                            cond: {
+                                                $lte: ["$$p.positionOpenedAt",
+                                                    oneDayAgo] 
+                                            },
                                         },
                                     },
                                     0,

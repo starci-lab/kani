@@ -36,13 +36,13 @@ export class RefreshService {
             .findById(userLike.id)
         if (!user) {
             throw new UserNotFoundException({
-                userId: userLike.id,
+                id: userLike.id,
             })
         }
         // if not found, try in database
         if (!user.encryptedTotpSecretPayload) {
             throw new UserTotpSecretNotFoundException({
-                userId: user.id,
+                id: user.id,
             })
         }
         const session = await this.connection

@@ -1,26 +1,39 @@
-import { Injectable } from "@nestjs/common"
+import {
+    Injectable 
+} from "@nestjs/common"
 import {
     InjectPrimaryMongoose,
     BotSchema,
     HistorySchema,
     PositionSchema,
     HistorySerieSchema,
-    HISTORY_SERIE_COUNT,
 } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Connection 
+} from "mongoose"
 import {
     HistoryChartSerie,
     HistoryRequest,
     HistoryRequestFilters,
     HistoryResponseData,
 } from "./history.dto"
-import { UserJwtLike } from "@modules/passport"
-import { DayjsService, MsService } from "@modules/mixin"
+import {
+    UserJwtLike 
+} from "@modules/passport"
+import {
+    DayjsService 
+} from "@modules/mixin"
 import {
     BotNotFoundException,
     BotNotOwnedByUserException,
 } from "@modules/exceptions"
-import { ChartInterval, chartIntervalToMsString } from "../../../abstracts"
+import {
+    ChartInterval, chartIntervalToMsString 
+} from "../../../abstracts"
+import ms from "ms"
+import {
+    envConfig 
+} from "@modules/env"
 
 /**
  * HistoryService
@@ -38,7 +51,6 @@ export class HistoryService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly msService: MsService,
         private readonly dayjsService: DayjsService,
     ) {}
 
@@ -51,15 +63,22 @@ export class HistoryService {
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
 
-        if (!bot) throw new BotNotFoundException("Bot not found")
+        if (!bot) throw new BotNotFoundException({
+            id: botId,
+        })
         if (bot.user.toString() !== userLike.id) {
-            throw new BotNotOwnedByUserException("Bot not owned by user")
+            throw new BotNotOwnedByUserException({
+                id: botId,
+                userId: userLike.id,
+            })
         }
 
         // Load history
         const history = await this.connection
             .model<HistorySchema>(HistorySchema.name)
-            .findOne({ bot: botId })
+            .findOne({
+                bot: botId 
+            })
 
         let fullSeries: Array<HistorySerieSchema> = []
         let seriesAppended: Array<HistorySerieSchema> = []
@@ -69,22 +88,28 @@ export class HistoryService {
             seriesAppended = result.seriesAppended
             fullSeries = seriesAppended
         } else {
-            const result = await this.appendHistorySeries(bot, history)
+            const result = await this.appendHistorySeries(bot,
+                history)
             seriesAppended = result.seriesAppended
-            fullSeries = [...history.series, ...seriesAppended]
+            fullSeries = [...history.series,
+                ...seriesAppended]
         }
 
         // Persist history
         await this.connection
             .model<HistorySchema>(HistorySchema.name)
             .updateOne(
-                { bot: botId },
                 {
-                    $setOnInsert: { bot: botId },
+                    bot: botId 
+                },
+                {
+                    $setOnInsert: {
+                        bot: botId 
+                    },
                     $push: {
                         series: {
                             $each: seriesAppended,
-                            $slice: -HISTORY_SERIE_COUNT,
+                            $slice: - envConfig().history.serieCount,
                         },
                     },
                     $inc: {
@@ -94,10 +119,13 @@ export class HistoryService {
                         lastSeriesUpdatedAt: this.dayjsService.now().toDate(),
                     },
                 },
-                { upsert: true },
+                {
+                    upsert: true 
+                },
             )
 
-        return this.getHistoryResponseData(fullSeries, filters)
+        return this.getHistoryResponseData(fullSeries,
+            filters)
     }
 
     /**
@@ -124,24 +152,23 @@ export class HistoryService {
             timeZone = "UTC",
         } = filters
 
-        const intervalMs = this.msService.fromString(
-            chartIntervalToMsString(interval),
-        )
+        const intervalMs = ms(chartIntervalToMsString(interval))
 
         const fromDate = from
             ? this.dayjsService.from(from).tz(timeZone)
-            : this.dayjsService.now().tz(timeZone).subtract(1, "week")
+            : this.dayjsService.now().tz(timeZone).subtract(1,
+                "week")
 
         const toDate = to
             ? this.dayjsService.from(to).tz(timeZone)
             : this.dayjsService.now().tz(timeZone)
 
-        const fromBucketDate = this.dayjsService.getNearestBucketUTC(
+        const fromBucketDate = this.dayjsService.getBucketStartUtcByTimezone(
             fromDate.toDate(),
             intervalMs,
             timeZone,
         )
-        const toBucketDate = this.dayjsService.getNearestBucketUTC(
+        const toBucketDate = this.dayjsService.getBucketStartUtcByTimezone(
             toDate.toDate(),
             intervalMs,
             timeZone,
@@ -152,7 +179,8 @@ export class HistoryService {
         for (
             let date = fromBucketDate;
             date.isSameOrBefore(toBucketDate);
-            date = date.add(intervalMs, "millisecond")
+            date = date.add(intervalMs,
+                "millisecond")
         ) {
             timestamps.push(date.valueOf())
         }
@@ -194,18 +222,20 @@ export class HistoryService {
                 bot: bot.id,
                 isActive: false,
             })
-            .sort({ positionClosedAt: 1 }) // ASC
-            .limit(HISTORY_SERIE_COUNT)
+            .sort({
+                positionClosedAt: 1 
+            }) // ASC
+            .limit(envConfig().history.serieCount)
 
         const series: Array<HistorySerieSchema> = []
 
         for (const position of positions) {
-            if (!position.positionClosedAt || !position.positionValueAtClose)
+            if (!position.closeSnapshot)
                 continue
 
             series.push({
-                positionClosedAt: position.positionClosedAt,
-                positionValueAtClose: position.positionValueAtClose,
+                positionClosedAt: position.closeSnapshot.snapshotAt,
+                positionValueAtClose: position.closeSnapshot.positionValue,
             })
         }
 
@@ -224,31 +254,36 @@ export class HistoryService {
             .find({
                 bot: bot.id,
                 isActive: false,
-                positionClosedAt: { $gt: history.lastSeriesUpdatedAt },
+                positionClosedAt: {
+                    $gt: history.lastSeriesUpdatedAt 
+                },
             })
-            .sort({ positionClosedAt: 1 }) // ASC
-            .limit(HISTORY_SERIE_COUNT)
+            .sort({
+                positionClosedAt: 1 
+            }) // ASC
+            .limit(envConfig().history.serieCount)
 
         const seriesAppended: Array<HistorySerieSchema> = []
 
         for (const position of positions) {
-            if (!position.positionClosedAt || !position.positionValueAtClose)
+            if (!position.closeSnapshot)
                 continue
 
             seriesAppended.push({
-                positionClosedAt: position.positionClosedAt,
-                positionValueAtClose: position.positionValueAtClose,
+                positionClosedAt: position.closeSnapshot.snapshotAt,
+                positionValueAtClose: position.closeSnapshot.positionValue,
             })
         }
 
         const overflow =
             history.seriesCount +
             seriesAppended.length -
-            HISTORY_SERIE_COUNT
+            envConfig().history.serieCount
 
         return {
             seriesAppended,
-            discardCount: Math.max(overflow, 0),
+            discardCount: Math.max(overflow,
+                0),
         }
     }
 }

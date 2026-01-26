@@ -1,6 +1,12 @@
-import { ObjectType, Field } from "@nestjs/graphql"
-import { TokenSchema } from "@modules/databases"
-import { AbstractGraphQLResponse, IAbstractGraphQLResponse } from "../../../abstracts"
+import {
+    ObjectType, Field 
+} from "@nestjs/graphql"
+import {
+    TokenSchema 
+} from "@modules/databases"
+import {
+    AbstractGraphQLResponse, IAbstractGraphQLResponse 
+} from "../../../abstracts"
 /**
  * GraphQL response type for the tokens query.
  */
@@ -11,9 +17,10 @@ export class TokensResponse
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<Array<TokenSchema>>
 {
-    @Field(() => [TokenSchema], {
-        description: "List of tokens returned by the query.",
-    })
+    @Field(() => [TokenSchema],
+        {
+            description: "List of tokens returned by the query.",
+        })
         data: Array<TokenSchema>
 }
 

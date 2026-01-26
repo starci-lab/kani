@@ -130,4 +130,6 @@ export enum WinstonLog {
     DlmmLiquidityPoolsSyncedDiagnostic = "Dlmm.Liquidity.Pools.Synced.Diagnostic",
     LiquidityPoolsBecameReady = "Liquidity.Pools.Became.Ready",
     LiquidityPoolsBecameNotReady = "Liquidity.Pools.Became.Not.Ready",
+    SocketIoClientConnected = "Socket.Io.Client.Connected",
+    SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
 }

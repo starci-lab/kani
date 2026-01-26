@@ -14,12 +14,12 @@ import {
 } from "bullmq"
 
 /**
- * Metadata persisted/returned by reconcile-balance phases.
+ * Data persisted/returned by open-position phases.
  *
  * - `openPositionTransaction` is produced by PREPARE and persisted on the Job document.
  * - `openPositionRecord` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
-export interface OpenPositionJobMetadata {
+export interface OpenPositionJobData {
     openPositionTransaction: PrepareOpenPositionResult
     transactionRecord?: AddTransactionRecordParams
     executeResult?: ExecuteOpenPositionResult
@@ -58,7 +58,7 @@ export interface ProcessParams {
 }
 
 export interface ProcessResult {
-    result: OpenPositionJobMetadata
+    result: OpenPositionJobData
 }
 /** Parameters for the PREPARE phase (same shape as ProcessParams). */
 export type PrepareParams = ProcessParams
@@ -77,18 +77,18 @@ export type SendHeartbeatParams = ProcessParams
 
 export interface ExecuteParams extends ProcessParams {
     /** Output of prepare() (prepared open-position transaction + optional metadata). */
-    prepareResult: OpenPositionJobMetadata
+    prepareResult: OpenPositionJobData
 }
 
 export interface ExecuteResult {
-    result: OpenPositionJobMetadata
+    result: OpenPositionJobData
 }
 
 export interface ConfirmParams extends ProcessParams {
     /** Output of execute() (includes transactionRecords for snapshotting). */
-    executeResult: OpenPositionJobMetadata
+    executeResult: OpenPositionJobData
 }
 
 export interface ConfirmResult {
-    result: OpenPositionJobMetadata
+    result: OpenPositionJobData
 }

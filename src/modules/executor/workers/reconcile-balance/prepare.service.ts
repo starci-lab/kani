@@ -4,7 +4,7 @@ import {
 import {
     PrepareParams,
     PrepareResult,
-    ReconcileBalanceJobMetadata,
+    ReconcileBalanceJobData,
 } from "./types"
 import {
     getJobStatusOrder,
@@ -91,7 +91,7 @@ export class PrepareService {
                 }
             )
             return {
-                result: job.metadata as ReconcileBalanceJobMetadata
+                result: job.data as ReconcileBalanceJobData
             }
         }
         // Local normalized balance values (BN)
@@ -253,7 +253,7 @@ export class PrepareService {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "metadata.swapTransactions": swapTransactions,
+                        "data.swapTransactions": swapTransactions,
                     },
                 }
             )
