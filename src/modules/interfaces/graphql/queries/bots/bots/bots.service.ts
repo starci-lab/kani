@@ -17,7 +17,7 @@ import {
 } from "@modules/passport"
 import Decimal from "decimal.js"
 import {
-    ProfitService 
+    PerformanceService 
 } from "../../../services"
 import {
     envConfig 
@@ -31,7 +31,7 @@ export class BotsService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly profitService: ProfitService,
+        private readonly performanceService: PerformanceService,
         private readonly validateService: ValidateService,
     ) { }
 
@@ -75,17 +75,21 @@ export class BotsService {
         // execute the query
         const bots = await query.exec()
         // get the roi for the bots
-        // const profits24h = await this.profitService.profit24h({
-        //     botIds: bots.map(bot => bot.id),
-        // })
+        const performances24h = await this.performanceService.performance24h({
+            botIds: bots.map(bot => bot.id),
+        })
         // add the profits to the bots
-        // bots.forEach(bot => {
-        //     const profit24h = profits24h.find(profit => profit.id === bot.id)
-        //     if (profit24h) {
-        //         bot.roi24h = profit24h.roi24h
-        //         bot.pnl24h = profit24h.pnl24h
-        //     }
-        // })
+        bots.forEach(bot => {
+            const performance24h = performances24h.find(performance => performance.id === bot.id)
+            if (performance24h) {
+                bot.performance24h = {
+                    roi: performance24h.roi.toNumber(),
+                    pnl: performance24h.pnl.toNumber(),
+                    roiInUsd: performance24h.roiInUsd.toNumber(),
+                    pnlInUsd: performance24h.pnlInUsd.toNumber(),
+                }
+            }
+        })
         // return the bots
         return {
             count: bots.length,

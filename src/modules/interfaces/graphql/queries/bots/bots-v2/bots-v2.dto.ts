@@ -24,6 +24,13 @@ export class BotsV2PaginationFilters extends PaginationPageFilters {
             description: "Whether to sort the bots by timestamp in ascending order.",
         })
         asc?: boolean
+
+    @Field(() => String,
+        {
+            nullable: true,
+            description: "The search string to filter the bots by.",
+        })
+        searchString?: string
 }
 
 @InputType({

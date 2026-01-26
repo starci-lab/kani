@@ -189,7 +189,6 @@ registerEnumType(
 export enum PositionSettlementReason {
     OutOfRange = "outOfRange",
 }
-
 export const GraphQLTypePositionSettlementReason = createEnumType(PositionSettlementReason)
 
 registerEnumType(

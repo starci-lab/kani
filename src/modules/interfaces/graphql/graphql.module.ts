@@ -22,6 +22,9 @@ import {
 import {
     MutationsModule 
 } from "./mutations"
+import {
+    ServicesModule 
+} from "./services"
 
 @Module({
 })
@@ -40,6 +43,7 @@ export class GraphQLModule extends ConfigurableModuleClass {
             throw new Error("Federation is not supported yet")
         } else {
             imports.push( 
+                ServicesModule.register(options),
                 NestGraphQLModule.forRoot<ApolloDriverConfig>({
                     driver: ApolloDriver,
                     playground: false,
@@ -51,7 +55,8 @@ export class GraphQLModule extends ConfigurableModuleClass {
                     context: ({ req, res }) => ({
                         req, res 
                     }),
-                }),)
+                })
+            )
         }
         // register all resolvers
         if (registerAllResolvers) {

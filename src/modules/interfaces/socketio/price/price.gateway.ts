@@ -23,9 +23,8 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    AsyncService, InjectSuperJson 
+    AsyncService 
 } from "@modules/mixin"
-import SuperJSON from "superjson"
 import {
     PythPriceUpdated 
 } from "@modules/socketio"
@@ -45,8 +44,6 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
         private readonly winstonService: WinstonService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly priceService: PriceService,
-        @InjectSuperJson()
-        private readonly superjson: SuperJSON,
         private readonly asyncService: AsyncService,
     ) {}
     

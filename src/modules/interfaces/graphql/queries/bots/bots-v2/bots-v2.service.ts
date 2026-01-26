@@ -15,7 +15,7 @@ import {
 } from "./bots-v2.dto"
 import Decimal from "decimal.js"
 import {
-    ProfitService 
+    PerformanceService 
 } from "../../../services"
 import {
     VerifyAccessTokenResponse 
@@ -35,7 +35,7 @@ export class BotsV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly profitService: ProfitService,
+        private readonly performanceService: PerformanceService,
         private readonly validateService: ValidateService,
     ) { }
 
@@ -45,17 +45,23 @@ export class BotsV2Service {
                 pageNumber = envConfig().pagination.bots.pageNumber.default,
                 limit = envConfig().pagination.bots.limit.default,
                 asc = false,
+                searchString,
             },
         }: BotsV2Request,
         response: VerifyAccessTokenResponse,
     ): Promise<BotsV2ResponseData> {
         // validate the limit
-        this.validateService.validateLimit({
-            limit, min: envConfig().pagination.bots.limit.min, max: envConfig().pagination.bots.limit.max 
-        })
+        this.validateService.validateLimit(
+            {
+                limit, 
+                min: envConfig().pagination.bots.limit.min, 
+                max: envConfig().pagination.bots.limit.max 
+            }
+        )
         // validate the page number
         this.validateService.validatePageNumber({
-            pageNumber, max: envConfig().pagination.bots.pageNumber.max 
+            pageNumber, 
+            max: envConfig().pagination.bots.pageNumber.max 
         })
         // create the query to get the bots
         // retrieve the user from the response
@@ -71,16 +77,28 @@ export class BotsV2Service {
         }
         const query = this.connection
             .model<BotSchema>(BotSchema.name)
-            .find({ 
-                user: user.id,
-            }
+            .find(
+                { 
+                    user: user.id,
+                    ...(
+                        searchString ? {
+                            name: {
+                                $regex: searchString,
+                                $options: "i",
+                            }
+                        } : {        
+                        }
+                    ),
+                }
             )
         // get the sort order
         const sortOrder = asc ? 1 : -1
         // sort the bots by createdAt
-        query.sort({
-            createdAt: sortOrder 
-        })    
+        query.sort(
+            {
+                createdAt: sortOrder 
+            }
+        )    
         // limit the number of bots to return
         query.limit(limit)
         // skip the number of bots based on page number
@@ -88,17 +106,30 @@ export class BotsV2Service {
         // execute the query
         const bots = await query.exec()
         // get the roi for the bots
-        // const profits24h = await this.profitService.profit24h({
-        //     botIds: bots.map(bot => bot.id),
-        // })
+        const performances24h = await this.performanceService.performance24h(
+            {
+                botIds: bots.map(bot => bot.id),
+            }
+        )
         // add the profits to the bots
-        // bots.forEach(bot => {
-        //     const profit24h = profits24h.find(profit => profit.id === bot.id)
-        //     if (profit24h) {
-        //         bot.roi24h = profit24h.roi24h
-        //         bot.pnl24h = profit24h.pnl24h
-        //     }
-        // })
+        bots.forEach(bot => {
+            const performance24h = performances24h.find(performance => performance.id === bot.id)
+            if (performance24h) {
+                bot.performance24h = {
+                    roi: performance24h.roi.toNumber(),
+                    pnl: performance24h.pnl.toNumber(),
+                    roiInUsd: performance24h.roiInUsd.toNumber(),
+                    pnlInUsd: performance24h.pnlInUsd.toNumber(),
+                }
+            } else {
+                bot.performance24h = {
+                    roi: 0,
+                    pnl: 0,
+                    roiInUsd: 0,
+                    pnlInUsd: 0,
+                }
+            }
+        })
         // return the bots
         return {
             count: bots.length,

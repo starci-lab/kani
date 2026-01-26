@@ -10,16 +10,11 @@ import {
 import {
     BotsResolver 
 } from "./bots.resolver"
-import {
-    ProfitService, ValidateService 
-} from "../../../services"
 
 @Module({
     providers: [
         BotsService,
         BotsResolver,
-        ProfitService,
-        ValidateService,
     ],
 })
 export class BotsModule extends ConfigurableModuleClass {}

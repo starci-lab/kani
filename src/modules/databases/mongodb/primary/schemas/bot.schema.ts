@@ -5,7 +5,7 @@ import {
     AbstractSchema 
 } from "./abstract"
 import {
-    Field, ID, ObjectType 
+    Field, Float, ID, ObjectType 
 } from "@nestjs/graphql"
 import {
     ChainId, EncryptedPayload, GraphQLTypeChainId 
@@ -42,6 +42,33 @@ import {
 import {
     ActiveJobSchema, ActiveJobSchemaClass 
 } from "./active-job.schema"
+
+@ObjectType({
+    description: "Represents a bot",
+})
+export class BotPerformance24H {
+    @Field(() => Float,
+        {
+            description: "The return on investment (ROI) percentage of the bot in the last 24 hours",
+        })
+        roi: number
+    @Field(() => Float,
+        {
+            description: "The profit and loss (PnL) in token units of the bot in the last 24 hours",
+        })
+        pnl: number
+    @Field(() => Float,
+        {
+            description: "The return on investment (ROI) percentage in USD of the bot in the last 24 hours",
+        })
+        roiInUsd: number
+    @Field(() => Float,
+        {
+            description: "The profit and loss (PnL) in USD of the bot in the last 24 hours",
+        })
+        pnlInUsd: number
+}
+
 /**
  * GraphQL object type representing a bot.
  * Each bot corresponds to a wallet running automated LP strategies
@@ -257,6 +284,16 @@ export class BotSchema extends AbstractSchema {
         type: ActiveJobSchemaClass, required: false 
     })
         activeJob?: ActiveJobSchema
+
+    /**
+     * The performance of the bot in the last 24 hours.
+     */
+    @Field(() => BotPerformance24H,
+        {
+            description: "The performance of the bot in the last 24 hours",
+            nullable: true,
+        })
+        performance24h?: BotPerformance24H
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

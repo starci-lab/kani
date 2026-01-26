@@ -1,5 +1,9 @@
-import { Args, Query, Resolver } from "@nestjs/graphql"
-import { UseGuards, UseInterceptors } from "@nestjs/common"
+import {
+    Args, Query, Resolver 
+} from "@nestjs/graphql"
+import {
+    UseGuards, UseInterceptors 
+} from "@nestjs/common"
 import {
     GraphQLJwtOnlyMFAEnabledAuthGuard,
     GraphQLUser,
@@ -10,9 +14,15 @@ import {
     FeesResponse,
     FeesResponseData,
 } from "./fees.dto"
-import { UseThrottler, ThrottlerConfig } from "@modules/throttler"
-import { GraphQLSuccessMessage, GraphQLTransformInterceptor } from "../../../interceptors"
-import { FeesService } from "./fees.service"
+import {
+    UseThrottler, ThrottlerConfig 
+} from "@modules/throttler"
+import {
+    GraphQLSuccessMessage, GraphQLTransformInterceptor 
+} from "../../../interceptors"
+import {
+    FeesService 
+} from "./fees.service"
 
 @Resolver()
 export class FeesResolver {
@@ -24,20 +34,23 @@ export class FeesResolver {
     @GraphQLSuccessMessage("Fees fetched successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseGuards(GraphQLJwtOnlyMFAEnabledAuthGuard)
-    @Query(() => FeesResponse, {
-        description:
+    @Query(() => FeesResponse,
+        {
+            description:
             "Returns the fees associated with a bot.",
-        deprecationReason: "Use v2 instead",
-    })
+            deprecationReason: "Use v2 instead",
+        })
     async fees(
         @GraphQLUser() user: UserJwtLike,   
-        @Args("request", {
-            description:
+        @Args("request",
+            {
+                description:
                 "Input parameters required to identify which bot's fees should be fetched.",
-        })
+            })
             request: FeesRequest,
     ): Promise<FeesResponseData> {
-        return this.feesService.fees(request, user)
+        return this.feesService.fees(request,
+            user)
     }
 }
 
