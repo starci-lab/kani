@@ -11,8 +11,9 @@ import {
     DynamicLiquidityPoolInfoDiagnosticService 
 } from "./dynamic-liquidity-pool-info.service"
 import {
-    DiagnosticsService 
-} from "./diagnostics.service"
+    LiquidityPoolSyncedDiagnosticService 
+} from "./liquidity-pools-synced.service"
+
 @Module({
 })
 export class DiagnosticsModule extends ConfigurableModuleClass {
@@ -26,7 +27,12 @@ export class DiagnosticsModule extends ConfigurableModuleClass {
                 ...dynamicModule.providers || [], 
                 DynamicLiquidityPoolInfoDiagnosticService,
                 PriceDiagnosticService, 
-                DiagnosticsService,
+                LiquidityPoolSyncedDiagnosticService,
+            ],
+            exports: [
+                DynamicLiquidityPoolInfoDiagnosticService,
+                PriceDiagnosticService, 
+                LiquidityPoolSyncedDiagnosticService,
             ],
         }
     }

@@ -174,7 +174,8 @@ export class RuntimeContextService {
                             if (!this.bot) {
                                 return
                             }
-                            this.handleClmmPositionCloseRequestedEventService.process(this.bot,
+                            this.handleClmmPositionCloseRequestedEventService.process(
+                                this.bot,
                                 event)
                         },
                     })

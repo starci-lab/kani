@@ -1,5 +1,5 @@
 import {
-    MarketListingId
+    MarketListingId,
 } from "@modules/databases"
 import {
     Dayjs
@@ -60,3 +60,8 @@ export interface PoolAnalyticsCacheResult extends SnapshotCacheResult {
 export type SessionIdCacheResult = boolean
 
 export type DynamicLiquidityPoolStateCacheResult = DynamicClmmLiquidityPoolInfoCacheResult | DynamicDlmmLiquidityPoolInfoCacheResult
+
+export type LiquidityPoolSyncedDiagnosticReadinessResult = SnapshotCacheResult
+export interface LiquidityPoolsSyncedDiagnosticReadinessResult extends SnapshotCacheResult {
+    results: Partial<Record<string, LiquidityPoolSyncedDiagnosticReadinessResult>>
+}

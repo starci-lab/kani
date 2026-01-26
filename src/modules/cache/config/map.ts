@@ -8,6 +8,7 @@ import {
     AggregatedTokenPriceCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult, 
     DynamicDlmmLiquidityPoolInfoCacheResult, 
+    LiquidityPoolsSyncedDiagnosticReadinessResult, 
     PoolAnalyticsCacheResult,
     SessionIdCacheResult
 } from "./types"
@@ -36,5 +37,10 @@ export const configMap = {
     [CacheKey.SessionId]: {
         ttl: envConfig().cache.ttl.sessionId,
         cacheResult: true as unknown as SessionIdCacheResult
+    },
+    [CacheKey.LiquidityPoolsSyncedDiagnosticReadiness]: {
+        ttl: envConfig().cache.ttl.liquidityPoolsSyncedDiagnosticReadiness,
+        cacheResult: {    
+        } as LiquidityPoolsSyncedDiagnosticReadinessResult
     },
 }

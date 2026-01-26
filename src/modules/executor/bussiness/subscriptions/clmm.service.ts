@@ -1,6 +1,6 @@
 import {
     EventName, 
-    ClmmLiquidityPoolsSyncedEventPayload
+    ClmmLiquidityPoolsSyncedEventPayload,
 } from "@modules/event"
 import {
     Injectable 

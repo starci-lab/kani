@@ -1,5 +1,6 @@
 import {
     Injectable, 
+    OnApplicationBootstrap, 
     OnModuleInit 
 } from "@nestjs/common"
 import {
@@ -16,47 +17,71 @@ import {
 import {
     AsyncService, 
     LokiJSService,
-    RetryService
 } from "@modules/mixin"
 import {
-    AggregatedTokenPriceNotFoundException,
-    PriceDiagnosticsFailedException
+    AggregatedTokenPriceNotFoundException
 } from "@exceptions"
+import {
+    Interval 
+} from "@nestjs/schedule"
+import {
+    envConfig 
+} from "@modules/env"
 /**
  * PriceDiagnosticService
  *
- * Hard startup gate for oracle price availability.
+ * Price feed diagnostics + readiness snapshot.
  *
- * This service validates that all required price feeds are
- * reachable and able to return price data before the application
- * is allowed to operate.
+ * This service periodically resolves prices for all selectable tokens
+ * and stores the latest per-token diagnostic result in an in-memory
+ * LokiJS collection (`this.results`).
  *
  * Behavior:
- *  - Runs during startup or explicit readiness checks
- *  - Resolves price for every configured token
- *  - Logs stale prices as warnings (does NOT block startup)
- *  - Treats missing or failing price resolutions as fatal
+ *  - On bootstrap, triggers an immediate diagnostics run (warm cache)
+ *  - On interval, refreshes results for every selectable token
+ *  - Logs stale / not-found / error details
+ *  - Exposes `isReady(tokenId)` based on the latest stored result
  *
  * Failure semantics:
- *  - If any token fails to resolve a price, the service throws
- *    and prevents the application from continuing.
+ *  - Diagnostics failures are captured as `{ success: false }` results
+ *    (no throw from `diagnose()`).
  *
- * This guarantees that the system never runs in a state where
- * critical oracle inputs are unavailable.
+ * Note:
+ *  - If you need this to be a hard startup gate, enforce it in the
+ *    caller by inspecting `results` and throwing when any token fails.
  */
 @Injectable()
-export class PriceDiagnosticService implements OnModuleInit {
+export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootstrap {
     private tokenCollection: Collection<TokenSchema>
+    // Stores the latest diagnostics result per tokenId for readiness checks.
+    private results: Collection<PriceDiagnosticReadinessResult>
     constructor(
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly priceService: PriceService,
     private readonly winstonService: WinstonService,
     private readonly asyncService: AsyncService,
-    private readonly retryService: RetryService,
     private readonly lokiJSService: LokiJSService,
     ) {}
 
+    onApplicationBootstrap() {
+        // Run once immediately on startup so readiness checks have data
+        // without waiting for the first interval tick.
+        this.diagnoseInterval()
+    }
+    
+    @Interval(envConfig().executor.diagnose.price.interval)
+    async diagnoseInterval() {
+        const results = await this.diagnose()
+        // Overwrite the previous snapshot (atomic enough for our in-memory usage).
+        this.results.clear()
+        // Insert the latest results so `isReady()` can do a quick lookup by tokenId.
+        this.results.insert(results)
+    }
+
     async onModuleInit() {
+        // Snapshot the tokens set we want to diagnose into a local Loki collection.
+        // This keeps the diagnostic input stable and avoids coupling to the primary
+        // memory collection's internal metadata.
         this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>(
             "price-diagnostic-tokens",
             {
@@ -76,90 +101,97 @@ export class PriceDiagnosticService implements OnModuleInit {
                 removeMeta: true,
             })
         this.tokenCollection.insert(tokens)
-    }
-
-    async diagnose(): Promise<void> {
-        await this.retryService.retry(
+        // Create the results collection used by `isReady()`.
+        this.results = await this.lokiJSService.createCollection<PriceDiagnosticReadinessResult>(
+            "price-diagnostic-results",
             {
-                options: {
-                    retries: Infinity,
-                },
-                action: async () => {
-                // retrieve all tokens from the primary memory storage service
-                    const tokens = this.tokenCollection.find()
-                    // diagnose each token
-                    const promises: Array<Promise<PriceFeedReadinessChecker>> = tokens.map(
-                        async (token) => {
-                            try {
-                                const { isStale, ageMs } = await this.priceService.resolvePrice(
-                                    {
-                                        token,
-                                    }
-                                )
-                                // we just warning if the price is stale
-                                if (isStale) {
-                                    this.winstonService.log(
-                                        WinstonLog.PriceDiagnosticFailedStale,
-                                        {
-                                            tokenId: token.displayId,
-                                            ageMs,
-                                        }
-                                    )
-                                    return {
-                                        tokenId: token.displayId,
-                                        // stale prices are logged as warnings but do not block readiness
-                                        success: false,
-                                    }
-                                } 
-                                return {
-                                    tokenId: token.displayId,
-                                    success: true,
-                                }
-                            } catch (error) {
-                                if (error instanceof AggregatedTokenPriceNotFoundException) {
-                                    this.winstonService.log(
-                                        WinstonLog.PriceDiagnosticFailedNotFound,
-                                        {
-                                            tokenId: token.displayId,
-                                        }
-                                    )
-                                    return {
-                                        tokenId: token.displayId,
-                                        success: false,
-                                    }
-                                }
-                                // we just logging if the price is not found
-                                this.winstonService.log(
-                                    WinstonLog.PriceDiagnosticFailed,
-                                    {
-                                        tokenId: token.displayId,
-                                        error: error.message,
-                                    }
-                                )
-                                // throw the error to the caller
-                                return {
-                                    tokenId: token.displayId,
-                                    success: false,
-                                }
-                            }
-                        }
-                    )
-                    const results = await this.asyncService.allMustDone(promises)
-                    // if any of the promises returned false, throw an error
-                    if (results.some((result) => !result.success)) {
-                        throw new PriceDiagnosticsFailedException(
-                            {
-                                tokenIds: results.filter((result) => !result.success).map((result) => result.tokenId),
-                            }
-                        )
-                    }
-                },
+                indices: ["tokenId"],
             }
         )
     }
+
+    async diagnose(): Promise<Array<PriceDiagnosticReadinessResult>> {
+        // retrieve all tokens from the primary memory storage service
+        const tokens = this.tokenCollection.find()
+        // diagnose each token
+        const promises: Array<Promise<PriceDiagnosticReadinessResult>> = tokens.map(
+            async (token) => {
+                try {
+                    const { isStale, ageMs, price } = await this.priceService.resolvePrice(
+                        {
+                            token,
+                        }
+                    )
+                    // we just warning if the price is stale
+                    if (isStale) {
+                        this.winstonService.log(
+                            WinstonLog.PriceDiagnosticFailedStale,
+                            {
+                                tokenId: token.displayId,
+                                ageMs,
+                                price: price.toNumber(),
+                            }
+                        )
+                        return {
+                            tokenId: token.displayId,
+                            ready: false,
+                            ageMs,
+                            price: price.toNumber(),
+                        }
+                    } 
+                    return {
+                        tokenId: token.displayId,
+                        ready: true,
+                        ageMs,
+                        price: price.toNumber(),
+                    }
+                } catch (error) {
+                    if (error instanceof AggregatedTokenPriceNotFoundException) {
+                        this.winstonService.log(
+                            WinstonLog.PriceDiagnosticFailedNotFound,
+                            {
+                                tokenId: token.displayId,
+                            }
+                        )
+                        return {
+                            tokenId: token.displayId,
+                            ready: false,
+                        }
+                    }
+                    // Any other error: log and mark as failed.
+                    this.winstonService.log(
+                        WinstonLog.PriceDiagnosticFailed,
+                        {
+                            tokenId: token.displayId,
+                            error: error.message,
+                        }
+                    )
+                    return {
+                        tokenId: token.displayId,
+                        ready: false,
+                    }
+                }
+            }
+        )
+        return await this.asyncService.allMustDone<Array<PriceDiagnosticReadinessResult>>(promises)
+    }
+
+    async ready(
+        tokenId: TokenId
+    ): Promise<boolean> {
+        // Fast readiness check backed by the latest interval snapshot.
+        const result = this.results.findOne({
+            tokenId: {
+                $eq: tokenId,
+            },
+        })
+        return result?.ready ?? false
+    }
 }
 
-export interface PriceFeedReadinessChecker {
+export interface PriceDiagnosticReadinessResult {
     tokenId: TokenId
-    success: boolean
+    ready: boolean
+    ageMs?: number
+    price?: number
 }

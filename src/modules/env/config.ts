@@ -288,11 +288,38 @@ export const envConfig = () => ({
                     "10s"),
             },
         },
+        subscriptions: {
+            clmm: {
+                interval: parseEnvMs("EXECUTOR_SUBSCRIPTIONS_CLMM_INTERVAL",
+                    "1s"),
+            },
+            dlmm: {
+                interval: parseEnvMs("EXECUTOR_SUBSCRIPTIONS_DLMM_INTERVAL",
+                    "1s"),
+            },
+        },
+        diagnose: {
+            price: {
+                interval: parseEnvMs("EXECUTOR_DIAGNOSE_PRICE_INTERVAL",
+                    "1s"),
+            },
+            dynamicLiquidityPoolInfo: {
+                interval: parseEnvMs("EXECUTOR_DIAGNOSE_DYNAMIC_LIQUIDITY_POOL_INFO_INTERVAL",
+                    "1s"),
+            },
+            liquidityPoolsSynced: {
+                interval: parseEnvMs("EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_INTERVAL",
+                    "1s"),
+                stale: parseEnvMs("EXECUTOR_DIAGNOSE_LIQUIDITY_POOLS_SYNCED_STALE",
+                    "10s"),
+            },
+        },
         interval: {
             load: parseEnvMs("EXECUTOR_INTERVAL_LOAD",
                 "10s"),
             rotate: parseEnvMs("EXECUTOR_INTERVAL_ROTATE",
                 "10s"),
+            
         },
         runtime: {
             interval: {
@@ -406,6 +433,9 @@ export const envConfig = () => ({
                 0),
             poolAnalytics: parseEnvInt(
                 "CACHE_TTL_POOL_ANALYTICS",
+                0),
+            liquidityPoolsSyncedDiagnosticReadiness: parseEnvInt(
+                "CACHE_TTL_LIQUIDITY_POOLS_SYNCED_DIAGNOSTIC_READINESS",
                 0),
         },
         stale: {

@@ -636,6 +636,7 @@ export interface PriceDiagnosticFailedNotFoundMessage {
 export interface PriceDiagnosticFailedStaleMessage {
     tokenId: TokenId
     ageMs: number
+    price: number
 }
 
 /**
@@ -1034,4 +1035,37 @@ export interface OpenPositionTransactionConfirmedMessage {
     botId: string
     txHash: string
     liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Clmm Liquidity Pools Synced Diagnostic Message
+ */
+export interface ClmmLiquidityPoolsSyncedDiagnosticMessage {
+    id: string
+}
+
+/**
+ * Dlmm Liquidity Pools Synced Diagnostic Message
+ */
+export interface DlmmLiquidityPoolsSyncedDiagnosticMessage {
+    id: string
+}
+
+/**
+ * Liquidity Pools Became Ready Message
+ */
+export interface LiquidityPoolsBecameReadyMessage {
+    syncAges: Array<LiquidityPoolSyncAge>
+}
+
+/**
+ * Liquidity Pools Became Not Ready Message
+ */
+export interface LiquidityPoolsBecameNotReadyMessage {
+    syncAges: Array<LiquidityPoolSyncAge>
+}
+
+export interface LiquidityPoolSyncAge {
+    liquidityPoolId: LiquidityPoolId
+    ageMs: number
 }

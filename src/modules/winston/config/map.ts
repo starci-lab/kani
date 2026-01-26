@@ -126,7 +126,11 @@ import {
     ClosePositionJobAlreadyEnqueuedMessage,
     CannotSettlePositionMessage,
     ClosePositionTransactionPreparedMessage,
-    OpenPositionTransactionConfirmedMessage
+    OpenPositionTransactionConfirmedMessage,
+    DlmmLiquidityPoolsSyncedDiagnosticMessage,
+    ClmmLiquidityPoolsSyncedDiagnosticMessage,
+    LiquidityPoolsBecameNotReadyMessage,
+    LiquidityPoolsBecameReadyMessage
 } from "./types"
 
 export const configMap = {
@@ -790,7 +794,7 @@ export const configMap = {
     // Price Diagnostic Warning
     [WinstonLog.PriceDiagnosticFailedStale]: {
         name: WinstonLog.PriceDiagnosticFailedStale,
-        level: WinstonLevel.Warn,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as PriceDiagnosticFailedStaleMessage,
@@ -798,7 +802,7 @@ export const configMap = {
     // Price Diagnostic Failed Not Found
     [WinstonLog.PriceDiagnosticFailedNotFound]: {
         name: WinstonLog.PriceDiagnosticFailedNotFound,
-        level: WinstonLevel.Error,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as PriceDiagnosticFailedNotFoundMessage,
@@ -806,7 +810,7 @@ export const configMap = {
     // Dynamic Liquidity Pool Info Diagnostic Failed
     [WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed]: {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailed,
-        level: WinstonLevel.Error,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticFailedMessage,
@@ -814,7 +818,7 @@ export const configMap = {
     // Dynamic Liquidity Pool Info Diagnostic Failed Not Found
     [WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound]: {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedNotFound,
-        level: WinstonLevel.Error,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticFailedNotFoundMessage,
@@ -822,7 +826,7 @@ export const configMap = {
     // Dynamic Liquidity Pool Info Diagnostic Failed Stale
     [WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale]: {
         name: WinstonLog.DynamicLiquidityPoolInfoDiagnosticFailedStale,
-        level: WinstonLevel.Warn,
+        level: WinstonLevel.Debug,
         loki: true,
         messageType: {
         } as DynamicLiquidityPoolInfoDiagnosticFailedStaleMessage,
@@ -1146,5 +1150,37 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionTransactionConfirmedMessage,
+    },
+    // Clmm Liquidity Pools Synced Diagnostic
+    [WinstonLog.ClmmLiquidityPoolsSyncedDiagnostic]: {
+        name: WinstonLog.ClmmLiquidityPoolsSyncedDiagnostic,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as ClmmLiquidityPoolsSyncedDiagnosticMessage,
+    },
+    // Dlmm Liquidity Pools Synced Diagnostic
+    [WinstonLog.DlmmLiquidityPoolsSyncedDiagnostic]: {
+        name: WinstonLog.DlmmLiquidityPoolsSyncedDiagnostic,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as DlmmLiquidityPoolsSyncedDiagnosticMessage,
+    },
+    // Liquidity Pools Became Ready
+    [WinstonLog.LiquidityPoolsBecameReady]: {
+        name: WinstonLog.LiquidityPoolsBecameReady,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as LiquidityPoolsBecameReadyMessage,
+    },
+    // Liquidity Pools Became Not Ready
+    [WinstonLog.LiquidityPoolsBecameNotReady]: {
+        name: WinstonLog.LiquidityPoolsBecameNotReady,
+        level: WinstonLevel.Warn,
+        loki: true,
+        messageType: {
+        } as LiquidityPoolsBecameNotReadyMessage,
     },
 }

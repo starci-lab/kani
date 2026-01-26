@@ -126,4 +126,8 @@ export enum WinstonLog {
     CannotSettlePosition = "Cannot.Settle.Position",
     ClosePositionTransactionPrepared = "Close.Position.Transaction.Prepared",
     OpenPositionTransactionConfirmed = "Open.Position.Transaction.Confirmed",
+    ClmmLiquidityPoolsSyncedDiagnostic = "Clmm.Liquidity.Pools.Synced.Diagnostic",
+    DlmmLiquidityPoolsSyncedDiagnostic = "Dlmm.Liquidity.Pools.Synced.Diagnostic",
+    LiquidityPoolsBecameReady = "Liquidity.Pools.Became.Ready",
+    LiquidityPoolsBecameNotReady = "Liquidity.Pools.Became.Not.Ready",
 }

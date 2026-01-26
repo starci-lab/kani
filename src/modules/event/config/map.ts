@@ -15,7 +15,13 @@ import {
     ExecutorBotDeletedEventPayload, 
     ExecutorBotUpdatedEventPayload, 
     ReinitializeBalancersEventPayload,
-    LockAuthorityTimeoutEventPayload
+    LockAuthorityTimeoutEventPayload,
+    LiquidityPoolsBecameReadyEventPayload,
+    LiquidityPoolsBecameNotReadyEventPayload,
+    DlmmPositionCloseWithoutEventRequestedEventPayload,
+    DlmmPositionOpenWithoutEventRequestedEventPayload,
+    ClmmPositionCloseWithoutEventRequestedEventPayload,
+    ClmmPositionOpenWithoutEventRequestedEventPayload
 } from "./types"
 import {
     KafkaTopicConfig 
@@ -133,5 +139,53 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as LockAuthorityTimeoutEventPayload
+    },
+    [EventName.LiquidityPoolsBecameReady]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as LiquidityPoolsBecameReadyEventPayload
+    },
+    [EventName.LiquidityPoolsBecameNotReady]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as LiquidityPoolsBecameNotReadyEventPayload
+    },
+    [EventName.ClmmPositionOpenWithoutEventRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ClmmPositionOpenWithoutEventRequestedEventPayload
+    },
+    [EventName.ClmmPositionCloseWithoutEventRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as ClmmPositionCloseWithoutEventRequestedEventPayload
+    },
+    [EventName.DlmmPositionOpenWithoutEventRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as DlmmPositionOpenWithoutEventRequestedEventPayload
+    },
+    [EventName.DlmmPositionCloseWithoutEventRequested]: {
+        useKafka: false,
+        useLocal: true,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as DlmmPositionCloseWithoutEventRequestedEventPayload
     },
 }

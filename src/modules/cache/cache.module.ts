@@ -16,6 +16,10 @@ import {
 import {
     CacheService 
 } from "./cache.service"
+import {
+    LiquidityPoolsSyncedDiagnosticReadinessCacheService 
+} from "./liquidity-pools-synced-diagnostic-readiness-cache.service"
+
 @Module({
 })
 export class CacheModule extends ConfigurableModuleClass {
@@ -33,10 +37,12 @@ export class CacheModule extends ConfigurableModuleClass {
                 ...providers,
                 CacheService,
                 AggregatedTokenPriceCacheService,
+                LiquidityPoolsSyncedDiagnosticReadinessCacheService,
             ],
             exports: [
                 CacheService,
-                AggregatedTokenPriceCacheService
+                AggregatedTokenPriceCacheService,
+                LiquidityPoolsSyncedDiagnosticReadinessCacheService,
             ],
         }
     }

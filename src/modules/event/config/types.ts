@@ -40,3 +40,23 @@ export interface ExecutorBotDeletedEventPayload {
 export interface LockAuthorityTimeoutEventPayload {
     botId: string
 }
+
+export interface LiquidityPoolsBecameReadyEventPayload {
+    ids: Array<string>
+}
+export interface LiquidityPoolsBecameNotReadyEventPayload {
+    ids: Array<string>
+}
+
+export interface ClmmPositionOpenWithoutEventRequestedEventPayload {
+    id: string
+}
+export interface ClmmPositionCloseWithoutEventRequestedEventPayload {
+    id: string
+}
+export interface DlmmPositionOpenWithoutEventRequestedEventPayload {
+    id: string
+}
+export interface DlmmPositionCloseWithoutEventRequestedEventPayload {
+    id: string
+}

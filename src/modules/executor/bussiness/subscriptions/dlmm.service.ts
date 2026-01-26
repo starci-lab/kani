@@ -1,18 +1,18 @@
 import {
-    EventName, 
+    EventName,
     DlmmLiquidityPoolsSyncedEventPayload,
 } from "@modules/event"
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    OnEvent 
+    OnEvent
 } from "@nestjs/event-emitter"
 import {
-    EventEmitterService 
+    EventEmitterService
 } from "@modules/event"
 import {
-    LiquidityPoolAssignmentsRotationService 
+    LiquidityPoolAssignmentsRotationService
 } from "./liquidity-pool-assignments-rotation.service"
 
 @Injectable()
@@ -20,20 +20,20 @@ export class DlmmSubscriptionService {
     constructor(
         private readonly eventEmitterService: EventEmitterService,
         private readonly liquidityPoolAssignmentsRotationService: LiquidityPoolAssignmentsRotationService,
-    ) {}
+    ) { }
 
-   /**
-     * Triggered when DLMM liquidity pools are fetched.
-     *
-     * Intent:
-     * - Fan-out the opportunity to close positions
-     * - Bots are currently IDLE (no active liquidity pool)
-     *
-     * Pattern:
-     * - BROADCAST (not load-balancing)
-     * - Deterministic fan-out
-     */
-   @OnEvent(EventName.DlmmLiquidityPoolsSynced)
+    /**
+      * Triggered when DLMM liquidity pools are fetched.
+      *
+      * Intent:
+      * - Fan-out the opportunity to close positions
+      * - Bots are currently IDLE (no active liquidity pool)
+      *
+      * Pattern:
+      * - BROADCAST (not load-balancing)
+      * - Deterministic fan-out
+      */
+    @OnEvent(EventName.DlmmLiquidityPoolsSynced)
     async handleDlmmLiquidityPoolsSynced(
         event: DlmmLiquidityPoolsSyncedEventPayload
     ) {
