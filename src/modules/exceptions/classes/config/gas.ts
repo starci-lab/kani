@@ -7,7 +7,7 @@ import {
 
 /** Thrown when target operational gas amount config is not found */
 export interface TargetOperationalGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    chainId: ChainId
+    chainId?: ChainId
 }
 export class TargetOperationalGasAmountNotFoundException extends AbstractException {
     constructor(
@@ -26,7 +26,7 @@ export class TargetOperationalGasAmountNotFoundException extends AbstractExcepti
 
 /** Thrown when minimum operational gas amount config is not found */
 export interface MinOperationalGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
-    chainId: ChainId
+    chainId?: ChainId
 }
 export class MinOperationalGasAmountNotFoundException extends AbstractException {
     constructor(

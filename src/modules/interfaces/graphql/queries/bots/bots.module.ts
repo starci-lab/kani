@@ -31,9 +31,9 @@ import {
 import {
     ReservesV2Module 
 } from "./reserves-v2"
-// import {
-//     FundingSnapshotV2Module 
-// } from "./funding-snapshot-v2"
+import {
+    PortfolioValueV2Module
+} from "./portfolio-value-v2"
 
 @Module({
     imports: [
@@ -67,9 +67,9 @@ import {
         ReservesV2Module.register({
             isGlobal: true,
         }),
-        // FundingSnapshotV2Module.register({
-        //     isGlobal: true,
-        // }),
+        PortfolioValueV2Module.register({
+            isGlobal: true,
+        }),
     ]
 })
 export class BotsModule extends ConfigurableModuleClass {}

@@ -5,8 +5,12 @@ import { BotModule } from "./bot"
 
 @Module({
     imports: [
-        AuthModule.register({}),
-        BotModule.register({}),
+        AuthModule.register({
+            isGlobal: true,
+        }),
+        BotModule.register({
+            isGlobal: true,
+        }),
     ],
 })
 export class MutationsModule extends ConfigurableModuleClass {}

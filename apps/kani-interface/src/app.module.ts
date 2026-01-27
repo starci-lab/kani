@@ -17,7 +17,7 @@ import {
     PassportModule 
 } from "@modules/passport"
 import {
-    DexesModule, FormulasModule, KeypairsModule, MathModule 
+    DexesModule, EvalModule, FormulasModule, KeypairsModule, MathModule 
 } from "@modules/blockchains"
 import {
     CryptoModule 
@@ -85,6 +85,9 @@ import {
 import {
     PrivyModule 
 } from "@modules/privy"
+import {
+    SocketIoModule as  SocketIoCoreModule
+} from "@modules/socketio"
 
 @Module({
     imports: [
@@ -119,6 +122,12 @@ import {
                     EventName.ReinitializeBalancers,
                 ],
             },
+        }),
+        SocketIoCoreModule.register({
+            isGlobal: true,
+        }),
+        EvalModule.register({
+            isGlobal: true,
         }),
         TxBuilderModule.register({
             isGlobal: true,

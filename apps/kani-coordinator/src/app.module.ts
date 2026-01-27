@@ -43,6 +43,7 @@ import {
 import {
     EventModule 
 } from "@modules/event"
+import { SilentWsExceptionFilter } from "@modules/socketio"
 
 @Module({
     imports: [
@@ -92,6 +93,10 @@ import {
         }),
     ],
     providers: [
+        {
+            provide: APP_FILTER,
+            useClass: SilentWsExceptionFilter,
+        },
         {
             provide: APP_FILTER,
             useClass: SentryCatchAllExceptionFilter,

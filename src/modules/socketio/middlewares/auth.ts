@@ -29,10 +29,12 @@ export const socketIoAuthMiddleware = (
             }))
         }
         // get the derived jwt secret service from the app
-        const derivedJwtSecretService = globalThis.__APP__.get(DerivedJwtSecretService,
+        const derivedJwtSecretService = globalThis.__APP__.get(
+            DerivedJwtSecretService,
             {
                 strict: false 
-            })
+            }
+        )
         const jwtSecret = derivedJwtSecretService.key
         const payload = verify(
             token, 

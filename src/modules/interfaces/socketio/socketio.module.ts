@@ -2,15 +2,15 @@ import {
     Module 
 } from "@nestjs/common"
 import {
-    PriceModule 
-} from "./price"
+    DynamicModule 
+} from "./dynamic"
 import {
     ConfigurableModuleClass 
 } from "./socketio.module-definition"
 
 @Module({
     imports: [
-        PriceModule.register({
+        DynamicModule.register({
             isGlobal: true,
         }),
     ],

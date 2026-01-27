@@ -68,6 +68,10 @@ export const envConfig = () => ({
             fractionDigits: parseEnvInt("COMPUTATION_AMOUNT_FRACTION_DIGITS",
                 10),
         },
+        round: {
+            fractionDigits: parseEnvInt("COMPUTATION_ROUND_FRACTION_DIGITS",
+                5),
+        },
         operation: {
             fractionDigits: parseEnvInt("COMPUTATION_OPERATION_FRACTION_DIGITS",
                 10),
@@ -397,6 +401,12 @@ export const envConfig = () => ({
         price: {
             broadcast: {
                 interval: parseEnvMs("SOCKET_IO_PRICE_BROADCAST_INTERVAL",
+                    "5s"),
+            },
+        },
+        dynamic: {
+            liquidityPoolsInfo: {
+                interval: parseEnvMs("SOCKET_IO_DYNAMIC_LIQUIDITY_POOLS_INFO_INTERVAL",
                     "5s"),
             },
         },

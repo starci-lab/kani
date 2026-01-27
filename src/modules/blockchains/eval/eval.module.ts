@@ -4,6 +4,12 @@ import {
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
 } from "./eval.module-definition"   
+import {
+    EvalBalanceService 
+} from "./balace.service"
+import {
+    Provider 
+} from "@nestjs/common"
 
 @Module({
 })
@@ -12,18 +18,17 @@ export class EvalModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const modules = [
+        const providers: Array<Provider> = [
+            EvalBalanceService,
         ]
         return {
             ...dynamicModule,
-            imports: [
-                ...modules,
-            ],
             providers: [
                 ...dynamicModule.providers || [],
+                ...providers,
             ],
             exports: [
-                ...modules,
+                ...providers,
             ],
         }
     }
