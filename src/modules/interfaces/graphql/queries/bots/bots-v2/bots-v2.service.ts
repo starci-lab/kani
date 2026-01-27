@@ -29,6 +29,9 @@ import {
 import {
     ValidateService 
 } from "../../../services"
+import {
+    ActivePositionAssociateService 
+} from "@modules/databases"
 
 @Injectable()
 export class BotsV2Service {
@@ -37,6 +40,7 @@ export class BotsV2Service {
         private readonly connection: Connection,
         private readonly performanceService: PerformanceService,
         private readonly validateService: ValidateService,
+        private readonly activePositionAssociateService: ActivePositionAssociateService,
     ) { }
 
     async botsV2(
@@ -46,6 +50,15 @@ export class BotsV2Service {
                 limit = envConfig().pagination.bots.limit.default,
                 asc = false,
                 searchString,
+            } = {
+            },
+            associate: {
+                activePosition: {
+                    liquidityPool: activePositionLiquidityPoolAssociate = false,
+                    position: activePositionPositionAssociate = false,
+                } = {
+                },
+            } = {
             },
         }: BotsV2Request,
         response: VerifyAccessTokenResponse,
@@ -130,6 +143,12 @@ export class BotsV2Service {
                 }
             }
         })
+        if (activePositionPositionAssociate) {
+            await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions(bots)
+        }
+        if (activePositionLiquidityPoolAssociate) {
+            await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions(bots)
+        }
         // return the bots
         return {
             count: bots.length,

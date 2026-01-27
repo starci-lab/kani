@@ -203,3 +203,24 @@ registerEnumType(
         }
     }
 )
+
+export enum PerformanceDisplayMode {
+    Target = "target",
+    Usd = "usd",
+}
+export const GraphQLTypePerformanceDisplayMode = createEnumType(PerformanceDisplayMode)
+
+registerEnumType(GraphQLTypePerformanceDisplayMode,
+    {
+        name: "PerformanceDisplayMode",
+        description: "The display mode of the bot's performance",
+        valuesMap: {
+            [PerformanceDisplayMode.Target]: {
+                description: "The performance is displayed in target units"
+            },
+            [PerformanceDisplayMode.Usd]: {
+                description: "The performance is displayed in USD units"
+            }
+        }
+    }
+)

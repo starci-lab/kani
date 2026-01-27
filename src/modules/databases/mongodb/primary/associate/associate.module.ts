@@ -7,12 +7,18 @@ import {
 import {
     ConfigurableModuleClass 
 } from "./associate.module-definition"
+import {
+    ActivePositionAssociateService 
+} from "./active-position.service"
+
 @Module({
     providers: [
-        PositionAssociateService
+        PositionAssociateService,
+        ActivePositionAssociateService
     ],
     exports: [
-        PositionAssociateService
+        PositionAssociateService,
+        ActivePositionAssociateService
     ]
 })
 export class AssociateModule extends ConfigurableModuleClass {

@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
-} from "./cexes.module-definition"   
+} from "./eval.module-definition"   
 import {
     BinanceModule 
 } from "./binance"

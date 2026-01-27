@@ -24,7 +24,9 @@ import {
 } from "./liquidity-pool.schema"
 import {
     AppVersion,
-    GraphQLTypeAppVersion,  
+    GraphQLTypeAppVersion,
+    GraphQLTypePerformanceDisplayMode,
+    PerformanceDisplayMode,  
 } from "../enums"
 import {
     BotActivePositionSchema, BotActivePositionSchemaClass 
@@ -294,6 +296,19 @@ export class BotSchema extends AbstractSchema {
             nullable: true,
         })
         performance24h?: BotPerformance24H
+
+    /**
+     * The display mode of the bot's performance. Default is usd.
+     */
+    @Field(() => GraphQLTypePerformanceDisplayMode,
+        {
+            description: "The display mode of the bot's performance",
+            nullable: true,
+        })
+    @Prop({
+        type: String, enum: PerformanceDisplayMode, required: false
+    })
+        performanceDisplayMode?: PerformanceDisplayMode
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

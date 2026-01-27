@@ -1,6 +1,6 @@
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
 import { CetusFeesService, LiquidityPoolStateService } from "@modules/blockchains"
-import { BotSchema, DexId, InjectPrimaryMongoose, LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
+import { BotSchema, InjectPrimaryMongoose, LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
 import { Connection } from "mongoose"
 
 @Injectable()

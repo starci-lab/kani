@@ -22,6 +22,9 @@ import {
 import {
     UpdateBotSettingsV2Module 
 } from "./update-bot-settings-v2"
+import {
+    UpdateBotPerformanceDisplayModeV2Module 
+} from "./update-bot-performance-display-mode-v2"
 
 @Module({
     imports: [
@@ -41,6 +44,9 @@ import {
             isGlobal: true,
         }),
         UpdateBotSettingsV2Module.register({
+            isGlobal: true,
+        }),
+        UpdateBotPerformanceDisplayModeV2Module.register({
             isGlobal: true,
         }),
     ],

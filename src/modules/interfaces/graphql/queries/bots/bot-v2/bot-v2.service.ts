@@ -3,7 +3,10 @@ import {
 } from "@nestjs/common"
 
 import {
-    InjectPrimaryMongoose, BotSchema, PositionSchema, UserSchema, 
+    InjectPrimaryMongoose, 
+    BotSchema,
+    PositionSchema, 
+    UserSchema, 
     BotActivePositionSchema
 } from "@modules/databases"
 import {
