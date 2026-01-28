@@ -132,6 +132,9 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
         }
         this.tokenIdMap.set(client.id,
             data.ids)
+
+        // Publish immediately so the client doesn't have to wait for the next interval tick.
+        await this.publishPricesSingle(client.id)
     }
 
     /**
@@ -142,25 +145,32 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
      */
     @Interval(envConfig().socketIo.price.broadcast.interval)
     async publishPrices() {
-        // 1) Build unique token id set across all clients.
-        const allTokenIds = new Set<string>()
-        for (const ids of this.tokenIdMap.values()) {
-            for (const id of ids) {
-                allTokenIds.add(id)
-            }
+        const promises: Array<Promise<void>> = []
+        for (const clientId of this.tokenIdMap.keys()) {
+            promises.push(this.publishPricesSingle(clientId))
         }
-        if (allTokenIds.size === 0) {
+        await this.asyncService.allIgnoreError(promises)
+    }
+
+    /**
+     * Publish prices to a single client based on its current subscription.
+     */
+    async publishPricesSingle(
+        clientId: string
+    ) {
+        const client = this.server.sockets.get(clientId)
+        if (!client) {
             return
         }
-
-        // 2) Fetch token documents once.
+        const ids = this.tokenIdMap.get(clientId) ?? []
+        if (ids.length === 0) {
+            return
+        }
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             id: {
-                $in: Array.from(allTokenIds),
+                $in: ids,
             },
         })
-
-        // 3) Resolve prices concurrently and store by token record id.
         const results: Record<string, PublicationPrice> = {
         }
         const promises: Array<Promise<void>> = tokens.map(
@@ -174,22 +184,14 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
             }
         )
         await this.asyncService.allIgnoreError(promises)
-
-        // 4) Publish per-client subset.
-        for (const [clientId] of this.tokenIdMap.entries()) {
-            const client = this.server.sockets.get(clientId)
-            if (!client) {
-                continue
-            }
-            const payload: PublicationPriceEventPayload = {
-                results,
-            }
-            this.wsResponseService.success({
-                message: "Prices updated successfully",
-                data: payload,
-                client,
-                eventName: PublicationEvent.Price,
-            })
+        const payload: PublicationPriceEventPayload = {
+            results,
         }
+        this.wsResponseService.success({
+            message: "Prices updated successfully",
+            data: payload,
+            client,
+            eventName: PublicationEvent.Price,
+        })
     }
 }

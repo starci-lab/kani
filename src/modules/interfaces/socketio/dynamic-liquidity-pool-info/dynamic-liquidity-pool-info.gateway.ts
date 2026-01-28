@@ -103,6 +103,8 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGateway
             client.id,
             data.ids
         )
+        // Publish immediately so the client doesn't have to wait for the next interval tick.
+        await this.publishDynamicLiquidityPoolsInfoSingle(client.id)
     }
 
     handleDisconnect(client: TypedSocket) {
@@ -118,17 +120,30 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGateway
      */
     @Interval(envConfig().socketIo.dynamic.liquidityPoolsInfo.interval)
     async publishDynamicLiquidityPoolsInfo() {
-        // 1) Build a unique set of pool ids requested by any connected client.
-        const allSubscribedIds = new Set<string>()
-        for (const ids of this.liquidityPoolIdsByClientId.values()) {
-            for (const id of ids) {
-                allSubscribedIds.add(id)
-            }
+        const promises: Array<Promise<void>> = []
+        for (const clientId of this.liquidityPoolIdsByClientId.keys()) {
+            promises.push(this.publishDynamicLiquidityPoolsInfoSingle(clientId))
         }
-        // 2) Fetch latest dynamic info for each unique pool id (CLMM first, then DLMM).
+        await this.asyncService.allIgnoreError(promises)
+    }
+
+    /**
+     * Publish dynamic liquidity pool info to a single client based on its current subscription.
+     */
+    async publishDynamicLiquidityPoolsInfoSingle(
+        clientId: string
+    ) {
+        const client = this.server.sockets.get(clientId)
+        if (!client) {
+            return
+        }
+        const ids = this.liquidityPoolIdsByClientId.get(clientId) ?? []
+        if (ids.length === 0) {
+            return
+        }
         const results: Record<string, PublicationDynamicLiquidityPoolInfo> = {
         }
-        const promises: Array<Promise<void>> = Array.from(allSubscribedIds).map(
+        const promises: Array<Promise<void>> = ids.map(
             async (liquidityPoolId) => {
                 const clmm = await this.cacheService.get({
                     key: CacheKey.DynamicClmmLiquidityPoolInfo,
@@ -148,24 +163,15 @@ export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGateway
             }
         )
         await this.asyncService.allIgnoreError(promises)
-        // 3) Publish (currently: same aggregated results payload to every client).
-        for (const [
-            clientId,
-        ] of this.liquidityPoolIdsByClientId.entries()) {
-            const client = this.server.sockets.get(clientId)
-            if (!client) {
-                continue
-            }
-            const payload: PublicationDynamicLiquidityPoolsInfoEventPayload = {
-                results,
-            }
-            this.wsResponseService.success({
-                message: "Dynamic liquidity pools info published successfully",
-                data: payload,
-                client,
-                eventName: PublicationEvent.DynamicLiquidityPoolsInfo,
-            })
+        const payload: PublicationDynamicLiquidityPoolsInfoEventPayload = {
+            results,
         }
+        this.wsResponseService.success({
+            message: "Dynamic liquidity pools info published successfully",
+            data: payload,
+            client,
+            eventName: PublicationEvent.DynamicLiquidityPoolsInfo,
+        })
     }
 }
 
