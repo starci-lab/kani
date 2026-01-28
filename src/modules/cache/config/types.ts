@@ -23,6 +23,7 @@ export interface DynamicClmmRewardInfo {
     emissionPerSecond: BN
     growthGlobal: BN
     vaultAddress?: string
+    lastUpdateTimeMs?: BN
 }
 
 export interface DynamicClmmLiquidityPoolInfoCacheResult extends SnapshotCacheResult {
@@ -32,6 +33,7 @@ export interface DynamicClmmLiquidityPoolInfoCacheResult extends SnapshotCacheRe
     rewards: Array<DynamicClmmRewardInfo>
     feeGrowthGlobalA: BN
     feeGrowthGlobalB: BN
+    rewardLastUpdatedTimeMs?: BN
 }
 
 export interface DynamicDlmmRewardInfo {

@@ -1,0 +1,45 @@
+{
+  "fee_growth_inside_a": "0",
+  "fee_growth_inside_b": "0",
+  "id": {
+    "id": "0xc4c87c17de1fe6633ab926ed7b7c14ae12e0f09f779177ec594d2871612d1b78"
+  },
+  "liquidity": "479463186753",
+  "reward_infos": [
+    {
+      "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::position_manager::PositionRewardInfo",
+      "fields": {
+        "amount_owed": "0",
+        "reward_growth_inside": "340282366920938463463372914069916846387"
+      }
+    },
+    {
+      "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::position_manager::PositionRewardInfo",
+      "fields": {
+        "amount_owed": "0",
+        "reward_growth_inside": "340282366920938462635562931112031662222"
+      }
+    },
+    {
+      "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::position_manager::PositionRewardInfo",
+      "fields": {
+        "amount_owed": "0",
+        "reward_growth_inside": "0"
+      }
+    }
+  ],
+  "tick_lower_index": {
+    "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::i32::I32",
+    "fields": {
+      "bits": 4294845286
+    }
+  },
+  "tick_upper_index": {
+    "type": "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::i32::I32",
+    "fields": {
+      "bits": 4294846276
+    }
+  },
+  "tokens_owed_a": "0",
+  "tokens_owed_b": "0"
+}

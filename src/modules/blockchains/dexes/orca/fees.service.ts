@@ -21,6 +21,7 @@ import {
     SolanaAccountNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     PositionClmmStateNotFoundException,
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import {
     Position 
@@ -47,16 +48,21 @@ import {
     Decimal 
 } from "decimal.js"
 import {
-    ClmmFeesFormulaService 
+    ClmmFeesFormulaService,
+    ClmmRewardsFormulaService,
 } from "../../formulas"
+import {
+    DynamicClmmRewardInfo,
+} from "@modules/cache"
 
 @Injectable()
 export class OrcaFeesService implements IFeesService {
     constructor(
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly rpcExecutorService: RpcExecutorService,
-    private readonly tickArrayService: TickArrayService,
-    private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly rpcExecutorService: RpcExecutorService,
+        private readonly tickArrayService: TickArrayService,
+        private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
+        private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
@@ -208,7 +214,6 @@ export class OrcaFeesService implements IFeesService {
         const liquidity = new BN(bot.activePosition.associatedPosition.clmmState.liquidity)
 
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
-            // -------- Token A --------
             feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
             feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideA.toString()),
@@ -230,11 +235,48 @@ export class OrcaFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const rewards = Object.fromEntries(
+            clmmRewards.map((clmmReward, index) => {
+                const tokenAddress = clmmReward.tokenAddress
+                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    tokenAddress: {
+                        $eq: tokenAddress,
+                    },
+                })
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        tokenAddress,
+                    })
+                }
+                const posReward = positionState.rewardInfos[index]
+                const rewardAmount = this.clmmRewardsFormulaService.computeReward({
+                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
+                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
+                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),
+                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickLower: new BN(tickLower),
+                    tickUpper: new BN(tickUpper),
+                    rewardGrowthInsideLast: new BN(posReward.growthInsideCheckpoint.toString()),
+                    liquidity,
+                    decimals: new Decimal(token.decimals),
+                    rewardOwned: new BN(posReward.amountOwed.toString()),
+                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
+                    lastUpdateMs: _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0),
+                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                })
+                return [
+                    token.id,
+                    rewardAmount,
+                ]
+            }),
+        )
+
         return {
             feeA,
             feeB,
-            rewards: [],
-            snapshotAt: state.dynamic.snapshotAt,
+            rewards,
+            snapshotAt: _state.dynamic.snapshotAt,
         }
     }
 }

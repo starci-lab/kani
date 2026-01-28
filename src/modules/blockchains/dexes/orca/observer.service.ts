@@ -131,6 +131,7 @@ export class OrcaObserverService implements OnApplicationBootstrap, OnModuleInit
             feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
             snapshotAt: this.dayjsService.now(),
+            rewardLastUpdatedTimeMs: new BN(state.rewardLastUpdatedTimestamp.toString()),
         }
         await this.asyncService.allIgnoreError([
             // store in cache

@@ -5,6 +5,7 @@ import {
     AbstractGraphQLResponse, 
     IAbstractGraphQLResponse
 } from "../../../abstracts"
+import GraphQLJSON from "graphql-type-json"
 
 @InputType({
     description: "Input parameters used to request accrued fees for a bot position v2.",
@@ -37,6 +38,12 @@ export class FeesV2ResponseData {
             description: "The date and time the fees were snapshot.",
         })
         snapshotAt: Date
+
+    @Field(() => GraphQLJSON,
+        {
+            description: "Accrued rewards for each reward token.",
+        })
+        rewards: unknown
 }
 
 @ObjectType({

@@ -44,4 +44,29 @@ export class ClmmUtilsService {
     ): BN {
         return a.sub(b).umod(wrapModulus)
     }
+    
+    /**
+     * Perform wrapping addition: (a + b) mod wrapModulus
+     *
+     * This mimics on-chain unsigned integer overflow behavior.
+     *
+     * Example:
+     *  - If a + b > wrapModulus, the result wraps around instead of becoming negative.
+     *
+     * Typical usage:
+     *  - Reward growth math (wrapModulus = Q128 or Q64)
+     *  - Fee growth math (wrapModulus = Q128 or Q64)
+     *
+     * @param a - Augend
+     * @param b - Addend
+     * @param wrapModulus - Overflow modulus (e.g. Q128 = 2^128, Q64 = 2^64)
+     * @returns (a + b) modulo wrapModulus
+     */
+    public wrapAdd(
+        a: BN,
+        b: BN,
+        wrapModulus: typeof Q128 | typeof Q64
+    ): BN {
+        return a.add(b).umod(wrapModulus)
+    }
 }

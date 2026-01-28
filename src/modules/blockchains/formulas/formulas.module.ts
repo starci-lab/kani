@@ -11,9 +11,6 @@ import {
     DlmmBinFormulaService 
 } from "./dlmm-bin.service"
 import {
-    ClmmRewardsFormulaService 
-} from "./clmm-rewards.service"
-import {
     ClmmUtilsService 
 } from "./clmm-utils.service"
 import {
@@ -25,24 +22,28 @@ import {
 import {
     ClmmLiquidityFormulaService 
 } from "./clmm-liquidity.service"
+import {
+    ClmmRewardsFormulaService 
+} from "./clmm-rewards.service"
+
 @Module({
     providers: [
         ClmmTickFormulaService,
         DlmmBinFormulaService,
-        ClmmRewardsFormulaService,
         ClmmFeesFormulaService,
         ClmmReservesFormulaService,
         ClmmUtilsService,
         ClmmLiquidityFormulaService,
+        ClmmRewardsFormulaService,
     ],
     exports: [
         ClmmTickFormulaService,
         DlmmBinFormulaService,
-        ClmmRewardsFormulaService,
         ClmmFeesFormulaService,
         ClmmReservesFormulaService,
         ClmmUtilsService,
         ClmmLiquidityFormulaService,
+        ClmmRewardsFormulaService,
     ],
 })
 export class FormulasModule extends ConfigurableModuleClass {}

@@ -22,6 +22,7 @@ import {
     MissingActivePositionLiquidityException,
     PositionClmmStateNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import {
     TickArrayLayout 
@@ -48,8 +49,12 @@ import {
     PersonalPositionState 
 } from "./beets"
 import {
-    ClmmFeesFormulaService 
+    ClmmFeesFormulaService,
+    ClmmRewardsFormulaService,
 } from "../../formulas"
+import {
+    DynamicClmmRewardInfo,
+} from "@modules/cache"
 
 @Injectable()
 export class RaydiumFeesService implements IFeesService {
@@ -58,6 +63,7 @@ export class RaydiumFeesService implements IFeesService {
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly tickArrayService: TickArrayService,
         private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
+        private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
     ) {}
 
     async fees({ bot, state }: FeesParams): Promise<FeesResult> {
@@ -254,11 +260,49 @@ export class RaydiumFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const rewards = Object.fromEntries(
+            clmmRewards.map((clmmReward, index) => {
+                const tokenAddress = clmmReward.tokenAddress
+                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    tokenAddress: {
+                        $eq: tokenAddress,
+                    },
+                })
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        tokenAddress,
+                    })
+                }
+                const posReward = positionState.rewardInfos[index]
+                const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0)
+                const rewardAmount = this.clmmRewardsFormulaService.computeReward({
+                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
+                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutsideX64[index].toString()),
+                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutsideX64[index].toString()),
+                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickLower: new BN(tickLower),
+                    tickUpper: new BN(tickUpper),
+                    rewardGrowthInsideLast: new BN(posReward.growthInsideLastX64.toString()),
+                    liquidity,
+                    decimals: new Decimal(token.decimals),
+                    rewardOwned: new BN(posReward.rewardAmountOwed.toString()),
+                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
+                    lastUpdateMs,
+                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                })
+                return [
+                    token.id,
+                    rewardAmount,
+                ]
+            }),
+        )
+
         return {
             feeA,
             feeB,
-            rewards: [],
-            snapshotAt: state.dynamic.snapshotAt,
+            rewards,
+            snapshotAt: _state.dynamic.snapshotAt,
         }
     }
 }

@@ -120,6 +120,7 @@ export class RaydiumObserverService implements OnApplicationBootstrap, OnModuleI
                     tokenAddress: rewardInfo.tokenMint.toString(),
                     emissionPerSecond: new BN(rewardInfo.emissionsPerSecondX64.toString()),
                     growthGlobal: new BN(rewardInfo.rewardGrowthGlobalX64.toString()),
+                    lastUpdateTimeMs: new BN(rewardInfo.lastUpdateTime.toString()),
                 })),
             feeGrowthGlobalA: new BN(state.feeGrowthGlobal0X64.toString()),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobal1X64.toString()),

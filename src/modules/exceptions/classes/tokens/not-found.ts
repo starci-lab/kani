@@ -9,10 +9,11 @@ export interface TokenNotFoundExceptionMetadata extends AbstractExceptionMetadat
     id?: string
     displayId?: TokenId
     conditions?: unknown
+    tokenAddress?: string
 }
 export class TokenNotFoundException extends AbstractException {
     constructor(
-        { id, displayId, conditions, originalError }: TokenNotFoundExceptionMetadata
+        { id, displayId, conditions, originalError, tokenAddress }: TokenNotFoundExceptionMetadata
     ) {
         super(
             "Token not found",
@@ -22,6 +23,7 @@ export class TokenNotFoundException extends AbstractException {
                 displayId,
                 conditions,
                 originalError,
+                tokenAddress,
             }
         )
     }

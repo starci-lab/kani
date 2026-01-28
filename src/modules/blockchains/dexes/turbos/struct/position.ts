@@ -9,7 +9,7 @@ import {
 export interface TurbosSuiObjectPositionRewardInfo {
     fields: {
         coins_owed_reward: string
-        reward_growth_inside_last: string
+        reward_growth_inside: string
     }
     type: string
 }
@@ -47,7 +47,7 @@ export interface TurbosPosition {
     tickUpperIndex: BN
     rewardInfos: Array<{
         coinsOwedReward: BN
-        rewardGrowthInsideLast: BN
+        rewardGrowthInside: BN
     }>
 }
 
@@ -66,7 +66,7 @@ export const parseTurbosPosition = (target: TurbosSuiObjectPositionFields): Turb
         tickUpperIndex: parseSuiI32(target.tick_upper_index),
         rewardInfos: target.reward_infos.map((reward) => ({
             coinsOwedReward: new BN(reward.fields.coins_owed_reward),
-            rewardGrowthInsideLast: new BN(reward.fields.reward_growth_inside_last),
+            rewardGrowthInside: new BN(reward.fields.reward_growth_inside),
         })),
     }
 }

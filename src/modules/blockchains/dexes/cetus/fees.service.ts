@@ -14,6 +14,7 @@ import {
     ErrorSuiObjectName,
     InvalidTickScoreException,
     LiquidityPoolClmmStateNotFoundException,
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -36,9 +37,13 @@ import {
 import {
     SuiMoveObjectData 
 } from "../../structs"
-import { 
-    ClmmFeesFormulaService
+import {
+    ClmmFeesFormulaService,
+    ClmmRewardsFormulaService,
 } from "../../formulas"
+import {
+    DynamicClmmRewardInfo 
+} from "@modules/cache"
 import { 
     CetusLiquidityPoolMetadata, 
     DexId, 
@@ -48,9 +53,10 @@ import {
 @Injectable()
 export class CetusFeesService implements IFeesService {
     constructor(
-    private readonly rpcExecutorService: RpcExecutorService,
-    private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly rpcExecutorService: RpcExecutorService,
+        private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
+        private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     async fees({ state, bot }: FeesParams): Promise<FeesResult> {
@@ -209,11 +215,50 @@ export class CetusFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const tickLowerBn = new BN(tickLower.toNumber())
+        const tickUpperBn = new BN(tickUpper.toNumber())
+        const rewards = Object.fromEntries(
+            clmmRewards.map((clmmReward, index) => {
+                const tokenAddress = clmmReward.tokenAddress
+                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    tokenAddress: {
+                        $eq: tokenAddress,
+                    },
+                })
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        tokenAddress,
+                    })
+                }
+                const posReward = positionInfoData.rewards[index]
+                const rewardAmount = this.clmmRewardsFormulaService.computeReward({
+                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
+                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardsGrowthOutside[index].toString()),
+                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardsGrowthOutside[index].toString()),
+                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickLower: tickLowerBn,
+                    tickUpper: tickUpperBn,
+                    rewardGrowthInsideLast: posReward.growthInside,
+                    liquidity: positionInfoData.liquidity,
+                    decimals: new Decimal(token.decimals),
+                    rewardOwned: posReward.amountOwned,
+                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
+                    lastUpdateMs: _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0),
+                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                })
+                return [
+                    token.id,
+                    rewardAmount,
+                ]
+            }),
+        )
+
         return {
             snapshotAt: _state.dynamic.snapshotAt,
             feeA,
             feeB,
-            rewards: [],
+            rewards,
         }
     }
 

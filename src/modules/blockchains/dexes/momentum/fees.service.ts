@@ -14,6 +14,7 @@ import {
     ErrorSuiObjectName,
     SuiObjectInvalidTypeException,
     LiquidityPoolClmmStateNotFoundException,
+    TokenNotFoundException,
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
@@ -36,8 +37,12 @@ import {
     serializeSuiI32, SuiMoveObjectData, SuiObject 
 } from "../../structs"
 import {
-    ClmmFeesFormulaService
+    ClmmFeesFormulaService,
+    ClmmRewardsFormulaService,
 } from "../../formulas"
+import {
+    DynamicClmmRewardInfo,
+} from "@modules/cache"
 import {
     DexId,
     MomentumLiquidityPoolMetadata,
@@ -49,6 +54,7 @@ export class MomentumFeesService implements IFeesService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
+        private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
@@ -206,11 +212,49 @@ export class MomentumFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
+        const rewards = Object.fromEntries(
+            clmmRewards.map((clmmReward, index) => {
+                const tokenAddress = clmmReward.tokenAddress
+                const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                    tokenAddress: {
+                        $eq: tokenAddress,
+                    },
+                })
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        tokenAddress,
+                    })
+                }
+                const posReward = position.rewardInfos[index]
+                const lastUpdateMs = clmmReward.lastUpdateTimeMs ?? _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0)
+                const rewardAmount = this.clmmRewardsFormulaService.computeReward({
+                    rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
+                    rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
+                    rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),
+                    tickCurrent: _state.dynamic.tickCurrent,
+                    tickLower,
+                    tickUpper,
+                    rewardGrowthInsideLast: posReward.rewardGrowthInsideLast,
+                    liquidity: position.liquidity,
+                    decimals: new Decimal(token.decimals),
+                    rewardOwned: posReward.coinsOwedReward,
+                    emissionsPerSecond: new BN(clmmReward.emissionPerSecond.toString()),
+                    lastUpdateMs,
+                    totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
+                })
+                return [
+                    token.id,
+                    rewardAmount,
+                ]
+            }),
+        )
+
         return {
             snapshotAt: _state.dynamic.snapshotAt,
             feeA,
             feeB,
-            rewards: [],
+            rewards,
         }
     }
 }

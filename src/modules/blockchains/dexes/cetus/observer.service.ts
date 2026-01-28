@@ -174,6 +174,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             feeGrowthGlobalA: new BN(state.feeGrowthGlobalA),
             feeGrowthGlobalB: new BN(state.feeGrowthGlobalB),
             snapshotAt: this.dayjsService.now(),
+            rewardLastUpdatedTimeMs: state.rewarderManager.lastUpdatedTime,
         }
         await this.asyncService.allIgnoreError(
             [

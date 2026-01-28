@@ -18,41 +18,11 @@ import {
     CacheModule
 } from "@modules/cache"
 import {
-    EventModule
-} from "@modules/event"
-import {
-    EventEmitterModule
-} from "@nestjs/event-emitter"
-import {
     WinstonModule, WinstonLevel
 } from "@modules/winston"
 import {
     AxiosModule
 } from "@modules/axios"
-import {
-    P2CBalancerModule
-} from "@modules/p2c-balancer"
-import {
-    BullModule
-} from "@modules/bullmq"
-import {
-    LeaseModule
-} from "@modules/lock"
-import {
-    CryptoModule
-} from "@modules/crypto"
-import {
-    DerivedModule
-} from "@modules/derived"
-import {
-    GcpModule
-} from "@modules/gcp"
-import {
-    PrivyModule
-} from "@modules/privy"
-import {
-    ApolloClientModule
-} from "@modules/apollo-client"
 import {
     StreamAsyncIteratorModule
 } from "@modules/stream-async-iterator"
@@ -60,56 +30,53 @@ import {
     CexesModule, PriceFeedsModule 
 } from "@modules/blockchains"
 import {
-    ComputeSwapAmountsService 
-} from "./compute-swap-amounts.service"
-import {
     MathModule 
 } from "@modules/blockchains"
 import { FormulasModule } from "@modules/blockchains"
-import { TickBoundsService } from "./tick-bounds.service"
+import { MathService } from "./math.service"
 
 @Module({
     imports: [
-        EnvModule.forRoot(),
-        MixinModule.register({
-            isGlobal: true,
-        }),
-        FilesystemModule.register({
-            isGlobal: true,
-        }),
-        PrimaryMongoDbModule.register({
-            isGlobal: true,
-            memoryStorage: true,
-        }),
-        WinstonModule.register({
-            isGlobal: true,
-            appName: "kani-algorithm-tests",
-            level: WinstonLevel.Verbose,
-        }),
-        MixinModule.register({
-            isGlobal: true,
-        }),
-        CacheModule.register({
-            isGlobal: true,
-        }),
-        StreamAsyncIteratorModule.register({
-            isGlobal: true,
-        }),
-        CexesModule.register({
-            isGlobal: true,
-        }),
-        AxiosModule.register({
-            isGlobal: true,
-        }),
-        PriceFeedsModule.register({
-            isGlobal: true,
-        }),
-        FormulasModule.register({
-            isGlobal: true,
-        }),
-        MathModule.register({
-            isGlobal: true,
-        }),
+        // EnvModule.forRoot(),
+        // MixinModule.register({
+        //     isGlobal: true,
+        // }),
+        // FilesystemModule.register({
+        //     isGlobal: true,
+        // }),
+        // PrimaryMongoDbModule.register({
+        //     isGlobal: true,
+        //     memoryStorage: true,
+        // }),
+        // WinstonModule.register({
+        //     isGlobal: true,
+        //     appName: "kani-algorithm-tests",
+        //     level: WinstonLevel.Verbose,
+        // }),
+        // MixinModule.register({
+        //     isGlobal: true,
+        // }),
+        // CacheModule.register({
+        //     isGlobal: true,
+        // }),
+        // StreamAsyncIteratorModule.register({
+        //     isGlobal: true,
+        // }),
+        // CexesModule.register({
+        //     isGlobal: true,
+        // }),
+        // AxiosModule.register({
+        //     isGlobal: true,
+        // }),
+        // PriceFeedsModule.register({
+        //     isGlobal: true,
+        // }),
+        // FormulasModule.register({
+        //     isGlobal: true,
+        // }),
+        // MathModule.register({
+        //     isGlobal: true,
+        // }),
         // AxiosModule.register({
         //     isGlobal: true,
         // }),
@@ -190,7 +157,8 @@ import { TickBoundsService } from "./tick-bounds.service"
         //ComputeSwapAmountsService,
         // RpcTestsService,
         // FeesTestService,
-        TickBoundsService,
+        // TickBoundsService,
+        MathService,
     ],
 })
 export class AppModule { }

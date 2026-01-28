@@ -103,13 +103,19 @@ export class FeesV2Service {
             })
         }
         // get the fees for the bot
-        const { feeA, feeB, snapshotAt } = await this.feesOrchestratorService.fees({
+        const { 
+            feeA, 
+            feeB, 
+            snapshotAt, 
+            rewards 
+        } = await this.feesOrchestratorService.fees({
             bot, liquidityPool 
         })
         return {
             feeA: feeA.toNumber(),
             feeB: feeB.toNumber(),
             snapshotAt: snapshotAt.toDate(),
+            rewards,
         }
     }
 }

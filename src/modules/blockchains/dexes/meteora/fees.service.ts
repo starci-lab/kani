@@ -223,7 +223,8 @@ export class MeteoraFeesService implements IFeesService {
                 amount: totalFeeY,
                 decimals: new Decimal(tokenB.decimals),
             }),  
-            rewards: [],
+            rewards: {
+            },
             snapshotAt: state.dynamic.snapshotAt,
         }
     }

@@ -157,6 +157,7 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             feeGrowthGlobalA: state.feeGrowthGlobalA,
             feeGrowthGlobalB: state.feeGrowthGlobalB,
             snapshotAt: this.dayjsService.now(),
+            rewardLastUpdatedTimeMs: state.rewardLastUpdatedTimeMs,
         }
         await this.asyncService.allIgnoreError(
             [

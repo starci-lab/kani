@@ -170,6 +170,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                 tokenAddress: `0x${reward.rewardCoinType}`,
                 emissionPerSecond: reward.rewardPerSeconds,
                 growthGlobal: reward.rewardGrowthGlobal,
+                lastUpdateTimeMs: reward.lastUpdateTime,
             })),
             feeGrowthGlobalA: state.feeGrowthGlobalX,
             feeGrowthGlobalB: state.feeGrowthGlobalY,

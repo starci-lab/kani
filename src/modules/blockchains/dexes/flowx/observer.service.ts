@@ -163,6 +163,7 @@ export class FlowXObserverService implements OnApplicationBootstrap, OnModuleIni
                 tokenAddress: `0x${reward.rewardCoinType}`,
                 emissionPerSecond: reward.rewardPerSeconds,
                 growthGlobal: reward.rewardGrowthGlobal,
+                lastUpdateTimeMs: reward.lastUpdateTime,
             })),
             feeGrowthGlobalA: state.feeGrowthGlobalX,
             feeGrowthGlobalB: state.feeGrowthGlobalY,
