@@ -5,13 +5,13 @@ import {
     ConfigurableModuleClass 
 } from "./socketio.module-definition"
 import {
-    WsTransformService 
-} from "./transform.service"
+    WsResponseService 
+} from "./response.service"
 
 @Module({
     providers: [
-        WsTransformService,
+        WsResponseService,
     ],
-    exports: [WsTransformService],
+    exports: [WsResponseService],
 })
 export class SocketIoModule extends ConfigurableModuleClass {}

@@ -1,74 +1,71 @@
 import {
-    OnGatewayInit, 
+    OnGatewayInit,
     OnGatewayDisconnect,
     SubscribeMessage,
     MessageBody,
-    ConnectedSocket
+    ConnectedSocket,
 } from "@nestjs/websockets"
 import {
-    DynamicWebSocketGateway, 
-    socketIoPrivyAuthMiddleware, 
-    WsSuccessMessage
+    socketIoPrivyAuthMiddleware,
+    WsResponseService,
+    WsSuccessMessage,
+    WsTransformInterceptor,
+    DynamicLiquidityPoolInfoWebSocketGateway,
 } from "@modules/socketio"
 import {
-    TypedSocket 
+    TypedSocket,
 } from "@modules/socketio"
 import {
-    Namespace 
+    Namespace,
 } from "socket.io"
 import {
-    WebSocketServer 
+    WebSocketServer,
 } from "@nestjs/websockets"
 import {
-    Interval 
+    Interval,
 } from "@nestjs/schedule"
 import {
     AsyncService,
-    InjectSuperJson
 } from "@modules/mixin"
 import {
-    envConfig 
+    envConfig,
 } from "@modules/env"
 import {
     CacheKey,
-    CacheService, 
-    DynamicLiquidityPoolStateCacheResult
+    CacheService,
 } from "@modules/cache"
 import {
     SubscribeDynamicLiquidityPoolsInfoEventPayload,
     PublicationEvent,
     SubscriptionEvent,
+    PublicationDynamicLiquidityPoolInfo,
+    PublicationDynamicLiquidityPoolsInfoEventPayload,
 } from "../config"
 import {
-    PrimaryMemoryStorageService 
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    SomeLiquidityPoolsNotFoundException 
+    SomeLiquidityPoolsNotFoundException,
 } from "@exceptions"
 import {
-    WsTransformInterceptor, WsTransformService 
-} from "@modules/socketio"
-import {
-    UseInterceptors 
+    UseInterceptors,
 } from "@nestjs/common"
-import SuperJSON from "superjson"
 
-@DynamicWebSocketGateway()
-export class DynamicGateway implements OnGatewayInit, OnGatewayDisconnect {
+@DynamicLiquidityPoolInfoWebSocketGateway()
+export class DynamicLiquidityPoolInfoGateway implements OnGatewayInit, OnGatewayDisconnect {
     /**
      * Map of socket client id -> subscribed liquidity pool ids.
      *
      * We keep this in-memory because subscriptions are ephemeral and tied
      * to the socket connection lifecycle.
      */
-    private readonly dynamicLiquidityPoolsInfoMap: Map<string, Array<string>> = new Map()
+    private readonly liquidityPoolIdsByClientId: Map<string, Array<string>> = new Map()
+
     constructor(
         private readonly asyncService: AsyncService,
         private readonly cacheService: CacheService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly wsTransformService: WsTransformService,
-        @InjectSuperJson()
-        private readonly superJson: SuperJSON,
+        private readonly wsResponseService: WsResponseService,
     ) {}
     
     @WebSocketServer()
@@ -102,7 +99,7 @@ export class DynamicGateway implements OnGatewayInit, OnGatewayDisconnect {
             )
         }
         // Store the latest subscription list for this client.
-        this.dynamicLiquidityPoolsInfoMap.set(
+        this.liquidityPoolIdsByClientId.set(
             client.id,
             data.ids
         )
@@ -110,7 +107,7 @@ export class DynamicGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     handleDisconnect(client: TypedSocket) {
         // Cleanup subscription state to avoid memory leaks.
-        this.dynamicLiquidityPoolsInfoMap.delete(client.id)
+        this.liquidityPoolIdsByClientId.delete(client.id)
     }
 
     /**
@@ -123,13 +120,13 @@ export class DynamicGateway implements OnGatewayInit, OnGatewayDisconnect {
     async publishDynamicLiquidityPoolsInfo() {
         // 1) Build a unique set of pool ids requested by any connected client.
         const allSubscribedIds = new Set<string>()
-        for (const ids of this.dynamicLiquidityPoolsInfoMap.values()) {
+        for (const ids of this.liquidityPoolIdsByClientId.values()) {
             for (const id of ids) {
                 allSubscribedIds.add(id)
             }
         }
         // 2) Fetch latest dynamic info for each unique pool id (CLMM first, then DLMM).
-        const resultsById: Record<string, DynamicLiquidityPoolStateCacheResult> = {
+        const results: Record<string, PublicationDynamicLiquidityPoolInfo> = {
         }
         const promises: Array<Promise<void>> = Array.from(allSubscribedIds).map(
             async (liquidityPoolId) => {
@@ -138,7 +135,7 @@ export class DynamicGateway implements OnGatewayInit, OnGatewayDisconnect {
                     args: [liquidityPoolId],
                 })
                 if (clmm) {
-                    resultsById[liquidityPoolId] = clmm
+                    results[liquidityPoolId] = clmm
                     return
                 }
                 const dlmm = await this.cacheService.get({
@@ -146,30 +143,30 @@ export class DynamicGateway implements OnGatewayInit, OnGatewayDisconnect {
                     args: [liquidityPoolId],
                 })
                 if (dlmm) {
-                    resultsById[liquidityPoolId] = dlmm
+                    results[liquidityPoolId] = dlmm
                 }
             }
         )
         await this.asyncService.allIgnoreError(promises)
-
-        // 3) Publish per-client subset.
+        // 3) Publish (currently: same aggregated results payload to every client).
         for (const [
             clientId,
-            ids,
-        ] of this.dynamicLiquidityPoolsInfoMap.entries()) {
+        ] of this.liquidityPoolIdsByClientId.entries()) {
             const client = this.server.sockets.get(clientId)
             if (!client) {
                 continue
             }
-            const results = ids
-                .map((id) => resultsById[id])
-                .filter(Boolean)
-            this.wsTransformService.transformSuccess({
+            const payload: PublicationDynamicLiquidityPoolsInfoEventPayload = {
+                results,
+            }
+            this.wsResponseService.success({
                 message: "Dynamic liquidity pools info published successfully",
-                data: results,
+                data: payload,
                 client,
                 eventName: PublicationEvent.DynamicLiquidityPoolsInfo,
             })
         }
     }
 }
+
+

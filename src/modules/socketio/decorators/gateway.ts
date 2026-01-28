@@ -5,33 +5,22 @@ import {
     createCorsOptions 
 } from "@modules/cors"
 
-export const PYTH_NAMESPACE = "pyth"
-export const CORE_NAMESPACE = "core"
-export const DYNAMIC_NAMESPACE = "dynamic"
-export const PythWebSocketGateway = () => WebSocketGateway(
-    {
-    // we use the namespace "PYTH"
-        namespace: PYTH_NAMESPACE,
-        // we allow both websocket and polling
-        transports: ["websocket",
-            "polling"],
-        // we allow cors
-        // cors: createCorsOptions(),
-        perMessageDeflate: true,
-    })
+export const PRICE_NAMESPACE = "price"
+export const DYNAMIC_LIQUIDITY_POOL_INFO_NAMESPACE = "dynamic-liquidity-pool-info"
 
-export const CoreWebSocketGateway = () => WebSocketGateway(
+export const PriceWebSocketGateway = () => WebSocketGateway(
     {
-        namespace: CORE_NAMESPACE,
+        namespace: PRICE_NAMESPACE,
         transports: ["websocket",
             "polling"],
         cors: createCorsOptions(),
         perMessageDeflate: true,
-    })
+    }
+)
 
-export const DynamicWebSocketGateway = () => WebSocketGateway(
+export const DynamicLiquidityPoolInfoWebSocketGateway = () => WebSocketGateway(
     {
-        namespace: DYNAMIC_NAMESPACE,
+        namespace: DYNAMIC_LIQUIDITY_POOL_INFO_NAMESPACE,
         transports: ["websocket",
             "polling"],
         cors: createCorsOptions(),

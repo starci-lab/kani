@@ -26,3 +26,24 @@ export class TokenNotFoundException extends AbstractException {
         )
     }
 }
+
+/** Thrown when some tokens are not found */
+export interface SomeTokensNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    actualCount: number
+    expectedCount: number
+}
+export class SomeTokensNotFoundException extends AbstractException {
+    constructor(
+        { actualCount, expectedCount, originalError }: SomeTokensNotFoundExceptionMetadata
+    ) {
+        super(
+            "Some tokens are not found",
+            "SOME_TOKENS_NOT_FOUND_EXCEPTION",
+            {
+                actualCount,
+                expectedCount,
+                originalError,
+            }
+        )
+    }
+}

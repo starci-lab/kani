@@ -1,8 +1,17 @@
 import {
-    OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect 
+    OnGatewayInit,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    SubscribeMessage,
+    MessageBody,
+    ConnectedSocket,
 } from "@nestjs/websockets"
 import {
-    PythWebSocketGateway, socketIoAuthMiddleware 
+    PriceWebSocketGateway,
+    socketIoPrivyAuthMiddleware,
+    WsResponseService,
+    WsSuccessMessage,
+    WsTransformInterceptor,
 } from "@modules/socketio"
 import {
     WinstonLog 
@@ -23,12 +32,6 @@ import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    AsyncService 
-} from "@modules/mixin"
-import {
-    PythPriceUpdated 
-} from "@modules/socketio"
-import {
     WinstonService 
 } from "@modules/winston"
 import {
@@ -37,13 +40,34 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    SubscriptionEvent,
+    SubscribePricesEventPayload,
+    PublicationEvent,
+    PublicationPrice,
+    PublicationPriceEventPayload,
+} from "../config"
+import {
+    SomeTokensNotFoundException,
+} from "@exceptions"
+import {
+    UseInterceptors,
+} from "@nestjs/common"
+import {
+    AsyncService 
+} from "@modules/mixin"
 
-@PythWebSocketGateway()
+@PriceWebSocketGateway()
 export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+    /**
+     * Map of socket client id -> subscribed token ids (token record ids from memory storage).
+     */
+    private readonly tokenIdMap: Map<string, Array<string>> = new Map()
     constructor(
         private readonly winstonService: WinstonService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly priceService: PriceService,
+        private readonly wsResponseService: WsResponseService,
         private readonly asyncService: AsyncService,
     ) {}
     
@@ -51,7 +75,8 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
     private readonly server: Namespace
 
     afterInit() {
-        this.server.use(socketIoAuthMiddleware) // use the auth middleware for the namespace
+        // Use Privy auth middleware for the namespace.
+        this.server.use(socketIoPrivyAuthMiddleware)
     }
 
     // handle the client connected
@@ -68,6 +93,8 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
 
     // handle the client disconnected
     handleDisconnect(client: TypedSocket) {
+        // Cleanup subscription state to avoid memory leaks.
+        this.tokenIdMap.delete(client.id)
         // log the client disconnected to loki
         this.winstonService.log(
             WinstonLog.SocketIoClientDisconnected,
@@ -78,35 +105,91 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
         )
     }
 
-    // handle the pyth sui prices updated with interval 5s
-    @Interval(envConfig().socketIo.price.broadcast.interval)
-    async fetchAndBroadcast() {
-        const tokens = this.primaryMemoryStorageService.tokenCollection.find()
-        const promises: Array<Promise<void>> = []
-        const prices: Array<PythPriceUpdated> = []
-        for (const token of tokens) {
-            promises.push(
-                (
-                    async () => {
-                        // get the price from the cache
-                        const priceCacheResult = await this.priceService.resolvePrice(
-                            {
-                                token,
-                            }
-                        )
-                        // if the price is not found, push the price 0
-                        if (!priceCacheResult) {
-                            prices.push({
-                                tokenId: token.displayId,
-                                price: 0,
-                            })
-                            return
-                        }
-                    }
-                )
-                ()
-            )
+    /**
+     * Subscribe a client to periodic Pyth price updates for a set of tokens.
+     *
+     * The ids are token record ids in the primary memory storage (`tokenCollection`),
+     * not display ids.
+     */
+    @WsSuccessMessage("Subscribed to pyth prices successfully")
+    @UseInterceptors(WsTransformInterceptor)
+    @SubscribeMessage(SubscriptionEvent.Price)
+    async handleSubscribePrice(
+        @ConnectedSocket() client: TypedSocket,
+        @MessageBody() data: SubscribePricesEventPayload,
+    ) {
+        // Validate token ids exist.
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
+            id: {
+                $in: data.ids,
+            },
+        })
+        if (tokens.length !== data.ids.length) {
+            throw new SomeTokensNotFoundException({
+                actualCount: tokens.length,
+                expectedCount: data.ids.length,
+            })
         }
+        this.tokenIdMap.set(client.id,
+            data.ids)
+    }
+
+    /**
+     * Periodically fetch Pyth prices and publish to each subscribed client.
+     *
+     * Note: we compute a shared unique token set across all clients to avoid
+     * redundant work.
+     */
+    @Interval(envConfig().socketIo.price.broadcast.interval)
+    async publishPrices() {
+        // 1) Build unique token id set across all clients.
+        const allTokenIds = new Set<string>()
+        for (const ids of this.tokenIdMap.values()) {
+            for (const id of ids) {
+                allTokenIds.add(id)
+            }
+        }
+        if (allTokenIds.size === 0) {
+            return
+        }
+
+        // 2) Fetch token documents once.
+        const tokens = this.primaryMemoryStorageService.tokenCollection.find({
+            id: {
+                $in: Array.from(allTokenIds),
+            },
+        })
+
+        // 3) Resolve prices concurrently and store by token record id.
+        const results: Record<string, PublicationPrice> = {
+        }
+        const promises: Array<Promise<void>> = tokens.map(
+            async (token) => {
+                const { price } = await this.priceService.resolvePrice({
+                    token,
+                })
+                results[token.id] = {
+                    price: price.toNumber(),
+                }
+            }
+        )
         await this.asyncService.allIgnoreError(promises)
+
+        // 4) Publish per-client subset.
+        for (const [clientId] of this.tokenIdMap.entries()) {
+            const client = this.server.sockets.get(clientId)
+            if (!client) {
+                continue
+            }
+            const payload: PublicationPriceEventPayload = {
+                results,
+            }
+            this.wsResponseService.success({
+                message: "Prices updated successfully",
+                data: payload,
+                client,
+                eventName: PublicationEvent.Price,
+            })
+        }
     }
 }

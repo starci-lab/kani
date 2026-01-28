@@ -15,19 +15,20 @@ import {
 } from "@exceptions"
 
 @Injectable()
-export class WsTransformService {
+export class WsResponseService {
     constructor(
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
     ) {}
 
-    transformSuccess<T = unknown>(
+    success<T = unknown>(
         { 
             message, 
             data, 
             client, 
             eventName 
-        }: TransformSuccessParams<T>): void {
+        }: WsSuccessResponseParams<T>,
+    ): void {
         client.emit(
             eventName,
             {
@@ -38,12 +39,13 @@ export class WsTransformService {
         )
     }
 
-    transformError(
+    error(
         { 
             client, 
             error,
             eventName 
-        }: TransformErrorParams): void {
+        }: WsErrorResponseParams,
+    ): void {
         client.emit(
             eventName,
             {
@@ -55,14 +57,14 @@ export class WsTransformService {
     }
 }
 
-export interface TransformSuccessParams<T = unknown> {
+export interface WsSuccessResponseParams<T = unknown> {
     message: string
     data: T
     client: TypedSocket
     eventName: string
 }
 
-export interface TransformErrorParams {
+export interface WsErrorResponseParams {
     client: TypedSocket
     eventName: string
     error: AbstractException
