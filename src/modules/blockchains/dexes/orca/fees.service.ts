@@ -235,6 +235,9 @@ export class OrcaFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        // ----------------------------
+        // Rewards (CLMM time-based)
+        // ----------------------------
         const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {

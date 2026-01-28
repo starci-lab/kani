@@ -109,7 +109,7 @@ export class RaydiumFeesService implements IFeesService {
 
         const { pda: tickArrayUpperPda } =
             await this.tickArrayService.getPda({
-                poolStateAddress: address(state.static.poolAddress),
+                poolStateAddress: address(_state.static.poolAddress),
                 tickIndex: tickUpper,
                 tickSpacing: new BN(_state.static.clmmState.tickSpacing),
                 programAddress: address(programAddress),
@@ -260,6 +260,9 @@ export class RaydiumFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        // ----------------------------
+        // Rewards (CLMM time-based)
+        // ----------------------------
         const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
