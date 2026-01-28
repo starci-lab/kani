@@ -107,6 +107,7 @@ implements OnModuleInit, OnApplicationBootstrap {
                         volume24H: new Decimal(item.volume_24h_usd).toString(),
                         tvl: new Decimal(item.liquidity_usd).toString(),
                         apr24H: new Decimal(item.apr).div(item.apr_percent).toString(),
+                        liquidity: new Decimal(item.liquidity_usd).toString(),
                     }
                     await this.cacheService.set(
                         {

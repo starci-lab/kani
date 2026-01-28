@@ -1,7 +1,15 @@
-import { Injectable, OnApplicationBootstrap } from "@nestjs/common"
-import { CetusFeesService, LiquidityPoolStateService } from "@modules/blockchains"
-import { BotSchema, InjectPrimaryMongoose, LiquidityPoolId, PrimaryMemoryStorageService } from "@modules/databases"
-import { Connection } from "mongoose"
+import {
+    Injectable, OnApplicationBootstrap 
+} from "@nestjs/common"
+import {
+    CetusFeesService, LiquidityPoolStateService 
+} from "@modules/blockchains"
+import {
+    BotSchema, InjectPrimaryMongoose, LiquidityPoolId, PrimaryMemoryStorageService 
+} from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
 
 @Injectable()
 export class FeesTestService implements OnApplicationBootstrap {

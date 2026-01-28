@@ -14,8 +14,14 @@ import {
     StaticModule 
 } from "./static"
 import {
-    ActivityModule 
-} from "./activity"
+    TransactionsModule 
+} from "./transactions"
+import {
+    PositionsModule 
+} from "./positions"
+import {
+    HistoriesModule
+} from "./histories"
 
 @Module({
     imports: [
@@ -28,8 +34,14 @@ import {
         StaticModule.register({
             isGlobal: true 
         }),
-        ActivityModule.register({
-            isGlobal: true 
+        TransactionsModule.register({
+            isGlobal: true,
+        }),
+        PositionsModule.register({
+            isGlobal: true,
+        }),
+        HistoriesModule.register({
+            isGlobal: true,
         }),
     ],
 })

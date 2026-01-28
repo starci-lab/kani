@@ -97,7 +97,7 @@ implements OnModuleInit, OnApplicationBootstrap
                     if (!liquidityPool || !liquidityPool.displayId) {
                         return
                     }
-                    const { stats, tvlUsdc } = item
+                    const { stats, tvlUsdc, liquidity } = item
                     const { fees, volume, yieldOverTvl } = stats["24h"]
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: new Decimal(fees).toString(),
@@ -105,6 +105,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         tvl: new Decimal(tvlUsdc).toString(),
                         apr24H: new Decimal(yieldOverTvl).mul(365).toString(),
                         snapshotAt,
+                        liquidity: new Decimal(liquidity).toString(),
                     }
                     await this.cacheService.set(
                         {

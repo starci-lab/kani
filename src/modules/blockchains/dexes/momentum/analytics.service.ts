@@ -101,6 +101,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         aprBreakdown: { total },
                         volume24h,
                         tvl,
+                        liquidity,
                     } = pool
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: new Decimal(fees24h).toString(),
@@ -108,6 +109,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         tvl: new Decimal(tvl).toString(),
                         apr24H: new Decimal(total).div(365).div(100).toString(),
                         snapshotAt,
+                        liquidity: new Decimal(liquidity).toString(),
                     }
                     await this.cacheService.set(
                         {

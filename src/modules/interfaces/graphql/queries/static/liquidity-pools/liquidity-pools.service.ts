@@ -19,13 +19,16 @@ import {
     PaginateService,
     ValidateService,
 } from "../../../services"
-import BN from "bn.js"
 import {
     ExactlyTwoTokensRequiredException 
 } from "@modules/exceptions"
 import {
     PositionAssociateService 
 } from "@modules/databases"
+import {
+    CacheKey, CacheService 
+} from "@modules/cache"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class LiquidityPoolsService {
@@ -35,6 +38,7 @@ export class LiquidityPoolsService {
         private readonly asyncService: AsyncService,
         private readonly validateService: ValidateService,
         private readonly paginateService: PaginateService,
+        private readonly cacheService: CacheService,
     ) { }
 
     async liquidityPools({
@@ -55,9 +59,15 @@ export class LiquidityPoolsService {
         // require paginate
         const isRequiredPaginate = ids?.length || addresses?.length
         // get the liquidity pools
-        let liquidityPools = this.memoryStorageService.liquidityPoolCollection.chain().find().data({
-            removeMeta: true,
-        })
+        let liquidityPools = this.memoryStorageService
+            .liquidityPoolCollection
+            .chain()
+            .find()
+            .data(
+                {
+                    removeMeta: true,
+                }
+            )
         // filter by dex ids
         if (dexIds?.length) {
             liquidityPools = liquidityPools.filter(
@@ -136,6 +146,29 @@ export class LiquidityPoolsService {
                 )
             }
         }
+        const promises: Array<Promise<void>> = []
+        for (const liquidityPool of liquidityPools) {
+            promises.push(
+                (async () => {
+                    const analytics = await this.cacheService.get(
+                        {
+                            key: CacheKey.PoolAnalytics,
+                            args: [liquidityPool.id],
+                        }
+                    )
+                    if (analytics) {
+                        liquidityPool.analytics = {
+                            fees24H: analytics.fee24H,
+                            volume24H: analytics.volume24H,
+                            tvl: analytics.tvl,
+                            apr24H: analytics.apr24H,
+                            liquidity: analytics.liquidity,
+                        }
+                    }
+                })(),
+            )
+        }
+        await this.asyncService.allIgnoreError(promises)
         // sort
         if (sortBy) {
             switch (sortBy) {
@@ -143,10 +176,12 @@ export class LiquidityPoolsService {
                 liquidityPools = liquidityPools.sort(
                     (prev, next) =>
                         asc
-                            ? (prev.dynamicInfo?.apr24H ?? 0) -
-                                    (next.dynamicInfo?.apr24H ?? 0)
-                            : (next.dynamicInfo?.apr24H ?? 0) -
-                                    (prev.dynamicInfo?.apr24H ?? 0),
+                            ? new Decimal(prev.analytics?.apr24H ?? 0)
+                                .sub(new Decimal(next.analytics?.apr24H ?? 0))
+                                .toNumber()
+                            : new Decimal(next.analytics?.apr24H ?? 0)
+                                .sub(new Decimal(prev.analytics?.apr24H ?? 0))
+                                .toNumber(),
                 )
                 break
             }
@@ -154,10 +189,12 @@ export class LiquidityPoolsService {
                 liquidityPools = liquidityPools.sort(
                     (prev, next) =>
                         asc
-                            ? (prev.dynamicInfo?.volume24H ?? 0) -
-                                    (next.dynamicInfo?.volume24H ?? 0)
-                            : (next.dynamicInfo?.volume24H ?? 0) -
-                                    (prev.dynamicInfo?.volume24H ?? 0),
+                            ? new Decimal(prev.analytics?.volume24H ?? 0)
+                                .sub(new Decimal(next.analytics?.volume24H ?? 0))
+                                .toNumber()
+                            : new Decimal(next.analytics?.volume24H ?? 0)
+                                .sub(new Decimal(prev.analytics?.volume24H ?? 0))
+                                .toNumber(),
                 )
                 break
             }
@@ -165,10 +202,12 @@ export class LiquidityPoolsService {
                 liquidityPools = liquidityPools.sort(
                     (prev, next) =>
                         asc
-                            ? (prev.dynamicInfo?.fees24H ?? 0) -
-                                    (next.dynamicInfo?.fees24H ?? 0)
-                            : (next.dynamicInfo?.fees24H ?? 0) -
-                                    (prev.dynamicInfo?.fees24H ?? 0),
+                            ? new Decimal(prev.analytics?.fees24H ?? 0)
+                                .sub(new Decimal(next.analytics?.fees24H ?? 0))
+                                .toNumber()
+                            : new Decimal(next.analytics?.fees24H ?? 0)
+                                .sub(new Decimal(prev.analytics?.fees24H ?? 0))
+                                .toNumber(),
                 )
                 break
             }
@@ -176,18 +215,17 @@ export class LiquidityPoolsService {
                 liquidityPools = liquidityPools.sort(
                     (prev, next) =>
                         asc
-                            ? new BN(prev.dynamicInfo?.liquidity ?? 0)
-                                .sub(new BN(next.dynamicInfo?.liquidity ?? 0))
+                            ? new Decimal(prev.analytics?.liquidity ?? 0)
+                                .sub(new Decimal(next.analytics?.liquidity ?? 0))
                                 .toNumber()
-                            : new BN(next.dynamicInfo?.liquidity ?? 0)
-                                .sub(new BN(prev.dynamicInfo?.liquidity ?? 0))
+                            : new Decimal(next.analytics?.liquidity ?? 0)
+                                .sub(new Decimal(prev.analytics?.liquidity ?? 0))
                                 .toNumber(),
                 )
                 break
             }
             }
         }
-
         return {
             count,
             data: liquidityPools,

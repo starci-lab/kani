@@ -5,9 +5,8 @@ import {
 import {
     InjectPrimaryMongoose, 
     BotSchema,
-    PositionSchema, 
-    UserSchema, 
-    BotActivePositionSchema
+    UserSchema,
+    ActivePositionAssociateService,
 } from "@modules/databases"
 import {
     Connection 
@@ -16,26 +15,36 @@ import {
     BotV2Request,
 } from "./bot-v2.dto"
 import {
-    BotNotFoundException 
+    BotNotFoundException,
+    UserNotFoundException,
 } from "@modules/exceptions"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"
-import {
-    UserNotFoundException 
-} from "@modules/exceptions"
 
 @Injectable()
 export class BotV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly activePositionAssociateService: ActivePositionAssociateService,
     ) {}
 
     async botV2(
-        { id }: BotV2Request,
+        request: BotV2Request,
         response: VerifyAccessTokenResponse,
     ): Promise<BotSchema> {
+        const {
+            id,
+            associate: {
+                activePosition: {
+                    liquidityPool: activePositionLiquidityPoolAssociate = false,
+                    position: activePositionPositionAssociate = false,
+                } = {
+                },
+            } = {
+            },
+        } = request
         // retrieve the user from the response
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
@@ -59,13 +68,16 @@ export class BotV2Service {
             })
         }
         const botJson = bot.toJSON<BotSchema>()
-        const activePosition = await this.connection
-            .model<PositionSchema>(PositionSchema.name).findOne({
-                bot: bot.id,
-                isActive: true,
-            })
-        if (activePosition) {
-            botJson.activePosition = activePosition.toJSON<BotActivePositionSchema>()
+        // Optional associations for bot.activePosition.
+        if (activePositionPositionAssociate) {
+            await this.activePositionAssociateService
+                .attachAssociatedPositionsToBotActivePositions([botJson])
+        }
+        if (activePositionLiquidityPoolAssociate) {
+            await this.activePositionAssociateService
+                .attachAssociatedLiquidityPoolToBotActivePositions(
+                    [botJson]
+                )
         }
         return botJson
     }

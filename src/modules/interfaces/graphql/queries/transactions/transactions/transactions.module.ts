@@ -17,5 +17,5 @@ import {
         TransactionsResolver,
     ],
 })
-export class TransactionsModule extends ConfigurableModuleClass {}
+export class TransactionsV1Module extends ConfigurableModuleClass {}
 

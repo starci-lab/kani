@@ -21,5 +21,5 @@ import {
         ValidateService,
     ],
 })
-export class PositionsModule extends ConfigurableModuleClass {}
+export class PositionsV1Module extends ConfigurableModuleClass {}
 

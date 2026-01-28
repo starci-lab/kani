@@ -55,6 +55,7 @@ export interface PoolAnalyticsCacheResult extends SnapshotCacheResult {
     volume24H: string
     tvl: string
     apr24H: string
+    liquidity: string
 }
 
 export type SessionIdCacheResult = boolean

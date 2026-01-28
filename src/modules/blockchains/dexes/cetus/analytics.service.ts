@@ -117,11 +117,12 @@ implements OnModuleInit, OnApplicationBootstrap
                     const apr = item.totalApr
                     const { fee, vol } = item.stats[0]
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
-                        fee24H: fee,
-                        volume24H: vol,
-                        tvl,
-                        apr24H: apr,
+                        fee24H: new Decimal(fee).toString(),
+                        volume24H: new Decimal(vol).toString(),
+                        tvl: new Decimal(tvl).toString(),
+                        apr24H: new Decimal(apr).toString(),
                         snapshotAt,
+                        liquidity: new Decimal(tvl).toString(),
                     }
                     await this.cacheService.set(
                         {

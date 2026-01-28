@@ -16,6 +16,17 @@ import {
 import {
     PrimaryMemoryStorageService
 } from "../memory"
+import {
+    CacheKey,
+    CacheService 
+} from "@modules/cache"
+import {
+    AsyncService 
+} from "@modules/mixin"
+
+export interface AttachAssociatedLiquidityPoolToBotActivePositionsOptions {
+    withAnalytics: boolean
+}
 
 @Injectable()
 export class ActivePositionAssociateService {
@@ -23,13 +34,15 @@ export class ActivePositionAssociateService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly cacheService: CacheService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
    * Attach associated Position data into each bot.activePosition.
    */
     async attachAssociatedPositionsToBotActivePositions(
-        bots: Array<BotSchema>,
+        bots: Array<BotSchema>
     ): Promise<void> {
         const botsWithActivePosition = bots.filter(
             (
@@ -69,7 +82,6 @@ export class ActivePositionAssociateService {
                     botId: bot.id,
                 })
             }
-
             bot.activePosition.associatedPosition =
                 position.toJSON<PositionSchema>()
         }
@@ -79,7 +91,7 @@ export class ActivePositionAssociateService {
    * Attach associated LiquidityPool data into each bot.activePosition.
    */
     async attachAssociatedLiquidityPoolToBotActivePositions(
-        bots: Array<BotSchema>,
+        bots: Array<BotSchema>
     ): Promise<void> {
         const botsWithActivePosition = bots.filter(
             (
@@ -115,20 +127,41 @@ export class ActivePositionAssociateService {
                     liquidityPool,
                 ]),
             )
-
+        
+        const promises: Array<Promise<void>> = []
         for (const bot of botsWithActivePosition) {
-            const liquidityPoolId =
+            promises.push(
+                (async () => {
+                    const liquidityPoolId =
                 bot.activePosition.liquidityPool.toString()
-            const liquidityPool =
+                    const liquidityPool =
                 liquidityPoolMap.get(liquidityPoolId)
 
-            if (!liquidityPool) {
-                throw new LiquidityPoolNotFoundException({
-                    id: liquidityPoolId,
-                })
-            }
-            bot.activePosition.associatedLiquidityPool =
+                    if (!liquidityPool) {
+                        throw new LiquidityPoolNotFoundException({
+                            id: liquidityPoolId,
+                        })
+                    }
+                    const analytics = await this.cacheService.get(
+                        {
+                            key: CacheKey.PoolAnalytics,
+                            args: [liquidityPoolId],
+                        }
+                    )
+                    if (analytics) {
+                        liquidityPool.analytics = {
+                            fees24H: analytics.fee24H,
+                            volume24H: analytics.volume24H,
+                            tvl: analytics.tvl,
+                            apr24H: analytics.apr24H,
+                            liquidity: analytics.liquidity,
+                        }
+                    }
+                    bot.activePosition.associatedLiquidityPool =
                 liquidityPool
+                })(),
+            )
         }
+        await this.asyncService.allIgnoreError(promises)
     }
 }

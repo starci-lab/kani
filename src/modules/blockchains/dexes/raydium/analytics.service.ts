@@ -108,6 +108,7 @@ implements OnModuleInit, OnApplicationBootstrap
                         tvl: new Decimal(tvl).toString(),
                         apr24H: new Decimal(day.apr).div(365).div(100).toString(),
                         snapshotAt,
+                        liquidity: new Decimal(tvl).toString(),
                     }
                     await this.cacheService.set(
                         {

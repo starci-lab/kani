@@ -173,9 +173,10 @@ implements OnModuleInit, OnApplicationBootstrap
                             cacheResult: {
                                 fee24H: new Decimal(item.stats.fee24H).toString(),
                                 volume24H: new Decimal(item.stats.volume24H).toString(),
-                                tvl: item.stats.totalLiquidityInUSD,
+                                tvl: new Decimal(item.stats.totalLiquidityInUSD).toString(),
                                 apr24H: new Decimal(item.stats.apr).div(365).div(100).toString(),
                                 snapshotAt,
+                                liquidity: new Decimal(item.stats.totalLiquidityInUSD).toString(),
                             },
                         }
                     )

@@ -48,62 +48,40 @@ import {
     description:
         "GraphQL response object for fetching dynamic liquidity pool info.",
 })
-export class GraphQLDynamicLiquidityPoolInfo {
-    @Field(() => Float,
+export class GraphQLLiquidityPoolAnalytics {
+    @Field(
+        () => String,
         {
-            nullable: true,
-            description: "Current tick index of the liquidity pool.",
-        })
-        tickCurrent?: number
-
-    @Field(() => Float,
-        {
-            nullable: true,
-            description: "Current active id of the liquidity pool.",
-        })
-        activeId?: number
-
-    @Field(() => String,
-        {
-            nullable: true,
-            description: "Total liquidity of the pool.",
-        })
-        liquidity?: string
-
-    @Field(() => Float,
-        {
-            nullable: true,
-            description: "Current price of the pool.",
-        })
-        price?: number
-
-    @Field(() => Float,
-        {
-            nullable: true,
             description: "Trading volume in the last 24 hours.",
         })
-        volume24H?: number
+        volume24H: string
 
-    @Field(() => Float,
+    @Field(
+        () => String,
         {
-            nullable: true,
             description: "Fees generated in the last 24 hours.",
         })
-        fees24H?: number
+        fees24H: string
 
-    @Field(() => Float,
+    @Field(
+        () => String,
         {
-            nullable: true,
             description: "APR calculated over the last 24 hours.",
         })
-        apr24H?: number
+        apr24H: string
 
-    @Field(() => String,
+    @Field(
+        () => String,
         {
-            nullable: true,
             description: "Total value locked (TVL) of the pool.",
         })
-        tvl?: string
+        tvl: string
+    @Field(
+        () => String,
+        {
+            description: "Liquidity of the pool.",
+        })
+        liquidity: string
 }
 
 @Schema({
@@ -250,12 +228,12 @@ export class LiquidityPoolSchema extends AbstractSchema {
     })
         url: string
 
-    @Field(() => GraphQLDynamicLiquidityPoolInfo,
+    @Field(() => GraphQLLiquidityPoolAnalytics,
         {
             description: "The dynamic liquidity pool info",
             nullable: true,
         })
-        dynamicInfo?: GraphQLDynamicLiquidityPoolInfo
+        analytics?: GraphQLLiquidityPoolAnalytics
 
     @Field(() => Float,
         {
