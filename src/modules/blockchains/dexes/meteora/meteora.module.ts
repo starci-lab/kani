@@ -23,11 +23,8 @@ import {
     MeteoraAnalyticsService 
 } from "./analytics.service"
 import {
-    MeteoraFeesService 
-} from "./fees.service"
-import {
-    MeteoraReservesService 
-} from "./reserves.service"
+    MeteoraReservesWithFeesService,
+} from "./reserves-with-fees.service"
 
 @Injectable()
 export class MeteoraModule extends ConfigurableModuleClass {
@@ -62,17 +59,11 @@ export class MeteoraModule extends ConfigurableModuleClass {
         ) {
             providers.push(MeteoraAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(MeteoraFeesService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(MeteoraReservesService)
+            providers.push(MeteoraReservesWithFeesService)
         }
         return {
             ...dynamicModule    ,

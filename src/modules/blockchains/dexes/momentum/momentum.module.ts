@@ -20,11 +20,8 @@ import {
     MomentumAnalyticsService 
 } from "./analytics.service"
 import {
-    MomentumFeesService 
-} from "./fees.service"
-import {
-    MomentumReservesService 
-} from "./reserves.service"
+    MomentumReservesWithFeesService,
+} from "./reserves-with-fees.service"
 @Injectable()
 export class MomentumModule extends ConfigurableModuleClass {
     static register(
@@ -56,17 +53,11 @@ export class MomentumModule extends ConfigurableModuleClass {
         ) {
             providers.push(MomentumAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(MomentumFeesService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(MomentumReservesService)
+            providers.push(MomentumReservesWithFeesService)
         }
         return {
             ...dynamicModule,

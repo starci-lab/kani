@@ -153,9 +153,8 @@ import {
             enabled: {
                 observe: false,
                 action: false,
-                fees: true,
+                reservesWithFees: true,
                 analytics: false,
-                reserves: true,
             },
         }),
         WinstonModule.register({

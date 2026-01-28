@@ -14,20 +14,17 @@ import {
     OrcaClosePositionActionService 
 } from "./close-position-action.service"
 import {
-    OrcaFeesService 
-} from "./fees.service"
-import { 
-    TickArrayService, 
-    OpenPositionInstructionService, 
-    ClosePositionInstructionService, 
-    PositionService 
+    TickArrayService,
+    OpenPositionInstructionService,
+    ClosePositionInstructionService,
+    PositionService,
 } from "./transactions"
 import {
-    OrcaAnalyticsService 
+    OrcaAnalyticsService,
 } from "./analytics.service"
 import {
-    OrcaReservesService 
-} from "./reserves.service"
+    OrcaReservesWithFeesService,
+} from "./reserves-with-fees.service"
 
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
@@ -62,18 +59,14 @@ export class OrcaModule extends ConfigurableModuleClass {
         ) {
             providers.push(OrcaAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(TickArrayService,
-                OrcaFeesService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(OrcaReservesService)
+            providers.push(
+                TickArrayService,
+                OrcaReservesWithFeesService,
+            )
         }
         return {
             ...dynamicModule,

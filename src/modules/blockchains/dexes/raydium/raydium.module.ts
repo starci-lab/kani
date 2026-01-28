@@ -23,11 +23,8 @@ import {
     RaydiumAnalyticsService 
 } from "./analytics.service"
 import {
-    RaydiumFeesService 
-} from "./fees.service"
-import {
-    RaydiumReservesService 
-} from "./reserves.service"
+    RaydiumReservesWithFeesService,
+} from "./reserves-with-fees.service"
 
 @Injectable()
 export class RaydiumModule extends ConfigurableModuleClass {
@@ -62,22 +59,14 @@ export class RaydiumModule extends ConfigurableModuleClass {
         ) {
             providers.push(RaydiumAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
             providers.push(
-                TickArrayService, 
-                PersonalPositionService, 
-                RaydiumFeesService
-            )
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(
-                RaydiumReservesService
+                TickArrayService,
+                PersonalPositionService,
+                RaydiumReservesWithFeesService,
             )
         }
         return {

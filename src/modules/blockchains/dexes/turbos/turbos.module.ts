@@ -20,11 +20,8 @@ import {
     TurbosAnalyticsService 
 } from "./analytics.service"
 import {
-    TurbosReservesService 
-} from "./reserves.service"
-import {
-    TurbosFeesService 
-} from "./fees.service"
+    TurbosReservesWithFeesService,
+} from "./reserves-with-fees.service"
 
 @Injectable()
 export class TurbosModule extends ConfigurableModuleClass {
@@ -59,17 +56,11 @@ export class TurbosModule extends ConfigurableModuleClass {
         ) {
             providers.push(TurbosAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(TurbosReservesService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
-        ) {
-            providers.push(TurbosFeesService)
+            providers.push(TurbosReservesWithFeesService)
         }
         return {
             ...dynamicModule,

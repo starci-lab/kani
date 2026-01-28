@@ -1,14 +1,17 @@
 import {
-    FeesParams, FeesResult, IFeesService 
+    ReservesWithFeesParams,
+    ReservesWithFeesResult,
+    IReservesWithFeesService,
+    ClmmLiquidityPoolState,
 } from "../../interfaces"
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import {
-    RpcExecutorService 
+    RpcExecutorService,
 } from "../../clients"
 import {
-    RpcAccessType 
+    RpcAccessType,
 } from "@modules/filesystem"
 import {
     address,
@@ -24,17 +27,15 @@ import {
     TokenNotFoundException,
 } from "@modules/exceptions"
 import {
-    Position 
+    Position,
 } from "./beets"
 import {
-    decodeTickArray 
+    decodeTickArray,
 } from "@orca-so/whirlpools-client"
 import BN from "bn.js"
 import {
-    ClmmLiquidityPoolState 
-} from "../../interfaces"
-import {
-    Q128, Q64 
+    Q128,
+    Q64,
 } from "@modules/utils"
 import {
     DexId,
@@ -42,30 +43,32 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    TickArrayService 
+    TickArrayService,
 } from "./transactions"
 import {
-    Decimal 
+    Decimal,
 } from "decimal.js"
 import {
     ClmmFeesFormulaService,
     ClmmRewardsFormulaService,
+    ClmmReservesFormulaService,
 } from "../../formulas"
 import {
     DynamicClmmRewardInfo,
 } from "@modules/cache"
 
 @Injectable()
-export class OrcaFeesService implements IFeesService {
+export class OrcaReservesWithFeesService implements IReservesWithFeesService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly tickArrayService: TickArrayService,
         private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
         private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
+        private readonly clmmReservesFormulaService: ClmmReservesFormulaService,
     ) {}
 
-    async fees({ bot, state }: FeesParams): Promise<FeesResult> {
+    async reservesWithFees({ bot, state }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
@@ -73,7 +76,7 @@ export class OrcaFeesService implements IFeesService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        // Stage: state validation (fees require an active position)
+        // Stage: state validation (requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -90,31 +93,50 @@ export class OrcaFeesService implements IFeesService {
         const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
         const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
 
-        const { programAddress } =
-      _state.static.metadata as OrcaLiquidityPoolMetadata
+        const { programAddress } = _state.static.metadata as OrcaLiquidityPoolMetadata
+
+        // ----------------------------
+        // Token validation
+        // ----------------------------
+        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenA.toString(),
+            },
+        })
+        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: _state.static.tokenB.toString(),
+            },
+        })
+
+        if (!tokenA || !tokenB) {
+            throw new InvalidPoolTokensException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
 
         // ----------------------------
         // PDA derivation
         // ----------------------------
         const { pda: tickArrayLowerPda } =
-      await this.tickArrayService.getPda({
-          poolStateAddress: address(_state.static.poolAddress),
-          tickIndex: tickLower,
-          tickSpacing: new BN(_state.static.clmmState.tickSpacing),
-          bot,
-          pdaOnly: true,
-          programAddress: address(programAddress),
-      })
+            await this.tickArrayService.getPda({
+                poolStateAddress: address(_state.static.poolAddress),
+                tickIndex: tickLower,
+                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+                bot,
+                pdaOnly: true,
+                programAddress: address(programAddress),
+            })
 
         const { pda: tickArrayUpperPda } =
-      await this.tickArrayService.getPda({
-          poolStateAddress: address(_state.static.poolAddress),
-          tickIndex: tickUpper,
-          tickSpacing: new BN(_state.static.clmmState.tickSpacing),
-          bot,
-          pdaOnly: true,
-          programAddress: address(programAddress),
-      })
+            await this.tickArrayService.getPda({
+                poolStateAddress: address(_state.static.poolAddress),
+                tickIndex: tickUpper,
+                tickSpacing: new BN(_state.static.clmmState.tickSpacing),
+                bot,
+                pdaOnly: true,
+                programAddress: address(programAddress),
+            })
 
         // ----------------------------
         // BATCH FETCH: position + 2 tick arrays
@@ -175,36 +197,16 @@ export class OrcaFeesService implements IFeesService {
         }
 
         // ----------------------------
-        // Token validation
-        // ----------------------------
-        const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: _state.static.tokenA.toString(),
-            },
-        })
-        const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: _state.static.tokenB.toString(),
-            },
-        })
-
-        if (!tokenA || !tokenB) {
-            throw new InvalidPoolTokensException({
-                liquidityPoolId: _state.static.displayId,
-            })
-        }
-
-        // ----------------------------
         // Tick index resolution
         // ----------------------------
         const lowerStart = new BN(tickArrayLower.data.startTickIndex)
         const upperStart = new BN(tickArrayUpper.data.startTickIndex)
 
-        const tickLowerIndex = new BN(tickLower)
+        const tickLowerIndex = tickLower
             .sub(lowerStart)
             .div(new BN(_state.static.clmmState.tickSpacing))
 
-        const tickUpperIndex = new BN(tickUpper)
+        const tickUpperIndex = tickUpper
             .sub(upperStart)
             .div(new BN(_state.static.clmmState.tickSpacing))
 
@@ -213,6 +215,25 @@ export class OrcaFeesService implements IFeesService {
 
         const liquidity = new BN(bot.activePosition.associatedPosition.clmmState.liquidity)
 
+        // ----------------------------
+        // Reserves calculation
+        // ----------------------------
+        const {
+            reserveA,
+            reserveB,
+        } = this.clmmReservesFormulaService.computeReserves({
+            tickLower,
+            tickUpper,
+            tickCurrent: _state.dynamic.tickCurrent,
+            liquidity,
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
+            fixedPointScale: Q64,
+        })
+
+        // ----------------------------
+        // Fee calculation
+        // ----------------------------
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
             feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
@@ -221,8 +242,8 @@ export class OrcaFeesService implements IFeesService {
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideB.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideB.toString()),
             tickCurrent: _state.dynamic.tickCurrent,
-            tickLower: new BN(tickLower),
-            tickUpper: new BN(tickUpper),
+            tickLower,
+            tickUpper,
             feeGrowthInsideLastA: new BN(positionState.feeGrowthCheckpointA.toString()),
             feeGrowthInsideLastB: new BN(positionState.feeGrowthCheckpointB.toString()),
             liquidity,
@@ -258,8 +279,8 @@ export class OrcaFeesService implements IFeesService {
                     rewardGrowthOutsideLower: new BN(tickLowerData.rewardGrowthsOutside[index].toString()),
                     rewardGrowthOutsideUpper: new BN(tickUpperData.rewardGrowthsOutside[index].toString()),
                     tickCurrent: _state.dynamic.tickCurrent,
-                    tickLower: new BN(tickLower),
-                    tickUpper: new BN(tickUpper),
+                    tickLower,
+                    tickUpper,
                     rewardGrowthInsideLast: new BN(posReward.growthInsideCheckpoint.toString()),
                     liquidity,
                     decimals: new Decimal(token.decimals),
@@ -276,6 +297,8 @@ export class OrcaFeesService implements IFeesService {
         )
 
         return {
+            reserveA,
+            reserveB,
             feeA,
             feeB,
             rewards,

@@ -1,63 +1,47 @@
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import {
-    InjectPrimaryMongoose,
+    ActivePositionAssociateService,
     BotSchema,
+    InjectPrimaryMongoose,
     PositionSchema,
     PrimaryMemoryStorageService,
-    UserSchema,
-    ActivePositionAssociateService,
 } from "@modules/databases"
 import {
-    Connection 
+    Connection,
 } from "mongoose"
 import {
-    FeesV2Request,
-    FeesV2ResponseData,
-} from "./fees-v2.dto"
+    ReservesWithFeesRequest,
+    ReservesWithFeesResponseData,
+} from "./reserves-with-fees.dto"
 import {
-    VerifyAccessTokenResponse 
-} from "@privy-io/node"
-import { 
-    ActivePositionNotFoundException, 
-    BotNotFoundException, 
-    BotNotOwnedByUserException, 
+    UserJwtLike,
+} from "@modules/passport"
+import {
+    ActivePositionNotFoundException,
+    BotNotFoundException,
+    BotNotOwnedByUserException,
     LiquidityPoolNotFoundException,
-    UserNotFoundException,
 } from "@modules/exceptions"
 import {
-    FeesOrchestratorService 
+    ReservesWithFeesOrchestratorService,
 } from "@modules/blockchains"
 
 @Injectable()
-export class FeesV2Service {
+export class ReservesWithFeesService {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly feesOrchestratorService: FeesOrchestratorService,
+        private readonly reservesWithFeesOrchestratorService: ReservesWithFeesOrchestratorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly activePositionAssociateService: ActivePositionAssociateService,
-    ) { }
+    ) {}
 
-    async feesV2(
-        {
-            botId,
-        }: FeesV2Request,
-        response: VerifyAccessTokenResponse,
-    ): Promise<FeesV2ResponseData> {
-        // retrieve the user from the response
-        const user = await this.connection
-            .model<UserSchema>(UserSchema.name)
-            .findOne({
-                privyUserId: response.user_id 
-            })
-        if (!user) {
-            throw new UserNotFoundException({
-                privyUserId: response.user_id,
-            })
-        }
-        // check if the bot exists
+    async reservesWithFees(
+        { botId }: ReservesWithFeesRequest,
+        userLike: UserJwtLike,
+    ): Promise<ReservesWithFeesResponseData> {
         const bot = await this.connection
             .model<BotSchema>(BotSchema.name)
             .findById(botId)
@@ -66,32 +50,29 @@ export class FeesV2Service {
                 id: botId,
             })
         }
-        // check if the bot is owned by the user
-        if (bot.user.toString() !== user.id) {
+        if (bot.user.toString() !== userLike.id) {
             throw new BotNotOwnedByUserException({
                 id: botId,
-                userId: user.id,
+                userId: userLike.id,
             })
         }
-        // attach the associated position to the active position
         await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions([bot])
         await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions([bot])
-        // get the active position
         const activePosition = await this.connection
             .model<PositionSchema>(PositionSchema.name)
             .findOne({
                 bot: botId,
                 isActive: true,
             })
-        if (!activePosition 
-            || activePosition.bot.toString() !== botId 
+        if (
+            !activePosition
+            || activePosition.bot.toString() !== botId
             || !activePosition.isActive
         ) {
             throw new ActivePositionNotFoundException({
                 botId,
             })
         }
-        // get the liquidity pool
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
             id: {
                 $eq: activePosition.liquidityPool.toString(),
@@ -102,21 +83,27 @@ export class FeesV2Service {
                 id: activePosition.liquidityPool.toString(),
             })
         }
-        // get the fees for the bot
-        const { 
-            feeA, 
-            feeB, 
-            snapshotAt, 
-            rewards 
-        } = await this.feesOrchestratorService.fees({
-            bot, liquidityPool 
+        const {
+            reserveA,
+            reserveB,
+            feeA,
+            feeB,
+            rewards,
+            snapshotAt,
+        } = await this.reservesWithFeesOrchestratorService.reservesWithFees({
+            bot,
+            liquidityPool,
         })
+        const rewardsAsNumbers = Object.fromEntries(
+            Object.entries(rewards).map(([k, v]) => [k, v.toNumber()]),
+        )
         return {
+            reserveA: reserveA.toNumber(),
+            reserveB: reserveB.toNumber(),
             feeA: feeA.toNumber(),
             feeB: feeB.toNumber(),
+            rewards: rewardsAsNumbers,
             snapshotAt: snapshotAt.toDate(),
-            rewards,
         }
     }
 }
-

@@ -35,13 +35,10 @@ import {
     ClosePositionOrchestratorService 
 } from "./close-position-orchestrator.service"
 import {
-    FeesOrchestratorService 
-} from "./fees-orchestrator.service"
+    ReservesWithFeesOrchestratorService,
+} from "./reserves-with-fees-orchestrator.service"
 import {
-    ReservesOrchestratorService 
-} from "./reserves-orchestrator.service"
-import {
-    MeteoraModule 
+    MeteoraModule,
 } from "./meteora"
 
 @Module({
@@ -136,17 +133,11 @@ export class DexesModule extends ConfigurableModuleClass {
             providers.push(OpenPositionOrchestratorService)
             providers.push(ClosePositionOrchestratorService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(FeesOrchestratorService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(ReservesOrchestratorService)
+            providers.push(ReservesWithFeesOrchestratorService)
         }
         return {
             ...dynamicModule,

@@ -20,11 +20,8 @@ import {
     CetusClosePositionActionService 
 } from "./close-position-action.service"
 import {
-    CetusFeesService 
-} from "./fees.service"
-import {
-    CetusReservesService 
-} from "./reserves.service"
+    CetusReservesWithFeesService,
+} from "./reserves-with-fees.service"
 
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
@@ -57,17 +54,11 @@ export class CetusModule extends ConfigurableModuleClass {
         ) {
             providers.push(CetusAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(CetusFeesService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(CetusReservesService)
+            providers.push(CetusReservesWithFeesService)
         }
         return {
             ...dynamicModule,

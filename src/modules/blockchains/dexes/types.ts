@@ -12,8 +12,7 @@ export interface DexesOptions {
         observe?: boolean
         action?: boolean
         analytics?: boolean
-        fees?: boolean
-        reserves?: boolean
+        reservesWithFees?: boolean
     }
 }
 
@@ -22,8 +21,7 @@ export interface DexOptions {
         observe?: boolean
         action?: boolean
         analytics?: boolean
-        fees?: boolean
-        reserves?: boolean
+        reservesWithFees?: boolean
     }
 }
 

@@ -1,5 +1,6 @@
 import {
-    Inject, Injectable 
+    Inject,
+    Injectable,
 } from "@nestjs/common"
 import {
     BotSchema,
@@ -13,71 +14,73 @@ import {
     ActivePositionNotFoundException,
 } from "@modules/exceptions"
 import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+    MODULE_OPTIONS_TOKEN,
+    OPTIONS_TYPE,
 } from "./dexes.module-definition"
 import {
-    FeesResult,
+    ReservesWithFeesResult,
     LiquidityPoolState,
 } from "../interfaces"
 import {
-    OrcaFeesService 
+    OrcaReservesWithFeesService,
 } from "./orca"
 import {
-    MeteoraFeesService 
+    MeteoraReservesWithFeesService,
 } from "./meteora"
 import {
-    RaydiumFeesService 
+    RaydiumReservesWithFeesService,
 } from "./raydium"
 import {
-    FlowXFeesService 
+    FlowXReservesWithFeesService,
 } from "./flowx"
 import {
-    CetusFeesService 
+    CetusReservesWithFeesService,
 } from "./cetus"
 import {
-    TurbosFeesService 
+    TurbosReservesWithFeesService,
 } from "./turbos"
 import {
-    MomentumFeesService 
+    MomentumReservesWithFeesService,
 } from "./momentum"
 import {
-    LiquidityPoolStateService 
+    LiquidityPoolStateService,
 } from "./liquidity-pool-state.service"
 
 /**
- * FeesOrchestratorService
+ * ReservesWithFeesOrchestratorService
  *
- * High-level orchestration layer for calculating fees.
+ * High-level orchestration layer for calculating reserves and fees together.
  *
  * Responsibilities:
- * - Evaluate whether fees SHOULD be calculated
+ * - Evaluate whether reserves and fees SHOULD be calculated
  * - Validate liquidity pool and DEX support
- * - Calculate fees
+ * - Calculate reserves and fees in a single call
  */
 @Injectable()
-export class FeesOrchestratorService {
+export class ReservesWithFeesOrchestratorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly orcaFeesService: OrcaFeesService,
-        private readonly flowxFeesService: FlowXFeesService,
-        private readonly cetusFeesService: CetusFeesService,
-        private readonly turbosFeesService: TurbosFeesService,
-        private readonly momentumFeesService: MomentumFeesService,
-        private readonly meteoraFeesService: MeteoraFeesService,
-        private readonly raydiumFeesService: RaydiumFeesService,
+        private readonly orcaReservesWithFeesService: OrcaReservesWithFeesService,
+        private readonly meteoraReservesWithFeesService: MeteoraReservesWithFeesService,
+        private readonly raydiumReservesWithFeesService: RaydiumReservesWithFeesService,
+        private readonly flowxReservesWithFeesService: FlowXReservesWithFeesService,
+        private readonly cetusReservesWithFeesService: CetusReservesWithFeesService,
+        private readonly turbosReservesWithFeesService: TurbosReservesWithFeesService,
+        private readonly momentumReservesWithFeesService: MomentumReservesWithFeesService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
     ) { }
+
     /**
-     * Execute on-chain fees transaction.
-     */ 
-    async fees(
+     * Execute reserves and fees calculation.
+     */
+    async reservesWithFees(
         {
             bot,
             liquidityPool,
-        }: OrchestrateFeesParams,
-    ): Promise<FeesResult> {
+        }: OrchestrateReservesWithFeesParams,
+    ): Promise<ReservesWithFeesResult> {
         // Stage: on-chain/data fetch (load latest pool state from cache/on-chain sources)
         const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
         const state: LiquidityPoolState = {
@@ -105,7 +108,7 @@ export class FeesOrchestratorService {
                 }
             )
         }
-        // Stage: state validation (fees require an active position)
+        // Stage: state validation (requires an active position)
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
@@ -113,66 +116,52 @@ export class FeesOrchestratorService {
         }
         switch (dex.displayId) {
         case DexId.FlowX:
-            return await this.flowxFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.flowxReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         case DexId.Cetus:
-            return await this.cetusFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.cetusReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         case DexId.Turbos:
-            return await this.turbosFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.turbosReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         case DexId.Momentum:
-            return await this.momentumFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.momentumReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         case DexId.Raydium: {
-            return await this.raydiumFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.raydiumReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         }
         case DexId.Orca: {
-            return await this.orcaFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.orcaReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         }
         case DexId.Meteora: {
-            return await this.meteoraFeesService.fees(
-                { 
-                    bot, 
-                    state 
-                }
-            )
+            return await this.meteoraReservesWithFeesService.reservesWithFees({
+                bot,
+                state,
+            })
         }
         default:
             throw new DexNotImplementedException({
                 id: state.static.dex.toString(),
             })
         }
-    }   
+    }
 }
 
-export interface OrchestrateFeesParams {
+export interface OrchestrateReservesWithFeesParams {
     bot: BotSchema
     liquidityPool: LiquidityPoolSchema
 }

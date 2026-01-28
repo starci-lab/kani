@@ -1,11 +1,14 @@
 import {
-    FeesParams, FeesResult, IFeesService 
+    ReservesWithFeesParams,
+    ReservesWithFeesResult,
+    IReservesWithFeesService,
+    ClmmLiquidityPoolState,
 } from "../../interfaces"
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import {
-    RpcExecutorService 
+    RpcExecutorService,
 } from "../../clients"
 import {
     ActivePositionNotFoundException,
@@ -18,63 +21,60 @@ import {
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
-    ClmmLiquidityPoolState 
-} from "../../interfaces"
-import {
-    Q128, Q64 
+    Q128,
+    Q64,
 } from "@modules/utils"
 import {
-    RpcAccessType 
+    RpcAccessType,
 } from "@modules/filesystem"
 import Decimal from "decimal.js"
-import { 
-    CetusSuiObjectPositionInfoFields, 
-    CetusSuiObjectTickFields, 
-    CetusSuiSkipListNodeFields, 
-    parseCetusPositionInfo, 
-    parseCetusTick
+import {
+    CetusSuiObjectPositionInfoFields,
+    CetusSuiObjectTickFields,
+    CetusSuiSkipListNodeFields,
+    parseCetusPositionInfo,
+    parseCetusTick,
 } from "./struct"
 import {
-    SuiMoveObjectData 
+    SuiMoveObjectData,
 } from "../../structs"
 import {
     ClmmFeesFormulaService,
     ClmmRewardsFormulaService,
+    ClmmReservesFormulaService,
 } from "../../formulas"
 import {
-    DynamicClmmRewardInfo 
+    DynamicClmmRewardInfo,
 } from "@modules/cache"
-import { 
-    CetusLiquidityPoolMetadata, 
-    DexId, 
-    PrimaryMemoryStorageService 
+import {
+    CetusLiquidityPoolMetadata,
+    DexId,
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 
 @Injectable()
-export class CetusFeesService implements IFeesService {
+export class CetusReservesWithFeesService implements IReservesWithFeesService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
         private readonly clmmFeesFormulaService: ClmmFeesFormulaService,
         private readonly clmmRewardsFormulaService: ClmmRewardsFormulaService,
+        private readonly clmmReservesFormulaService: ClmmReservesFormulaService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
-    async fees({ state, bot }: FeesParams): Promise<FeesResult> {
+    async reservesWithFees({ state, bot }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
-        // Stage: state validation (fees require an active position)
-        if (!bot.activePosition || !bot.activePosition.associatedPosition
-        ) {
+        // Stage: state validation (requires an active position)
+        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
         // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
-            throw new LiquidityPoolClmmStateNotFoundException(
-                {
-                    liquidityPoolId: _state.static.displayId,
-                }
-            )
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -112,21 +112,18 @@ export class CetusFeesService implements IFeesService {
             },
         })
         if (!tickLowerDataRaw) {
-            throw new SuiObjectNotFoundException(
-                {
-                    name: ErrorSuiObjectName.TickLower,
-                    parentId: tickManagerId,
-                    dexId: DexId.Cetus,
-                    liquidityPoolId: _state.static.displayId,
-                }
-            )
+            throw new SuiObjectNotFoundException({
+                name: ErrorSuiObjectName.TickLower,
+                parentId: tickManagerId,
+                dexId: DexId.Cetus,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const _tickLowerData = tickLowerDataRaw as unknown as SuiMoveObjectData<
-        CetusSuiSkipListNodeFields<CetusSuiObjectTickFields
-        , `${string}::tick::Tick`
-        >>
+            CetusSuiSkipListNodeFields<CetusSuiObjectTickFields, `${string}::tick::Tick`>
+        >
         const tickLowerData = parseCetusTick(_tickLowerData.content.fields.value.fields.value.fields)
-        // get the tick upper data
+        // Stage: on-chain fetch (tick upper dynamic field)
         const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -140,59 +137,67 @@ export class CetusFeesService implements IFeesService {
             },
         })
         if (!tickUpperDataRaw) {
-            throw new SuiObjectNotFoundException(
-                {
-                    name: ErrorSuiObjectName.TickUpper,
-                    parentId: tickManagerId,
-                    dexId: DexId.Cetus,
-                    liquidityPoolId: _state.static.displayId,
-                }
-            )
+            throw new SuiObjectNotFoundException({
+                name: ErrorSuiObjectName.TickUpper,
+                parentId: tickManagerId,
+                dexId: DexId.Cetus,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const _tickUpperData = tickUpperDataRaw as unknown as SuiMoveObjectData<
-        CetusSuiSkipListNodeFields<
-        CetusSuiObjectTickFields, 
-        `${string}::tick::Tick`
-        >>
+            CetusSuiSkipListNodeFields<CetusSuiObjectTickFields, `${string}::tick::Tick`>
+        >
         const tickUpperData = parseCetusTick(_tickUpperData.content.fields.value.fields.value.fields)
-        // ----------------------------
-        // Position checkpoint
-        // ----------------------------
-        // ----------------------------
-        // Fee calculation (WRAPPED)
-        // ----------------------------
-        const { data: positionInfoDataRaw } = await this.rpcExecutorService.withSuiClient(
-            {
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    return suiClient.getDynamicFieldObject({
-                        parentId: positionManagerId,
-                        name: {
-                            type: "0x2::object::ID",
-                            value: positionId,
-                        },
-                    })
-                },
-            }
-        )
-        if (!positionInfoDataRaw) {
-            throw new SuiObjectNotFoundException(
-                {
-                    name: ErrorSuiObjectName.PositionInfo,
+        // Stage: on-chain fetch (position info)
+        const { data: positionInfoDataRaw } = await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Http,
+            callback: async ({ suiClient }) => {
+                return suiClient.getDynamicFieldObject({
                     parentId: positionManagerId,
-                    dexId: DexId.Cetus,
-                    liquidityPoolId: _state.static.displayId,
-                }
-            )
+                    name: {
+                        type: "0x2::object::ID",
+                        value: positionId,
+                    },
+                })
+            },
+        })
+        if (!positionInfoDataRaw) {
+            throw new SuiObjectNotFoundException({
+                name: ErrorSuiObjectName.PositionInfo,
+                parentId: positionManagerId,
+                dexId: DexId.Cetus,
+                liquidityPoolId: _state.static.displayId,
+            })
         }
         const _positionInfoData = positionInfoDataRaw as unknown as SuiMoveObjectData<
-        CetusSuiSkipListNodeFields<
-        CetusSuiObjectPositionInfoFields, 
-        `${string}::position::PositionInfo`
-        >>
+            CetusSuiSkipListNodeFields<CetusSuiObjectPositionInfoFields, `${string}::position::PositionInfo`>
+        >
         const positionInfoData = parseCetusPositionInfo(
             _positionInfoData.content.fields.value.fields.value.fields
         )
+
+        const tickLowerBn = new BN(tickLower.toNumber())
+        const tickUpperBn = new BN(tickUpper.toNumber())
+
+        // ----------------------------
+        // Reserves calculation
+        // ----------------------------
+        const {
+            reserveA,
+            reserveB,
+        } = this.clmmReservesFormulaService.computeReserves({
+            tickLower: tickLowerBn,
+            tickUpper: tickUpperBn,
+            tickCurrent: _state.dynamic.tickCurrent,
+            liquidity: positionInfoData.liquidity,
+            decimalsA: new Decimal(tokenA.decimals),
+            decimalsB: new Decimal(tokenB.decimals),
+            fixedPointScale: Q64,
+        })
+
+        // ----------------------------
+        // Fee calculation
+        // ----------------------------
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
             feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
@@ -201,8 +206,8 @@ export class CetusFeesService implements IFeesService {
             feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideB.toString()),
             feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideB.toString()),
             tickCurrent: _state.dynamic.tickCurrent,
-            tickLower: new BN(tickLower.toNumber()),
-            tickUpper: new BN(tickUpper.toNumber()),
+            tickLower: tickLowerBn,
+            tickUpper: tickUpperBn,
             feeGrowthInsideLastA: positionInfoData.feeGrowthInsideA,
             feeGrowthInsideLastB: positionInfoData.feeGrowthInsideB,
             liquidity: positionInfoData.liquidity,
@@ -215,9 +220,10 @@ export class CetusFeesService implements IFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
+        // ----------------------------
+        // Rewards (CLMM time-based)
+        // ----------------------------
         const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
-        const tickLowerBn = new BN(tickLower.toNumber())
-        const tickUpperBn = new BN(tickUpper.toNumber())
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
                 const tokenAddress = clmmReward.tokenAddress
@@ -255,10 +261,12 @@ export class CetusFeesService implements IFeesService {
         )
 
         return {
-            snapshotAt: _state.dynamic.snapshotAt,
+            reserveA,
+            reserveB,
             feeA,
             feeB,
             rewards,
+            snapshotAt: _state.dynamic.snapshotAt,
         }
     }
 

@@ -20,11 +20,8 @@ import {
     FlowXAnalyticsService 
 } from "./analytics.service"
 import {
-    FlowXReservesService 
-} from "./reserves.service"
-import {
-    FlowXFeesService 
-} from "./fees.service"
+    FlowXReservesWithFeesService,
+} from "./reserves-with-fees.service"
 
 @Injectable()
 export class FlowXModule extends ConfigurableModuleClass {
@@ -57,17 +54,11 @@ export class FlowXModule extends ConfigurableModuleClass {
         ) {
             providers.push(FlowXAnalyticsService)
         }
-        if (typeof options.enabled === "boolean" 
+        if ((typeof options.enabled === "boolean" 
             ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.fees ?? true))
+            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
-            providers.push(FlowXFeesService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reserves ?? true))
-        ) {
-            providers.push(FlowXReservesService)
+            providers.push(FlowXReservesWithFeesService)
         }
         return {
             ...dynamicModule,

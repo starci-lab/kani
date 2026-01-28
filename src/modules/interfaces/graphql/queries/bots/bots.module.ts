@@ -1,38 +1,32 @@
 import {
-    Module 
+    Module,
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass 
+    ConfigurableModuleClass,
 } from "./bots.module-definition"
 import {
-    BotModule 
+    BotModule,
 } from "./bot"
 import {
-    BotV2Module 
+    BotV2Module,
 } from "./bot-v2"
 import {
-    BotsModule as BotsCursorModule 
+    BotsModule as BotsCursorModule,
 } from "./bots"
 import {
-    BotsV2Module 
+    BotsV2Module,
 } from "./bots-v2"
 import {
-    BotsModule as BotsQueryModule 
+    BotsModule as BotsQueryModule,
 } from "./bots"
 import {
-    FeesModule 
-} from "./fees"
+    ReservesWithFeesModule,
+} from "./reserves-with-fees"
 import {
-    FeesV2Module 
-} from "./fees-v2"
+    ReservesWithFeesV2Module,
+} from "./reserves-with-fees-v2"
 import {
-    ReservesModule 
-} from "./reserves"
-import {
-    ReservesV2Module 
-} from "./reserves-v2"
-import {
-    PortfolioValueV2Module
+    PortfolioValueV2Module,
 } from "./portfolio-value-v2"
 
 @Module({
@@ -55,21 +49,15 @@ import {
         BotsV2Module.register({
             isGlobal: true,
         }),
-        FeesModule.register({
+        ReservesWithFeesModule.register({
             isGlobal: true,
         }),
-        FeesV2Module.register({
-            isGlobal: true,
-        }),
-        ReservesModule.register({
-            isGlobal: true,
-        }),
-        ReservesV2Module.register({
+        ReservesWithFeesV2Module.register({
             isGlobal: true,
         }),
         PortfolioValueV2Module.register({
             isGlobal: true,
         }),
-    ]
+    ],
 })
 export class BotsModule extends ConfigurableModuleClass {}

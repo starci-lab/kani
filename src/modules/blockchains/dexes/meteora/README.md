@@ -1,6 +1,6 @@
-## Meteora DLMM — Fee calculation (as implemented in `fees.service.ts`)
+## Meteora DLMM — Fee calculation (as implemented in `reserves-with-fees.service.ts`)
 
-The `fees.service.ts` implementation computes the **unclaimed fees** for a Meteora (DLMM) position by iterating each bin in the position range \([minBinId, maxBinId]\), then summing up total fees for **token X (tokenA)** and **token Y (tokenB)**.
+The `reserves-with-fees.service.ts` implementation computes **reserves** and **unclaimed fees** for a Meteora (DLMM) position. The fee part iterates each bin in the position range \([minBinId, maxBinId]\), then sums total fees for **token X (tokenA)** and **token Y (tokenB)**.
 
 ### Inputs (concepts)
 

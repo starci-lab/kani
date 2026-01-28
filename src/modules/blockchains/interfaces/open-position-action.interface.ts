@@ -131,3 +131,23 @@ export interface IReservesService {
     params: ReservesParams,
   ): Promise<ReservesResult>;
 }
+
+export interface ReservesWithFeesParams {
+  bot: BotSchema
+  state: LiquidityPoolState;
+}
+
+export interface ReservesWithFeesResult {
+  reserveA: Decimal;
+  reserveB: Decimal;
+  feeA: Decimal;
+  feeB: Decimal;
+  rewards: Record<string, Decimal>;
+  snapshotAt: Dayjs;
+}
+
+export interface IReservesWithFeesService {
+  reservesWithFees(
+    params: ReservesWithFeesParams,
+  ): Promise<ReservesWithFeesResult>;
+}

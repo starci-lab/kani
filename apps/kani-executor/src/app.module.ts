@@ -208,7 +208,7 @@ import {
             enabled: {
                 observe: false,
                 action: true,
-                fees: false,
+                reservesWithFees: false,
                 analytics: false,
             },
         }),
