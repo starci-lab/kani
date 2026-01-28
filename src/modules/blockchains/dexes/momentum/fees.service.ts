@@ -185,9 +185,12 @@ export class MomentumFeesService implements IFeesService {
         const fields = objectInfo.data.content.fields as unknown as MomentumSuiObjectPositionFields
         const position = parseMomentumPosition(fields)
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideX.toString()),
-            feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideX.toString()),
+            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideX.toString()),
+            feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideX.toString()),
+            feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideY.toString()),
+            feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideY.toString()),
             tickCurrent: _state.dynamic.tickCurrent,
             tickLower,
             tickUpper,

@@ -63,7 +63,7 @@ import {
     SuiEvent 
 } from "@mysten/sui/client"
 import {
-    MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosSuiObjectPositionNFT 
+    MintNftEvent, parseTurbosSuiObjectPositionNFT, TurbosClmmPosition, TurbosSuiObjectPositionNFTFields 
 } from "./struct"
 import {
     envConfig 
@@ -131,7 +131,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                             liquidityPoolId: _state.static.displayId,
                         })
                     }
-                    const positionNftFields = positionNftObjectInfo.data.content as unknown as TurbosSuiObjectPositionNFT
+                    const positionNftFields = positionNftObjectInfo.data.content as unknown as TurbosSuiObjectPositionNFTFields
                     const turbosPositionNFT = parseTurbosSuiObjectPositionNFT(positionNftFields)
                     const clmmPosition = await suiClient.getObject({
                         id: turbosPositionNFT.positionId,

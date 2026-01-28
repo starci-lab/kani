@@ -233,9 +233,12 @@ export class RaydiumFeesService implements IFeesService {
         const liquidity = new BN(positionState.liquidity.toString())
 
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
-            feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
-            feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
+            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideX64A.toString()),
+            feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideX64A.toString()),
+            feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideX64B.toString()),
+            feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideX64B.toString()),
             tickCurrent: _state.dynamic.tickCurrent,
             tickLower: new BN(tickLower),
             tickUpper: new BN(tickUpper),

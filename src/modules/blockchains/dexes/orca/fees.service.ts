@@ -209,9 +209,12 @@ export class OrcaFeesService implements IFeesService {
 
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             // -------- Token A --------
-            feeGrowthGlobal: _state.dynamic.feeGrowthGlobalA,
-            feeGrowthOutsideLower: new BN(tickLowerData.feeGrowthOutsideA.toString()),
-            feeGrowthOutsideUpper: new BN(tickUpperData.feeGrowthOutsideA.toString()),
+            feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
+            feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
+            feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideA.toString()),
+            feeGrowthOutsideUpperA: new BN(tickUpperData.feeGrowthOutsideA.toString()),
+            feeGrowthOutsideLowerB: new BN(tickLowerData.feeGrowthOutsideB.toString()),
+            feeGrowthOutsideUpperB: new BN(tickUpperData.feeGrowthOutsideB.toString()),
             tickCurrent: _state.dynamic.tickCurrent,
             tickLower: new BN(tickLower),
             tickUpper: new BN(tickUpper),

@@ -88,9 +88,12 @@ export class ClmmFeesFormulaService {
      * Compute total fees (token A & token B) for a CLMM position.
      */
     public computeFees({
-        feeGrowthGlobal,
-        feeGrowthOutsideLower,
-        feeGrowthOutsideUpper,
+        feeGrowthGlobalA,
+        feeGrowthGlobalB,
+        feeGrowthOutsideLowerA,
+        feeGrowthOutsideUpperA,
+        feeGrowthOutsideLowerB,
+        feeGrowthOutsideUpperB,
         tickCurrent,
         tickLower,
         tickUpper,
@@ -107,9 +110,9 @@ export class ClmmFeesFormulaService {
     }: ComputeFeesParams): ComputeFeesResult {
         // -------- Token A --------
         const feeGrowthInsideA = this.computeFeeGrowthInside({
-            feeGrowthGlobal,
-            feeGrowthOutsideLower,
-            feeGrowthOutsideUpper,
+            feeGrowthGlobal: feeGrowthGlobalA,
+            feeGrowthOutsideLower: feeGrowthOutsideLowerA,
+            feeGrowthOutsideUpper: feeGrowthOutsideUpperA,
             tickCurrent,
             tickLower,
             tickUpper,
@@ -126,9 +129,9 @@ export class ClmmFeesFormulaService {
 
         // -------- Token B --------
         const feeGrowthInsideB = this.computeFeeGrowthInside({
-            feeGrowthGlobal,
-            feeGrowthOutsideLower,
-            feeGrowthOutsideUpper,
+            feeGrowthGlobal: feeGrowthGlobalB,
+            feeGrowthOutsideLower: feeGrowthOutsideLowerB,
+            feeGrowthOutsideUpper: feeGrowthOutsideUpperB,
             tickCurrent,
             tickLower,
             tickUpper,
@@ -158,28 +161,51 @@ export class ClmmFeesFormulaService {
 
 export interface ComputeFeesParams {
     /**
-     * Global fee growth accumulator of the pool (for a specific token).
+     * Global fee growth accumulator of the pool (for token A).
      *
      * Monotonically increasing value tracking total fees per unit liquidity,
      * represented in fixed-point (usually Q64.64) and wrapped in u128.
      */
-    feeGrowthGlobal: BN
+    feeGrowthGlobalA: BN
+    /**
+     * Global fee growth accumulator of the pool (for token B).
+     *
+     * Monotonically increasing value tracking total fees per unit liquidity,
+     * represented in fixed-point (usually Q64.64) and wrapped in u128.
+     */
+    feeGrowthGlobalB: BN
 
     /**
-     * Fee growth outside the lower tick boundary.
+     * Fee growth outside the lower tick boundary (token A).
      *
      * Used to exclude fee growth that occurred below the position range.
      * Stored as wrapped u128.
      */
-    feeGrowthOutsideLower: BN
+    feeGrowthOutsideLowerA: BN
 
     /**
-     * Fee growth outside the upper tick boundary.
+     * Fee growth outside the upper tick boundary (token A).
      *
      * Used to exclude fee growth that occurred above the position range.
      * Stored as wrapped u128.
      */
-    feeGrowthOutsideUpper: BN
+    feeGrowthOutsideUpperA: BN
+
+    /**
+     * Fee growth outside the lower tick boundary (token B).
+     *
+     * Used to exclude fee growth that occurred below the position range.
+     * Stored as wrapped u128.
+     */
+    feeGrowthOutsideLowerB: BN
+
+    /**
+     * Fee growth outside the upper tick boundary (token B).
+     *
+     * Used to exclude fee growth that occurred above the position range.
+     * Stored as wrapped u128.
+     */
+    feeGrowthOutsideUpperB: BN
 
     /**
      * Current pool tick (current market price).

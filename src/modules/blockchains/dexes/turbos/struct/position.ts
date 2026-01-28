@@ -84,8 +84,8 @@ export type TurbosSuiObjectPositionNFT = SuiObject<
     `${string}::position_nft::PositionNFT`
 >
 
-export const parseTurbosSuiObjectPositionNFT = (target: TurbosSuiObjectPositionNFT): TurbosPositionNFT => {
+export const parseTurbosSuiObjectPositionNFT = (target: TurbosSuiObjectPositionNFTFields): TurbosPositionNFT => {
     return {
-        positionId: target.fields.position_id,
+        positionId: target.position_id,
     }
 }

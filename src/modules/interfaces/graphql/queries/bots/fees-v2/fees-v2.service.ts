@@ -7,6 +7,7 @@ import {
     PositionSchema,
     PrimaryMemoryStorageService,
     UserSchema,
+    ActivePositionAssociateService,
 } from "@modules/databases"
 import {
     Connection 
@@ -36,6 +37,7 @@ export class FeesV2Service {
         private readonly connection: Connection,
         private readonly feesOrchestratorService: FeesOrchestratorService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly activePositionAssociateService: ActivePositionAssociateService,
     ) { }
 
     async feesV2(
@@ -71,6 +73,9 @@ export class FeesV2Service {
                 userId: user.id,
             })
         }
+        // attach the associated position to the active position
+        await this.activePositionAssociateService.attachAssociatedPositionsToBotActivePositions([bot])
+        await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions([bot])
         // get the active position
         const activePosition = await this.connection
             .model<PositionSchema>(PositionSchema.name)
