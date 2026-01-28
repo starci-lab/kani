@@ -4,7 +4,7 @@ import {
     PrepareClosePositionResult,
 } from "@modules/blockchains"
 import {
-    DynamicLiquidityPoolStateCacheResult 
+    DynamicLiquidityPoolInfoCacheResult 
 } from "@modules/cache"
 import {
     BotSchema,
@@ -47,7 +47,7 @@ export interface ProcessParams {
     liquidityPool: LiquidityPoolSchema
 
     /** Liquidity pool state. */
-    dynamicLiquidityPoolInfo: DynamicLiquidityPoolStateCacheResult
+    dynamicLiquidityPoolInfo: DynamicLiquidityPoolInfoCacheResult
 
     /** Target token. */
     targetToken: TokenSchema

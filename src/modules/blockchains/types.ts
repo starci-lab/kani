@@ -11,7 +11,7 @@ import {
     sendAndConfirmTransactionFactory, signTransaction 
 } from "@solana/kit"
 import {
-    DynamicLiquidityPoolStateCacheResult 
+    DynamicLiquidityPoolInfoCacheResult 
 } from "@modules/cache"
 
 // to ensure the amount is correct
@@ -45,12 +45,12 @@ export interface BasePayload {
 
 export interface OpenPositionPayload extends BasePayload {
     liquidityPoolId: LiquidityPoolId
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolStateCacheResult
+    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
 }
 
 export interface ClosePositionPayload extends BasePayload {
     liquidityPoolId: LiquidityPoolId
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolStateCacheResult
+    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
 }
 
 export interface ReconcileBalancePayload extends BasePayload {

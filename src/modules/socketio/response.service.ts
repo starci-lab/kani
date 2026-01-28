@@ -27,14 +27,14 @@ export class WsResponseService {
             data, 
             client, 
             eventName 
-        }: WsSuccessResponseParams<T>,
+        }: Omit<WsResponseParams<T>, "success">,
     ): void {
         client.emit(
             eventName,
             {
                 success: true,
                 message,
-                data: this.superJson.serialize(data),
+                data: this.superJson.stringify(data),
             },
         )
     }
@@ -44,28 +44,24 @@ export class WsResponseService {
             client, 
             error,
             eventName 
-        }: WsErrorResponseParams,
+        }: Omit<WsResponseParams<string>, "success">,
     ): void {
         client.emit(
             eventName,
             {
                 success: false,
-                message: error.message,
-                error: error.name,
+                message: error?.message ?? "Unknown error",
+                error: error?.name ?? "Unknown error",
             },
         )
     }
 }
 
-export interface WsSuccessResponseParams<T = unknown> {
+export interface WsResponseParams<T = unknown> {
     message: string
-    data: T
+    data?: T
     client: TypedSocket
     eventName: string
-}
-
-export interface WsErrorResponseParams {
-    client: TypedSocket
-    eventName: string
-    error: AbstractException
+    success: boolean
+    error?: AbstractException
 }

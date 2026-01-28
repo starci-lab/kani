@@ -106,7 +106,7 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    DynamicLiquidityPoolStateCacheResult 
+    DynamicLiquidityPoolInfoCacheResult 
 } from "@modules/cache"
 
 /**
@@ -534,5 +534,5 @@ export interface EnqueueOpenPositionParams {
     liquidityPool: LiquidityPoolSchema
     jobId: string
     isRetry?: boolean
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolStateCacheResult
+    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
 }

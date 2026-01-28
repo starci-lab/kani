@@ -59,7 +59,7 @@ export interface PoolAnalyticsCacheResult extends SnapshotCacheResult {
 
 export type SessionIdCacheResult = boolean
 
-export type DynamicLiquidityPoolStateCacheResult = DynamicClmmLiquidityPoolInfoCacheResult | DynamicDlmmLiquidityPoolInfoCacheResult
+export type DynamicLiquidityPoolInfoCacheResult = DynamicClmmLiquidityPoolInfoCacheResult | DynamicDlmmLiquidityPoolInfoCacheResult
 
 export type LiquidityPoolSyncedDiagnosticReadinessResult = SnapshotCacheResult
 export interface LiquidityPoolsSyncedDiagnosticReadinessResult extends SnapshotCacheResult {

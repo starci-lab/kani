@@ -6,7 +6,7 @@ import {
     CacheKey,
     DynamicClmmLiquidityPoolInfoCacheResult,
     DynamicDlmmLiquidityPoolInfoCacheResult,
-    DynamicLiquidityPoolStateCacheResult
+    DynamicLiquidityPoolInfoCacheResult
 } from "@modules/cache"
 import {
     Injectable 
@@ -84,7 +84,7 @@ export class LiquidityPoolStateService {
     async getDynamicLiquidityPoolInfo(
         liquidityPool: LiquidityPoolSchema,
     ): Promise<
-    DynamicLiquidityPoolStateCacheResult
+    DynamicLiquidityPoolInfoCacheResult
     > {
         switch (liquidityPool.type) {
         case LiquidityPoolType.Clmm:

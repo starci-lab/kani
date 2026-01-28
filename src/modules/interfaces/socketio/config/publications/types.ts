@@ -1,8 +1,8 @@
 import {
-    DynamicLiquidityPoolStateCacheResult 
+    DynamicLiquidityPoolInfoCacheResult 
 } from "@modules/cache"
 
-export type PublicationDynamicLiquidityPoolInfo = DynamicLiquidityPoolStateCacheResult
+export type PublicationDynamicLiquidityPoolInfo = DynamicLiquidityPoolInfoCacheResult
 
 export interface PublicationDynamicLiquidityPoolsInfoEventPayload {
     results: Record<string, PublicationDynamicLiquidityPoolInfo>
