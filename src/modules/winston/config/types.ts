@@ -84,16 +84,19 @@ export interface SwapTransactionFailedMessage {
  * Google Drive File Uploaded Message
  */
 export interface GoogleDriveFileUploadedMessage {
-    fileId: string
-    folderId: string
-    filePath: string
+    fileId?: string
+    folderId?: string
+    filePath?: string
+    archiveName?: string
 }
 
 /**
  * Google Drive File Downloaded Message
  */
 export interface GoogleDriveFileDownloadedMessage {
-    outputPath: string
+    outputPath?: string
+    fileId?: string
+    archiveName?: string
 }
 
 /**
@@ -1087,4 +1090,165 @@ export interface SocketIoClientConnectedMessage {
 export interface SocketIoClientDisconnectedMessage {
     clientId: string
     userId: string
+}
+
+/**
+ * Mongo Dump Completed Message
+ */
+export interface MongoDumpCompletedMessage {
+    dumpDirName: string
+}
+
+/**
+ * SevenZ Compression Completed Message
+ */
+export interface SevenZCompressionCompletedMessage {
+    archiveName: string
+}
+
+/**
+ * Backup Completed Message
+ */
+export interface BackupCompletedMessage {
+    archiveName: string
+}
+
+/**
+ * Backup Failed Message
+ */
+export interface BackupFailedMessage {
+    error: string
+}
+
+/**
+ * SevenZ Extraction Completed Message
+ */
+export interface SevenZExtractionCompletedMessage {
+    archiveName: string
+}
+
+/**
+ * MongoDB Restore Completed Message
+ */
+export interface MongoDBRestoreCompletedMessage {
+    dbName: string
+    fileId: string
+}
+
+/**
+ * Restore Completed Message
+ */
+export interface RestoreCompletedMessage {
+    archiveName: string
+    fileId: string
+}
+
+/**
+ * Restore Failed Message
+ */
+export interface RestoreFailedMessage {
+    error: string
+}
+
+/**
+ * Seed Completed Message
+ */
+export interface SeedCompletedMessage {
+}
+
+/**
+ * Seed Failed Message
+ */
+export interface SeedFailedMessage {
+    error: string
+}
+
+/**
+ * Migration Started Message
+ */
+export interface MigrationStartedMessage {
+}
+
+/**
+ * Migration Open Snapshots Updated Message
+ */
+export interface MigrationOpenSnapshotsUpdatedMessage {
+    matched: number
+    modified: number
+}
+
+/**
+ * Migration Close Snapshots Updated Message
+ */
+export interface MigrationCloseSnapshotsUpdatedMessage {
+    matched: number
+    modified: number
+}
+
+/**
+ * Migration Completed Message
+ */
+export interface MigrationCompletedMessage {
+    openSnapshots: {
+        matched: number
+        modified: number
+    }
+    closeSnapshots: {
+        matched: number
+        modified: number
+    }
+}
+
+/**
+ * Migration Failed Message
+ */
+export interface MigrationFailedMessage {
+    error: string
+    stack?: string
+}
+
+/**
+ * Key Generated Success Message
+ */
+export interface KeyGeneratedSuccessMessage {
+}
+
+/**
+ * Key Generation Failed Message
+ */
+export interface KeyGenerationFailedMessage {
+    error: string
+}
+
+/**
+ * Key Encrypted Success Message
+ */
+export interface KeyEncryptedSuccessMessage {
+}
+
+/**
+ * Key Decryption Check Failed Message
+ */
+export interface KeyDecryptionCheckFailedMessage {
+    error: string
+}
+
+/**
+ * Key Decryption Check Success Message
+ */
+export interface KeyDecryptionCheckSuccessMessage {
+}
+
+/**
+ * Key Written Success Message
+ */
+export interface KeyWrittenSuccessMessage {
+    keyName: string
+}
+
+/**
+ * Command Error Message
+ */
+export interface CommandErrorMessage {
+    message: string
 }

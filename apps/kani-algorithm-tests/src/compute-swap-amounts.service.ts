@@ -11,7 +11,6 @@ import {
     ChainId, TokenType 
 } from "@modules/typedefs"
 import BN from "bn.js"
-import { sleep } from "@utils"
 
 @Injectable()
 export class ComputeSwapAmountsService implements OnApplicationBootstrap {

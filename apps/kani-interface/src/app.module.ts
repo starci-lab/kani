@@ -101,8 +101,12 @@ import {
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
-            memoryStorage: true,
-            withSeeders: true,
+            memoryStorage: {
+                manualLoad: true,
+            },
+            withSeeders: {
+                manualSeed: true,
+            },
             associate: true,
         }),
         FormulasModule.register({

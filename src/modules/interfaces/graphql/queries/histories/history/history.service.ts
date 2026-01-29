@@ -163,22 +163,26 @@ export class HistoryService {
             ? this.dayjsService.from(to).tz(timeZone)
             : this.dayjsService.now().tz(timeZone)
 
-        const fromBucketDate = this.dayjsService.getBucketStartUtcByTimezone(
-            fromDate.toDate(),
-            intervalMs,
-            timeZone,
+        const fromAlignedTime = this.dayjsService.alignTimeToIntervalUtc(
+            {
+                timeZone,
+                intervalMs,
+                time: fromDate,
+            }
         )
-        const toBucketDate = this.dayjsService.getBucketStartUtcByTimezone(
-            toDate.toDate(),
-            intervalMs,
-            timeZone,
+        const toAlignedTime = this.dayjsService.alignTimeToIntervalUtc(
+            {
+                timeZone,
+                intervalMs,
+                time: toDate,
+            }
         )
 
         // Build timestamps (ASC)
         const timestamps: Array<number> = []
         for (
-            let date = fromBucketDate;
-            date.isSameOrBefore(toBucketDate);
+            let date = fromAlignedTime;
+            date.isSameOrBefore(toAlignedTime);
             date = date.add(intervalMs,
                 "millisecond")
         ) {
@@ -194,7 +198,7 @@ export class HistoryService {
         for (const timestamp of timestamps) {
             while (
                 serieIndex < fullSeries.length &&
-                new Date(fullSeries[serieIndex].positionClosedAt).getTime() <=
+                new Date(fullSeries[serieIndex].closedAt).getTime() <=
                     timestamp
             ) {
                 lastSerie = fullSeries[serieIndex]
@@ -203,7 +207,7 @@ export class HistoryService {
             series.push(
                 {
                     timestamp: new Date(timestamp),
-                    value: lastSerie ? lastSerie.positionValueAtClose : 0,
+                    value: lastSerie?.valueAtClose ?? 0,
                 }
             )
         }
@@ -223,7 +227,7 @@ export class HistoryService {
                 isActive: false,
             })
             .sort({
-                positionClosedAt: 1 
+                "closeSnapshot.snapshotAt": 1 
             }) // ASC
             .limit(envConfig().history.serieCount)
 
@@ -232,10 +236,10 @@ export class HistoryService {
         for (const position of positions) {
             if (!position.closeSnapshot)
                 continue
-
             series.push({
-                positionClosedAt: position.closeSnapshot.snapshotAt,
-                positionValueAtClose: position.closeSnapshot.positionValue,
+                closedAt: position.closeSnapshot.snapshotAt,
+                valueAtClose: position.closeSnapshot.positionValue,
+                valueInUsdAtClose: position.closeSnapshot.positionValueInUsd,
             })
         }
 
@@ -254,12 +258,12 @@ export class HistoryService {
             .find({
                 bot: bot.id,
                 isActive: false,
-                positionClosedAt: {
+                "closeSnapshot.snapshotAt": {
                     $gt: history.lastSeriesUpdatedAt 
                 },
             })
             .sort({
-                positionClosedAt: 1 
+                "closeSnapshot.snapshotAt": 1 
             }) // ASC
             .limit(envConfig().history.serieCount)
 
@@ -270,8 +274,9 @@ export class HistoryService {
                 continue
 
             seriesAppended.push({
-                positionClosedAt: position.closeSnapshot.snapshotAt,
-                positionValueAtClose: position.closeSnapshot.positionValue,
+                closedAt: position.closeSnapshot.snapshotAt,
+                valueAtClose: position.closeSnapshot.positionValue,
+                valueInUsdAtClose: position.closeSnapshot.positionValueInUsd,
             })
         }
 

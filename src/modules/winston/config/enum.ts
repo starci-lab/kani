@@ -132,4 +132,30 @@ export enum WinstonLog {
     LiquidityPoolsBecameNotReady = "Liquidity.Pools.Became.Not.Ready",
     SocketIoClientConnected = "Socket.Io.Client.Connected",
     SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
+    // Database Commands
+    MongoDumpCompleted = "Mongo.Dump.Completed",
+    SevenZCompressionCompleted = "SevenZ.Compression.Completed",
+    BackupCompleted = "Backup.Completed",
+    BackupFailed = "Backup.Failed",
+    SevenZExtractionCompleted = "SevenZ.Extraction.Completed",
+    MongoDBRestoreCompleted = "MongoDB.Restore.Completed",
+    RestoreCompleted = "Restore.Completed",
+    RestoreFailed = "Restore.Failed",
+    SeedCompleted = "Seed.Completed",
+    SeedFailed = "Seed.Failed",
+    // Migration Commands
+    MigrationStarted = "Migration.Started",
+    MigrationOpenSnapshotsUpdated = "Migration.Open.Snapshots.Updated",
+    MigrationCloseSnapshotsUpdated = "Migration.Close.Snapshots.Updated",
+    MigrationCompleted = "Migration.Completed",
+    MigrationFailed = "Migration.Failed",
+    // Key Generation Commands
+    KeyGeneratedSuccess = "Key.Generated.Success",
+    KeyGenerationFailed = "Key.Generation.Failed",
+    KeyEncryptedSuccess = "Key.Encrypted.Success",
+    KeyDecryptionCheckFailed = "Key.Decryption.Check.Failed",
+    KeyDecryptionCheckSuccess = "Key.Decryption.Check.Success",
+    KeyWrittenSuccess = "Key.Written.Success",
+    // Command Errors
+    CommandError = "Command.Error",
 }

@@ -1,6 +1,5 @@
 import { CommandRunner, SubCommand } from "nest-commander"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
+import { WinstonLog, WinstonService } from "@modules/winston"
 import { GcpKmsService } from "@modules/gcp"
 import { KeyManagementServiceClient } from "@google-cloud/kms"
 import { MountStorageService } from "@modules/filesystem"
@@ -17,9 +16,7 @@ export class GenerateCommand extends CommandRunner {
     constructor(
     private readonly gcpKmsService: GcpKmsService,
     private readonly mountStorageService: MountStorageService,
-
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
+    private readonly winstonService: WinstonService,
     ) {
         super()
     }
@@ -39,30 +36,30 @@ export class GenerateCommand extends CommandRunner {
             location: locationName,
             protectionLevel: "HSM",
         })
-        this.logger.info(WinstonLog.KeyGeneratedSuccess)
+        this.winstonService.log(WinstonLog.KeyGeneratedSuccess, {})
         if (!data) {
-            this.logger.error(WinstonLog.KeyGenerationFailed, { error: "Data is empty" })
+            this.winstonService.log(WinstonLog.KeyGenerationFailed, { error: "Data is empty" })
             process.exit(1)
         }
         // we encrypt the data
         const encryptedData = await this.gcpKmsService.encrypt(data.toString("utf8"))
-        this.logger.info(WinstonLog.KeyEncryptedSuccess)
+        this.winstonService.log(WinstonLog.KeyEncryptedSuccess, {})
         // we decrypt the data
         const decryptedData = await this.gcpKmsService.decrypt(encryptedData)
         // we check if the decrypted data is the same as the original data
         if (decryptedData !== data.toString("utf8")) {
-            this.logger.error(WinstonLog.KeyDecryptionCheckFailed, 
+            this.winstonService.log(WinstonLog.KeyDecryptionCheckFailed, 
                 { error: "Decrypted data is not the same as the original data" }
             )
             process.exit(1)
         }
-        this.logger.info(WinstonLog.KeyDecryptionCheckSuccess)
+        this.winstonService.log(WinstonLog.KeyDecryptionCheckSuccess, {})
         // store the encrypted data in the filesystem
         await fsPromise.writeFile(
             join(process.cwd(), "dump", `${options.name}.txt`),
             encryptedData.toString("base64")
         )
-        this.logger.info(WinstonLog.KeyWrittenSuccess, { keyName: options.name })
+        this.winstonService.log(WinstonLog.KeyWrittenSuccess, { keyName: options.name })
         // exit the app
         process.exit(0)
     }

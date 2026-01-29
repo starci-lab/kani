@@ -95,7 +95,32 @@ export class PositionSnapshotsSchema extends AbstractSchema {
         type: Number,
     })
         positionValueInUsd: number
+
+    /**
+     * Balance value in the target token at the time of snapshot
+     */
+    @Field(() => Float,
+        {
+            description: "The value of the balance in the target token at the time of snapshot",
+        })
+    @Prop({
+        type: Number,
+    })
+        balanceValue: number
+
+    /**
+     * Balance value in USD at the time of snapshot
+     */
+    @Field(() => Float,
+        {
+            description: "The value of the balance in USD at the time of snapshot",
+        })
+    @Prop({
+        type: Number,
+    })
+        balanceValueInUsd: number    
 }
+
 
 /**
  * The actual Mongoose schema generated from the class definition above.

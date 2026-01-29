@@ -64,7 +64,12 @@ export class ClosePositionSnapshotService {
             quoteBalanceAmount: oneMillion,
             gasBalanceAmount: oneMillion,
         } : after
-        const { positionValue, positionValueInUsd } = await this.positionValueService.calculatePositionValue(
+        const { 
+            positionValue, 
+            positionValueInUsd, 
+            balanceValue, 
+            balanceValueInUsd 
+        } = await this.positionValueService.calculatePositionValue(
             {
                 before,
                 after: _after,
@@ -79,6 +84,8 @@ export class ClosePositionSnapshotService {
             gasBalanceAmount: _after.gasBalanceAmount.toString(),
             positionValue: positionValue.toNumber(),
             positionValueInUsd: positionValueInUsd.toNumber(),
+            balanceValue: balanceValue.toNumber(),
+            balanceValueInUsd: balanceValueInUsd.toNumber(),
             snapshotAt: now,
         }
         // Calculate ROI and PnL from open and close snapshots

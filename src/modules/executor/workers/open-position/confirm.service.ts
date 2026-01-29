@@ -131,15 +131,6 @@ export class ConfirmService {
                             session,
                         }
                     )
-                    console.log(liquidityPool.type === LiquidityPoolType.Clmm ? {
-                        liquidity: liquidity ?? new BN(0),
-                        tickLower: openPositionTransaction.tickLower ?? new BN(0),
-                        tickUpper: openPositionTransaction.tickUpper ?? new BN(0),
-                    } : undefined)
-                    console.log(liquidityPool.type === LiquidityPoolType.Dlmm ? {
-                        minBinId: openPositionTransaction?.minBinId ?? new BN(0),
-                        maxBinId: openPositionTransaction?.maxBinId ?? new BN(0),
-                    } : undefined)
                     await this.openPositionSnapshotService.addOpenPositionRecord(
                         {
                             bot,

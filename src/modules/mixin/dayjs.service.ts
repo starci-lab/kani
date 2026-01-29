@@ -1,7 +1,9 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import dayjs from "dayjs"
+import dayjs, {
+    Dayjs 
+} from "dayjs"
 import ms from "ms"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
@@ -27,13 +29,16 @@ export class DayjsService {
         return dayjs(config).utc()
     }
 
-    getBucketStartUtcByTimezone(
-        date: Date,
-        intervalMs: number,
-        timeZone: string
+    alignTimeToIntervalUtc(
+        {
+            timeZone,
+            intervalMs,
+            time,
+        }: AlignTimeToIntervalUtcOptions,
     ) {
         // 1. Apply timezone
-        const local = this.from(date).tz(timeZone)
+        const local = dayjs.tz(time.toDate(),
+            timeZone)
         // 2. calculate the bucket date according to the local time
         const utcOffset = local.utcOffset()
         // 3. calculate the nearest value of the minus offset
@@ -44,7 +49,16 @@ export class DayjsService {
             .floor()
             .mul(intervalMs)
         // 4. return the nearest bucket date
-        return this.from(nearestValueOfMinusOffset.toNumber()).subtract(utcOffset,
-            "minute")
+        return this.from(
+            nearestValueOfMinusOffset.toNumber())
+            .subtract(utcOffset,
+                "minute"
+            )
     }
+}
+
+export interface AlignTimeToIntervalUtcOptions {
+    timeZone: string
+    intervalMs: number
+    time: Dayjs
 }

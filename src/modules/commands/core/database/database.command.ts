@@ -3,18 +3,23 @@ import {
     Command, CommandRunner 
 } from "nest-commander"
 import {
-    GenerateCommand 
+    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand 
 } from "./subs"
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
 
 @Command({
-    name: "key",
-    description: "manage key actions",
-    subCommands: [ GenerateCommand ]
+    name: "db",
+    description: "manage db actions",
+    subCommands: [ 
+        BackupCommand,
+        RestoreCommand,
+        SeedCommand,
+        MigratePositionBalanceValuesCommand 
+    ]
 })
-export class KeyCommand extends CommandRunner {
+export class DatabaseCommand extends CommandRunner {
     constructor(
         private readonly winstonService: WinstonService,
     ) {
@@ -25,7 +30,7 @@ export class KeyCommand extends CommandRunner {
         this.winstonService.log(
             WinstonLog.CommandError,
             {
-                message: "Please specify a subcommand, e.g. generate"
+                message: "Please specify a subcommand, e.g. backup or restore"
             }
         )
     }

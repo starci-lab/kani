@@ -5,14 +5,13 @@ import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
     PriceService 
-} from "../math/price.service"
+} from "./price.service"
 import {
     TokenSchema 
 } from "@modules/databases"
 import {
     toDecimalAmount 
 } from "@modules/utils"
-
 /**
  * Service for calculating the value of a position based on balance changes.
  * 
@@ -66,55 +65,65 @@ export class PositionValueService {
         
         // Calculate balance differences and convert to target token equivalent
         // Target token difference (already in target token, no conversion needed)
-        const targetBalanceAmountDiff = toDecimalAmount({
-            amount: before.targetBalanceAmount.sub(after.targetBalanceAmount).abs(),
+        const targetBalanceAmount = toDecimalAmount({
+            amount: before.targetBalanceAmount,
             decimals: new Decimal(targetToken.decimals),
         })
+        const targetBalanceAmountAfter = toDecimalAmount({
+            amount: after.targetBalanceAmount,
+            decimals: new Decimal(targetToken.decimals),
+        })
+        const targetBalanceAmountDiff = 
+            targetBalanceAmountAfter.sub(targetBalanceAmount)
         
         // Quote token difference converted to target token equivalent
-        const quoteBalanceAmountDiffInTarget = toDecimalAmount({
-            amount: before.quoteBalanceAmount.sub(after.quoteBalanceAmount).abs(),
+        const quoteBalanceAmount = toDecimalAmount({
+            amount: before.quoteBalanceAmount,
             decimals: new Decimal(quoteToken.decimals),
         }).mul(relativeQuotePrice)
+        const quoteBalanceAmountAfter = toDecimalAmount({
+            amount: after.quoteBalanceAmount,
+            decimals: new Decimal(quoteToken.decimals),
+        }).mul(relativeQuotePrice)
+        const quoteBalanceAmountDiff = quoteBalanceAmountAfter.sub(quoteBalanceAmount)
         
         // Gas token difference converted to target token equivalent
-        const gasBalanceAmountDiff = toDecimalAmount({
-            amount: before.gasBalanceAmount.sub(after.gasBalanceAmount).abs(),
+        const gasBalanceAmount = toDecimalAmount({
+            amount: before.gasBalanceAmount,
             decimals: new Decimal(gasToken.decimals),
         }).mul(relativeGasPrice)
-        
+        const gasBalanceAmountAfter = toDecimalAmount({
+            amount: after.gasBalanceAmount,
+            decimals: new Decimal(gasToken.decimals),
+        }).mul(relativeGasPrice)
+        const gasBalanceAmountDiff = gasBalanceAmountAfter.sub(gasBalanceAmount)
         // Sum all differences to get total position value in target token
-        const positionValue = targetBalanceAmountDiff.add(quoteBalanceAmountDiffInTarget).add(gasBalanceAmountDiff)
-        
+        const positionValue = targetBalanceAmountDiff.add(quoteBalanceAmountDiff).add(gasBalanceAmountDiff).abs()
         // Convert position value to USD using target token's USD price
         const { price: targetPrice } = await this.priceService.resolvePrice({
             token: targetToken,
         })
+        const balanceValue = targetBalanceAmount.add(quoteBalanceAmount).add(gasBalanceAmount)
+        const balanceValueInUsd = balanceValue.mul(targetPrice)
         const positionValueInUsd = positionValue.mul(targetPrice)
           
         return {
             positionValue,
             positionValueInUsd,
+            balanceValue,
+            balanceValueInUsd,
         }
     }
 }
 
-/**
- * Parameters for calculating position value.
- */
+/** Parameters for calculating position value. */
 export interface CalculatePositionValueParams {
-    /** Balance amounts before the position operation */
     before: CalculatePositionValue,
-    /** Balance amounts after the position operation */
     after: CalculatePositionValue,
-    /** The target token (base token for calculations) */
     targetToken: TokenSchema,
-    /** The quote token */
     quoteToken: TokenSchema,
-    /** The gas token */
     gasToken: TokenSchema,
 }
-
 /**
  * Result of position value calculation.
  */
@@ -123,6 +132,10 @@ export interface CalculatePositionValueResult {
     positionValue: Decimal,
     /** Position value in USD */
     positionValueInUsd: Decimal,
+    /** Balance value in target token */
+    balanceValue: Decimal,
+    /** Balance value in USD */
+    balanceValueInUsd: Decimal,
 }
 
 /**

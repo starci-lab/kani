@@ -132,7 +132,29 @@ import {
     LiquidityPoolsBecameNotReadyMessage,
     LiquidityPoolsBecameReadyMessage,
     SocketIoClientConnectedMessage,
-    SocketIoClientDisconnectedMessage
+    SocketIoClientDisconnectedMessage,
+    MongoDumpCompletedMessage,
+    SevenZCompressionCompletedMessage,
+    BackupCompletedMessage,
+    BackupFailedMessage,
+    SevenZExtractionCompletedMessage,
+    MongoDBRestoreCompletedMessage,
+    RestoreCompletedMessage,
+    RestoreFailedMessage,
+    SeedCompletedMessage,
+    SeedFailedMessage,
+    MigrationStartedMessage,
+    MigrationOpenSnapshotsUpdatedMessage,
+    MigrationCloseSnapshotsUpdatedMessage,
+    MigrationCompletedMessage,
+    MigrationFailedMessage,
+    KeyGeneratedSuccessMessage,
+    KeyGenerationFailedMessage,
+    KeyEncryptedSuccessMessage,
+    KeyDecryptionCheckFailedMessage,
+    KeyDecryptionCheckSuccessMessage,
+    KeyWrittenSuccessMessage,
+    CommandErrorMessage,
 } from "./types"
 
 export const configMap = {
@@ -1200,5 +1222,181 @@ export const configMap = {
         loki: true,
         messageType: {
         } as SocketIoClientDisconnectedMessage,
+    },
+    // Mongo Dump Completed
+    [WinstonLog.MongoDumpCompleted]: {
+        name: WinstonLog.MongoDumpCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MongoDumpCompletedMessage,
+    },
+    // SevenZ Compression Completed
+    [WinstonLog.SevenZCompressionCompleted]: {
+        name: WinstonLog.SevenZCompressionCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as SevenZCompressionCompletedMessage,
+    },
+    // Backup Completed
+    [WinstonLog.BackupCompleted]: {
+        name: WinstonLog.BackupCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as BackupCompletedMessage,
+    },
+    // Backup Failed
+    [WinstonLog.BackupFailed]: {
+        name: WinstonLog.BackupFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as BackupFailedMessage,
+    },
+    // SevenZ Extraction Completed
+    [WinstonLog.SevenZExtractionCompleted]: {
+        name: WinstonLog.SevenZExtractionCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as SevenZExtractionCompletedMessage,
+    },
+    // MongoDB Restore Completed
+    [WinstonLog.MongoDBRestoreCompleted]: {
+        name: WinstonLog.MongoDBRestoreCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MongoDBRestoreCompletedMessage,
+    },
+    // Restore Completed
+    [WinstonLog.RestoreCompleted]: {
+        name: WinstonLog.RestoreCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as RestoreCompletedMessage,
+    },
+    // Restore Failed
+    [WinstonLog.RestoreFailed]: {
+        name: WinstonLog.RestoreFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as RestoreFailedMessage,
+    },
+    // Seed Completed
+    [WinstonLog.SeedCompleted]: {
+        name: WinstonLog.SeedCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as SeedCompletedMessage,
+    },
+    // Seed Failed
+    [WinstonLog.SeedFailed]: {
+        name: WinstonLog.SeedFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as SeedFailedMessage,
+    },
+    // Migration Started
+    [WinstonLog.MigrationStarted]: {
+        name: WinstonLog.MigrationStarted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MigrationStartedMessage,
+    },
+    // Migration Open Snapshots Updated
+    [WinstonLog.MigrationOpenSnapshotsUpdated]: {
+        name: WinstonLog.MigrationOpenSnapshotsUpdated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MigrationOpenSnapshotsUpdatedMessage,
+    },
+    // Migration Close Snapshots Updated
+    [WinstonLog.MigrationCloseSnapshotsUpdated]: {
+        name: WinstonLog.MigrationCloseSnapshotsUpdated,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MigrationCloseSnapshotsUpdatedMessage,
+    },
+    // Migration Completed
+    [WinstonLog.MigrationCompleted]: {
+        name: WinstonLog.MigrationCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MigrationCompletedMessage,
+    },
+    // Migration Failed
+    [WinstonLog.MigrationFailed]: {
+        name: WinstonLog.MigrationFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as MigrationFailedMessage,
+    },
+    // Key Generated Success
+    [WinstonLog.KeyGeneratedSuccess]: {
+        name: WinstonLog.KeyGeneratedSuccess,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as KeyGeneratedSuccessMessage,
+    },
+    // Key Generation Failed
+    [WinstonLog.KeyGenerationFailed]: {
+        name: WinstonLog.KeyGenerationFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as KeyGenerationFailedMessage,
+    },
+    // Key Encrypted Success
+    [WinstonLog.KeyEncryptedSuccess]: {
+        name: WinstonLog.KeyEncryptedSuccess,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as KeyEncryptedSuccessMessage,
+    },
+    // Key Decryption Check Failed
+    [WinstonLog.KeyDecryptionCheckFailed]: {
+        name: WinstonLog.KeyDecryptionCheckFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as KeyDecryptionCheckFailedMessage,
+    },
+    // Key Decryption Check Success
+    [WinstonLog.KeyDecryptionCheckSuccess]: {
+        name: WinstonLog.KeyDecryptionCheckSuccess,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as KeyDecryptionCheckSuccessMessage,
+    },
+    // Key Written Success
+    [WinstonLog.KeyWrittenSuccess]: {
+        name: WinstonLog.KeyWrittenSuccess,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as KeyWrittenSuccessMessage,
+    },
+    // Command Error
+    [WinstonLog.CommandError]: {
+        name: WinstonLog.CommandError,
+        level: WinstonLevel.Error,
+        loki: false,
+        messageType: {
+        } as CommandErrorMessage,
     },
 }

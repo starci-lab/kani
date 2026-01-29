@@ -1,10 +1,16 @@
 
-import { Module } from "@nestjs/common"
+import {
+    Module 
+} from "@nestjs/common"
 import {
     ConfigurableModuleClass,
 } from "./key.module-definition"
-import { KeyCommand } from "./key.command"
-import { GenerateCommand } from "./subs"
+import {
+    KeyCommand 
+} from "./key.command"
+import {
+    GenerateCommand 
+} from "./subs"
 @Module({
     providers: [
         KeyCommand,

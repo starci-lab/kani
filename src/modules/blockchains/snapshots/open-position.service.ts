@@ -68,7 +68,7 @@ export class OpenPositionSnapshotService {
             }
             : undefined
         // Build open snapshot using before snapshot (snapshot before opening position)
-        const { positionValue, positionValueInUsd } = await this.positionValueService.calculatePositionValue(
+        const { positionValue, positionValueInUsd, balanceValue, balanceValueInUsd } = await this.positionValueService.calculatePositionValue(
             {
                 before,
                 after: stimulate ? {
@@ -87,6 +87,8 @@ export class OpenPositionSnapshotService {
             gasBalanceAmount: before.gasBalanceAmount.toString(),
             positionValue: positionValue.toNumber(),
             positionValueInUsd: positionValueInUsd.toNumber(),
+            balanceValue: balanceValue.toNumber(),
+            balanceValueInUsd: balanceValueInUsd.toNumber(),
             snapshotAt: now,
         }
         // Build fees object (required field)

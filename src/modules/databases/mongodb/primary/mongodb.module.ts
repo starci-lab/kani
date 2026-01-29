@@ -98,13 +98,14 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
         const { dbName, host, password, port, username } =
       envConfig().databases.mongoose.primary
         const url = `mongodb://${username}:${password}@${host}:${port}`
-
         const extraModules: Array<DynamicModule> = []
         // If withSeeders is a boolean, use it as the manualSeed value
         if (
             typeof options.withSeeders === "undefined" 
             || options.withSeeders
         ) {
+            console.log("withSeeders",
+                options.isGlobal)
             extraModules.push(
                 SeedersModule.register(
                     {
@@ -119,6 +120,8 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
             typeof options.memoryStorage === "undefined" 
             || options.memoryStorage
         ) {
+            console.log("memoryStorage",
+                options.isGlobal)
             extraModules.push(
                 MemoryModule.register({
                     isGlobal: options.isGlobal,
@@ -131,6 +134,8 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
             typeof options.associate === "undefined" 
             || options.associate
         ) {
+            console.log("associate",
+                options.isGlobal)
             extraModules.push(
                 AssociateModule.register({
                     isGlobal: options.isGlobal,

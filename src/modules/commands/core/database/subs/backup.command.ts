@@ -1,25 +1,46 @@
-import { CommandRunner, SubCommand } from "nest-commander"
-import { ExecaService } from "@modules/execa"
+import {
+    CommandRunner, SubCommand 
+} from "nest-commander"
+import {
+    ExecaService 
+} from "@modules/execa"
 import path from "path"
-import { GoogleDriveService, GoogleDriveFolderId } from "@modules/gcp"
+import {
+    GoogleDriveService 
+} from "@modules/gcp"
 import fs from "fs/promises"
-import { envConfig } from "@modules/env"
-import { DayjsService } from "@modules/mixin"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { Readable } from "stream"
-import { DerivedAesKeyService } from "@modules/derived"
-import { Option } from "nest-commander"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    Readable 
+} from "stream"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
+import {
+    Option 
+} from "nest-commander"
+import {
+    GoogleDriveFolderName 
+} from "@modules/typedefs"
 
-@SubCommand({ name: "backup", description: "Backup MongoDB and upload to Google Drive" })
+@SubCommand({
+    name: "backup", description: "Backup MongoDB and upload to Google Drive" 
+})
 export class BackupCommand extends CommandRunner {
     constructor(
     private readonly execaService: ExecaService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly dayjsService: DayjsService,
     private readonly derivedAesKeyService: DerivedAesKeyService,
-    @InjectWinston()
-    private readonly logger: WinstonLogger,
+    private readonly winstonService: WinstonService,
     ) {
         super()
     }
@@ -50,8 +71,10 @@ export class BackupCommand extends CommandRunner {
             const dumpDirName = `kani-mongo-dump-${backupedAt}`
             const archiveName = `kani-${backupedAt}.7z`
             const backupRoot = mountPath.data.backup
-            const dumpDirPath = path.join(backupRoot, dumpDirName)
-            const archivePath = path.join(backupRoot, archiveName)
+            const dumpDirPath = path.join(backupRoot,
+                dumpDirName)
+            const archivePath = path.join(backupRoot,
+                archiveName)
             // the aes password is the same as the one used to encrypt the database
             const aesPassword = this.derivedAesKeyService.key
             // ================================
@@ -68,7 +91,10 @@ export class BackupCommand extends CommandRunner {
                 "mongodump", 
                 mongodumpArgs
             )
-            this.logger.info(WinstonLog.MongoDumpCompleted, { dumpDirName })
+            this.winstonService.log(WinstonLog.MongoDumpCompleted,
+                {
+                    dumpDirName 
+                })
             // ================================
             // 7z compress + encrypt
             // ================================
@@ -88,11 +114,19 @@ export class BackupCommand extends CommandRunner {
                 "7z",
                 sevenZArgs
             )
-            this.logger.info(WinstonLog.SevenZCompressionCompleted, { archiveName })
+            this.winstonService.log(
+                WinstonLog.SevenZCompressionCompleted,
+                {
+                    archiveName,
+                }
+            )
             // ================================
             // Cleanup plaintext dump
             // ================================
-            await fs.rm(dumpDirPath, { recursive: true, force: true })
+            await fs.rm(dumpDirPath,
+                {
+                    recursive: true, force: true 
+                })
             // ================================
             // Upload to Google Drive
             // ================================
@@ -114,19 +148,32 @@ export class BackupCommand extends CommandRunner {
             // upload file to Google Drive
             await this.googleDriveService.uploadFiles({
                 files: [file],
-                folderEnum: GoogleDriveFolderId.Db,
+                folderName: GoogleDriveFolderName.Db,
             })
-            this.logger.info(WinstonLog.GoogleDriveFileUploaded, { archiveName })
+            this.winstonService.log(WinstonLog.GoogleDriveFileUploaded,
+                {
+                    archiveName,
+                }
+            )
             // ================================
             // Cleanup encrypted archive
             // ================================
-            await fs.rm(archivePath, { force: true })
+            await fs.rm(archivePath,
+                {
+                    force: true 
+                })
             // log the backup completed
-            this.logger.info(WinstonLog.BackupCompleted, { archiveName })
+            this.winstonService.log(WinstonLog.BackupCompleted,
+                {
+                    archiveName 
+                })
             // exit the app
             process.exit(0)
         } catch (error) {
-            this.logger.error(WinstonLog.BackupFailed, { error: error.message })
+            this.winstonService.log(WinstonLog.BackupFailed,
+                {
+                    error: error.message 
+                })
             process.exit(1)
         }
     }

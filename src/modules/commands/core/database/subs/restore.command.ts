@@ -1,14 +1,31 @@
-import { CommandRunner, SubCommand, Option } from "nest-commander"
-import { InjectPrimaryMongoose } from "@modules/databases"
-import { Connection } from "mongoose"
-import { ExecaService } from "@modules/execa"
+import {
+    CommandRunner, SubCommand, Option 
+} from "nest-commander"
+import {
+    InjectPrimaryMongoose 
+} from "@modules/databases"
+import {
+    Connection 
+} from "mongoose"
+import {
+    ExecaService 
+} from "@modules/execa"
 import path from "path"
-import { envConfig } from "@modules/env"
-import { DayjsService } from "@modules/mixin"
-import { InjectWinston, WinstonLog } from "@modules/winston"
-import { Logger as WinstonLogger } from "winston"
-import { GoogleDriveService } from "@modules/gcp"
-import { DerivedAesKeyService } from "@modules/derived"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
+import {
+    GoogleDriveService 
+} from "@modules/gcp"
+import {
+    DerivedAesKeyService 
+} from "@modules/derived"
 import fs from "fs/promises"
 
 @SubCommand({
@@ -23,8 +40,7 @@ export class RestoreCommand extends CommandRunner {
       private readonly dayjsService: DayjsService,
       private readonly googleDriveService: GoogleDriveService,
       private readonly derivedAesKeyService: DerivedAesKeyService,
-      @InjectWinston()
-      private readonly logger: WinstonLogger,
+      private readonly winstonService: WinstonService,
     ) {
         super()
     }
@@ -64,19 +80,28 @@ export class RestoreCommand extends CommandRunner {
 
             const restoreRoot = mountPath.data.restore
             const archiveName = `restore-${restoreAt}.7z`
-            const archivePath = path.join(restoreRoot, archiveName)
+            const archivePath = path.join(restoreRoot,
+                archiveName)
             // delete the archive if it exists
             if (await fs.stat(archivePath).then(() => true).catch(() => false)) {
-                await fs.rm(archivePath, { force: true })
+                await fs.rm(archivePath,
+                    {
+                        force: true 
+                    })
             }
-            const extractDir = path.join(restoreRoot, `restore-${restoreAt}`)
+            const extractDir = path.join(restoreRoot,
+                `restore-${restoreAt}`)
             const aesPassword = this.derivedAesKeyService.key
   
             // ================================
             // Download from Google Drive
             // ================================
-            await this.googleDriveService.downloadFile(fileId, archivePath)
-            this.logger.info(WinstonLog.GoogleDriveFileDownloaded, { fileId, archiveName })
+            await this.googleDriveService.downloadFile(fileId,
+                archivePath)
+            this.winstonService.log(WinstonLog.GoogleDriveFileDownloaded,
+                {
+                    fileId, archiveName 
+                })
             // ================================
             // Extract + decrypt
             // ================================
@@ -90,14 +115,19 @@ export class RestoreCommand extends CommandRunner {
             }
             sevenZArgs.push("-y")
             await this.execaService.exec(
-                "7z", sevenZArgs
+                "7z",
+                sevenZArgs
             )
-            this.logger.info(WinstonLog.SevenZExtractionCompleted, { archiveName })
+            this.winstonService.log(WinstonLog.SevenZExtractionCompleted,
+                {
+                    archiveName 
+                })
             // ================================
             // MongoDB restore
             // ================================
             const [dumpRootDir] = await fs.readdir(extractDir)
-            const dumpRootPath = path.join(extractDir, dumpRootDir)
+            const dumpRootPath = path.join(extractDir,
+                dumpRootDir)
             const mongorestoreArgs: Array<string> = [
                 `--uri=${mongoUri}`,
                 `--dir=${dumpRootPath}`,
@@ -107,20 +137,36 @@ export class RestoreCommand extends CommandRunner {
                 "--quiet"
             ]
             await this.execaService.exec(
-                "mongorestore", mongorestoreArgs
+                "mongorestore",
+                mongorestoreArgs
             )
-            this.logger.info(WinstonLog.MongoDBRestoreCompleted, { dbName: this.connection.name, fileId })
+            this.winstonService.log(WinstonLog.MongoDBRestoreCompleted,
+                {
+                    dbName: this.connection.name, fileId 
+                })
             // ================================
             // Cleanup
             // ================================
-            await fs.rm(extractDir, { recursive: true, force: true })
-            await fs.rm(archivePath, { force: true })
+            await fs.rm(extractDir,
+                {
+                    recursive: true, force: true 
+                })
+            await fs.rm(archivePath,
+                {
+                    force: true 
+                })
   
-            this.logger.info(WinstonLog.RestoreCompleted, { archiveName, fileId })
+            this.winstonService.log(WinstonLog.RestoreCompleted,
+                {
+                    archiveName, fileId 
+                })
             // exit the app
             process.exit(0)
         } catch (error) {
-            this.logger.error(WinstonLog.RestoreFailed, { error: error.message })
+            this.winstonService.log(WinstonLog.RestoreFailed,
+                {
+                    error: error.message 
+                })
             process.exit(1)
         }
     }

@@ -1,13 +1,19 @@
 
-import { Module } from "@nestjs/common"
+import {
+    Module 
+} from "@nestjs/common"
 import {
     ConfigurableModuleClass,
 } from "./commands.module-definition"
-import { DatabaseModule } from "./cloud/database"
-import { LocalModule } from "./local"
+import {
+    CoreModule,
+} from "./core"
+import {
+    LocalModule 
+} from "./local"
 @Module({
     imports: [
-        DatabaseModule.register(
+        CoreModule.register(
             {
                 isGlobal: true,
             }

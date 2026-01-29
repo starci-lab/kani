@@ -58,6 +58,7 @@ export const chartIntervalToMsString = (
 
 export enum ChartUnit {
     Usd = "usd",
+    Target = "target",
 }
 
 export const GraphQLTypeChartUnit = createEnumType(ChartUnit)
@@ -69,6 +70,9 @@ registerEnumType(GraphQLTypeChartUnit,
         valuesMap: {
             [GraphQLTypeChartUnit.Usd]: {
                 description: "USD",
+            },
+            [GraphQLTypeChartUnit.Target]: {
+                description: "Target",
             },
         },
     })
