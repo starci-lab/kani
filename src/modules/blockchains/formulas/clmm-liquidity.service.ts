@@ -39,7 +39,7 @@ export class ClmmLiquidityFormulaService {
      * @param clmmTickFormulaService - Service for converting between ticks and sqrt prices
      */
     constructor(
-        private readonly clmmTickFormulaService: ClmmTickFormulaService
+        private readonly clmmTickFormulaService: ClmmTickFormulaService,
     ) {}
 
     /**

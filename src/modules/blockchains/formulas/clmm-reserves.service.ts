@@ -10,6 +10,9 @@ import {
 import {
     ClmmTickFormulaService 
 } from "./clmm-tick.service"
+import {
+    ClmmLiquidityFormulaService 
+} from "./clmm-liquidity.service"
 
 /**
  * CLMM Reserves Formula Service
@@ -48,7 +51,8 @@ import {
 @Injectable()
 export class ClmmReservesFormulaService {
     constructor(
-        private readonly clmmTickFormulaService: ClmmTickFormulaService
+        private readonly clmmTickFormulaService: ClmmTickFormulaService,
+        private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) {}
 
     /**
@@ -73,7 +77,6 @@ export class ClmmReservesFormulaService {
         decimalsA,
         decimalsB,
     }: CalculateReservesParams): CalculateReservesResult {
-
         /**
          * Convert ticks to fixed-point sqrt prices:
          *
@@ -126,9 +129,7 @@ export class ClmmReservesFormulaService {
             const tokenB = liquidity
                 .mul(sqrtPriceUpper.sub(sqrtPriceLower))
                 .div(fixedPointScale)
-                .div(sqrtPriceLower)
-                .div(sqrtPriceUpper)
-
+          
             return {
                 reserveA: new Decimal(0),
                 reserveB: toDecimalAmount({

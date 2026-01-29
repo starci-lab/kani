@@ -111,7 +111,7 @@ export class PriceGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
      * The ids are token record ids in the primary memory storage (`tokenCollection`),
      * not display ids.
      */
-    @WsSuccessMessage("Subscribed to pyth prices successfully")
+    @WsSuccessMessage("Subscribed to prices successfully")
     @UseInterceptors(WsTransformInterceptor)
     @SubscribeMessage(SubscriptionEvent.Price)
     async handleSubscribePrice(
