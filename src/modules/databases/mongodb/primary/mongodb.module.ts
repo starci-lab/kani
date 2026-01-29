@@ -58,6 +58,8 @@ import {
     ActiveJobSchema,
     PositionPerformanceSchema,
     PositionPerformanceSchemaClass,
+    BotChartConfigSchemaClass,
+    BotChartConfigSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -288,6 +290,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: PositionPerformanceSchema.name,
                         useFactory: () => PositionPerformanceSchemaClass,
+                    },
+                    {
+                        name: BotChartConfigSchema.name,
+                        useFactory: () => BotChartConfigSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

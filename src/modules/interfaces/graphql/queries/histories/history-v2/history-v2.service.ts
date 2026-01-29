@@ -8,6 +8,9 @@ import {
     PositionSchema,
     HistorySerieSchema,
     UserSchema,
+    ChartInterval,
+    chartIntervalToMsString,
+    ChartUnit,
 } from "@modules/databases"
 import {
     Connection 
@@ -29,10 +32,6 @@ import {
     BotNotOwnedByUserException,
     UserNotFoundException,
 } from "@modules/exceptions"
-import {
-    ChartInterval, chartIntervalToMsString, 
-    ChartUnit
-} from "../../../abstracts"
 import {
     envConfig 
 } from "@modules/env"
@@ -96,8 +95,10 @@ export class HistoryV2Service {
                 history
             )
             seriesAppended = result.seriesAppended
-            fullSeries = [...history.series,
-                ...seriesAppended]
+            fullSeries = [
+                ...history.series,
+                ...seriesAppended
+            ]
         }
 
         // Persist history
@@ -137,7 +138,8 @@ export class HistoryV2Service {
     }
 
     private async getHistoryResponseData(
-        { fullSeries, filters, botId }: GetHistoryResponseDataParams): Promise<HistoryV2ResponseData> {
+        { fullSeries, filters, botId }: GetHistoryResponseDataParams
+    ): Promise<HistoryV2ResponseData> {
         const {
             interval = ChartInterval.OneHour,
             from,
@@ -230,14 +232,18 @@ export class HistoryV2Service {
                     valueInUsdAtClose: lastPosition.openSnapshot.balanceValueInUsd ?? 0,
                 }
             }
-          
-            series.push({
-                timestamp: new Date(timestamp),
-                value:
+            if (!lastSerie) {
+                continue
+            }
+            series.push(
+                {
+                    timestamp: new Date(timestamp),
+                    value:
                 unit === ChartUnit.Target
                     ? (lastSerie?.valueAtClose ?? 0)
                     : (lastSerie?.valueInUsdAtClose ?? 0),
-            })
+                }
+            )
         }
         return {
             series,

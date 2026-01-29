@@ -44,6 +44,10 @@ import {
 import {
     ActiveJobSchema, ActiveJobSchemaClass
 } from "./active-job.schema"
+import {
+    BotChartConfigSchema,
+    BotChartConfigSchemaClass,
+} from "./bot-chart-config.schema"
 
 @ObjectType({
     description: "Represents a bot",
@@ -322,6 +326,19 @@ export class BotSchema extends AbstractSchema {
         type: String, enum: PerformanceDisplayMode, required: false
     })
         positionsPerformanceDisplayMode?: PerformanceDisplayMode
+
+    /**
+     * The chart configuration of the bot (unit and interval).
+     */
+    @Field(() => BotChartConfigSchema,
+        {
+            description: "The chart configuration of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: BotChartConfigSchemaClass, required: false
+    })
+        chartConfig?: BotChartConfigSchema
 }
 /**
  * The actual Mongoose schema generated from the class definition above.
