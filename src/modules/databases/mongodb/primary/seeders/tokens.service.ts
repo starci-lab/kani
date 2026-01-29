@@ -137,6 +137,7 @@ const data: Array<DeepPartial<TokenSchema>> = [
         chainId: ChainId.Sui,
         tokenAddress: "0x2::sui::SUI",
         decimals: 9,
+        type: TokenType.Native,
         marketListings: [
             {
                 id: MarketListingId.Binance,
@@ -171,7 +172,6 @@ const data: Array<DeepPartial<TokenSchema>> = [
         ],
         iconUrl: "https://r2.kanibot.xyz/tokens/sui.png",
         projectUrl: "https://sui.io/",
-        type: TokenType.Native,
         selectable: true,
     },
     {

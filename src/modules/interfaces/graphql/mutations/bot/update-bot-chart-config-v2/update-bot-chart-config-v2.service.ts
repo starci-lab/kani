@@ -71,18 +71,12 @@ export class UpdateBotChartConfigV2Service {
             },
             {
                 $set: {
-                    chartConfig: {
-                        ...(
-                            chartUnit && {
-                                chartUnit 
-                            }
-                        ),
-                        ...(
-                            chartInterval && {
-                                chartInterval 
-                            }
-                        ),
-                    },
+                    ...(chartUnit && {
+                        "chartConfig.chartUnit": chartUnit 
+                    }),
+                    ...(chartInterval && {
+                        "chartConfig.chartInterval": chartInterval 
+                    }),
                 },
             },
         )
