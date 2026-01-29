@@ -46,13 +46,19 @@ export class BotsService {
         userLike: UserJwtLike,
     ): Promise<BotsResponseData> {
         // validate the limit
-        this.validateService.validateLimit({
-            limit, min: envConfig().pagination.bots.limit.min, max: envConfig().pagination.bots.limit.max 
-        })
+        this.validateService.validateLimit(
+            {
+                limit, min: envConfig().pagination.bots.limit.min, 
+                max: envConfig().pagination.bots.limit.max 
+            }
+        )
         // validate the page number
-        this.validateService.validatePageNumber({
-            pageNumber, max: envConfig().pagination.bots.pageNumber.max 
-        })
+        this.validateService.validatePageNumber(
+            {
+                pageNumber, 
+                max: envConfig().pagination.bots.pageNumber.max 
+            }
+        )
         // create the query to get the bots
         const query = this.connection
             .model<BotSchema>(BotSchema.name)

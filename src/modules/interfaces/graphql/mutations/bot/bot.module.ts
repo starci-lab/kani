@@ -25,6 +25,9 @@ import {
 import {
     UpdateBotPerformanceDisplayModeV2Module 
 } from "./update-bot-performance-display-mode-v2"
+import {
+    UpdateBotPositionsPerformanceDisplayModeV2Module 
+} from "./update-bot-positions-performance-display-mode-v2"
 
 @Module({
     imports: [
@@ -47,6 +50,9 @@ import {
             isGlobal: true,
         }),
         UpdateBotPerformanceDisplayModeV2Module.register({
+            isGlobal: true,
+        }),
+        UpdateBotPositionsPerformanceDisplayModeV2Module.register({
             isGlobal: true,
         }),
     ],

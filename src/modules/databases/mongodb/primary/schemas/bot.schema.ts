@@ -1,38 +1,38 @@
 import {
-    Prop, Schema, SchemaFactory 
+    Prop, Schema, SchemaFactory
 } from "@nestjs/mongoose"
 import {
-    AbstractSchema 
+    AbstractSchema
 } from "./abstract"
 import {
-    Field, Float, ID, ObjectType 
+    Field, Float, ID, ObjectType
 } from "@nestjs/graphql"
 import {
-    ChainId, EncryptedPayload, GraphQLTypeChainId 
+    ChainId, EncryptedPayload, GraphQLTypeChainId
 } from "@modules/typedefs"
 import {
-    Schema as MongooseSchema, Types 
+    Schema as MongooseSchema, Types
 } from "mongoose"
 import {
-    UserSchema 
+    UserSchema
 } from "./user.schema"
 import {
-    TokenSchema 
+    TokenSchema
 } from "./token.schema"
 import {
-    LiquidityPoolSchema 
+    LiquidityPoolSchema
 } from "./liquidity-pool.schema"
 import {
     AppVersion,
     GraphQLTypeAppVersion,
     GraphQLTypePerformanceDisplayMode,
-    PerformanceDisplayMode,  
+    PerformanceDisplayMode,
 } from "../enums"
 import {
-    BotActivePositionSchema, BotActivePositionSchemaClass 
+    BotActivePositionSchema, BotActivePositionSchemaClass
 } from "./bot-active-position.schema"
 import {
-    PrivyMetadataSchema, PrivyMetadataSchemaClass 
+    PrivyMetadataSchema, PrivyMetadataSchemaClass
 } from "./privy-metadata.schema"
 import {
     BotSnapshotsSchema,
@@ -42,7 +42,7 @@ import {
     PrimaryMongoDbCollectionRef,
 } from "../ref"
 import {
-    ActiveJobSchema, ActiveJobSchemaClass 
+    ActiveJobSchema, ActiveJobSchemaClass
 } from "./active-job.schema"
 
 @ObjectType({
@@ -93,16 +93,16 @@ export class BotSchema extends AbstractSchema {
             description: "The account address of the wallet",
         })
     @Prop({
-        type: String 
+        type: String
     })
         accountAddress: string
- 
+
     /**
      * The encrypted private key corresponding to the account address.
      * This value must be securely encrypted before being stored in the database.
      */
     @Prop({
-        type: MongooseSchema.Types.Mixed, required: false 
+        type: MongooseSchema.Types.Mixed, required: false
     })
         encryptedPrivateKeyPayload?: EncryptedPayload
 
@@ -111,15 +111,15 @@ export class BotSchema extends AbstractSchema {
      * This value must be securely encrypted before being stored in the database.
      */
     @Prop({
-        type: MongooseSchema.Types.Mixed, required: false 
+        type: MongooseSchema.Types.Mixed, required: false
     })
         encryptedPrivySignerPrivateKeyPayload?: EncryptedPayload
-    
+
     /**
      * The metadata of the privy wallet.
      */
     @Prop({
-        type: PrivyMetadataSchemaClass, required: false 
+        type: PrivyMetadataSchemaClass, required: false
     })
         privyMetadata?: PrivyMetadataSchema
 
@@ -129,7 +129,7 @@ export class BotSchema extends AbstractSchema {
      */
     @Field(() => GraphQLTypeChainId)
     @Prop({
-        type: String, required: true 
+        type: String, required: true
     })
         chainId: ChainId
 
@@ -138,7 +138,7 @@ export class BotSchema extends AbstractSchema {
      */
     @Field(() => ID,
         {
-            description: "The user that the bot is provisioned to" 
+            description: "The user that the bot is provisioned to"
         })
     @Prop({
         type: MongooseSchema.Types.ObjectId,
@@ -152,10 +152,10 @@ export class BotSchema extends AbstractSchema {
     @Field(() => String,
         {
             description:
-            "Human-readable name of the bot, used for easy identification and management.",
+                "Human-readable name of the bot, used for easy identification and management.",
         })
     @Prop({
-        type: String, required: true 
+        type: String, required: true
     })
         name: string
 
@@ -165,7 +165,7 @@ export class BotSchema extends AbstractSchema {
     @Field(() => [ID],
         {
             description:
-            "List of liquidity pools where this bot will actively manage positions.",
+                "List of liquidity pools where this bot will actively manage positions.",
         })
     @Prop({
         type: [MongooseSchema.Types.ObjectId],
@@ -182,7 +182,7 @@ export class BotSchema extends AbstractSchema {
             defaultValue: false,
         })
     @Prop({
-        type: Boolean, required: true, default: false 
+        type: Boolean, required: true, default: false
     })
         running: boolean
 
@@ -195,7 +195,7 @@ export class BotSchema extends AbstractSchema {
             nullable: true,
         })
     @Prop({
-        type: Date, required: false 
+        type: Date, required: false
     })
         lastRunAt?: Date
 
@@ -251,7 +251,7 @@ export class BotSchema extends AbstractSchema {
             defaultValue: false,
         })
     @Prop({
-        type: Boolean, required: true, default: false 
+        type: Boolean, required: true, default: false
     })
         isExitToUsdc: boolean
 
@@ -261,7 +261,7 @@ export class BotSchema extends AbstractSchema {
             defaultValue: AppVersion.V1,
         })
     @Prop({
-        type: String, enum: AppVersion, required: true, default: AppVersion.V1 
+        type: String, enum: AppVersion, required: true, default: AppVersion.V1
     })
         version: AppVersion
 
@@ -274,7 +274,7 @@ export class BotSchema extends AbstractSchema {
             nullable: true,
         })
     @Prop({
-        type: BotActivePositionSchemaClass, required: false 
+        type: BotActivePositionSchemaClass, required: false
     })
         activePosition?: BotActivePositionSchema
 
@@ -283,7 +283,7 @@ export class BotSchema extends AbstractSchema {
      */
 
     @Prop({
-        type: ActiveJobSchemaClass, required: false 
+        type: ActiveJobSchemaClass, required: false
     })
         activeJob?: ActiveJobSchema
 
@@ -298,7 +298,7 @@ export class BotSchema extends AbstractSchema {
         performance24h?: BotPerformance24H
 
     /**
-     * The display mode of the bot's performance. Default is usd.
+     * The display mode of the bot's active performance.
      */
     @Field(() => GraphQLTypePerformanceDisplayMode,
         {
@@ -309,6 +309,19 @@ export class BotSchema extends AbstractSchema {
         type: String, enum: PerformanceDisplayMode, required: false
     })
         performanceDisplayMode?: PerformanceDisplayMode
+
+    /**
+        * The display mode of the bot's positions performance.
+        */
+    @Field(() => GraphQLTypePerformanceDisplayMode,
+        {
+            description: "The display mode of the positions performance",
+            nullable: true,
+        })
+    @Prop({
+        type: String, enum: PerformanceDisplayMode, required: false
+    })
+        positionsPerformanceDisplayMode?: PerformanceDisplayMode
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

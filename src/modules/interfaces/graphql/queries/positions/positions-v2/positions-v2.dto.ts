@@ -15,6 +15,18 @@ import {
 } from "../../../abstracts"
 
 @InputType({
+    description: "Options to specify which related entities should be associated with bots v2.",
+})
+export class PositionsV2AssociateOptions {
+    @Field(() => Boolean,
+        {
+            nullable: true,
+            description: "Whether to associate the liquidity pool data with each position.",
+        })
+        liquidityPool?: boolean
+}
+
+@InputType({
     description: "The request for fetching positions v2.",
 })
 export class PositionsV2PaginationFilters extends PaginationPageFilters {
@@ -40,6 +52,12 @@ export class PositionsV2Request {
             description: "The ID of the bot to fetch positions for.",
         })
         botId: string
+    @Field(() => PositionsV2AssociateOptions,
+        {
+            description: "The options to associate with the positions.",
+            nullable: true,
+        })
+        associate?: PositionsV2AssociateOptions
 }
 
 @ObjectType({

@@ -527,17 +527,17 @@ export const envConfig = () => ({
         liquidityPools: {
             limit: {
                 default: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_DEFAULT",
-                    10),
+                    20),
                 min: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_MIN",
-                    10),
+                    1),
                 max: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_LIMIT_MAX",
-                    10),
+                    20),
             },
             pageNumber: {
                 default: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_DEFAULT",
-                    10),
+                    20),
                 max: parseEnvInt("PAGINATION_LIQUIDITY_POOLS_PAGE_NUMBER_MAX",
-                    100),
+                    20),
             },
         },
     },

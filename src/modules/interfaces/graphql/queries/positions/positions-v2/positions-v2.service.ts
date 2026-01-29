@@ -49,7 +49,11 @@ export class PositionsV2Service {
                 pageNumber = envConfig().pagination.positions.pageNumber.default,
                 asc,
             },
-            botId
+            botId,
+            associate: {
+                liquidityPool: liquidityPoolAssociate = true,
+            } = {
+            },
         }: PositionsV2Request,
         response: VerifyAccessTokenResponse,
     ): Promise<PositionsV2ResponseData> {
@@ -110,8 +114,10 @@ export class PositionsV2Service {
         // execute the query
         const positions = await query.exec()
         // attach the associated liquidity pool to the positions
-        for (const position of positions) {
-            this.positionAssociateService.associateLiquidityPool(position)
+        if (liquidityPoolAssociate) {
+            for (const position of positions) {
+                this.positionAssociateService.associateLiquidityPool(position)
+            }
         }
         // return the positions
         return {
