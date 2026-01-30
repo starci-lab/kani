@@ -642,7 +642,7 @@ export const envConfig = () => ({
                     "backup")),
         },
         terraform: {
-            coinMarketCapApiKey: parseEnvString("TERRAFORM_COINMARKETCAP_API_KEY_MOUNT_PATH",
+            coinMarketCapApiKey: parseEnvString("TERRAFORM_COIN_MARKET_CAP_API_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
