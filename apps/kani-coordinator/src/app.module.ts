@@ -43,7 +43,9 @@ import {
 import {
     EventModule 
 } from "@modules/event"
-import { SilentWsExceptionFilter } from "@modules/socketio"
+import {
+    CacheModule 
+} from "@modules/cache"
 
 @Module({
     imports: [
@@ -80,10 +82,18 @@ import { SilentWsExceptionFilter } from "@modules/socketio"
         MixinModule.register({
             isGlobal: true,
         }),
+        CacheModule.register({
+            isGlobal: true,
+        }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
-            withSeeders: true,
-            memoryStorage: true,
+            withSeeders: {
+                manualSeed: true,
+            },
+            memoryStorage: {
+                manualLoad: false,
+            },
+            associate: true,
         }),
         SemaModule.register({
             isGlobal: true,
@@ -93,10 +103,6 @@ import { SilentWsExceptionFilter } from "@modules/socketio"
         }),
     ],
     providers: [
-        {
-            provide: APP_FILTER,
-            useClass: SilentWsExceptionFilter,
-        },
         {
             provide: APP_FILTER,
             useClass: SentryCatchAllExceptionFilter,
