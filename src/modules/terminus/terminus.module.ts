@@ -1,7 +1,15 @@
-import { Module } from "@nestjs/common"
-import { TerminusModule as NestTerminusModule } from "@nestjs/terminus"
-import { ConfigurableModuleClass } from "./terminus.module-definition"
-import { TerminusController } from "./terminus.controller"
+import {
+    Module 
+} from "@nestjs/common"
+import {
+    TerminusModule as NestTerminusModule 
+} from "@nestjs/terminus"
+import {
+    ConfigurableModuleClass 
+} from "./terminus.module-definition"
+import {
+    TerminusController 
+} from "./terminus.controller"
 import { 
     DependenciesService, 
     KafkaService, 

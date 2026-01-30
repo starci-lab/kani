@@ -14,7 +14,7 @@ import {
     envConfig 
 } from "@modules/env"
 
-type RedisTarget = "cache" | "adapter" | "bullmq" | "throttler"
+type RedisTarget = "cache" | "adapter" | "bullmq" | "throttler" | "lockAuthority"
 
 @Injectable()
 export class RedisService {
@@ -36,9 +36,6 @@ export class RedisService {
                 host: cfg.host,
                 port: cfg.port,
                 password: cfg.password,
-                retryAttempts: 3,   // number of reconnect attempts
-                retryDelay: 300,    // delay (ms) between attempts
-                connectTimeout: 1500,
             },
         }
         return options
@@ -69,6 +66,13 @@ export class RedisService {
         return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
             DependencyName.ThrottlerRedis,
             this.buildRedisOptions("throttler"),
+        )
+    }
+
+    async pingLockAuthorityRedis(): Promise<HealthIndicatorResult> {
+        return await this.microserviceHealthIndicator.pingCheck<MicroserviceOptions>(
+            DependencyName.LockAuthorityRedis,
+            this.buildRedisOptions("lockAuthority"),
         )
     }
 }

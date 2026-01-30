@@ -8,6 +8,7 @@ import {
     parseEnvFloat,
     parseEnvInt
 } from "./utils"
+import bytes from "bytes"
 
 export const envConfig = () => ({
     // is production
@@ -892,11 +893,12 @@ export const envConfig = () => ({
     resources: {
         ram: {
             threadhold: parseEnvInt("RAM_ALLOCATION_THRESHOLD",
-                250), 
+                bytes("1GB") as number
+            ), 
         }, 
         disk: {
             threadholdPercent: parseEnvFloat("DISK_ALLOCATION_THRESHOLD",
-                0.8), 
+                1), 
         }, 
     },
     // ports config
