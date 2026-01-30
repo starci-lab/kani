@@ -13,11 +13,11 @@ import {
 } from "./database.command"
 @Module({
     providers: [
-        DatabaseCommand,
         BackupCommand,
         RestoreCommand,
         SeedCommand,
         MigratePositionBalanceValuesCommand,
+        DatabaseCommand,
     ],
 })
 export class DatabaseModule extends ConfigurableModuleClass {}
