@@ -4,7 +4,7 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
-    ClosePositionJobMetadata,
+    ClosePositionJobData,
 } from "./types"
 import {
     getJobStatusOrder,
@@ -81,7 +81,7 @@ export class ExecuteService {
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )
-            const { closePositionTransaction, transactionRecord } = job.metadata as ToStringObject<ClosePositionJobMetadata>
+            const { closePositionTransaction, transactionRecord } = job.data as ToStringObject<ClosePositionJobData>
             return {
                 result: {
                     closePositionTransaction: this.superJson.parse<PrepareClosePositionResult>(closePositionTransaction),

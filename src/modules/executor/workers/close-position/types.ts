@@ -22,7 +22,7 @@ import {
  * - `closePositionTransaction` is produced by PREPARE and persisted on the Job document.
  * - `transactionRecord` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
-export interface ClosePositionJobMetadata {
+export interface ClosePositionJobData {
     closePositionTransaction: PrepareClosePositionResult
     transactionRecord?: AddTransactionRecordParams
 }
@@ -60,7 +60,7 @@ export interface ProcessParams {
 }
 
 export interface ProcessResult {
-    result: ClosePositionJobMetadata
+    result: ClosePositionJobData
 }
 /** Parameters for the PREPARE phase (same shape as ProcessParams). */
 export type PrepareParams = ProcessParams
@@ -79,18 +79,18 @@ export type SendHeartbeatParams = ProcessParams
 
 export interface ExecuteParams extends ProcessParams {
     /** Output of prepare() (prepared close-position transaction + optional metadata). */
-    prepareResult: ClosePositionJobMetadata
+    prepareResult: ClosePositionJobData
 }
 
 export interface ExecuteResult {
-    result: ClosePositionJobMetadata
+    result: ClosePositionJobData
 }
 
 export interface ConfirmParams extends ProcessParams {
     /** Output of execute() (includes transactionRecords for snapshotting). */
-    executeResult: ClosePositionJobMetadata
+    executeResult: ClosePositionJobData
 }
 
 export interface ConfirmResult {
-    result: ClosePositionJobMetadata
+    result: ClosePositionJobData
 }
