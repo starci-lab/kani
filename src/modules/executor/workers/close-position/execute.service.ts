@@ -121,7 +121,7 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
-                        "metadata.transactionRecord": this.superJson.stringify(transactionRecord),
+                        "data.transactionRecord": this.superJson.stringify(transactionRecord),
                     },
                 }
             )

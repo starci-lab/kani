@@ -109,7 +109,7 @@ export class PrepareService {
             {
                 $set: {
                     status: JobStatus.Prepared,
-                    "metadata.closePositionTransaction": this.superJson.stringify(closePositionTransaction),
+                    "data.closePositionTransaction": this.superJson.stringify(closePositionTransaction),
                 },
             }
         )
