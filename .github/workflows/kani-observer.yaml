@@ -1,4 +1,4 @@
-name: build-and-rollout-kani-observer-deployment
+name: build-and-push-kani-observer
 
 on:
   push:
