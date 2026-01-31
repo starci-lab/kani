@@ -30,7 +30,6 @@ import {
 } from "@modules/blockchains"
 import {
     toDecimalAmount,
-    round,
 } from "@modules/utils"
 import {
     TokenType,
@@ -125,36 +124,36 @@ export class PortfolioValueV2Service {
         }
 
         const portfolioValue: PortfolioValueV2Snapshot = {
-            excludingGas: round(evalResult.fundingSnapsot.excludingGas).toNumber(),
-            includingGas: round(evalResult.fundingSnapsot.includingGas).toNumber(),
+            excludingGas: evalResult.fundingSnapsot.excludingGas.toNumber(),
+            includingGas: evalResult.fundingSnapsot.includingGas.toNumber(),
         }
         const portfolioValueInUsd: PortfolioValueV2Snapshot = {
-            excludingGas: round(evalResult.fundingSnapshotInUsd.excludingGas).toNumber(),
-            includingGas: round(evalResult.fundingSnapshotInUsd.includingGas).toNumber(),
+            excludingGas: evalResult.fundingSnapshotInUsd.excludingGas.toNumber(),
+            includingGas: evalResult.fundingSnapshotInUsd.includingGas.toNumber(),
         }
 
         return {
-            targetBalanceAmount: round(
+            targetBalanceAmount: 
                 toDecimalAmount(
                     {
                         amount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? "0"),
                         decimals: new Decimal(targetToken.decimals),
                     })
-            ).toNumber(),
-            quoteBalanceAmount: round(
+                    .toNumber(),
+            quoteBalanceAmount: 
                 toDecimalAmount(
                     {
                         amount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? "0"),
                         decimals: new Decimal(quoteToken.decimals),
                     })
-            ).toNumber(),
-            gasBalanceAmount: round(
+                    .toNumber(),
+            gasBalanceAmount: 
                 toDecimalAmount(
                     {
                         amount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? "0"),
                         decimals: new Decimal(gasToken.decimals),
                     })
-            ).toNumber(),
+                    .toNumber(),
             portfolioValue,
             portfolioValueInUsd,
             status: evalResult.status,

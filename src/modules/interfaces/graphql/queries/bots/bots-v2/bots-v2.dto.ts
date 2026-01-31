@@ -62,6 +62,13 @@ export class BotsV2AssociateOptions {
             description: "Options to associate related entities with each active position.",
         })
         activePosition?: BotsV2ActivePositionAssociateOptions
+
+    @Field(() => Boolean,
+        {
+            nullable: true,
+            description: "Whether to associate the status of the bots.",
+        })
+        status?: boolean
 }
 
 @InputType({

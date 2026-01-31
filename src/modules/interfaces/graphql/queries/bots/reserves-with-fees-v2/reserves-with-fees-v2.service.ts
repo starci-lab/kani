@@ -29,9 +29,6 @@ import {
 import {
     ReservesWithFeesOrchestratorService,
 } from "@modules/blockchains"
-import {
-    round 
-} from "@modules/utils"
 
 @Injectable()
 export class ReservesWithFeesV2Service {
@@ -112,13 +109,13 @@ export class ReservesWithFeesV2Service {
         const rewardsAsNumbers = Object.fromEntries(
             Object.entries(rewards).map(([k,
                 v]) => [k,
-                round(v).toNumber()]),
+                v.toNumber()]),
         )
         return {
-            reserveA: round(reserveA).toNumber(),
-            reserveB: round(reserveB).toNumber(),
-            feeA: round(feeA).toNumber(),
-            feeB: round(feeB).toNumber(),
+            reserveA: reserveA.toNumber(),
+            reserveB: reserveB.toNumber(),
+            feeA: feeA.toNumber(),
+            feeB: feeB.toNumber(),
             rewards: rewardsAsNumbers,
             snapshotAt: snapshotAt.toDate(),
         }

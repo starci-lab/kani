@@ -24,9 +24,6 @@ import {
 import {
     BalanceFetcherService 
 } from "@modules/blockchains"
-import {
-    round,
-} from "@modules/utils"
 
 @Injectable()
 export class BalancesV2Service {
@@ -76,7 +73,7 @@ export class BalancesV2Service {
             (token) => ({
                 id: token.token.id,
                 balanceAmount: token.balanceAmount.toString(),
-                balanceAmountDecimal: round(token.balanceAmountDecimal).toNumber(),
+                balanceAmountDecimal: token.balanceAmountDecimal.toNumber(),
             }))
             .sort((tokenBalanceA, tokenBalanceB) => 
                 tokenBalanceB.id.localeCompare(

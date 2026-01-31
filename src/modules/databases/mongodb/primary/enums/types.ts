@@ -296,4 +296,30 @@ registerEnumType(GraphQLTypeChartUnit,
                 description: "Target",
             },
         },
-    })
+    }
+)
+
+export enum BotStatus {
+    InRange = "inRange",
+    OutOfRange = "outOfRange",
+    Idle = "idle",
+}
+export const GraphQLTypeBotStatus = createEnumType(BotStatus)
+
+registerEnumType(GraphQLTypeBotStatus,
+    {
+        name: "BotStatus",
+        description: "The status of the bot",
+        valuesMap: {
+            [BotStatus.InRange]: {
+                description: "The bot is in range"
+            },
+            [BotStatus.OutOfRange]: {
+                description: "The bot is out of range"
+            },
+            [BotStatus.Idle]: {
+                description: "The bot is idle"
+            }
+        }
+    }
+)

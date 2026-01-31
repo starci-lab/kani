@@ -4,7 +4,9 @@ import {
 import {
     InjectPrimaryMongoose,
     BotSchema,
-    UserSchema
+    UserSchema,
+    BotStatus,
+    LiquidityPoolType
 } from "@modules/databases"
 import {
     Connection 
@@ -32,6 +34,14 @@ import {
 import {
     ActivePositionAssociateService 
 } from "@modules/databases"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    CacheKey,
+    CacheService 
+} from "@modules/cache"
+import BN from "bn.js"
 
 @Injectable()
 export class BotsV2Service {
@@ -41,6 +51,8 @@ export class BotsV2Service {
         private readonly performanceService: PerformanceService,
         private readonly validateService: ValidateService,
         private readonly activePositionAssociateService: ActivePositionAssociateService,
+        private readonly asyncService: AsyncService,
+        private readonly cacheService: CacheService,
     ) { }
 
     async botsV2(
@@ -58,6 +70,7 @@ export class BotsV2Service {
                     position: activePositionPositionAssociate = false,
                 } = {
                 },
+                status: statusAssociate = false,
             } = {
             },
         }: BotsV2Request,
@@ -148,6 +161,59 @@ export class BotsV2Service {
         }
         if (activePositionLiquidityPoolAssociate) {
             await this.activePositionAssociateService.attachAssociatedLiquidityPoolToBotActivePositions(bots)
+        }
+        if (statusAssociate) {
+            // if the bot do not have an active position, set the status to idle
+            await this.asyncService.allIgnoreError(
+                bots.map(
+                    async (bot) => {
+                        if (!bot.activePosition) {
+                            bot.status = BotStatus.Idle
+                        }
+                        const type = bot.activePosition?.associatedLiquidityPool?.type
+                        switch (type) {
+                        case LiquidityPoolType.Clmm: {
+                            const cache = await this.cacheService.get(
+                                {
+                                    key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                                    args: [bot.activePosition?.liquidityPool.toString()],
+                                }
+                            )
+                            if (cache) {
+                                const { tickCurrent } = cache
+                                if (
+                                    tickCurrent.lt(new BN(bot.activePosition?.associatedPosition?.clmmState?.tickLower ?? 0)) 
+                                    || tickCurrent.gt(new BN(bot.activePosition?.associatedPosition?.clmmState?.tickUpper ?? 0))) {
+                                    bot.status = BotStatus.OutOfRange
+                                } else {
+                                    bot.status = BotStatus.InRange
+                                }
+                            }
+                            break
+                        }
+                        case LiquidityPoolType.Dlmm: {
+                            const cache = await this.cacheService.get(
+                                {
+                                    key: CacheKey.DynamicDlmmLiquidityPoolInfo,
+                                    args: [bot.activePosition?.liquidityPool.toString()],
+                                }
+                            )
+                            if (cache) {
+                                const { activeId } = cache
+                                if (
+                                    activeId.lt(new BN(bot.activePosition?.associatedPosition?.dlmmState?.minBinId ?? 0)) 
+                                    || activeId.gt(new BN(bot.activePosition?.associatedPosition?.dlmmState?.maxBinId ?? 0))) {
+                                    bot.status = BotStatus.OutOfRange
+                                } else {
+                                    bot.status = BotStatus.InRange
+                                }
+                            }
+                            break
+                        }
+                        }
+                    }
+                )
+            )
         }
         // return the bots
         return {

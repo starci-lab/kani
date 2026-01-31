@@ -24,7 +24,9 @@ import {
 } from "./liquidity-pool.schema"
 import {
     AppVersion,
+    BotStatus,
     GraphQLTypeAppVersion,
+    GraphQLTypeBotStatus,
     GraphQLTypePerformanceDisplayMode,
     PerformanceDisplayMode,
 } from "../enums"
@@ -339,6 +341,18 @@ export class BotSchema extends AbstractSchema {
         type: BotChartConfigSchemaClass, required: false
     })
         chartConfig?: BotChartConfigSchema
+
+    /**
+     * The status of the bot.
+     */
+    @Field(
+        () => GraphQLTypeBotStatus,
+        {
+            description: "The status of the bot",
+            nullable: true
+        }
+    )
+        status?: BotStatus
 }
 /**
  * The actual Mongoose schema generated from the class definition above.
