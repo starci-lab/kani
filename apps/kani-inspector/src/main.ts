@@ -1,8 +1,22 @@
-import { NestFactory } from "@nestjs/core"
-import { AppModule } from "./app.module"
+import {
+    NestFactory 
+} from "@nestjs/core"
+import {
+    AppModule 
+} from "./app.module"
+import {
+    envConfig 
+} from "@modules/env"
+import {
+    setupCors 
+} from "@modules/cors"
+import compression from "compression"
 
 const bootstrap = async () => {
     const app = await NestFactory.create(AppModule)
-    await app.listen(process.env.port ?? 3000)
+    setupCors(app)
+    app.setGlobalPrefix("api")
+    app.use(compression())
+    await app.listen(envConfig().ports.kaniInspector)
 }
 bootstrap()

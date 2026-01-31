@@ -83,7 +83,7 @@ import {
         }),
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani Observer",
+            appName: "Kani Inspector",
             level: WinstonLevel.Info,
         }),
         FormulasModule.register({

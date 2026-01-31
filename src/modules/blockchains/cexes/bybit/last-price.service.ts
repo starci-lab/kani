@@ -130,7 +130,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 }
                                 resetTimeout()
                                 await this.asyncService.allIgnoreError(
-                                    tokenPrices.map((tokenPrice) =>
+                                    tokenPrices.map((tokenPrice) => 
                                         this.aggregatedTokenPriceCacheService.set({
                                             tokenId: tokenPrice.tokenId,
                                             price: tokenPrice.price,
@@ -145,7 +145,8 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                         error: error.message,
                                         streamName: "bybit-last-price",
                                         symbols: batch,
-                                    })
+                                    }
+                                )
                             }
                         }
                     } finally {

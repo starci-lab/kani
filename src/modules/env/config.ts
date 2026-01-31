@@ -913,6 +913,8 @@ export const envConfig = () => ({
             3004),
         kaniObserver: parseEnvInt("KANI_OBSERVER_PORT",
             3005),
+        kaniInspector: parseEnvInt("KANI_INSPECTOR_PORT",
+            3006),
     },
     // cors config
     cors: {
