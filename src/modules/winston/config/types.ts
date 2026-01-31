@@ -1149,24 +1149,11 @@ export interface RestoreCompletedMessage {
 export interface RestoreFailedMessage {
     error: string
 }
-
-/**
- * Seed Completed Message
- */
-export interface SeedCompletedMessage {
-}
-
 /**
  * Seed Failed Message
  */
 export interface SeedFailedMessage {
     error: string
-}
-
-/**
- * Migration Started Message
- */
-export interface MigrationStartedMessage {
 }
 
 /**
@@ -1208,22 +1195,10 @@ export interface MigrationFailedMessage {
 }
 
 /**
- * Key Generated Success Message
- */
-export interface KeyGeneratedSuccessMessage {
-}
-
-/**
  * Key Generation Failed Message
  */
 export interface KeyGenerationFailedMessage {
     error: string
-}
-
-/**
- * Key Encrypted Success Message
- */
-export interface KeyEncryptedSuccessMessage {
 }
 
 /**
@@ -1232,13 +1207,6 @@ export interface KeyEncryptedSuccessMessage {
 export interface KeyDecryptionCheckFailedMessage {
     error: string
 }
-
-/**
- * Key Decryption Check Success Message
- */
-export interface KeyDecryptionCheckSuccessMessage {
-}
-
 /**
  * Key Written Success Message
  */
@@ -1251,4 +1219,18 @@ export interface KeyWrittenSuccessMessage {
  */
 export interface CommandErrorMessage {
     message: string
+}
+
+/**
+ * Migration Avatars Completed Message
+ */
+export interface MigrationAvatarsCompletedMessage {
+    updatedCount: number
+}
+
+/**
+ * Migration Avatars Failed Message
+ */
+export interface MigrationAvatarsFailedMessage {
+    error: string
 }

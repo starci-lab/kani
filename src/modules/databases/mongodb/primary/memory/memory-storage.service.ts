@@ -17,7 +17,7 @@ import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
 } from "./memory.module-definition"
 import {
-    AccountLimitsConfig, BalanceConfig, ConfigRecord, ConfigSchema 
+    AccountLimitsConfig, AvatarsConfig, BalanceConfig, ConfigRecord, ConfigSchema 
 } from "../schemas"
 import {
     ConfigId 
@@ -27,6 +27,7 @@ import {
 } from "@modules/utils"
 import { 
     AccountLimitsConfigNotFoundException, 
+    AvatarsConfigNotFoundException, 
     BalanceConfigNotFoundException, 
     GasConfigNotFoundException 
 } from "@modules/exceptions"
@@ -36,6 +37,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
     public gasConfig: GasConfig
     public balanceConfig: BalanceConfig
     public accountLimits: AccountLimitsConfig
+    public avatarsConfig: AvatarsConfig
     // collections
     public tokenCollection: Collection<TokenSchema>
     public liquidityPoolCollection: Collection<LiquidityPoolSchema>
@@ -132,6 +134,16 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
                     })
                 }
                 this.accountLimits = accountLimits.value
+            })(),
+            (async () => {
+                const avatarsConfig = await this.connection
+                    .model<ConfigSchema>(ConfigSchema.name)
+                    .findById<ConfigRecord<AvatarsConfig>>(createObjectId(ConfigId.Avatars))
+                if (!avatarsConfig) {
+                    throw new AvatarsConfigNotFoundException({
+                    })
+                }
+                this.avatarsConfig = avatarsConfig.value
             })(),
         ])
     }

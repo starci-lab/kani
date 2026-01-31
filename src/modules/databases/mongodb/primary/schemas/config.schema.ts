@@ -68,3 +68,7 @@ export interface ProfitConfig {
 export interface AccountLimitsConfig {
     maxBotsPerAccount: number
 }
+
+export interface AvatarsConfig {
+    avatarUrls: Array<string>
+}

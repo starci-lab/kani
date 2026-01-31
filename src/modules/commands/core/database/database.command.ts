@@ -3,7 +3,7 @@ import {
     Command, CommandRunner 
 } from "nest-commander"
 import {
-    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand 
+    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand, MigrateAvatarsCommand 
 } from "./subs"
 import {
     WinstonLog, WinstonService 
@@ -16,7 +16,8 @@ import {
         BackupCommand,
         RestoreCommand,
         SeedCommand,
-        MigratePositionBalanceValuesCommand 
+        MigratePositionBalanceValuesCommand,
+        MigrateAvatarsCommand,
     ]
 })
 export class DatabaseCommand extends CommandRunner {

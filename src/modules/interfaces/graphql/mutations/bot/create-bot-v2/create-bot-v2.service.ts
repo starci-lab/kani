@@ -173,6 +173,7 @@ export class CreateBotV2Service {
                                     signerPublicKey: keyPair.publicKey,
                                     walletPublicKey: wallet.public_key  
                                 },
+                                avatarUrl: this.primaryMemoryStorageService.avatarsConfig.avatarUrls[Math.floor(Math.random() * this.primaryMemoryStorageService.avatarsConfig.avatarUrls.length)],
                                 version: AppVersion.V2,
                                 isExitToUsdc,
                             }

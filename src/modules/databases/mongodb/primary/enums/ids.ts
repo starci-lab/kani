@@ -221,6 +221,7 @@ export enum ConfigId {
     Gas = "gas",
     Balance = "balance",
     AccountLimits = "accountLimits",
+    Avatars = "avatars",
 }
 
 export enum StateId {

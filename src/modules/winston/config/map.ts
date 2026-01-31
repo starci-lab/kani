@@ -141,18 +141,14 @@ import {
     MongoDBRestoreCompletedMessage,
     RestoreCompletedMessage,
     RestoreFailedMessage,
-    SeedCompletedMessage,
-    SeedFailedMessage,
-    MigrationStartedMessage,
     MigrationOpenSnapshotsUpdatedMessage,
     MigrationCloseSnapshotsUpdatedMessage,
     MigrationCompletedMessage,
     MigrationFailedMessage,
-    KeyGeneratedSuccessMessage,
+    MigrationAvatarsCompletedMessage,
+    MigrationAvatarsFailedMessage,
     KeyGenerationFailedMessage,
-    KeyEncryptedSuccessMessage,
     KeyDecryptionCheckFailedMessage,
-    KeyDecryptionCheckSuccessMessage,
     KeyWrittenSuccessMessage,
     CommandErrorMessage,
 } from "./types"
@@ -1293,7 +1289,7 @@ export const configMap = {
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as SeedCompletedMessage,
+        }
     },
     // Seed Failed
     [WinstonLog.SeedFailed]: {
@@ -1301,7 +1297,7 @@ export const configMap = {
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as SeedFailedMessage,
+        }
     },
     // Migration Started
     [WinstonLog.MigrationStarted]: {
@@ -1309,7 +1305,7 @@ export const configMap = {
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as MigrationStartedMessage,
+        }
     },
     // Migration Open Snapshots Updated
     [WinstonLog.MigrationOpenSnapshotsUpdated]: {
@@ -1343,13 +1339,29 @@ export const configMap = {
         messageType: {
         } as MigrationFailedMessage,
     },
+    // Migration Avatars Completed
+    [WinstonLog.MigrationAvatarsCompleted]: {
+        name: WinstonLog.MigrationAvatarsCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MigrationAvatarsCompletedMessage,
+    },
+    // Migration Avatars Failed
+    [WinstonLog.MigrationAvatarsFailed]: {
+        name: WinstonLog.MigrationAvatarsFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as MigrationAvatarsFailedMessage,
+    },
     // Key Generated Success
     [WinstonLog.KeyGeneratedSuccess]: {
         name: WinstonLog.KeyGeneratedSuccess,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as KeyGeneratedSuccessMessage,
+        }
     },
     // Key Generation Failed
     [WinstonLog.KeyGenerationFailed]: {
@@ -1365,7 +1377,7 @@ export const configMap = {
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as KeyEncryptedSuccessMessage,
+        }
     },
     // Key Decryption Check Failed
     [WinstonLog.KeyDecryptionCheckFailed]: {
@@ -1381,7 +1393,7 @@ export const configMap = {
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as KeyDecryptionCheckSuccessMessage,
+        }
     },
     // Key Written Success
     [WinstonLog.KeyWrittenSuccess]: {

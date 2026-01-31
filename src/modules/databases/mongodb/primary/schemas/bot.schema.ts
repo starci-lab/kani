@@ -353,6 +353,18 @@ export class BotSchema extends AbstractSchema {
         }
     )
         status?: BotStatus
+    /**
+     * The avatar of the bot.
+     */
+    @Field(() => String,
+        {
+            description: "The avatar of the bot",
+        }
+    )
+    @Prop({
+        type: String, required: true
+    })
+        avatarUrl: string
 }
 /**
  * The actual Mongoose schema generated from the class definition above.
