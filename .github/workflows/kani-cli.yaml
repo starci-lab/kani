@@ -1,4 +1,4 @@
-name: build-and-rollout-kani-cli-deployment
+name: build-and-push-kani-cli
 
 on:
   push:

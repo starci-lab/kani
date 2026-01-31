@@ -29,7 +29,8 @@ export class MongodbService {
      * Health check for Primary MongoDB
      */
     async pingPrimaryMongodb(): Promise<HealthIndicatorResult> {
-        const connection = this.moduleRef.get<Connection>(getPrimaryConnectionToken(),
+        const connection = this.moduleRef.get<Connection>(
+            getPrimaryConnectionToken(),
             {
                 strict: false 
             })

@@ -36,6 +36,7 @@ FROM deps as build
 # "devDependencies" to be installed to build. If you don't need this, remove this step.
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=package-lock.json,target=package-lock.json \
+    --mount=type=bind,source=patches,target=patches \
     --mount=type=cache,target=/root/.npm \
     npm ci
 

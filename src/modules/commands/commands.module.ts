@@ -10,7 +10,7 @@ import {
 } from "./core"
 import {
     LocalModule 
-} from "./local"
+} from "./local" 
 @Module({
     imports: [
         CoreModule.register(

@@ -7,6 +7,8 @@ import {
     HistorySchema,
     PositionSchema,
     HistorySerieSchema,
+    ChartInterval,
+    chartIntervalToMsString,
 } from "@modules/databases"
 import {
     Connection 
@@ -27,9 +29,6 @@ import {
     BotNotFoundException,
     BotNotOwnedByUserException,
 } from "@modules/exceptions"
-import {
-    ChartInterval, chartIntervalToMsString 
-} from "../../../abstracts"
 import ms from "ms"
 import {
     envConfig 

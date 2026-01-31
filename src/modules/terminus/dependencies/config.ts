@@ -21,6 +21,10 @@ export enum DependencyName {
      */
     ThrottlerRedis = "throttler-redis",
     /**
+     * Redis instance used for lock authority
+     */
+    LockAuthorityRedis = "lock-authority-redis",
+    /**
      * Kafka broker used for event streaming and messaging
      */
     Kafka = "kafka",
@@ -94,6 +98,12 @@ export const config: Record<DependencyName, DependencyConfig> = {
     },
     // Throttler Redis: rate limiting; traffic may be allowed without it
     [DependencyName.ThrottlerRedis]: {
+        liveness: false,
+        readiness: true,
+        startup: true,
+    },
+    // Lock Authority Redis: lock authority; API can still serve traffic
+    [DependencyName.LockAuthorityRedis]: {
         liveness: false,
         readiness: true,
         startup: true,

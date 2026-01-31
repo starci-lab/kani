@@ -61,9 +61,6 @@ import {
         ExecaModule.register({
             isGlobal: true,
         }),
-        GcpModule.register({
-            isGlobal: true,
-        }),
         CacheModule.register({
             isGlobal: true,
         }),

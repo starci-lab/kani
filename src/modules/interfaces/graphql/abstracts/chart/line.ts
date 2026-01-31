@@ -7,12 +7,12 @@ import {
 import {
     IChartSerie 
 } from "./base"
-import { 
-    ChartInterval, 
-    ChartUnit, 
-    GraphQLTypeChartInterval, 
-    GraphQLTypeChartUnit 
-} from "./enum"
+import {
+    ChartInterval,
+    ChartUnit,
+    GraphQLTypeChartInterval,
+    GraphQLTypeChartUnit,
+} from "@modules/databases"
 
 @ObjectType({
     isAbstract: true,

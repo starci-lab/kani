@@ -8,6 +8,7 @@ import {
     parseEnvFloat,
     parseEnvInt
 } from "./utils"
+import bytes from "bytes"
 
 export const envConfig = () => ({
     // is production
@@ -642,7 +643,7 @@ export const envConfig = () => ({
                     "backup")),
         },
         terraform: {
-            coinMarketCapApiKey: parseEnvString("TERRAFORM_COINMARKETCAP_API_KEY_MOUNT_PATH",
+            coinMarketCapApiKey: parseEnvString("TERRAFORM_COIN_MARKET_CAP_API_KEY_MOUNT_PATH",
                 join(process.cwd(),
                     ".mount",
                     "terraform",
@@ -892,11 +893,12 @@ export const envConfig = () => ({
     resources: {
         ram: {
             threadhold: parseEnvInt("RAM_ALLOCATION_THRESHOLD",
-                250), 
+                bytes("1GB") as number
+            ), 
         }, 
         disk: {
             threadholdPercent: parseEnvFloat("DISK_ALLOCATION_THRESHOLD",
-                0.8), 
+                1), 
         }, 
     },
     // ports config
