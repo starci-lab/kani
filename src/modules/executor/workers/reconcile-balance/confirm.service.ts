@@ -3,6 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     BalanceService,
+    BalanceFetcherService,
     BalanceSnapshotService,
     TransactionSnapshotService,
 } from "@modules/blockchains"
@@ -27,6 +28,7 @@ import {
 export class ConfirmService {
     constructor(
         private readonly balanceService: BalanceService,
+        private readonly balanceFetcherService: BalanceFetcherService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         @InjectPrimaryMongoose()
@@ -72,7 +74,7 @@ export class ConfirmService {
             targetBalanceAmount,
             quoteBalanceAmount,
             gasBalanceAmount,
-        } = await this.balanceService.fetchBalances({
+        } = await this.balanceFetcherService.fetchBalances({
             bot 
         })
 

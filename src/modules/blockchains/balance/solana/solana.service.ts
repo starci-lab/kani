@@ -2,16 +2,11 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    TokenType 
-} from "@modules/typedefs"
-import {
-    FetchBalanceParams,
-    FetchBalanceResult,
     IBalanceService,
     PrepareSwapTransactionParams,
     PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
-} from "./balance.interface"
+} from "../balance.interface"
 import { 
     AppVersion,
 } from "@modules/databases"
@@ -24,7 +19,6 @@ import {
 } from "@modules/exceptions"
 import BN from "bn.js"
 import {
-    address,
     getCompiledTransactionMessageDecoder,
     getTransactionDecoder,
     getBase64Encoder,
@@ -36,35 +30,25 @@ import {
     setTransactionMessageFeePayerSigner,
     pipe,
     createTransactionMessage,
-    Rpc,
-    SolanaRpcApi,
     assertIsSendableTransaction,
     assertIsTransactionWithinSizeLimit,
     sendAndConfirmTransactionFactory,
-    RpcSubscriptions,
     getSignatureFromTransaction,
-    SolanaRpcSubscriptionsApi,
     createNoopSigner,
+    address,
     signature,
     getBase64EncodedWireTransaction,
+    Rpc,
+    SolanaRpcApi,
+    RpcSubscriptions,
+    SolanaRpcSubscriptionsApi,
 } from "@solana/kit"
-import { 
-    findAssociatedTokenPda, 
-    TOKEN_PROGRAM_ADDRESS, 
-} from "@solana-program/token"
-import {
-    fetchToken as fetchToken2022,
-    TOKEN_2022_PROGRAM_ADDRESS,
-} from "@solana-program/token-2022"
-import {
-    fetchToken 
-} from "@solana-program/token"
 import {
     SolanaAggregatorSelectorService 
-} from "../aggregators"
+} from "../../aggregators"
 import {
     SignerService 
-} from "../signers"
+} from "../../signers"
 import {
     BotSchema, TokenSchema 
 } from "@modules/databases"
@@ -92,66 +76,6 @@ export class SolanaBalanceService implements IBalanceService {
         private readonly winstonService: WinstonService,
     ) { }
 
-    public async fetchBalance(
-        {
-            bot,
-            token,
-        }: FetchBalanceParams
-    ): Promise<FetchBalanceResult> {
-        return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Http,
-            callback: async ({ rpc }) => {
-                // return the native token balance
-                if (token.type === TokenType.Native) {
-                    const balance = await rpc.getBalance(address(bot.accountAddress)).send()
-                    return {
-                        balanceAmount: new BN(balance.value.toString()),
-                    }
-                }
-                // return the token balance
-                const mintAddress = address(token.tokenAddress)
-                const ownerAddress = address(bot.accountAddress)
-                // Derive the user's associated token account (ATA)
-                // This is required because balances are stored in ATA, not in the owner wallet directly.
-                const [
-                    ataAddress
-                ] = await findAssociatedTokenPda(
-                    {
-                        mint: mintAddress,
-                        owner: ownerAddress,
-                        tokenProgram:
-                    token.is2022Token
-                        ? TOKEN_2022_PROGRAM_ADDRESS
-                        : TOKEN_PROGRAM_ADDRESS,
-                    }
-                )
-
-                // Token-2022 accounts are handled by the newer token-2022 program.
-                try {
-                    if (token.is2022Token) {
-                        const token2022 = await fetchToken2022(rpc,
-                            ataAddress)
-                        return {
-                            balanceAmount: new BN(token2022.data.amount.toString()),
-                        }
-                    } else {
-                        // Standard SPL token account
-                        const tokenAccount = await fetchToken(rpc,
-                            ataAddress)
-                        return {
-                            balanceAmount: new BN(tokenAccount.data.amount.toString()),
-                        }
-                    }
-                } catch {
-                    // we dont find the ata address, so the balance is 0
-                    return {
-                        balanceAmount: new BN(0),
-                    }
-                }
-            },
-        })
-        
-    }
 
     public async prepareSwapTransaction(
         {

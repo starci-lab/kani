@@ -2,11 +2,6 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    FetchBalanceParams,
-    FetchBalanceResult,
-    FetchBalancesParams,
-    FetchBalancesResult,
-    IBalanceService,
     PrepareSwapTransactionParams,
     PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
@@ -16,13 +11,16 @@ import {
 } from "./balance.interface"
 import {
     SolanaBalanceService 
-} from "./solana.service"
+} from "./solana/solana.service"
 import {
     TokenType, ChainId 
 } from "@modules/typedefs"
 import {
     SuiBalanceService 
-} from "./sui.service"
+} from "./sui/sui.service"
+import {
+    BalanceFetcherService 
+} from "./fetcher.service"
 import { 
     JobType, 
     JobStatus, 
@@ -32,19 +30,11 @@ import {
     BotSchema, 
 } from "@modules/databases"
 import {
-    TargetOperationalGasAmountNotFoundException,
     TokenNotFoundException,
-    MinOperationalGasAmountNotFoundException,
-    UnsupportedChainIdException,
-    InsufficientMinGasBalanceAmountException,
     CannotEnqueueReconcileBalanceJobException,
     CannotReconcileBalanceEnqueueJobReason,
 } from "@modules/exceptions"
 import {
-    GasStatusService 
-} from "./gas-status.service"
-import {
-    GasStatus, 
     ReconcileBalancePayload
 } from "../types"
 import BN from "bn.js"
@@ -83,12 +73,12 @@ import {
 } from "@modules/winston"
 
 @Injectable()
-export class BalanceService implements IBalanceService {
+export class BalanceService {
     constructor(
     private readonly solanaBalanceService: SolanaBalanceService,
     private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     private readonly suiBalanceService: SuiBalanceService,
-    private readonly gasStatusService: GasStatusService,
+    private readonly balanceFetcherService: BalanceFetcherService,
     private readonly swapMathService: SwapMathService,
     @InjectPrimaryMongoose()
     private readonly connection: Connection,
@@ -262,7 +252,7 @@ export class BalanceService implements IBalanceService {
                 targetBalanceAmount: _targetBalanceAmount,
                 quoteBalanceAmount: _quoteBalanceAmount,
                 gasBalanceAmount: _gasBalanceAmount,
-            } = await this.fetchBalances(
+            } = await this.balanceFetcherService.fetchBalances(
                 {
                     bot,
                 }
@@ -306,145 +296,6 @@ export class BalanceService implements IBalanceService {
             return this.suiBalanceService.executeSwapTransaction(params)
         default:
             throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
-        }
-    }
-
-    public async fetchBalances(
-        {
-            bot,
-        }: FetchBalancesParams
-    ): Promise<FetchBalancesResult> {
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
-            }
-        })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                id: bot.targetToken.toString(),
-            })
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
-            }
-        })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                id: bot.quoteToken.toString(),
-            })
-        }
-        const { balanceAmount: targetBalanceAmount } = await this.fetchBalance({
-            bot,
-            token: targetToken,
-        })
-        const { balanceAmount: quoteBalanceAmount } = await this.fetchBalance({
-            bot,
-            token: quoteToken,
-        })
-        const gasStatus = this.gasStatusService.getGasStatus({
-            targetTokenId: targetToken.displayId,
-            quoteTokenId: quoteToken.displayId,
-        })
-        const targetOperationalGasAmount =
-      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[bot.chainId]
-          ?.targetOperationalAmount
-        if (!targetOperationalGasAmount) {
-            throw new TargetOperationalGasAmountNotFoundException(
-                {
-                    chainId: bot.chainId,
-                }
-            )
-        }
-        const minOperationalGasAmount =
-      this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[bot.chainId]
-          ?.minOperationalAmount
-        if (!minOperationalGasAmount) {
-            throw new MinOperationalGasAmountNotFoundException(
-                {
-                    chainId: bot.chainId,
-                }
-            )
-        }
-        const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
-        const minOperationalGasAmountBN = new BN(minOperationalGasAmount)
-        switch (gasStatus) {
-        case GasStatus.IsTarget: {
-        // we use the possible maximum amount of gas that can be used
-            const effectiveGasAmountBN = BN.min(
-                targetOperationalGasAmountBN,
-                targetBalanceAmount,
-            )
-            if (effectiveGasAmountBN.lt(minOperationalGasAmountBN)) {
-                throw new InsufficientMinGasBalanceAmountException(
-                    {
-                        gasBalanceAmount: effectiveGasAmountBN.toString(),
-                        minOperationalGasAmount: minOperationalGasAmountBN.toString(),
-                        chainId: bot.chainId,
-                        botId: bot.id,
-                    }
-                )
-            }
-            const targetBalanceAmountAfterDeductingGas =
-          targetBalanceAmount.sub(effectiveGasAmountBN)
-            return {
-                targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
-                quoteBalanceAmount,
-                gasBalanceAmount: effectiveGasAmountBN,
-            }
-        }
-        case GasStatus.IsQuote: {
-            const quoteBalanceAmountAfterDeductingGas = quoteBalanceAmount.sub(
-                targetOperationalGasAmountBN,
-            )
-            return {
-                targetBalanceAmount,
-                quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
-                gasBalanceAmount: targetOperationalGasAmountBN,
-            }
-        }
-        default: {
-            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native
-                },
-                chainId: {
-                    $eq: bot.chainId
-                }
-            })
-            if (!gasToken) {
-                throw new TokenNotFoundException({
-                    conditions: {
-                        chainId: bot.chainId,
-                        type: TokenType.Native,
-                    },
-                })
-            }
-            const { balanceAmount: gasBalanceAmount } = await this.fetchBalance({
-                bot,
-                token: gasToken,
-            })
-            return {
-                targetBalanceAmount,
-                quoteBalanceAmount,
-                gasBalanceAmount,
-            }
-        }
-        }
-    }
-
-    public async fetchBalance(
-        params: FetchBalanceParams,
-    ): Promise<FetchBalanceResult> {
-        switch (params.bot.chainId) {
-        case ChainId.Solana:
-            return this.solanaBalanceService.fetchBalance(params)
-        case ChainId.Sui:
-            return this.suiBalanceService.fetchBalance(params)
-        default:
-            throw new UnsupportedChainIdException(
-                params.bot.chainId,
-            )
         }
     }
 }

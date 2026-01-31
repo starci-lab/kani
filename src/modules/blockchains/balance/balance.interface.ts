@@ -18,7 +18,6 @@ import {
  * It returns a quote + executable swap data.
  */
 export interface IBalanceService {
-    fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResult>
     prepareSwapTransaction(params: PrepareSwapTransactionParams): Promise<PrepareSwapTransactionResult>
     executeSwapTransaction(params: ExecuteSwapTransactionParams): Promise<void>
 }
@@ -115,4 +114,18 @@ export interface GetBalanceAmountInUsdParams {
 
 export interface GetBalanceAmountInUsdResult {
     balanceAmountInUsd: Decimal
+}
+
+export interface FetchTokensParams {
+    bot: BotSchema
+}
+
+export interface FetchTokensResult {
+    tokens: Array<TokenBalance>
+}
+
+export interface TokenBalance {
+    token: TokenSchema
+    balanceAmount: BN
+    balanceAmountDecimal: Decimal
 }

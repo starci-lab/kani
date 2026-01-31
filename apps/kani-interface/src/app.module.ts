@@ -17,7 +17,12 @@ import {
     PassportModule 
 } from "@modules/passport"
 import {
-    DexesModule, EvalModule, FormulasModule, KeypairsModule, MathModule 
+    DexesModule, 
+    EvalModule, 
+    FormulasModule, 
+    KeypairsModule, 
+    MathModule, 
+    BalanceModule,
 } from "@modules/blockchains"
 import {
     CryptoModule 
@@ -141,6 +146,10 @@ import {
         }),
         ClientsModule.register({
             isGlobal: true,
+        }),
+        BalanceModule.register({
+            isGlobal: true,
+            fetcherOnly: true,
         }),
         DexesModule.register({
             isGlobal: true,

@@ -11,6 +11,9 @@ import {
     BotV2Module,
 } from "./bot-v2"
 import {
+    BalancesV2Module,
+} from "./balances-v2"
+import {
     BotsModule as BotsCursorModule,
 } from "./bots"
 import {
@@ -35,6 +38,9 @@ import {
             isGlobal: true,
         }),
         BotV2Module.register({
+            isGlobal: true,
+        }),
+        BalancesV2Module.register({
             isGlobal: true,
         }),
         BotsCursorModule.register({

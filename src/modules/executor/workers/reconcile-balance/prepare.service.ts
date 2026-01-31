@@ -20,7 +20,8 @@ import {
     TokenType
 } from "@modules/typedefs"
 import {
-    SwapDirection
+    SwapDirection,
+    BalanceFetcherService
 } from "@modules/blockchains"
 import {
     BalanceService
@@ -45,6 +46,7 @@ import {
 export class PrepareService {
     constructor(
         private readonly balanceService: BalanceService,
+        private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
@@ -109,7 +111,7 @@ export class PrepareService {
                 targetBalanceAmount, 
                 quoteBalanceAmount, 
                 gasBalanceAmount 
-            } = await this.balanceService.fetchBalances({
+            } = await this.balanceFetcherService.fetchBalances({
                 bot,
             })
 

@@ -2,6 +2,7 @@ import {
     Injectable,
 } from "@nestjs/common"
 import {
+    BalanceFetcherService,
     BalanceService,
     BalanceSnapshotService,
     ClosePositionSnapshotService,
@@ -37,6 +38,7 @@ import BN from "bn.js"
 export class ConfirmService {
     constructor(
         private readonly balanceService: BalanceService,
+        private readonly balanceFetcherService: BalanceFetcherService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
         private readonly closePositionSnapshotService: ClosePositionSnapshotService,
@@ -97,7 +99,7 @@ export class ConfirmService {
             targetBalanceAmount,
             quoteBalanceAmount,
             gasBalanceAmount,
-        } = await this.balanceService.fetchBalances(
+        } = await this.balanceFetcherService.fetchBalances(
             {
                 bot,
             }

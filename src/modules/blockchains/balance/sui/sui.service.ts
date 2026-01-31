@@ -2,13 +2,11 @@ import {
     Injectable 
 } from "@nestjs/common"
 import { 
-    FetchBalanceParams, 
-    FetchBalanceResult, 
     IBalanceService, 
     PrepareSwapTransactionParams,
     PrepareSwapTransactionResult,
     ExecuteSwapTransactionParams,
-} from "./balance.interface"
+} from "../balance.interface"
 import {
     AppVersion, 
 } from "@modules/databases"
@@ -20,13 +18,12 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     TransactionValidationFailedException
 } from "@modules/exceptions"
-import BN from "bn.js"
 import {
     SuiAggregatorSelectorService 
-} from "../aggregators"
+} from "../../aggregators"
 import {
     SignerService 
-} from "../signers"
+} from "../../signers"
 import {
     RpcExecutorService 
 } from "@modules/blockchains"
@@ -215,23 +212,4 @@ export class SuiBalanceService implements IBalanceService {
         })
     }
 
-    async fetchBalance(
-        {
-            bot,
-            token,
-        }: FetchBalanceParams
-    ): Promise<FetchBalanceResult> {
-        return await this.rpcExecutorService.withSuiClient({
-            accessType: RpcAccessType.Http,
-            callback: async ({ suiClient }) => {
-                const { totalBalance } = await suiClient.getBalance({
-                    owner: bot.accountAddress,
-                    coinType: token.tokenAddress,
-                })
-                return {
-                    balanceAmount: new BN(totalBalance.toString()),
-                }
-            },
-        })
-    }   
 }   

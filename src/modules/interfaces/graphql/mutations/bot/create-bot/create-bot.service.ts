@@ -181,6 +181,9 @@ export class CreateBotService {
                             $inc: {
                                 botCount: 1 
                             },
+                            $setOnInsert: {
+                                version: 0,
+                            }
                         },
                         {
                             sort: {

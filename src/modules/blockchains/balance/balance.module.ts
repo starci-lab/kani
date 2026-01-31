@@ -8,6 +8,9 @@ import {
     BalanceService 
 } from "./balance.service"
 import {
+    BalanceFetcherService 
+} from "./fetcher.service"
+import {
     SwapMathService 
 } from "../math/swap.service"
 import {
@@ -17,11 +20,13 @@ import {
     QuoteRatioService 
 } from "../math/quote-ratio.service"
 import {
-    SuiBalanceService 
-} from "./sui.service"
+    SolanaBalanceService,
+    SolanaBalanceFetcherService 
+} from "./solana"
 import {
-    SolanaBalanceService 
-} from "./solana.service"
+    SuiBalanceService,
+    SuiBalanceFetcherService 
+} from "./sui"
 
 @Module({
 })
@@ -29,13 +34,20 @@ export class BalanceModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
-            SolanaBalanceService,
-            SuiBalanceService,
-            BalanceService,
+            SolanaBalanceFetcherService,
+            SuiBalanceFetcherService,
+            BalanceFetcherService,
             SwapMathService,
             GasStatusService,
             QuoteRatioService,
         ]
+        if (!options.fetcherOnly) {
+            providers.push(
+                SolanaBalanceService,
+                SuiBalanceService,
+                BalanceService,
+            )
+        }
         return {
             ...dynamicModule,
             providers: [

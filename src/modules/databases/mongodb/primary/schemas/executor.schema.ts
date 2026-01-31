@@ -1,5 +1,5 @@
 import {
-    Field, ObjectType 
+    Field, Int, ObjectType 
 } from "@nestjs/graphql"
 import {
     AbstractSchema 
@@ -40,11 +40,12 @@ export class ExecutorSchema extends AbstractSchema {
     @Field(() => Date,
         {
             description: "Timestamp when the resource was last refreshed",
+            nullable: true
         })
     @Prop({
-        type: Date, required: true 
+        type: Date, required: false 
     })
-        lastRefreshedAt: Date
+        lastRefreshedAt?: Date
 
     @Field(() => Number,
         {
@@ -55,14 +56,14 @@ export class ExecutorSchema extends AbstractSchema {
     })
         refreshCount: number
 
-    @Field(() => String,
+    @Field(() => Int,
         {
             description: "The executor version" 
         })
     @Prop({
-        type: String, required: true 
+        type: Number, required: false, default: 0
     })
-        version: string
+        version: number
 }
 
 export const ExecutorSchemaClass = SchemaFactory.createForClass(ExecutorSchema)
