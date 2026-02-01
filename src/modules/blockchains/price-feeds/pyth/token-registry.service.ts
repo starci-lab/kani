@@ -60,6 +60,7 @@ export class PythTokenRegistryService {
             if (!priceFeed) return undefined
             return {
                 tokenId: token.displayId,
+                id: token.id,
                 price: priceFeed.price,
             }
         })

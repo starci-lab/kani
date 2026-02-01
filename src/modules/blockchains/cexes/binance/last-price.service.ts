@@ -23,11 +23,18 @@ import {
 } from "./token-registry.service"
 import _ from "lodash"
 import {
-    AsyncService, RetryService 
+    AsyncService, DayjsService, RetryService 
 } from "@modules/mixin"
 import {
     WebSocketStreamConnection, StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
+import {
+    EventEmitterService, EventName 
+} from "@modules/event"
+import Decimal from "decimal.js"
+import {
+    Dayjs 
+} from "dayjs"
 
 @Injectable()
 export class BinanceLastPriceService implements OnApplicationBootstrap {
@@ -38,6 +45,8 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly asyncService: AsyncService,
+        private readonly dayjsService: DayjsService,
+        private readonly eventEmitterService: EventEmitterService,
     ) {
     }
 
@@ -72,6 +81,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 envConfig().cexes.binance.interval.rest,
                             )
                         }
+                        let startTime: Dayjs | null = null
                         // create the stream
                         const stream = await this.streamAsyncIteratorService.createStream(
                             {
@@ -87,6 +97,7 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                             symbols: batch,
                                         }
                                     )
+                                    startTime = this.dayjsService.now()
                                     connection.ws.send(
                                         JSON.stringify(
                                             {
@@ -113,6 +124,10 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                         {
                                             streamName: BINANCE_LAST_PRICE_STREAM_NAME,
                                             symbols: batch,
+                                            durationMs: this.dayjsService.now().diff(
+                                                startTime,
+                                                "millisecond"
+                                            ),
                                         }
                                     )
                                 }
@@ -145,12 +160,26 @@ export class BinanceLastPriceService implements OnApplicationBootstrap {
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map(
                                         async (tokenPrice) => {
-                                            await this.aggregatedTokenPriceCacheService.set(
-                                                {
-                                                    tokenId: tokenPrice.tokenId,
-                                                    price: tokenPrice.price,
-                                                    marketListingId: MarketListingId.Binance,
-                                                }
+                                            await this.asyncService.allIgnoreError(
+                                                [
+                                                    this.aggregatedTokenPriceCacheService.set(
+                                                        {
+                                                            id: tokenPrice.id,
+                                                            price: tokenPrice.price,
+                                                            marketListingId: MarketListingId.Binance,
+                                                        }
+                                                    ),
+                                                    this.eventEmitterService.emit(
+                                                        {
+                                                            event: EventName.TokenPriceUpdated,
+                                                            payload: {
+                                                                id: tokenPrice.id,
+                                                                price: new Decimal(tokenPrice.price),
+                                                                marketListingId: MarketListingId.Binance,
+                                                            },
+                                                        }
+                                                    ),
+                                                ]
                                             )
                                         }
                                     )

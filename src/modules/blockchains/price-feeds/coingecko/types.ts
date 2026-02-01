@@ -4,6 +4,7 @@ import {
 
 export interface CoingeckoTokenPrice {
     tokenId: TokenId
+    id: string
     price: number
 }
 

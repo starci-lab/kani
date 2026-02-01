@@ -39,6 +39,9 @@ import {
     WinstonService 
 } from "@modules/winston"
 import Decimal from "decimal.js"
+import {
+    EventEmitterService, EventName 
+} from "@modules/event"
 
 @Injectable()
 export class PythRestService implements OnApplicationBootstrap {
@@ -49,6 +52,7 @@ export class PythRestService implements OnApplicationBootstrap {
         private readonly pythTokenRegistryService: PythTokenRegistryService,
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
+        private readonly eventEmitterService: EventEmitterService,
     ) {}
 
     /**
@@ -110,13 +114,25 @@ export class PythRestService implements OnApplicationBootstrap {
             await this.asyncService.allIgnoreError(
                 pythTokenPrices.map(
                     async (data) => {
-                        await this.aggregatedTokenPriceCacheService.set(
-                            {
-                                tokenId: data.tokenId,
-                                price: data.price,
-                                marketListingId: MarketListingId.Pyth,
-                            }
-                        )
+                        return this.asyncService.allIgnoreError([
+                            this.aggregatedTokenPriceCacheService.set(
+                                {
+                                    id: data.id,
+                                    price: data.price,
+                                    marketListingId: MarketListingId.Pyth,
+                                }
+                            ),
+                            this.eventEmitterService.emit(
+                                {
+                                    event: EventName.TokenPriceUpdated,
+                                    payload: {
+                                        id: data.id,
+                                        price: new Decimal(data.price),
+                                        marketListingId: MarketListingId.Pyth,
+                                    },
+                                }
+                            ),
+                        ])
                     }
                 ),
             )

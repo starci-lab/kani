@@ -262,6 +262,7 @@ export interface WebsocketSubscriptionOpenedMessage {
 export interface WebsocketSubscriptionClosedMessage {
     streamName: string
     symbols: Array<string>
+    durationMs: number
 }
 
 /**

@@ -23,9 +23,6 @@ import {
 import {
     EventName, configMap 
 } from "./config"
-import {
-    createHash 
-} from "@modules/utils"
 
 export interface EmitOptions {
     useKafka?: boolean
@@ -58,6 +55,16 @@ export class EventEmitterService implements OnModuleInit {
         }
     }
 
+    getEventName<T extends EventName>(
+        event: T,
+        args?: Array<unknown>
+    ): T {
+        if (args) {
+            return `${event}.${args.map(arg => typeof arg === "string" ? arg : JSON.stringify(arg)).join(".")}` as T
+        }
+        return event
+    }
+
     private isKafkaProducerEnabled(): boolean {
         return (
             this.options.kafka?.usePublish ?? false
@@ -74,12 +81,10 @@ export class EventEmitterService implements OnModuleInit {
         }: EmitParams<T>
     ) {
         const config = configMap[event]
-        if (args) {
-            event = createHash(
-                event,
-                ...args
-            ) as T
-        }
+        const eventName = this.getEventName(
+            event,
+            args
+        )
         // if useLocal is not provided, use the config value
         const useLocal =
           options?.useLocal !== undefined
@@ -94,7 +99,7 @@ export class EventEmitterService implements OnModuleInit {
         // Emit locally (in-process listeners)
         if (useLocal) {
             this.eventEmitter.emit(
-                event,
+                eventName,
                 payload
             )
         }
@@ -106,7 +111,7 @@ export class EventEmitterService implements OnModuleInit {
           this.kafkaProducerService
         ) {
             await this.kafkaProducerService.producer.send({
-                topic: event,
+                topic: eventName,
                 compression: CompressionTypes.GZIP,
                 acks: 1,
                 messages: [
@@ -128,14 +133,12 @@ export class EventEmitterService implements OnModuleInit {
             listener,
         }: OnParams<T>
     ) {
-        if (args) {
-            event = createHash(
-                event,
-                ...args
-            ) as T
-        }
-        this.eventEmitter.on(
+        const eventName = this.getEventName(
             event,
+            args
+        )
+        this.eventEmitter.on(
+            eventName,
             listener
         )
     }
@@ -147,14 +150,14 @@ export class EventEmitterService implements OnModuleInit {
             listener,
         }: OffParams<T>
     ) {
-        if (args) {
-            event = createHash(
-                event,
-                ...args
-            ) as T
-        }
-        this.eventEmitter.off(event,
-            listener)
+        const eventName = this.getEventName(
+            event,
+            args
+        )
+        this.eventEmitter.off(
+            eventName,
+            listener
+        )
     }
 }
 

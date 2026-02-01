@@ -6,6 +6,7 @@ import {
     BINANCE_WS_URL 
 } from "./constants"
 import {
+    DayjsService, 
     RetryService 
 } from "@modules/mixin"
 import {
@@ -24,6 +25,9 @@ import {
     BinanceTokenRegistryService 
 } from "./token-registry.service"
 import _ from "lodash"
+import {
+    Dayjs 
+} from "dayjs"
 
 const ORDER_BOOK_STREAM_NAME = "binance-order-book"
 @Injectable()
@@ -33,6 +37,7 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
         private readonly retryService: RetryService,
         private readonly winstonService: WinstonService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -50,7 +55,6 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                     const connection = new WebSocketStreamConnection(BINANCE_WS_URL)
                     const abortController = new AbortController()
                     let timeout: NodeJS.Timeout | undefined = undefined
-
                     const resetTimeout = () => {
                         if (timeout) {
                             clearTimeout(timeout)
@@ -61,6 +65,7 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                         )
                     }
 
+                    let startTime: Dayjs | null = null
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         signal: abortController.signal,
@@ -70,6 +75,7 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                                     streamName: ORDER_BOOK_STREAM_NAME,
                                     symbols,
                                 })
+                            startTime = this.dayjsService.now()
                             connection.ws.send(
                                 JSON.stringify({
                                     method: "SUBSCRIBE",
@@ -92,23 +98,25 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                                 {
                                     streamName: ORDER_BOOK_STREAM_NAME,
                                     symbols,
-                                })
+                                    durationMs: this.dayjsService.now().diff(
+                                        startTime,
+                                        "millisecond"
+                                    ),
+                                }
+                            )
                         }
                     })
 
                     for await (const data of stream) {
                         try {
                             const parsed = JSON.parse(data.toString()) as OrderBookStream | NullOrderBookStream
-
                             // Subscription ACK: { result: null, id: 1 }
                             if ("result" in parsed && parsed.result === null) {
                                 continue
                             }
-
                             if (!("data" in parsed)) {
                                 continue
                             }
-
                             const streamSymbol = parsed.stream.split("@")[0]
                             if (!symbols.includes(streamSymbol)) continue
 
@@ -122,7 +130,6 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                                 askPrice: parseFloat(bestAsk[0]),
                                 askQty: parseFloat(bestAsk[1]),
                             }
-
                             if (
                                 !Number.isFinite(orderBook.bidPrice) ||
                                 !Number.isFinite(orderBook.bidQty) ||

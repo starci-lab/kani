@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    MarketListingId, MarketListingSchema, PrimaryMemoryStorageService 
+    MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     CoinMarketCapTokenPrice, CoinMarketCapTokenPriceData 
@@ -23,7 +23,9 @@ export class CoinMarketCapTokenRegistryService {
     getSymbols(): Array<string> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.CoinMarketCap
+                $elemMatch: {
+                    id: MarketListingId.CoinMarketCap,
+                },
             }
         })
         if (!tokens.length) return []
@@ -48,7 +50,9 @@ export class CoinMarketCapTokenRegistryService {
         // retrieve the tokens from the primary memory storage service
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.CoinMarketCap
+                $elemMatch: {
+                    id: MarketListingId.CoinMarketCap,
+                },
             }
         })
         if (!tokens.length) return []
@@ -64,6 +68,7 @@ export class CoinMarketCapTokenRegistryService {
                 if (!tokenPrice) return undefined
                 return {
                     tokenId: token.displayId,
+                    id: token.id,
                     price: tokenPrice.price ?? 0,
                 }
             }

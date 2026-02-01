@@ -36,6 +36,10 @@ import {
 import {
     MountStorageService 
 } from "@modules/filesystem"
+import {
+    EventEmitterService, EventName 
+} from "@modules/event"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModuleInit {
@@ -49,6 +53,7 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly mountStorageService: MountStorageService,
+        private readonly eventEmitterService: EventEmitterService,
     ) {}
 
     onModuleInit() {
@@ -130,12 +135,26 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
             await this.asyncService.allIgnoreError(
                 tokenPrices.map(
                     async (data) => {
-                        await this.aggregatedTokenPriceCacheService.set(
-                            {
-                                tokenId: data.tokenId,
-                                price: data.price,
-                                marketListingId: MarketListingId.CoinMarketCap,
-                            }
+                        return this.asyncService.allIgnoreError(
+                            [
+                                this.aggregatedTokenPriceCacheService.set(
+                                    {
+                                        id: data.id,
+                                        price: data.price,
+                                        marketListingId: MarketListingId.CoinMarketCap,
+                                    }
+                                ),
+                                this.eventEmitterService.emit(
+                                    {
+                                        event: EventName.TokenPriceUpdated,
+                                        payload: {
+                                            id: data.id,
+                                            price: new Decimal(data.price),
+                                            marketListingId: MarketListingId.CoinMarketCap,
+                                        },
+                                    }
+                                ),
+                            ]
                         )
                     }
                 ),

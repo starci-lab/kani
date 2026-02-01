@@ -132,7 +132,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                     async (data) => {
                                         await this.aggregatedTokenPriceCacheService.set(
                                             {
-                                                tokenId: data.tokenId,
+                                                id: data.id,
                                                 price: data.price,
                                                 marketListingId: MarketListingId.Pyth,
                                             }

@@ -2,7 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    MarketListingId, MarketListingSchema, PrimaryMemoryStorageService 
+    MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     CoingeckoTokenPrice, CoingeckoTokenPriceData 
@@ -23,7 +23,9 @@ export class CoingeckoTokenRegistryService {
     getSymbols(): Array<string> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Coingecko
+                $elemMatch: {
+                    id: MarketListingId.Coingecko,
+                },
             }
         })
         if (!tokens.length) return []
@@ -47,7 +49,9 @@ export class CoingeckoTokenRegistryService {
     ): Array<CoingeckoTokenPrice> {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
-                $where: (marketListing: MarketListingSchema) => marketListing.id === MarketListingId.Coingecko
+                $elemMatch: {
+                    id: MarketListingId.Coingecko,
+                },
             }
         })
         if (!tokens.length) return []
@@ -63,6 +67,7 @@ export class CoingeckoTokenRegistryService {
                 if (!priceData) return undefined
                 return {
                     tokenId: token.displayId,
+                    id: token.id,
                     price: priceData.price,
                 }
             })

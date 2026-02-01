@@ -1,4 +1,5 @@
 export enum EventName {
+    TokenPriceUpdated = "token.price.updated",
     ClmmLiquidityPoolsSynced = "clmm.liquidity.pools.synced",
     DlmmLiquidityPoolsSynced = "dlmm.liquidity.pools.synced",
     ReinitializeBalancers = "reinitialize.balancers",

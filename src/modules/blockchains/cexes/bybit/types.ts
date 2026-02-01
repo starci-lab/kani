@@ -1,7 +1,10 @@
-import { TokenId } from "@modules/databases"
+import {
+    TokenId 
+} from "@modules/databases"
 
 export interface BybitTokenPrice {
     tokenId: TokenId
+    id: string
     price: number
 }
 

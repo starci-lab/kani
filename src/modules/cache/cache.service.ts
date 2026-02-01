@@ -13,9 +13,6 @@ import {
     configMap
 } from "./config"
 import {
-    createHash
-} from "@modules/utils"
-import {
     CacheType,
     DelParams,
     GetParams, SetParams
@@ -41,6 +38,19 @@ export class CacheService {
     @InjectSuperJson()
     private readonly superjson: SuperJSON,
     ) {}
+    
+    /**
+     * Get the cache key for a given cache key and arguments.
+     * @param key - The cache key.
+     * @param args - The arguments.
+     * @returns The cache key.
+     */
+    getCacheKey(
+        key: CacheKey,
+        args?: Array<unknown>
+    ): string {
+        return `${key}:${args?.map(arg => typeof arg === "string" ? arg : JSON.stringify(arg)).join(":")}`
+    }
 
     /**
    * Retrieve a cached value by logical cache key and optional arguments.
@@ -60,11 +70,10 @@ export class CacheService {
             cacheType = CacheType.Redis,
         }: GetParams<K>
     ): Promise<typeof configMap[typeof key]["cacheResult"] | undefined> {
-        const cacheKey = createHash(
+        const cacheKey = this.getCacheKey(
             key,
-            ...(args || [])
+            args
         )
-
         const cacheManager =
       cacheType === CacheType.Redis
           ? this.redisCacheManager
@@ -76,7 +85,6 @@ export class CacheService {
         if (!serializedCachedResult) {
             return undefined
         }
-
         // Deserialize using SuperJSON to restore complex types
         return this.superjson.parse<
       typeof configMap[typeof key]["cacheResult"]
@@ -100,11 +108,10 @@ export class CacheService {
             cacheType = CacheType.Redis,
         }: SetParams<K>
     ): Promise<void> {
-        const cacheKey = createHash(
+        const cacheKey = this.getCacheKey(
             key,
-            ...(args || [])
+            args
         )
-
         const serializedCachedResult =
       this.superjson.stringify(cacheResult)
 
@@ -117,7 +124,6 @@ export class CacheService {
       cacheType === CacheType.Redis
           ? configMap[key].ttl
           : configMap[key].ttl * 1000
-
         await cacheManager.set(
             cacheKey,
             serializedCachedResult,
@@ -138,11 +144,10 @@ export class CacheService {
             cacheType = CacheType.Redis,
         }: DelParams
     ): Promise<void> {
-        const cacheKey = createHash(
+        const cacheKey = this.getCacheKey(
             key,
-            ...(args || [])
+            args
         )
-
         const cacheManager =
       cacheType === CacheType.Redis
           ? this.redisCacheManager

@@ -87,7 +87,7 @@ export const envConfig = () => ({
             },
             chunks: {
                 rest: parseEnvInt("PRICE_FEEDS_COINGECKO_CHUNKS_REST",
-                    10),
+                    20),
             },
         },
         pyth: {
@@ -97,9 +97,9 @@ export const envConfig = () => ({
             },
             chunks: {
                 rest: parseEnvInt("PRICE_FEEDS_PYTH_CHUNKS_REST",
-                    10),
+                    20),
                 subscription: parseEnvInt("PRICE_FEEDS_PYTH_CHUNKS_SUBSCRIPTION",
-                    10),
+                    5),
             },
         },
         coinmarketcap: {
@@ -109,7 +109,7 @@ export const envConfig = () => ({
             },
             chunks: {
                 rest: parseEnvInt("PRICE_FEEDS_COINMARKETCAP_CHUNKS_REST",
-                    10),
+                    20),
             },
         },
     },

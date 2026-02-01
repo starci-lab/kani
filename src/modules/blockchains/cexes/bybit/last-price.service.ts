@@ -9,7 +9,9 @@ import {
     AggregatedTokenPriceCacheService 
 } from "@modules/cache"
 import {
-    AsyncService, RetryService 
+    AsyncService, 
+    DayjsService, 
+    RetryService 
 } from "@modules/mixin"
 import {
     BYBIT_LAST_PRICE_STREAM_NAME,
@@ -28,6 +30,13 @@ import _ from "lodash"
 import {
     WebSocketStreamConnection, StreamAsyncIteratorService 
 } from "@modules/stream-async-iterator"
+import {
+    EventEmitterService, EventName 
+} from "@modules/event"
+import Decimal from "decimal.js"
+import {
+    Dayjs 
+} from "dayjs"
   
 @Injectable()
 export class BybitLastPriceService implements OnApplicationBootstrap {
@@ -38,14 +47,18 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
       private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
       private readonly asyncService: AsyncService,
       private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+      private readonly dayjsService: DayjsService,
+      private readonly eventEmitterService: EventEmitterService,
     ) {}
   
     onApplicationBootstrap() {
         const symbols = this.bybitTokenRegistryService.getSymbols()
         if (!symbols.length) return
         // Split symbols into chunks (Bybit has a limit on subscription args)
-        const batches = _.chunk(symbols,
-            envConfig().cexes.bybit.chunks.lastPrice)
+        const batches = _.chunk(
+            symbols,
+            envConfig().cexes.bybit.chunks.lastPrice
+        )
         for (const batch of batches) {
             this.retryService.retry({
                 options: {
@@ -66,6 +79,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         )
                     }
 
+                    let startTime: Dayjs | null = null
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         signal: abortController.signal,
@@ -75,6 +89,7 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                     streamName: BYBIT_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
                                 })
+                            startTime = this.dayjsService.now()
                             resetTimeout()
                             connection.ws.send(JSON.stringify({
                                 op: "subscribe",
@@ -96,6 +111,10 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 {
                                     streamName: BYBIT_LAST_PRICE_STREAM_NAME,
                                     symbols: batch,
+                                    durationMs: this.dayjsService.now().diff(
+                                        startTime,
+                                        "millisecond"
+                                    ),
                                 }
                             )
                         }
@@ -105,7 +124,6 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                         for await (const data of stream) {
                             try {
                                 const parsed = JSON.parse(data.toString()) as BybitTickerUpdate | BybitWsSubscribeResult
-
                                 if ("success" in parsed) {
                                     if (!parsed.success) {
                                         continue
@@ -131,11 +149,25 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                 resetTimeout()
                                 await this.asyncService.allIgnoreError(
                                     tokenPrices.map((tokenPrice) => 
-                                        this.aggregatedTokenPriceCacheService.set({
-                                            tokenId: tokenPrice.tokenId,
-                                            price: tokenPrice.price,
-                                            marketListingId: MarketListingId.Bybit,
-                                        })
+                                        this.asyncService.allIgnoreError(
+                                            [
+                                                this.aggregatedTokenPriceCacheService.set({
+                                                    id: tokenPrice.id,
+                                                    price: tokenPrice.price,
+                                                    marketListingId: MarketListingId.Bybit,
+                                                }),
+                                                this.eventEmitterService.emit(
+                                                    {
+                                                        event: EventName.TokenPriceUpdated,
+                                                        payload: {
+                                                            id: tokenPrice.id,
+                                                            price: new Decimal(tokenPrice.price),
+                                                            marketListingId: MarketListingId.Bybit,
+                                                        },
+                                                    }
+                                                ),
+                                            ]
+                                        )
                                     )
                                 )
                             } catch (error) {

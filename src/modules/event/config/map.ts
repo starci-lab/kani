@@ -21,7 +21,8 @@ import {
     DlmmPositionCloseWithoutEventRequestedEventPayload,
     DlmmPositionOpenWithoutEventRequestedEventPayload,
     ClmmPositionCloseWithoutEventRequestedEventPayload,
-    ClmmPositionOpenWithoutEventRequestedEventPayload
+    ClmmPositionOpenWithoutEventRequestedEventPayload,
+    TokenPriceUpdatedEventPayload
 } from "./types"
 import {
     KafkaTopicConfig 
@@ -187,5 +188,13 @@ export const configMap = {
         } as Partial<KafkaTopicConfig>,
         eventPayload: {
         } as DlmmPositionCloseWithoutEventRequestedEventPayload
+    },
+    [EventName.TokenPriceUpdated]: {
+        useKafka: true,
+        useLocal: false,
+        config: {
+        } as Partial<KafkaTopicConfig>,
+        eventPayload: {
+        } as TokenPriceUpdatedEventPayload
     },
 }

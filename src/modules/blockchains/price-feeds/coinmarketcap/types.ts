@@ -4,6 +4,7 @@ import {
 
 export interface CoinMarketCapTokenPrice {
     tokenId: TokenId
+    id: string
     price: number
 }
 

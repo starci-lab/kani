@@ -3,11 +3,13 @@ import {
 } from "@modules/cache"
 import {
     BotSchema,
+    MarketListingId,
     RpcEjection 
 } from "@modules/databases"
 import {
     ExecutorSchema 
 } from "@modules/databases"
+import Decimal from "decimal.js"
 
 export type WithId<T> = T & {
     id: string
@@ -59,4 +61,10 @@ export interface DlmmPositionOpenWithoutEventRequestedEventPayload {
 }
 export interface DlmmPositionCloseWithoutEventRequestedEventPayload {
     id: string
+}
+
+export interface TokenPriceUpdatedEventPayload {
+    id: string
+    price: Decimal
+    marketListingId: MarketListingId
 }

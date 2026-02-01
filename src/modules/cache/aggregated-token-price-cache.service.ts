@@ -2,10 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    createObjectId
-} from "@modules/utils"
-import {
-    MarketListingId, TokenId 
+    MarketListingId 
 } from "@modules/databases"
 import {
     DayjsService 
@@ -31,7 +28,7 @@ export class AggregatedTokenPriceCacheService {
 
     async set(
         {
-            tokenId,
+            id,
             price,
             marketListingId,
         }
@@ -40,7 +37,7 @@ export class AggregatedTokenPriceCacheService {
         // try to get the cache result
         let cacheResult = await this.cacheService.get({
             key: CacheKey.AggregatedTokenPrice,
-            args: [createObjectId(tokenId).toString()],
+            args: [id],
         })
         if (!cacheResult) {
             cacheResult = {
@@ -57,19 +54,21 @@ export class AggregatedTokenPriceCacheService {
         // save the cache result
         await this.cacheService.set({
             key: CacheKey.AggregatedTokenPrice,
-            args: [createObjectId(tokenId).toString()],
+            args: [id],
             cacheResult,
         })
     }
 
-    async get(tokenId: TokenId): Promise<AggregatedTokenPriceCacheResult> {
-        const cachedResult = await this.cacheService.get({
-            key: CacheKey.AggregatedTokenPrice,
-            args: [createObjectId(tokenId).toString()],
-        })
+    async get(id: string): Promise<AggregatedTokenPriceCacheResult> {
+        const cachedResult = await this.cacheService.get(
+            {
+                key: CacheKey.AggregatedTokenPrice,
+                args: [id],
+            }
+        )
         if (!cachedResult) {
             throw new AggregatedTokenPriceNotFoundException({
-                tokenId
+                id,
             })
         }
         return cachedResult
@@ -77,7 +76,7 @@ export class AggregatedTokenPriceCacheService {
 }
 
 export interface SetAggregatedTokenPriceParams {
-    tokenId: TokenId
+    id: string
     price: number
     marketListingId: MarketListingId
 }

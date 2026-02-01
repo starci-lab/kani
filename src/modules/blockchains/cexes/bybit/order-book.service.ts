@@ -9,6 +9,9 @@ import {
     RetryService 
 } from "@modules/mixin"
 import {
+    DayjsService 
+} from "@modules/mixin"
+import {
     OrderBook 
 } from "../types"
 import {
@@ -32,6 +35,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
         private readonly retryService: RetryService,
         private readonly winstonService: WinstonService,
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     onApplicationBootstrap() {
@@ -63,6 +67,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                     )
                 }
 
+                const startTime = this.dayjsService.now()
                 const stream = await this.streamAsyncIteratorService.createStream({
                     connection,
                     signal: abortController.signal,
@@ -93,6 +98,10 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                             {
                                 streamName: "bybit-order-book",
                                 symbols,
+                                durationMs: this.dayjsService.now().diff(
+                                    startTime,
+                                    "millisecond"
+                                ),
                             })
                     }
                 })

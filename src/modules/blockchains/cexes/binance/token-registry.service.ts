@@ -72,6 +72,7 @@ export class BinanceTokenRegistryService {
                 if (!tokenPrice) return undefined
                 return {
                     tokenId: token.displayId,
+                    id: token.id,
                     price: tokenPrice.price,
                 }
             }

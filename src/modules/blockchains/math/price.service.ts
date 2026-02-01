@@ -43,7 +43,7 @@ export class PriceService {
         { token }: ResolvePriceParams,
     ): Promise<ResolvePriceResult> {
         const aggregated =
-            await this.aggregatedTokenPriceCacheService.get(token.displayId)
+            await this.aggregatedTokenPriceCacheService.get(token.id)
         const now = this.dayjsService.now()
         const maxAgeMs = envConfig().cache.stale.priceMaxAgeMs
         const maxDeviationRatio = envConfig().price.deviationMaxRatio
@@ -54,7 +54,6 @@ export class PriceService {
                 (marketListingPrev, marketListingNext) => 
                     marketListingPrev.priority - marketListingNext.priority
             )
-
         // Collect prices for median calculation
         const observedPrices: Array<number> = marketListings
             .map(
@@ -65,11 +64,10 @@ export class PriceService {
                 (price): price is number =>
                     typeof price === "number" && !isNaN(price),
             )
-
         if (observedPrices.length === 0) {
             throw new AggregatedTokenPriceNotFoundException(
                 {
-                    tokenId: token.displayId
+                    id: token.id,
                 }
             )
         }
@@ -89,8 +87,8 @@ export class PriceService {
             ageMs: number
         } | null = null
 
-        for (const market of marketListings) {
-            const priceEntry = aggregated.prices[market.id]
+        for (const marketListing of marketListings) {
+            const priceEntry = aggregated.prices[marketListing.id]
             if (!priceEntry) continue
             if (isPriceOutlier(priceEntry.price)) continue
 
@@ -113,6 +111,7 @@ export class PriceService {
                 }
             }
         }
+        
         if (bestStaleCandidate) {
             return {
                 price: bestStaleCandidate.price,
@@ -123,7 +122,7 @@ export class PriceService {
 
         throw new AggregatedTokenPriceNotFoundException(
             {
-                tokenId: token.displayId
+                id: token.id,
             }
         )
     }

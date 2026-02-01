@@ -67,6 +67,7 @@ export class BybitTokenRegistryService {
             if (!tokenPrice) return undefined
             return {
                 tokenId: token.displayId,
+                id: token.id,
                 price: tokenPrice.price,
             }
         }).filter(Boolean) as Array<BybitTokenPrice>

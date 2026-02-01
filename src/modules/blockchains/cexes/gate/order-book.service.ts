@@ -6,7 +6,8 @@ import {
     GATE_WS_URL 
 } from "./constants"
 import {
-    DayjsService, RetryService 
+    DayjsService, 
+    RetryService 
 } from "@modules/mixin"
 import {
     envConfig 
@@ -26,9 +27,9 @@ export class GateOrderBookService implements OnApplicationBootstrap {
     constructor(
       private readonly gateTokenRegistryService: GateTokenRegistryService,
       private readonly retryService: RetryService,
-      private readonly dayjsService: DayjsService,
       private readonly winstonService: WinstonService,
       private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
+      private readonly dayjsService: DayjsService,
     ) {}
   
     onApplicationBootstrap() {
@@ -54,6 +55,7 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                     )
                 }
 
+                const startTime = this.dayjsService.now()
                 const stream = await this.streamAsyncIteratorService.createStream({
                     connection,
                     signal: abortController.signal,
@@ -84,6 +86,10 @@ export class GateOrderBookService implements OnApplicationBootstrap {
                             {
                                 streamName: "gate-order-book",
                                 symbols,
+                                durationMs: this.dayjsService.now().diff(
+                                    startTime,
+                                    "millisecond"
+                                ),
                             })
                     }
                 })

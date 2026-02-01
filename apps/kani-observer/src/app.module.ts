@@ -81,9 +81,10 @@ import {
         SentryModule.register({
             isGlobal: true,
         }),
+        ScheduleModule.forRoot(),   
         WinstonModule.register({
             isGlobal: true,
-            appName: "Kani Inspector",
+            appName: "Kani Observer",
             level: WinstonLevel.Info,
         }),
         FormulasModule.register({
@@ -142,7 +143,6 @@ import {
         SignersModule.register({
             isGlobal: true,
         }),
-        ScheduleModule.forRoot(),
         ClientsModule.register({
             isGlobal: true,
         }),

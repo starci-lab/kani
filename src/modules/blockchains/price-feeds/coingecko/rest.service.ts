@@ -33,6 +33,10 @@ import {
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
+import {
+    EventEmitterService, EventName 
+} from "@modules/event"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class CoingeckoRestService implements OnApplicationBootstrap {
@@ -45,6 +49,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         private readonly coingeckoTokenRegistryService: CoingeckoTokenRegistryService,
         private readonly winstonService: WinstonService,
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
+        private readonly eventEmitterService: EventEmitterService,
     ) {
         const key = "coingecko"
         this.axios = this.axiosService.create(key)
@@ -78,28 +83,24 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
-                        const prices = await this.retryService.retry(
+                        const response = await this.axios.get<CoingeckoTokenPriceResult>(
+                            "https://api.coingecko.com/api/v3/simple/price",
                             {
-                                action: async () => {
-                                    const response = await this.axios.get<CoingeckoTokenPriceResult>(
-                                        "https://api.coingecko.com/api/v3/simple/price",
-                                        {
-                                            params: {
-                                                ids: chunk.join(","),
-                                                vs_currencies: "usd",
-                                            },
-                                        }
-                                    )
-                                    return response.data
+                                params: {
+                                    ids: chunk.join(","),
+                                    vs_currencies: "usd",
                                 },
                             }
                         )
+                        const prices = response.data
                         return Object.entries(prices).map(([coinId,
                             data]) => ({
                             coinId,
                             price: data?.usd ?? 0,
                         }))
-                    }))
+                    }
+                )
+            )
             const priceData = prices.flat().map<CoingeckoTokenPriceData>(data => ({
                 coinId: data?.coinId ?? "",
                 price: data?.price ?? 0,
@@ -117,12 +118,26 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
             await this.asyncService.allIgnoreError(
                 tokenPrices.map(
                     async (data) => {
-                        await this.aggregatedTokenPriceCacheService.set(
-                            {
-                                tokenId: data.tokenId,
-                                price: data.price,
-                                marketListingId: MarketListingId.Coingecko,
-                            }
+                        return this.asyncService.allIgnoreError(
+                            [
+                                this.aggregatedTokenPriceCacheService.set(
+                                    {
+                                        id: data.id,
+                                        price: data.price,
+                                        marketListingId: MarketListingId.Coingecko,
+                                    }
+                                ),
+                                this.eventEmitterService.emit(
+                                    {
+                                        event: EventName.TokenPriceUpdated,
+                                        payload: {
+                                            id: data.id,
+                                            price: new Decimal(data.price),
+                                            marketListingId: MarketListingId.Coingecko,
+                                        },
+                                    }
+                                ),
+                            ]
                         )
                     }
                 ),
