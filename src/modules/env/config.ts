@@ -798,9 +798,11 @@ export const envConfig = () => ({
     },
     // k8s
     k8s: {
-        podNamespace: parseEnvString("POD_NAMESPACE",
-            "default"),
         executor: {
+            podNamespace: parseEnvString("POD_NAMESPACE",
+                "default"),
+            image: parseEnvString("KANI_EXECUTOR_IMAGE",
+                "nginx:alpine"),
             probes: {
                 liveness: {
                     failureThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_LIVENESS_FAILURE_THRESHOLD",
@@ -863,8 +865,6 @@ export const envConfig = () => ({
                         "5s"),
                 }
             },
-            image: parseEnvString("K8S_EXECUTOR_IMAGE",
-                "nginx:alpine"),
             replicas: parseEnvInt("K8S_EXECUTOR_REPLICAS",
                 1),
             envVarsConfigMapName: parseEnvString("K8S_EXECUTOR_ENV_VARS_CONFIG_MAP_NAME",

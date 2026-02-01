@@ -73,7 +73,7 @@ export class K8SDeploymentService  {
             this.kubernetesApi.readNamespacedDeployment(
                 {
                     name,
-                    namespace: envConfig().k8s.podNamespace,
+                    namespace: envConfig().k8s.executor.podNamespace,
                 }
             )
         )
@@ -110,11 +110,11 @@ export class K8SDeploymentService  {
         const annotations = this.k8sAnnotationsService.getAnnotations(executor)
     
         await this.kubernetesApi.createNamespacedDeployment({
-            namespace: envConfig().k8s.podNamespace,
+            namespace: envConfig().k8s.executor.podNamespace,
             body: {
                 metadata: {
                     name,
-                    namespace: envConfig().k8s.podNamespace,
+                    namespace: envConfig().k8s.executor.podNamespace,
                     labels,
                     annotations,
                 },
@@ -160,7 +160,7 @@ export class K8SDeploymentService  {
                                         },
                                         {
                                             name: "POD_NAMESPACE",
-                                            value: envConfig().k8s.podNamespace,
+                                            value: envConfig().k8s.executor.podNamespace,
                                         },
                                         {
                                             name: "EXECUTOR_ID",
@@ -421,7 +421,7 @@ export class K8SDeploymentService  {
         ]
         await this.kubernetesApi.patchNamespacedDeployment({
             name,
-            namespace: envConfig().k8s.podNamespace,
+            namespace: envConfig().k8s.executor.podNamespace,
             body: patchBody,
         }
         )
@@ -449,7 +449,7 @@ export class K8SDeploymentService  {
         await this.kubernetesApi.deleteNamespacedDeployment(
             {
                 name,
-                namespace: envConfig().k8s.podNamespace,
+                namespace: envConfig().k8s.executor.podNamespace,
             }
         )
         this.winstonService.log(

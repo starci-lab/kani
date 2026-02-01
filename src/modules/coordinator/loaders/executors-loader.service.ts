@@ -43,6 +43,15 @@ import {
 import {
     Collection 
 } from "lokijs"
+import {
+    AppsV1Api 
+} from "@kubernetes/client-node"
+import {
+    InjectKubernetesApi 
+} from "@modules/kubernetes"
+import {
+    parseExecutorId 
+} from "../utils"
 
 @Injectable()
 export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleInit {
@@ -60,6 +69,8 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
         private readonly winstonService: WinstonService,
         private readonly semaService: SemaService,
         private readonly lokiJSService: LokiJSService,
+        @InjectKubernetesApi()
+        private readonly kubernetesApi: AppsV1Api,
     ) { }
 
     async onModuleInit() {
@@ -91,12 +102,26 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             return
         }
         try {
+            // retrieve all deployments
+            const deployments = await this.kubernetesApi.listNamespacedDeployment(
+                {
+                    namespace: envConfig().k8s.executor.podNamespace,
+                }
+            )
+            const deploymentExecutorIds = deployments.items
+                .map(
+                    deployment => parseExecutorId(deployment?.metadata?.name || "")
+                ).filter(
+                    executorId => executorId !== null
+                )
+            const snapshotExecutorIds = this.executorCollection.find().map(executor => executor.id).filter(Boolean) as Array<string>
+            // get the old executor ids, will be the intersection of the snapshot and the deployment
+            const oldExecutorIds = _.intersection(snapshotExecutorIds,
+                deploymentExecutorIds)
             // query all executors (include fields used for update detection)
             const executors = await this.connection.model<ExecutorSchema>(ExecutorSchema.name).find()
             // map the executors to a partial executor schema
             const newExecutors: Array<ExecutorSchema> = executors.map((executor) => executor.toJSON()) ?? []
-            // get the old and new executor ids
-            const oldExecutorIds = this.executorCollection.find().map(executor => executor.id)
             const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
             // get the added and removed executor ids
             const createdExecutorIds = _.difference(newExecutorIds,

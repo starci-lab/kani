@@ -66,7 +66,7 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             // retrieve all deployments
             const deployments = await this.kubernetesApi.listNamespacedDeployment(
                 {
-                    namespace: envConfig().k8s.podNamespace,
+                    namespace: envConfig().k8s.executor.podNamespace,
                 }
             )
             // filter out the deployments that are not in the database
@@ -113,7 +113,7 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             // retrieve all services
             const services = await this.kubernetesCoreApi.listNamespacedService(
                 {
-                    namespace: envConfig().k8s.podNamespace,
+                    namespace: envConfig().k8s.executor.podNamespace,
                 }
             )
             // filter out the services that are not in the database
