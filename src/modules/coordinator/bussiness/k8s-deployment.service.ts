@@ -273,6 +273,24 @@ export class K8SDeploymentService  {
                                             readOnly: true
                                         },
                                         {
+                                            mountPath: envConfig().mountPath.terraform.privySignerPrivateKey.replace(/\/data$/,
+                                                ""),
+                                            name: "privy-signer-private-key",
+                                            readOnly: true
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.terraform.privyAppSecretKey.replace(/\/data$/,
+                                                ""),
+                                            name: "privy-app-secret-key",
+                                            readOnly: true
+                                        },
+                                        {
+                                            mountPath: envConfig().mountPath.terraform.coinMarketCapApiKey.replace(/\/data$/,
+                                                ""),
+                                            name: "coin-market-cap-api-key",
+                                            readOnly: true
+                                        },
+                                        {
                                             mountPath: envConfig().mountPath.terraform.encryptedJwtSecretKey.replace(/\/data$/,
                                                 ""),
                                             name: "jwt-secret",
@@ -319,6 +337,24 @@ export class K8SDeploymentService  {
                                     name: "gcp-google-drive-ud-sa",
                                     secret: {
                                         secretName: "gcp-google-drive-ud-sa",
+                                    },
+                                },
+                                {
+                                    name: "privy-signer-private-key",
+                                    secret: {
+                                        secretName: "privy-signer-private-key",
+                                    },
+                                },
+                                {
+                                    name: "privy-app-secret-key",
+                                    secret: {
+                                        secretName: "privy-app-secret-key",
+                                    },
+                                },
+                                {
+                                    name: "coinmarketcap-api-key",
+                                    secret: {
+                                        secretName: "coin-market-cap-api-key",
                                     },
                                 },
                                 {
