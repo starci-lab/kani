@@ -798,7 +798,7 @@ export const envConfig = () => ({
     },
     // k8s
     k8s: {
-        podNamespace: parseEnvString("K8S_POD_NAMESPACE",
+        podNamespace: parseEnvString("POD_NAMESPACE",
             "default"),
         executor: {
             probes: {
