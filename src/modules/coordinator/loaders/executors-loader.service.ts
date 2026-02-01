@@ -91,21 +91,12 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
             return
         }
         try {
-            const model = this.connection
-                .model<ExecutorSchema>(ExecutorSchema.name)
-                // query all executors (include fields used for update detection)
-            const executorRaws = await model
-                .find({
-                },
-                {
-                    _id: 1, version: 1 
-                })
-                // map the executors to a partial executor schema
-            const newExecutors: Array<ExecutorSchema> = executorRaws.map((executor) => executor.toJSON<ExecutorSchema>()) ?? []
+            // query all executors (include fields used for update detection)
+            const executors = await this.connection.model<ExecutorSchema>(ExecutorSchema.name).find()
+            // map the executors to a partial executor schema
+            const newExecutors: Array<ExecutorSchema> = executors.map((executor) => executor.toJSON()) ?? []
             // get the old and new executor ids
-            const oldExecutorIds = this.executorCollection.chain().find().data({
-                removeMeta: true
-            }).map(executor => executor.id)
+            const oldExecutorIds = this.executorCollection.find().map(executor => executor.id)
             const newExecutorIds = newExecutors.map(executor => executor.id).filter(Boolean) as Array<string>
             // get the added and removed executor ids
             const createdExecutorIds = _.difference(newExecutorIds,
@@ -118,9 +109,13 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     const id = executor.id
                     if (!id) return null
                     if (createdExecutorIds.includes(id) || deletedExecutorIds.includes(id)) return null
-                    const old = this.executorCollection.find({
-                        id 
-                    })
+                    const old = this.executorCollection.findOne(
+                        {
+                            id: {
+                                $eq: executor.id
+                            }
+                        }
+                    )
                     if (!old) return null
                     // Compare only the fields we fetched for update detection.
                     const oldSnapshot = _.pick(old,
@@ -130,8 +125,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     return _.isEqual(oldSnapshot,
                         newSnapshot) ? null : id
                 })
-                .filter((id): id is string => Boolean(id))
-                // check if there are created executors
+                .filter((id): id is string => Boolean(id))            // check if there are created executors
             if (createdExecutorIds.length > 0) {
                 this.winstonService.log(
                     WinstonLog.CoordinatorExecutorsCreated,
@@ -177,7 +171,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                         ids: updatedExecutorIds,
                     }
                 )
-                const updatedRaws = await model
+                const updatedRaws = await this.connection.model<ExecutorSchema>(ExecutorSchema.name)
                     .find(
                         {
                             _id: {
@@ -188,7 +182,7 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                     .lean()
                     .exec()
                 for (const raw of updatedRaws) {
-                    const data = model.hydrate(raw).toJSON<ExecutorSchema>()
+                    const data = this.connection.model<ExecutorSchema>(ExecutorSchema.name).hydrate(raw).toJSON()
                     this.eventEmitterService.emit(
                         {
                             event: EventName.CoordinatorExecutorUpdated,

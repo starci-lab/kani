@@ -21,6 +21,7 @@ import {
     description: "Represents a bot assigned to an executor",
 })
 @Schema({
+    _id: false,
     autoCreate: false,
 })
 export class AssignedBotSchema extends AbstractSchema {

@@ -71,13 +71,13 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             )
             // filter out the deployments that are not in the database
             const executorIdsToDelete = deployments.items.filter(
-                deployment => !Array.from(
-                    this.executorsLoaderService.executors.values())
-                    .some(
-                        executor => executor.id && (
-                            createExecutorName(executor.id) === deployment?.metadata?.name
+                deployment =>
+                    this.executorsLoaderService.executorCollection.find()
+                        .some(
+                            executor => executor.id && (
+                                createExecutorName(executor.id) !== deployment?.metadata?.name
+                            ) 
                         )
-                    )
             ).filter(
                 deployment => isCreatedExecutorName(deployment?.metadata?.name || "")
             ).map(
@@ -118,7 +118,7 @@ export class BootstrapResourceCleanupService implements OnModuleInit {
             )
             // filter out the services that are not in the database
             const executorIdsToDelete = services.items.filter(
-                service => !Array.from(this.executorsLoaderService.executors.values()).some(
+                service => !this.executorsLoaderService.executorCollection.find().some(
                     executor => executor.id && (
                         createExecutorName(executor.id) === service?.metadata?.name
                     )

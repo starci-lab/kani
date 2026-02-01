@@ -172,7 +172,7 @@ export class RuntimeContextService {
             annotations[K8SAnnotationKey.CoordinatorVersion]
         // if the executor version or coordinator version is not the same as the cached executor, delete the deployment and create a new one
         if (
-            executorVersion !== this.executor.version ||
+            executorVersion !== this.executor.version.toString() ||
             coordinatorVersion !== envConfig().coordinator.version
         ) {
             await this.k8sDeploymentService.deleteDeployment(this.executor.id)
@@ -213,7 +213,7 @@ export class RuntimeContextService {
             annotations[K8SAnnotationKey.CoordinatorVersion]
 
         if (
-            executorVersion !== this.executor.version ||
+            executorVersion !== this.executor.version.toString() ||
             coordinatorVersion !== envConfig().coordinator.version
         ) {
             await this.k8sServiceService.deleteService(this.executor.id)

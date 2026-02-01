@@ -197,8 +197,21 @@ export class CreateBotV2Service {
                             $inc: {
                                 botCount: 1 
                             },
+                            $push: {
+                                assignedBots: {
+                                    bot: bot.id,
+                                }
+                            },
                         },
                         {
+                            setOnInsert: {
+                                version: 0,
+                                assignedBots: [
+                                    {
+                                        bot: bot.id,
+                                    }
+                                ],
+                            },
                             sort: {
                                 botCount: 1 
                             },

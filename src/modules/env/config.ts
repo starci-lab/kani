@@ -942,7 +942,7 @@ export const envConfig = () => ({
         },
         interval: {
             load: parseEnvMs("COORDINATOR_INTERVAL_LOAD",
-                "10s"),
+                "5s"),
         }
     },
 })
