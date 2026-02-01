@@ -5,17 +5,24 @@ import {
     AbstractSchema 
 } from "./abstract"
 import {
-    Field, ObjectType 
+    Field, ID, ObjectType 
 } from "@nestjs/graphql"
 import {
     EncryptedPayload 
 } from "@modules/typedefs"
 import {
-    Schema as MongooseSchema 
+    Schema as MongooseSchema, 
+    Types
 } from "mongoose"
 import {
     AppVersion, GraphQLTypeAppVersion 
 } from "../enums"
+import {
+    BotSchema 
+} from "./bot.schema"
+import {
+    PrimaryMongoDbCollectionRef 
+} from "../ref"
 
 @Schema({
     timestamps: true,
@@ -106,6 +113,16 @@ export class UserSchema extends AbstractSchema {
         type: String, enum: AppVersion, required: true, default: AppVersion.V1 
     })
         version: AppVersion
+
+    @Field(() => [ID],
+        {
+            description: "The ids of the bots owned by the user",
+            nullable: true,
+        })
+    @Prop({
+        type: [MongooseSchema.Types.ObjectId], ref: PrimaryMongoDbCollectionRef.Bot, required: false
+    })
+        ownedBots?: Array<BotSchema | Types.ObjectId>
 }   
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)

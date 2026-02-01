@@ -22,6 +22,7 @@ import {
 import {
     UserNotFoundException,
     TokenNotFoundException,
+    MaxBotsPerAccountReachedException,
 } from "@modules/exceptions"
 import {
     PrivyCoreService 
@@ -113,6 +114,7 @@ export class CreateBotV2Service {
                 .map((liquidityPool) => liquidityPool.id)
                 .value()
         }
+        const maxBotsPerAccount = this.primaryMemoryStorageService.accountLimits.maxBotsPerAccount
         // we try to find the user in the database
         const user = await this.connection.model<UserSchema>(UserSchema.name)
             .findOne({
@@ -124,6 +126,13 @@ export class CreateBotV2Service {
                     privyUserId: response.user_id,
                 }
             )
+        }
+        // check if the user has reached the max bots per account
+        if (user.ownedBots && user.ownedBots.length >= maxBotsPerAccount) {
+            throw new MaxBotsPerAccountReachedException({
+                userId: user.id,
+                maxBotsPerAccount,
+            })
         }
         // we retrieve t
         // retrieve the liquidity pools from the cache
@@ -184,8 +193,8 @@ export class CreateBotV2Service {
                     )
                     // return the bot
                 const bot = botRaw.toJSON()
-                // find the executor with the lowest bot count
-                const executor = await this.connection
+                // find the executor with the lowest bot count and update it
+                await this.connection
                     .model<ExecutorSchema>(ExecutorSchema.name)
                     .findOneAndUpdate(
                         {
@@ -215,30 +224,44 @@ export class CreateBotV2Service {
                             sort: {
                                 botCount: 1 
                             },
-                            new: true, // return the document after the update
+                            upsert: true,
                             session,
                         }
                     )
-                    // return the bot
-                if (!executor) {
-                    // create a new executor
-                    await this.connection
-                        .model<ExecutorSchema>(ExecutorSchema.name)
-                        .create(
-                            [
-                                {
-                                    assignedBots: [
-                                        {
-                                            bot: bot.id,
+                // update the user with the new bot id
+                const result = await this.connection
+                    .model<UserSchema>(UserSchema.name)
+                    .updateOne(
+                        {
+                            _id: user.id,
+                            $expr: {
+                                $lt: [
+                                    {
+                                        $size: {
+                                            $ifNull: [
+                                                "$ownedBots",
+                                                []
+                                            ]
                                         }
-                                    ],
-                                    botCount: 1 
-                                }
-                            ],
-                            {
-                                session 
+                                    },
+                                    maxBotsPerAccount
+                                ]
                             }
-                        )      
+                        },
+                        {
+                            $push: {
+                                ownedBots: bot.id,
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
+                if (result.matchedCount === 0) {
+                    throw new MaxBotsPerAccountReachedException({
+                        userId: user.id,
+                        maxBotsPerAccount,
+                    })
                 }
                 return {
                     bot,
