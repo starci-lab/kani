@@ -151,6 +151,9 @@ import {
     KeyDecryptionCheckFailedMessage,
     KeyWrittenSuccessMessage,
     CommandErrorMessage,
+    ErrorGettingCacheMessage,
+    ErrorSettingCacheMessage,
+    ErrorDeletingCacheMessage,
 } from "./types"
 
 export const configMap = {
@@ -1410,5 +1413,29 @@ export const configMap = {
         loki: false,
         messageType: {
         } as CommandErrorMessage,
+    },
+    // Error Getting Cache
+    [WinstonLog.ErrorGettingCache]: {
+        name: WinstonLog.ErrorGettingCache,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ErrorGettingCacheMessage,
+    },
+    // Error Setting Cache
+    [WinstonLog.ErrorSettingCache]: {
+        name: WinstonLog.ErrorSettingCache,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ErrorSettingCacheMessage,
+    },
+    // Error Deleting Cache
+    [WinstonLog.ErrorDeletingCache]: {
+        name: WinstonLog.ErrorDeletingCache,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ErrorDeletingCacheMessage,
     },
 }

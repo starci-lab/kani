@@ -21,24 +21,30 @@ import {
     InjectSuperJson
 } from "@modules/mixin"
 import SuperJSON from "superjson"
+import {
+    WinstonLog,
+    WinstonService
+} from "@modules/winston"
 
 @Injectable()
 export class CacheService {
     constructor(
-    // Redis-backed cache manager (shared across instances)
-    @InjectRedisCache()
-    private readonly redisCacheManager: Cache,
+        // Redis-backed cache manager (shared across instances)
+        @InjectRedisCache()
+        private readonly redisCacheManager: Cache,
 
-    // In-memory cache manager (per-instance, non-distributed)
-    @InjectMemoryCache()
-    private readonly memoryCacheManager: Cache,
+        // In-memory cache manager (per-instance, non-distributed)
+        @InjectMemoryCache()
+        private readonly memoryCacheManager: Cache,
 
-    // SuperJSON is used to safely serialize / deserialize complex data types
-    // (e.g. Dayjs, BigInt, Map, Set) when storing values in cache
-    @InjectSuperJson()
-    private readonly superjson: SuperJSON,
-    ) {}
-    
+        // SuperJSON is used to safely serialize / deserialize complex data types
+        // (e.g. Dayjs, BigInt, Map, Set) when storing values in cache
+        @InjectSuperJson()
+        private readonly superjson: SuperJSON,
+
+        private readonly winstonService: WinstonService,
+    ) { }
+
     /**
      * Get the cache key for a given cache key and arguments.
      * @param key - The cache key.
@@ -74,21 +80,33 @@ export class CacheService {
             key,
             args
         )
-        const cacheManager =
-      cacheType === CacheType.Redis
-          ? this.redisCacheManager
-          : this.memoryCacheManager
+        try {
+            const cacheManager =
+                cacheType === CacheType.Redis
+                    ? this.redisCacheManager
+                    : this.memoryCacheManager
 
-        const serializedCachedResult =
-      await cacheManager.get<string>(cacheKey)
+            const serializedCachedResult =
+                await cacheManager.get<string>(cacheKey)
 
-        if (!serializedCachedResult) {
-            return undefined
+            if (!serializedCachedResult) {
+                return undefined
+            }
+            // Deserialize using SuperJSON to restore complex types
+            return this.superjson.parse<
+                typeof configMap[typeof key]["cacheResult"]
+            >(serializedCachedResult)
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ErrorGettingCache,
+                {
+                    error: error.message,
+                    cacheKey,
+                    cacheType: cacheType,
+                }
+            )
+            throw error
         }
-        // Deserialize using SuperJSON to restore complex types
-        return this.superjson.parse<
-      typeof configMap[typeof key]["cacheResult"]
-    >(serializedCachedResult)
     }
 
     /**
@@ -112,23 +130,35 @@ export class CacheService {
             key,
             args
         )
-        const serializedCachedResult =
-      this.superjson.stringify(cacheResult)
+        try {
+            const serializedCachedResult =
+                this.superjson.stringify(cacheResult)
 
-        const cacheManager =
-      cacheType === CacheType.Redis
-          ? this.redisCacheManager
-          : this.memoryCacheManager
+            const cacheManager =
+                cacheType === CacheType.Redis
+                    ? this.redisCacheManager
+                    : this.memoryCacheManager
 
-        const ttl =
-      cacheType === CacheType.Redis
-          ? configMap[key].ttl
-          : configMap[key].ttl * 1000
-        await cacheManager.set(
-            cacheKey,
-            serializedCachedResult,
-            ttl,
-        )
+            const ttl =
+                cacheType === CacheType.Redis
+                    ? configMap[key].ttl
+                    : configMap[key].ttl * 1000
+            await cacheManager.set(
+                cacheKey,
+                serializedCachedResult,
+                ttl,
+            )
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ErrorSettingCache,
+                {
+                    error: error.message,
+                    cacheKey,
+                    cacheType: cacheType,
+                }
+            )
+            throw error
+        }
     }
 
     /**
@@ -143,16 +173,28 @@ export class CacheService {
             args,
             cacheType = CacheType.Redis,
         }: DelParams
-    ): Promise<void> {
+    ): Promise < void> {
         const cacheKey = this.getCacheKey(
             key,
             args
         )
-        const cacheManager =
-      cacheType === CacheType.Redis
-          ? this.redisCacheManager
-          : this.memoryCacheManager
+        try {
+            const cacheManager =
+                cacheType === CacheType.Redis
+                    ? this.redisCacheManager
+                    : this.memoryCacheManager
 
-        await cacheManager.del(cacheKey)
+            await cacheManager.del(cacheKey)
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.ErrorDeletingCache,
+                {
+                    error: error.message,
+                    cacheKey,
+                    cacheType: cacheType,
+                }
+            )
+            throw error
+        }
     }
 }

@@ -22,7 +22,6 @@ import {
 import {
     UserNotFoundException,
     TokenNotFoundException,
-    MaxBotsPerAccountReachedException,
 } from "@modules/exceptions"
 import {
     PrivyCoreService 
@@ -127,13 +126,6 @@ export class CreateBotV2Service {
                 }
             )
         }
-        // check if the user has reached the max bots per account
-        if (user.ownedBots && user.ownedBots.length >= maxBotsPerAccount) {
-            throw new MaxBotsPerAccountReachedException({
-                userId: user.id,
-                maxBotsPerAccount,
-            })
-        }
         // we retrieve t
         // retrieve the liquidity pools from the cache
         const liquidityPools = this.primaryMemoryStorageService
@@ -224,7 +216,7 @@ export class CreateBotV2Service {
                             sort: {
                                 botCount: 1 
                             },
-                            upsert: true,
+                            new: true, // return the document after the update
                             session,
                         }
                     )
@@ -237,12 +229,7 @@ export class CreateBotV2Service {
                             $expr: {
                                 $lt: [
                                     {
-                                        $size: {
-                                            $ifNull: [
-                                                "$ownedBots",
-                                                []
-                                            ]
-                                        }
+                                        $size: "$ownedBots" 
                                     },
                                     maxBotsPerAccount
                                 ]
@@ -258,10 +245,7 @@ export class CreateBotV2Service {
                         }
                     )
                 if (result.matchedCount === 0) {
-                    throw new MaxBotsPerAccountReachedException({
-                        userId: user.id,
-                        maxBotsPerAccount,
-                    })
+                    throw new Error("Max bots per account reached")
                 }
                 return {
                     bot,

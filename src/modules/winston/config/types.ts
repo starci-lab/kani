@@ -1235,3 +1235,27 @@ export interface MigrationAvatarsCompletedMessage {
 export interface MigrationAvatarsFailedMessage {
     error: string
 }
+
+/**
+ * Error Getting Cache Message
+ */
+export interface ErrorGettingCacheMessage {
+    cacheKey: string
+    error: string
+    cacheType: string
+}
+
+/**
+ * Error Setting Cache Message
+ */
+export interface ErrorSettingCacheMessage {
+    cacheKey: string
+    error: string
+    cacheType: string
+}
+
+export interface ErrorDeletingCacheMessage {
+    cacheKey: string
+    error: string
+    cacheType: string
+}
