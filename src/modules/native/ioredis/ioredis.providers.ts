@@ -2,6 +2,7 @@ import {
     Provider 
 } from "@nestjs/common"
 import Redis from "ioredis"
+import Valkey from "iovalkey"
 import {
     ioRedisInstanceKeyMap 
 } from "./config"
@@ -14,11 +15,26 @@ import {
 
 export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
     provide: createIoRedisKey(key),
-    inject: [],
     useFactory: (
     ) => {
         const { host, port, password, additionalOptions, useCluster } = ioRedisInstanceKeyMap[key]
+        // use valkey if key === IoRedisInstanceKey.Cache
         if (useCluster) {
+            if (key === IoRedisInstanceKey.Cache) {
+                return new Valkey.Cluster(
+                    [
+                        {
+                            host,
+                            port,
+                        }
+                    ],
+                    {
+                        redisOptions: {
+                            password,
+                        },
+                    }
+                )
+            }
             return new Redis.Cluster(
                 [
                     {
@@ -32,6 +48,15 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
                         enableAutoPipelining: true,
                         ...additionalOptions,
                     },
+                }
+            )
+        }
+        if (key === IoRedisInstanceKey.Cache) {
+            return new Valkey(
+                {
+                    host,
+                    port,
+                    password,
                 }
             )
         }

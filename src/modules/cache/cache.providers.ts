@@ -7,29 +7,21 @@ import {
 import {
     MEMORY_CACHE_MANAGER, REDIS_CACHE_MANAGER 
 } from "./constants"
-import KeyvRedis from "@keyv/redis"
-import {
-    envConfig 
-} from "@modules/env"
+import KeyvValkey  from "@keyv/valkey"
 import Keyv from "keyv"
-import {
-    createClient 
-} from "redis"
 import {
     CacheableMemory 
 } from "cacheable"
+import {
+    createIoRedisKey, IoRedisInstanceKey, 
+    ValkeyOrCluster
+} from "@modules/native"
 
 export const createRedisCacheManagerProvider = (): Provider => ({
     provide: REDIS_CACHE_MANAGER,
-    useFactory: async (): Promise<Cache> => {
-        const client = createClient(
-            {
-                url: `redis://${envConfig().redis.cache.host}:${envConfig().redis.cache.port}`,
-                password: envConfig().redis.cache.password,
-            }
-        )
-        await client.connect()
-        const keyv = new Keyv(new KeyvRedis(client))
+    inject: [createIoRedisKey(IoRedisInstanceKey.Cache)],
+    useFactory: async (valkeyOrCluster: ValkeyOrCluster): Promise<Cache> => {
+        const keyv = new Keyv(new KeyvValkey(valkeyOrCluster))
         return createCache(
             {
                 stores: [

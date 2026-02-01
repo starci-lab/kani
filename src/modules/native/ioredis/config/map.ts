@@ -44,4 +44,10 @@ export const ioRedisInstanceKeyMap: Record<IoRedisInstanceKey, IoRedisInstanceKe
         password: envConfig().redis.adapter.password,
         useCluster: envConfig().redis.adapter.useCluster,
     },
+    [IoRedisInstanceKey.Cache]: {
+        host: envConfig().redis.cache.host,
+        port: envConfig().redis.cache.port,
+        password: envConfig().redis.cache.password,
+        useCluster: envConfig().redis.cache.useCluster,
+    },
 }
