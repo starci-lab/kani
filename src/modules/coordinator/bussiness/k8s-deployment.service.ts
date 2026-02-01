@@ -352,7 +352,7 @@ export class K8SDeploymentService  {
                                     },
                                 },
                                 {
-                                    name: "coinmarketcap-api-key",
+                                    name: "coin-market-cap-api-key",
                                     secret: {
                                         secretName: "coin-market-cap-api-key",
                                     },
