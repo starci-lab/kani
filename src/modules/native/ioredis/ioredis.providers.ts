@@ -21,6 +21,7 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
         // use valkey if key === IoRedisInstanceKey.Cache
         if (useCluster) {
             if (key === IoRedisInstanceKey.Cache) {
+                console.log("use valkey cluster")
                 return new Valkey.Cluster(
                     [
                         {
@@ -31,6 +32,7 @@ export const createIoRedisProvider = (key: IoRedisInstanceKey): Provider => ({
                     {
                         redisOptions: {
                             password,
+                            enableAutoPipelining: true,
                         },
                     }
                 )
