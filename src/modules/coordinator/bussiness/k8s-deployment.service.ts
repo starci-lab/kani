@@ -269,7 +269,7 @@ export class K8SDeploymentService  {
                                         {
                                             mountPath: envConfig().mountPath.terraform.encryptedAesKey.replace(/\/data$/,
                                                 ""),
-                                            name: "aes",
+                                            name: "encrypted-aes-key",
                                             readOnly: true
                                         },
                                         {
@@ -293,7 +293,7 @@ export class K8SDeploymentService  {
                                         {
                                             mountPath: envConfig().mountPath.terraform.encryptedJwtSecretKey.replace(/\/data$/,
                                                 ""),
-                                            name: "jwt-secret",
+                                            name: "encrypted-jwt-secret-key",
                                             readOnly: true
                                         },
                                         // config
@@ -358,15 +358,15 @@ export class K8SDeploymentService  {
                                     },
                                 },
                                 {
-                                    name: "aes",
+                                    name: "encrypted-aes-key",
                                     secret: {
-                                        secretName: "aes",
+                                        secretName: "encrypted-aes-key",
                                     },
                                 },
                                 {
-                                    name: "jwt-secret",
+                                    name: "encrypted-jwt-secret-key",
                                     secret: {
-                                        secretName: "jwt-secret",
+                                        secretName: "encrypted-jwt-secret-key",
                                     },
                                 },
                                 // config
