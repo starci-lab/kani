@@ -441,6 +441,18 @@ export const envConfig = () => ({
     },
     // cache config
     cache: {
+        debug: {
+            enabled: parseEnvBoolean("CACHE_DEBUG_ENABLED",
+                true),
+            ttl: parseEnvMs("CACHE_DEBUG_TTL",
+                "5000"),
+            ok: {
+                redis: parseEnvString("CACHE_DEBUG_OK_REDIS",
+                    "ok-redis"),
+                memory: parseEnvString("CACHE_DEBUG_OK_MEMORY",
+                    "ok-memory"),
+            },
+        },
         ttl: {
             sendOtpCode: parseEnvMs(
                 "CACHE_TTL_SEND_OTP_CODE",

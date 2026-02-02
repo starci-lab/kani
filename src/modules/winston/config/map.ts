@@ -1438,4 +1438,20 @@ export const configMap = {
         messageType: {
         } as ErrorDeletingCacheMessage,
     },
+    // Cache Debug Ok Redis
+    [WinstonLog.CacheDebugOkRedis]: {
+        name: WinstonLog.CacheDebugOkRedis,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        }
+    },
+    // Cache Debug Ok Memory
+    [WinstonLog.CacheDebugOkMemory]: {
+        name: WinstonLog.CacheDebugOkMemory,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        }
+    },
 }

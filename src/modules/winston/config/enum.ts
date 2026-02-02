@@ -163,4 +163,6 @@ export enum WinstonLog {
     ErrorGettingCache = "Error.Getting.Cache",
     ErrorSettingCache = "Error.Setting.Cache",
     ErrorDeletingCache = "Error.Deleting.Cache",
+    CacheDebugOkRedis = "Cache.Debug.Ok.Redis",
+    CacheDebugOkMemory = "Cache.Debug.Ok.Memory",
 }
