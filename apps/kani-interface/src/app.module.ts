@@ -66,7 +66,8 @@ import {
     FilesystemModule 
 } from "@modules/filesystem"
 import {
-    IoRedisInstanceKey, IoRedisModule 
+    IoRedisInstanceKey, IoRedisModule, 
+    RedisInstanceKey, RedisModule
 } from "@modules/native"
 import {
     APP_FILTER 
@@ -102,7 +103,18 @@ import {
         }),
         IoRedisModule.register({
             isGlobal: true,
-            instanceKey: IoRedisInstanceKey.Adapter,
+            instanceKeys: [
+                IoRedisInstanceKey.Adapter,
+            ],
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
+            ],
+        }),
+        CacheModule.register({
+            isGlobal: true,
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
@@ -202,9 +214,6 @@ import {
         TotpModule.register({
             isGlobal: true,
             appName: "Kani",
-        }),
-        CacheModule.register({
-            isGlobal: true,
         }),
         GcpModule.register({
             isGlobal: true,

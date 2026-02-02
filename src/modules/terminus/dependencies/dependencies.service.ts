@@ -67,6 +67,9 @@ export class DependenciesService {
             case DependencyName.Memory:
                 promises.push(() => this.memoryService.pingMemory())
                 break
+            case DependencyName.LockAuthorityRedis:
+                promises.push(() => this.redisService.pingLockAuthorityRedis())
+                break
             default:
                 throw new DependencyNotFoundException({
                     dependencyName,

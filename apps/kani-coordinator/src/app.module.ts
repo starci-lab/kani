@@ -46,12 +46,21 @@ import {
 import {
     CacheModule 
 } from "@modules/cache"
+import {
+    RedisInstanceKey, RedisModule 
+} from "@modules/native"
 
 @Module({
     imports: [
         EnvModule.forRoot(),
         SentryModule.register({
             isGlobal: true,
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
+            ],
         }),
         EventEmitterModule.forRoot(),
         EventModule.register({

@@ -6,7 +6,8 @@ import {
     parseEnvString,
     parseEnvBoolean,
     parseEnvFloat,
-    parseEnvInt
+    parseEnvInt,
+    parseEnvSecond
 } from "./utils"
 import bytes from "bytes"
 
@@ -441,6 +442,18 @@ export const envConfig = () => ({
     },
     // cache config
     cache: {
+        debug: {
+            enabled: parseEnvBoolean("CACHE_DEBUG_ENABLED",
+                true),
+            ttl: parseEnvMs("CACHE_DEBUG_TTL",
+                "5000"),
+            ok: {
+                redis: parseEnvString("CACHE_DEBUG_OK_REDIS",
+                    "ok-redis"),
+                memory: parseEnvString("CACHE_DEBUG_OK_MEMORY",
+                    "ok-memory"),
+            },
+        },
         ttl: {
             sendOtpCode: parseEnvMs(
                 "CACHE_TTL_SEND_OTP_CODE",
@@ -815,13 +828,13 @@ export const envConfig = () => ({
                         scheme: parseEnvString("K8S_EXECUTOR_PROBES_LIVENESS_SCHEME",
                             "HTTP"),
                     },
-                    initialDelaySeconds: parseEnvMs("K8S_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS",
-                        "30s"),
-                    periodSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS",
-                        "10s"),
+                    initialDelaySeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_LIVENESS_INITIAL_DELAY_SECONDS",
+                        "60s"),
+                    periodSeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_LIVENESS_PERIOD_SECONDS",
+                        "120s"),
                     successThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_LIVENESS_SUCCESS_THRESHOLD",
                         1),
-                    timeoutSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS",
+                    timeoutSeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_LIVENESS_TIMEOUT_SECONDS",
                         "5s"),
                 },
                 readiness: {
@@ -835,13 +848,13 @@ export const envConfig = () => ({
                         scheme: parseEnvString("K8S_EXECUTOR_PROBES_READINESS_SCHEME",
                             "HTTP"),
                     },
-                    initialDelaySeconds: parseEnvMs("K8S_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS",
-                        "30s"),
-                    periodSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS",
-                        "10s"),
+                    initialDelaySeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_READINESS_INITIAL_DELAY_SECONDS",
+                        "60s"),
+                    periodSeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_READINESS_PERIOD_SECONDS",
+                        "120s"),
                     successThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_READINESS_SUCCESS_THRESHOLD",
                         1),
-                    timeoutSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS",
+                    timeoutSeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_READINESS_TIMEOUT_SECONDS",
                         "5s"),
                 },
                 startup: {
@@ -855,13 +868,13 @@ export const envConfig = () => ({
                         scheme: parseEnvString("K8S_EXECUTOR_PROBES_STARTUP_SCHEME",
                             "HTTP"),
                     },
-                    initialDelaySeconds: parseEnvMs("K8S_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS",
-                        "30s"),
-                    periodSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS",
-                        "10s"),
+                    initialDelaySeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_STARTUP_INITIAL_DELAY_SECONDS",
+                        "60s"),
+                    periodSeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_STARTUP_PERIOD_SECONDS",
+                        "120s"),
                     successThreshold: parseEnvInt("K8S_EXECUTOR_PROBES_STARTUP_SUCCESS_THRESHOLD",
                         1),
-                    timeoutSeconds: parseEnvMs("K8S_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS",
+                    timeoutSeconds: parseEnvSecond("K8S_EXECUTOR_PROBES_STARTUP_TIMEOUT_SECONDS",
                         "5s"),
                 }
             },

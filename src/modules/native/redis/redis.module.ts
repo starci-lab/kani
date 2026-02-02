@@ -3,19 +3,19 @@ import {
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
-} from "./ioredis.module-definition"
+} from "./redis.module-definition"
 import {
-    createIoRedisProvider 
-} from "./ioredis.providers"
+    createRedisProvider 
+} from "./redis.providers"
 
 @Module({
 })
-export class IoRedisModule extends ConfigurableModuleClass {
+export class RedisModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
         const { instanceKeys } = options
         const providers = instanceKeys.map(instanceKey =>
-            createIoRedisProvider(instanceKey)
+            createRedisProvider(instanceKey)
         )
         return {
             ...dynamicModule,

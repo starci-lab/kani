@@ -1,9 +1,18 @@
-import { createAdapter } from "@socket.io/redis-adapter"
-import { ServerOptions } from "http"
-import { RedisOrCluster } from "@modules/native"
-import { IoAdapter } from "@nestjs/platform-socket.io"
+import {
+    createAdapter 
+} from "@socket.io/redis-adapter"
 
-export class AuthenticatedRedisIoAdapter extends IoAdapter {
+import {
+    ServerOptions 
+} from "http"
+import {
+    RedisOrCluster 
+} from "@modules/native"
+import {
+    IoAdapter 
+} from "@nestjs/platform-socket.io"
+
+export class RedisIoAdapter extends IoAdapter {
     private adapterConstructor: ReturnType<typeof createAdapter>
     private redisClientOrCluster: RedisOrCluster
 
@@ -15,11 +24,13 @@ export class AuthenticatedRedisIoAdapter extends IoAdapter {
         // if cluster is enabled,
         const pubClient = this.redisClientOrCluster.duplicate()
         const subClient = this.redisClientOrCluster.duplicate() 
-        this.adapterConstructor = createAdapter(pubClient, subClient)
+        this.adapterConstructor = createAdapter(pubClient,
+            subClient)
     }
 
     public createIOServer(port: number, options?: ServerOptions) {
-        const server = super.createIOServer(port, options)
+        const server = super.createIOServer(port,
+            options)
         server.adapter(this.adapterConstructor)
         
         return server

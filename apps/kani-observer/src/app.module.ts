@@ -71,6 +71,14 @@ import {
 import {
     StreamAsyncIteratorModule 
 } from "@modules/stream-async-iterator"
+import {
+    IoRedisInstanceKey, IoRedisModule, 
+    RedisInstanceKey, 
+    RedisModule
+} from "@modules/native"
+import {
+    ThrottlerModule 
+} from "@modules/throttler"
 
 @Module({
     imports: [
@@ -86,6 +94,22 @@ import {
             isGlobal: true,
             appName: "Kani Observer",
             level: WinstonLevel.Info,
+        }),
+        IoRedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                IoRedisInstanceKey.Adapter,
+                IoRedisInstanceKey.Throttler,
+            ],
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
+            ],
+        }),
+        ThrottlerModule.register({
+            isGlobal: true,
         }),
         FormulasModule.register({
             isGlobal: true,
@@ -103,13 +127,13 @@ import {
         MathModule.register({
             isGlobal: true,
         }),
+        CacheModule.register({
+            isGlobal: true,
+        }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
             withSeeders: true,
             memoryStorage: true,
-        }),
-        CacheModule.register({
-            isGlobal: true,
         }),
         EventModule.register({
             isGlobal: true,

@@ -1,1 +1,1 @@
-export * from "./authenticated-redis-io-adapter"
+export * from "./redis-io-adapter"

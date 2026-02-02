@@ -1,6 +1,5 @@
 export * from "./constants"
 export * from "./ioredis.decorators"
 export * from "./ioredis.module"
-export * from "./ioredis.module-definition"
 export * from "./ioredis.providers"
 export * from "./types"

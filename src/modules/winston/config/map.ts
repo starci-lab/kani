@@ -154,6 +154,12 @@ import {
     ErrorGettingCacheMessage,
     ErrorSettingCacheMessage,
     ErrorDeletingCacheMessage,
+    CacheDebugOkRedisMessage,
+    CacheDebugOkMemoryMessage,
+    LockAuthorityReleaseFailedMessage,
+    LockAuthorityAcquireFailedMessage,
+    LockAuthorityNotifyExpiredLocksFailedMessage,
+    LockAuthoritySendHeartbeatFailedMessage,
 } from "./types"
 
 export const configMap = {
@@ -1437,5 +1443,53 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ErrorDeletingCacheMessage,
+    },
+    // Cache Debug Ok Redis
+    [WinstonLog.CacheDebugOkRedis]: {
+        name: WinstonLog.CacheDebugOkRedis,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CacheDebugOkRedisMessage,
+    },
+    // Cache Debug Ok Memory
+    [WinstonLog.CacheDebugOkMemory]: {
+        name: WinstonLog.CacheDebugOkMemory,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as CacheDebugOkMemoryMessage,
+    },
+    // Lock Authority Notify Expired Locks Failed
+    [WinstonLog.LockAuthorityNotifyExpiredLocksFailed]: {
+        name: WinstonLog.LockAuthorityNotifyExpiredLocksFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as LockAuthorityNotifyExpiredLocksFailedMessage,
+    },
+    // Lock Authority Acquire Failed
+    [WinstonLog.LockAuthorityAcquireFailed]: {
+        name: WinstonLog.LockAuthorityAcquireFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as LockAuthorityAcquireFailedMessage,
+    },
+    // Lock Authority Release Failed
+    [WinstonLog.LockAuthorityReleaseFailed]: {
+        name: WinstonLog.LockAuthorityReleaseFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as LockAuthorityReleaseFailedMessage,
+    },
+    // Lock Authority Send Heartbeat Failed
+    [WinstonLog.LockAuthoritySendHeartbeatFailed]: {
+        name: WinstonLog.LockAuthoritySendHeartbeatFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as LockAuthoritySendHeartbeatFailedMessage,
     },
 }

@@ -1259,3 +1259,54 @@ export interface ErrorDeletingCacheMessage {
     error: string
     cacheType: string
 }
+
+/**
+ * Cache Debug Ok Redis Message
+ */
+export interface CacheDebugOkRedisMessage {
+    randomString: string
+}
+
+/**
+ * Cache Debug Ok Memory Message
+ */
+export interface CacheDebugOkMemoryMessage {
+    randomString: string
+}
+
+/**
+ * Lock Authority Notify Expired Locks Failed Message
+ */
+export interface LockAuthorityNotifyExpiredLocksFailedMessage {
+    error: string
+}
+
+/**
+ * Lock Authority Acquire Failed Message
+ */
+export interface LockAuthorityAcquireFailedMessage {
+    botId: string
+    key: string
+    lockSchedulerKey: string
+    error: string
+}
+
+/**
+ * Lock Authority Release Failed Message
+ */
+export interface LockAuthorityReleaseFailedMessage {
+    botId: string
+    key: string
+    lockSchedulerKey: string
+    error: string   
+}
+
+/**
+ * Lock Authority Send Heartbeat Failed Message
+ */
+export interface LockAuthoritySendHeartbeatFailedMessage {
+    botId: string
+    key: string
+    lockSchedulerKey: string
+    error: string
+}

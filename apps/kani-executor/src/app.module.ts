@@ -88,7 +88,9 @@ import {
 } from "@modules/stream-async-iterator"
 import {
     IoRedisModule,
-    IoRedisInstanceKey 
+    IoRedisInstanceKey, 
+    RedisModule,
+    RedisInstanceKey
 } from "@modules/native"
 
 @Module({
@@ -103,9 +105,17 @@ import {
         IoRedisModule.register(
             {
                 isGlobal: true,
-                instanceKey: IoRedisInstanceKey.LockAuthority,
+                instanceKeys: [
+                    IoRedisInstanceKey.LockAuthority,
+                ],
             }
         ),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
+            ],
+        }),
         SemaModule.register({
             isGlobal: true,
         }),
@@ -220,7 +230,6 @@ import {
             dependencies: [
                 DependencyName.MongodbPrimary,
                 DependencyName.CacheRedis,
-                DependencyName.AdapterRedis,
                 DependencyName.ThrottlerRedis,
                 DependencyName.Kafka,
                 DependencyName.Memory,

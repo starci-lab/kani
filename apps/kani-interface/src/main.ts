@@ -18,7 +18,7 @@ import {
     swaggerBuilder 
 } from "@modules/docs"
 import {
-    AuthenticatedRedisIoAdapter 
+    RedisIoAdapter 
 } from "@modules/socketio"
 import {
     createIoRedisKey, 
@@ -59,7 +59,7 @@ for powering Kani's applications and integrations.",
             strict: false 
         }
     )
-    const redisIoAdapter = new AuthenticatedRedisIoAdapter(app)
+    const redisIoAdapter = new RedisIoAdapter(app)
     redisIoAdapter.setClient(redis)
     await redisIoAdapter.connect()
     app.useWebSocketAdapter(redisIoAdapter)

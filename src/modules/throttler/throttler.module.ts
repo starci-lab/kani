@@ -8,10 +8,14 @@ import {
     ThrottlerModule as ThrottlerCoreModule 
 } from "@nestjs/throttler"
 import {
-    ThrottlerStorageRedisService 
+    ThrottlerStorageRedisService,
 } from "@nest-lab/throttler-storage-redis"
 import {
-    createIoRedisKey, IoRedisInstanceKey, IoRedisModule 
+    createIoRedisKey, IoRedisInstanceKey, 
+    IoRedisModule
+} from "@modules/native"
+import {
+    RedisOrCluster
 } from "@modules/native"
 import Redis from "ioredis"
 // throttler config
@@ -20,16 +24,23 @@ import Redis from "ioredis"
 export class ThrottlerModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        const throttlerCoreModule = ThrottlerCoreModule.forRootAsync(
+        const throttlerCoreModule =  ThrottlerCoreModule.forRootAsync(
             {
                 imports: [
                     IoRedisModule.register({
-                        instanceKey: IoRedisInstanceKey.Throttler,
+                        instanceKeys: [
+                            IoRedisInstanceKey.Throttler,
+                        ],
                     }),
                 ],
                 inject: [createIoRedisKey(IoRedisInstanceKey.Throttler)],
-                useFactory: (redis: Redis) => ({
-                    storage: new ThrottlerStorageRedisService(redis),
+                useFactory: (redis: RedisOrCluster) => ({
+                    storage:(() => {
+                        if (redis instanceof Redis) {
+                            return new ThrottlerStorageRedisService(redis)
+                        }
+                        return new ThrottlerStorageRedisService(redis)
+                    })(),
                     throttlers: [],
                 }),
             })
