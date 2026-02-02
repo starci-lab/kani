@@ -23,6 +23,9 @@ import {
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
+import {
+    v4 
+} from "uuid"
 
 export const createRedisCacheManagerProvider = (): Provider => ({
     provide: REDIS_CACHE_MANAGER,
@@ -30,18 +33,12 @@ export const createRedisCacheManagerProvider = (): Provider => ({
         WinstonService],
     useFactory: async (valkeyOrCluster: ValkeyOrCluster, winstonService: WinstonService): Promise<Cache> => {
         const keyv = new Keyv(new KeyvValkey(valkeyOrCluster))
+        console.log(keyv)
         const cache = createCache(
             {
                 stores: [
                     // priority cache
                     keyv, 
-                    // fallback cache
-                    new Keyv({
-                        store: new CacheableMemory({
-                            ttl: 0 
-                        }),
-                    }
-                    )
                 ],
                 ttl: 0,
             }
@@ -49,14 +46,18 @@ export const createRedisCacheManagerProvider = (): Provider => ({
         // test
         if (envConfig().cache.debug.enabled) {
             // add ok-redis 
-            await cache.set(envConfig().cache.debug.ok.redis,
-                true,
-                envConfig().cache.debug.ttl)
+            const randomString = v4()
+            await cache.set(
+                envConfig().cache.debug.ok.redis,
+                randomString,
+                envConfig().cache.debug.ttl
+            )
             const okRedis = await cache.get(envConfig().cache.debug.ok.redis)
-            assert(okRedis === true)
+            assert(okRedis === randomString)
             winstonService.log(
                 WinstonLog.CacheDebugOkRedis,
                 {
+                    randomString,
                 }
             )
         }
@@ -80,14 +81,18 @@ export const createMemoryCacheManagerProvider = (): Provider => ({
         })
         if (envConfig().cache.debug.enabled) {
             // add ok-memory
-            await cache.set(envConfig().cache.debug.ok.memory,
-                true,
-                envConfig().cache.debug.ttl)
+            const randomString = v4()
+            await cache.set(
+                envConfig().cache.debug.ok.memory,
+                randomString,
+                envConfig().cache.debug.ttl
+            )
             const okMemory = await cache.get(envConfig().cache.debug.ok.memory)
-            assert(okMemory === true)
+            assert(okMemory === randomString)
             winstonService.log(
                 WinstonLog.CacheDebugOkMemory,
                 {
+                    randomString,
                 }
             )
         }

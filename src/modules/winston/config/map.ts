@@ -154,6 +154,8 @@ import {
     ErrorGettingCacheMessage,
     ErrorSettingCacheMessage,
     ErrorDeletingCacheMessage,
+    CacheDebugOkRedisMessage,
+    CacheDebugOkMemoryMessage,
 } from "./types"
 
 export const configMap = {
@@ -1444,7 +1446,7 @@ export const configMap = {
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        }
+        } as CacheDebugOkRedisMessage,
     },
     // Cache Debug Ok Memory
     [WinstonLog.CacheDebugOkMemory]: {
@@ -1452,6 +1454,6 @@ export const configMap = {
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        }
+        } as CacheDebugOkMemoryMessage,
     },
 }

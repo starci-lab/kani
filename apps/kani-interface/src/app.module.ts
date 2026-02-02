@@ -102,7 +102,13 @@ import {
         }),
         IoRedisModule.register({
             isGlobal: true,
-            instanceKey: IoRedisInstanceKey.Adapter,
+            instanceKeys: [
+                IoRedisInstanceKey.Adapter,
+                IoRedisInstanceKey.Cache,
+            ],
+        }),
+        CacheModule.register({
+            isGlobal: true,
         }),
         PrimaryMongoDbModule.register({
             isGlobal: true,
@@ -202,9 +208,6 @@ import {
         TotpModule.register({
             isGlobal: true,
             appName: "Kani",
-        }),
-        CacheModule.register({
-            isGlobal: true,
         }),
         GcpModule.register({
             isGlobal: true,

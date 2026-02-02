@@ -62,7 +62,9 @@ export class BullModule extends ConfigurableModuleClass {
                 NestBullModule.forRootAsync({
                     imports: [
                         IoRedisModule.register({
-                            instanceKey: IoRedisInstanceKey.BullMQ,
+                            instanceKeys: [
+                                IoRedisInstanceKey.BullMQ
+                            ],
                         }),
                     ],
                     inject: [createIoRedisKey(IoRedisInstanceKey.BullMQ)],

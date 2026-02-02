@@ -11,7 +11,8 @@ import {
     ThrottlerStorageRedisService 
 } from "@nest-lab/throttler-storage-redis"
 import {
-    createIoRedisKey, IoRedisInstanceKey, IoRedisModule 
+    createIoRedisKey, IoRedisInstanceKey, 
+    IoRedisModule
 } from "@modules/native"
 import Redis from "ioredis"
 // throttler config
@@ -20,11 +21,13 @@ import Redis from "ioredis"
 export class ThrottlerModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        const throttlerCoreModule = ThrottlerCoreModule.forRootAsync(
+        const throttlerCoreModule =  ThrottlerCoreModule.forRootAsync(
             {
                 imports: [
                     IoRedisModule.register({
-                        instanceKey: IoRedisInstanceKey.Throttler,
+                        instanceKeys: [
+                            IoRedisInstanceKey.Throttler,
+                        ],
                     }),
                 ],
                 inject: [createIoRedisKey(IoRedisInstanceKey.Throttler)],

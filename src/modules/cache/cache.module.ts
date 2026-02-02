@@ -19,10 +19,6 @@ import {
 import {
     LiquidityPoolsSyncedDiagnosticReadinessCacheService 
 } from "./liquidity-pools-synced-diagnostic-readiness-cache.service"
-import {
-    IoRedisInstanceKey, IoRedisModule 
-} from "@modules/native"
-
 @Module({
 })
 export class CacheModule extends ConfigurableModuleClass {
@@ -35,12 +31,6 @@ export class CacheModule extends ConfigurableModuleClass {
             createMemoryCacheManagerProvider()
         ]
         return {
-            imports: [
-                IoRedisModule.register({
-                    instanceKey: IoRedisInstanceKey.Cache,
-                    isGlobal: true,
-                }),
-            ],
             ...dynamicModule,
             providers: [...dynamicModule.providers || [],
                 ...providers,

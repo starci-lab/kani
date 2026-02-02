@@ -11,6 +11,9 @@ import {
     Connection 
 } from "mongoose"
 import {
+    Collection 
+} from "lokijs"
+import {
     AsyncService, LokiJSService, ReadinessWatcherFactoryService 
 } from "@modules/mixin"
 import {

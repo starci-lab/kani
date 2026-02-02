@@ -7,7 +7,7 @@ import Valkey, {
 
 export interface IoRedisOptions {
     // Instance key
-    instanceKey: IoRedisInstanceKey
+    instanceKeys: Array<IoRedisInstanceKey>
 }
 
 export type RedisOrCluster = Redis | Cluster

@@ -1259,3 +1259,17 @@ export interface ErrorDeletingCacheMessage {
     error: string
     cacheType: string
 }
+
+/**
+ * Cache Debug Ok Redis Message
+ */
+export interface CacheDebugOkRedisMessage {
+    randomString: string
+}
+
+/**
+ * Cache Debug Ok Memory Message
+ */
+export interface CacheDebugOkMemoryMessage {
+    randomString: string
+}
