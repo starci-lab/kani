@@ -72,7 +72,9 @@ import {
     StreamAsyncIteratorModule 
 } from "@modules/stream-async-iterator"
 import {
-    IoRedisInstanceKey, IoRedisModule 
+    IoRedisInstanceKey, IoRedisModule, 
+    RedisInstanceKey, 
+    RedisModule
 } from "@modules/native"
 import {
     ThrottlerModule 
@@ -97,8 +99,13 @@ import {
             isGlobal: true,
             instanceKeys: [
                 IoRedisInstanceKey.Adapter,
-                IoRedisInstanceKey.Cache,
                 IoRedisInstanceKey.Throttler,
+            ],
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
             ],
         }),
         ThrottlerModule.register({

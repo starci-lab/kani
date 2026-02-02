@@ -18,9 +18,9 @@ import {
     envConfig 
 } from "@modules/env/config"
 import {
-    createIoRedisKey, IoRedisInstanceKey, IoRedisModule 
+    createIoRedisKey, IoRedisInstanceKey, IoRedisModule, 
+    RedisOrCluster
 } from "@modules/native"
-import Redis from "ioredis"
 
 @Module({
 })
@@ -68,7 +68,7 @@ export class BullModule extends ConfigurableModuleClass {
                         }),
                     ],
                     inject: [createIoRedisKey(IoRedisInstanceKey.BullMQ)],
-                    useFactory: async (redis: Redis) => ({
+                    useFactory: async (redis: RedisOrCluster) => ({
                         // connection to redis
                         connection: redis,
                     })

@@ -7,14 +7,16 @@ import {
 import {
     MEMORY_CACHE_MANAGER, REDIS_CACHE_MANAGER 
 } from "./constants"
-import KeyvValkey  from "@keyv/valkey"
-import Keyv from "keyv"
+import KeyvRedis, {
+    Keyv 
+} from "@keyv/redis"
 import {
     CacheableMemory 
 } from "cacheable"
 import {
-    createIoRedisKey, IoRedisInstanceKey, 
-    ValkeyOrCluster
+    createRedisKey, 
+    RedisInstanceKey, 
+    RedisClient
 } from "@modules/native"
 import assert from "assert"
 import {
@@ -29,11 +31,13 @@ import {
 
 export const createRedisCacheManagerProvider = (): Provider => ({
     provide: REDIS_CACHE_MANAGER,
-    inject: [createIoRedisKey(IoRedisInstanceKey.Cache),
+    inject: [createRedisKey(RedisInstanceKey.Cache),
         WinstonService],
-    useFactory: async (valkeyOrCluster: ValkeyOrCluster, winstonService: WinstonService): Promise<Cache> => {
-        const keyv = new Keyv(new KeyvValkey(valkeyOrCluster))
-        console.log(keyv)
+    useFactory: async (
+        redis: RedisClient, 
+        winstonService: WinstonService
+    ): Promise<Cache> => {
+        const keyv = new Keyv(new KeyvRedis(redis))
         const cache = createCache(
             {
                 stores: [

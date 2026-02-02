@@ -66,7 +66,8 @@ import {
     FilesystemModule 
 } from "@modules/filesystem"
 import {
-    IoRedisInstanceKey, IoRedisModule 
+    IoRedisInstanceKey, IoRedisModule, 
+    RedisInstanceKey, RedisModule
 } from "@modules/native"
 import {
     APP_FILTER 
@@ -104,7 +105,12 @@ import {
             isGlobal: true,
             instanceKeys: [
                 IoRedisInstanceKey.Adapter,
-                IoRedisInstanceKey.Cache,
+            ],
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
             ],
         }),
         CacheModule.register({

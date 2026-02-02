@@ -3,14 +3,12 @@ import {
     OnApplicationBootstrap
 } from "@nestjs/common"
 import {
-    InjectIoRedis
+    InjectIoRedis,
+    RedisOrCluster
 } from "@modules/native"
 import {
     IoRedisInstanceKey
 } from "@modules/native"
-import {
-    RedisClient
-} from "bullmq"
 import {
     envConfig
 } from "@modules/env"
@@ -24,6 +22,9 @@ import {
     EventEmitterService, 
     EventName
 } from "@modules/event"
+import {
+    WinstonLog, WinstonService 
+} from "@modules/winston"
 
 const LOCK_AUTHORITY_KEY = "lock-authority"
 
@@ -57,9 +58,10 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      */
     constructor(
         @InjectIoRedis(IoRedisInstanceKey.LockAuthority)
-        private readonly redisClient: RedisClient,
+        private readonly redisClient: RedisOrCluster,
         private readonly dayjsService: DayjsService,
         private readonly eventEmitterService: EventEmitterService,
+        private readonly winstonService: WinstonService,
     ) { }
 
     onApplicationBootstrap() {
@@ -72,7 +74,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      * ZSET members are lock keys, score is their `expireAt` timestamp in ms.
      */
     private getLockSchedulerKey() {
-        return `${LOCK_AUTHORITY_KEY}:scheduler:${envConfig().executor.id}`
+        return `${LOCK_AUTHORITY_KEY}:{${envConfig().executor.id}}:scheduler`
     }
 
     /**
@@ -81,14 +83,14 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      * The lock key itself stores a simple value (currently `1`) with a TTL.
      */
     private getLockKey(botId: string) {
-        return `${LOCK_AUTHORITY_KEY}:${botId}:${envConfig().executor.id}`
+        return `${LOCK_AUTHORITY_KEY}:{${envConfig().executor.id}}:${botId}`
     }
 
     /**
      * Returns the bot ID from the lock key.
      */
     private getBotId(lockKey: string) {
-        return lockKey.split(":")[1]
+        return lockKey.split(":")[2]
     }
 
     /**
@@ -106,9 +108,10 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      */
     @Interval(envConfig().executor.lockAuthority.interval.notifyExpiredLocks)
     async notifyExpiredLocks() {
-        const now = this.dayjsService.now()
+        try {
+            const now = this.dayjsService.now()
 
-        const lua = `
+            const lua = `
         local expiredKeys = redis.call(
             "ZRANGEBYSCORE",
             KEYS[1],
@@ -123,26 +126,36 @@ export class LockAuthorityService implements OnApplicationBootstrap {
 
         return expiredKeys
     `
-        // evaluate the lua script to get the expired locks
-        const expiredLocks = await this.redisClient.eval(
-            lua,
-            1,                              // number of KEYS
-            this.getLockSchedulerKey(),     // KEYS[1]
-            now.valueOf()                   // ARGV[1]
-        ) as Array<string>
-        // get the bot IDs from the expired locks
-        const botIds = expiredLocks.map(this.getBotId)
-        // broadcast the expired locks to the event emitter
-        for (const botId of botIds) {
-            this.eventEmitterService.emit(
+            // evaluate the lua script to get the expired locks
+            const expiredLocks = await this.redisClient.eval(
+                lua,
+                1,                              // number of KEYS
+                this.getLockSchedulerKey(),     // KEYS[1]
+                now.valueOf()                   // ARGV[1]
+            ) as Array<string>
+            // get the bot IDs from the expired locks
+            const botIds = expiredLocks.map(this.getBotId)
+            // broadcast the expired locks to the event emitter
+            for (const botId of botIds) {
+                this.eventEmitterService.emit(
+                    {
+                        event: EventName.LockAuthorityTimeout,
+                        payload: {
+                            botId 
+                        },
+                    }
+                )
+            }
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.LockAuthorityNotifyExpiredLocksFailed,
                 {
-                    event: EventName.LockAuthorityTimeout,
-                    payload: {
-                        botId 
-                    },
+                    error: error.message,
                 }
             )
+            throw error
         }
+        
     }
 
     /**
@@ -164,15 +177,17 @@ export class LockAuthorityService implements OnApplicationBootstrap {
             botId,
         }: AcquireParams,
     ) {
+
         // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()
-        const ttl = envConfig().executor.lockAuthority.ttl
-        const now = this.dayjsService.now()
-        const expireAt = now.add(ttl,
-            "millisecond").valueOf()
+        try {
+            const ttl = envConfig().executor.lockAuthority.ttl
+            const now = this.dayjsService.now()
+            const expireAt = now.add(ttl,
+                "millisecond").valueOf()
 
-        /**
+            /**
          * Lua script logic (atomic):
          *
          * KEYS[1] -> lock key
@@ -190,23 +205,35 @@ export class LockAuthorityService implements OnApplicationBootstrap {
          * 3) If failed (lock already exists):
          *    - Return 0
          */
-        const lua = `
+            const lua = `
    if redis.call("SET", KEYS[1], ARGV[1], "PX", ARGV[2], "NX") then
        redis.call("ZADD", KEYS[2], ARGV[3], KEYS[1])
        return 1
    end
    return 0
 `
-        const ok = await this.redisClient.eval(
-            lua,
-            2,                              // Number of KEYS
-            key,                            // KEYS[1]: lock key
-            lockSchedulerKey,               // KEYS[2]: scheduler ZSET key
-            1,                              // ARGV[1]: lock value (boolean = 1)
-            ttl,                            // ARGV[2]: TTL (ms)
-            expireAt                        // ARGV[3]: expire timestamp (ms)
-        )
-        return ok === 1
+            const ok = await this.redisClient.eval(
+                lua,
+                2,                              // Number of KEYS
+                key,                            // KEYS[1]: lock key
+                lockSchedulerKey,               // KEYS[2]: scheduler ZSET key
+                1,                              // ARGV[1]: lock value (boolean = 1)
+                ttl,                            // ARGV[2]: TTL (ms)
+                expireAt                        // ARGV[3]: expire timestamp (ms)
+            )
+            return ok === 1
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.LockAuthorityAcquireFailed,
+                {
+                    botId,
+                    key,
+                    lockSchedulerKey,
+                    error: error.message,
+                }
+            )
+            throw error
+        }
     }
 
     /**
@@ -225,6 +252,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
         // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()
+        try {
         /**
          * Lua logic (atomic):
          * - Delete lock key
@@ -234,20 +262,32 @@ export class LockAuthorityService implements OnApplicationBootstrap {
          * KEYS[1] -> lock key
          * KEYS[2] -> scheduler ZSET key
          */
-        const lua = `
+            const lua = `
         if redis.call("DEL", KEYS[1]) == 1 then
             redis.call("ZREM", KEYS[2], KEYS[1])
             return 1
         end
         return 0
     `
-        const result = await this.redisClient.eval(
-            lua,
-            2,
-            key,                            // KEYS[1]: lock key
-            lockSchedulerKey,               // KEYS[2]: scheduler ZSET key
-        )
-        return result === 1
+            const result = await this.redisClient.eval(
+                lua,
+                2,
+                key,                            // KEYS[1]: lock key
+                lockSchedulerKey,               // KEYS[2]: scheduler ZSET key
+            )
+            return result === 1
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.LockAuthorityReleaseFailed,
+                {
+                    botId,
+                    key,
+                    lockSchedulerKey,
+                    error: error.message,
+                }
+            )
+            throw error
+        }
     }
 
     /**
@@ -266,15 +306,15 @@ export class LockAuthorityService implements OnApplicationBootstrap {
     // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()
+        try {
+            const ttl = envConfig().executor.lockAuthority.ttl
+            const expireAt = this.dayjsService
+                .now()
+                .add(ttl,
+                    "millisecond")
+                .valueOf()
 
-        const ttl = envConfig().executor.lockAuthority.ttl
-        const expireAt = this.dayjsService
-            .now()
-            .add(ttl,
-                "millisecond")
-            .valueOf()
-
-        /**
+            /**
          * Lua logic (atomic):
          * - Check lock exists AND value == 1
          * - Extend TTL
@@ -287,7 +327,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
          * ARGV[2] -> TTL in ms
          * ARGV[3] -> new expireAt timestamp (ms)
          */
-        const lua = `
+            const lua = `
         if redis.call("GET", KEYS[1]) == ARGV[1] then
             redis.call("PEXPIRE", KEYS[1], ARGV[2])
             redis.call("ZADD", KEYS[2], ARGV[3], KEYS[1])
@@ -296,16 +336,28 @@ export class LockAuthorityService implements OnApplicationBootstrap {
         return 0
     `
 
-        const result = await this.redisClient.eval(
-            lua,
-            2,
-            key,                            // KEYS[1]: lock key
-            lockSchedulerKey,               // KEYS[2]: scheduler ZSET
-            1,                              // ARGV[1]: expected lock value
-            ttl,                            // ARGV[2]: TTL (ms)
-            expireAt                        // ARGV[3]: new expireAt
-        )
+            const result = await this.redisClient.eval(
+                lua,
+                2,
+                key,                            // KEYS[1]: lock key
+                lockSchedulerKey,               // KEYS[2]: scheduler ZSET
+                1,                              // ARGV[1]: expected lock value
+                ttl,                            // ARGV[2]: TTL (ms)
+                expireAt                        // ARGV[3]: new expireAt
+            )
 
-        return result === 1
+            return result === 1
+        } catch (error) {
+            this.winstonService.log(
+                WinstonLog.LockAuthoritySendHeartbeatFailed,
+                {
+                    botId,
+                    key,
+                    lockSchedulerKey,
+                    error: error.message,
+                }
+            )
+            throw error
+        }
     }
 }
