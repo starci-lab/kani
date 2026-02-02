@@ -364,7 +364,7 @@ export const envConfig = () => ({
                     cooldown: {
                         rescan: parseEnvMs(
                             "EXECUTOR_OPERATION_RECONCILE_BALANCE_COOLDOWN_RESCAN",
-                            "5m"
+                            "30s"
                         ),
                     },
                     requeue: {

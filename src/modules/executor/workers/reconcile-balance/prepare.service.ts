@@ -111,10 +111,11 @@ export class PrepareService {
                 targetBalanceAmount, 
                 quoteBalanceAmount, 
                 gasBalanceAmount 
-            } = await this.balanceFetcherService.fetchBalances({
-                bot,
-            })
-
+            } = await this.balanceFetcherService.fetchBalances(
+                {
+                    bot,
+                }
+            )
             gasBalanceAmountBN = gasBalanceAmount
             quoteBalanceAmountBN = quoteBalanceAmount
             targetBalanceAmountBN = targetBalanceAmount
@@ -136,7 +137,6 @@ export class PrepareService {
             quoteBalanceAmount: quoteBalanceAmountBN,
             gasBalanceAmount: gasBalanceAmountBN,
         })
-
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
                 id: {

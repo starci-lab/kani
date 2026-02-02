@@ -114,10 +114,14 @@ export class ExecutorsLoaderService implements OnApplicationBootstrap, OnModuleI
                 ).filter(
                     executorId => executorId !== null
                 )
-            const snapshotExecutorIds = this.executorCollection.find().map(executor => executor.id).filter(Boolean) as Array<string>
+            const snapshotExecutorIds = this.executorCollection.find().map(
+                executor => executor.id
+            ).filter(Boolean) as Array<string>
             // get the old executor ids, will be the intersection of the snapshot and the deployment
-            const oldExecutorIds = _.intersection(snapshotExecutorIds,
-                deploymentExecutorIds)
+            const oldExecutorIds = _.intersection(
+                snapshotExecutorIds,
+                deploymentExecutorIds
+            )
             // query all executors (include fields used for update detection)
             const executors = await this.connection.model<ExecutorSchema>(ExecutorSchema.name).find()
             // map the executors to a partial executor schema

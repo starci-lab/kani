@@ -365,6 +365,23 @@ export class BotSchema extends AbstractSchema {
         type: String, required: true
     })
         avatarUrl: string
+
+    /**
+     * The incentive token addresses of the bot.
+     */
+    @Field(() => [ID],
+        {
+            description: "The incentive token of the bot",
+            nullable: true,
+        })
+    @Prop(
+        {
+            type: MongooseSchema.Types.ObjectId,
+            ref: PrimaryMongoDbCollectionRef.Token,
+            required: false,
+        }
+    )
+        incentiveTokens?: Array<TokenSchema | Types.ObjectId>
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

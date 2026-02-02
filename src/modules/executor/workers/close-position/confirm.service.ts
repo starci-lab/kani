@@ -3,7 +3,6 @@ import {
 } from "@nestjs/common"
 import {
     BalanceFetcherService,
-    BalanceService,
     BalanceSnapshotService,
     ClosePositionSnapshotService,
     TransactionSnapshotService,
@@ -14,6 +13,7 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     Connection,
@@ -33,11 +33,17 @@ import {
     envConfig,
 } from "@modules/env"
 import BN from "bn.js"
+import { 
+    LiquidityPoolStateService 
+} from "@modules/blockchains"
+import _ from "lodash"
+import {
+    DynamicClmmRewardInfo, DynamicDlmmRewardInfo 
+} from "@modules/cache"
 
 @Injectable()
 export class ConfirmService {
     constructor(
-        private readonly balanceService: BalanceService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,
@@ -45,6 +51,8 @@ export class ConfirmService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly liquidityPoolStateService: LiquidityPoolStateService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
     /**
@@ -95,15 +103,35 @@ export class ConfirmService {
             })
         }
         const { transactionRecord } = executeResult
+        // Fetch dynamic pool from cache
+        const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+        // Extract reward token addresses
+        const rewardTokenAddresses = dynamicLiquidityPoolInfo.rewards.map((reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo) => reward.tokenAddress)
+        // Get reward tokens that are NOT target or quote token
+        const nonPairRewardTokenAddresses = _.difference(
+            rewardTokenAddresses,
+            [targetToken.tokenAddress,
+                quoteToken.tokenAddress]
+        )
+        const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
+            {
+                tokenAddress: {
+                    $in: nonPairRewardTokenAddresses,
+                },
+            }
+        )
         const {
             targetBalanceAmount,
             quoteBalanceAmount,
             gasBalanceAmount,
+            incentiveBalanceAmounts,
         } = await this.balanceFetcherService.fetchBalances(
             {
                 bot,
+                incentiveTokens: nonPairRewardTokens,
             }
         )
+
         const stimulate = envConfig().executor.runtime.operation.closePosition.stimulate
         const session = await this.connection.startSession()
         await session.withTransaction(
@@ -123,6 +151,7 @@ export class ConfirmService {
                         quoteBalanceAmount,
                         gasBalanceAmount,
                         session,
+                        incentiveBalanceAmounts,
                     }
                 )
                 // only update bot only if the operation is not stimulated
@@ -147,11 +176,17 @@ export class ConfirmService {
                             targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
                             quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
                             gasBalanceAmount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0),
+                            incentiveBalanceAmounts: bot.balanceSnapshots?.incentiveSnapshots ? Object.fromEntries(
+                                Object.entries(bot.balanceSnapshots?.incentiveSnapshots).map(([key,
+                                    value]) => [key,
+                                    new BN(value.amount)])
+                            ) : undefined,
                         },
                         after: {
                             targetBalanceAmount,
                             quoteBalanceAmount,
                             gasBalanceAmount,
+                            incentiveBalanceAmounts,
                         },
                         positionId: bot.activePosition?.associatedPosition?.id ?? "",
                         closeTxHash: transactionRecord?.txHash ?? "",
@@ -171,6 +206,7 @@ export class ConfirmService {
                         {
                             $set: {
                                 status: JobStatus.Confirmed,
+                                nonPairRewardTokens,
                             },
                         },
                         {

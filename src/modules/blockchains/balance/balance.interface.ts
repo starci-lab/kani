@@ -43,12 +43,14 @@ export interface FetchBalanceResult {
 
 export interface FetchBalancesParams {
     bot: BotSchema
+    incentiveTokens?: Array<TokenSchema>
 }
 
 export interface FetchBalancesResult {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount: BN
+    incentiveBalanceAmounts: Record<string, BN>
 }
 
 export interface ProcessTransferFeesTransactionParams {

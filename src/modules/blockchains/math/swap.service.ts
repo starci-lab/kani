@@ -369,22 +369,26 @@ export class SwapMathService {
                         tokenOut: targetToken,
                         relativePrice: targetToGasRelativePrice,
                     }
+                ) 
+                swapSteps.push(
+                    {
+                        direction: SwapDirection.TargetToGas,
+                        usedAmount: targetAmountForGasSwap,
+                        swappedAmount: swapGasAmountBN,
+                    }
                 )
-                
-                swapSteps.push({
-                    direction: SwapDirection.TargetToGas,
-                    usedAmount: targetAmountForGasSwap,
-                    swappedAmount: swapGasAmountBN,
-                })
             }
             else {
                 // Quote token has more than 50% of portfolio value (or equal)
                 // Swap from quote to gas to maintain better balance
-                const { price: quoteToGasRelativePrice } = await this.priceService.resolveRelativePrice({
-                    tokenA: quoteToken,
-                    tokenB: gasToken,
-                })
-                
+                const { 
+                    price: quoteToGasRelativePrice 
+                } = await this.priceService.resolveRelativePrice(
+                    {
+                        tokenA: quoteToken,
+                        tokenB: gasToken,
+                    }
+                )
                 // Calculate how much quote token we need to swap to get the required gas
                 const quoteAmountForGasSwap = this.computeAmountOutByPrice(
                     {
@@ -393,13 +397,14 @@ export class SwapMathService {
                         tokenOut: quoteToken,
                         relativePrice: quoteToGasRelativePrice,
                     }
+                )             
+                swapSteps.push(
+                    {
+                        direction: SwapDirection.QuoteToGas,
+                        usedAmount: quoteAmountForGasSwap,
+                        swappedAmount: swapGasAmountBN,
+                    }
                 )
-                
-                swapSteps.push({
-                    direction: SwapDirection.QuoteToGas,
-                    usedAmount: quoteAmountForGasSwap,
-                    swappedAmount: swapGasAmountBN,
-                })
             }
             
             return {
@@ -474,7 +479,6 @@ export class SwapMathService {
             // Strategy:
             // 1. If gas needed, swap from target to gas (since we have excess target)
             // 2. Then rebalance by swapping remaining target to quote
-            
             const swapSteps: Array<SwapStep> = []
             let targetAmountForGasSwap = new BN(0)
 
@@ -512,7 +516,7 @@ export class SwapMathService {
                 {
                     amount: remainingTargetAmount,
                     currentRatio: quoteRatioResult.quoteRatio,
-                    targetRatio: new Decimal(envConfig().quote.ratio.expected.below),
+                    targetRatio: new Decimal(envConfig().quote.ratio.expected.above),
                     targetToken,
                     quoteToken,
                     direction: RebalanceDirection.TargetToQuote,
@@ -653,14 +657,14 @@ export class SwapMathService {
             relativePrice,
         }: ComputeRebalanceAmountParams
     ): ComputeRebalanceAmountResult {
-    /**
+        /**
      * Case 1: Quote → Target (increase target exposure)
      *
-     * current_ratio = A / (A + Q)
-     * target_ratio  = (A + X) / (A + Q)
+     * current_ratio = T / (T + Q)
+     * target_ratio  = (T + X) / (T + Q)
      *
      * where:
-     * - A = amount_target
+     * - T = amount_target
      * - Q = amount_quote_in_target
      * - X = target added (in target unit)
      */
@@ -670,7 +674,6 @@ export class SwapMathService {
                 amount,
                 decimals: new Decimal(quoteToken.decimals),
             }).div(relativePrice)
-
             /**
          * Special case: no target yet
          *
@@ -680,7 +683,6 @@ export class SwapMathService {
             if (currentRatio.eq(0)) {
                 const swappedAmount = targetRatio.mul(amountQuoteInTarget)
                 const usedAmount = swappedAmount.mul(relativePrice)
-
                 return {
                     swappedAmount: toRawAmount({
                         amount: swappedAmount,
@@ -692,24 +694,12 @@ export class SwapMathService {
                     }),
                 }
             }
-
-            /**
-         * General case:
-         *
-         * target_ratio = (A + X) / (A + Q)
-         * current_ratio = A / (A + Q)
-         *
-         * => X = A * (target_ratio / current_ratio - 1)
-         */
             const amountTarget = currentRatio
                 .mul(amountQuoteInTarget)
                 .div(new Decimal(1).sub(currentRatio))
-
             const swappedAmount = amountTarget
                 .mul(targetRatio.div(currentRatio).sub(1))
-
             const usedAmount = swappedAmount.mul(relativePrice)
-
             return {
                 swappedAmount: toRawAmount({
                     amount: swappedAmount,
@@ -725,26 +715,21 @@ export class SwapMathService {
         /**
      * Case 2: Target → Quote (decrease target exposure)
      *
-     * current_ratio = A / (A + Q)
-     * target_ratio  = (A - X) / (A + Q)
+     * current_ratio = T / (T + Q)
+     * target_ratio  = (T - X) / (A + Q)
      *
-     * => X = A * (1 - target_ratio / current_ratio)
+     * => X = T * (current_ratio - target_ratio)
      */
         else {
-        // Normalize target amount
+            // Normalize target amount
             const amountTarget = toDecimalAmount({
                 amount,
                 decimals: new Decimal(targetToken.decimals),
             })
 
-            /**
-         * X = A * (1 - targetRatio / currentRatio)
-         */
-            const swappedAmount = amountTarget
-                .mul(new Decimal(1).sub(targetRatio.div(currentRatio)))
-
-            const usedAmount = swappedAmount.mul(relativePrice)
-
+            const usedAmount = amountTarget
+                .mul(currentRatio.sub(targetRatio))
+            const swappedAmount = usedAmount.mul(relativePrice)
             return {
                 swappedAmount: toRawAmount({
                     amount: swappedAmount,

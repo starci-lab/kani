@@ -10,6 +10,9 @@ import {
 import {
     AbstractSchema,
 } from "./abstract"
+import {
+    IncentiveSnapshotSchema, IncentiveSnapshotSchemaClass 
+} from "./incentive-snapshot.schema"
 
 @ObjectType({
     description: "Represents the bot's snapshots",
@@ -57,6 +60,19 @@ export class BotSnapshotsSchema extends AbstractSchema {
         required: true,
     })
         gasBalanceAmount: string
+
+    /**
+     * Snapshot of the incentive token addresses (stringified BN).
+     */
+    @Field(() => [IncentiveSnapshotSchema],
+        {
+            description: "The snapshot of the incentive token addresses",
+        })
+    @Prop({
+        type: [IncentiveSnapshotSchemaClass],
+        required: true,
+    })
+        incentiveSnapshots: Array<IncentiveSnapshotSchema>
 
     /**
      * When the snapshot values were recorded.

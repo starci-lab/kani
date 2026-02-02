@@ -60,6 +60,8 @@ import {
     PositionPerformanceSchemaClass,
     BotChartConfigSchemaClass,
     BotChartConfigSchema,
+    IncentiveSnapshotSchemaClass,
+    IncentiveSnapshotSchema,
 } from "./schemas"
 import {
     MongooseModule as NestMongooseModule 
@@ -288,6 +290,10 @@ export class PrimaryMongoDbModule extends ConfigurableModuleClass {
                     {
                         name: BotChartConfigSchema.name,
                         useFactory: () => BotChartConfigSchemaClass,
+                    },
+                    {
+                        name: IncentiveSnapshotSchema.name,
+                        useFactory: () => IncentiveSnapshotSchemaClass,
                     },
                 ],
                 CONNECTION_NAME),

@@ -102,79 +102,74 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
     async confirm(
         { positionId, state, bot }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        try {
-            const _state = state as ClmmLiquidityPoolState
-            return await this.rpcExecutorService.withSuiClient({
-                accessType: RpcAccessType.Http,
-                callback: async ({ suiClient }) => {
-                    const positionNftObjectInfo = await suiClient.getObject({
+        const _state = state as ClmmLiquidityPoolState
+        return await this.rpcExecutorService.withSuiClient({
+            accessType: RpcAccessType.Http,
+            callback: async ({ suiClient }) => {
+                const positionNftObjectInfo = await suiClient.getObject({
+                    id: positionId,
+                    options: {
+                        showContent: true,
+                    }
+                })
+                // Stage: on-chain fetch validation (Position NFT object must exist)
+                if (positionNftObjectInfo.error || !positionNftObjectInfo.data) {
+                    throw new SuiObjectNotFoundException({
+                        name: ErrorSuiObjectName.PositionNFT,
                         id: positionId,
-                        options: {
-                            showContent: true,
-                        }
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
                     })
-                    // Stage: on-chain fetch validation (Position NFT object must exist)
-                    if (positionNftObjectInfo.error || !positionNftObjectInfo.data) {
-                        throw new SuiObjectNotFoundException({
-                            name: ErrorSuiObjectName.PositionNFT,
-                            id: positionId,
-                            dexId: DexId.Turbos,
-                            liquidityPoolId: _state.static.displayId,
-                        })
+                }
+                // Stage: on-chain fetch validation (object must be a Move object)
+                if (positionNftObjectInfo.data.content?.dataType !== "moveObject") {
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.PositionNFT,
+                        id: positionId,
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
+                const positionNftFields = positionNftObjectInfo.data.content.fields as unknown as TurbosSuiObjectPositionNFTFields
+                const turbosPositionNFT = parseTurbosSuiObjectPositionNFT(positionNftFields)
+                const clmmPosition = await suiClient.getObject({
+                    id: turbosPositionNFT.positionId,
+                    options: {
+                        showContent: true,
                     }
-                    // Stage: on-chain fetch validation (object must be a Move object)
-                    if (positionNftObjectInfo.data.content?.dataType !== "moveObject") {
-                        throw new SuiObjectInvalidTypeException({
-                            name: ErrorSuiObjectName.PositionNFT,
-                            id: positionId,
-                            dexId: DexId.Turbos,
-                            liquidityPoolId: _state.static.displayId,
-                        })
-                    }
-                    const positionNftFields = positionNftObjectInfo.data.content as unknown as TurbosSuiObjectPositionNFTFields
-                    const turbosPositionNFT = parseTurbosSuiObjectPositionNFT(positionNftFields)
-                    const clmmPosition = await suiClient.getObject({
+                })
+                // Stage: on-chain fetch validation (Position object must exist)
+                if (clmmPosition.error || !clmmPosition.data) {
+                    throw new SuiObjectNotFoundException({
+                        name: ErrorSuiObjectName.Position,
                         id: turbosPositionNFT.positionId,
-                        options: {
-                            showContent: true,
-                        }
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
                     })
-                    // Stage: on-chain fetch validation (Position object must exist)
-                    if (clmmPosition.error || !clmmPosition.data) {
-                        throw new SuiObjectNotFoundException({
-                            name: ErrorSuiObjectName.Position,
-                            id: turbosPositionNFT.positionId,
-                            dexId: DexId.Turbos,
-                            liquidityPoolId: _state.static.displayId,
-                        })
+                }
+                // Stage: on-chain fetch validation (object must be a Move object)
+                if (clmmPosition.data.content?.dataType !== "moveObject") {
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.PositionNFT,
+                        id: turbosPositionNFT.positionId,
+                        dexId: DexId.Turbos,
+                        liquidityPoolId: _state.static.displayId,
+                    })  
+                }
+                this.winstonService.log(
+                    WinstonLog.OpenPositionTransactionConfirmed,
+                    {
+                        botId: bot.id,
+                        txHash: positionId,
+                        liquidityPoolId: _state.static.displayId,
                     }
-                    // Stage: on-chain fetch validation (object must be a Move object)
-                    if (clmmPosition.data.content?.dataType !== "moveObject") {
-                        throw new SuiObjectInvalidTypeException({
-                            name: ErrorSuiObjectName.PositionNFT,
-                            id: turbosPositionNFT.positionId,
-                            dexId: DexId.Turbos,
-                            liquidityPoolId: _state.static.displayId,
-                        })  
-                    }
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionConfirmed,
-                        {
-                            botId: bot.id,
-                            txHash: positionId,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
-                    const clmmPositionFields = clmmPosition.data.content.fields as unknown as TurbosClmmPosition
-                    return {
-                        liquidity: new BN(clmmPositionFields.liquidity),
-                    }
-                },
-            })
-        } catch (error) {
-            console.log(error)
-            throw error
-        }
+                )
+                const clmmPositionFields = clmmPosition.data.content.fields as unknown as TurbosClmmPosition
+                return {
+                    liquidity: new BN(clmmPositionFields.liquidity),
+                }
+            },
+        })
     }
 
     async prepare(

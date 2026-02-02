@@ -16,6 +16,7 @@ export interface BalanceSnapshotParams {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount: BN
+    incentiveBalanceAmounts?: Record<string, BN>
 }
 
 export interface ClmmSnapshotParams {
@@ -78,5 +79,6 @@ export interface UpdateBotSnapshotBalancesRecordParams {
     targetBalanceAmount: BN
     quoteBalanceAmount: BN
     gasBalanceAmount: BN
+    incentiveBalanceAmounts?: Record<string, BN>
     session?: ClientSession
 }

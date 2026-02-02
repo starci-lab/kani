@@ -49,23 +49,28 @@ export class BalanceFetcherService {
     public async fetchBalances(
         {
             bot,
+            incentiveTokens,
         }: FetchBalancesParams
     ): Promise<FetchBalancesResult> {
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: {
+                    $eq: bot.targetToken.toString()
+                }
             }
-        })
+        )
         if (!targetToken) {
             throw new TokenNotFoundException({
                 id: bot.targetToken.toString(),
             })
         }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne(
+            {
+                id: {
+                    $eq: bot.quoteToken.toString()
+                }
             }
-        })
+        )
         if (!quoteToken) {
             throw new TokenNotFoundException({
                 id: bot.quoteToken.toString(),
@@ -79,6 +84,17 @@ export class BalanceFetcherService {
             bot,
             token: quoteToken,
         })
+        const incentiveBalanceAmounts: Record<string, BN> = {
+        }
+        if (incentiveTokens) {
+            for (const incentiveToken of incentiveTokens) {
+                const { balanceAmount: incentiveBalanceAmount } = await this.fetchBalance({
+                    bot,
+                    token: incentiveToken,
+                })
+                incentiveBalanceAmounts[incentiveToken.id] = incentiveBalanceAmount
+            }
+        }
         const gasStatus = this.gasStatusService.getGasStatus({
             targetTokenId: targetToken.displayId,
             quoteTokenId: quoteToken.displayId,
@@ -128,6 +144,7 @@ export class BalanceFetcherService {
                 targetBalanceAmount: targetBalanceAmountAfterDeductingGas,
                 quoteBalanceAmount,
                 gasBalanceAmount: effectiveGasAmountBN,
+                incentiveBalanceAmounts,
             }
         }
         case GasStatus.IsQuote: {
@@ -138,6 +155,7 @@ export class BalanceFetcherService {
                 targetBalanceAmount,
                 quoteBalanceAmount: quoteBalanceAmountAfterDeductingGas,
                 gasBalanceAmount: targetOperationalGasAmountBN,
+                incentiveBalanceAmounts,
             }
         }
         default: {
@@ -165,6 +183,7 @@ export class BalanceFetcherService {
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasBalanceAmount,
+                incentiveBalanceAmounts,
             }
         }
         }
