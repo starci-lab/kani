@@ -1,4 +1,3 @@
-Error.stackTraceLimit = 500
 // we need to initialize sentry before anything else
 import "@modules/sentry/instrument"
 
