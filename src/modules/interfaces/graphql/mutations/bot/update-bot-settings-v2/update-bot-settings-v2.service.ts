@@ -35,6 +35,7 @@ export class UpdateBotSettingsV2Service {
             id,
             name,
             isExitToUsdc,
+            withdrawalAddress,
         }: UpdateBotSettingsV2Request,
         response: VerifyAccessTokenResponse,
     ) {
@@ -73,6 +74,7 @@ export class UpdateBotSettingsV2Service {
         const update = {
             name,
             isExitToUsdc,
+            withdrawalAddress,
         }
         // delete undefined fields
         Object.keys(update).forEach(

@@ -50,6 +50,13 @@ export class CreateBotV2Request {
             defaultValue: false,
         })
         isExitToUsdc: boolean
+
+    @Field(() => String,
+        {
+            description: "The withdrawal address of the bot",
+            nullable: true,
+        })
+        withdrawalAddress?: string
 }
 
 @ObjectType({

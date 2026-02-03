@@ -382,6 +382,16 @@ export class BotSchema extends AbstractSchema {
         }
     )
         incentiveTokens?: Array<TokenSchema | Types.ObjectId>
+
+    @Field(() => String,
+        {
+            description: "The withdrawal address of the bot",
+            nullable: true,
+        })
+    @Prop({
+        type: String, required: false
+    })
+        withdrawalAddress?: string
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

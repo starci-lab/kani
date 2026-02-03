@@ -68,7 +68,8 @@ export class CreateBotV2Service {
             targetTokenId,
             quoteTokenId,
             liquidityPoolIds,
-            isExitToUsdc
+            isExitToUsdc,
+            withdrawalAddress
         }: CreateBotV2Request,
     ): Promise<CreateBotV2ResponseData> {
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
@@ -177,6 +178,7 @@ export class CreateBotV2Service {
                                 avatarUrl: this.primaryMemoryStorageService.avatarsConfig.avatarUrls[Math.floor(Math.random() * this.primaryMemoryStorageService.avatarsConfig.avatarUrls.length)],
                                 version: AppVersion.V2,
                                 isExitToUsdc,
+                                withdrawalAddress,
                             }
                         ],
                         {

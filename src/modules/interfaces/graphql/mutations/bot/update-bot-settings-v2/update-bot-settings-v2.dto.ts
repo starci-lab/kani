@@ -26,6 +26,12 @@ export class UpdateBotSettingsV2Request {
             nullable: true,
         })
         isExitToUsdc?: boolean
+    @Field(() => String,
+        {
+            description: "The withdrawal address of the bot",
+            nullable: true,
+        })
+        withdrawalAddress?: string
 }
 
 

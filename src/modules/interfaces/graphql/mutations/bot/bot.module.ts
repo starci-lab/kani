@@ -33,7 +33,7 @@ import {
 } from "./update-bot-chart-config-v2"
 import {
     WithdrawModule 
-} from "./withdraw"
+} from "./withdraw-v2"
 
 @Module({
     imports: [
