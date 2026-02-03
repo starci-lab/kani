@@ -222,6 +222,7 @@ export enum ConfigId {
     Balance = "balance",
     AccountLimits = "accountLimits",
     Avatars = "avatars",
+    Authentication = "authentication",
 }
 
 export enum StateId {

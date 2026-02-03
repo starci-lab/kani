@@ -41,7 +41,8 @@ export class UserV2Resolver {
     @Query(() => UserV2Response,
         {
             description: "Fetch a single user v2 by their unique ID.",
-        })
+        }
+    )
     @UseInterceptors(GraphQLTransformInterceptor)
     async userV2(
         @PrivyResponse() response: VerifyAccessTokenResponse,

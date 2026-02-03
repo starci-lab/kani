@@ -22,6 +22,9 @@ import {
 import {
     BalanceConfigModule 
 } from "./balance-config"
+import {
+    AuthenticationConfigModule 
+} from "./authentication-config"
 
 @Module({
     imports: [
@@ -41,6 +44,9 @@ import {
             isGlobal: true,
         }),
         BalanceConfigModule.register({
+            isGlobal: true,
+        }),
+        AuthenticationConfigModule.register({
             isGlobal: true,
         }),
     ],

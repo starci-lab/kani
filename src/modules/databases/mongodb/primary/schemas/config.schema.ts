@@ -5,6 +5,7 @@ import {
     Prop, Schema, SchemaFactory 
 } from "@nestjs/mongoose"
 import {
+    AuthenticationFactor,
     ConfigId 
 } from "../enums"
 import {
@@ -71,4 +72,8 @@ export interface AccountLimitsConfig {
 
 export interface AvatarsConfig {
     avatarUrls: Array<string>
+}
+
+export interface AuthenticationConfig {
+    authenticationFactors: Array<AuthenticationFactor>
 }

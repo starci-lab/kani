@@ -1,4 +1,5 @@
 import {
+    AuthenticationFactor,
     ConfigId 
 } from "../enums"
 import {
@@ -108,6 +109,13 @@ export const data: Array<DeepPartial<ConfigSchema>> = [
                 "https://r2.starci.net/kani/21.png",
                 "https://r2.starci.net/kani/22.png",
             ],
+        },
+    },
+    {
+        _id: createObjectId(ConfigId.Authentication),
+        displayId: ConfigId.Authentication,
+        value: {
+            authenticationFactors: [AuthenticationFactor.TOTP],
         },
     },
 ]

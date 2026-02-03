@@ -6,7 +6,7 @@ import {
     ConfigurableModuleClass,
 } from "./database.module-definition"
 import {
-    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand, MigrateAvatarsCommand 
+    BackupCommand, RestoreCommand, SeedCommand, MigratePositionBalanceValuesCommand, MigrateAvatarsCommand, MigrateUserTotpCommand 
 } from "./subs"
 import {
     DatabaseCommand 
@@ -18,6 +18,7 @@ import {
         SeedCommand,
         MigratePositionBalanceValuesCommand,
         MigrateAvatarsCommand,
+        MigrateUserTotpCommand,
         DatabaseCommand,
     ],
 })

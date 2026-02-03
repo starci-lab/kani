@@ -8,6 +8,9 @@ import {
     EnableMFAModule 
 } from "./enable-mfa"
 import {
+    EnableMFAV2Module 
+} from "./enable-mfa-v2"
+import {
     RefreshModule 
 } from "./refresh"
 import {
@@ -19,10 +22,16 @@ import {
 import {
     RequestSend2FactorOtpModule 
 } from "./request-send-2-factor-otp"
+import {
+    VerifyMultiStepsModule 
+} from "./verify-multi-steps"
 
 @Module({
     imports: [
         EnableMFAModule.register({
+            isGlobal: true,
+        }),
+        EnableMFAV2Module.register({
             isGlobal: true,
         }),
         RefreshModule.register({
@@ -35,6 +44,9 @@ import {
             isGlobal: true,
         }),
         RequestSend2FactorOtpModule.register({
+            isGlobal: true,
+        }),
+        VerifyMultiStepsModule.register({
             isGlobal: true,
         }),
     ],

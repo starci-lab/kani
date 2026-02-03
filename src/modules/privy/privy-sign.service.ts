@@ -136,7 +136,7 @@ export class PrivySignService {
                     encoding: "hex",
                     hash_function: "blake2b256" as "keccak256" | "sha256",
                 },
-                authorization_context: authorizationContext 
+                authorization_context: authorizationContext,
             }
         )
         const txSignature = toSerializedSignature({

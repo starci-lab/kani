@@ -107,7 +107,7 @@ export class VerifySignInOtpService {
                 })
         )?.toJSON()
         if (!user) {
-            const totpSecret = this.totpService.generateSecret()
+            const totpSecret = this.totpService.generateSecret(email)
             const encryptedTotpSecretPayload = this.derivedAesKeyService.encrypt(totpSecret.base32)
             const session = await this.connection.startSession()
             user = await session.withTransaction(

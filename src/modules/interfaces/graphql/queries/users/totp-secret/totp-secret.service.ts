@@ -54,7 +54,8 @@ export class TotpSecretService {
         const decryptedTotpSecret = this.derivedAesKeyService.decrypt(user.encryptedTotpSecretPayload)
         return {
             totpSecret: decryptedTotpSecret,
-            totpSecretUrl: this.totpService.generateTotpSecretUrl(decryptedTotpSecret),
+            totpSecretUrl: this.totpService.generateTotpSecretUrl(decryptedTotpSecret,
+                user.email),
         }
     }
 }

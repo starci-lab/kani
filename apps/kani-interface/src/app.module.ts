@@ -101,6 +101,9 @@ import {
         FilesystemModule.register({
             isGlobal: true,
         }),
+        PrivyModule.register({
+            isGlobal: true,
+        }),
         IoRedisModule.register({
             isGlobal: true,
             instanceKeys: [
@@ -127,9 +130,6 @@ import {
             associate: true,
         }),
         FormulasModule.register({
-            isGlobal: true,
-        }),
-        PrivyModule.register({
             isGlobal: true,
         }),
         EventEmitterModule.forRoot(),

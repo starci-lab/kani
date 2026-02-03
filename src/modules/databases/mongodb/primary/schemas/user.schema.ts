@@ -15,7 +15,8 @@ import {
     Types
 } from "mongoose"
 import {
-    AppVersion, GraphQLTypeAppVersion 
+    AppVersion, AuthenticationFactor, GraphQLTypeAppVersion, 
+    GraphQLTypeAuthenticationFactor
 } from "../enums"
 import {
     BotSchema 
@@ -77,17 +78,11 @@ export class UserSchema extends AbstractSchema {
         type: String, required: false 
     })
         referralCode?: string
-    
-    @Field(() => String,
-        {
-            description: "A temporary token used to complete TOTP verification during the first login step.",
-            nullable: true,
-        })
-        temporaryTotpToken?: string
 
     @Field(() => Boolean,
         {
             description: "Whether the multi-factor authentication is enabled.",
+            nullable: true,
         })
     @Prop({
         type: Boolean, required: false 
@@ -123,6 +118,16 @@ export class UserSchema extends AbstractSchema {
         type: [MongooseSchema.Types.ObjectId], ref: PrimaryMongoDbCollectionRef.Bot, required: false
     })
         ownedBots?: Array<BotSchema | Types.ObjectId>
+
+    @Field(() => [GraphQLTypeAuthenticationFactor],
+        {
+            description: "The factors of authentication enabled for the user",
+            nullable: true,
+        })
+    @Prop({
+        type: [String], enum: AuthenticationFactor, required: false 
+    })
+        authenticationFactors?: Array<AuthenticationFactor>
 }   
 
 export const UserSchemaClass = SchemaFactory.createForClass(UserSchema)

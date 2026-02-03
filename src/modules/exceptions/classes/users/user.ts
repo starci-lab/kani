@@ -102,3 +102,26 @@ export class FailedToGenerateReferralCodeException extends AbstractException {
         )
     }
 }
+
+/** Thrown when email is not found for a user */
+export interface EmailNotFoundExceptionMetadata extends AbstractExceptionMetadata {
+    privyUserId: string
+}
+
+export class EmailNotFoundException extends AbstractException {
+    constructor(
+        {
+            privyUserId,
+            originalError,
+        }: EmailNotFoundExceptionMetadata
+    ) {
+        super(
+            "Email not found",
+            "EMAIL_NOT_FOUND_EXCEPTION",
+            {
+                privyUserId,
+                originalError,
+            }
+        )
+    }
+}

@@ -34,6 +34,16 @@ import {
 import {
     CacheModule 
 } from "@modules/cache"
+import {
+    RedisModule,
+    RedisInstanceKey
+} from "@modules/native"
+import {
+    TotpModule 
+} from "@modules/totp"
+import {
+    PrivyModule 
+} from "@modules/privy"
 
 @Module({
     imports: [
@@ -48,6 +58,19 @@ import {
         }),
         FilesystemModule.register({
             isGlobal: true,
+        }),
+        PrivyModule.register({
+            isGlobal: true,
+        }),
+        TotpModule.register({
+            isGlobal: true,
+            appName: "Kani",
+        }),
+        RedisModule.register({
+            isGlobal: true,
+            instanceKeys: [
+                RedisInstanceKey.Cache,
+            ],
         }),
         GcpModule.register({
             isGlobal: true,

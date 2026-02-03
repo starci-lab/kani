@@ -323,3 +323,20 @@ registerEnumType(GraphQLTypeBotStatus,
         }
     }
 )
+
+export enum AuthenticationFactor {
+    TOTP = "totp",
+}
+export const GraphQLTypeAuthenticationFactor = createEnumType(AuthenticationFactor)
+
+registerEnumType(GraphQLTypeAuthenticationFactor,
+    {
+        name: "AuthenticationFactor",
+        description: "The factor of authentication",
+        valuesMap: {
+            [AuthenticationFactor.TOTP]: {
+                description: "The authentication factor is TOTP"
+            },
+        }
+    }
+)

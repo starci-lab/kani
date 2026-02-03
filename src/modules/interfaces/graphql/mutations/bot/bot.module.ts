@@ -31,6 +31,9 @@ import {
 import {
     UpdateBotChartConfigV2Module 
 } from "./update-bot-chart-config-v2"
+import {
+    WithdrawModule 
+} from "./withdraw"
 
 @Module({
     imports: [
@@ -59,6 +62,9 @@ import {
             isGlobal: true,
         }),
         UpdateBotChartConfigV2Module.register({
+            isGlobal: true,
+        }),
+        WithdrawModule.register({
             isGlobal: true,
         }),
     ],

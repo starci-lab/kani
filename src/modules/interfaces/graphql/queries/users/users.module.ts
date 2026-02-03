@@ -11,6 +11,9 @@ import {
     TotpSecretModule 
 } from "./totp-secret"
 import {
+    TotpSecretV2Module 
+} from "./totp-secret-v2"
+import {
     UserV2Module 
 } from "./user-v2"
 
@@ -20,6 +23,9 @@ import {
             isGlobal: true,
         }),
         TotpSecretModule.register({
+            isGlobal: true,
+        }),
+        TotpSecretV2Module.register({
             isGlobal: true,
         }),
         UserV2Module.register({

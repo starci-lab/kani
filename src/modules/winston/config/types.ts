@@ -1254,6 +1254,21 @@ export interface MigrationAvatarsFailedMessage {
 }
 
 /**
+ * Migration User Totp Completed Message
+ */
+export interface MigrationUserTotpCompletedMessage {
+    updatedCount: number
+    skippedCount?: number
+}
+
+/**
+ * Migration User Totp Failed Message
+ */
+export interface MigrationUserTotpFailedMessage {
+    error: string
+}
+
+/**
  * Error Getting Cache Message
  */
 export interface ErrorGettingCacheMessage {

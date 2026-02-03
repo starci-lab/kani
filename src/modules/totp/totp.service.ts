@@ -1,7 +1,13 @@
-import { Inject, Injectable } from "@nestjs/common"
+import {
+    Inject, Injectable 
+} from "@nestjs/common"
 import speakeasy from "speakeasy"
-import { MODULE_OPTIONS_TOKEN } from "./totp.module-definition"
-import { TotpOptions } from "./types"
+import {
+    MODULE_OPTIONS_TOKEN 
+} from "./totp.module-definition"
+import {
+    TotpOptions 
+} from "./types"
 
 @Injectable()
 export class TotpService {
@@ -10,10 +16,10 @@ export class TotpService {
         private readonly options: TotpOptions,
     ) {}
     // 1. Create secret for user
-    generateSecret() {
+    generateSecret(email: string) {
         const secret = speakeasy.generateSecret({
             // Display name in Google Authenticator
-            name: this.options.appName, 
+            name: this.generateTotpSecretLabel(email), 
             // Issuer in Google Authenticator
             issuer: "KANI",
         })
@@ -30,12 +36,16 @@ export class TotpService {
         })
     }
 
-    generateTotpSecretUrl(secret: string) {
+    private generateTotpSecretLabel(email: string) {
+        return `${this.options.appName}:${email}`
+    }
+
+    generateTotpSecretUrl(secret: string, email: string) {
         return speakeasy.otpauthURL({
             secret: secret,
             encoding: "base32",
             issuer: "KANI",
-            label: this.options.appName,
+            label: this.generateTotpSecretLabel(email),
         })
     }
 }
