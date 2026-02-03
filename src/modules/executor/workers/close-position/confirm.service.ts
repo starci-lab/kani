@@ -131,7 +131,6 @@ export class ConfirmService {
                 incentiveTokens: nonPairRewardTokens,
             }
         )
-
         const stimulate = envConfig().executor.runtime.operation.closePosition.stimulate
         const session = await this.connection.startSession()
         await session.withTransaction(

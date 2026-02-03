@@ -8,7 +8,6 @@ import {
 } from "@modules/blockchains"
 import {
     PrimaryMemoryStorageService, 
-    TokenId,
     TokenSchema
 } from "@modules/databases"
 import {
@@ -105,7 +104,7 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
         this.results = await this.lokiJSService.createCollection<PriceDiagnosticReadinessResult>(
             "price-diagnostic-results",
             {
-                indices: ["tokenId"],
+                indices: ["id"],
             }
         )
     }
@@ -133,14 +132,14 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
                             }
                         )
                         return {
-                            tokenId: token.displayId,
+                            id: token.id,
                             ready: false,
                             ageMs,
                             price: price.toNumber(),
                         }
                     } 
                     return {
-                        tokenId: token.displayId,
+                        id: token.id,
                         ready: true,
                         ageMs,
                         price: price.toNumber(),
@@ -154,7 +153,7 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
                             }
                         )
                         return {
-                            tokenId: token.displayId,
+                            id: token.id,
                             ready: false,
                         }
                     }
@@ -167,7 +166,7 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
                         }
                     )
                     return {
-                        tokenId: token.displayId,
+                        id: token.id,
                         ready: false,
                     }
                 }
@@ -177,12 +176,12 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
     }
 
     async ready(
-        tokenId: TokenId
+        id: string
     ): Promise<boolean> {
         // Fast readiness check backed by the latest interval snapshot.
         const result = this.results.findOne({
-            tokenId: {
-                $eq: tokenId,
+            id: {
+                $eq: id,
             },
         })
         return result?.ready ?? false
@@ -190,7 +189,7 @@ export class PriceDiagnosticService implements OnModuleInit, OnApplicationBootst
 }
 
 export interface PriceDiagnosticReadinessResult {
-    tokenId: TokenId
+    id: string
     ready: boolean
     ageMs?: number
     price?: number

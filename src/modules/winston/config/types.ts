@@ -216,6 +216,23 @@ export interface OpenPositionEnqueueFailedMessage {
 }
 
 /**
+ * Open Position Skipped - Dynamic Liquidity Pool Info Not Ready Message
+ */
+export interface OpenPositionSkippedDynamicLiquidityPoolInfoNotReadyMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Skipped - Price Not Ready Message
+ */
+export interface OpenPositionSkippedPriceNotReadyMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    tokenId: TokenId
+}
+
+/**
  * Close Position Enqueued Message
  */
 export interface ClosePositionEnqueuedMessage {

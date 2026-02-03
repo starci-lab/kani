@@ -192,7 +192,6 @@ implements OnModuleInit, OnApplicationBootstrap {
                 }),
                 liquidityPool => liquidityPool.id
             )
-
             this.winstonService.log(
                 WinstonLog.LiquidityPoolsBecameReady,
                 {
@@ -202,14 +201,14 @@ implements OnModuleInit, OnApplicationBootstrap {
                     })),
                 }
             )
-
             this.eventEmitterService.emit(
                 {
                     event: EventName.LiquidityPoolsBecameReady,
                     payload: {
                         ids: Object.keys(becameReady),
                     },
-                })
+                }
+            )
         }
 
         if (!_.isEmpty(becameNotReady)) {

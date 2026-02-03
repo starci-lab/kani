@@ -7,7 +7,6 @@ import {
     LiquidityPoolType,
     PrimaryMemoryStorageService,
     LiquidityPoolSchema,
-    LiquidityPoolId,
 } from "@modules/databases"
 import {
     WinstonLog, WinstonService 
@@ -91,7 +90,7 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
         this.results = await this.lokiJSService.createCollection<DynamicLiquidityPoolInfoDiagnosticReadinessResult>(
             "dynamic-liquidity-pool-info-diagnostic-results",
             {
-                indices: ["liquidityPoolId"],
+                indices: ["id"],
             }
         )
     }
@@ -123,7 +122,7 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
                         )
 
                         return {
-                            liquidityPoolId: liquidityPool.displayId,
+                            id: liquidityPool.displayId,
                             ready: false,
                         }
                     }
@@ -140,13 +139,13 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
                             },
                         )
                         return {
-                            liquidityPoolId: liquidityPool.displayId,
+                            id: liquidityPool.id,
                             ready: false,
                             ageMs,
                         }
                     }
                     return {
-                        liquidityPoolId: liquidityPool.displayId,
+                        id: liquidityPool.id,
                         ready: true,
                         ageMs,
                     }
@@ -160,7 +159,7 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
                         },
                     )
                     return {
-                        liquidityPoolId: liquidityPool.displayId,
+                        id: liquidityPool.id,
                         ready: false,
                     }
                 }
@@ -170,11 +169,11 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
     }
 
     async ready(
-        liquidityPoolId: LiquidityPoolId
+        id: string
     ): Promise<boolean> {
         const result = this.results.findOne({
-            liquidityPoolId: {
-                $eq: liquidityPoolId,
+            id: {
+                $eq: id,
             },
         })
         return result?.ready ?? false
@@ -182,7 +181,7 @@ export class DynamicLiquidityPoolInfoDiagnosticService implements OnModuleInit, 
 }
 
 export interface DynamicLiquidityPoolInfoDiagnosticReadinessResult {
-    liquidityPoolId: LiquidityPoolId
+    id: string
     ready: boolean
     ageMs?: number
 }

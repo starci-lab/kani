@@ -1,9 +1,15 @@
 import {
-    BullQueueData, BullQueueName 
+    createHash
+} from "@modules/utils"
+import {
+    BullQueueData, BullQueueName
 } from "./types"
 import {
-    formatWithBraces 
+    formatWithBraces
 } from "./utils"
+import {
+    envConfig
+} from "@modules/env"
 
 /**
  * Centralized configuration for all BullMQ queues.
@@ -12,16 +18,22 @@ import {
 export const bullData: Record<BullQueueName, BullQueueData> = {
     [BullQueueName.OpenPosition]: {
         // Prefix for Redis keys to keep liquidity pool jobs organized and isolated
-        prefix: formatWithBraces("open_position"),
+        prefix: formatWithBraces(createHash("open_position",
+            envConfig().executor.id)),
         // Queue name used internally by BullMQ
-        name: "open_position",
+        name: createHash("open_position",
+            envConfig().executor.id),
     },
     [BullQueueName.ClosePosition]: {
-        prefix: formatWithBraces("close_position"),
-        name: "close_position",
+        prefix: formatWithBraces(createHash("close_position",
+            envConfig().executor.id)),
+        name: createHash("close_position",
+            envConfig().executor.id),
     },
     [BullQueueName.ReconcileBalance]: {
-        prefix: formatWithBraces("reconcile_balance"),
-        name: "reconcile_balance",
+        prefix: formatWithBraces(createHash("reconcile_balance",
+            envConfig().executor.id)),
+        name: createHash("reconcile_balance",
+            envConfig().executor.id),
     }
 }

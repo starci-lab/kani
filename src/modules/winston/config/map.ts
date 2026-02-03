@@ -19,6 +19,8 @@ import {
     NoAvailableRpcMessage,
     OpenPositionEnqueueFailedMessage,
     OpenPositionEnqueuedMessage,
+    OpenPositionSkippedDynamicLiquidityPoolInfoNotReadyMessage,
+    OpenPositionSkippedPriceNotReadyMessage,
     ClosePositionEnqueuedMessage,
     ClosePositionEnqueueFailedMessage,
     OpenPositionTransactionExecutedMessage,
@@ -395,6 +397,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as OpenPositionEnqueueFailedMessage,
+    },
+    // Open Position Skipped - Dynamic Liquidity Pool Info Not Ready
+    [WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady]: {
+        name: WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedDynamicLiquidityPoolInfoNotReadyMessage,
+    },
+    // Open Position Skipped - Price Not Ready
+    [WinstonLog.OpenPositionSkippedPriceNotReady]: {
+        name: WinstonLog.OpenPositionSkippedPriceNotReady,
+        level: WinstonLevel.Debug,
+        loki: true,
+        messageType: {
+        } as OpenPositionSkippedPriceNotReadyMessage,
     },
     // Close Position Enqueued
     [WinstonLog.ClosePositionEnqueued]: {

@@ -32,6 +32,8 @@ export enum WinstonLog {
     NoAvailableRpc = "No.Available.Rpc",
     OpenPositionEnqueued = "Open.Position.Enqueued",
     OpenPositionEnqueueFailed = "Open.Position.Enqueue.Failed",
+    OpenPositionSkippedDynamicLiquidityPoolInfoNotReady = "Open.Position.Skipped.Dynamic.Liquidity.Pool.Info.Not.Ready",
+    OpenPositionSkippedPriceNotReady = "Open.Position.Skipped.Price.Not.Ready",
     ClosePositionEnqueued = "Close.Position.Enqueued",
     ClosePositionEnqueueFailed = "Close.Position.Enqueue.Failed",
     ErrorDecryptingJwtSecretKey = "Error.Decrypting.Jwt.Secret.Key",

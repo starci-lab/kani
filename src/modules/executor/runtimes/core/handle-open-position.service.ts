@@ -4,6 +4,7 @@ import {
 import {
     BotSchema, 
     LiquidityPoolSchema,
+    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     LockAuthorityService 
@@ -22,11 +23,20 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    DayjsService 
+    DayjsService, AsyncService 
 } from "@modules/mixin"
 import {
     LiquidityPoolsSyncedEventPayload 
 } from "@modules/event"
+import {
+    PriceDiagnosticService,
+    DynamicLiquidityPoolInfoDiagnosticService,
+} from "../../bussiness"  
+import {
+    DynamicLiquidityPoolInfoDiagnosticNotReadyException,
+    PriceDiagnosticNotReadyException,
+    TokenNotFoundException
+} from "@exceptions"
 
 export interface HandleOpenPositionParams {
     bot: BotSchema
@@ -53,6 +63,10 @@ export class HandleOpenPositionService {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
+        private readonly dynamicLiquidityPoolInfoDiagnosticService: DynamicLiquidityPoolInfoDiagnosticService,
+        private readonly priceDiagnosticService: PriceDiagnosticService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -90,6 +104,80 @@ export class HandleOpenPositionService {
         if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
             return
         }
+        await this.asyncService.allMustDone([
+            (
+                async () => {
+                    if (!await this.dynamicLiquidityPoolInfoDiagnosticService.ready(liquidityPool.id)) {
+                        this.winstonService.log(
+                            WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady,
+                            {
+                                botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
+                            }
+                        )
+                        throw new DynamicLiquidityPoolInfoDiagnosticNotReadyException(
+                            {
+                                liquidityPoolId: liquidityPool.displayId,
+                            }
+                        )
+                    }
+                }
+            )(),
+            (
+                async () => {
+                    if (!await this.priceDiagnosticService.ready(liquidityPool.tokenA.toString())) {
+                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                            id: {
+                                $eq: liquidityPool.tokenA.toString(),
+                            },
+                        })
+                        if (!token) {
+                            throw new TokenNotFoundException({
+                                id: liquidityPool.tokenA.toString(),
+                            })
+                        }
+                        this.winstonService.log(
+                            WinstonLog.OpenPositionSkippedPriceNotReady,
+                            {
+                                botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
+                                tokenId: token.displayId,
+                            }
+                        )
+                        throw new PriceDiagnosticNotReadyException({
+                            tokenId: token.displayId,
+                        })
+                    }
+                }
+            )(),
+            (
+                async () => {
+                    if (!await this.priceDiagnosticService.ready(liquidityPool.tokenB.toString())) {
+                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                            id: {
+                                $eq: liquidityPool.tokenB.toString(),
+                            },
+                        })
+                        if (!token) {
+                            throw new TokenNotFoundException({
+                                id: liquidityPool.tokenB.toString(),
+                            })
+                        }
+                        this.winstonService.log(
+                            WinstonLog.OpenPositionSkippedPriceNotReady,
+                            {
+                                botId: bot.id,
+                                liquidityPoolId: liquidityPool.displayId,
+                                tokenId: token.displayId,
+                            }
+                        )
+                        throw new PriceDiagnosticNotReadyException({
+                            tokenId: token.displayId,
+                        })
+                    }
+                }
+            )(),
+        ])
         const jobId = new Types.ObjectId().toString()
         // check if the bot has an active job
         const acquired = await this.lockAuthorityService.acquire(

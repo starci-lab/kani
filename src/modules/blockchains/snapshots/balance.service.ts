@@ -43,7 +43,7 @@ export class BalanceSnapshotService {
           )
           : null
 
-        const stages = {
+        const $set = {
             "balanceSnapshots.targetBalanceAmount": targetBalanceAmount.toString(),
             "balanceSnapshots.quoteBalanceAmount": quoteBalanceAmount.toString(),
             "balanceSnapshots.gasBalanceAmount": gasBalanceAmount.toString(),
@@ -51,17 +51,18 @@ export class BalanceSnapshotService {
         }
         // only override incentiveSnapshots if there are incentiveBalanceAmounts
         if (incentiveObj && Object.keys(incentiveObj).length > 0) {
-            stages["balanceSnapshots.incentiveSnapshots"] = {
+            $set["balanceSnapshots.incentiveSnapshots"] = {
                 $map: {
                     input: "$balanceSnapshots.incentiveSnapshots",
                     as: "i",
                     in: {
                         $cond: [
                             {
-                                $in: [{
-                                    $toString: "$$i.token" 
-                                },
-                                Object.keys(incentiveObj)],
+                                $in: [
+                                    {
+                                        $toString: "$$i.token" 
+                                    },
+                                    Object.keys(incentiveObj)],
                             },
                             {
                                 token: "$$i.token",
@@ -87,7 +88,7 @@ export class BalanceSnapshotService {
             },
             [
                 {
-                    $set: stages,
+                    $set,
                 },
             ],
             {
