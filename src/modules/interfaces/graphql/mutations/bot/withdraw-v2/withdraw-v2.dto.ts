@@ -50,19 +50,24 @@ export class WithdrawV2ResponseData {
     @Field(
         () => String,
         {
-            description: "The hash of the transaction.",
+            description: "The job ID of the withdrawal.",
         }
     )
-        txHash: string
+        jobId: string
 }
 
+@ObjectType(
+    {
+        description: "Standard GraphQL response returned after withdrawing from a bot (v2).",
+    }
+)
 export class WithdrawV2Response
     extends AbstractGraphQLResponse
     implements IAbstractGraphQLResponse<WithdrawV2ResponseData> {
-        @Field(() => String,
+        @Field(() => WithdrawV2ResponseData,
             {
-                description: "The hash of the transaction.",
+                description: "The response data of the withdrawal.",
             }
         )
-            txHash: string
+            data: WithdrawV2ResponseData
 }

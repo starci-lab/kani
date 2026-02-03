@@ -1,6 +1,12 @@
-import { Context, Mutation, Resolver } from "@nestjs/graphql"
-import { RefreshService } from "./refresh.service"
-import { UseGuards, UseInterceptors } from "@nestjs/common"
+import {
+    Context, Mutation, Resolver 
+} from "@nestjs/graphql"
+import {
+    RefreshService 
+} from "./refresh.service"
+import {
+    UseGuards, UseInterceptors 
+} from "@nestjs/common"
 import { 
     GraphQLUser, 
     GraphQLJwtRefreshTokenAuthGuard, 
@@ -10,12 +16,24 @@ import {
     RefreshResponse, 
     RefreshResponseData,
 } from "./refresh.dto"
-import { ThrottlerConfig } from "@modules/throttler"
-import { UseThrottler } from "@modules/throttler/throttler.decorators"
-import { GraphQLSuccessMessage, GraphQLTransformInterceptor } from "../../../interceptors"
-import { CookieService } from "@modules/cookie"
-import { Response } from "express"
-import { GraphQLTOTPGuard } from "@modules/totp"
+import {
+    ThrottlerConfig 
+} from "@modules/throttler"
+import {
+    UseThrottler 
+} from "@modules/throttler/throttler.decorators"
+import {
+    GraphQLSuccessMessage, GraphQLTransformInterceptor 
+} from "../../../interceptors"
+import {
+    CookieService 
+} from "@modules/cookie"
+import {
+    Response 
+} from "express"
+import {
+    GraphQLTOTPGuard 
+} from "@modules/totp"
 
 @Resolver()
 export class RefreshResolver {
@@ -27,11 +45,13 @@ export class RefreshResolver {
     @GraphQLSuccessMessage("JWT access token refreshed successfully")
     @UseInterceptors(GraphQLTransformInterceptor)
     @UseThrottler(ThrottlerConfig.Strict)
-    @UseGuards(GraphQLJwtRefreshTokenAuthGuard, GraphQLTOTPGuard)
-    @Mutation(() => RefreshResponse, {
-        deprecationReason: "This mutation is deprecated. Use the privy authentication instead.",
-        description: "Refresh a JWT access token.",
-    })
+    @UseGuards(GraphQLJwtRefreshTokenAuthGuard,
+        GraphQLTOTPGuard)
+    @Mutation(() => RefreshResponse,
+        {
+            deprecationReason: "This mutation is deprecated. Use the privy authentication instead.",
+            description: "Refresh a JWT access token.",
+        })
     async refresh(
         @GraphQLUser() user: UserJwtLike,
         @Context("res") res: Response,
@@ -41,8 +61,12 @@ export class RefreshResolver {
             // simple check to ensure type-safety
             throw new Error("Refresh token not found")
         }
-        this.cookieService.attachHttpOnlyCookie(res, "refresh_token", refreshToken)
-        return { accessToken }
+        this.cookieService.attachHttpOnlyCookie(res,
+            "refresh_token",
+            refreshToken)
+        return {
+            accessToken 
+        }
     }
 }
 

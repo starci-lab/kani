@@ -17,24 +17,25 @@ import {
     UserNotFoundException,
 } from "@modules/exceptions"
 import {
-    WithdrawRequest
-} from "./withdraw.dto"
-import {
     VerifyAccessTokenResponse
 } from "@privy-io/node"
+import {
+    WithdrawV2Request
+} from "./withdraw-v2.dto"
 
 @Injectable()
-export class WithdrawService {
+export class WithdrawV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
     ) {}
 
-    async withdraw(
+    async withdrawV2(
         response: VerifyAccessTokenResponse,
         {
             id,
-        }: WithdrawRequest,
+            tokens,
+        }: WithdrawV2Request,
     ) {
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
@@ -64,5 +65,11 @@ export class WithdrawService {
             })
         }
         // TODO: Implement withdrawal logic
+        console.log(tokens)
+        return {
+            data: {
+                jobId: "123",
+            },
+        }
     }
 }

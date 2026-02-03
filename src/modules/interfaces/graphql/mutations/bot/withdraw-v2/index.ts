@@ -1,1 +1,1 @@
-export * from "./withdraw.module"
+export * from "./withdraw-v2.module"
