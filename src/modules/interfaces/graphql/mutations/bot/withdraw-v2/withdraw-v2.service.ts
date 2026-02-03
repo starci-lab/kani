@@ -54,10 +54,12 @@ export class WithdrawV2Service {
             })
         }
         if (bot.user.toString() !== user.id) {
-            throw new BotNotOwnedByUserException({
-                id,
-                userId: user.id,
-            })
+            throw new BotNotOwnedByUserException(
+                {
+                    id,
+                    userId: user.id,
+                }
+            )
         }
         if (bot.version !== AppVersion.V2) {
             throw new BotNotV2Exception({
