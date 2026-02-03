@@ -1,7 +1,8 @@
 import {
-    Injectable, UnauthorizedException 
+    Injectable,
 } from "@nestjs/common"
 import {
+    AuthenticationFactor,
     InjectPrimaryMongoose,
     UserSchema,
 } from "@modules/databases"
@@ -9,13 +10,14 @@ import {
     Connection 
 } from "mongoose"
 import {
-    EnableMFAV2Request,
-    EnableMFAV2ResponseData 
-} from "./enable-mfa-v2.dto"
+    DisableAuthenticatorAppV2Request
+} from "./disable-authenticator-app-v2.dto"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"
 import {
+    UserAuthenticatorAppNotEnabledException,
+    InvalidTOTPCodeException,
     UserNotFoundException,
     UserTotpSecretNotFoundException,
 } from "@modules/exceptions"
@@ -27,7 +29,7 @@ import {
 } from "@modules/derived"
 
 @Injectable()
-export class EnableMFAV2Service {
+export class DisableAuthenticatorAppV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
@@ -35,10 +37,10 @@ export class EnableMFAV2Service {
         private readonly derivedAesKeyService: DerivedAesKeyService,
     ) {}
 
-    async enableMFAV2(
+    async disableAuthenticatorAppV2(
         response: VerifyAccessTokenResponse,
-        { totpCode }: EnableMFAV2Request
-    ): Promise<EnableMFAV2ResponseData> {
+        { totpCode }: DisableAuthenticatorAppV2Request
+    ) {
         const user = await this.connection
             .model<UserSchema>(UserSchema.name)
             .findOne({
@@ -49,39 +51,42 @@ export class EnableMFAV2Service {
                 privyUserId: response.user_id,
             })
         }
+        if (!user.authenticationFactors?.includes(AuthenticationFactor.TOTP)) {
+            throw new UserAuthenticatorAppNotEnabledException({
+                id: user.id,
+            })
+        }
         if (!user.encryptedTotpSecretPayload) {
             throw new UserTotpSecretNotFoundException({
                 id: user.id,
             })
         }
-        
         // Verify TOTP code
         const decryptedTotpSecret = this.derivedAesKeyService.decrypt(user.encryptedTotpSecretPayload)
         const verified = this.totpService.verifyTotp(totpCode,
             decryptedTotpSecret)
         if (!verified) {
-            throw new UnauthorizedException("Invalid TOTP code")
+            throw new InvalidTOTPCodeException({
+                id: user.id,
+            })
         }
-        
-        // Enable MFA if not already enabled
         const session = await this.connection.startSession()
         return await session.withTransaction(
             async () => {
-                if (!user.mfaEnabled) {
-                    await this.connection.model<UserSchema>(UserSchema.name).updateOne(
-                        {
-                            _id: user.id,
+                await this.connection.model<UserSchema>(UserSchema.name).updateOne(
+                    {
+                        _id: user.id,
+                    },
+                    {
+                        $unset: {
+                            encryptedTotpSecretPayload: 1,
                         },
-                        {
-                            $set: {
-                                mfaEnabled: true,
-                            },
+                        $pull: {
+                            authenticationFactors: AuthenticationFactor.TOTP,
                         },
-                    )
-                }
-                return {
-                    mfaEnabled: true,
-                }
-            })
+                    },
+                )
+            }
+        )
     }
 }

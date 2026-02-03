@@ -13,21 +13,6 @@ import {
 import {
     CodeGeneratorService 
 } from "@modules/code"
-import {
-    DerivedAesKeyService 
-} from "@modules/derived"
-import {
-    TotpService 
-} from "@modules/totp"
-import {
-    PrivyClient 
-} from "@privy-io/node"
-import {
-    EmailNotFoundException 
-} from "@modules/exceptions"
-import {
-    InjectPrivyClient 
-} from "@modules/privy"
 
 @Injectable()
 export class UserV2Service {
@@ -35,10 +20,6 @@ export class UserV2Service {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly codeGeneratorService: CodeGeneratorService,
-        private readonly derivedAesKeyService: DerivedAesKeyService,
-        private readonly totpService: TotpService,
-        @InjectPrivyClient()
-        private readonly privyClient: PrivyClient,
     ) {}
 
     async userV2(
@@ -50,19 +31,6 @@ export class UserV2Service {
                 privyUserId: response.user_id 
             })
         if (!user) {
-            const privyUser = await this.privyClient
-                .users()
-                ._get(response.user_id)
-            // create the user
-            const email = privyUser.linked_accounts.find(account => account.type === "email")?.address
-            if (!email) {
-                throw new EmailNotFoundException(
-                    {
-                        privyUserId: response.user_id,
-                    }
-                )
-            }   
-            const totpSecret = this.totpService.generateSecret(email)
             const [userRaw] = await this.connection
                 .model<UserSchema>
                 (UserSchema.name)
@@ -72,8 +40,6 @@ export class UserV2Service {
                             privyUserId: response.user_id,
                             version: AppVersion.V2,
                             referralCode: this.codeGeneratorService.generateCode("KANI"),
-                            mfaEnabled: false,
-                            encryptedTotpSecretPayload: this.derivedAesKeyService.encrypt(totpSecret.base32),
                         }
                     ]
                 )

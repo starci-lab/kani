@@ -57,7 +57,7 @@ export class RefreshService {
         }
         return this.jwtAuthService.generate({
             id: user.id,
-            mfaEnabled: user.mfaEnabled,
+            mfaEnabled: true,
             encryptedTotpSecretPayload: user.encryptedTotpSecretPayload,
         })
     }

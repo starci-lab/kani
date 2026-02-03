@@ -136,7 +136,7 @@ export class VerifySignInOtpService {
             refreshToken
         } = await this.jwtAuthService.generate({
             id: user.id,
-            mfaEnabled: user.mfaEnabled,
+            mfaEnabled: true,
             encryptedTotpSecretPayload: user.encryptedTotpSecretPayload,
         })
         if (refreshToken) {

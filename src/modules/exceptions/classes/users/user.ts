@@ -57,6 +57,29 @@ export class UserTotpSecretNotFoundException extends AbstractException {
     }
 }
 
+/** Thrown when TOTP code is invalid */
+export interface InvalidTOTPCodeExceptionMetadata extends AbstractExceptionMetadata {
+    id?: string
+}
+
+export class InvalidTOTPCodeException extends AbstractException {
+    constructor(
+        {
+            id,
+            originalError,
+        }: InvalidTOTPCodeExceptionMetadata
+    ) {
+        super(
+            "Invalid TOTP code",
+            "INVALID_TOTP_CODE_EXCEPTION",
+            {
+                id,
+                originalError,
+            }
+        )
+    }
+}
+
 /** Thrown when user MFA is already enabled */
 export interface UserMfaAlreadyEnabledExceptionMetadata extends AbstractExceptionMetadata {
     id: string
@@ -72,6 +95,52 @@ export class UserMfaAlreadyEnabledException extends AbstractException {
         super(
             "User MFA already enabled",
             "USER_MFA_ALREADY_ENABLED_EXCEPTION",
+            {
+                id,
+                originalError,
+            }
+        )
+    }
+}
+
+/** Thrown when user authenticator app is already enabled */
+export interface UserAuthenticatorAppEnabledExceptionMetadata extends AbstractExceptionMetadata {
+    id: string
+}
+
+export class UserAuthenticatorAppEnabledException extends AbstractException {
+    constructor(
+        {
+            id,
+            originalError,
+        }: UserAuthenticatorAppEnabledExceptionMetadata
+    ) {
+        super(
+            "User authenticator app already enabled",
+            "USER_AUTHENTICATOR_APP_ENABLED_EXCEPTION",
+            {
+                id,
+                originalError,
+            }
+        )
+    }
+}
+
+/** Thrown when user authenticator app is not enabled */
+export interface UserAuthenticatorAppNotEnabledExceptionMetadata extends AbstractExceptionMetadata {
+    id: string
+}
+
+export class UserAuthenticatorAppNotEnabledException extends AbstractException {
+    constructor(
+        {
+            id,
+            originalError,
+        }: UserAuthenticatorAppNotEnabledExceptionMetadata
+    ) {
+        super(
+            "User authenticator app is not enabled",
+            "USER_AUTHENTICATOR_APP_NOT_ENABLED_EXCEPTION",
             {
                 id,
                 originalError,

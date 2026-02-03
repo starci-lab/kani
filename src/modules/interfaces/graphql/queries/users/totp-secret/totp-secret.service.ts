@@ -2,6 +2,7 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
+    AuthenticationFactor,
     InjectPrimaryMongoose, UserSchema 
 } from "@modules/databases"
 import {
@@ -41,7 +42,7 @@ export class TotpSecretService {
                 id,
             })
         }
-        if (user.mfaEnabled) {
+        if (user.authenticationFactors?.includes(AuthenticationFactor.TOTP)) {
             throw new UserMfaAlreadyEnabledException({
                 id,
             })

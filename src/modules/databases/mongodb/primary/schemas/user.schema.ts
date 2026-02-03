@@ -78,17 +78,7 @@ export class UserSchema extends AbstractSchema {
         type: String, required: false 
     })
         referralCode?: string
-
-    @Field(() => Boolean,
-        {
-            description: "Whether the multi-factor authentication is enabled.",
-            nullable: true,
-        })
-    @Prop({
-        type: Boolean, required: false 
-    })
-        mfaEnabled: boolean
-
+        
     @Field(() => String,
         {
             description: "The user's Privy user ID.",

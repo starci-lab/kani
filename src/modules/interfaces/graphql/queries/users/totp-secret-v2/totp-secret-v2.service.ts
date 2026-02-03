@@ -9,7 +9,7 @@ import {
 } from "mongoose"
 import {
     EmailNotFoundException,
-    UserMfaAlreadyEnabledException, UserNotFoundException, UserTotpSecretNotFoundException 
+    UserNotFoundException 
 } from "@modules/exceptions"
 import {
     VerifyAccessTokenResponse 
@@ -52,11 +52,6 @@ export class TotpSecretV2Service {
                 privyUserId: response.user_id,
             })
         }
-        if (user.mfaEnabled) {
-            throw new UserMfaAlreadyEnabledException({
-                id: user.id,
-            })
-        }
         const privyUser = await this.privyClient.users()._get(response.user_id)
         const email = privyUser.linked_accounts.find(account => account.type === "email")?.address
         if (!email) {
@@ -64,17 +59,25 @@ export class TotpSecretV2Service {
                 privyUserId: response.user_id,
             })
         }   
-        // Decrypt the encrypted payload
-        if (!user.encryptedTotpSecretPayload) {
-            throw new UserTotpSecretNotFoundException({
-                id: user.id,
-            })
-        }
-        const decryptedTotpSecret = this.derivedAesKeyService.decrypt(user.encryptedTotpSecretPayload)
+        // Create the TOTP secret
+        const totpSecret = this.totpService.generateSecret(email)
+        // Update the user with the TOTP secret
+        await this.connection.model<UserSchema>(UserSchema.name).updateOne(
+            {
+                _id: user.id,
+            },
+            {
+                $set: {
+                    encryptedTotpSecretPayload: this.derivedAesKeyService.encrypt(totpSecret.base32) 
+                },
+            },
+        )
         return {
-            totpSecret: decryptedTotpSecret,
-            totpSecretUrl: this.totpService.generateTotpSecretUrl(decryptedTotpSecret,
-                email),
+            totpSecret: totpSecret.base32,
+            totpSecretUrl: this.totpService.generateTotpSecretUrl(
+                totpSecret.base32,
+                email
+            ),
         }
     }
 }

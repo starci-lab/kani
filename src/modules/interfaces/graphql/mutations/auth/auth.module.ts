@@ -5,11 +5,11 @@ import {
     ConfigurableModuleClass 
 } from "./auth.module-definition"
 import {
-    EnableMFAModule 
-} from "./enable-mfa"
+    EnableAuthenticatorAppV2Module 
+} from "./enable-authenticator-app-v2"
 import {
-    EnableMFAV2Module 
-} from "./enable-mfa-v2"
+    DisableAuthenticatorAppV2Module 
+} from "./disable-authenticator-app-v2"
 import {
     RefreshModule 
 } from "./refresh"
@@ -22,16 +22,13 @@ import {
 import {
     RequestSend2FactorOtpModule 
 } from "./request-send-2-factor-otp"
-import {
-    VerifyMultiStepsModule 
-} from "./verify-multi-steps"
 
 @Module({
     imports: [
-        EnableMFAModule.register({
+        EnableAuthenticatorAppV2Module.register({
             isGlobal: true,
         }),
-        EnableMFAV2Module.register({
+        DisableAuthenticatorAppV2Module.register({
             isGlobal: true,
         }),
         RefreshModule.register({
@@ -44,9 +41,6 @@ import {
             isGlobal: true,
         }),
         RequestSend2FactorOtpModule.register({
-            isGlobal: true,
-        }),
-        VerifyMultiStepsModule.register({
             isGlobal: true,
         }),
     ],
