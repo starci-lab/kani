@@ -8,7 +8,7 @@ import {
     IsMongoId, IsString, IsNumberString, IsObject,
 } from "class-validator"
 
-export class WithdrawTokenInput {
+export class WithdrawTokenInputDto {
     @IsMongoId()
     @ApiProperty({
         description: "MongoDB ID of the token to withdraw",
@@ -26,14 +26,14 @@ export class WithdrawTokenInput {
         amount: string
 }
 
-export class AddWithdrawJobRequest {
+export class AddWithdrawJobRequestDto {
     @ApiProperty({
         description: "List of tokens and corresponding amounts to withdraw",
-        type: WithdrawTokenInput,
+        type: WithdrawTokenInputDto,
         isArray: true,
     })
     @IsObject()
-        tokenInputs: Array<WithdrawTokenInput>
+        tokenInputs: Array<WithdrawTokenInputDto>
 }
 
 export class AddWithdrawJobResponseDataDto {

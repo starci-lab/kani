@@ -10,7 +10,7 @@ import {
         description: "Input payload for withdrawing a token from a bot.",
     }
 )
-export class WithdrawV2Token {
+export class WithdrawV2TokenInput {
     @Field(() => ID,
         {
             description: "The ID of the token to withdraw.",
@@ -34,11 +34,11 @@ export class WithdrawV2Request {
         })
         id: string
 
-    @Field(() => [WithdrawV2Token],
+    @Field(() => [WithdrawV2TokenInput],
         {
             description: "The tokens to withdraw.",
         })
-        tokens: Array<WithdrawV2Token>
+        tokenInputs: Array<WithdrawV2TokenInput>
 }
 
 @ObjectType(

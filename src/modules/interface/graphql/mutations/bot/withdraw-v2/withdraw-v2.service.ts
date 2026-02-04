@@ -1,5 +1,5 @@
 import {
-    Injectable
+    Injectable, OnModuleInit
 } from "@nestjs/common"
 import {
     AppVersion,
@@ -22,19 +22,38 @@ import {
 import {
     WithdrawV2Request
 } from "./withdraw-v2.dto"
+import {
+    AxiosService
+} from "@modules/axios"
+import {
+    restConfig, buildExecutorFullEndpointPath
+} from "@modules/executor"
+import {
+    AxiosInstance,
+    AxiosResponse
+} from "axios"
+import {
+    AddWithdrawJobResponseDataDto, AddWithdrawJobRequestDto
+} from "@modules/executor"
 
 @Injectable()
-export class WithdrawV2Service {
+export class WithdrawV2Service implements OnModuleInit {
+    private axiosInstance: AxiosInstance
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-    ) {}
+        private readonly axiosService: AxiosService,
+    ) { }
+
+    onModuleInit() {
+        this.axiosInstance = this.axiosService.create("executor")
+    }
 
     async withdrawV2(
         response: VerifyAccessTokenResponse,
         {
             id,
-            tokens,
+            tokenInputs,
         }: WithdrawV2Request,
     ) {
         const user = await this.connection
@@ -66,12 +85,25 @@ export class WithdrawV2Service {
                 id,
             })
         }
-        // TODO: Implement withdrawal logic
-        console.log(tokens)
-        return {
-            data: {
-                jobId: "123",
+        const { data } = await this.axiosInstance.post<
+            AddWithdrawJobResponseDataDto,
+            AxiosResponse<AddWithdrawJobResponseDataDto>,
+            AddWithdrawJobRequestDto
+        >(
+            buildExecutorFullEndpointPath(
+                {
+                    tags: restConfig().jobs().tags,
+                    api: restConfig().jobs().api().addWithdrawJob.path,
+                    bot,
+                }
+            ),
+            {
+                tokenInputs,
             },
+        )
+        const { jobId } = data
+        return {
+            jobId,
         }
     }
 }

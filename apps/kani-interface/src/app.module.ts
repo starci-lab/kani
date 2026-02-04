@@ -95,6 +95,12 @@ import {
 import {
     ApolloServerModule, ApolloServerType 
 } from "@modules/api"
+import {
+    AxiosModule 
+} from "@modules/axios"
+import {
+    ExecutorModule 
+} from "@modules/executor"
 
 @Module({
     imports: [
@@ -110,6 +116,9 @@ import {
             instanceKeys: [
                 IoRedisInstanceKey.Adapter,
             ],
+        }),
+        AxiosModule.register({
+            isGlobal: true,
         }),
         RedisModule.register({
             isGlobal: true,
@@ -152,6 +161,10 @@ import {
         }),
         SocketIoCoreModule.register({
             isGlobal: true,
+        }),
+        ExecutorModule.register({
+            isGlobal: true,
+            configOnly: true,
         }),
         EvalModule.register({
             isGlobal: true,

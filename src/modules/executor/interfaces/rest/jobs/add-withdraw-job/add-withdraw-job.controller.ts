@@ -13,7 +13,7 @@ import {
     ApiTags,
 } from "@nestjs/swagger"
 import {
-    AddWithdrawJobRequest,
+    AddWithdrawJobRequestDto,
     AddWithdrawJobResponseDataDto,
 } from "./add-withdraw-job.dto"
 import {
@@ -26,12 +26,12 @@ import {
     RestSuccessMessage 
 } from "@modules/api"
 import {
-    buildEndpointPath,
+    buildExecutorEndpointPath,
     restConfig 
-} from "../config"
+} from "../../config"
 
 @ApiTags(restConfig().jobs().tags)
-@Controller(buildEndpointPath(
+@Controller(buildExecutorEndpointPath(
     restConfig().jobs().tags,
     restConfig().jobs().api().addWithdrawJob.path)
 )
@@ -49,7 +49,7 @@ export class AddWithdrawJobController {
         description: "Queue a withdraw job for the given tokens and amounts.",
     })
     @ApiBody({
-        type: AddWithdrawJobRequest,
+        type: AddWithdrawJobRequestDto,
         description: "List of tokens and amounts to withdraw.",
     })
     @ApiResponse({
@@ -62,7 +62,7 @@ export class AddWithdrawJobController {
         description: "Invalid request body.",
     })
     async addWithdrawJob(
-        @Body() body: AddWithdrawJobRequest,
+        @Body() body: AddWithdrawJobRequestDto,
     ): Promise<AddWithdrawJobResponseDataDto> {
         return this.addWithdrawJobService.addWithdrawJob(body)
     }

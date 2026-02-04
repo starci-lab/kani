@@ -27,3 +27,7 @@ export const parseEnvSecond = (
     const msValue = ms((process.env[value] || defaultValue) as ms.StringValue)
     return Math.floor(Number(msValue) / 1000)
 }
+
+export const runInKubernetes = () => {
+    return !!process.env.KUBERNETES_SERVICE_HOST && !!process.env.KUBERNETES_SERVICE_PORT
+}

@@ -1,5 +1,5 @@
 import {
-    DynamicModule, Module, Provider,
+    DynamicModule, Module,
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE,
@@ -27,29 +27,33 @@ export class ExecutorModule extends ConfigurableModuleClass {
         options: typeof OPTIONS_TYPE,
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = []
-        return {
-            imports: [
+        const modules: Array<DynamicModule> = []    
+        if (!options.configOnly) {
+            modules.push(
                 LoadersModule.register({
                     isGlobal: true,
                 }),
                 RuntimesModule.register({
                     isGlobal: true,
                 }),
+            )
+            modules.push(
                 BussinessModule.register({
                     isGlobal: true,
                 }),
                 WorkersModule.register({
                     isGlobal: true,
                 }),
+            )
+            modules.push(
                 InterfacesModule.register({
                     isGlobal: true,
                 }),
-            ],
+            )
+        }
+        return {  
             ...dynamicModule,
-            providers: [...dynamicModule.providers || [],
-                ...providers],
-            exports: [...providers],
+            imports: [...modules],
         }
     }
 }   
