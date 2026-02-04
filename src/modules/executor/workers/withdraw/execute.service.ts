@@ -8,7 +8,7 @@ import {
 } from "./types"
 import {
     BalanceActionService
-} from "@modules/blockchains/balance"
+} from "@modules/blockchains"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
@@ -86,7 +86,7 @@ export class ExecuteService {
                     bot,
                     txHash,
                     chainId: bot.chainId,
-                    type: TransactionType.Swap,
+                    type: TransactionType.Withdraw,
                 }
             )
         }

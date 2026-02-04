@@ -22,7 +22,7 @@ export interface BalanceOptions {
     }
 }
 
-export interface WithdrawTokenInput {
+export interface BalanceWithdrawTokenInput {
     token: TokenSchema
     amount: BN
 }
@@ -35,7 +35,7 @@ export interface PrepareTx {
 
 export interface PrepareWithdrawTransactionParams {
     bot: BotSchema
-    tokenInputs: Array<WithdrawTokenInput>
+    tokenInputs: Array<BalanceWithdrawTokenInput>
     toAddress: string
     toUsdc?: boolean
 }
@@ -66,7 +66,7 @@ export interface ExecuteReconcileBalanceTransactionResults {
     txHashes: Array<string>
 }
 
-export interface ReconcileBalanceTokenInput {
+export interface BalanceReconcileBalanceTokenInput {
     tokenIn: TokenSchema
     tokenOut: TokenSchema
     amount: BN
@@ -74,7 +74,7 @@ export interface ReconcileBalanceTokenInput {
 
 export interface PrepareReconcileBalanceTransactionParams {
     bot: BotSchema
-    tokenInputs: Array<ReconcileBalanceTokenInput>
+    tokenInputs: Array<BalanceReconcileBalanceTokenInput>
 }
 
 export interface PrepareReconcileBalanceTransactionResult {

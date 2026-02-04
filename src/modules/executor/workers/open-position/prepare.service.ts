@@ -21,11 +21,9 @@ import {
     Connection 
 } from "mongoose"
 import {
-    OpenPositionActionService
-} from "@modules/blockchains/dexes/orchestrator"
-import {
-    PrepareOpenPositionResult
-} from "@modules/blockchains/interfaces"
+    OpenPositionActionService,
+    PrepareOpenPositionResult  
+} from "@modules/blockchains"
 import {
     SuperJSON
 } from "superjson"

@@ -24,7 +24,7 @@ import {
     AddTransactionRecordParams,
     ClosePositionActionService,
     PrepareClosePositionResult,
-} from "@modules/blockchains/dexes/orchestrator"
+} from "@modules/blockchains"
 import {
     envConfig 
 } from "@modules/env"

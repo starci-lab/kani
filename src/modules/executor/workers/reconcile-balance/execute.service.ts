@@ -86,7 +86,7 @@ export class ExecuteService {
                     bot,
                     txHash,
                     chainId: bot.chainId,
-                    type: TransactionType.Swap,
+                    type: TransactionType.ReconcileBalance,
                 }
             )
         }

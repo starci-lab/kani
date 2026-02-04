@@ -25,7 +25,7 @@ import {
     OpenPositionActionService,
     PrepareOpenPositionResult,
     ExecuteOpenPositionResult,
-} from "@modules/blockchains/dexes/orchestrator"
+} from "@modules/blockchains"
 import {
     envConfig 
 } from "@modules/env"

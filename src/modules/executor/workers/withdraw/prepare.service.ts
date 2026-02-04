@@ -13,6 +13,7 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
+    BotWithdrawalAddressNotSetException,
     SomeTokensNotFoundException,
     TokenBalanceNotEnoughForWithdrawException,
     TokenNotFoundException
@@ -21,11 +22,8 @@ import {
     BalanceFetcherService
 } from "@modules/blockchains"
 import {
-    BalanceActionService
-} from "@modules/blockchains/balance"
-import {
-    WithdrawTokenInput
-} from "@modules/blockchains/balance/types"
+    BalanceActionService,
+} from "@modules/blockchains"
 import {
     JobSchema
 } from "@modules/databases"
@@ -39,6 +37,9 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
+import {
+    BalanceWithdrawTokenInput 
+} from "@modules/blockchains"
 
 @Injectable()
 export class PrepareService {
@@ -75,6 +76,7 @@ export class PrepareService {
         bot, 
         payload: {
             tokenInputs,
+            toUsdc,
         }
     }: PrepareParams): Promise<PrepareResult> {
         // Guard: if job already passed PENDING phase, do nothing
@@ -92,6 +94,11 @@ export class PrepareService {
             return {
                 result: job.data as ReconcileBalanceJobData
             }
+        }
+        if (!bot.withdrawalAddress) {
+            throw new BotWithdrawalAddressNotSetException({
+                botId: bot.id,
+            })
         }
         const tokens = this.primaryMemoryStorageService.tokenCollection.find(
             {
@@ -128,7 +135,7 @@ export class PrepareService {
             }
         }
         // Convert tokenInputs from payload (with tokenId) to WithdrawTokenInput (with token)
-        const withdrawTokenInputs: Array<WithdrawTokenInput> = tokenInputs.map((tokenInput) => {
+        const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = tokenInputs.map((tokenInput) => {
             const token = tokens.find((token) => token.id.toString() === tokenInput.tokenId)
             if (!token) {
                 throw new TokenNotFoundException({
@@ -138,6 +145,7 @@ export class PrepareService {
             return {
                 token,
                 amount: tokenInput.amount,
+                tokenId: token.id.toString(),
             }
         })
 
@@ -148,8 +156,8 @@ export class PrepareService {
         const { prepareTxs } = await this.balanceActionService.prepareWithdrawTransaction({
             bot,
             tokenInputs: withdrawTokenInputs,
-            toAddress: bot.accountAddress, // TODO: get from payload or config
-            toUsdc: false, // TODO: get from payload or config
+            toAddress: bot.withdrawalAddress,
+            toUsdc,
         })
         // Persist job state transition:
         // PENDING → PREPARED

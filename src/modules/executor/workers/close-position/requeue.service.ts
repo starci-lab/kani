@@ -34,8 +34,10 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    ClosePositionEnqueueService, LiquidityPoolStateService, SettlementService
-} from "@modules/blockchains/dexes/orchestrator"
+    ClosePositionEnqueueService, 
+    LiquidityPoolStateService, 
+    SettlementService
+} from "@modules/blockchains"
 import {
     BotsLoaderService 
 } from "../../loaders"

@@ -17,7 +17,7 @@ import {
     Types 
 } from "mongoose"
 import {
-    OpenPositionOrchestratorService 
+    OpenPositionEnqueueService 
 } from "@modules/blockchains"
 import {
     envConfig 
@@ -59,7 +59,7 @@ export class HandleOpenPositionService {
      * - Log enqueue success/failure and release lock on enqueue failure
      */
     constructor(
-        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly openPositionEnqueueService: OpenPositionEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
@@ -188,7 +188,7 @@ export class HandleOpenPositionService {
         if (!acquired) return
         // enqueue the balance rebalancing
         try {
-            const bullmqJob = await this.openPositionOrchestratorService.enqueue(
+            const bullmqJob = await this.openPositionEnqueueService.enqueue(
                 {
                     bot,
                     jobId,

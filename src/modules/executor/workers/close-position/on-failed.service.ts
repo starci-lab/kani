@@ -5,18 +5,9 @@ import {
     UnrecoverableError,
 } from "bullmq"
 import {
-    InjectPrimaryMongoose,
-} from "@modules/databases"
-import {
-    DayjsService,
-} from "@modules/mixin"
-import {
     WinstonLog,
     WinstonService,
 } from "@modules/winston"
-import {
-    Connection,
-} from "mongoose"
 import {
     OnFailedParams,
 } from "./types"
@@ -24,9 +15,6 @@ import {
 @Injectable()
 export class OnFailedService {
     constructor(
-        @InjectPrimaryMongoose()
-        private readonly connection: Connection,
-        private readonly dayjsService: DayjsService,
         private readonly winstonService: WinstonService,
     ) {}
 

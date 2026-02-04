@@ -66,4 +66,5 @@ export interface WithdrawTokenInput {
 
 export interface WithdrawPayload extends BasePayload {
     tokenInputs: Array<WithdrawTokenInput>
+    toUsdc?: boolean
 }

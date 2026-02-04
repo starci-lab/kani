@@ -1,127 +1,186 @@
 import {
-    DynamicModule, Module 
+    DynamicModule, 
+    Provider
 } from "@nestjs/common"
-import {
-    ConfigurableModuleClass, OPTIONS_TYPE 
-} from "./dexes.module-definition"
 import {
     CetusModule 
 } from "./cetus"
 import {
-    DexId 
-} from "@modules/databases"
+    FlowXModule 
+} from "./flowx"
 import {
-    TurbosModule 
-} from "./turbos"
+    MeteoraModule 
+} from "./meteora"
 import {
     MomentumModule 
 } from "./momentum"
 import {
-    FlowXModule 
-} from "./flowx"
+    OrcaModule 
+} from "./orca"
+import {
+    LiquidityPoolStateService, 
+    ClosePositionActionService, 
+    OpenPositionActionService, 
+    ClosePositionEnqueueService, 
+    OpenPositionEnqueueService, 
+    ReservesWithFeesActionService 
+} from "./orchestrator"
 import {
     RaydiumModule 
 } from "./raydium"
 import {
-    OrcaModule 
-} from "./orca"
+    TurbosModule 
+} from "./turbos"
+import {    
+    Module,
+} from "@nestjs/common"
 import {
-    OrchestratorModule
-} from "./orchestrator"
+    ConfigurableModuleClass,
+    OPTIONS_TYPE 
+} from "./dexes.module-definition"
 import {
-    MeteoraModule,
-} from "./meteora"
+    DexId 
+} from "@modules/databases"
 
 @Module({
 })
 export class DexesModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        const dexModules: Array<DynamicModule> = []
-        if (
-            !options.dexIds 
-            || options.dexIds?.includes(DexId.Cetus)
-        ) {
+
+        /* ------------------ DEX MODULES ------------------ */
+
+        const dexModules: DynamicModule[] = []
+
+        const useDex = (dexId: DexId) =>
+            !options.dexIds || options.dexIds.includes(dexId)
+
+        if (useDex(DexId.Cetus)) {
             dexModules.push(CetusModule.register({
                 isGlobal: options.isGlobal,
                 enabled: options.enabled,
             }))
         }
-        if (
-            !options.dexIds
-            || options.dexIds?.includes(DexId.Turbos)
-        ) {
-            dexModules.push(
-                TurbosModule.register({
-                    isGlobal: options.isGlobal,
-                    enabled: options.enabled,
-                }))
+
+        if (useDex(DexId.Turbos)) {
+            dexModules.push(TurbosModule.register({
+                isGlobal: options.isGlobal,
+                enabled: options.enabled,
+            }))
         }
-        if (
-            !options.dexIds
-            || options.dexIds?.includes(DexId.Momentum)
-        ) {
-            dexModules.push(
-                MomentumModule.register({
-                    isGlobal: options.isGlobal,
-                    enabled: options.enabled,
-                }))
+
+        if (useDex(DexId.Momentum)) {
+            dexModules.push(MomentumModule.register({
+                isGlobal: options.isGlobal,
+                enabled: options.enabled,
+            }))
         }
-        if (
-            !options.dexIds
-            || options.dexIds?.includes(DexId.FlowX)
-        ) {
-            dexModules.push(
-                FlowXModule.register({
-                    isGlobal: options.isGlobal,
-                    enabled: options.enabled,
-                }))
+
+        if (useDex(DexId.FlowX)) {
+            dexModules.push(FlowXModule.register({
+                isGlobal: options.isGlobal,
+                enabled: options.enabled,
+            }))
         }
-        if (
-            !options.dexIds
-            || options.dexIds?.includes(DexId.Raydium)
-        ) {
-            dexModules.push(
-                RaydiumModule.register({
-                    isGlobal: options.isGlobal,
-                    enabled: options.enabled,
-                }))
+
+        if (useDex(DexId.Raydium)) {
+            dexModules.push(RaydiumModule.register({
+                isGlobal: options.isGlobal,
+                enabled: options.enabled,
+            }))
         }
-        if (
-            !options.dexIds
-            || options.dexIds?.includes(DexId.Orca)
-        ) {
+
+        if (useDex(DexId.Orca)) {
             dexModules.push(OrcaModule.register({
                 isGlobal: options.isGlobal,
                 enabled: options.enabled,
             }))
         }
-        if (
-            !options.dexIds
-            || options.dexIds?.includes(DexId.Meteora)
-        ) {
-            dexModules.push(
-                MeteoraModule.register({
-                    isGlobal: options.isGlobal,
-                    enabled: options.enabled,
-                }))
+
+        if (useDex(DexId.Meteora)) {
+            dexModules.push(MeteoraModule.register({
+                isGlobal: options.isGlobal,
+                enabled: options.enabled,
+            }))
         }
-        const orchestratorModule = OrchestratorModule.register(options)
+
+        /* ------------------ ENABLE HELPERS ------------------ */
+
+        const isGlobalEnabled = (): boolean => {
+            if (typeof options.enabled === "boolean") return options.enabled
+            if (options.enabled === undefined) return true
+            return true
+        }
+
+        const isActionEnabled = (): boolean => {
+            if (!isGlobalEnabled()) return false
+
+            const action = options.enabled?.action
+            if (typeof action === "boolean") return action
+            if (action === undefined) return true
+
+            return action.action ?? true
+        }
+
+        const isEnqueueEnabled = (): boolean => {
+            if (!isGlobalEnabled()) return false
+
+            const action = options.enabled?.action
+            if (typeof action === "boolean") return action
+            if (action === undefined) return true
+
+            return action.enqueue ?? true
+        }
+
+        const isReservesWithFeesEnabled = (): boolean => {
+            if (!isGlobalEnabled()) return false
+
+            const reserves = options.enabled?.reservesWithFees
+            if (typeof reserves === "boolean") return reserves
+            if (reserves === undefined) return true
+
+            return reserves ?? true
+        }
+
+        /* ------------------ ORCHESTRATOR PROVIDERS ------------------ */
+
+        const orchestratorProviders: Array<Provider> = [
+            LiquidityPoolStateService,
+        ]
+
+        if (isActionEnabled()) {
+            orchestratorProviders.push(
+                ClosePositionActionService,
+                OpenPositionActionService,
+            )
+        }
+
+        if (isEnqueueEnabled()) {
+            orchestratorProviders.push(
+                ClosePositionEnqueueService,
+                OpenPositionEnqueueService,
+            )
+        }
+
+        if (isReservesWithFeesEnabled()) {
+            orchestratorProviders.push(
+                ReservesWithFeesActionService,
+            )
+        }
+
+        /* ------------------ RETURN MODULE ------------------ */
+
         return {
             ...dynamicModule,
-            imports: [
-                ...dexModules,
-                orchestratorModule,
-            ],
+            imports: [...dexModules],
             providers: [
-                ...dynamicModule.providers || [],
+                ...(dynamicModule.providers ?? []),
+                ...orchestratorProviders,
             ],
             exports: [
                 ...dexModules,
-                orchestratorModule,
-            ]
+                ...orchestratorProviders,
+            ],
         }
-    } 
+    }
 }

@@ -16,7 +16,7 @@ import {
     Types 
 } from "mongoose"
 import {
-    ClosePositionOrchestratorService,
+    ClosePositionEnqueueService,
     LiquidityPoolStateService,
 } from "@modules/blockchains"
 import {
@@ -53,7 +53,7 @@ export class HandleClosePositionService {
      * - Log enqueue success/failure and release lock on enqueue failure
      */
     constructor(
-        private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
+        private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly settlementService: SettlementService,
@@ -120,7 +120,7 @@ export class HandleClosePositionService {
         // settle the position
         // enqueue the close position
         try {
-            const bullmqJob = await this.closePositionOrchestratorService.enqueue(
+            const bullmqJob = await this.closePositionEnqueueService.enqueue(
                 {
                     bot,
                     jobId,

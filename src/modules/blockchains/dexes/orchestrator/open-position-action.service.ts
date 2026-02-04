@@ -18,7 +18,7 @@ import {
 } from "../orca"
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
-} from "./orchestrator.module-definition"
+} from "../dexes.module-definition"
 import {
     MeteoraOpenPositionActionService 
 } from "../meteora"

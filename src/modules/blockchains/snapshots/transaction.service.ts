@@ -1,24 +1,19 @@
 import { 
-    BotSchema, 
     InjectPrimaryMongoose, 
     TransactionSchema, 
-    TransactionType
 } from "@modules/databases"
-import {
-    ClientSession, Connection 
-} from "mongoose"
 import {
     Injectable 
 } from "@nestjs/common"
-import {
-    ChainId 
-} from "@modules/typedefs"
 import {
     DayjsService 
 } from "@modules/mixin"
 import {
     AddTransactionRecordParams
 } from "./types"
+import {
+    Connection 
+} from "mongoose"
 
 @Injectable()
 export class TransactionSnapshotService {

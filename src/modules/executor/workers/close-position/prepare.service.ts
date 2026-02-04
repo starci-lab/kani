@@ -23,7 +23,7 @@ import {
 import {
     ClosePositionActionService,
     PrepareClosePositionResult,
-} from "@modules/blockchains/dexes/orchestrator"
+} from "@modules/blockchains"
 import {
     InjectSuperJson 
 } from "@modules/mixin"

@@ -25,18 +25,14 @@ import {
 } from "@modules/blockchains"
 import {
     BalanceEnqueueService,
-    BalanceActionService
-} from "@modules/blockchains/balance"
-import {
-    ReconcileBalanceTokenInput
-} from "@modules/blockchains/balance/types"
+    BalanceActionService,
+    BalanceReconcileBalanceTokenInput
+} from "@modules/blockchains"
 import {
     JobSchema
 } from "@modules/databases"
 import {
-    WinstonLog
-} from "@modules/winston"
-import {
+    WinstonLog,
     WinstonService
 } from "@modules/winston"
 import {
@@ -188,7 +184,7 @@ export class PrepareService {
             )
         }
         // Convert swapSteps to tokenInputs for prepareReconcileBalanceTransaction
-        const tokenInputs: Array<ReconcileBalanceTokenInput> = []
+        const tokenInputs: Array<BalanceReconcileBalanceTokenInput> = []
         for (const swapStep of swapSteps) {
             const { direction, usedAmount } = swapStep
             switch (direction) {

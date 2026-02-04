@@ -14,10 +14,6 @@ import {
     ActivePositionNotFoundException,
 } from "@modules/exceptions"
 import {
-    MODULE_OPTIONS_TOKEN,
-    OPTIONS_TYPE,
-} from "./orchestrator.module-definition"
-import {
     ReservesWithFeesResult,
     LiquidityPoolState,
 } from "../../interfaces"
@@ -45,6 +41,9 @@ import {
 import {
     LiquidityPoolStateService,
 } from "./liquidity-pool-state.service"
+import {
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+} from "../dexes.module-definition"
 
 export interface OrchestrateReservesWithFeesParams {
     bot: BotSchema

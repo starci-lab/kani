@@ -36,16 +36,13 @@ export class ExecutorModule extends ConfigurableModuleClass {
                 RuntimesModule.register({
                     isGlobal: true,
                 }),
-            )
-            modules.push(
+
                 BussinessModule.register({
                     isGlobal: true,
                 }),
                 WorkersModule.register({
                     isGlobal: true,
                 }),
-            )
-            modules.push(
                 InterfacesModule.register({
                     isGlobal: true,
                 }),
