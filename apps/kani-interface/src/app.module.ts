@@ -40,10 +40,8 @@ import {
     CacheModule 
 } from "@modules/cache"
 import {
-    GraphQLModule, 
-    HttpModule,
-    SocketIoModule
-} from "@modules/interfaces"
+    InterfaceModule 
+} from "@modules/interface"
 import {
     ThrottlerModule 
 } from "@modules/throttler"
@@ -94,6 +92,9 @@ import {
 import {
     SocketIoModule as  SocketIoCoreModule
 } from "@modules/socketio"
+import {
+    ApolloServerModule, ApolloServerType 
+} from "@modules/api"
 
 @Module({
     imports: [
@@ -128,6 +129,11 @@ import {
                 manualSeed: true,
             },
             associate: true,
+        }),
+        ApolloServerModule.register({
+            isGlobal: true,
+            type: ApolloServerType.Monolithic,
+            useServices: true,
         }),
         FormulasModule.register({
             isGlobal: true,
@@ -231,16 +237,8 @@ import {
         MailModule.register({
             isGlobal: true,
         }),
-        HttpModule.register({
+        InterfaceModule.register({
             isGlobal: true,
-        }),
-        SocketIoModule.register({
-            isGlobal: true,
-        }),
-        GraphQLModule.register({
-            isGlobal: true,
-            useFederation: false,
-            registerAllResolvers: true,
         }),
         TerminusModule.register({
             isGlobal: true,

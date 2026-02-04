@@ -52,7 +52,7 @@ import {
 } from "@modules/axios"
 import {
     ApolloClientModule 
-} from "@modules/apollo-client"
+} from "@modules/api"
 import {
     FilesystemModule 
 } from "@modules/filesystem"

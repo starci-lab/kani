@@ -151,6 +151,8 @@ import {
     MigrationAvatarsFailedMessage,
     MigrationUserTotpCompletedMessage,
     MigrationUserTotpFailedMessage,
+    MigrationBotExecutorCompletedMessage,
+    MigrationBotExecutorFailedMessage,
     KeyGenerationFailedMessage,
     KeyDecryptionCheckFailedMessage,
     KeyWrittenSuccessMessage,
@@ -1399,6 +1401,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as MigrationUserTotpFailedMessage,
+    },
+    // Migration Bot Executor Completed
+    [WinstonLog.MigrationBotExecutorCompleted]: {
+        name: WinstonLog.MigrationBotExecutorCompleted,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as MigrationBotExecutorCompletedMessage,
+    },
+    // Migration Bot Executor Failed
+    [WinstonLog.MigrationBotExecutorFailed]: {
+        name: WinstonLog.MigrationBotExecutorFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as MigrationBotExecutorFailedMessage,
     },
     // Key Generated Success
     [WinstonLog.KeyGeneratedSuccess]: {

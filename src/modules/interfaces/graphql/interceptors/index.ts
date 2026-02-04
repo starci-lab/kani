@@ -1,1 +1,0 @@
-export * from "./graphql-transform.interceptor"

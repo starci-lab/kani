@@ -1,0 +1,1 @@
+export * from "./monolithic-apollo-server.module"

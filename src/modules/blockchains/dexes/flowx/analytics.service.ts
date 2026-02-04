@@ -28,7 +28,7 @@ import {
 import Decimal from "decimal.js"
 import {
     ApolloClientService 
-} from "@modules/apollo-client"
+} from "@modules/api"
 import {
     ApolloClient, gql 
 } from "@apollo/client"

@@ -50,6 +50,9 @@ import {
     BotChartConfigSchema,
     BotChartConfigSchemaClass,
 } from "./bot-chart-config.schema"
+import {
+    ExecutorSchema 
+} from "./executor.schema"
 
 @ObjectType({
     description: "Represents a bot",
@@ -392,6 +395,16 @@ export class BotSchema extends AbstractSchema {
         type: String, required: false
     })
         withdrawalAddress?: string
+
+    @Field(() => ID,
+        {
+            description: "The executor of the bot",
+        })
+    @Prop({
+        type: MongooseSchema.Types.ObjectId,
+        ref: PrimaryMongoDbCollectionRef.Executor,
+    })
+        executor: ExecutorSchema | Types.ObjectId
 }
 /**
  * The actual Mongoose schema generated from the class definition above.

@@ -1269,6 +1269,20 @@ export interface MigrationUserTotpFailedMessage {
 }
 
 /**
+ * Migration Bot Executor Completed Message
+ */
+export interface MigrationBotExecutorCompletedMessage {
+    updatedCount: number
+}
+
+/**
+ * Migration Bot Executor Failed Message
+ */
+export interface MigrationBotExecutorFailedMessage {
+    error: string
+}
+
+/**
  * Error Getting Cache Message
  */
 export interface ErrorGettingCacheMessage {
