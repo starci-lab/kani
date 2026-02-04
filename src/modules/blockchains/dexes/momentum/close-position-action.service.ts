@@ -7,6 +7,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     Transaction,
@@ -129,6 +130,14 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         transaction: closePositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHashes: [txHash],
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         prepareTxs: [
                             {
@@ -150,7 +159,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
             stimulate, 
             prepareTxs,
         }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
         // Sui requires exactly one transaction per execution
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -182,7 +191,9 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                return
+                return {
+                    txHashes: [txHash],
+                }
             }
         }
         if (!signatureWithBytes) {
@@ -193,7 +204,7 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                 type: ErrorTransactionType.ClosePosition,
             })
         }
-        await this.rpcExecutorService.withSuiClient({
+        return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (stimulate) {
@@ -218,7 +229,9 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                             liquidityPoolId: _state.static.displayId,
                         }
                     )
-                    return
+                    return {
+                        txHashes: [txHash],
+                    }
                 }
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
@@ -235,6 +248,9 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
+                return {
+                    txHashes: [digest],
+                }
             },
         })
     }

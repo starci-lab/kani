@@ -17,8 +17,10 @@ import {
     LiquidityPoolFetchedErrorMessage,
     LiquidityPoolWsErrorMessage,
     NoAvailableRpcMessage,
-    OpenPositionEnqueueFailedMessage,
-    OpenPositionEnqueuedMessage,
+    OpenPositionJobEnqueueFailedMessage,
+    OpenPositionJobEnqueuedMessage,
+    OpenPositionJobRequeuedMessage,
+    OpenPositionJobRequeueFailedMessage,
     OpenPositionSkippedDynamicLiquidityPoolInfoNotReadyMessage,
     OpenPositionSkippedPriceNotReadyMessage,
     ClosePositionEnqueuedMessage,
@@ -75,20 +77,20 @@ import {
     ExecutorRuntimeInitializationFailedMessage,
     CoordinatorRuntimeInitializationFailedMessage,
     ExecutorNotFoundMessage,
-    ReconcileBalanceEnqueueFailedMessage,
-    ReconcileBalanceEnqueuedMessage,
     ReconcileBalanceProcessingStartedMessage,
-    ReconcileBalanceProcessingCompletedMessage,
-    ReconcileBalanceProcessingFailedPermanentFailureMessage,
-    ReconcileBalanceProcessingFailedUnrecoverableMessage,
-    ReconcileBalanceProcessingFailedRetryableMessage,
-    WithdrawEnqueueFailedMessage,
-    WithdrawEnqueuedMessage,
-    WithdrawProcessingStartedMessage,
-    WithdrawProcessingCompletedMessage,
-    WithdrawProcessingFailedPermanentFailureMessage,
-    WithdrawProcessingFailedUnrecoverableMessage,
-    WithdrawProcessingFailedRetryableMessage,
+    ReconcileBalanceJobCompletedMessage,
+    ReconcileBalanceJobFailedPermanentFailureMessage,
+    ReconcileBalanceJobFailedUnrecoverableMessage,
+    ReconcileBalanceJobFailedRetryableMessage,
+    WithdrawJobEnqueueFailedMessage,
+    WithdrawJobEnqueuedMessage,
+    WithdrawJobRequeuedMessage,
+    WithdrawJobRequeueFailedMessage,
+    WithdrawJobStartedMessage,
+    WithdrawJobCompletedMessage,
+    WithdrawJobFailedPermanentFailureMessage,
+    WithdrawJobFailedUnrecoverableMessage,
+    WithdrawJobFailedRetryableMessage,
     PriceDiagnosticFailedMessage,
     PriceDiagnosticSuccessMessage,
     PriceDiagnosticFailedNotFoundMessage,
@@ -104,8 +106,11 @@ import {
     ReconcileBalanceRequeueFailedMessage,
     ReconcileBalanceJobAlreadyPreparedMessage,
     ReconcileBalanceJobAlreadyConfirmedMessage,
+    ReconcileBalanceJobConfirmedMessage,
     ReconcileBalanceJobAlreadyExecutedMessage,
     WithdrawRequeueFailedMessage,
+    WithdrawJobPreparedMessage,
+    WithdrawJobConfirmedMessage,
     WithdrawJobAlreadyPreparedMessage,
     WithdrawJobAlreadyConfirmedMessage,
     WithdrawJobAlreadyExecutedMessage,
@@ -120,16 +125,16 @@ import {
     ClosePositionProcessingFailedRetryableMessage,
     ClosePositionProcessingCompletedMessage,
     ClosePositionRequeueFailedMessage,
-    OpenPositionProcessingFailedUnrecoverableMessage,
-    OpenPositionProcessingFailedPermanentFailureMessage,
-    OpenPositionProcessingFailedRetryableMessage,
-    OpenPositionProcessingCompletedMessage,
+    OpenPositionJobFailedUnrecoverableMessage,
+    OpenPositionJobFailedPermanentFailureMessage,
+    OpenPositionJobFailedRetryableMessage,
+    OpenPositionJobCompletedMessage,
     OpenPositionRequeueFailedMessage,
-    OpenPositionProcessingStartedMessage,
+    OpenPositionJobStartedMessage,
     DiagnosticsReadyMessage,
     ClosePositionTransactionStimulatedMessage,
     OpenPositionTransactionStimulatedMessage,
-    OpenPositionTransactionPreparedMessage,
+    OpenPositionJobPreparedMessage,
     ClosePositionTransactionFoundMessage,
     OpenPositionTransactionFoundMessage,
     SwapTransactionFoundMessage,
@@ -143,7 +148,7 @@ import {
     ClosePositionJobAlreadyEnqueuedMessage,
     CannotSettlePositionMessage,
     ClosePositionTransactionPreparedMessage,
-    OpenPositionTransactionConfirmedMessage,
+    OpenPositionJobConfirmedMessage,
     DlmmLiquidityPoolsSyncedDiagnosticMessage,
     ClmmLiquidityPoolsSyncedDiagnosticMessage,
     LiquidityPoolsBecameNotReadyMessage,
@@ -185,6 +190,14 @@ import {
     WithdrawTransactionStimulatedMessage,
     ReconcileBalanceTransactionExecutedMessage,
     ReconcileBalanceTransactionStimulatedMessage,
+    ReconcileBalanceJobPreparedMessage,
+    WithdrawTransactionPreparedMessage,
+    WithdrawTransactionFoundMessage,
+    ReconcileBalanceTransactionFoundMessage,
+    ReconcileBalanceJobEnqueueFailedMessage,
+    ReconcileBalanceJobEnqueuedMessage,
+    ReconcileBalanceJobRequeuedMessage,
+    ReconcileBalanceJobRequeueFailedMessage,
 } from "./types"
 
 export const configMap = {
@@ -260,6 +273,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceTransactionStimulatedMessage,
+    },
+    // Reconcile Balance Job Prepared
+    [WinstonLog.ReconcileBalanceJobPrepared]: {
+        name: WinstonLog.ReconcileBalanceJobPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobPreparedMessage,
+    },
+    // Withdraw Transaction Prepared
+    [WinstonLog.WithdrawTransactionPrepared]: {
+        name: WinstonLog.WithdrawTransactionPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawTransactionPreparedMessage,
     },
     // Close Position Transaction
     [WinstonLog.ClosePositionTransactionExecuted]: {
@@ -437,21 +466,37 @@ export const configMap = {
         messageType: {
         } as NoAvailableRpcMessage,
     },
-    // Open Position Enqueued
-    [WinstonLog.OpenPositionEnqueued]: {
-        name: WinstonLog.OpenPositionEnqueued,
+    // Open Position Job Enqueued
+    [WinstonLog.OpenPositionJobEnqueued]: {
+        name: WinstonLog.OpenPositionJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as OpenPositionEnqueuedMessage,
+        } as OpenPositionJobEnqueuedMessage,
     },
-    // Open Position Enqueue Failed
-    [WinstonLog.OpenPositionEnqueueFailed]: {
-        name: WinstonLog.OpenPositionEnqueueFailed,
+    // Open Position Job Enqueue Failed
+    [WinstonLog.OpenPositionJobEnqueueFailed]: {
+        name: WinstonLog.OpenPositionJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as OpenPositionEnqueueFailedMessage,
+        } as OpenPositionJobEnqueueFailedMessage,
+    },
+    // Open Position Job Requeued
+    [WinstonLog.OpenPositionJobRequeued]: {
+        name: WinstonLog.OpenPositionJobRequeued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobRequeuedMessage,
+    },
+    // Open Position Job Requeue Failed
+    [WinstonLog.OpenPositionJobRequeueFailed]: {
+        name: WinstonLog.OpenPositionJobRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as OpenPositionJobRequeueFailedMessage,
     },
     // Open Position Skipped - Dynamic Liquidity Pool Info Not Ready
     [WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady]: {
@@ -792,7 +837,7 @@ export const configMap = {
     // Executor Mongo Db Change Stream Bot Updated
     [WinstonLog.ExecutorMongoDbChangeStreamBotUpdated]: {
         name: WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
-        level: WinstonLevel.Info,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as ExecutorMongoDbChangeStreamBotUpdatedMessage,
@@ -822,44 +867,76 @@ export const configMap = {
         } as ExecutorNotFoundMessage,
     },
     // Reconcile Balance Enqueue Failed
-    [WinstonLog.ReconcileBalanceEnqueueFailed]: {
-        name: WinstonLog.ReconcileBalanceEnqueueFailed,
+    [WinstonLog.ReconcileBalanceJobEnqueueFailed]: {
+        name: WinstonLog.ReconcileBalanceJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ReconcileBalanceEnqueueFailedMessage,
+        } as ReconcileBalanceJobEnqueueFailedMessage,
     },
     // Reconcile Balance Enqueued
-    [WinstonLog.ReconcileBalanceEnqueued]: {
-        name: WinstonLog.ReconcileBalanceEnqueued,
+    [WinstonLog.ReconcileBalanceJobEnqueued]: {
+        name: WinstonLog.ReconcileBalanceJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as ReconcileBalanceEnqueuedMessage,
+        } as ReconcileBalanceJobEnqueuedMessage,
     },
-    // Withdraw Enqueue Failed
-    [WinstonLog.WithdrawEnqueueFailed]: {
-        name: WinstonLog.WithdrawEnqueueFailed,
+    // Reconcile Balance Job Requeue Failed
+    [WinstonLog.ReconcileBalanceJobRequeueFailed]: {
+        name: WinstonLog.ReconcileBalanceJobRequeueFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as WithdrawEnqueueFailedMessage,
+        } as ReconcileBalanceJobRequeueFailedMessage,
     },
-    // Withdraw Enqueued
-    [WinstonLog.WithdrawEnqueued]: {
-        name: WinstonLog.WithdrawEnqueued,
+    // Reconcile Balance Job Requeued
+    [WinstonLog.ReconcileBalanceJobRequeued]: {
+        name: WinstonLog.ReconcileBalanceJobRequeued,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as WithdrawEnqueuedMessage,
+        } as ReconcileBalanceJobRequeuedMessage,
     },
-    // Reconcile Balance Processing Completed
-    [WinstonLog.ReconcileBalanceProcessingCompleted]: {
-        name: WinstonLog.ReconcileBalanceProcessingCompleted,
+    // Withdraw Job Enqueue Failed
+    [WinstonLog.WithdrawJobEnqueueFailed]: {
+        name: WinstonLog.WithdrawJobEnqueueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as WithdrawJobEnqueueFailedMessage,
+    },
+    // Withdraw Job Enqueued
+    [WinstonLog.WithdrawJobEnqueued]: {
+        name: WinstonLog.WithdrawJobEnqueued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawJobEnqueuedMessage,
+    },
+    // Withdraw Job Requeued
+    [WinstonLog.WithdrawJobRequeued]: {
+        name: WinstonLog.WithdrawJobRequeued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawJobRequeuedMessage,
+    },
+    // Withdraw Job Requeue Failed
+    [WinstonLog.WithdrawJobRequeueFailed]: {
+        name: WinstonLog.WithdrawJobRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as WithdrawJobRequeueFailedMessage,
+    },
+    // Reconcile Balance Job Completed
+    [WinstonLog.ReconcileBalanceJobCompleted]: {
+        name: WinstonLog.ReconcileBalanceJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as ReconcileBalanceProcessingCompletedMessage,
+        } as ReconcileBalanceJobCompletedMessage,
     },
     // Reconcile Balance Processing Started
     [WinstonLog.ReconcileBalanceProcessingStarted]: {
@@ -869,69 +946,69 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceProcessingStartedMessage,
     },
-    // Withdraw Processing Completed
-    [WinstonLog.WithdrawProcessingCompleted]: {
-        name: WinstonLog.WithdrawProcessingCompleted,
+    // Withdraw Job Completed
+    [WinstonLog.WithdrawJobCompleted]: {
+        name: WinstonLog.WithdrawJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as WithdrawProcessingCompletedMessage,
+        } as WithdrawJobCompletedMessage,
     },
-    // Withdraw Processing Started
-    [WinstonLog.WithdrawProcessingStarted]: {
-        name: WinstonLog.WithdrawProcessingStarted,
+    // Withdraw Job Started
+    [WinstonLog.WithdrawJobStarted]: {
+        name: WinstonLog.WithdrawJobStarted,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as WithdrawProcessingStartedMessage,
+        } as WithdrawJobStartedMessage,
     },
-    // Reconcile Balance Processing Failed Unrecoverable
-    [WinstonLog.ReconcileBalanceProcessingFailedUnrecoverable]: {
-        name: WinstonLog.ReconcileBalanceProcessingFailedUnrecoverable,
+    // Reconcile Balance Job Failed Unrecoverable
+    [WinstonLog.ReconcileBalanceJobFailedUnrecoverable]: {
+        name: WinstonLog.ReconcileBalanceJobFailedUnrecoverable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ReconcileBalanceProcessingFailedUnrecoverableMessage,
+        } as ReconcileBalanceJobFailedUnrecoverableMessage,
     },
-    // Reconcile Balance Processing Failed Permanent Failure
-    [WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure]: {
-        name: WinstonLog.ReconcileBalanceProcessingFailedPermanentFailure,
+    // Reconcile Balance Job Failed Permanent Failure
+    [WinstonLog.ReconcileBalanceJobFailedPermanentFailure]: {
+        name: WinstonLog.ReconcileBalanceJobFailedPermanentFailure,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ReconcileBalanceProcessingFailedPermanentFailureMessage,
+        } as ReconcileBalanceJobFailedPermanentFailureMessage,
     },
-    // Reconcile Balance Processing Failed Retryable
-    [WinstonLog.ReconcileBalanceProcessingFailedRetryable]: {
-        name: WinstonLog.ReconcileBalanceProcessingFailedRetryable,
+    // Reconcile Balance Job Failed Retryable
+    [WinstonLog.ReconcileBalanceJobFailedRetryable]: {
+        name: WinstonLog.ReconcileBalanceJobFailedRetryable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ReconcileBalanceProcessingFailedRetryableMessage,
+        } as ReconcileBalanceJobFailedRetryableMessage,
     },
-    // Withdraw Processing Failed Unrecoverable
-    [WinstonLog.WithdrawProcessingFailedUnrecoverable]: {
-        name: WinstonLog.WithdrawProcessingFailedUnrecoverable,
+    // Withdraw Job Failed Unrecoverable
+    [WinstonLog.WithdrawJobFailedUnrecoverable]: {
+        name: WinstonLog.WithdrawJobFailedUnrecoverable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as WithdrawProcessingFailedUnrecoverableMessage,
+        } as WithdrawJobFailedUnrecoverableMessage,
     },
-    // Withdraw Processing Failed Permanent Failure
-    [WinstonLog.WithdrawProcessingFailedPermanentFailure]: {
-        name: WinstonLog.WithdrawProcessingFailedPermanentFailure,
+    // Withdraw Job Failed Permanent Failure
+    [WinstonLog.WithdrawJobFailedPermanentFailure]: {
+        name: WinstonLog.WithdrawJobFailedPermanentFailure,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as WithdrawProcessingFailedPermanentFailureMessage,
+        } as WithdrawJobFailedPermanentFailureMessage,
     },
-    // Withdraw Processing Failed Retryable
-    [WinstonLog.WithdrawProcessingFailedRetryable]: {
-        name: WinstonLog.WithdrawProcessingFailedRetryable,
+    // Withdraw Job Failed Retryable
+    [WinstonLog.WithdrawJobFailedRetryable]: {
+        name: WinstonLog.WithdrawJobFailedRetryable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as WithdrawProcessingFailedRetryableMessage,
+        } as WithdrawJobFailedRetryableMessage,
     },
     // Price Diagnostic Failed
     [WinstonLog.PriceDiagnosticFailed]: {
@@ -1061,6 +1138,14 @@ export const configMap = {
         messageType: {
         } as ReconcileBalanceJobAlreadyConfirmedMessage,
     },
+    // Reconcile Balance Job Confirmed
+    [WinstonLog.ReconcileBalanceJobConfirmed]: {
+        name: WinstonLog.ReconcileBalanceJobConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceJobConfirmedMessage,
+    },
     // Withdraw Requeue Failed
     [WinstonLog.WithdrawRequeueFailed]: {
         name: WinstonLog.WithdrawRequeueFailed,
@@ -1068,6 +1153,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as WithdrawRequeueFailedMessage,
+    },
+    // Withdraw Job Prepared
+    [WinstonLog.WithdrawJobPrepared]: {
+        name: WinstonLog.WithdrawJobPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawJobPreparedMessage,
+    },
+    // Withdraw Job Confirmed
+    [WinstonLog.WithdrawJobConfirmed]: {
+        name: WinstonLog.WithdrawJobConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawJobConfirmedMessage,
     },
     // Withdraw Job Already Prepared
     [WinstonLog.WithdrawJobAlreadyPrepared]: {
@@ -1173,45 +1274,45 @@ export const configMap = {
         messageType: {
         } as ClosePositionProcessingCompletedMessage,
     },
-    // Open Position Processing Failed Unrecoverable
-    [WinstonLog.OpenPositionProcessingFailedUnrecoverable]: {
-        name: WinstonLog.OpenPositionProcessingFailedUnrecoverable,
+    // Open Position Job Failed Unrecoverable
+    [WinstonLog.OpenPositionJobFailedUnrecoverable]: {
+        name: WinstonLog.OpenPositionJobFailedUnrecoverable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as OpenPositionProcessingFailedUnrecoverableMessage,
+        } as OpenPositionJobFailedUnrecoverableMessage,
     },
-    // Open Position Processing Failed Permanent Failure
-    [WinstonLog.OpenPositionProcessingFailedPermanentFailure]: {
-        name: WinstonLog.OpenPositionProcessingFailedPermanentFailure,
+    // Open Position Job Failed Permanent Failure
+    [WinstonLog.OpenPositionJobFailedPermanentFailure]: {
+        name: WinstonLog.OpenPositionJobFailedPermanentFailure,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as OpenPositionProcessingFailedPermanentFailureMessage,
+        } as OpenPositionJobFailedPermanentFailureMessage,
     },
-    // Open Position Processing Failed Retryable
-    [WinstonLog.OpenPositionProcessingFailedRetryable]: {
-        name: WinstonLog.OpenPositionProcessingFailedRetryable,
+    // Open Position Job Failed Retryable
+    [WinstonLog.OpenPositionJobFailedRetryable]: {
+        name: WinstonLog.OpenPositionJobFailedRetryable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as OpenPositionProcessingFailedRetryableMessage,
+        } as OpenPositionJobFailedRetryableMessage,
     },
-    // Open Position Processing Completed
-    [WinstonLog.OpenPositionProcessingCompleted]: {
-        name: WinstonLog.OpenPositionProcessingCompleted,
+    // Open Position Job Completed
+    [WinstonLog.OpenPositionJobCompleted]: {
+        name: WinstonLog.OpenPositionJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as OpenPositionProcessingCompletedMessage,
+        } as OpenPositionJobCompletedMessage,
     },
-    // Open Position Processing Started
-    [WinstonLog.OpenPositionProcessingStarted]: {
-        name: WinstonLog.OpenPositionProcessingStarted,
+    // Open Position Job Started
+    [WinstonLog.OpenPositionJobStarted]: {
+        name: WinstonLog.OpenPositionJobStarted,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as OpenPositionProcessingStartedMessage,
+        } as OpenPositionJobStartedMessage,
     },
     // Open Position Requeue Failed
     [WinstonLog.OpenPositionRequeueFailed]: {
@@ -1253,13 +1354,13 @@ export const configMap = {
         messageType: {
         } as ClosePositionTransactionStimulatedMessage,
     },
-    // Open Position Transaction Prepared
-    [WinstonLog.OpenPositionTransactionPrepared]: {
-        name: WinstonLog.OpenPositionTransactionPrepared,
+    // Open Position Job Prepared
+    [WinstonLog.OpenPositionJobPrepared]: {
+        name: WinstonLog.OpenPositionJobPrepared,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as OpenPositionTransactionPreparedMessage,
+        } as OpenPositionJobPreparedMessage,
     },
     // Close Position Transaction Found
     [WinstonLog.ClosePositionTransactionFound]: {
@@ -1365,13 +1466,13 @@ export const configMap = {
         messageType: {
         } as ClosePositionTransactionPreparedMessage,
     },
-    // Open Position Transaction Confirmed
-    [WinstonLog.OpenPositionTransactionConfirmed]: {
-        name: WinstonLog.OpenPositionTransactionConfirmed,
+    // Open Position Job Confirmed
+    [WinstonLog.OpenPositionJobConfirmed]: {
+        name: WinstonLog.OpenPositionJobConfirmed,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
-        } as OpenPositionTransactionConfirmedMessage,
+        } as OpenPositionJobConfirmedMessage,
     },
     // Clmm Liquidity Pools Synced Diagnostic
     [WinstonLog.ClmmLiquidityPoolsSyncedDiagnostic]: {
@@ -1716,5 +1817,21 @@ export const configMap = {
         loki: true,
         messageType: {
         } as LockAuthoritySendHeartbeatFailedMessage,
+    },
+    // Withdraw Transaction Found
+    [WinstonLog.WithdrawTransactionFound]: {
+        name: WinstonLog.WithdrawTransactionFound,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawTransactionFoundMessage,
+    },
+    // Reconcile Balance Transaction Found
+    [WinstonLog.ReconcileBalanceTransactionFound]: {
+        name: WinstonLog.ReconcileBalanceTransactionFound,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceTransactionFoundMessage,
     },
 }

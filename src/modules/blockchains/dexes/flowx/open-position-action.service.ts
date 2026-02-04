@@ -94,7 +94,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state, bot }: ConfirmOpenPositionParams
+        { positionId, state }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
@@ -129,14 +129,6 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     )
                 }
                 const fields = objectInfo.data.content.fields as unknown as FlowXClmmPosition
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionConfirmed,
-                    {
-                        botId: bot.id,
-                        txHash: positionId,
-                        liquidityPoolId: _state.static.displayId,
-                    }
-                )
                 return {
                     liquidity: new BN(fields.liquidity),
                 }
@@ -259,14 +251,6 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {
@@ -362,14 +346,6 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                             type: ErrorTransactionType.OpenPosition,
                         })
                     }
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     const { positionId } = this.parseIncreaseLiquidityEvent({
                         state: _state,
                         bot,

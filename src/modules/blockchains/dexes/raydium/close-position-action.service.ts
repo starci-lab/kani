@@ -7,6 +7,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     SignerService 
@@ -183,7 +184,8 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
 
     async execute(
         { bot, state, txCheck, stimulate, prepareTxs }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
+        const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
@@ -207,6 +209,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                             liquidityPoolId: state.static.displayId,
                         },
                     )
+                    txHashes.push(prepareTx.txHash)
                     continue
                 }
             }
@@ -218,7 +221,6 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                     type: ErrorTransactionType.ClosePosition,
                 })
             }
-
             await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Write,
                 callback: async ({ rpc, rpcSubscriptions }) => {
@@ -245,6 +247,7 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                                 liquidityPoolId: state.static.displayId,
                             },
                         )
+                        txHashes.push(prepareTx.txHash)
                         return
                     }
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
@@ -265,8 +268,12 @@ export class RaydiumClosePositionActionService implements IClosePositionActionSe
                             liquidityPoolId: state.static.displayId,
                         },
                     )
+                    txHashes.push(prepareTx.txHash)
                 },
             })
+        }
+        return {
+            txHashes,
         }
     }
 }

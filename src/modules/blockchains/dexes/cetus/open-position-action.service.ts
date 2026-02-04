@@ -101,7 +101,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state, bot }: 
+        { positionId, state }: 
         ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
@@ -137,14 +137,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     )
                 }
                 const fields = objectInfo.data.content.fields as unknown as CetusLiquidityPosition
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionConfirmed,
-                    {
-                        botId: bot.id,
-                        txHash: positionId,
-                        liquidityPoolId: _state.static.displayId,
-                    }
-                )
                 return {
                     liquidity: new BN(fields.liquidity),
                 }
@@ -315,14 +307,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         }
                     )
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {
@@ -418,14 +402,6 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             type: ErrorTransactionType.OpenPosition,
                         })
                     }
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash: devInspect.effects.transactionDigest,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     const { positionId } = this.parseAddLiquidityEvent({
                         state: _state,
                         bot,
@@ -472,6 +448,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 })
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             },
         })

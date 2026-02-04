@@ -99,7 +99,7 @@ export class OnCompletedService {
             }
         )
         this.winstonService.log(
-            WinstonLog.ReconcileBalanceProcessingCompleted,
+            WinstonLog.ReconcileBalanceJobCompleted,
             {
                 botId: bot.id,
                 jobId: job.id,

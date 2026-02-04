@@ -118,7 +118,7 @@ export class RequeueService implements OnApplicationBootstrap {
                             }
                         )
                         this.winstonService.log(
-                            WinstonLog.ReconcileBalanceEnqueued,
+                            WinstonLog.ReconcileBalanceJobRequeued,
                             {
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 botId: bot.id,
@@ -127,10 +127,11 @@ export class RequeueService implements OnApplicationBootstrap {
                         )
                     } catch (error) {
                         this.winstonService.log(
-                            WinstonLog.ReconcileBalanceEnqueueFailed,
+                            WinstonLog.ReconcileBalanceJobRequeueFailed,
                             {
                                 botId: bot.id,
                                 error: error.message,
+                                jobId: bot.activeJob?.job?.toString() ?? "",
                             }
                         )
                         this.lockAuthorityService.release(

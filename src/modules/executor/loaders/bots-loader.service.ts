@@ -331,21 +331,13 @@ implements OnApplicationBootstrap, OnModuleInit {
   
                     try {
                         resumeToken = change._id
-  
                         switch (change.operationType) {
                         case "update": {
                             const data =
                     model
                         .hydrate(change.fullDocument)
                         .toJSON<BotSchema>()
-  
-                            this.winstonService.log(
-                                WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
-                                {
-                                    id: data.id 
-                                },
-                            )
-  
+
                             const props: Array<string> = [
                                 "running",
                                 "name",
@@ -372,18 +364,20 @@ implements OnApplicationBootstrap, OnModuleInit {
                             for (const key of props) {
                                 ;(old)[key] = (data)[key]
                             }
-  
                             this.botCollection.update(old)
-  
+                            this.winstonService.log(
+                                WinstonLog.ExecutorMongoDbChangeStreamBotUpdated,
+                                {
+                                    id: data.id 
+                                },
+                            )
                             this.eventEmitterService.emit({
                                 event: EventName.ExecutorBotUpdated,
                                 payload: data,
                             })
-  
                             break
                         }
                         }
-  
                         resetTimeout()
                     } finally {
                         this.sema.release(token)

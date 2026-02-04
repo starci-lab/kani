@@ -15,6 +15,10 @@ export interface PrepareClosePositionResult {
   prepareTxs: Array<PrepareTx>
 }
 
+export interface ExecuteClosePositionResult {
+  txHashes: Array<string>
+}
+
 export interface ExecuteClosePositionParams {
   bot: BotSchema;
   state: LiquidityPoolState;
@@ -29,5 +33,5 @@ export interface IClosePositionActionService {
   ): Promise<PrepareClosePositionResult>;
   execute(
     params: ExecuteClosePositionParams,
-  ): Promise<void>;
+  ): Promise<ExecuteClosePositionResult>;
 }

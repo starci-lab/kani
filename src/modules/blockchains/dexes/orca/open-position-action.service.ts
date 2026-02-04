@@ -199,14 +199,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                                 nftMintAddress: mintKeyPair.address.toString(),
                                 ataAddress: ataAddress.toString(),
                             }
-                            this.winstonService.log(
-                                WinstonLog.OpenPositionTransactionPrepared,
-                                {
-                                    botId: bot.id,
-                                    txHash,
-                                    liquidityPoolId: _state.static.displayId,
-                                }
-                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -252,14 +244,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash: signedTransaction.txHash,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {
@@ -384,7 +368,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 },
             })
         }
-
         return {
             positionId: positionId.toString(),
             txHashes,
@@ -393,7 +376,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
 
     async confirm(
         {
-            bot,
             state,
             positionId,
         }: ConfirmOpenPositionParams
@@ -417,14 +399,6 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 }
                 const [positionState] = Position.struct.deserialize(Buffer.from(positionInfo.data),
                     8)
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionConfirmed,
-                    {
-                        botId: bot.id,
-                        txHash: positionId,
-                        liquidityPoolId: state.static.displayId,
-                    }
-                )
                 return {
                     liquidity: new BN(positionState.liquidity.toString()),
                 }

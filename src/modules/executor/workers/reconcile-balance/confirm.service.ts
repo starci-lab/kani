@@ -25,6 +25,9 @@ import {
 import {
     envConfig
 } from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class ConfirmService {
@@ -35,6 +38,7 @@ export class ConfirmService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -63,25 +67,27 @@ export class ConfirmService {
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
             return
         }
-        const { transactionRecords } = executeResult
-        // re-fetch balances post execution
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        } = await this.balanceFetcherService.fetchBalances({
-            bot 
-        })
+        if (!envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
+            const { transactionRecords } = executeResult
+            // re-fetch balances post execution
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+            } = await this.balanceFetcherService.fetchBalances({
+                bot 
+            })
 
-        const session = await this.connection.startSession()
-        try {
+            const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {
-                    // no update when stimulate is enabled
+                // no update when stimulate is enabled
                     if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
                         return
                     }
@@ -121,9 +127,14 @@ export class ConfirmService {
                         )
                 }
             )
-        } finally {
-            await session.endSession()
         }
+        this.winstonService.log(
+            WinstonLog.ReconcileBalanceJobConfirmed,
+            {
+                botId: bot.id,
+                jobId: job.id,
+            }
+        )
     }
 }
 

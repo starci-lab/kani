@@ -95,7 +95,7 @@ export class OnCompletedService {
                     }
                 )
                 this.winstonService.log(
-                    WinstonLog.OpenPositionProcessingCompleted,
+                    WinstonLog.OpenPositionJobCompleted,
                     {
                         botId: bot.id,
                         jobId: job.id,

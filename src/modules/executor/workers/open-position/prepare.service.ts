@@ -28,7 +28,8 @@ import {
     SuperJSON
 } from "superjson"
 import {
-    InjectSuperJson 
+    InjectSuperJson,
+    DayjsService
 } from "@modules/mixin"
 import {
     ToStringObject 
@@ -43,6 +44,7 @@ export class PrepareService {
         private readonly openPositionActionService: OpenPositionActionService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     // Phase: PREPARE
@@ -76,18 +78,23 @@ export class PrepareService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
+            const { openPositionTransaction: stringifiedOpenPositionTransaction } = job.data as ToStringObject<OpenPositionJobData>
+            const openPositionTransaction = this.superJson.parse<PrepareOpenPositionResult>(stringifiedOpenPositionTransaction)
+
             this.winstonService.log(
                 WinstonLog.OpenPositionJobAlreadyPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    liquidityPoolId: liquidityPool.displayId,
+                    liquidityPoolId: liquidityPool.displayId,  
+                    txHashes: openPositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
-            const { openPositionTransaction } = job.data as ToStringObject<OpenPositionJobData>
             return {
                 result: {
-                    openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
+                    openPositionTransaction,
                 }
             }
         }
@@ -111,6 +118,15 @@ export class PrepareService {
                     status: JobStatus.Prepared,
                     "data.openPositionTransaction": this.superJson.stringify(openPositionTransaction),
                 },
+            }
+        )
+        this.winstonService.log(
+            WinstonLog.OpenPositionJobPrepared,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                txHashes: openPositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                liquidityPoolId: liquidityPool.displayId,
             }
         )
         return {

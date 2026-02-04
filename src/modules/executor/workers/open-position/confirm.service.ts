@@ -34,6 +34,9 @@ import BN from "bn.js"
 import {
     envConfig 
 } from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class ConfirmService {
@@ -46,6 +49,7 @@ export class ConfirmService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly openPositionActionService: OpenPositionActionService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -80,31 +84,37 @@ export class ConfirmService {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
             return
         }
-        const { transactionRecords, openPositionTransaction, executeResult: _executeResult } = executeResult
-        // confirm the position
-        const { liquidity } = await this.openPositionActionService.confirm({
-            positionId: _executeResult?.positionId ?? "",
-            state: {
-                static: liquidityPool,
-                dynamic: dynamicLiquidityPoolInfo,
-            },
-            bot,
-        })
-        // re-fetch balances post execution
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        } = await this.balanceFetcherService.fetchBalances({
-            bot 
-        })
-        const targetIsA = liquidityPool.tokenA.toString() === targetToken.id.toString()
-        const session = await this.connection.startSession()
-        try {
+        if (!envConfig().executor.runtime.operation.openPosition.stimulate) {
+            const { 
+                transactionRecords, 
+                openPositionTransaction, 
+                executeResult: _executeResult    
+            } = executeResult
+            // confirm the position
+            const { liquidity } = await this.openPositionActionService.confirm({
+                positionId: _executeResult?.positionId ?? "",
+                state: {
+                    static: liquidityPool,
+                    dynamic: dynamicLiquidityPoolInfo,
+                },
+                bot,
+            })
+            // re-fetch balances post execution
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+            } = await this.balanceFetcherService.fetchBalances({
+                bot 
+            })
+            const targetIsA = liquidityPool.tokenA.toString() === targetToken.id.toString()
+            const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {
                     if (envConfig().executor.runtime.operation.openPosition.stimulate) {
@@ -187,9 +197,15 @@ export class ConfirmService {
                         )
                 }
             )
-        } finally {
-            await session.endSession()
         }
+        this.winstonService.log(
+            WinstonLog.OpenPositionJobConfirmed,
+            {
+                botId: bot.id,
+                liquidityPoolId: liquidityPool.displayId,
+                jobId: job.id,
+            }
+        )
     }
 }
 

@@ -7,6 +7,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     Transaction,
@@ -91,7 +92,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                                     WinstonLog.ClosePositionTransactionPrepared,
                                     {
                                         botId: bot.id,
-                                        txHash,
+                                        txHashes: [txHash],
                                         liquidityPoolId: _state.static.displayId,
                                     }
                                 )
@@ -128,7 +129,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         WinstonLog.ClosePositionTransactionPrepared,
                         {
                             botId: bot.id,
-                            txHash,
+                            txHashes: [txHash],
                             liquidityPoolId: _state.static.displayId,
                         }
                     )
@@ -153,7 +154,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             stimulate, 
             prepareTxs,
         }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
         // Sui requires exactly one transaction per execution
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -186,7 +187,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                return
+                return {
+                    txHashes: [txHash],
+                }
             }
         }
         if (!signatureWithBytes) {
@@ -197,7 +200,7 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                 type: ErrorTransactionType.ClosePosition,
             })
         }
-        await this.rpcExecutorService.withSuiClient({
+        return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (stimulate) {
@@ -222,7 +225,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                             liquidityPoolId: _state.static.displayId,
                         }
                     )
-                    return
+                    return {
+                        txHashes: [txHash],
+                    }
                 }
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
@@ -239,6 +244,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
+                return {
+                    txHashes: [digest],
+                }
             },
         })
     }

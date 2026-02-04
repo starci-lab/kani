@@ -7,6 +7,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     Transaction,
@@ -113,6 +114,14 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
+                            this.winstonService.log(
+                                WinstonLog.ClosePositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHashes: [txHash],
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -144,6 +153,14 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         transaction: closePositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHashes: [txHash],
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         prepareTxs: [
                             {
@@ -166,7 +183,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
             stimulate,
             prepareTxs,
         }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
         // Sui requires exactly one transaction per execution
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -198,7 +215,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                return
+                return {
+                    txHashes: [txHash],
+                }
             }
         }
         if (!signatureWithBytes) {
@@ -211,7 +230,7 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 }
             )
         }
-        await this.rpcExecutorService.withSuiClient({
+        return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (stimulate) {
@@ -236,7 +255,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                             liquidityPoolId: _state.static.displayId,
                         }
                     )
-                    return
+                    return {
+                        txHashes: [txHash],
+                    }
                 }
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
@@ -253,6 +274,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
+                return {
+                    txHashes: [digest],
+                }
             },
         })
     }

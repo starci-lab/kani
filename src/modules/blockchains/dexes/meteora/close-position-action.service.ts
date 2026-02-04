@@ -7,6 +7,7 @@ import {
     DlmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     SignerService 
@@ -183,7 +184,8 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
             stimulate, 
             prepareTxs,
         }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
+        const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
@@ -207,6 +209,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                             liquidityPoolId: state.static.displayId,
                         },
                     )
+                    txHashes.push(prepareTx.txHash)
                     continue
                 }
             }
@@ -245,6 +248,7 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                                 liquidityPoolId: state.static.displayId,
                             },
                         )
+                        txHashes.push(prepareTx.txHash)
                         return
                     }
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
@@ -265,8 +269,13 @@ export class MeteoraClosePositionActionService implements IClosePositionActionSe
                             liquidityPoolId: state.static.displayId,
                         },
                     )
+                    txHashes.push(prepareTx.txHash)
+                    return
                 },
             })
+        }
+        return {
+            txHashes,
         }
     }
 }

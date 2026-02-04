@@ -4,10 +4,12 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
-    ReconcileBalanceJobData
+    WithdrawJobData
 } from "./types"
 import {
-    BalanceActionService
+    AddTransactionRecordParams,
+    BalanceActionService,
+    PrepareWithdrawTransactionResult
 } from "@modules/blockchains"
 import {
     getJobStatusOrder,
@@ -26,6 +28,16 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    DayjsService,
+    InjectSuperJson,
+} from "@modules/mixin"
+import {
+    SuperJSON 
+} from "superjson"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
 
 @Injectable()
 export class ExecuteService {
@@ -34,6 +46,9 @@ export class ExecuteService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly dayjsService: DayjsService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -58,19 +73,30 @@ export class ExecuteService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
+            const { 
+                withdrawTransaction: stringifiedWithdrawTransaction, 
+                transactionRecords: stringifiedTransactionRecords 
+            } = job.data as ToStringObject<WithdrawJobData>
+            const withdrawTransaction = this.superJson.parse<PrepareWithdrawTransactionResult>(stringifiedWithdrawTransaction)
+            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
             this.winstonService.log(
                 WinstonLog.WithdrawJobAlreadyExecuted,
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
             return {
-                result: job.data as ReconcileBalanceJobData
+                result: {
+                    withdrawTransaction,
+                    transactionRecords,
+                }
             }
         }
 
-        const transactionRecords: ReconcileBalanceJobData["transactionRecords"] = []
+        const transactionRecords: Array<AddTransactionRecordParams> = []
         const { withdrawTransaction } = prepareResult
 
         const { txHashes } = await this.balanceActionService.executeWithdrawTransaction({
@@ -99,6 +125,7 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
+                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
                     },
                 }
             )

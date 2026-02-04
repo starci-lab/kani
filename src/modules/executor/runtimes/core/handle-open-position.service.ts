@@ -119,80 +119,84 @@ export class HandleOpenPositionService {
         if (diffMs > envConfig().executor.runtime.operation.reconcileBalance.cooldown.rescan) {
             return
         }
-        await this.asyncService.allMustDone([
-            (
-                async () => {
-                    if (!await this.dynamicLiquidityPoolInfoDiagnosticService.ready(liquidityPool.id)) {
-                        this.winstonService.log(
-                            WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady,
-                            {
-                                botId: bot.id,
-                                liquidityPoolId: liquidityPool.displayId,
-                            }
-                        )
-                        throw new DynamicLiquidityPoolInfoDiagnosticNotReadyException(
-                            {
-                                liquidityPoolId: liquidityPool.displayId,
-                            }
-                        )
+        try {
+            await this.asyncService.allMustDone([
+                (
+                    async () => {
+                        if (!await this.dynamicLiquidityPoolInfoDiagnosticService.ready(liquidityPool.id)) {
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionSkippedDynamicLiquidityPoolInfoNotReady,
+                                {
+                                    botId: bot.id,
+                                    liquidityPoolId: liquidityPool.displayId,
+                                }
+                            )
+                            throw new DynamicLiquidityPoolInfoDiagnosticNotReadyException(
+                                {
+                                    liquidityPoolId: liquidityPool.displayId,
+                                }
+                            )
+                        }
                     }
-                }
-            )(),
-            (
-                async () => {
-                    if (!await this.priceDiagnosticService.ready(liquidityPool.tokenA.toString())) {
-                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                            id: {
-                                $eq: liquidityPool.tokenA.toString(),
-                            },
-                        })
-                        if (!token) {
-                            throw new TokenNotFoundException({
-                                id: liquidityPool.tokenA.toString(),
+                )(),
+                (
+                    async () => {
+                        if (!await this.priceDiagnosticService.ready(liquidityPool.tokenA.toString())) {
+                            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                                id: {
+                                    $eq: liquidityPool.tokenA.toString(),
+                                },
+                            })
+                            if (!token) {
+                                throw new TokenNotFoundException({
+                                    id: liquidityPool.tokenA.toString(),
+                                })
+                            }
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionSkippedPriceNotReady,
+                                {
+                                    botId: bot.id,
+                                    liquidityPoolId: liquidityPool.displayId,
+                                    tokenId: token.displayId,
+                                }
+                            )
+                            throw new PriceDiagnosticNotReadyException({
+                                tokenId: token.displayId,
                             })
                         }
-                        this.winstonService.log(
-                            WinstonLog.OpenPositionSkippedPriceNotReady,
-                            {
-                                botId: bot.id,
-                                liquidityPoolId: liquidityPool.displayId,
-                                tokenId: token.displayId,
-                            }
-                        )
-                        throw new PriceDiagnosticNotReadyException({
-                            tokenId: token.displayId,
-                        })
                     }
-                }
-            )(),
-            (
-                async () => {
-                    if (!await this.priceDiagnosticService.ready(liquidityPool.tokenB.toString())) {
-                        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-                            id: {
-                                $eq: liquidityPool.tokenB.toString(),
-                            },
-                        })
-                        if (!token) {
-                            throw new TokenNotFoundException({
-                                id: liquidityPool.tokenB.toString(),
+                )(),
+                (
+                    async () => {
+                        if (!await this.priceDiagnosticService.ready(liquidityPool.tokenB.toString())) {
+                            const token = this.primaryMemoryStorageService.tokenCollection.findOne({
+                                id: {
+                                    $eq: liquidityPool.tokenB.toString(),
+                                },
+                            })
+                            if (!token) {
+                                throw new TokenNotFoundException({
+                                    id: liquidityPool.tokenB.toString(),
+                                })
+                            }
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionSkippedPriceNotReady,
+                                {
+                                    botId: bot.id,
+                                    liquidityPoolId: liquidityPool.displayId,
+                                    tokenId: token.displayId,
+                                }
+                            )
+                            throw new PriceDiagnosticNotReadyException({
+                                tokenId: token.displayId,
                             })
                         }
-                        this.winstonService.log(
-                            WinstonLog.OpenPositionSkippedPriceNotReady,
-                            {
-                                botId: bot.id,
-                                liquidityPoolId: liquidityPool.displayId,
-                                tokenId: token.displayId,
-                            }
-                        )
-                        throw new PriceDiagnosticNotReadyException({
-                            tokenId: token.displayId,
-                        })
                     }
-                }
-            )(),
-        ])
+                )(),
+            ])
+        } catch {
+            return
+        }
         // we wait for ensure no active job for the bot
         const noActiveJobFound = await this.waitService.wait(
             {
@@ -223,7 +227,7 @@ export class HandleOpenPositionService {
                 }
             )
             this.winstonService.log(
-                WinstonLog.OpenPositionEnqueued,
+                WinstonLog.OpenPositionJobEnqueued,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
@@ -233,10 +237,11 @@ export class HandleOpenPositionService {
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.OpenPositionEnqueueFailed,
+                WinstonLog.OpenPositionJobEnqueueFailed,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    jobId,
                     error: error.message,
                 }
             )

@@ -36,7 +36,8 @@ import {
 import { 
     PrepareClosePositionResult, 
     ExecuteClosePositionParams,
-    PrepareClosePositionParams, 
+    PrepareClosePositionParams,
+    ExecuteClosePositionResult, 
 } from "../../interfaces"
 
 @Injectable()
@@ -142,7 +143,7 @@ export class ClosePositionActionService {
 
     async execute(
         params: ExecuteClosePositionParams,
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
         const { state } = params
         // Stage: state validation (DEX must exist for execution routing)
         const dexId = state.static.dex.toString()

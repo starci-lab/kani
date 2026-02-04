@@ -132,7 +132,7 @@ export class RequeueService implements OnApplicationBootstrap {
                             }
                         )
                         this.winstonService.log(
-                            WinstonLog.OpenPositionEnqueued,
+                            WinstonLog.OpenPositionJobRequeued,
                             {
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 botId: bot.id,
@@ -142,10 +142,11 @@ export class RequeueService implements OnApplicationBootstrap {
                         )
                     } catch (error) {
                         this.winstonService.log(
-                            WinstonLog.OpenPositionEnqueueFailed,
+                            WinstonLog.OpenPositionJobRequeueFailed,
                             {
                                 botId: bot.id,
                                 liquidityPoolId: liquidityPool.displayId,
+                                jobId: bot.activeJob?.job?.toString() ?? "",
                                 error: error.message,
                             }
                         )

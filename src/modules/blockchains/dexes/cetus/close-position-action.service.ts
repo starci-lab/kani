@@ -7,6 +7,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     Transaction,
@@ -95,7 +96,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     return await this.signerService.withSuiSigner({
                         bot,
                         action: async (signer) => {
-                        // dev inspect the transaction block
+                            // dev inspect the transaction block
                             const devInspect = await suiClient.devInspectTransactionBlock({
                                 transactionBlock: closePositionTxb,
                                 sender: bot.accountAddress,
@@ -115,6 +116,14 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
+                            this.winstonService.log(
+                                WinstonLog.ClosePositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHashes: [txHash],
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 prepareTxs: [{
                                     txHash,
@@ -148,6 +157,14 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                             encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         }
                     )
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHashes: [txHash],
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         prepareTxs: [{
                             txHash,
@@ -167,7 +184,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
             prepareTxs,
             stimulate,
         }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
         // sui require 1 tx only
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
@@ -202,7 +219,9 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                return
+                return {
+                    txHashes: [txHash],
+                }
             }
         }
         if (!signatureWithBytes) {
@@ -215,7 +234,7 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 }
             )
         }
-        await this.rpcExecutorService.withSuiClient({
+        return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (stimulate) {
@@ -240,7 +259,9 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                             liquidityPoolId: _state.static.displayId,
                         }
                     )
-                    return
+                    return {
+                        txHashes: [txHash],
+                    }
                 }
                 const { digest } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
@@ -257,6 +278,9 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
+                return {
+                    txHashes: [digest],
+                }
             },
         })
     }

@@ -33,7 +33,8 @@ import {
     ToStringObject 
 } from "@modules/typedefs"
 import {
-    InjectSuperJson 
+    InjectSuperJson,
+    DayjsService
 } from "@modules/mixin"
 import {
     SuperJSON 
@@ -48,6 +49,7 @@ export class ExecuteService {
         private readonly winstonService: WinstonService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -74,26 +76,29 @@ export class ExecuteService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
+            const { 
+                openPositionTransaction: stringifiedOpenPositionTransaction, 
+                executeResult: stringifiedExecuteResult, 
+                transactionRecords: stringifiedTransactionRecords 
+            } = job.data as ToStringObject<OpenPositionJobData>
+            const openPositionTransaction = this.superJson.parse<PrepareOpenPositionResult>(stringifiedOpenPositionTransaction)
+            const executeResult = stringifiedExecuteResult ? this.superJson.parse<ExecuteOpenPositionResult>(stringifiedExecuteResult) : undefined
+            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
             this.winstonService.log(
                 WinstonLog.OpenPositionJobAlreadyExecuted,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
-            const { 
-                openPositionTransaction, 
-                executeResult, 
-                transactionRecords 
-            } = job.data as ToStringObject<OpenPositionJobData>
             return {
                 result: {
-                    openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
-                    executeResult: executeResult ? this.superJson.parse<ExecuteOpenPositionResult>(executeResult) : undefined,
-                    transactionRecords: transactionRecords
-                        ? this.superJson.parse<Array<AddTransactionRecordParams>>(transactionRecords)
-                        : undefined,
+                    openPositionTransaction,
+                    executeResult,
+                    transactionRecords,
                 }
             }
         }

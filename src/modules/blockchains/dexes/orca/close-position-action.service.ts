@@ -7,6 +7,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
+    ExecuteClosePositionResult,
 } from "../../interfaces"
 import {
     SignerService 
@@ -138,6 +139,14 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             const txHash = transactionSignature.toString()
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
+                            this.winstonService.log(
+                                WinstonLog.ClosePositionTransactionPrepared,
+                                {
+                                    botId: bot.id,
+                                    txHashes: [txHash],
+                                    liquidityPoolId: _state.static.displayId,
+                                }
+                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -169,6 +178,14 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })
+                    this.winstonService.log(
+                        WinstonLog.ClosePositionTransactionPrepared,
+                        {
+                            botId: bot.id,
+                            txHashes: [signedTransaction.txHash],
+                            liquidityPoolId: _state.static.displayId,
+                        }
+                    )
                     return {
                         prepareTxs: [
                             {
@@ -184,11 +201,11 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
 
     async execute(
         { bot, state, txCheck, stimulate, prepareTxs }: ExecuteClosePositionParams
-    ): Promise<void> {
+    ): Promise<ExecuteClosePositionResult> {
+        const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             const txHash = prepareTx.txHash
             const solanaTx = prepareTx.solanaTx
-
             if (!solanaTx) {
                 throw new TransactionNotPreparedException({
                     botId: bot.id,
@@ -219,6 +236,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             liquidityPoolId: state.static.displayId,
                         },
                     )
+                    txHashes.push(txHash)
                     continue
                 }
             }
@@ -254,6 +272,7 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                                 liquidityPoolId: state.static.displayId,
                             },
                         )
+                        txHashes.push(txHash)
                         return
                     }
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
@@ -274,8 +293,12 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             liquidityPoolId: state.static.displayId,
                         },
                     )
+                    txHashes.push(txHash)
                 },
             })
+        }
+        return {
+            txHashes,
         }
     }
 }

@@ -38,6 +38,9 @@ import {
 import {
     Connection 
 } from "mongoose"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class PrepareService {
@@ -49,6 +52,7 @@ export class PrepareService {
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     // Phase: PREPARE
@@ -88,6 +92,8 @@ export class PrepareService {
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
             return {
@@ -245,9 +251,10 @@ export class PrepareService {
                 }
             )
         this.winstonService.log(
-            WinstonLog.ReconcileBalancePrepared,
+            WinstonLog.ReconcileBalanceJobPrepared,
             {
                 botId: bot.id,
+                jobId: job.id,
                 txHashes: reconcileBalanceTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )

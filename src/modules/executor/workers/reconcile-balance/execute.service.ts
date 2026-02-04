@@ -26,6 +26,9 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class ExecuteService {
@@ -34,6 +37,7 @@ export class ExecuteService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -63,6 +67,8 @@ export class ExecuteService {
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
                 }
             )
             return {

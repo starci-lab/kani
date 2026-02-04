@@ -102,13 +102,8 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
      */
 
     async confirm(
-        { positionId, state, bot }: ConfirmOpenPositionParams
+        { positionId, state }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
-        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
-            return {
-                liquidity: new BN(0),
-            }
-        }
         const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -163,14 +158,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: _state.static.displayId,
                     })  
                 }
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionConfirmed,
-                    {
-                        botId: bot.id,
-                        txHash: positionId,
-                        liquidityPoolId: _state.static.displayId,
-                    }
-                )
                 const clmmPositionFields = clmmPosition.data.content.fields as unknown as TurbosClmmPosition
                 return {
                     liquidity: new BN(clmmPositionFields.liquidity),
@@ -274,14 +261,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
-                            this.winstonService.log(
-                                WinstonLog.OpenPositionTransactionPrepared,
-                                {
-                                    botId: bot.id,
-                                    txHash,
-                                    liquidityPoolId: _state.static.displayId,
-                                }
-                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -314,14 +293,6 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         transaction: openPositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {

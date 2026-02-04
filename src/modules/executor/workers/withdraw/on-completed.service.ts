@@ -96,7 +96,7 @@ export class OnCompletedService {
                     }
                 )
                 this.winstonService.log(
-                    WinstonLog.WithdrawProcessingCompleted,
+                    WinstonLog.WithdrawJobCompleted,
                     {
                         botId: bot.id,
                         jobId: job.id,

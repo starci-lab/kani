@@ -197,9 +197,9 @@ export interface NoAvailableRpcMessage {
 }
 
 /**
- * Open Position Enqueued Message
+ * Open Position Job Enqueued Message
  */
-export interface OpenPositionEnqueuedMessage {
+export interface OpenPositionJobEnqueuedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
     jobId: string
@@ -207,11 +207,32 @@ export interface OpenPositionEnqueuedMessage {
 }
 
 /**
- * Open Position Enqueue Failed Message
+ * Open Position Job Enqueue Failed Message
  */
-export interface OpenPositionEnqueueFailedMessage {
+export interface OpenPositionJobEnqueueFailedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
+    jobId: string
+    error: string
+}
+
+/**
+ * Open Position Job Requeued Message
+ */
+export interface OpenPositionJobRequeuedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Open Position Job Requeue Failed Message
+ */
+export interface OpenPositionJobRequeueFailedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    jobId: string
     error: string
 }
 
@@ -581,27 +602,46 @@ export interface ReconcileBalanceEnqueuedMessage {
 }
 
 /**
- * Withdraw Enqueue Failed Message
+ * Withdraw Job Enqueue Failed Message
  */
-export interface WithdrawEnqueueFailedMessage {
+export interface WithdrawJobEnqueueFailedMessage {
     botId: string
-    error: string
+    jobId: string
     bullmqJobId?: string
+    error: string
 }
 
 /**
- * Withdraw Enqueued Message
+ * Withdraw Job Enqueued Message
  */
-export interface WithdrawEnqueuedMessage {
+export interface WithdrawJobEnqueuedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
 }
 
 /**
- * Reconcile Balance Processing Completed Message
+ * Withdraw Job Requeued Message
  */
-export interface ReconcileBalanceProcessingCompletedMessage {
+export interface WithdrawJobRequeuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Withdraw Job Requeue Failed Message
+ */
+export interface WithdrawJobRequeueFailedMessage {
+    botId: string
+    jobId: string
+    error: string
+}
+
+/**
+ * Reconcile Balance Job Completed Message
+ */
+export interface ReconcileBalanceJobCompletedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -617,37 +657,27 @@ export interface ReconcileBalanceProcessingStartedMessage {
 }
 
 /**
- * Withdraw Processing Completed Message
+ * Withdraw Job Completed Message
  */
-export interface WithdrawProcessingCompletedMessage {
+export interface WithdrawJobCompletedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
 }
 
 /**
- * Withdraw Processing Started Message
+ * Withdraw Job Started Message
  */
-export interface WithdrawProcessingStartedMessage {
+export interface WithdrawJobStartedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
 }
 
 /**
- * Reconcile Balance Processing Failed Unrecoverable Message
+ * Reconcile Balance Job Failed Unrecoverable Message
  */
-export interface ReconcileBalanceProcessingFailedUnrecoverableMessage {
-    botId: string
-    jobId: string
-    bullmqJobId?: string
-    error: string
-}
-
-/**
- * Reconcile Balance Processing Failed Permanent Failure Message
- */
-export interface ReconcileBalanceProcessingFailedPermanentFailureMessage {
+export interface ReconcileBalanceJobFailedUnrecoverableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -655,9 +685,19 @@ export interface ReconcileBalanceProcessingFailedPermanentFailureMessage {
 }
 
 /**
- * Reconcile Balance Processing Failed Retryable Message
+ * Reconcile Balance Job Failed Permanent Failure Message
  */
-export interface ReconcileBalanceProcessingFailedRetryableMessage {
+export interface ReconcileBalanceJobFailedPermanentFailureMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Reconcile Balance Job Failed Retryable Message
+ */
+export interface ReconcileBalanceJobFailedRetryableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -666,9 +706,9 @@ export interface ReconcileBalanceProcessingFailedRetryableMessage {
 }
 
 /**
- * Withdraw Processing Failed Unrecoverable Message
+ * Withdraw Job Failed Unrecoverable Message
  */
-export interface WithdrawProcessingFailedUnrecoverableMessage {
+export interface WithdrawJobFailedUnrecoverableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -676,9 +716,9 @@ export interface WithdrawProcessingFailedUnrecoverableMessage {
 }
 
 /**
- * Withdraw Processing Failed Permanent Failure Message
+ * Withdraw Job Failed Permanent Failure Message
  */
-export interface WithdrawProcessingFailedPermanentFailureMessage {
+export interface WithdrawJobFailedPermanentFailureMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -686,9 +726,9 @@ export interface WithdrawProcessingFailedPermanentFailureMessage {
 }
 
 /**
- * Withdraw Processing Failed Retryable Message
+ * Withdraw Job Failed Retryable Message
  */
-export interface WithdrawProcessingFailedRetryableMessage {
+export interface WithdrawJobFailedRetryableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -806,11 +846,48 @@ export interface ReconcileBalanceRequeueFailedMessage {
 }
 
 /**
+ * Reconcile Balance Job Enqueued Message
+ */
+export interface ReconcileBalanceJobEnqueuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Reconcile Balance Job Enqueue Failed Message
+ */
+export interface ReconcileBalanceJobEnqueueFailedMessage {
+    botId: string
+    jobId: string
+    error: string
+}
+
+/**
+ * Reconcile Balance Job Requeued Message
+ */
+export interface ReconcileBalanceJobRequeuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Reconcile Balance Job Requeue Failed Message
+ */
+export interface ReconcileBalanceJobRequeueFailedMessage {
+    botId: string
+    jobId: string
+    error: string
+}
+
+/**
  * Reconcile Balance Job Already Prepared Message
  */
 export interface ReconcileBalanceJobAlreadyPreparedMessage {
     botId: string
     jobId: string
+    ageMs: number
 }
 
 /**
@@ -819,12 +896,22 @@ export interface ReconcileBalanceJobAlreadyPreparedMessage {
 export interface ReconcileBalanceJobAlreadyExecutedMessage {
     botId: string
     jobId: string
+    ageMs: number
 }
 
 /**
  * Reconcile Balance Job Already Confirmed Message
  */
 export interface ReconcileBalanceJobAlreadyConfirmedMessage {
+    botId: string
+    jobId: string
+    ageMs: number
+}
+
+/**
+ * Reconcile Balance Job Confirmed Message
+ */
+export interface ReconcileBalanceJobConfirmedMessage {
     botId: string
     jobId: string
 }
@@ -842,6 +929,8 @@ export interface WithdrawRequeueFailedMessage {
 export interface WithdrawJobAlreadyPreparedMessage {
     botId: string
     jobId: string
+    ageMs: number
+    txHashes: Array<string>
 }
 
 /**
@@ -850,12 +939,31 @@ export interface WithdrawJobAlreadyPreparedMessage {
 export interface WithdrawJobAlreadyExecutedMessage {
     botId: string
     jobId: string
+    ageMs: number
 }
 
 /**
  * Withdraw Job Already Confirmed Message
  */
 export interface WithdrawJobAlreadyConfirmedMessage {
+    botId: string
+    jobId: string
+    ageMs: number
+}
+
+/**
+ * Withdraw Job Prepared Message
+ */
+export interface WithdrawJobPreparedMessage {
+    botId: string
+    jobId: string
+    txHashes: Array<string>
+}
+
+/**
+ * Withdraw Job Confirmed Message
+ */
+export interface WithdrawJobConfirmedMessage {
     botId: string
     jobId: string
 }
@@ -867,6 +975,8 @@ export interface OpenPositionJobAlreadyPreparedMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    txHashes: Array<string>
+    ageMs: number
 }
 
 /**
@@ -876,6 +986,7 @@ export interface OpenPositionJobAlreadyExecutedMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    ageMs: number
 }
 
 /**
@@ -885,6 +996,7 @@ export interface OpenPositionJobAlreadyConfirmedMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    ageMs: number
 }
 
 /**
@@ -966,9 +1078,9 @@ export interface ClosePositionRequeueFailedMessage {
 }
 
 /**
- * Open Position Processing Failed Unrecoverable Message
+ * Open Position Job Failed Unrecoverable Message
  */
-export interface OpenPositionProcessingFailedUnrecoverableMessage {
+export interface OpenPositionJobFailedUnrecoverableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -977,9 +1089,9 @@ export interface OpenPositionProcessingFailedUnrecoverableMessage {
 }
 
 /**
- * Open Position Processing Failed Permanent Failure Message
+ * Open Position Job Failed Permanent Failure Message
  */
-export interface OpenPositionProcessingFailedPermanentFailureMessage {
+export interface OpenPositionJobFailedPermanentFailureMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -988,9 +1100,9 @@ export interface OpenPositionProcessingFailedPermanentFailureMessage {
 }
 
 /**
- * Open Position Processing Failed Retryable Message
+ * Open Position Job Failed Retryable Message
  */
-export interface OpenPositionProcessingFailedRetryableMessage {
+export interface OpenPositionJobFailedRetryableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1000,9 +1112,9 @@ export interface OpenPositionProcessingFailedRetryableMessage {
 }
 
 /**
- * Open Position Processing Completed Message
+ * Open Position Job Completed Message
  */
-export interface OpenPositionProcessingCompletedMessage {
+export interface OpenPositionJobCompletedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1017,9 +1129,9 @@ export interface OpenPositionRequeueFailedMessage {
 }
 
 /**
- * Open Position Processing Started Message
+ * Open Position Job Started Message
  */
-export interface OpenPositionProcessingStartedMessage {
+export interface OpenPositionJobStartedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1051,11 +1163,12 @@ export interface ClosePositionTransactionStimulatedMessage {
 }
 
 /**
- * Open Position Transaction Prepared Message
+ * Open Position Job Prepared Message
  */
-export interface OpenPositionTransactionPreparedMessage {
+export interface OpenPositionJobPreparedMessage {
     botId: string
-    txHash: string
+    jobId: string
+    txHashes: Array<string>
     liquidityPoolId: LiquidityPoolId
 }
 
@@ -1178,17 +1291,17 @@ export interface CannotSettlePositionMessage {
  */
 export interface ClosePositionTransactionPreparedMessage {
     botId: string
-    txHash: string
+    txHashes: Array<string>
     liquidityPoolId: LiquidityPoolId
 }
 
 /**
- * Open Position Transaction Confirmed Message
+ * Open Position Job Confirmed Message
  */
-export interface OpenPositionTransactionConfirmedMessage {
+export interface OpenPositionJobConfirmedMessage {
     botId: string
-    txHash: string
     liquidityPoolId: LiquidityPoolId
+    jobId: string
 }
 
 /**
@@ -1518,6 +1631,40 @@ export interface ReconcileBalanceTransactionExecutedMessage {
  * Reconcile Balance Transaction Stimulated Message
  */
 export interface ReconcileBalanceTransactionStimulatedMessage {
+    botId: string
+    txHash: string
+}
+
+/**
+ * Reconcile Balance Job Prepared Message
+ */
+export interface ReconcileBalanceJobPreparedMessage {
+    botId: string
+    jobId: string
+    txHashes: Array<string>
+}
+
+/**
+ * Withdraw Transaction Prepared Message
+ */
+export interface WithdrawTransactionPreparedMessage {
+    botId: string
+    txHashes: Array<string>
+}
+
+/**
+ * Withdraw Transaction Found Message
+ */
+export interface WithdrawTransactionFoundMessage {
+    botId: string
+    txHash: string
+}
+
+
+/**
+ * Reconcile Balance Transaction Found Message
+ */
+export interface ReconcileBalanceTransactionFoundMessage {
     botId: string
     txHash: string
 }

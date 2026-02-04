@@ -4,7 +4,7 @@ import {
 import {
     PrepareParams,
     PrepareResult,
-    ReconcileBalanceJobData,
+    WithdrawJobData,
 } from "./types"
 import {
     getJobStatusOrder,
@@ -19,7 +19,8 @@ import {
     TokenNotFoundException
 } from "@modules/exceptions"
 import {
-    BalanceFetcherService
+    BalanceFetcherService,
+    PrepareWithdrawTransactionResult
 } from "@modules/blockchains"
 import {
     BalanceActionService,
@@ -35,11 +36,19 @@ import {
     Connection 
 } from "mongoose"
 import {
-    AsyncService 
+    AsyncService,
+    InjectSuperJson,
+} from "@modules/mixin"
+import {
+    DayjsService 
 } from "@modules/mixin"
 import {
     BalanceWithdrawTokenInput 
 } from "@modules/blockchains"
+import SuperJSON from "superjson"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
 
 @Injectable()
 export class PrepareService {
@@ -51,6 +60,9 @@ export class PrepareService {
         private readonly asyncService: AsyncService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
+        private readonly dayjsService: DayjsService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     // Phase: PREPARE
@@ -84,15 +96,22 @@ export class PrepareService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
+            const { withdrawTransaction: stringifiedWithdrawTransaction } = job.data as ToStringObject<WithdrawJobData>
+            const withdrawTransaction = this.superJson.parse<PrepareWithdrawTransactionResult>(stringifiedWithdrawTransaction)
             this.winstonService.log(
                 WinstonLog.WithdrawJobAlreadyPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
+                    ageMs: this.dayjsService.now().diff(job.createdAt,
+                        "millisecond"),
+                    txHashes: withdrawTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
                 }
             )
             return {
-                result: job.data as ReconcileBalanceJobData
+                result: {
+                    withdrawTransaction,
+                }
             }
         }
         if (!bot.withdrawalAddress) {
@@ -171,14 +190,15 @@ export class PrepareService {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "data.withdrawTransaction": withdrawTransaction,
+                        "data.withdrawTransaction": this.superJson.stringify(withdrawTransaction),
                     },
                 }
             )
         this.winstonService.log(
-            WinstonLog.WithdrawPrepared,
+            WinstonLog.WithdrawJobPrepared,
             {
                 botId: bot.id,
+                jobId: job.id,
                 txHashes: withdrawTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )

@@ -16,7 +16,7 @@ import {
  * - `prepareTxs` is produced by PREPARE and persisted on the Job document.
  * - `transactionRecords` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
-export interface ReconcileBalanceJobData {
+export interface WithdrawJobData {
     withdrawTransaction: PrepareWithdrawTransactionResult
     transactionRecords?: Array<AddTransactionRecordParams>
 }
@@ -39,7 +39,7 @@ export interface ProcessParams {
 }
 
 export interface ProcessResult {
-    result: ReconcileBalanceJobData
+    result: WithdrawJobData
 }
 
 /** Parameters for the PREPARE phase (same shape as ProcessParams). */
@@ -47,7 +47,7 @@ export type PrepareParams = ProcessParams
 export type PrepareResult = ProcessResult
 export interface ExecuteParams extends ProcessParams {
     /** Output of prepare() (prepared swap transactions + optional metadata). */
-    prepareResult: ReconcileBalanceJobData
+    prepareResult: WithdrawJobData
 }
 export type ExecuteResult = ProcessResult
 
@@ -56,7 +56,7 @@ export type SendHeartbeatParams = ProcessParams
 
 export interface ConfirmParams extends ProcessParams {
     /** Output of execute() (includes transactionRecords for snapshotting). */
-    executeResult: ReconcileBalanceJobData
+    executeResult: WithdrawJobData
 }
 
 export interface OnFailedParams extends ProcessParams {

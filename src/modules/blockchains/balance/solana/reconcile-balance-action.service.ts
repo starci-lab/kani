@@ -221,6 +221,13 @@ export class SolanaReconcileBalanceActionService {
                 })
                 // if transaction already exists on chain, skip it
                 if (transaction) {
+                    this.winstonService.log(
+                        WinstonLog.ReconcileBalanceTransactionFound,
+                        {
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                        }
+                    )
                     txHashes.push(prepareTx.txHash)
                     continue
                 }
@@ -257,6 +264,7 @@ export class SolanaReconcileBalanceActionService {
                                 txHash: prepareTx.txHash,
                             }
                         )
+                        txHashes.push(prepareTx.txHash)
                         return
                     }
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
@@ -276,9 +284,9 @@ export class SolanaReconcileBalanceActionService {
                             txHash: transactionSignature.toString(),
                         }
                     )
+                    txHashes.push(prepareTx.txHash)
                 },
             })    
-            txHashes.push(prepareTx.txHash)
         } 
         return {
             txHashes,

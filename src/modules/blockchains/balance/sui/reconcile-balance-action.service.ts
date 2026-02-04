@@ -8,9 +8,6 @@ import {
     ExecuteReconcileBalanceTransactionResults,
 } from "../types"
 import {
-    PrepareTx
-} from "../../interfaces"
-import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     MissingSuiMessageWithBytesParamException,
@@ -87,7 +84,6 @@ export class SuiReconcileBalanceActionService {
         }
         let txb = new Transaction()
         txb.setSender(bot.accountAddress)
-        const prepareTxs: Array<PrepareTx> = []
         for (const tokenInput of tokenInputs) {
             // if tokenIn and tokenOut are the same, skip swap
             if (tokenInput.tokenIn.displayId === tokenInput.tokenOut.displayId) {
@@ -176,10 +172,10 @@ export class SuiReconcileBalanceActionService {
                 }
             },
         })
-        prepareTxs.push({
+        const prepareTxs = [{
             txHash: transaction.txHash,
             signatureWithBytes: transaction.signatureWithBytes,
-        })
+        }]
         return {
             prepareTxs,
         }
@@ -216,6 +212,13 @@ export class SuiReconcileBalanceActionService {
                 })
                 // if transaction already exists on chain and is successful, add to txHashes
                 if (transaction && transaction.effects?.status?.status === "success") {
+                    this.winstonService.log(
+                        WinstonLog.ReconcileBalanceTransactionFound,
+                        {
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                        }
+                    )
                     txHashes.push(prepareTx.txHash)
                     continue
                 }
@@ -253,6 +256,7 @@ export class SuiReconcileBalanceActionService {
                                 txHash: prepareTx.txHash,
                             }
                         )
+                        txHashes.push(prepareTx.txHash)
                         return
                     }
                     const { digest } = await suiClient.executeTransactionBlock({
@@ -271,9 +275,9 @@ export class SuiReconcileBalanceActionService {
                             txHash: prepareTx.txHash,
                         }
                     )
+                    txHashes.push(prepareTx.txHash)
                 },
             })
-            txHashes.push(prepareTx.txHash)
         }
         return {
             txHashes,

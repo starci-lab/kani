@@ -115,7 +115,7 @@ export class HandleReconcileBalanceService {
                 }
             )
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceEnqueued,
+                WinstonLog.ReconcileBalanceJobEnqueued,
                 {
                     jobId,
                     botId: bot.id,
@@ -124,10 +124,11 @@ export class HandleReconcileBalanceService {
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceEnqueueFailed,
+                WinstonLog.ReconcileBalanceJobEnqueueFailed,
                 {
                     botId: bot.id,
                     error: error.message,
+                    jobId,
                 }
             )
             await this.lockAuthorityService.release(

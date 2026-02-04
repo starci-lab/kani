@@ -219,14 +219,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                                 nftMintAddress: mintKeyPair.address.toString(),
                                 ataAddress: ataAddress.toString(),
                             }
-                            this.winstonService.log(
-                                WinstonLog.OpenPositionTransactionPrepared,
-                                {
-                                    botId: bot.id,
-                                    txHash,
-                                    liquidityPoolId: _state.static.displayId,
-                                }
-                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -272,14 +264,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash: signedTransaction.txHash.toString(),
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {
@@ -330,6 +314,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     },
                 })
                 if (transaction) {
+                    this.winstonService.log(
+                        WinstonLog.OpenPositionTransactionFound,
+                        {
+                            botId: bot.id,
+                            txHash: prepareTx.txHash,
+                            liquidityPoolId: state.static.displayId,
+                        }
+                    )
                     txHashes.push(prepareTx.txHash)
                     continue
                 }
@@ -396,7 +388,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         {
             positionId,
             state,
-            bot,
         }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
@@ -418,14 +409,6 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 }
                 const [personalPositionState] = PersonalPositionState.struct.deserialize(Buffer.from(positionInfo.data),
                     8)
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionConfirmed,
-                    {
-                        botId: bot.id,
-                        txHash: positionId,
-                        liquidityPoolId: state.static.displayId,
-                    }
-                )
                 return {
                     liquidity: new BN(personalPositionState.liquidity.toString()),
                 }

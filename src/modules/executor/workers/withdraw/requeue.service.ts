@@ -118,7 +118,7 @@ export class RequeueService implements OnApplicationBootstrap {
                             }
                         )
                         this.winstonService.log(
-                            WinstonLog.WithdrawEnqueued,
+                            WinstonLog.WithdrawJobRequeued,
                             {
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 botId: bot.id,
@@ -127,9 +127,10 @@ export class RequeueService implements OnApplicationBootstrap {
                         )
                     } catch (error) {
                         this.winstonService.log(
-                            WinstonLog.WithdrawEnqueueFailed,
+                            WinstonLog.WithdrawJobRequeueFailed,
                             {
                                 botId: bot.id,
+                                jobId: bot.activeJob?.job?.toString() ?? "",
                                 error: error.message,
                             }
                         )

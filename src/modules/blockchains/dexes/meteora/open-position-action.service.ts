@@ -169,14 +169,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
-                            this.winstonService.log(
-                                WinstonLog.OpenPositionTransactionPrepared,
-                                {
-                                    botId: bot.id,
-                                    txHash,
-                                    liquidityPoolId: _state.static.displayId,
-                                }
-                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -218,14 +210,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })
-                    this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHash: signedTransaction.txHash,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {
@@ -355,11 +339,10 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             positionId,
             txHashes,
         }
-    }
+    } 
 
     async confirm(
         {   
-            bot,
             state,
             positionId,
         }: ConfirmOpenPositionParams
@@ -381,14 +364,6 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: state.static.displayId,    
                     })
                 }
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionConfirmed,
-                    {
-                        botId: bot.id,
-                        txHash: positionId,
-                        liquidityPoolId: state.static.displayId,
-                    }
-                )
                 return {
                     // temporary empty, will need other logic to get liquidity
                 }
