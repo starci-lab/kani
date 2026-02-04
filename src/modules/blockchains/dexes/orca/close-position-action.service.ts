@@ -139,14 +139,6 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             const txHash = transactionSignature.toString()
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
-                            this.winstonService.log(
-                                WinstonLog.ClosePositionTransactionPrepared,
-                                {
-                                    botId: bot.id,
-                                    txHashes: [txHash],
-                                    liquidityPoolId: _state.static.displayId,
-                                }
-                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -178,14 +170,6 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })
-                    this.winstonService.log(
-                        WinstonLog.ClosePositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHashes: [signedTransaction.txHash],
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {

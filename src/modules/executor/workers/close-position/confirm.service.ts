@@ -40,6 +40,9 @@ import _ from "lodash"
 import {
     DynamicClmmRewardInfo, DynamicDlmmRewardInfo 
 } from "@modules/cache"
+import {
+    DayjsService 
+} from "@modules/mixin"
 
 @Injectable()
 export class ConfirmService {
@@ -53,6 +56,7 @@ export class ConfirmService {
         private readonly winstonService: WinstonService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -88,6 +92,10 @@ export class ConfirmService {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    ageMs: this.dayjsService.now().diff(
+                        job.createdAt,
+                        "millisecond",
+                    ),
                 }
             )
             return
@@ -206,13 +214,20 @@ export class ConfirmService {
                         {
                             $set: {
                                 status: JobStatus.Confirmed,
-                                nonPairRewardTokens,
                             },
                         },
                         {
                             session,
                         }
                     )
+            }
+        )
+        this.winstonService.log(
+            WinstonLog.ClosePositionJobConfirmed,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                liquidityPoolId: liquidityPool.displayId,
             }
         )
     }

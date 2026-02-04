@@ -114,14 +114,6 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
-                            this.winstonService.log(
-                                WinstonLog.ClosePositionTransactionPrepared,
-                                {
-                                    botId: bot.id,
-                                    txHashes: [txHash],
-                                    liquidityPoolId: _state.static.displayId,
-                                }
-                            )
                             return {
                                 prepareTxs: [
                                     {
@@ -153,14 +145,6 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                         transaction: closePositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
-                    this.winstonService.log(
-                        WinstonLog.ClosePositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHashes: [txHash],
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {

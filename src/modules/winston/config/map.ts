@@ -23,8 +23,10 @@ import {
     OpenPositionJobRequeueFailedMessage,
     OpenPositionSkippedDynamicLiquidityPoolInfoNotReadyMessage,
     OpenPositionSkippedPriceNotReadyMessage,
-    ClosePositionEnqueuedMessage,
-    ClosePositionEnqueueFailedMessage,
+    ClosePositionJobEnqueuedMessage,
+    ClosePositionJobEnqueueFailedMessage,
+    ClosePositionJobRequeuedMessage,
+    ClosePositionJobRequeueFailedMessage,
     OpenPositionTransactionExecutedMessage,
     OpenPositionTransactionFailedMessage,
     PythPricesFetchedMessage,
@@ -115,15 +117,17 @@ import {
     WithdrawJobAlreadyConfirmedMessage,
     WithdrawJobAlreadyExecutedMessage,
     OpenPositionJobAlreadyExecutedMessage,
+    ClosePositionJobPreparedMessage,
     ClosePositionJobAlreadyPreparedMessage,
     OpenPositionJobAlreadyConfirmedMessage,
     ClosePositionJobAlreadyExecutedMessage,
     ClosePositionJobAlreadyConfirmedMessage,
+    ClosePositionJobConfirmedMessage,
     OpenPositionJobAlreadyPreparedMessage,
-    ClosePositionProcessingFailedUnrecoverableMessage,
-    ClosePositionProcessingFailedPermanentFailureMessage,
-    ClosePositionProcessingFailedRetryableMessage,
-    ClosePositionProcessingCompletedMessage,
+    ClosePositionJobFailedUnrecoverableMessage,
+    ClosePositionJobFailedPermanentFailureMessage,
+    ClosePositionJobFailedRetryableMessage,
+    ClosePositionJobCompletedMessage,
     ClosePositionRequeueFailedMessage,
     OpenPositionJobFailedUnrecoverableMessage,
     OpenPositionJobFailedPermanentFailureMessage,
@@ -514,21 +518,37 @@ export const configMap = {
         messageType: {
         } as OpenPositionSkippedPriceNotReadyMessage,
     },
-    // Close Position Enqueued
-    [WinstonLog.ClosePositionEnqueued]: {
-        name: WinstonLog.ClosePositionEnqueued,
+    // Close Position Job Enqueued
+    [WinstonLog.ClosePositionJobEnqueued]: {
+        name: WinstonLog.ClosePositionJobEnqueued,
         level: WinstonLevel.Verbose,
         loki: true,
         messageType: {  
-        } as ClosePositionEnqueuedMessage,
+        } as ClosePositionJobEnqueuedMessage,
     },
-    // Close Position Enqueue Failed
-    [WinstonLog.ClosePositionEnqueueFailed]: {
-        name: WinstonLog.ClosePositionEnqueueFailed,
+    // Close Position Job Enqueue Failed
+    [WinstonLog.ClosePositionJobEnqueueFailed]: {
+        name: WinstonLog.ClosePositionJobEnqueueFailed,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ClosePositionEnqueueFailedMessage,
+        } as ClosePositionJobEnqueueFailedMessage,
+    },
+    // Close Position Job Requeued
+    [WinstonLog.ClosePositionJobRequeued]: {
+        name: WinstonLog.ClosePositionJobRequeued,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobRequeuedMessage,
+    },
+    // Close Position Job Requeue Failed
+    [WinstonLog.ClosePositionJobRequeueFailed]: {
+        name: WinstonLog.ClosePositionJobRequeueFailed,
+        level: WinstonLevel.Error,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobRequeueFailedMessage,
     },
     // Error Decrypting JWT Secret Key
     [WinstonLog.ErrorDecryptingJwtSecretKey]: {
@@ -1218,6 +1238,14 @@ export const configMap = {
         messageType: {
         } as OpenPositionJobAlreadyConfirmedMessage,
     },
+    // Close Position Job Prepared
+    [WinstonLog.ClosePositionJobPrepared]: {
+        name: WinstonLog.ClosePositionJobPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobPreparedMessage,
+    },
     // Close Position Job Already Prepared
     [WinstonLog.ClosePositionJobAlreadyPrepared]: {
         name: WinstonLog.ClosePositionJobAlreadyPrepared,
@@ -1242,37 +1270,45 @@ export const configMap = {
         messageType: {
         } as ClosePositionJobAlreadyConfirmedMessage,
     },
-    // Close Position Processing Failed Unrecoverable
-    [WinstonLog.ClosePositionProcessingFailedUnrecoverable]: {
-        name: WinstonLog.ClosePositionProcessingFailedUnrecoverable,
+    // Close Position Job Confirmed
+    [WinstonLog.ClosePositionJobConfirmed]: {
+        name: WinstonLog.ClosePositionJobConfirmed,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionJobConfirmedMessage,
+    },
+    // Close Position Job Failed Unrecoverable
+    [WinstonLog.ClosePositionJobFailedUnrecoverable]: {
+        name: WinstonLog.ClosePositionJobFailedUnrecoverable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ClosePositionProcessingFailedUnrecoverableMessage,
+        } as ClosePositionJobFailedUnrecoverableMessage,
     },
-    // Close Position Processing Failed Permanent Failure
-    [WinstonLog.ClosePositionProcessingFailedPermanentFailure]: {
-        name: WinstonLog.ClosePositionProcessingFailedPermanentFailure,
+    // Close Position Job Failed Permanent Failure
+    [WinstonLog.ClosePositionJobFailedPermanentFailure]: {
+        name: WinstonLog.ClosePositionJobFailedPermanentFailure,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ClosePositionProcessingFailedPermanentFailureMessage,
+        } as ClosePositionJobFailedPermanentFailureMessage,
     },
-    // Close Position Processing Failed Retryable
-    [WinstonLog.ClosePositionProcessingFailedRetryable]: {
-        name: WinstonLog.ClosePositionProcessingFailedRetryable,
+    // Close Position Job Failed Retryable
+    [WinstonLog.ClosePositionJobFailedRetryable]: {
+        name: WinstonLog.ClosePositionJobFailedRetryable,
         level: WinstonLevel.Error,
         loki: true,
         messageType: {
-        } as ClosePositionProcessingFailedRetryableMessage,
+        } as ClosePositionJobFailedRetryableMessage,
     },
-    // Close Position Processing Completed
-    [WinstonLog.ClosePositionProcessingCompleted]: {
-        name: WinstonLog.ClosePositionProcessingCompleted,
+    // Close Position Job Completed
+    [WinstonLog.ClosePositionJobCompleted]: {
+        name: WinstonLog.ClosePositionJobCompleted,
         level: WinstonLevel.Info,
         loki: true,
         messageType: {
-        } as ClosePositionProcessingCompletedMessage,
+        } as ClosePositionJobCompletedMessage,
     },
     // Open Position Job Failed Unrecoverable
     [WinstonLog.OpenPositionJobFailedUnrecoverable]: {

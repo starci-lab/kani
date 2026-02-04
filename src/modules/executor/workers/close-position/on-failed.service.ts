@@ -44,7 +44,7 @@ export class OnFailedService {
 
         if (isUnrecoverable) {
             this.winstonService.log(
-                WinstonLog.ClosePositionProcessingFailedUnrecoverable,
+                WinstonLog.ClosePositionJobFailedUnrecoverable,
                 {
                     botId: bot.id,
                     jobId: job.id,
@@ -55,7 +55,7 @@ export class OnFailedService {
             )
         } else if (isPermanentFailure) {
             this.winstonService.log(
-                WinstonLog.ClosePositionProcessingFailedPermanentFailure,
+                WinstonLog.ClosePositionJobFailedPermanentFailure,
                 {
                     botId: bot.id,
                     jobId: job.id,
@@ -66,7 +66,7 @@ export class OnFailedService {
             )
         } else {
             this.winstonService.log(
-                WinstonLog.ClosePositionProcessingFailedRetryable,
+                WinstonLog.ClosePositionJobFailedRetryable,
                 {
                     botId: bot.id,
                     jobId: job.id,

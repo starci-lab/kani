@@ -130,14 +130,6 @@ export class MomentumClosePositionActionService implements IClosePositionActionS
                         transaction: closePositionTxb,
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                     })
-                    this.winstonService.log(
-                        WinstonLog.ClosePositionTransactionPrepared,
-                        {
-                            botId: bot.id,
-                            txHashes: [txHash],
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
                     return {
                         prepareTxs: [
                             {

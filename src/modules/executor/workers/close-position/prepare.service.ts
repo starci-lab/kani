@@ -25,7 +25,8 @@ import {
     PrepareClosePositionResult,
 } from "@modules/blockchains"
 import {
-    InjectSuperJson 
+    InjectSuperJson,
+    DayjsService
 } from "@modules/mixin"
 import {
     SuperJSON 
@@ -43,6 +44,7 @@ export class PrepareService {
         private readonly closePositionActionService: ClosePositionActionService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     // Phase: PREPARE
@@ -76,18 +78,24 @@ export class PrepareService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
+            const { closePositionTransaction: stringifiedClosePositionTransaction } = job.data as ToStringObject<ClosePositionJobData>
+            const closePositionTransaction = this.superJson.parse<PrepareClosePositionResult>(stringifiedClosePositionTransaction)
             this.winstonService.log(
                 WinstonLog.ClosePositionJobAlreadyPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    txHashes: closePositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                    ageMs: this.dayjsService.now().diff(
+                        job.createdAt,
+                        "millisecond",
+                    ),
                 }
             )
-            const { closePositionTransaction } = job.data as ToStringObject<ClosePositionJobData>
             return {
                 result: {
-                    closePositionTransaction: this.superJson.parse<PrepareClosePositionResult>(closePositionTransaction),
+                    closePositionTransaction,
                 }
             }
         }
@@ -111,6 +119,15 @@ export class PrepareService {
                     status: JobStatus.Prepared,
                     "data.closePositionTransaction": this.superJson.stringify(closePositionTransaction),
                 },
+            }
+        )
+        this.winstonService.log(
+            WinstonLog.ClosePositionJobPrepared,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                txHashes: closePositionTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                liquidityPoolId: liquidityPool.displayId,
             }
         )
         return {

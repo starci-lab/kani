@@ -154,7 +154,7 @@ export class HandleClosePositionService {
                 }
             )
             this.winstonService.log(
-                WinstonLog.ClosePositionEnqueued,
+                WinstonLog.ClosePositionJobEnqueued,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
@@ -164,10 +164,11 @@ export class HandleClosePositionService {
             )
         } catch (error) {
             this.winstonService.log(
-                WinstonLog.ClosePositionEnqueueFailed,
+                WinstonLog.ClosePositionJobEnqueueFailed,
                 {
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    jobId,
                     error: error.message,
                 }
             )

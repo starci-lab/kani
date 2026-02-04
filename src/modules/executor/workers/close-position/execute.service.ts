@@ -32,7 +32,8 @@ import {
     ToStringObject 
 } from "@modules/typedefs"
 import {
-    InjectSuperJson 
+    InjectSuperJson,
+    DayjsService,
 } from "@modules/mixin"
 import {
     SuperJSON 
@@ -47,6 +48,7 @@ export class ExecuteService {
         private readonly winstonService: WinstonService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
+        private readonly dayjsService: DayjsService,
     ) {}
 
     /**
@@ -73,21 +75,25 @@ export class ExecuteService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
+            const { closePositionTransaction: stringifiedClosePositionTransaction, transactionRecords: stringifiedTransactionRecords } = job.data as ToStringObject<ClosePositionJobData>
+            const closePositionTransaction = this.superJson.parse<PrepareClosePositionResult>(stringifiedClosePositionTransaction)
+            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
             this.winstonService.log(
                 WinstonLog.ClosePositionJobAlreadyExecuted,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     liquidityPoolId: liquidityPool.displayId,
+                    ageMs: this.dayjsService.now().diff(
+                        job.createdAt,
+                        "millisecond",
+                    ),
                 }
             )
-            const { closePositionTransaction, transactionRecords } = job.data as ToStringObject<ClosePositionJobData>
             return {
                 result: {
-                    closePositionTransaction: this.superJson.parse<PrepareClosePositionResult>(closePositionTransaction),
-                    transactionRecords: transactionRecords
-                        ? this.superJson.parse<Array<AddTransactionRecordParams>>(transactionRecords)
-                        : undefined,
+                    closePositionTransaction,
+                    transactionRecords,
                 }
             }
         }

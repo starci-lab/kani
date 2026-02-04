@@ -254,9 +254,9 @@ export interface OpenPositionSkippedPriceNotReadyMessage {
 }
 
 /**
- * Close Position Enqueued Message
+ * Close Position Job Enqueued Message
  */
-export interface ClosePositionEnqueuedMessage {
+export interface ClosePositionJobEnqueuedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
     jobId: string
@@ -264,11 +264,33 @@ export interface ClosePositionEnqueuedMessage {
 }
 
 /**
- * Close Position Enqueue Failed Message
+ * Close Position Job Enqueue Failed Message
  */
-export interface ClosePositionEnqueueFailedMessage {
+export interface ClosePositionJobEnqueueFailedMessage {
     botId: string
     liquidityPoolId: LiquidityPoolId
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Close Position Job Requeued Message
+ */
+export interface ClosePositionJobRequeuedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Close Position Job Requeue Failed Message
+ */
+export interface ClosePositionJobRequeueFailedMessage {
+    botId: string
+    liquidityPoolId: LiquidityPoolId
+    jobId: string
     error: string
 }
 
@@ -1000,12 +1022,24 @@ export interface OpenPositionJobAlreadyConfirmedMessage {
 }
 
 /**
+ * Close Position Job Prepared Message
+ */
+export interface ClosePositionJobPreparedMessage {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+    txHashes: Array<string>
+}
+
+/**
  * Close Position Job Already Prepared Message
  */
 export interface ClosePositionJobAlreadyPreparedMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    txHashes: Array<string>
+    ageMs: number
 }
 
 /**
@@ -1015,6 +1049,7 @@ export interface ClosePositionJobAlreadyExecutedMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    ageMs: number
 }
 
 /**
@@ -1024,12 +1059,22 @@ export interface ClosePositionJobAlreadyConfirmedMessage {
     botId: string
     jobId: string
     liquidityPoolId: LiquidityPoolId
+    ageMs: number
 }
 
 /**
- * Close Position Processing Failed Unrecoverable Message
+ * Close Position Job Confirmed Message
  */
-export interface ClosePositionProcessingFailedUnrecoverableMessage {
+export interface ClosePositionJobConfirmedMessage {
+    botId: string
+    jobId: string
+    liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Close Position Job Failed Unrecoverable Message
+ */
+export interface ClosePositionJobFailedUnrecoverableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1038,9 +1083,9 @@ export interface ClosePositionProcessingFailedUnrecoverableMessage {
 }
 
 /**
- * Close Position Processing Failed Permanent Failure Message
+ * Close Position Job Failed Permanent Failure Message
  */
-export interface ClosePositionProcessingFailedPermanentFailureMessage {
+export interface ClosePositionJobFailedPermanentFailureMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1049,9 +1094,9 @@ export interface ClosePositionProcessingFailedPermanentFailureMessage {
 }
 
 /**
- * Close Position Processing Failed Retryable Message
+ * Close Position Job Failed Retryable Message
  */
-export interface ClosePositionProcessingFailedRetryableMessage {
+export interface ClosePositionJobFailedRetryableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1061,9 +1106,9 @@ export interface ClosePositionProcessingFailedRetryableMessage {
 }
 
 /**
- * Close Position Processing Completed Message
+ * Close Position Job Completed Message
  */
-export interface ClosePositionProcessingCompletedMessage {
+export interface ClosePositionJobCompletedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
