@@ -186,7 +186,7 @@ export const envConfig = () => ({
                     "1m"),
                 observer: {
                     fetch: parseEnvMs("DEXES_CETUS_INTERVAL_OBSERVER_FETCH",
-                        "10s"),
+                        "5s"),
                 }
             },
             openPosition: {
@@ -200,7 +200,7 @@ export const envConfig = () => ({
                     "1m"),
                 observer: {
                     fetch: parseEnvMs("DEXES_FLOWX_INTERVAL_OBSERVER_FETCH",
-                        "10s"),
+                        "5s"),
                 },
             },
             openPosition: {
@@ -214,7 +214,7 @@ export const envConfig = () => ({
                     "1m"),
                 observer: {
                     fetch: parseEnvMs("DEXES_MOMENTUM_INTERVAL_OBSERVER_FETCH",
-                        "10s"),
+                        "5s"),
                 },
             },
             openPosition: {
@@ -228,7 +228,7 @@ export const envConfig = () => ({
                     "1m"),
                 observer: {
                     fetch: parseEnvMs("DEXES_TURBOS_INTERVAL_OBSERVER_FETCH",
-                        "10s"),
+                        "5s"),
                 },
             },
             openPosition: {

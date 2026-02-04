@@ -67,6 +67,13 @@ export class HandleReconcileBalanceService {
     async process(
         bot: BotSchema,
     ) {
+        // check if the bot has an active job
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         // we do nothing if the bot is not running
         if (!bot.running) return
         // we do nothing if the bot has an active position
@@ -99,13 +106,6 @@ export class HandleReconcileBalanceService {
         if (!noActiveJobFound) return
         // acquire the lock authority
         const jobId = new Types.ObjectId().toString()
-        // check if the bot has an active job
-        const acquired = await this.lockAuthorityService.acquire(
-            {
-                botId: bot.id,
-            }
-        )
-        if (!acquired) return
         // enqueue the balance rebalancing
         try {
             const bullmqJob = await this.balanceEnqueueService.enqueue(

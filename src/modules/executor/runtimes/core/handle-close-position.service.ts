@@ -92,6 +92,13 @@ export class HandleClosePositionService {
             eventPayload,
         }: HandleClosePositionParams
     ) {
+        // check if the bot has an active job
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         // run even if the bot is not running
         // // we do nothing if the bot is not running
         // if (!bot.running) return
@@ -134,13 +141,6 @@ export class HandleClosePositionService {
             }
         )
         if (!noActiveJobFound) return
-        // check if the bot has an active job
-        const acquired = await this.lockAuthorityService.acquire(
-            {
-                botId: bot.id,
-            }
-        )
-        if (!acquired) return
         // settle the position
         // enqueue the close position
         try {

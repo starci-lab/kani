@@ -25,6 +25,9 @@ import {
 import {
     WinstonLog, WinstonService 
 } from "@modules/winston"
+import {
+    sleep 
+} from "@modules/utils"
 
 const LOCK_AUTHORITY_KEY = "lock-authority"
 
@@ -249,6 +252,7 @@ export class LockAuthorityService implements OnApplicationBootstrap {
      * - false if no lock existed
      */
     async release({ botId }: ReleaseParams): Promise<boolean> {
+        await sleep(100) // 0.1s to release the lock to avoid race condition
         // create the key for the lock authority
         const key = this.getLockKey(botId)
         const lockSchedulerKey = this.getLockSchedulerKey()

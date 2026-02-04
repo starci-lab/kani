@@ -100,128 +100,131 @@ export class ConfirmService {
             )
             return
         }
-        if (!bot.activePosition?.position || !bot.activePosition?.associatedPosition) {
-            throw new ActivePositionNotFoundException({
-                botId: bot.id,
-            })
-        }
-        if (!bot.balanceSnapshots) {
-            throw new BalanceSnapshotsNotFoundException({
-                botId: bot.id,
-            })
-        }
-        const { transactionRecords } = executeResult
-        // Fetch dynamic pool from cache
-        const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
-        // Extract reward token addresses
-        const rewardTokenAddresses = dynamicLiquidityPoolInfo.rewards.map((reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo) => reward.tokenAddress)
-        // Get reward tokens that are NOT target or quote token
-        const nonPairRewardTokenAddresses = _.difference(
-            rewardTokenAddresses,
-            [targetToken.tokenAddress,
-                quoteToken.tokenAddress]
-        )
-        const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
-            {
-                tokenAddress: {
-                    $in: nonPairRewardTokenAddresses,
-                },
+        if (!envConfig().executor.runtime.operation.closePosition.stimulate) {
+            if (!bot.activePosition?.position || !bot.activePosition?.associatedPosition) {
+                throw new ActivePositionNotFoundException({
+                    botId: bot.id,
+                })
             }
-        )
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-            incentiveBalanceAmounts,
-        } = await this.balanceFetcherService.fetchBalances(
-            {
-                bot,
-                incentiveTokens: nonPairRewardTokens,
+            if (!bot.balanceSnapshots) {
+                throw new BalanceSnapshotsNotFoundException({
+                    botId: bot.id,
+                })
             }
-        )
-        const stimulate = envConfig().executor.runtime.operation.closePosition.stimulate
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async (session) => {
-                if (transactionRecords?.length) {
-                    for (const record of transactionRecords) {
-                        await this.transactionSnapshotService.addTransactionRecord(
-                            {
-                                ...record,
-                                session,
-                            },
-                        )
-                    }
+        
+            const { transactionRecords } = executeResult
+            // Fetch dynamic pool from cache
+            const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
+            // Extract reward token addresses
+            const rewardTokenAddresses = dynamicLiquidityPoolInfo.rewards.map((reward: DynamicClmmRewardInfo | DynamicDlmmRewardInfo) => reward.tokenAddress)
+            // Get reward tokens that are NOT target or quote token
+            const nonPairRewardTokenAddresses = _.difference(
+                rewardTokenAddresses,
+                [targetToken.tokenAddress,
+                    quoteToken.tokenAddress]
+            )
+            const nonPairRewardTokens = this.primaryMemoryStorageService.tokenCollection.find(
+                {
+                    tokenAddress: {
+                        $in: nonPairRewardTokenAddresses,
+                    },
                 }
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                    {
-                        bot,
-                        targetBalanceAmount,
-                        quoteBalanceAmount,
-                        gasBalanceAmount,
-                        session,
-                        incentiveBalanceAmounts,
-                    }
-                )
-                // only update bot only if the operation is not stimulated
-                if (!stimulate) {
-                    await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                        {
-                            _id: bot.id,
-                        },
-                        {
-                            $unset: {
-                                activePosition: null,
-                            },
-                        },
-                        {
-                            session,
+            )
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+                incentiveBalanceAmounts,
+            } = await this.balanceFetcherService.fetchBalances(
+                {
+                    bot,
+                    incentiveTokens: nonPairRewardTokens,
+                }
+            )
+            const stimulate = envConfig().executor.runtime.operation.closePosition.stimulate
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async (session) => {
+                    if (transactionRecords?.length) {
+                        for (const record of transactionRecords) {
+                            await this.transactionSnapshotService.addTransactionRecord(
+                                {
+                                    ...record,
+                                    session,
+                                },
+                            )
                         }
-                    )
-                }
-                await this.closePositionSnapshotService.updateClosePositionRecord(
-                    {
-                        before: {
-                            targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
-                            quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
-                            gasBalanceAmount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0),
-                            incentiveBalanceAmounts: bot.balanceSnapshots?.incentiveSnapshots ? Object.fromEntries(
-                                Object.entries(bot.balanceSnapshots?.incentiveSnapshots).map(([key,
-                                    value]) => [key,
-                                    new BN(value.amount)])
-                            ) : undefined,
-                        },
-                        after: {
+                    }
+                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
+                        {
+                            bot,
                             targetBalanceAmount,
                             quoteBalanceAmount,
                             gasBalanceAmount,
+                            session,
                             incentiveBalanceAmounts,
-                        },
-                        positionId: bot.activePosition?.associatedPosition?.id ?? "",
-                        closeTxHashes: transactionRecords?.map((record) => record.txHash) ?? [],
-                        targetToken,
-                        quoteToken,
-                        gasToken,
-                        session,
-                    }
-                )
-                await this.connection
-                    .model<JobSchema>(JobSchema.name)
-                    .updateOne(
-                        {
-                            _id: job.id,
-                        },
-                        {
-                            $set: {
-                                status: JobStatus.Confirmed,
+                        }
+                    )
+                    // only update bot only if the operation is not stimulated
+                    if (!stimulate) {
+                        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                            {
+                                _id: bot.id,
                             },
-                        },
+                            {
+                                $unset: {
+                                    activePosition: null,
+                                },
+                            },
+                            {
+                                session,
+                            }
+                        )
+                    }
+                    await this.closePositionSnapshotService.updateClosePositionRecord(
                         {
+                            before: {
+                                targetBalanceAmount: new BN(bot.balanceSnapshots?.targetBalanceAmount ?? 0),
+                                quoteBalanceAmount: new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? 0),
+                                gasBalanceAmount: new BN(bot.balanceSnapshots?.gasBalanceAmount ?? 0),
+                                incentiveBalanceAmounts: bot.balanceSnapshots?.incentiveSnapshots ? Object.fromEntries(
+                                    Object.entries(bot.balanceSnapshots?.incentiveSnapshots).map(([key,
+                                        value]) => [key,
+                                        new BN(value.amount)])
+                                ) : undefined,
+                            },
+                            after: {
+                                targetBalanceAmount,
+                                quoteBalanceAmount,
+                                gasBalanceAmount,
+                                incentiveBalanceAmounts,
+                            },
+                            positionId: bot.activePosition?.associatedPosition?.id ?? "",
+                            closeTxHashes: transactionRecords?.map((record) => record.txHash) ?? [],
+                            targetToken,
+                            quoteToken,
+                            gasToken,
                             session,
                         }
                     )
-            }
-        )
+                    await this.connection
+                        .model<JobSchema>(JobSchema.name)
+                        .updateOne(
+                            {
+                                _id: job.id,
+                            },
+                            {
+                                $set: {
+                                    status: JobStatus.Confirmed,
+                                },
+                            },
+                            {
+                                session,
+                            }
+                        )
+                }
+            )       
+        }
         this.winstonService.log(
             WinstonLog.ClosePositionJobConfirmed,
             {

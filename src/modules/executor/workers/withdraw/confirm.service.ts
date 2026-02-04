@@ -39,6 +39,9 @@ import {
 import {
     SuperJSON 
 } from "superjson"
+import {
+    envConfig 
+} from "@modules/env"
 
 @Injectable()
 export class ConfirmService {
@@ -97,54 +100,56 @@ export class ConfirmService {
                 }
             }
         }
+        if (!envConfig().executor.runtime.operation.withdraw.stimulate) {
         // re-fetch balances post execution
-        const {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        } = await this.balanceFetcherService.fetchBalances({
-            bot
-        })
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount,
+            } = await this.balanceFetcherService.fetchBalances({
+                bot
+            })
 
-        const session = await this.connection.startSession()
-        await session.withTransaction(
-            async () => {
-                for (const transactionRecord of executeResult.transactionRecords || []) {
-                    await this.transactionSnapshotService.addTransactionRecord(
-                        {
-                            ...transactionRecord,
-                            session,
-                        }
-                    )
-                }
-
-                await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
-                    {
-                        bot,
-                        targetBalanceAmount,
-                        quoteBalanceAmount,
-                        gasBalanceAmount,
-                        session,
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async () => {
+                    for (const transactionRecord of executeResult.transactionRecords || []) {
+                        await this.transactionSnapshotService.addTransactionRecord(
+                            {
+                                ...transactionRecord,
+                                session,
+                            }
+                        )
                     }
-                )
 
-                await this.connection
-                    .model<JobSchema>(JobSchema.name)
-                    .updateOne(
+                    await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                         {
-                            _id: job.id,
-                        },
-                        {
-                            $set: {
-                                status: JobStatus.Confirmed,
-                            },
-                        },
-                        {
+                            bot,
+                            targetBalanceAmount,
+                            quoteBalanceAmount,
+                            gasBalanceAmount,
                             session,
                         }
                     )
-            }
-        )
+
+                    await this.connection
+                        .model<JobSchema>(JobSchema.name)
+                        .updateOne(
+                            {
+                                _id: job.id,
+                            },
+                            {
+                                $set: {
+                                    status: JobStatus.Confirmed,
+                                },
+                            },
+                            {
+                                session,
+                            }
+                        )
+                }
+            )
+        }
         this.winstonService.log(
             WinstonLog.WithdrawJobConfirmed,
             {

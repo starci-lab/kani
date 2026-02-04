@@ -100,6 +100,13 @@ export class HandleOpenPositionService {
             eventPayload,
         }: HandleOpenPositionParams
     ) {
+        // check if the bot has an active job
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         // we do nothing if the bot is not running
         if (!bot.running) {
             return
@@ -208,13 +215,6 @@ export class HandleOpenPositionService {
         )
         if (!noActiveJobFound) return
         const jobId = new Types.ObjectId().toString()
-        // check if the bot has an active job
-        const acquired = await this.lockAuthorityService.acquire(
-            {
-                botId: bot.id,
-            }
-        )
-        if (!acquired) return
         // enqueue the balance rebalancing
         try {
             const bullmqJob = await this.openPositionEnqueueService.enqueue(
