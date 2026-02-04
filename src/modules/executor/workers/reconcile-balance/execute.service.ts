@@ -7,8 +7,8 @@ import {
     ReconcileBalanceJobData
 } from "./types"
 import {
-    BalanceService
-} from "@modules/blockchains"
+    BalanceActionService
+} from "@modules/blockchains/balance"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
@@ -30,7 +30,7 @@ import {
 @Injectable()
 export class ExecuteService {
     constructor(
-        private readonly balanceService: BalanceService,
+        private readonly balanceActionService: BalanceActionService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
@@ -71,24 +71,20 @@ export class ExecuteService {
         }
 
         const transactionRecords: ReconcileBalanceJobData["transactionRecords"] = []
-        const { swapTransactions } = prepareResult
+        const { prepareTxs } = prepareResult
 
-        for (const swapTransaction of swapTransactions) {
-            await this.balanceService.executeSwapTransaction(
-                {
-                    bot,
-                    txHash: swapTransaction.txHash,
-                    signatureWithBytes: swapTransaction.signatureWithBytes,
-                    solanaTx: swapTransaction.solanaTx,
-                    // only check the transaction if it is a retry
-                    txCheck: isRetry || (payload.isRetry ?? false),
-                    stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
-                }
-            )
+        const { txHashes } = await this.balanceActionService.executeReconcileBalanceTransaction({
+            bot,
+            prepareTxs,
+            isRetry: isRetry || (payload.isRetry ?? false),
+            stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
+        })
+
+        for (const txHash of txHashes) {
             transactionRecords.push(
                 {
                     bot,
-                    txHash: swapTransaction.txHash,
+                    txHash,
                     chainId: bot.chainId,
                     type: TransactionType.Swap,
                 }

@@ -2,7 +2,6 @@ import {
     Injectable,
 } from "@nestjs/common"
 import {
-    BalanceService,
     BalanceFetcherService,
     BalanceSnapshotService,
     TransactionSnapshotService,
@@ -27,7 +26,6 @@ import {
 @Injectable()
 export class ConfirmService {
     constructor(
-        private readonly balanceService: BalanceService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly transactionSnapshotService: TransactionSnapshotService,
         private readonly balanceSnapshotService: BalanceSnapshotService,

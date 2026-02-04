@@ -22,4 +22,6 @@ export type NonReadOnlySolanaTransaction = FullySignedTransaction & TransactionW
 export type FullySolanaTransaction = FullySignedTransaction & TransactionWithinSizeLimit & Readonly<{
     messageBytes: TransactionMessageBytes;
     signatures: SignaturesMap;
-}> & TransactionWithBlockhashLifetime
+}> & TransactionWithBlockhashLifetime & {
+    lifetimeConstraint: TransactionBlockhashLifetime;
+}

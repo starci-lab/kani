@@ -1,5 +1,5 @@
 import {
-    DynamicModule, Module, Provider 
+    DynamicModule, Module 
 } from "@nestjs/common"
 import {
     ConfigurableModuleClass, OPTIONS_TYPE 
@@ -26,17 +26,8 @@ import {
     OrcaModule 
 } from "./orca"
 import {
-    LiquidityPoolStateService 
-} from "./liquidity-pool-state.service"
-import {
-    OpenPositionOrchestratorService 
-} from "./open-position-orchestrator.service"
-import {
-    ClosePositionOrchestratorService 
-} from "./close-position-orchestrator.service"
-import {
-    ReservesWithFeesOrchestratorService,
-} from "./reserves-with-fees-orchestrator.service"
+    OrchestratorModule
+} from "./orchestrator"
 import {
     MeteoraModule,
 } from "./meteora"
@@ -117,40 +108,19 @@ export class DexesModule extends ConfigurableModuleClass {
                     enabled: options.enabled,
                 }))
         }
-        const providers: Array<Provider> = [
-            LiquidityPoolStateService,
-        ]
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.observe ?? true))
-        ) {
-            providers.push(LiquidityPoolStateService)
-        }
-        if (typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
-        ) {
-            providers.push(OpenPositionOrchestratorService)
-            providers.push(ClosePositionOrchestratorService)
-        }
-        if ((typeof options.enabled === "boolean" 
-            ? options.enabled
-            : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
-        ) {
-            providers.push(ReservesWithFeesOrchestratorService)
-        }
+        const orchestratorModule = OrchestratorModule.register(options)
         return {
             ...dynamicModule,
             imports: [
-                ...dexModules
+                ...dexModules,
+                orchestratorModule,
             ],
             providers: [
                 ...dynamicModule.providers || [],
-                ...providers,
             ],
             exports: [
                 ...dexModules,
-                ...providers,
+                orchestratorModule,
             ]
         }
     } 

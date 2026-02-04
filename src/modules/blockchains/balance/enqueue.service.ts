@@ -2,22 +2,13 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    PrepareSwapTransactionParams,
-    PrepareSwapTransactionResult,
-    ExecuteSwapTransactionParams,
     EnqueueBalanceRebalancingParams,
     DetermineReconcileBalancePlanParams,
     DetermineReconcileBalancePlanResult,
 } from "./balance.interface"
 import {
-    SolanaBalanceService 
-} from "./solana/solana.service"
-import {
-    TokenType, ChainId 
+    TokenType
 } from "@modules/typedefs"
-import {
-    SuiBalanceService 
-} from "./sui/sui.service"
 import {
     BalanceFetcherService 
 } from "./fetcher.service"
@@ -72,22 +63,24 @@ import {
     WinstonService 
 } from "@modules/winston"
 
+import {
+    IBalanceEnqueueService
+} from "./balance.interface"
+
 @Injectable()
-export class BalanceService {
+export class BalanceEnqueueService implements IBalanceEnqueueService {
     constructor(
-    private readonly solanaBalanceService: SolanaBalanceService,
-    private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-    private readonly suiBalanceService: SuiBalanceService,
-    private readonly balanceFetcherService: BalanceFetcherService,
-    private readonly swapMathService: SwapMathService,
-    @InjectPrimaryMongoose()
-    private readonly connection: Connection,
-    @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
-    private readonly reconcileBalanceQueue: Queue<string>,
-    @InjectSuperJson()
-    private readonly superJson: SuperJSON,
-    private readonly dayjsService: DayjsService,
-    private readonly winstonService: WinstonService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly balanceFetcherService: BalanceFetcherService,
+        private readonly swapMathService: SwapMathService,
+        @InjectPrimaryMongoose()
+        private readonly connection: Connection,
+        @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
+        private readonly reconcileBalanceQueue: Queue<string>,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
+        private readonly dayjsService: DayjsService,
+        private readonly winstonService: WinstonService,
     ) {
     }
 
@@ -107,8 +100,8 @@ export class BalanceService {
                 await session.withTransaction(
                     async () => {
                         /**
-                * Persist job record.
-                */
+                 * Persist job record.
+                 */
                         const [ jobRaw ] = await this.connection.model<JobSchema>(
                             JobSchema.name
                         ).create(
@@ -271,31 +264,5 @@ export class BalanceService {
                 gasBalanceAmount
             }
         )
-    }
-
-    async prepareSwapTransaction(
-        params: PrepareSwapTransactionParams,
-    ): Promise<PrepareSwapTransactionResult> {
-        switch (params.bot.chainId) {
-        case ChainId.Solana:
-            return this.solanaBalanceService.prepareSwapTransaction(params)
-        case ChainId.Sui:
-            return this.suiBalanceService.prepareSwapTransaction(params)
-        default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
-        }
-    }
-
-    async executeSwapTransaction(
-        params: ExecuteSwapTransactionParams,
-    ): Promise<void> {
-        switch (params.bot.chainId) {
-        case ChainId.Solana:
-            return this.solanaBalanceService.executeSwapTransaction(params)
-        case ChainId.Sui:
-            return this.suiBalanceService.executeSwapTransaction(params)
-        default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
-        }
     }
 }

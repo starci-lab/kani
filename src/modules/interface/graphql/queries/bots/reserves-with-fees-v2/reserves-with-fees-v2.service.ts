@@ -27,7 +27,7 @@ import {
     UserNotFoundException,
 } from "@modules/exceptions"
 import {
-    ReservesWithFeesOrchestratorService,
+    ReservesWithFeesActionService,
 } from "@modules/blockchains"
 
 @Injectable()
@@ -35,7 +35,7 @@ export class ReservesWithFeesV2Service {
     constructor(
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly reservesWithFeesOrchestratorService: ReservesWithFeesOrchestratorService,
+        private readonly reservesWithFeesActionService: ReservesWithFeesActionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly activePositionAssociateService: ActivePositionAssociateService,
     ) {}
@@ -102,7 +102,7 @@ export class ReservesWithFeesV2Service {
             feeB,
             rewards,
             snapshotAt,
-        } = await this.reservesWithFeesOrchestratorService.reservesWithFees({
+        } = await this.reservesWithFeesActionService.reservesWithFees({
             bot,
             liquidityPool,
         })

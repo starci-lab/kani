@@ -34,8 +34,8 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    ClosePositionOrchestratorService, LiquidityPoolStateService, SettlementService
-} from "@modules/blockchains"
+    ClosePositionEnqueueService, LiquidityPoolStateService, SettlementService
+} from "@modules/blockchains/dexes/orchestrator"
 import {
     BotsLoaderService 
 } from "../../loaders"
@@ -54,7 +54,7 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly closePositionOrchestratorService: ClosePositionOrchestratorService,
+        private readonly closePositionEnqueueService: ClosePositionEnqueueService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly settlementService: SettlementService,
         private readonly positionAssociateService: PositionAssociateService,
@@ -148,7 +148,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     )
                     if (!acquired) return
                     try {
-                        await this.closePositionOrchestratorService.enqueue(
+                        await this.closePositionEnqueueService.enqueue(
                             {
                                 bot,
                                 liquidityPool,

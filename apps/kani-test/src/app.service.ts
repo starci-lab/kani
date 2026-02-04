@@ -1,41 +1,13 @@
-import { WsConnectionAbortedException } from "@modules/exceptions"
-import { WebSocketStreamConnection } from "@modules/mixin"
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import pRetry from "p-retry"
-
+import {
+    Injectable, OnModuleInit 
+} from "@nestjs/common"
+import { generateP256KeyPair } from "@privy-io/node"
 @Injectable()
 export class AppService implements OnModuleInit { 
     constructor() {}
 
     async onModuleInit() {
-        const connection = new WebSocketStreamConnection(
-            "wss://stream.binance.com:9443/ws/!ticker@arr",
-        )
         
-        await pRetry(async () => {
-            console.log("retry")
-            const hentai = this.hentai()
-            hentai.next()
-            const controller = new AbortController()
-            const timeout = setTimeout(() => {
-                controller.abort()
-            }, 10000)
-            const asyncIterator = await this.createAsyncIterator(connection, controller.signal)
-            for await (const data of asyncIterator) {
-            // clearTimeout(timeout)
-            // setTimeout(() => {
-            //     controller.abort()
-            // }, 10000)
-                //
-                // console.log(data)
-            }
-        }, {
-            retries: 10,
-            minTimeout: 1000,
-            maxTimeout: 10000,
-            factor: 2,
-            randomize: true,
-        })
     }
 
     async createAsyncIterator<TData>(
@@ -74,7 +46,8 @@ export class AppService implements OnModuleInit {
                         onAbort()
                     } else {
                         // add the abort event listener to the signal
-                        signal.addEventListener("abort", onAbort)
+                        signal.addEventListener("abort",
+                            onAbort)
                     }
                 }
                 // define the onData handler
@@ -129,7 +102,8 @@ export class AppService implements OnModuleInit {
                     }
                 } finally {
                     // remove the abort event listener from the signal
-                    signal?.removeEventListener("abort", onAbort)
+                    signal?.removeEventListener("abort",
+                        onAbort)
                     // close the connection
                     connection.close()
                 }

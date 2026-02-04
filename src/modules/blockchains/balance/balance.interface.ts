@@ -13,13 +13,42 @@ import {
     ComputeSwapAmountsResult 
 } from "../math"
 
+import {
+    PrepareReconcileBalanceTransactionParams,
+    PrepareReconcileBalanceTransactionResult,
+    ExecuteReconcileBalanceTransactionParams,
+    ExecuteReconcileBalanceTransactionResults,
+    PrepareWithdrawTransactionParams,
+    PrepareWithdrawTransactionResult,
+    ExecuteWithdrawTransactionParams,
+    ExecuteWithdrawTransactionResult,
+} from "./types"
+
 /**
- * The core interface for any swap aggregator (Jupiter, Meteora, Raydium, etc.).
- * It returns a quote + executable swap data.
+ * The core interface for balance action operations.
  */
-export interface IBalanceService {
-    prepareSwapTransaction(params: PrepareSwapTransactionParams): Promise<PrepareSwapTransactionResult>
-    executeSwapTransaction(params: ExecuteSwapTransactionParams): Promise<void>
+export interface IBalanceActionService {
+    prepareReconcileBalanceTransaction(params: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult>
+    executeReconcileBalanceTransaction(params: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults>
+    prepareWithdrawTransaction(params: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult>
+    executeWithdrawTransaction(params: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult>
+}
+
+/**
+ * The core interface for balance fetcher operations.
+ */
+export interface IBalanceFetcherService {
+    fetchBalance(params: FetchBalanceParams): Promise<FetchBalanceResult>
+    fetchBalances(params: FetchBalancesParams): Promise<FetchBalancesResult>
+    fetchTokens(params: FetchTokensParams): Promise<FetchTokensResult>
+}
+
+/**
+ * The core interface for balance enqueue operations.
+ */
+export interface IBalanceEnqueueService {
+    enqueue(params: EnqueueBalanceRebalancingParams): Promise<import("bullmq").Job<string>>
+    determineReconcileBalancePlan(params: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult>
 }
 
 export interface DetermineReconcileBalancePlanParams {

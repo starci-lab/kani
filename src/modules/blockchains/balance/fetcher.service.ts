@@ -36,8 +36,12 @@ import {
 } from "../types"
 import BN from "bn.js"
 
+import {
+    IBalanceFetcherService
+} from "./balance.interface"
+
 @Injectable()
-export class BalanceFetcherService {
+export class BalanceFetcherService implements IBalanceFetcherService {
     constructor(
         private readonly solanaBalanceFetcherService: SolanaBalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,

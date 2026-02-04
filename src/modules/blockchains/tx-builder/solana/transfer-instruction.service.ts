@@ -11,11 +11,11 @@ import {
     BN 
 } from "turbos-clmm-sdk"
 import {
-    PrimaryMemoryStorageService, TokenId 
+    PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    TokenNotFoundException 
-} from "@modules/exceptions"
+    TokenSchema 
+} from "@modules/databases"
 import {
     getTransferSolInstruction 
 } from "@solana-program/system"
@@ -44,19 +44,9 @@ export class TransferInstructionService {
             fromAddress,
             toAddress,
             amount,
-            tokenId,
+            token,
         }: CreateTransferInstructionsParams
     ): Promise<CreateTransferInstructionsResult> {
-        const token = this.primaryMemoryStorageService.tokenCollection.findOne({
-            displayId: {
-                $eq: tokenId,
-            }
-        })
-        if (!token) {
-            throw new TokenNotFoundException({
-                displayId: tokenId,
-            })
-        }
         if (token.type === TokenType.Native) {
             return {
                 instructions: [
@@ -111,7 +101,7 @@ export interface CreateTransferInstructionsParams {
     fromAddress: Address
     toAddress: Address
     amount: BN
-    tokenId: TokenId
+    token: TokenSchema
 }
 
 export interface CreateTransferInstructionsResult {

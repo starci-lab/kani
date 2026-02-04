@@ -33,8 +33,8 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    OpenPositionOrchestratorService, LiquidityPoolStateService 
-} from "@modules/blockchains/dexes"
+    OpenPositionEnqueueService, LiquidityPoolStateService 
+} from "@modules/blockchains/dexes/orchestrator"
 import {
     BotsLoaderService 
 } from "../../loaders"
@@ -53,7 +53,7 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly openPositionEnqueueService: OpenPositionEnqueueService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
     ) {
     }
@@ -121,7 +121,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     )
                     if (!acquired) return
                     try {
-                        const bullmqJob = await this.openPositionOrchestratorService.enqueue(
+                        const bullmqJob = await this.openPositionEnqueueService.enqueue(
                             {
                                 bot,
                                 liquidityPool,

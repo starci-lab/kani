@@ -581,6 +581,24 @@ export interface ReconcileBalanceEnqueuedMessage {
 }
 
 /**
+ * Withdraw Enqueue Failed Message
+ */
+export interface WithdrawEnqueueFailedMessage {
+    botId: string
+    error: string
+    bullmqJobId?: string
+}
+
+/**
+ * Withdraw Enqueued Message
+ */
+export interface WithdrawEnqueuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
  * Reconcile Balance Processing Completed Message
  */
 export interface ReconcileBalanceProcessingCompletedMessage {
@@ -593,6 +611,24 @@ export interface ReconcileBalanceProcessingCompletedMessage {
  * Reconcile Balance Processing Started Message
  */
 export interface ReconcileBalanceProcessingStartedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Withdraw Processing Completed Message
+ */
+export interface WithdrawProcessingCompletedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Withdraw Processing Started Message
+ */
+export interface WithdrawProcessingStartedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -622,6 +658,37 @@ export interface ReconcileBalanceProcessingFailedPermanentFailureMessage {
  * Reconcile Balance Processing Failed Retryable Message
  */
 export interface ReconcileBalanceProcessingFailedRetryableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+    attemptsMade: number
+}
+
+/**
+ * Withdraw Processing Failed Unrecoverable Message
+ */
+export interface WithdrawProcessingFailedUnrecoverableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Withdraw Processing Failed Permanent Failure Message
+ */
+export interface WithdrawProcessingFailedPermanentFailureMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Withdraw Processing Failed Retryable Message
+ */
+export interface WithdrawProcessingFailedRetryableMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -742,6 +809,37 @@ export interface ReconcileBalanceJobAlreadyExecutedMessage {
  * Reconcile Balance Job Already Confirmed Message
  */
 export interface ReconcileBalanceJobAlreadyConfirmedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Withdraw Requeue Failed Message
+ */
+export interface WithdrawRequeueFailedMessage {
+    error: string
+}
+
+/**
+ * Withdraw Job Already Prepared Message
+ */
+export interface WithdrawJobAlreadyPreparedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Withdraw Job Already Executed Message
+ */
+export interface WithdrawJobAlreadyExecutedMessage {
+    botId: string
+    jobId: string
+}
+
+/**
+ * Withdraw Job Already Confirmed Message
+ */
+export interface WithdrawJobAlreadyConfirmedMessage {
     botId: string
     jobId: string
 }
@@ -1025,6 +1123,25 @@ export interface ClosePositionJobAlreadyEnqueuedMessage {
  * Reconcile Balance Job Already Enqueued Message
  */
 export interface ReconcileBalanceJobAlreadyEnqueuedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+}
+
+/**
+ * Withdraw Bootstrapping Failed Message
+ */
+export interface WithdrawBootstrappingFailedMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Withdraw Job Already Enqueued Message
+ */
+export interface WithdrawJobAlreadyEnqueuedMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1355,4 +1472,36 @@ export interface LockAuthoritySendHeartbeatFailedMessage {
     key: string
     lockSchedulerKey: string
     error: string
+}
+
+/**
+ * Withdraw Transaction Executed Message
+ */
+export interface WithdrawTransactionExecutedMessage {
+    botId: string
+    txHash: string
+}
+
+/**
+ * Withdraw Transaction Stimulated Message
+ */
+export interface WithdrawTransactionStimulatedMessage {
+    botId: string
+    txHash: string
+}
+
+/**
+ * Reconcile Balance Transaction Executed Message
+ */
+export interface ReconcileBalanceTransactionExecutedMessage {
+    botId: string
+    txHash: string
+}
+
+/**
+ * Reconcile Balance Transaction Stimulated Message
+ */
+export interface ReconcileBalanceTransactionStimulatedMessage {
+    botId: string
+    txHash: string
 }

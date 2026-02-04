@@ -24,7 +24,6 @@ export class MintInstructionService {
         {
             ownerAddress,
             url,
-
             withInitialize = false,
         }: CreateMint2InstructionParams
     ): Promise<CreateMint2InstructionResult> {

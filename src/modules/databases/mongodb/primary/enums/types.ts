@@ -108,6 +108,7 @@ export enum JobType {
     OpenPosition = "openPosition",
     ClosePosition = "closePosition",
     ReconcileBalance = "reconcileBalance",
+    Withdraw = "withdraw",
 }
 
 export const GraphQLTypeJobType = createEnumType(JobType)
@@ -125,6 +126,9 @@ registerEnumType(GraphQLTypeJobType,
             },
             [JobType.ReconcileBalance]: {
                 description: "The reconcile balance job"
+            },
+            [JobType.Withdraw]: {
+                description: "The withdraw job"
             }
         }
     })

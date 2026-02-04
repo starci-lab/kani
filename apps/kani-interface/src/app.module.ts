@@ -180,7 +180,11 @@ import {
         }),
         BalanceModule.register({
             isGlobal: true,
-            fetcherOnly: true,
+            enable: {
+                fetcher: true,
+                action: false,
+                enqueue: false,
+            },
         }),
         DexesModule.register({
             isGlobal: true,

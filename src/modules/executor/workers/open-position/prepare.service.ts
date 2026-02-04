@@ -21,9 +21,11 @@ import {
     Connection 
 } from "mongoose"
 import {
-    OpenPositionOrchestratorService, 
+    OpenPositionActionService
+} from "@modules/blockchains/dexes/orchestrator"
+import {
     PrepareOpenPositionResult
-} from "@modules/blockchains"
+} from "@modules/blockchains/interfaces"
 import {
     SuperJSON
 } from "superjson"
@@ -40,7 +42,7 @@ export class PrepareService {
         private readonly winstonService: WinstonService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
-        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly openPositionActionService: OpenPositionActionService,
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
     ) {}
@@ -91,7 +93,7 @@ export class PrepareService {
                 }
             }
         }
-        const openPositionTransaction = await this.openPositionOrchestratorService.prepare(
+        const openPositionTransaction = await this.openPositionActionService.prepare(
             {
                 bot,
                 state: {

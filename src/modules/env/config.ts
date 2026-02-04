@@ -375,7 +375,14 @@ export const envConfig = () => ({
                     stimulate: parseEnvBoolean("EXECUTOR_OPERATION_RECONCILE_BALANCE_STIMULATE",
                         false),
                 },
-                
+                withdraw: {
+                    requeue: {
+                        interval: parseEnvMs("EXECUTOR_OPERATION_WITHDRAW_REQUEUE_INTERVAL",
+                            "10s"),
+                    },
+                    stimulate: parseEnvBoolean("EXECUTOR_OPERATION_WITHDRAW_STIMULATE",
+                        false),
+                },
             },
         },
         lockAuthority: {

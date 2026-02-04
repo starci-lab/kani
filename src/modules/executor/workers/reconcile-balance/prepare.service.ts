@@ -24,11 +24,12 @@ import {
     BalanceFetcherService
 } from "@modules/blockchains"
 import {
-    BalanceService
+    BalanceEnqueueService,
+    BalanceActionService
 } from "@modules/blockchains/balance"
 import {
-    PrepareSwapTransactionResult
-} from "@modules/blockchains/balance"
+    ReconcileBalanceTokenInput
+} from "@modules/blockchains/balance/types"
 import {
     JobSchema
 } from "@modules/databases"
@@ -45,7 +46,8 @@ import {
 @Injectable()
 export class PrepareService {
     constructor(
-        private readonly balanceService: BalanceService,
+        private readonly balanceEnqueueService: BalanceEnqueueService,
+        private readonly balanceActionService: BalanceActionService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly winstonService: WinstonService,
@@ -131,7 +133,7 @@ export class PrepareService {
         // - Determine required swaps
         // - No side effects (pure planning)
         const { swapSteps } =
-        await this.balanceService.determineReconcileBalancePlan({
+        await this.balanceEnqueueService.determineReconcileBalancePlan({
             bot,
             targetBalanceAmount: targetBalanceAmountBN,
             quoteBalanceAmount: quoteBalanceAmountBN,
@@ -185,64 +187,50 @@ export class PrepareService {
                 }
             )
         }
-        const swapTransactions: Array<PrepareSwapTransactionResult> = []
+        // Convert swapSteps to tokenInputs for prepareReconcileBalanceTransaction
+        const tokenInputs: Array<ReconcileBalanceTokenInput> = []
         for (const swapStep of swapSteps) {
-            const { direction, usedAmount, swappedAmount } = swapStep
+            const { direction, usedAmount } = swapStep
             switch (direction) {
             case SwapDirection.TargetToQuote: {
-                const swapTransaction = await this.balanceService.prepareSwapTransaction(
-                    {
-                        bot,
-                        tokenIn: targetToken,
-                        tokenOut: quoteToken,
-                        amountIn: usedAmount,
-                        estimatedSwappedAmount: swappedAmount,
-                    }
-                )
-                swapTransactions.push(swapTransaction)
-            }
+                tokenInputs.push({
+                    tokenIn: targetToken,
+                    tokenOut: quoteToken,
+                    amount: usedAmount,
+                })
                 break
+            }
             case SwapDirection.QuoteToTarget: {
-                const swapTransaction = await this.balanceService.prepareSwapTransaction(
-                    {
-                        bot,
-                        tokenIn: quoteToken,
-                        tokenOut: targetToken,
-                        amountIn: usedAmount,
-                        estimatedSwappedAmount: swappedAmount,
-                    }
-                )
-                swapTransactions.push(swapTransaction)
+                tokenInputs.push({
+                    tokenIn: quoteToken,
+                    tokenOut: targetToken,
+                    amount: usedAmount,
+                })
                 break
             }
             case SwapDirection.TargetToGas: {
-                const swapTransaction = await this.balanceService.prepareSwapTransaction(
-                    {
-                        bot,
-                        tokenIn: targetToken,
-                        tokenOut: gasToken,
-                        amountIn: usedAmount,
-                        estimatedSwappedAmount: swappedAmount,
-                    }
-                )
-                swapTransactions.push(swapTransaction)
+                tokenInputs.push({
+                    tokenIn: targetToken,
+                    tokenOut: gasToken,
+                    amount: usedAmount,
+                })
                 break
             }
             case SwapDirection.QuoteToGas: {
-                const swapTransaction = await this.balanceService.prepareSwapTransaction(
-                    {
-                        bot,
-                        tokenIn: quoteToken,
-                        tokenOut: gasToken,
-                        amountIn: usedAmount,
-                        estimatedSwappedAmount: swappedAmount,
-                    }
-                )
-                swapTransactions.push(swapTransaction)
+                tokenInputs.push({
+                    tokenIn: quoteToken,
+                    tokenOut: gasToken,
+                    amount: usedAmount,
+                })
                 break
             }
             }
         }
+        // Prepare reconcile balance transactions
+        const { prepareTxs } = await this.balanceActionService.prepareReconcileBalanceTransaction({
+            bot,
+            tokenInputs,
+        })
         // Persist job state transition:
         // PENDING → PREPARED
         // This marks preparation as completed and enables execution phase
@@ -255,7 +243,7 @@ export class PrepareService {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "data.swapTransactions": swapTransactions,
+                        "data.prepareTxs": prepareTxs,
                     },
                 }
             )
@@ -263,13 +251,13 @@ export class PrepareService {
             WinstonLog.SwapTransactionPrepared,
             {
                 botId: bot.id,
-                txHashes: swapTransactions.map((swapTransaction) => swapTransaction.txHash),
+                txHashes: prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )
         // Return execution plan to next phase
         return {
             result: {
-                swapTransactions
+                prepareTxs
             }
         }
     }

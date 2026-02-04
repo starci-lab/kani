@@ -149,7 +149,7 @@ export class ClosePositionWorker extends WorkerHost {
                 }
 
                 const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
-                    displayId: {
+                    id: {
                         $eq: liquidityPoolId,
                     }
                 })
@@ -157,7 +157,7 @@ export class ClosePositionWorker extends WorkerHost {
                 if (!liquidityPool) {
                     throw new UnrecoverableError(
                         new LiquidityPoolNotFoundException({
-                            displayId: liquidityPoolId 
+                            id: liquidityPoolId 
                         }).toJSON()
                     )
                 }

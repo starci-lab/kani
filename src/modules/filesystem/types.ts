@@ -69,7 +69,6 @@ export interface SwapReferralFeeConfig {
 }
 
 /* ================= Privy ================= */
-
 export interface PrivyConfig {
     appId: string
     signer: {

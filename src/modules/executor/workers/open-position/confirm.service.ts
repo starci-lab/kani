@@ -25,9 +25,9 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    OpenPositionOrchestratorService,
+    OpenPositionActionService,
     OpenPositionSnapshotService,
-} from "@modules/blockchains"
+} from "@modules/blockchains/dexes/orchestrator"
 import {
     BalanceSnapshotsNotFoundException, 
 } from "@exceptions"
@@ -47,7 +47,7 @@ export class ConfirmService {
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
-        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly openPositionActionService: OpenPositionActionService,
     ) {}
 
     /**
@@ -88,7 +88,7 @@ export class ConfirmService {
         }
         const { transactionRecord, openPositionTransaction, executeResult: _executeResult } = executeResult
         // confirm the position
-        const { liquidity } = await this.openPositionOrchestratorService.confirm({
+        const { liquidity } = await this.openPositionActionService.confirm({
             positionId: _executeResult?.positionId ?? "",
             state: {
                 static: liquidityPool,

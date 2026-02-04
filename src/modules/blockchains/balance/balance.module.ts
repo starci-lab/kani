@@ -5,8 +5,11 @@ import {
     ConfigurableModuleClass, OPTIONS_TYPE 
 } from "./balance.module-definition"
 import {
-    BalanceService 
-} from "./balance.service"
+    BalanceEnqueueService 
+} from "./enqueue.service"
+import {
+    BalanceActionService 
+} from "./action.service"
 import {
     BalanceFetcherService 
 } from "./fetcher.service"
@@ -21,11 +24,15 @@ import {
 } from "../math/quote-ratio.service"
 import {
     SolanaBalanceService,
-    SolanaBalanceFetcherService 
+    SolanaBalanceFetcherService,
+    SolanaWithdrawActionService,
+    SolanaReconcileBalanceActionService,
 } from "./solana"
 import {
     SuiBalanceService,
-    SuiBalanceFetcherService 
+    SuiBalanceFetcherService,
+    SuiWithdrawActionService,
+    SuiReconcileBalanceActionService,
 } from "./sui"
 
 @Module({
@@ -33,21 +40,44 @@ import {
 export class BalanceModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-            SolanaBalanceFetcherService,
-            SuiBalanceFetcherService,
-            BalanceFetcherService,
+        const providers: Array<Provider> = []
+        
+        // Always add base services
+        providers.push(
             SwapMathService,
             GasStatusService,
             QuoteRatioService,
-        ]
-        if (!options.fetcherOnly) {
+        )
+        
+        // Add fetcher services if enabled
+        if (options.enable?.fetcher !== false) {
             providers.push(
-                SolanaBalanceService,
-                SuiBalanceService,
-                BalanceService,
+                SolanaBalanceFetcherService,
+                SuiBalanceFetcherService,
+                BalanceFetcherService,
             )
         }
+        
+        // Add action services if enabled
+        if (options.enable?.action !== false) {
+            providers.push(
+                SolanaWithdrawActionService,
+                SolanaReconcileBalanceActionService,
+                SolanaBalanceService,
+                SuiWithdrawActionService,
+                SuiReconcileBalanceActionService,
+                SuiBalanceService,
+                BalanceActionService,
+            )
+        }
+        
+        // Add enqueue services if enabled
+        if (options.enable?.enqueue !== false) {
+            providers.push(
+                BalanceEnqueueService,
+            )
+        }
+        
         return {
             ...dynamicModule,
             providers: [

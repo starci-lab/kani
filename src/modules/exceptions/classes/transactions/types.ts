@@ -5,4 +5,8 @@ export enum ErrorTransactionType {
     OpenPosition = "openPosition",
     // Close position transaction
     ClosePosition = "closePosition",
+    // Withdraw transaction
+    Withdraw = "withdraw",
+    // Reconcile balance transaction
+    ReconcileBalance = "reconcileBalance",
 }

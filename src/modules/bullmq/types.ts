@@ -6,6 +6,7 @@ export enum BullQueueName {
     OpenPosition = "openPosition",
     ClosePosition = "closePosition",
     ReconcileBalance = "reconcileBalance",
+    Withdraw = "withdraw",
 }
 
 /**

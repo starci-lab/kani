@@ -32,8 +32,8 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    BalanceService 
-} from "@modules/blockchains"
+    BalanceEnqueueService 
+} from "@modules/blockchains/balance"
 import {
     BotsLoaderService 
 } from "../../loaders"
@@ -50,7 +50,7 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly winstonService: WinstonService,
         private readonly botsLoaderService: BotsLoaderService,
         private readonly asyncService: AsyncService,
-        private readonly balanceService: BalanceService,
+        private readonly balanceEnqueueService: BalanceEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
     ) {
     }
@@ -110,7 +110,7 @@ export class RequeueService implements OnApplicationBootstrap {
                     )
                     if (!acquired) return
                     try {
-                        const bullmqJob = await this.balanceService.enqueue(
+                        const bullmqJob = await this.balanceEnqueueService.enqueue(
                             {
                                 bot,
                                 jobId: bot.activeJob?.job?.toString() ?? "",

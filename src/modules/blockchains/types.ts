@@ -5,7 +5,7 @@ import {
 } from "@mysten/sui/transactions"
 import BN from "bn.js"
 import {
-    LiquidityPoolId, TokenId 
+    TokenId 
 } from "@modules/databases"
 import {
     sendAndConfirmTransactionFactory, signTransaction 
@@ -44,12 +44,12 @@ export interface BasePayload {
 }
 
 export interface OpenPositionPayload extends BasePayload {
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId: string
     dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
 }
 
 export interface ClosePositionPayload extends BasePayload {
-    liquidityPoolId: LiquidityPoolId
+    liquidityPoolId: string
     dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
 }
 
@@ -57,4 +57,13 @@ export interface ReconcileBalancePayload extends BasePayload {
     targetBalanceAmount?: BN
     quoteBalanceAmount?: BN
     gasBalanceAmount?: BN
+}
+
+export interface WithdrawTokenInput {
+    tokenId: string
+    amount: BN
+}
+
+export interface WithdrawPayload extends BasePayload {
+    tokenInputs: Array<WithdrawTokenInput>
 }

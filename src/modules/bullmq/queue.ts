@@ -35,5 +35,11 @@ export const bullData: Record<BullQueueName, BullQueueData> = {
             envConfig().executor.id)),
         name: createHash("reconcile_balance",
             envConfig().executor.id),
+    },
+    [BullQueueName.Withdraw]: {
+        prefix: formatWithBraces(createHash("withdraw",
+            envConfig().executor.id)),
+        name: createHash("withdraw",
+            envConfig().executor.id),
     }
 }

@@ -22,10 +22,10 @@ import {
 } from "@modules/winston"
 import {
     AddTransactionRecordParams,
-    OpenPositionOrchestratorService,
+    OpenPositionActionService,
     PrepareOpenPositionResult,
     ExecuteOpenPositionResult,
-} from "@modules/blockchains"
+} from "@modules/blockchains/dexes/orchestrator"
 import {
     envConfig 
 } from "@modules/env"
@@ -42,7 +42,7 @@ import {
 @Injectable()
 export class ExecuteService {
     constructor(
-        private readonly openPositionOrchestratorService: OpenPositionOrchestratorService,
+        private readonly openPositionActionService: OpenPositionActionService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
@@ -97,7 +97,7 @@ export class ExecuteService {
         }
         const { openPositionTransaction } = prepareResult
         const stimulate = envConfig().executor.runtime.operation.openPosition.stimulate
-        const executeResult = await this.openPositionOrchestratorService.execute(
+        const executeResult = await this.openPositionActionService.execute(
             {
                 bot,
                 txHash: openPositionTransaction.txHash,

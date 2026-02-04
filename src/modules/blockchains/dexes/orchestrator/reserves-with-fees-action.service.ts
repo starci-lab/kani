@@ -16,38 +16,43 @@ import {
 import {
     MODULE_OPTIONS_TOKEN,
     OPTIONS_TYPE,
-} from "./dexes.module-definition"
+} from "./orchestrator.module-definition"
 import {
     ReservesWithFeesResult,
     LiquidityPoolState,
-} from "../interfaces"
+} from "../../interfaces"
 import {
     OrcaReservesWithFeesService,
-} from "./orca"
+} from "../orca"
 import {
     MeteoraReservesWithFeesService,
-} from "./meteora"
+} from "../meteora"
 import {
     RaydiumReservesWithFeesService,
-} from "./raydium"
+} from "../raydium"
 import {
     FlowXReservesWithFeesService,
-} from "./flowx"
+} from "../flowx"
 import {
     CetusReservesWithFeesService,
-} from "./cetus"
+} from "../cetus"
 import {
     TurbosReservesWithFeesService,
-} from "./turbos"
+} from "../turbos"
 import {
     MomentumReservesWithFeesService,
-} from "./momentum"
+} from "../momentum"
 import {
     LiquidityPoolStateService,
 } from "./liquidity-pool-state.service"
 
+export interface OrchestrateReservesWithFeesParams {
+    bot: BotSchema
+    liquidityPool: LiquidityPoolSchema
+}
+
 /**
- * ReservesWithFeesOrchestratorService
+ * ReservesWithFeesActionService
  *
  * High-level orchestration layer for calculating reserves and fees together.
  *
@@ -57,7 +62,7 @@ import {
  * - Calculate reserves and fees in a single call
  */
 @Injectable()
-export class ReservesWithFeesOrchestratorService {
+export class ReservesWithFeesActionService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly orcaReservesWithFeesService: OrcaReservesWithFeesService,
@@ -159,9 +164,4 @@ export class ReservesWithFeesOrchestratorService {
             })
         }
     }
-}
-
-export interface OrchestrateReservesWithFeesParams {
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
 }

@@ -40,7 +40,9 @@ import {
     SuiClient 
 } from "@mysten/sui/client"
 import {
-    messageWithIntent, SignatureWithBytes, toSerializedSignature 
+    messageWithIntent, 
+    SignatureWithBytes, 
+    toSerializedSignature 
 } from "@mysten/sui/cryptography"
 import {
     fromHex, toBase64 
@@ -73,17 +75,16 @@ export class PrivySignService {
             getTransactionEncoder().encode(transaction)
         )
         const privySignerPrivateKey = this.derivedAesKeyService.decrypt(encryptedPrivySignerPrivateKey)
-        const authorizationContext: AuthorizationContext = {
-            authorization_private_keys: [
-                this.mountStorageService.privySignerPrivateKey, 
-                privySignerPrivateKey
-            ],
-        }
         const signedTransaction = await this.privyClient.wallets().solana().signTransaction(
             walletId, 
             { 
                 transaction: transactionBytes, 
-                authorization_context: authorizationContext 
+                authorization_context: {
+                    authorization_private_keys: [
+                        this.mountStorageService.privySignerPrivateKey, 
+                        privySignerPrivateKey
+                    ],
+                } 
             }
         )
         const decodedTransaction = getTransactionDecoder().decode(
@@ -140,7 +141,9 @@ export class PrivySignService {
             }
         )
         const txSignature = toSerializedSignature({
-            signature: fromHex(signedTransaction.signature),
+            signature: fromHex(
+                signedTransaction.signature
+            ),
             signatureScheme: "ED25519",
             publicKey
         })

@@ -6,18 +6,20 @@ import {
 } from "@modules/databases"
 import {
     AddTransactionRecordParams,
-    PrepareSwapTransactionResult,
     ReconcileBalancePayload 
 } from "@modules/blockchains"
+import {
+    PrepareTx
+} from "@modules/blockchains/balance"
 
 /**
  * Data persisted/returned by reconcile-balance phases.
  *
- * - `swapTransactions` is produced by PREPARE and persisted on the Job document.
+ * - `prepareTxs` is produced by PREPARE and persisted on the Job document.
  * - `transactionRecords` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
 export interface ReconcileBalanceJobData {
-    swapTransactions: Array<PrepareSwapTransactionResult>
+    prepareTxs: Array<PrepareTx>
     transactionRecords?: Array<AddTransactionRecordParams>
 }
 
