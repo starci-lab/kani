@@ -1,8 +1,11 @@
 import {
-    ApiProperty 
+    AbstractRestResponse, IAbstractRestResponse,
+} from "@modules/api"
+import {
+    ApiProperty,
 } from "@nestjs/swagger"
 import {
-    IsMongoId, IsString, IsNumberString, IsObject 
+    IsMongoId, IsString, IsNumberString, IsObject,
 } from "class-validator"
 
 export class WithdrawTokenInput {
@@ -33,11 +36,16 @@ export class AddWithdrawJobRequest {
         tokenInputs: Array<WithdrawTokenInput>
 }
 
-export class AddWithdrawJobResponse {
+export class AddWithdrawJobResponseDataDto {
     @ApiProperty({
         description: "The ID of the job that was created",
-        example: "123",
+        example: "ac95c751a75e2665d5c1faa9",
     })
     @IsString()
         jobId: string
+}
+
+export class AddWithdrawJobResponseDto
+    extends AbstractRestResponse<AddWithdrawJobResponseDataDto>
+    implements IAbstractRestResponse<AddWithdrawJobResponseDataDto> {
 }

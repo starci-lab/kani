@@ -1,8 +1,9 @@
 import {
-    Injectable 
+    Injectable,
 } from "@nestjs/common"
 import {
-    AddWithdrawJobRequest 
+    AddWithdrawJobRequest,
+    AddWithdrawJobResponseDataDto,
 } from "./add-withdraw-job.dto"
 
 @Injectable()
@@ -12,9 +13,12 @@ export class AddWithdrawJobService {
     async addWithdrawJob(
         {
             tokenInputs,
-        }: AddWithdrawJobRequest
-    ): Promise<void> {
+        }: AddWithdrawJobRequest,
+    ): Promise<AddWithdrawJobResponseDataDto> {
         // TODO: Implement add withdraw job logic
         console.log(tokenInputs)
+        return {
+            jobId: "123",
+        }
     }
 }

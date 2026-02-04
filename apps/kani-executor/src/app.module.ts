@@ -63,9 +63,6 @@ import {
     AxiosModule 
 } from "@modules/axios"
 import {
-    ApolloClientModule 
-} from "@modules/apollo-client"
-import {
     TerminusModule, DependencyName 
 } from "@modules/terminus"
 import {
@@ -92,6 +89,9 @@ import {
     RedisModule,
     RedisInstanceKey
 } from "@modules/native"
+import {
+    ApolloClientModule,
+} from "@modules/api"
 
 @Module({
     imports: [

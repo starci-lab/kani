@@ -22,16 +22,16 @@ export abstract class AbstractRestResponse<T = unknown> {
         message: string
 
     @ApiPropertyOptional({
-        description: "Optional payload returned on success.",
-        example: null,
-    })
-        data?: T
-
-    @ApiPropertyOptional({
         description: "Error code or name when success is false.",
         example: "BadRequestException",
     })
         error?: string
+
+    @ApiPropertyOptional({
+        description: "Optional payload returned on success.",
+        example: null,
+    })
+        data?: T
 }
 
 /**

@@ -1,27 +1,30 @@
 import {
-    DynamicModule, Module, Provider 
+    DynamicModule, Module, Provider,
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass, OPTIONS_TYPE 
+    ConfigurableModuleClass, OPTIONS_TYPE,
 } from "./executor.module-definition"
 import {
-    LoadersModule 
+    LoadersModule,
 } from "./loaders"
 import {
-    RuntimesModule 
+    RuntimesModule,
 } from "./runtimes"
 import {
-    BussinessModule 
+    BussinessModule,
 } from "./bussiness"
 import {
-    WorkersModule 
+    WorkersModule,
 } from "./workers"
+import {
+    InterfacesModule,
+} from "./interfaces"
 
 @Module({
 })
 export class ExecutorModule extends ConfigurableModuleClass {
     static register(
-        options: typeof OPTIONS_TYPE
+        options: typeof OPTIONS_TYPE,
     ): DynamicModule {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = []
@@ -37,6 +40,9 @@ export class ExecutorModule extends ConfigurableModuleClass {
                     isGlobal: true,
                 }),
                 WorkersModule.register({
+                    isGlobal: true,
+                }),
+                InterfacesModule.register({
                     isGlobal: true,
                 }),
             ],
