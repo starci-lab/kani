@@ -223,10 +223,11 @@ export class PrepareService {
             }
         }
         // Prepare reconcile balance transactions
-        const { prepareTxs } = await this.balanceActionService.prepareReconcileBalanceTransaction({
+        const reconcileBalanceTransaction = await this.balanceActionService.prepareReconcileBalanceTransaction({
             bot,
             tokenInputs,
         })
+
         // Persist job state transition:
         // PENDING → PREPARED
         // This marks preparation as completed and enables execution phase
@@ -239,21 +240,21 @@ export class PrepareService {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "data.prepareTxs": prepareTxs,
+                        "data.reconcileBalanceTransaction": reconcileBalanceTransaction,
                     },
                 }
             )
         this.winstonService.log(
-            WinstonLog.SwapTransactionPrepared,
+            WinstonLog.ReconcileBalancePrepared,
             {
                 botId: bot.id,
-                txHashes: prepareTxs.map((prepareTx) => prepareTx.txHash),
+                txHashes: reconcileBalanceTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )
         // Return execution plan to next phase
         return {
             result: {
-                prepareTxs
+                reconcileBalanceTransaction
             }
         }
     }

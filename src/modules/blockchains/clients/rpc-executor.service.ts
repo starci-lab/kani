@@ -243,7 +243,7 @@ export class RpcExecutorService {
             // Unauthorized / forbidden => permanent failure
             if ([401,
                 403].includes(error.status)) {
-                return RpcErrorType.Fatal
+                return RpcErrorType.Ignorable
             }
             return RpcErrorType.Ignorable
         }
@@ -252,7 +252,7 @@ export class RpcExecutorService {
             if (RETRYABLE_JSON_RPC_CODES.has(error.code)) {
                 return RpcErrorType.Ignorable
             }
-            return RpcErrorType.Fatal
+            return RpcErrorType.Ignorable
         }
         // if the error is not a http status error or a json rpc error, return the error type
         return RpcErrorType.Ignorable

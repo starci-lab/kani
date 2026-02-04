@@ -3,22 +3,23 @@ import {
 } from "@modules/databases"
 import { 
     LiquidityPoolState, 
-    SolanaTx
+    PrepareTx,
 } from "./types"
-import {
-    SignatureWithBytes 
-} from "@mysten/sui/cryptography"
-import {
-    PrepareClosePositionParams, PrepareClosePositionResult 
-} from "./types"
+
+export interface PrepareClosePositionParams {
+  bot: BotSchema;
+  state: LiquidityPoolState;
+}
+
+export interface PrepareClosePositionResult {
+  prepareTxs: Array<PrepareTx>
+}
 
 export interface ExecuteClosePositionParams {
   bot: BotSchema;
   state: LiquidityPoolState;
   txCheck: boolean;
-  signatureWithBytes?: SignatureWithBytes;
-  solanaTx?: SolanaTx;
-  txHash: string;
+  prepareTxs: Array<PrepareTx>
   stimulate?: boolean;
 }
 

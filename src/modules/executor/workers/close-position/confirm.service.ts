@@ -102,7 +102,7 @@ export class ConfirmService {
                 botId: bot.id,
             })
         }
-        const { transactionRecord } = executeResult
+        const { transactionRecords } = executeResult
         // Fetch dynamic pool from cache
         const dynamicLiquidityPoolInfo = await this.liquidityPoolStateService.getDynamicLiquidityPoolInfo(liquidityPool)
         // Extract reward token addresses
@@ -135,13 +135,15 @@ export class ConfirmService {
         const session = await this.connection.startSession()
         await session.withTransaction(
             async (session) => {
-                if (transactionRecord) {
-                    await this.transactionSnapshotService.addTransactionRecord(
-                        {
-                            ...transactionRecord,
-                            session,
-                        }
-                    )
+                if (transactionRecords?.length) {
+                    for (const record of transactionRecords) {
+                        await this.transactionSnapshotService.addTransactionRecord(
+                            {
+                                ...record,
+                                session,
+                            },
+                        )
+                    }
                 }
                 await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                     {
@@ -188,12 +190,11 @@ export class ConfirmService {
                             incentiveBalanceAmounts,
                         },
                         positionId: bot.activePosition?.associatedPosition?.id ?? "",
-                        closeTxHash: transactionRecord?.txHash ?? "",
+                        closeTxHashes: transactionRecords?.map((record) => record.txHash) ?? [],
                         targetToken,
                         quoteToken,
                         gasToken,
                         session,
-                        stimulate,
                     }
                 )
                 await this.connection

@@ -6,22 +6,22 @@ import {
     Decimal 
 } from "decimal.js"
 import {
-    SolanaTx 
+    PrepareTx,
 } from "./types"
 import {
-    LiquidityPoolState, PrepareOpenPositionParams 
+    LiquidityPoolState 
 } from "./types"
-import {
-    SignatureWithBytes 
-} from "@mysten/sui/cryptography"
 import {
     Dayjs 
 } from "dayjs"
 
+export interface PrepareOpenPositionParams {
+  bot: BotSchema;
+  state: LiquidityPoolState;
+}
+
 export interface PrepareOpenPositionResult {
-  txHash: string;
-  signatureWithBytes?: SignatureWithBytes;
-  solanaTx?: SolanaTx;
+  prepareTxs: Array<PrepareTx>
   feeAmountA: BN;
   feeAmountB: BN;
   tickLower?: BN;
@@ -38,15 +38,14 @@ export interface ExecuteOpenPositionParams {
     bot: BotSchema;
     state: LiquidityPoolState;
     txCheck: boolean;
-    signatureWithBytes?: SignatureWithBytes
-    solanaTx?: SolanaTx;
-    txHash: string;
+    prepareTxs: Array<PrepareTx>
     positionId?: string;
     stimulate?: boolean;
 }
 
 export interface ExecuteOpenPositionResult {
   positionId: string;
+  txHashes: Array<string>;
 }
 
 export interface IOpenActionService {

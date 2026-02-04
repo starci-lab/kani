@@ -4,10 +4,12 @@ import {
 import {
     PrepareReconcileBalanceTransactionParams,
     PrepareReconcileBalanceTransactionResult,
-    PrepareTx,
     ExecuteReconcileBalanceTransactionParams,
     ExecuteReconcileBalanceTransactionResults,
 } from "../types"
+import {
+    PrepareTx
+} from "../../interfaces"
 import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
@@ -46,6 +48,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    AsyncService
+} from "@modules/mixin"
 
 /**
  * SuiReconcileBalanceActionService
@@ -62,6 +67,7 @@ export class SuiReconcileBalanceActionService {
         private readonly signerService: SignerService,
         private readonly winstonService: WinstonService,
         private readonly selectCoinsService: SelectCoinsService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     /**
@@ -74,6 +80,11 @@ export class SuiReconcileBalanceActionService {
             tokenInputs,
         }: PrepareReconcileBalanceTransactionParams
     ): Promise<PrepareReconcileBalanceTransactionResult> {
+        if (tokenInputs.length === 0) {
+            return {
+                prepareTxs: [],
+            }
+        }
         let txb = new Transaction()
         txb.setSender(bot.accountAddress)
         const prepareTxs: Array<PrepareTx> = []
@@ -188,16 +199,19 @@ export class SuiReconcileBalanceActionService {
         const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             // if isRetry, check if transaction has already been executed
-            if (isRetry) {
+            if (isRetry && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSuiClient({
                     accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
-                        return await suiClient.getTransactionBlock({
-                            digest: prepareTx.txHash,
-                            options: {
-                                showEffects: true,
-                            },
-                        })
+                        const [transaction] = await this.asyncService.resolveTuple( 
+                            suiClient.getTransactionBlock({
+                                digest: prepareTx.txHash,
+                                options: {
+                                    showEffects: true,
+                                },
+                            })
+                        )
+                        return transaction
                     },
                 })
                 // if transaction already exists on chain and is successful, add to txHashes

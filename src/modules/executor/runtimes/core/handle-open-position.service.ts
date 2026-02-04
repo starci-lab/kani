@@ -37,6 +37,18 @@ import {
     PriceDiagnosticNotReadyException,
     TokenNotFoundException
 } from "@exceptions"
+import {
+    WaitService
+} from "@modules/mixin"
+import {
+    InjectQueue
+} from "@nestjs/bullmq"
+import {
+    bullData, BullQueueName
+} from "@modules/bullmq"
+import {
+    Queue
+} from "bullmq"
 
 export interface HandleOpenPositionParams {
     bot: BotSchema
@@ -67,6 +79,9 @@ export class HandleOpenPositionService {
         private readonly priceDiagnosticService: PriceDiagnosticService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
+        private readonly waitService: WaitService,
+        @InjectQueue(bullData[BullQueueName.OpenPosition].name)
+        private readonly openPositionQueue: Queue<string>,
     ) {}
 
     /**
@@ -178,6 +193,16 @@ export class HandleOpenPositionService {
                 }
             )(),
         ])
+        // we wait for ensure no active job for the bot
+        const noActiveJobFound = await this.waitService.wait(
+            {
+                action: async () => {
+                    const job = await this.openPositionQueue.getJob(bot.id)
+                    return !job
+                }
+            }
+        )
+        if (!noActiveJobFound) return
         const jobId = new Types.ObjectId().toString()
         // check if the bot has an active job
         const acquired = await this.lockAuthorityService.acquire(

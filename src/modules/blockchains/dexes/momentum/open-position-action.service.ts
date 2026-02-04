@@ -39,6 +39,8 @@ import {
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
+    SuiSingleTransactionRequiredException,
+    ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -237,8 +239,12 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                 }
                             )
                             return {
-                                txHash,
-                                signatureWithBytes,
+                                prepareTxs: [
+                                    {
+                                        txHash,
+                                        signatureWithBytes,
+                                    },
+                                ],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
@@ -275,8 +281,12 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         }
                     )
                     return {
-                        txHash,
-                        signatureWithBytes,
+                        prepareTxs: [
+                            {
+                                txHash,
+                                signatureWithBytes,
+                            },
+                        ],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -294,9 +304,18 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
         state,
         txCheck,
         stimulate,
-        txHash,
-        signatureWithBytes,
+        prepareTxs,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // Sui requires exactly one transaction per execution
+        if (prepareTxs.length !== 1) {
+            throw new SuiSingleTransactionRequiredException({
+                operation: ErrorSuiSingleTransactionRequiredOperation.OpenPosition,
+                numTxs: prepareTxs.length,
+            })
+        }
+        const [prepareTx] = prepareTxs
+        const txHash = prepareTx.txHash
+        const signatureWithBytes = prepareTx.signatureWithBytes
         const _state = state as ClmmLiquidityPoolState
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -329,6 +348,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 )
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             }
         }
@@ -373,6 +393,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                     )
                     return {
                         positionId: positionId.toString(),
+                        txHashes: [txHash],
                     }
                 }
                 const { digest, events } = await suiClient.executeTransactionBlock({
@@ -403,6 +424,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                 )
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             },
         })

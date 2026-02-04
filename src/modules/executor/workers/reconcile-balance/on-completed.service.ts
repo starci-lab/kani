@@ -53,7 +53,8 @@ export class OnCompletedService {
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
-                if (envConfig().executor.workers.job.level === 2) {
+                if (
+                    envConfig().executor.workers.job.level === 2) {
                     await this.connection.model<JobSchema>(JobSchema.name).deleteOne(
                         {
                             _id: job.id,
@@ -95,14 +96,14 @@ export class OnCompletedService {
                         session,
                     }
                 )
-                this.winstonService.log(
-                    WinstonLog.ReconcileBalanceProcessingCompleted,
-                    {
-                        botId: bot.id,
-                        jobId: job.id,
-                        bullmqJobId: bullmqJob.id,
-                    }
-                )
+            }
+        )
+        this.winstonService.log(
+            WinstonLog.ReconcileBalanceProcessingCompleted,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                bullmqJobId: bullmqJob.id,
             }
         )
         await this.lockAuthorityService.release(

@@ -84,7 +84,7 @@ export class ConfirmService {
             )
             return
         }
-        const { transactionRecord, openPositionTransaction, executeResult: _executeResult } = executeResult
+        const { transactionRecords, openPositionTransaction, executeResult: _executeResult } = executeResult
         // confirm the position
         const { liquidity } = await this.openPositionActionService.confirm({
             positionId: _executeResult?.positionId ?? "",
@@ -107,6 +107,9 @@ export class ConfirmService {
         try {
             await session.withTransaction(
                 async () => {
+                    if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+                        return
+                    }
                     if (!bot.balanceSnapshots) {
                         throw new BalanceSnapshotsNotFoundException(
                             {
@@ -114,13 +117,15 @@ export class ConfirmService {
                             }
                         )
                     }
-                    if (transactionRecord) {
-                        await this.transactionSnapshotService.addTransactionRecord(
-                            {
-                                ...transactionRecord,
-                                session,
-                            }
-                        )
+                    if (transactionRecords?.length) {
+                        for (const record of transactionRecords) {
+                            await this.transactionSnapshotService.addTransactionRecord(
+                                {
+                                    ...record,
+                                    session,
+                                },
+                            )
+                        }
                     }
                     await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                         {
@@ -144,25 +149,25 @@ export class ConfirmService {
                                 quoteBalanceAmount,
                                 gasBalanceAmount,
                             },
-                            openTxHash: openPositionTransaction.txHash,
-                            positionId: _executeResult?.positionId ?? "",
+                            liquidityPool,
                             feeTargetAmount: targetIsA ? openPositionTransaction.feeAmountA : openPositionTransaction.feeAmountB,
                             feeQuoteAmount: targetIsA ? openPositionTransaction.feeAmountB : openPositionTransaction.feeAmountA,
-                            liquidityPool,
                             targetToken,
                             quoteToken,
                             gasToken,
-                            session,
-                            stimulate: envConfig().executor.runtime.operation.openPosition.stimulate,
+                            positionId: _executeResult?.positionId ?? "",
+                            openTxHashes: transactionRecords?.map((record) => record.txHash) ?? [],
                             clmmParams: liquidityPool.type === LiquidityPoolType.Clmm ? {
                                 liquidity: liquidity ?? new BN(0),
-                                tickLower: openPositionTransaction.tickLower ?? new BN(0),
-                                tickUpper: openPositionTransaction.tickUpper ?? new BN(0),
+                                tickLower: openPositionTransaction?.tickLower ?? new BN(0),
+                                tickUpper: openPositionTransaction?.tickUpper ?? new BN(0),
                             } : undefined,
                             dlmmParams: liquidityPool.type === LiquidityPoolType.Dlmm ? {
                                 minBinId: openPositionTransaction?.minBinId ?? new BN(0),
                                 maxBinId: openPositionTransaction?.maxBinId ?? new BN(0),
                             } : undefined,
+                            metadata: openPositionTransaction.metadata,
+                            session,
                         }
                     )
                     await this.connection

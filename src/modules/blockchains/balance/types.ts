@@ -5,6 +5,7 @@ import {
 import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
+    PrepareTx,
     SolanaTx 
 } from "../interfaces"
 import {
@@ -25,12 +26,6 @@ export interface BalanceOptions {
 export interface BalanceWithdrawTokenInput {
     token: TokenSchema
     amount: BN
-}
-
-export interface PrepareTx {
-    txHash: string
-    solanaTx?: SolanaTx
-    signatureWithBytes?: SignatureWithBytes
 }
 
 export interface PrepareWithdrawTransactionParams {

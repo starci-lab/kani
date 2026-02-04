@@ -153,7 +153,7 @@ export class PrepareService {
         // Note: toAddress and toUsdc should come from payload or config
         // For now, we'll use bot.accountAddress as default toAddress
         // and toUsdc as false (can be made configurable)
-        const { prepareTxs } = await this.balanceActionService.prepareWithdrawTransaction({
+        const withdrawTransaction = await this.balanceActionService.prepareWithdrawTransaction({
             bot,
             tokenInputs: withdrawTokenInputs,
             toAddress: bot.withdrawalAddress,
@@ -171,21 +171,21 @@ export class PrepareService {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "data.prepareTxs": prepareTxs,
+                        "data.withdrawTransaction": withdrawTransaction,
                     },
                 }
             )
         this.winstonService.log(
-            WinstonLog.SwapTransactionPrepared,
+            WinstonLog.WithdrawPrepared,
             {
                 botId: bot.id,
-                txHashes: prepareTxs.map((prepareTx) => prepareTx.txHash),
+                txHashes: withdrawTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
             }
         )
         // Return execution plan to next phase
         return {
             result: {
-                prepareTxs
+                withdrawTransaction
             }
         }
     }

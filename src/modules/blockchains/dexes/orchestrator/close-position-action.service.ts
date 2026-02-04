@@ -2,7 +2,6 @@ import {
     Inject, Injectable 
 } from "@nestjs/common"
 import {
-    BotSchema,
     DexId,
     PrimaryMemoryStorageService,
 } from "@modules/databases"

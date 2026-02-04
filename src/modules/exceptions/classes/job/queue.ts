@@ -49,10 +49,21 @@ export interface CannotReconcileBalanceEnqueueJobExceptionMetadata {
     botId: string
     reason: CannotReconcileBalanceEnqueueJobReason
     error?: string
+    /** Original error name (e.g. JobIdAlreadyExistsError) */
+    errorName?: string
+    /** Original error stack (for debugging) */
+    errorStack?: string
 }
 export class CannotEnqueueReconcileBalanceJobException extends AbstractException {
     constructor(
-        { jobId, botId, reason, error }: CannotReconcileBalanceEnqueueJobExceptionMetadata
+        {
+            jobId,
+            botId,
+            reason,
+            error,
+            errorName,
+            errorStack,
+        }: CannotReconcileBalanceEnqueueJobExceptionMetadata
     ) {
         super(
             "Cannot enqueue reconcile balance job", 
@@ -62,6 +73,8 @@ export class CannotEnqueueReconcileBalanceJobException extends AbstractException
                 botId,
                 reason,
                 error,
+                errorName,
+                errorStack,
             }
         )
     }

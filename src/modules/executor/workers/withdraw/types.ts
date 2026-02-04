@@ -6,11 +6,9 @@ import {
 } from "@modules/databases"
 import {
     AddTransactionRecordParams,
-    WithdrawPayload 
+    WithdrawPayload,
+    PrepareWithdrawTransactionResult
 } from "@modules/blockchains"
-import {
-    PrepareTx
-} from "@modules/blockchains/balance"
 
 /**
  * Data persisted/returned by withdraw phases.
@@ -19,7 +17,7 @@ import {
  * - `transactionRecords` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
 export interface ReconcileBalanceJobData {
-    prepareTxs: Array<PrepareTx>
+    withdrawTransaction: PrepareWithdrawTransactionResult
     transactionRecords?: Array<AddTransactionRecordParams>
 }
 

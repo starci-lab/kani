@@ -85,16 +85,15 @@ export class PositionSchema extends AbstractSchema {
      * On-chain transaction hash that created (opened) this position.
      * Guaranteed to be unique across all positions.
      */
-    @Field(() => String,
+    @Field(() => [String],
         {
-            description: "Transaction hash that created this position",
+            description: "Transaction hashes that created this position",
         })
     @Prop({
-        type: String,
+        type: [String],
         required: true,
-        unique: true,
     })
-        openTxHash: string
+        openTxHashes: Array<string>
 
     /**
      * Reference to the liquidity pool where this position was opened.
@@ -206,16 +205,16 @@ export class PositionSchema extends AbstractSchema {
      * On-chain transaction hash that closed this position.
      * Present only after the position is closed.
      */
-    @Field(() => String,
+    @Field(() => [String],
         {
-            description: "Transaction hash that closed this position",
+            description: "Transaction hashes that closed this position",
             nullable: true,
         })
     @Prop({
-        type: String,
+        type: [String],
         required: false,
     })
-        closeTxHash?: string
+        closeTxHashes?: Array<string>
 
     /**
      * Snapshot captured at the time the position was opened.

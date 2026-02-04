@@ -31,6 +31,18 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    WaitService
+} from "@modules/mixin"
+import {
+    InjectQueue
+} from "@nestjs/bullmq"
+import {
+    bullData, BullQueueName
+} from "@modules/bullmq"
+import {
+    Queue
+} from "bullmq"
 
 export interface HandleClosePositionParams {
     bot: BotSchema
@@ -59,6 +71,9 @@ export class HandleClosePositionService {
         private readonly settlementService: SettlementService,
         private readonly liquidityPoolStateService: LiquidityPoolStateService,
         private readonly positionAssociateService: PositionAssociateService,
+        private readonly waitService: WaitService,
+        @InjectQueue(bullData[BullQueueName.ClosePosition].name)
+        private readonly closePositionQueue: Queue<string>,
     ) {}
 
     /**
@@ -77,10 +92,9 @@ export class HandleClosePositionService {
             eventPayload,
         }: HandleClosePositionParams
     ) {
-        // we do nothing if the bot is not running
-        if (!bot.running) {
-            return
-        }
+        // run even if the bot is not running
+        // // we do nothing if the bot is not running
+        // if (!bot.running) return
         // we do nothing if the bot has an active position
         if (!bot.activePosition) return
         if (bot.activeJob) {
@@ -110,6 +124,16 @@ export class HandleClosePositionService {
             )
             return
         }
+        // we wait for ensure no active job for the bot
+        const noActiveJobFound = await this.waitService.wait(
+            {
+                action: async () => {
+                    const job = await this.closePositionQueue.getJob(bot.id)
+                    return !job
+                }
+            }
+        )
+        if (!noActiveJobFound) return
         // check if the bot has an active job
         const acquired = await this.lockAuthorityService.acquire(
             {

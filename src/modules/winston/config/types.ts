@@ -783,6 +783,22 @@ export interface SwapTransactionPreparedMessage {
 }
 
 /**
+ * Reconcile Balance Prepared Message
+ */
+export interface ReconcileBalancePreparedMessage {
+    botId: string
+    txHashes: Array<string>
+}
+
+/**
+ * Withdraw Prepared Message
+ */
+export interface WithdrawPreparedMessage {
+    botId: string
+    txHashes: Array<string>
+}
+
+/**
  * Reconcile Balance Requeue Failed Message
  */
 export interface ReconcileBalanceRequeueFailedMessage {

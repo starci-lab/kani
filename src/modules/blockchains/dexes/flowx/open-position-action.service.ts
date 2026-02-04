@@ -40,6 +40,8 @@ import {
     ErrorTransactionType,
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
+    SuiSingleTransactionRequiredException,
+    ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
 import {
     RpcExecutorService 
@@ -226,8 +228,12 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
                             return {
-                                txHash,
-                                signatureWithBytes,
+                                prepareTxs: [
+                                    {
+                                        txHash,
+                                        signatureWithBytes,
+                                    },
+                                ],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
@@ -262,8 +268,12 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         }
                     )
                     return {
-                        txHash,
-                        signatureWithBytes,
+                        prepareTxs: [
+                            {
+                                txHash,
+                                signatureWithBytes,
+                            },
+                        ],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -279,9 +289,18 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
         state,
         txCheck,
         stimulate,
-        txHash,
-        signatureWithBytes,
+        prepareTxs,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // Sui requires exactly one transaction per execution
+        if (prepareTxs.length !== 1) {
+            throw new SuiSingleTransactionRequiredException({
+                operation: ErrorSuiSingleTransactionRequiredOperation.OpenPosition,
+                numTxs: prepareTxs.length,
+            })
+        }
+        const [prepareTx] = prepareTxs
+        const txHash = prepareTx.txHash
+        const signatureWithBytes = prepareTx.signatureWithBytes
         const _state = state as ClmmLiquidityPoolState
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -314,6 +333,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 )
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             }
         }
@@ -366,6 +386,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     )
                     return {
                         positionId,
+                        txHashes: [txHash],
                     }
                 }
                 const { digest, events } = await suiClient.executeTransactionBlock({
@@ -394,6 +415,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                 })
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             },
         })

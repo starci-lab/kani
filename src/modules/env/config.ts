@@ -57,6 +57,15 @@ export const envConfig = () => ({
                 true),
         },
     },
+    // wait config
+    wait: {
+        base: {
+            retries: parseEnvInt("WAIT_BASE_RETRIES",
+                30),
+            intervalMs: parseEnvMs("WAIT_BASE_INTERVAL_MS",
+                "100ms"),
+        },
+    },
     // transaction config
     transaction: {
         swap: {

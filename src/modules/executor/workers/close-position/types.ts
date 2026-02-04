@@ -20,11 +20,12 @@ import {
  * Metadata persisted/returned by close-position phases.
  *
  * - `closePositionTransaction` is produced by PREPARE and persisted on the Job document.
- * - `transactionRecord` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
+ * - `transactionRecords` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
 export interface ClosePositionJobData {
     closePositionTransaction: PrepareClosePositionResult
-    transactionRecord?: AddTransactionRecordParams
+    /** Transaction records to snapshot in CONFIRM (one per tx hash) */
+    transactionRecords?: Array<AddTransactionRecordParams>
 }
 
 export interface ProcessParams {

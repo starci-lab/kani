@@ -11,7 +11,6 @@ import {
     PositionSchema, 
     PositionSnapshotsSchema
 } from "@modules/databases"
-import BN from "bn.js"
 import {
     DayjsService 
 } from "@modules/mixin"
@@ -40,7 +39,7 @@ export class OpenPositionSnapshotService {
             bot,
             liquidityPool,
             positionId,
-            openTxHash,
+            openTxHashes,
             metadata,
             session,
             feeTargetAmount,
@@ -48,7 +47,6 @@ export class OpenPositionSnapshotService {
             targetToken,
             quoteToken,
             gasToken,
-            stimulate,
         }: AddOpenPositionRecordParams
     ) {
         const now = this.dayjsService.now().toDate()
@@ -68,14 +66,15 @@ export class OpenPositionSnapshotService {
             }
             : undefined
         // Build open snapshot using before snapshot (snapshot before opening position)
-        const { positionValue, positionValueInUsd, balanceValue, balanceValueInUsd } = await this.positionValueService.calculatePositionValue(
+        const { 
+            positionValue, 
+            positionValueInUsd, 
+            balanceValue, 
+            balanceValueInUsd 
+        } = await this.positionValueService.calculatePositionValue(
             {
                 before,
-                after: stimulate ? {
-                    targetBalanceAmount: new BN(0),
-                    quoteBalanceAmount: new BN(0),
-                    gasBalanceAmount: new BN(0),
-                } : after,
+                after,
                 targetToken,
                 quoteToken,
                 gasToken,
@@ -105,7 +104,7 @@ export class OpenPositionSnapshotService {
                     chainId: bot.chainId,
                     liquidityPool: liquidityPool.id,
                     positionId,
-                    openTxHash,
+                    openTxHashes,
                     isActive: true,
                     metadata,
                     clmmState,

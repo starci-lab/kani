@@ -29,7 +29,6 @@ export class TransactionSnapshotService {
             bot,
             chainId,
             type,
-            isStimulated,
             session,
         }: AddTransactionRecordParams
     ): Promise<void> {
@@ -42,7 +41,6 @@ export class TransactionSnapshotService {
                         txHash,
                         bot: bot.id,
                         timestamp: this.dayjsService.now().toDate(),
-                        isStimulated,
                     }
                 ],
                 {

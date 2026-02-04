@@ -199,3 +199,35 @@ export class SuiObjectPositionNotFoundException extends AbstractException {
         )
     }
 }
+
+export enum ErrorSuiSingleTransactionRequiredOperation {
+    OpenPosition = "openPosition",
+    ClosePosition = "closePosition",
+}
+/** Thrown when Sui operation expects exactly one prepared transaction */
+export interface SuiSingleTransactionRequiredExceptionMetadata extends AbstractExceptionMetadata {
+    operation: ErrorSuiSingleTransactionRequiredOperation
+    numTxs: number
+}
+
+
+export class SuiSingleTransactionRequiredException extends AbstractException {
+    constructor(
+        {
+            operation,
+            numTxs,
+            originalError,
+        }: SuiSingleTransactionRequiredExceptionMetadata
+    ) {
+        super(
+            "Sui requires exactly one transaction",
+            "SUI_SINGLE_TRANSACTION_REQUIRED_EXCEPTION",
+            {
+                operation,
+                numTxs,
+                originalError,
+            },
+        )
+    }
+}
+

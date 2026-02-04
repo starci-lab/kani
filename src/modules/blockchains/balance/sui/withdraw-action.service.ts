@@ -4,10 +4,12 @@ import {
 import {
     PrepareWithdrawTransactionParams,
     PrepareWithdrawTransactionResult,
-    PrepareTx,
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
 } from "../types"
+import {
+    PrepareTx
+} from "../../interfaces"
 import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,
@@ -53,6 +55,9 @@ import {
     TokenType 
 } from "@modules/typedefs"
 import BN from "bn.js"
+import {
+    AsyncService
+} from "@modules/mixin"
 
 @Injectable()
 export class SuiWithdrawActionService {
@@ -64,6 +69,7 @@ export class SuiWithdrawActionService {
         private readonly winstonService: WinstonService,
         private readonly selectCoinsService: SelectCoinsService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly asyncService: AsyncService,
     ) { }
 
     public async prepare(
@@ -364,19 +370,27 @@ export class SuiWithdrawActionService {
             stimulate = false,
         }: ExecuteWithdrawTransactionParams
     ): Promise<ExecuteWithdrawTransactionResult> {
+        if (prepareTxs.length === 0) {
+            return {
+                txHashes: [],
+            }
+        }
         const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
             // if isRetry, check if transaction has already been executed
-            if (isRetry) {
+            if (isRetry && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSuiClient({
                     accessType: RpcAccessType.Http,
                     callback: async ({ suiClient }) => {
-                        return await suiClient.getTransactionBlock({
-                            digest: prepareTx.txHash,
-                            options: {
-                                showEffects: true,
-                            },
-                        })
+                        const [transaction] = await this.asyncService.resolveTuple(
+                            suiClient.getTransactionBlock({
+                                digest: prepareTx.txHash,
+                                options: {
+                                    showEffects: true,
+                                },
+                            })
+                        )
+                        return transaction
                     },
                 })
                 // if transaction already exists on chain and is successful, add to txHashes

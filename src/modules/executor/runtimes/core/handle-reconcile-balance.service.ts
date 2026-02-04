@@ -18,11 +18,21 @@ import {
     Types 
 } from "mongoose"
 import {
-    DayjsService 
+    DayjsService,
+    WaitService
 } from "@modules/mixin"
 import {
     envConfig 
 } from "@modules/env"
+import {
+    InjectQueue 
+} from "@nestjs/bullmq"
+import {
+    Queue 
+} from "bullmq"
+import {
+    BullQueueName, bullData
+} from "@modules/bullmq"
 
 @Injectable()
 export class HandleReconcileBalanceService {
@@ -40,6 +50,9 @@ export class HandleReconcileBalanceService {
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
+        private readonly waitService: WaitService,
+        @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
+        private readonly reconcileBalanceQueue: Queue<string>,
     ) {}
 
     /**
@@ -58,9 +71,7 @@ export class HandleReconcileBalanceService {
         if (!bot.running) return
         // we do nothing if the bot has an active position
         if (bot.activePosition) return
-        if (bot.activeJob) {
-            return
-        }
+        // after this, we will poll 10 times for 
         if (bot.balanceSnapshots?.snapshotAt) {
             const diffMs = this.dayjsService.now().diff(
                 this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
@@ -70,6 +81,23 @@ export class HandleReconcileBalanceService {
                 return
             }
         }
+        // check if the bot has an active job
+        if (bot.activeJob) {
+            return
+        }
+        // we wait for ensure no active job for the bot
+        const noActiveJobFound = await this.waitService.wait(
+            {
+                action: async () => {
+                    const job = await this.reconcileBalanceQueue.getJob(bot.id)
+                    console.log("job",
+                        job)
+                    return !job
+                }
+            }
+        )
+        if (!noActiveJobFound) return
+        // acquire the lock authority
         const jobId = new Types.ObjectId().toString()
         // check if the bot has an active job
         const acquired = await this.lockAuthorityService.acquire(

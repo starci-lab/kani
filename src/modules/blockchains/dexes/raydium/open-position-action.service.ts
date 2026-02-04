@@ -20,7 +20,6 @@ import {
 import { 
     InvalidPoolTokensException, 
     BalanceSnapshotsNotFoundException,
-    TransactionNotPreparedException,
     MissingPositionIdParamException,
     ErrorTransactionType,
     SolanaAccountNotFoundException,
@@ -30,7 +29,7 @@ import {
     ActivePositionNotFoundException,
     PositionClmmStateNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
-    TransactionValidationFailedException,
+    MissingSolanaTxParamException,
 } from "@modules/exceptions"
 import {
     TickMathService 
@@ -229,7 +228,12 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                                 }
                             )
                             return {
-                                txHash,
+                                prepareTxs: [
+                                    {
+                                        txHash,
+                                        solanaTx: signedTransaction,  
+                                    }
+                                ],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
@@ -272,13 +276,17 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         WinstonLog.OpenPositionTransactionPrepared,
                         {
                             botId: bot.id,
-                            txHash: signedTransaction.txHash,
+                            txHash: signedTransaction.txHash.toString(),
                             liquidityPoolId: _state.static.displayId,
                         }
                     )
                     return {
-                        txHash: signedTransaction.txHash,
-                        solanaTx: signedTransaction.signedTransaction,
+                        prepareTxs: [
+                            {
+                                txHash: signedTransaction.txHash.toString(),
+                                solanaTx: signedTransaction.signedTransaction,
+                            }
+                        ],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -296,8 +304,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     async execute({
         txCheck,
         stimulate,
-        txHash,
-        solanaTx,
+        prepareTxs,
         positionId,
         bot,
         state,
@@ -308,92 +315,81 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: state.static.displayId,
             })
         }
-        if (txCheck && !stimulate) {
-            const transaction = await this.rpcExecutorService.withSolanaRpc({
-                accessType: RpcAccessType.Http,
-                callback: async ({ rpc }) => {
-                    return await rpc.getTransaction(
-                        signature(txHash), 
-                        {
-                            commitment: "confirmed", encoding: "base58" 
-                        }
-                    ).send()
-                },
-            })
-            if (transaction) {
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionFound,
-                    {
-                        botId: bot.id,
-                        txHash,
-                        liquidityPoolId: state.static.displayId,
-                    }
-                )
-                return {
-                    positionId: positionId.toString(),
-                }   
+        const txHashes: Array<string> = []
+        for (const prepareTx of prepareTxs) {
+            if (txCheck && !stimulate) {
+                const transaction = await this.rpcExecutorService.withSolanaRpc({
+                    accessType: RpcAccessType.Http,
+                    callback: async ({ rpc }) => {
+                        return await rpc.getTransaction(
+                            signature(prepareTx.txHash), 
+                            {
+                                commitment: "confirmed", encoding: "base58" 
+                            }
+                        ).send()
+                    },
+                })
+                if (transaction) {
+                    txHashes.push(prepareTx.txHash)
+                    continue
+                }
             }
-        }
-        if (!solanaTx) {
-            throw new TransactionNotPreparedException({
-                botId: bot.id,
-                txHash,
-                liquidityPoolId: state.static.displayId,
-                type: ErrorTransactionType.OpenPosition,
-            })
-        }
-        return await this.rpcExecutorService.withSolanaRpc({
-            accessType: RpcAccessType.Write,
-            callback: async ({ rpc, rpcSubscriptions }) => { 
-                if (stimulate) {
-                    const transaction = await rpc.simulateTransaction(
-                        getBase64EncodedWireTransaction(solanaTx),
-                        {
-                            encoding: "base64",
-                            commitment: "confirmed",
-                        }).send()
-                    if (transaction.value.err) {
-                        throw new TransactionValidationFailedException({
-                            botId: bot.id,
-                            txHash,
-                            type: ErrorTransactionType.OpenPosition,
-                        })
+            const solanaTx = prepareTx.solanaTx
+            if (!solanaTx) {
+                throw new MissingSolanaTxParamException({
+                    botId: bot.id,
+                    type: ErrorTransactionType.OpenPosition,
+                })   
+            }
+            await this.rpcExecutorService.withSolanaRpc({
+                accessType: RpcAccessType.Write,
+                callback: async ({ rpc, rpcSubscriptions }) => { 
+                    if (stimulate) {
+                        const transaction = await rpc.simulateTransaction(
+                            getBase64EncodedWireTransaction(solanaTx),
+                            {
+                                encoding: "base64",
+                                commitment: "confirmed",
+                            }).send()
+                        if (!transaction.value.err) {
+                            this.winstonService.log(
+                                WinstonLog.OpenPositionTransactionStimulated,
+                                {
+                                    botId: bot.id,
+                                    txHash: prepareTx.txHash,
+                                    liquidityPoolId: state.static.displayId,
+                                }
+                            )
+                            txHashes.push(prepareTx.txHash)
+                            return
+                        }
                     }
+                    const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
+                        rpc,
+                        rpcSubscriptions,
+                    })
+                    await sendAndConfirmTransaction(
+                        solanaTx, 
+                        {
+                            commitment: "confirmed",
+                        }
+                    )
                     this.winstonService.log(
-                        WinstonLog.OpenPositionTransactionStimulated,
+                        WinstonLog.OpenPositionTransactionExecuted,
                         {
                             botId: bot.id,
-                            txHash,
+                            txHash: prepareTx.txHash,
                             liquidityPoolId: state.static.displayId,
                         }
                     )
-                    return {
-                        positionId: positionId.toString(),
-                    }
-                }
-                const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
-                    rpc,
-                    rpcSubscriptions,
-                })
-                await sendAndConfirmTransaction(
-                    solanaTx, 
-                    {
-                        commitment: "confirmed",
-                    }
-                )
-                this.winstonService.log(
-                    WinstonLog.OpenPositionTransactionExecuted,
-                    {
-                        botId: bot.id,
-                        txHash,
-                        liquidityPoolId: state.static.displayId,
-                    }
-                )
-                return {
-                    positionId,
-                }
-            },
-        })
+                    txHashes.push(prepareTx.txHash)
+                },
+            })
+        }
+        return {
+            positionId: positionId.toString(),
+            txHashes,
+        }
     }
 
     async confirm(

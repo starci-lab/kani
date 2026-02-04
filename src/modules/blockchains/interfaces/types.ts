@@ -5,7 +5,7 @@ import {
     ClmmPool 
 } from "@flowx-finance/sdk"
 import {
-    BotSchema, LiquidityPoolId, LiquidityPoolSchema, TokenSchema 
+    LiquidityPoolId, LiquidityPoolSchema, TokenSchema 
 } from "@modules/databases"
 import BN from "bn.js"
 import {
@@ -60,24 +60,13 @@ export interface LiquidityPoolState {
     dynamic: DynamicClmmLiquidityPoolInfoCacheResult | DynamicDlmmLiquidityPoolInfoCacheResult;
 }
 
-export interface PrepareOpenPositionParams {
-    bot: BotSchema;
-    state: LiquidityPoolState;
-}
-
-
-export interface PrepareClosePositionParams {
-    bot: BotSchema;
-    state: LiquidityPoolState;
-}
-
-export interface PrepareClosePositionResult {
-    txHash: string;
-    signatureWithBytes?: SignatureWithBytes;
-    solanaTx?: SolanaTx;
-}
-
 export type SolanaTx = FullySignedTransaction & Readonly<TransactionWithinSizeLimit & TransactionWithBlockhashLifetime & Readonly<{
     messageBytes: TransactionMessageBytes;
     signatures: SignaturesMap;
 }>>
+
+export interface PrepareTx {
+    txHash: string
+    solanaTx?: SolanaTx
+    signatureWithBytes?: SignatureWithBytes
+}

@@ -4,8 +4,10 @@ import {
 import {
     PrepareWithdrawTransactionParams,
     PrepareWithdrawTransactionResult,
-    PrepareTx,
 } from "../types"
+import {
+    PrepareTx
+} from "../../interfaces"
 import {
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,

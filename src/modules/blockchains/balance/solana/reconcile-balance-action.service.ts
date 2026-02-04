@@ -4,10 +4,12 @@ import {
 import {
     PrepareReconcileBalanceTransactionParams,
     PrepareReconcileBalanceTransactionResult,
-    PrepareTx,
     ExecuteReconcileBalanceTransactionParams,
     ExecuteReconcileBalanceTransactionResults,
 } from "../types"
+import {
+    PrepareTx
+} from "../../interfaces"
 import {
     PrivyMetadataNotFoundException, 
     EncryptedPrivySignerPrivateKeyNotFoundException, 

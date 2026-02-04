@@ -71,11 +71,11 @@ export class ExecuteService {
         }
 
         const transactionRecords: ReconcileBalanceJobData["transactionRecords"] = []
-        const { prepareTxs } = prepareResult
+        const { reconcileBalanceTransaction } = prepareResult
 
         const { txHashes } = await this.balanceActionService.executeReconcileBalanceTransaction({
             bot,
-            prepareTxs,
+            prepareTxs: reconcileBalanceTransaction.prepareTxs,
             isRetry: isRetry || (payload.isRetry ?? false),
             stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
         })

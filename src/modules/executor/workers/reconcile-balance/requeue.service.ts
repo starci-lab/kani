@@ -100,7 +100,7 @@ export class RequeueService implements OnApplicationBootstrap {
                 async (bot) => {
                     const bullmqJob = await this.reconcileBalanceQueue.getJob(bot.id)
                     if (bullmqJob) {
-                    // we can add additional logic here
+                        // we can add additional logic here
                         return
                     }
                     const acquired = await this.lockAuthorityService.acquire(

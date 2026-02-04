@@ -85,13 +85,15 @@ export class ExecuteService {
             const { 
                 openPositionTransaction, 
                 executeResult, 
-                transactionRecord 
+                transactionRecords 
             } = job.data as ToStringObject<OpenPositionJobData>
             return {
                 result: {
                     openPositionTransaction: this.superJson.parse<PrepareOpenPositionResult>(openPositionTransaction),
                     executeResult: executeResult ? this.superJson.parse<ExecuteOpenPositionResult>(executeResult) : undefined,
-                    transactionRecord: transactionRecord ? this.superJson.parse<AddTransactionRecordParams>(transactionRecord) : undefined,
+                    transactionRecords: transactionRecords
+                        ? this.superJson.parse<Array<AddTransactionRecordParams>>(transactionRecords)
+                        : undefined,
                 }
             }
         }
@@ -100,9 +102,7 @@ export class ExecuteService {
         const executeResult = await this.openPositionActionService.execute(
             {
                 bot,
-                txHash: openPositionTransaction.txHash,
-                signatureWithBytes: openPositionTransaction.signatureWithBytes,
-                solanaTx: openPositionTransaction.solanaTx,
+                prepareTxs: openPositionTransaction.prepareTxs,
                 state: {
                     static: liquidityPool,
                     dynamic: dynamicLiquidityPoolInfo,
@@ -111,13 +111,15 @@ export class ExecuteService {
                 stimulate,
             }
         )
-        const transactionRecord: AddTransactionRecordParams = {
-            bot,
-            txHash: openPositionTransaction.txHash,
-            chainId: bot.chainId,
-            type: TransactionType.OpenPosition,
-            isStimulated: stimulate,
-        }
+        const txHashes = executeResult.txHashes ?? []
+        const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
+            (txHash) => ({
+                bot,
+                txHash,
+                chainId: bot.chainId,
+                type: TransactionType.OpenPosition,
+            }),
+        )
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -128,14 +130,14 @@ export class ExecuteService {
                     $set: {
                         status: JobStatus.Executed,
                         "data.executeResult": this.superJson.stringify(executeResult),
-                        "data.transactionRecord": this.superJson.stringify(transactionRecord),
+                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
                     },
                 }
             )
         return {
             result: {
                 ...prepareResult,
-                transactionRecord,
+                transactionRecords,
                 executeResult,
             }
         }

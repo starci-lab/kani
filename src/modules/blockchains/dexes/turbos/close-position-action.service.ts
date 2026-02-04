@@ -25,6 +25,8 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     ErrorTransactionType,
     TransactionValidationFailedException,
+    SuiSingleTransactionRequiredException,
+    ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
 import {
     RpcExecutorService
@@ -94,8 +96,12 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                                     }
                                 )
                                 return {
-                                    txHash,
-                                    signatureWithBytes,
+                                    prepareTxs: [
+                                        {
+                                            txHash,
+                                            signatureWithBytes,
+                                        },
+                                    ],
                                 }
                             },
                         }
@@ -127,8 +133,12 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                         }
                     )
                     return {
-                        txHash,
-                        signatureWithBytes,
+                        prepareTxs: [
+                            {
+                                txHash,
+                                signatureWithBytes,
+                            },
+                        ],
                     }
                 }
             },
@@ -141,10 +151,19 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
             state, 
             txCheck, 
             stimulate, 
-            signatureWithBytes, 
-            txHash 
+            prepareTxs,
         }: ExecuteClosePositionParams
     ): Promise<void> {
+        // Sui requires exactly one transaction per execution
+        if (prepareTxs.length !== 1) {
+            throw new SuiSingleTransactionRequiredException({
+                operation: ErrorSuiSingleTransactionRequiredOperation.ClosePosition,
+                numTxs: prepareTxs.length,
+            })
+        }
+        const [prepareTx] = prepareTxs
+        const txHash = prepareTx.txHash
+        const signatureWithBytes = prepareTx.signatureWithBytes
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (close requires an active position)
         if (txCheck && !stimulate) {

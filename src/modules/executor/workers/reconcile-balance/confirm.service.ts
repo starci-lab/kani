@@ -22,6 +22,9 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
+import {
+    envConfig
+} from "@modules/env"
 
 @Injectable()
 export class ConfirmService {
@@ -64,9 +67,7 @@ export class ConfirmService {
             )
             return
         }
-
         const { transactionRecords } = executeResult
-
         // re-fetch balances post execution
         const {
             targetBalanceAmount,
@@ -80,6 +81,10 @@ export class ConfirmService {
         try {
             await session.withTransaction(
                 async () => {
+                    // no update when stimulate is enabled
+                    if (envConfig().executor.runtime.operation.reconcileBalance.stimulate) {
+                        return
+                    }
                     for (const transactionRecord of transactionRecords || []) {
                         await this.transactionSnapshotService.addTransactionRecord(
                             {
@@ -88,7 +93,7 @@ export class ConfirmService {
                             }
                         )
                     }
-
+                    // update the bot snapshot balances
                     await this.balanceSnapshotService.updateBotSnapshotBalancesRecord(
                         {
                             bot,
@@ -98,7 +103,7 @@ export class ConfirmService {
                             session,
                         }
                     )
-
+                    // update the job status to CONFIRMED
                     await this.connection
                         .model<JobSchema>(JobSchema.name)
                         .updateOne(

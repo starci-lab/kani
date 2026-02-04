@@ -21,7 +21,8 @@ import {
  */
 export interface OpenPositionJobData {
     openPositionTransaction: PrepareOpenPositionResult
-    transactionRecord?: AddTransactionRecordParams
+    /** Transaction records to snapshot in CONFIRM (one per tx hash) */
+    transactionRecords?: Array<AddTransactionRecordParams>
     executeResult?: ExecuteOpenPositionResult
 }
 

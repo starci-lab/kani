@@ -41,7 +41,7 @@ export interface AddOpenPositionRecordParams {
     bot: BotSchema
     liquidityPool: LiquidityPoolSchema
     positionId: string
-    openTxHash: string
+    openTxHashes: Array<string>
     metadata?: unknown
     feeTargetAmount: BN
     feeQuoteAmount: BN
@@ -49,7 +49,6 @@ export interface AddOpenPositionRecordParams {
     targetToken: TokenSchema
     quoteToken: TokenSchema
     gasToken: TokenSchema
-    stimulate?: boolean
 }
 
 export interface UpdateClosePositionRecordParams {
@@ -57,12 +56,11 @@ export interface UpdateClosePositionRecordParams {
     after: BalanceSnapshotParams
     // Common fields
     positionId: string
-    closeTxHash: string
+    closeTxHashes: Array<string>
     session?: ClientSession
     targetToken: TokenSchema
     quoteToken: TokenSchema
     gasToken: TokenSchema
-    stimulate?: boolean
 }
 
 export interface AddTransactionRecordParams {
@@ -71,7 +69,6 @@ export interface AddTransactionRecordParams {
     txHash: string
     chainId: ChainId
     type: TransactionType
-    isStimulated?: boolean
 }
 
 export interface UpdateBotSnapshotBalancesRecordParams {

@@ -1,5 +1,5 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     EnqueueBalanceRebalancingParams,
@@ -10,59 +10,52 @@ import {
     TokenType
 } from "@modules/typedefs"
 import {
-    BalanceFetcherService 
+    BalanceFetcherService
 } from "./fetcher.service"
-import { 
-    JobType, 
-    JobStatus, 
-    PrimaryMemoryStorageService, 
-    InjectPrimaryMongoose, 
+import {
+    JobType,
+    JobStatus,
+    PrimaryMemoryStorageService,
+    InjectPrimaryMongoose,
     JobSchema,
-    BotSchema, 
+    BotSchema,
 } from "@modules/databases"
 import {
     TokenNotFoundException,
-    CannotEnqueueReconcileBalanceJobException,
-    CannotReconcileBalanceEnqueueJobReason,
 } from "@modules/exceptions"
 import {
     ReconcileBalancePayload
 } from "../types"
 import BN from "bn.js"
 import {
-    SwapMathService 
+    SwapMathService
 } from "../math"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env"
 import {
-    Connection 
+    Connection
 } from "mongoose"
 import {
     Job,
-    Queue 
+    Queue
 } from "bullmq"
 import {
-    bullData, BullQueueName 
+    bullData, BullQueueName
 } from "@modules/bullmq"
 import {
-    InjectQueue 
+    InjectQueue
 } from "@nestjs/bullmq"
 import {
-    InjectSuperJson 
+    InjectSuperJson
 } from "@modules/mixin"
 import SuperJSON from "superjson"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    v4 
+    v4
 } from "uuid"
-import {
-    WinstonLog,
-    WinstonService 
-} from "@modules/winston"
-
 import {
     IBalanceEnqueueService
 } from "./types"
@@ -80,7 +73,6 @@ export class BalanceEnqueueService implements IBalanceEnqueueService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
-        private readonly winstonService: WinstonService,
     ) {
     }
 
@@ -94,97 +86,72 @@ export class BalanceEnqueueService implements IBalanceEnqueueService {
         /**
          * Add reconcile balance job to the queue
          */
-        try {
-            if (!isRetry) {
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        /**
+        if (!isRetry) {
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async () => {
+                    /**
                  * Persist job record.
                  */
-                        const [ jobRaw ] = await this.connection.model<JobSchema>(
-                            JobSchema.name
-                        ).create(
-                            [
-                                {
-                                    _id: jobId,
-                                    bot: bot.id,
-                                    type: JobType.ReconcileBalance,
-                                    status: JobStatus.Pending,
-                                    executor: envConfig().executor.id,
-                                    startedAt: this.dayjsService.now().toDate(),
-                                }
-                            ],
+                    const [jobRaw] = await this.connection.model<JobSchema>(
+                        JobSchema.name
+                    ).create(
+                        [
                             {
-                                session 
-                            })
-                        const job = jobRaw.toJSON<JobSchema>()
-                        /**
+                                _id: jobId,
+                                bot: bot.id,
+                                type: JobType.ReconcileBalance,
+                                status: JobStatus.Pending,
+                                executor: envConfig().executor.id,
+                                startedAt: this.dayjsService.now().toDate(),
+                            }
+                        ],
+                        {
+                            session
+                        })
+                    const job = jobRaw.toJSON<JobSchema>()
+                    /**
                     * Update the bot with the active job id.
                     */
-                        await this.connection.model<BotSchema>(BotSchema.name)
-                            .updateOne(
-                                {
-                                    _id: bot.id 
-                                },
-                                {
-                                    $set: {
-                                        activeJob: {
-                                            job: job.id,
-                                            queuedAt: this.dayjsService.now().toDate(),
-                                            jobType: JobType.ReconcileBalance,
-                                        },
-                                    } 
-                                },
-                                {
-                                    session 
+                    await this.connection.model<BotSchema>(BotSchema.name)
+                        .updateOne(
+                            {
+                                _id: bot.id
+                            },
+                            {
+                                $set: {
+                                    activeJob: {
+                                        job: job.id,
+                                        queuedAt: this.dayjsService.now().toDate(),
+                                        jobType: JobType.ReconcileBalance,
+                                    },
                                 }
-                            )
-                    }
-                )   
-            }
-            // check if the job is already in the queue
-            const jobInQueue = await this.reconcileBalanceQueue.getJob(bot.id)
-            if (jobInQueue) {
-                this.winstonService.log(
-                    WinstonLog.ReconcileBalanceJobAlreadyEnqueued,
-                    {
-                        jobId,
-                        botId: bot.id,
-                    }
-                )
-                throw new CannotEnqueueReconcileBalanceJobException({
-                    botId: bot.id,
-                    jobId,
-                    reason: CannotReconcileBalanceEnqueueJobReason.AlreadyInQueue,
-                })
-            }
-            /**
-        * Enqueue reconcile balance job.
-        */
-            const payload: ReconcileBalancePayload = {
-                jobId,
-                botId: bot.id,
-                isRetry,
-            }
-            return await this.reconcileBalanceQueue.add(
-                v4(),
-                this.superJson.stringify(
-                    payload
-                ),
-                {
-                    jobId: bot.id,
+                            },
+                            {
+                                session
+                            }
+                        )
                 }
             )
-        } catch (error) {
-            throw new CannotEnqueueReconcileBalanceJobException({
-                botId: bot.id,
-                jobId,
-                reason: CannotReconcileBalanceEnqueueJobReason.RuntimeError,
-                error: error.message,
-            })
         }
-    }   
+        /**
+        * Enqueue reconcile balance job.
+        */
+        const payload: ReconcileBalancePayload = {
+            jobId,
+            botId: bot.id,
+            isRetry,
+        }
+        return await this.reconcileBalanceQueue.add(
+            v4(),
+            this.superJson.stringify(
+                payload
+            ),
+            {
+                jobId: bot.id,
+            }
+        )
+    }
 
     async determineReconcileBalancePlan({
         bot,
@@ -201,7 +168,7 @@ export class BalanceEnqueueService implements IBalanceEnqueueService {
             throw new TokenNotFoundException({
                 id: bot.targetToken.toString(),
             })
-        }   
+        }
         const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.quoteToken.toString()
@@ -211,7 +178,7 @@ export class BalanceEnqueueService implements IBalanceEnqueueService {
             throw new TokenNotFoundException({
                 id: bot.quoteToken.toString(),
             })
-        }   
+        }
         const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             type: {
                 $eq: TokenType.Native

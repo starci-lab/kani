@@ -8,10 +8,8 @@ import {
     JobStatus,
     JobType,
     LiquidityPoolSchema,
-    PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    AbstractException,
     CannotClosePositionEnqueueJobReason,
     CannotEnqueueClosePositionJobException,
 } from "@modules/exceptions"
@@ -88,100 +86,83 @@ export class ClosePositionEnqueueService {
             dynamicLiquidityPoolInfo,
         }: EnqueueClosePositionParams,
     ): Promise<Job<string>> {
-        try {
-            if (!isRetry) {
-                // Persist job record + set bot activeJob + enqueue in one transaction (same pattern as open-position).
-                const session = await this.connection.startSession()
-                await session.withTransaction(
-                    async () => {
-                        const [jobRaw] = await this.connection.model<JobSchema>(
-                            JobSchema.name
-                        ).create(
-                            [
-                                {
-                                    _id: jobId,
-                                    liquidityPool: liquidityPool.id,
-                                    bot: bot.id,
-                                    executor: envConfig().executor.id,
-                                    type: JobType.ClosePosition,
-                                    status: JobStatus.Pending,
-                                }
-                            ],
+        if (!isRetry) {
+            // Persist job record + set bot activeJob + enqueue in one transaction (same pattern as open-position).
+            const session = await this.connection.startSession()
+            await session.withTransaction(
+                async () => {
+                    const [jobRaw] = await this.connection.model<JobSchema>(
+                        JobSchema.name
+                    ).create(
+                        [
                             {
-                                session,
+                                _id: jobId,
+                                liquidityPool: liquidityPool.id,
+                                bot: bot.id,
+                                executor: envConfig().executor.id,
+                                type: JobType.ClosePosition,
+                                status: JobStatus.Pending,
                             }
-                        )
-                        const job = jobRaw.toJSON<JobSchema>()
-                        await this.connection.model<BotSchema>(BotSchema.name).updateOne(
-                            {
-                                _id: bot.id,
-                            },
-                            {
-                                $set: {
-                                    activeJob: {
-                                        job: job.id,
-                                        liquidityPool: liquidityPool.id,
-                                        jobType: JobType.ClosePosition,
-                                        queuedAt: this.dayjsService.now().toDate(),
-                                    },
+                        ],
+                        {
+                            session,
+                        }
+                    )
+                    const job = jobRaw.toJSON<JobSchema>()
+                    await this.connection.model<BotSchema>(BotSchema.name).updateOne(
+                        {
+                            _id: bot.id,
+                        },
+                        {
+                            $set: {
+                                activeJob: {
+                                    job: job.id,
+                                    liquidityPool: liquidityPool.id,
+                                    jobType: JobType.ClosePosition,
+                                    queuedAt: this.dayjsService.now().toDate(),
                                 },
                             },
-                            {
-                                session,
-                            }
-                        )
-                    }
-                )
-            } 
-            // check if the job is already in the queue
-            const jobInQueue = await this.closePositionQueue.getJob(bot.id)
-            if (jobInQueue) {
-                this.winstonService.log(
-                    WinstonLog.ClosePositionJobAlreadyEnqueued,
-                    {
-                        jobId,
-                        botId: bot.id,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
-                throw new CannotEnqueueClosePositionJobException(
-                    {
-                        jobId,
-                        botId: bot.id,
-                        liquidityPoolId: liquidityPool.displayId,
-                        reason: CannotClosePositionEnqueueJobReason.AlreadyInQueue,
-                    }
-                )
-            }   
-            const payload: ClosePositionPayload = {
-                jobId,
-                botId: bot.id,
-                liquidityPoolId: liquidityPool.id,
-                isRetry,
-                dynamicLiquidityPoolInfo,
-            }
-            return await this.closePositionQueue.add(
-                v4(),
-                this.superjson.stringify(payload),
-                {
-                    jobId: bot.id,
+                        },
+                        {
+                            session,
+                        }
+                    )
                 }
             )
-        } catch (error) {
-            // if the error is an abstract exception, throw it
-            if (error instanceof AbstractException) {
-                throw error
-            }
-            // otherwise, throw a new cannot enqueue close position job exception
+        } 
+        // check if the job is already in the queue
+        const jobInQueue = await this.closePositionQueue.getJob(bot.id)
+        if (jobInQueue) {
+            this.winstonService.log(
+                WinstonLog.ClosePositionJobAlreadyEnqueued,
+                {
+                    jobId,
+                    botId: bot.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }
+            )
             throw new CannotEnqueueClosePositionJobException(
                 {
                     jobId,
                     botId: bot.id,
                     liquidityPoolId: liquidityPool.displayId,
-                    reason: CannotClosePositionEnqueueJobReason.RuntimeError,
-                    error: error.message,
+                    reason: CannotClosePositionEnqueueJobReason.AlreadyInQueue,
                 }
             )
+        }   
+        const payload: ClosePositionPayload = {
+            jobId,
+            botId: bot.id,
+            liquidityPoolId: liquidityPool.id,
+            isRetry,
+            dynamicLiquidityPoolInfo,
         }
+        return await this.closePositionQueue.add(
+            v4(),
+            this.superjson.stringify(payload),
+            {
+                jobId: bot.id,
+            }
+        )
     }
 }

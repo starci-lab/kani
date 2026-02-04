@@ -45,6 +45,8 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
+    SuiSingleTransactionRequiredException,
+    ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -102,6 +104,11 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
     async confirm(
         { positionId, state, bot }: ConfirmOpenPositionParams
     ): Promise<ConfirmOpenPositionResult> {
+        if (envConfig().executor.runtime.operation.openPosition.stimulate) {
+            return {
+                liquidity: new BN(0),
+            }
+        }
         const _state = state as ClmmLiquidityPoolState
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -276,8 +283,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                                 }
                             )
                             return {
-                                txHash,
-                                signatureWithBytes,
+                                prepareTxs: [
+                                    {
+                                        txHash,
+                                        signatureWithBytes,
+                                    },
+                                ],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
@@ -312,8 +323,12 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         }
                     )
                     return {
-                        txHash,
-                        signatureWithBytes,
+                        prepareTxs: [
+                            {
+                                txHash,
+                                signatureWithBytes,
+                            },
+                        ],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -329,11 +344,20 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
             bot,
             state,
             txCheck,
-            txHash,
-            signatureWithBytes,
             stimulate,
+            prepareTxs,
         }: ExecuteOpenPositionParams
     ): Promise<ExecuteOpenPositionResult> {
+        // Sui requires exactly one transaction per execution
+        if (prepareTxs.length !== 1) {
+            throw new SuiSingleTransactionRequiredException({
+                operation: ErrorSuiSingleTransactionRequiredOperation.OpenPosition,
+                numTxs: prepareTxs.length,
+            })
+        }
+        const [prepareTx] = prepareTxs
+        const txHash = prepareTx.txHash
+        const signatureWithBytes = prepareTx.signatureWithBytes
         const _state = state as ClmmLiquidityPoolState
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -366,6 +390,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 )
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             }
         }
@@ -410,6 +435,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     })
                     return {
                         positionId,
+                        txHashes: [txHash],
                     }
                 }
                 const { digest, events } = await suiClient.executeTransactionBlock({
@@ -438,6 +464,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                 })
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             },
         })

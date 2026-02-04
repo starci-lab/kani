@@ -99,6 +99,8 @@ import {
     PriceDiagnosticFailedStaleMessage,
     SwapTransactionStimulatedMessage,
     SwapTransactionPreparedMessage,
+    ReconcileBalancePreparedMessage,
+    WithdrawPreparedMessage,
     ReconcileBalanceRequeueFailedMessage,
     ReconcileBalanceJobAlreadyPreparedMessage,
     ReconcileBalanceJobAlreadyConfirmedMessage,
@@ -1010,6 +1012,22 @@ export const configMap = {
         loki: true,
         messageType: {
         } as SwapTransactionPreparedMessage,
+    },
+    // Reconcile Balance Prepared
+    [WinstonLog.ReconcileBalancePrepared]: {
+        name: WinstonLog.ReconcileBalancePrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalancePreparedMessage,
+    },
+    // Withdraw Prepared
+    [WinstonLog.WithdrawPrepared]: {
+        name: WinstonLog.WithdrawPrepared,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawPreparedMessage,
     },
     // Reconcile Balance Requeue Failed
     [WinstonLog.ReconcileBalanceRequeueFailed]: {

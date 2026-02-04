@@ -76,16 +76,6 @@ export class TransactionSchema extends AbstractSchema {
         type: Date, required: true 
     })
         timestamp: Date
-
-    @Field(() => Boolean,
-        {
-            description: "Whether the transaction is stimulated",
-            nullable: true,
-        })
-    @Prop({
-        type: Boolean, required: false 
-    })
-        isStimulated?: boolean 
 }
 
 export const TransactionSchemaClass = SchemaFactory.createForClass(TransactionSchema)

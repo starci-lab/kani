@@ -10,7 +10,6 @@ import {
     PositionSnapshotsSchema,
     PositionPerformanceSchema
 } from "@modules/databases"
-import BN from "bn.js"
 import {
     DayjsService 
 } from "@modules/mixin"
@@ -38,12 +37,11 @@ export class ClosePositionSnapshotService {
             before,
             after,
             positionId,
-            closeTxHash,
+            closeTxHashes,
             targetToken,
             quoteToken,
             gasToken,
             session,
-            stimulate,
         }: UpdateClosePositionRecordParams
     ) {
         const now = this.dayjsService.now().toDate()
@@ -56,14 +54,6 @@ export class ClosePositionSnapshotService {
         if (!position) {
             throw new Error(`Position with id ${positionId} not found`)
         }
-
-        const oneMillion = new BN("1000000000")
-        // Build close snapshot using after snapshot (snapshot after closing position)
-        const _after = stimulate ? {
-            targetBalanceAmount: oneMillion,
-            quoteBalanceAmount: oneMillion,
-            gasBalanceAmount: oneMillion,
-        } : after
         const { 
             positionValue, 
             positionValueInUsd, 
@@ -72,16 +62,16 @@ export class ClosePositionSnapshotService {
         } = await this.positionValueService.calculatePositionValue(
             {
                 before,
-                after: _after,
+                after,
                 targetToken,
                 quoteToken,
                 gasToken,
             }
         )   
         const closeSnapshot: Partial<PositionSnapshotsSchema> = {
-            targetBalanceAmount: _after.targetBalanceAmount.toString(),
-            quoteBalanceAmount: _after.quoteBalanceAmount.toString(),
-            gasBalanceAmount: _after.gasBalanceAmount.toString(),
+            targetBalanceAmount: after.targetBalanceAmount.toString(),
+            quoteBalanceAmount: after.quoteBalanceAmount.toString(),
+            gasBalanceAmount: after.gasBalanceAmount.toString(),
             positionValue: positionValue.toNumber(),
             positionValueInUsd: positionValueInUsd.toNumber(),
             balanceValue: balanceValue.toNumber(),
@@ -113,7 +103,7 @@ export class ClosePositionSnapshotService {
         },
         {
             $set: {
-                closeTxHash,
+                closeTxHashes,
                 isActive: false,
                 closeSnapshot,
                 performance,

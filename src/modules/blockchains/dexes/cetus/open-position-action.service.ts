@@ -41,6 +41,8 @@ import {
     EncryptedPrivySignerPrivateKeyNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     SlippageToleranceExceededException,
+    SuiSingleTransactionRequiredException,
+    ErrorSuiSingleTransactionRequiredOperation,
 } from "@modules/exceptions"
 import Decimal from "decimal.js"
 import {
@@ -278,8 +280,10 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
                             return {
-                                txHash,
-                                signatureWithBytes,
+                                prepareTxs: [{
+                                    txHash,
+                                    signatureWithBytes,
+                                }],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
@@ -320,8 +324,12 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         }
                     )
                     return {
-                        txHash,
-                        signatureWithBytes,
+                        prepareTxs: [
+                            {
+                                txHash,
+                                signatureWithBytes,
+                            }
+                        ],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -337,9 +345,18 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         state,
         txCheck,
         stimulate,
-        txHash, // the tx hash of the open position transaction
-        signatureWithBytes, // the signature with bytes of the open position transaction    
+        prepareTxs,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // sui require 1 tx only
+        if (prepareTxs.length !== 1) {
+            throw new SuiSingleTransactionRequiredException({
+                operation: ErrorSuiSingleTransactionRequiredOperation.OpenPosition,
+                numTxs: prepareTxs.length,
+            })
+        }
+        const [prepareTx] = prepareTxs
+        const txHash = prepareTx.txHash
+        const signatureWithBytes = prepareTx.signatureWithBytes
         const _state = state as ClmmLiquidityPoolState
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
@@ -372,6 +389,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 )
                 return {
                     positionId,
+                    txHashes: [txHash],
                 }
             }
         }
@@ -424,6 +442,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     )
                     return {
                         positionId: positionId.toString(),
+                        txHashes: [txHash],
                     }
                 }
                 const { digest, events } = await suiClient.executeTransactionBlock({

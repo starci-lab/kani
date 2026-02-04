@@ -8,6 +8,9 @@ import {
     RetryService 
 } from "./retry.service"
 import {
+    WaitService 
+} from "./wait.service"
+import {
     NextJsQueryService 
 } from "./nextjs-query.serivce"
 import {
@@ -41,6 +44,7 @@ export class MixinModule extends ConfigurableModuleClass {
         const dynamicModule = super.register(options)
         const providers: Array<Provider> = [
             RetryService,
+            WaitService,
             ReadinessWatcherFactoryService,
             InstanceIdService,
             DayjsService,
