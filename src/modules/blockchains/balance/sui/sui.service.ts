@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     IBalanceActionService,
-} from "../balance.interface"
+} from "../types"
 import {
     PrepareReconcileBalanceTransactionParams,
     PrepareReconcileBalanceTransactionResult,

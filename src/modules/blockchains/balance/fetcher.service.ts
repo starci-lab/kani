@@ -8,7 +8,7 @@ import {
     FetchBalancesResult,
     FetchTokensParams,
     FetchTokensResult,
-} from "./balance.interface"
+} from "./types"
 import {
     SolanaBalanceFetcherService 
 } from "./solana/fetcher.service"
@@ -38,7 +38,7 @@ import BN from "bn.js"
 
 import {
     IBalanceFetcherService
-} from "./balance.interface"
+} from "./types"
 
 @Injectable()
 export class BalanceFetcherService implements IBalanceFetcherService {

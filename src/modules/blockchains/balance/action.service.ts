@@ -23,7 +23,7 @@ import {
 
 import {
     IBalanceActionService
-} from "./balance.interface"
+} from "./types"
 
 @Injectable()
 export class BalanceActionService implements IBalanceActionService {

@@ -9,7 +9,7 @@ import {
     FetchBalanceResult,
     FetchTokensParams,
     FetchTokensResult,
-} from "../balance.interface"
+} from "../types"
 import BN from "bn.js"
 import {
     address,

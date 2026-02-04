@@ -5,7 +5,7 @@ import {
     EnqueueBalanceRebalancingParams,
     DetermineReconcileBalancePlanParams,
     DetermineReconcileBalancePlanResult,
-} from "./balance.interface"
+} from "./types"
 import {
     TokenType
 } from "@modules/typedefs"
@@ -65,7 +65,7 @@ import {
 
 import {
     IBalanceEnqueueService
-} from "./balance.interface"
+} from "./types"
 
 @Injectable()
 export class BalanceEnqueueService implements IBalanceEnqueueService {

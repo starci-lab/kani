@@ -1,6 +1,5 @@
 export * from "./balance.module"
 export * from "./gas-status.service"
-export * from "./balance.interface"
 export * from "./fetcher.service"
 export * from "./action.service"
 export * from "./enqueue.service"
