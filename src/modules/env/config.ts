@@ -357,7 +357,7 @@ export const envConfig = () => ({
                 closePosition: {
                     settle: {
                         enabled: parseEnvBoolean("EXECUTOR_OPERATION_CLOSE_POSITION_SETTLE_ENABLED",
-                            false),
+                            true),
                     },
                     requeue: {
                         interval: parseEnvMs("EXECUTOR_OPERATION_CLOSE_POSITION_REQUEUE_INTERVAL",

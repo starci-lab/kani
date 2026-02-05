@@ -337,23 +337,6 @@ export const PositionSchemaClass =
     SchemaFactory.createForClass(PositionSchema)
 
 /**
- * Index constraint:
- * A single bot can have at most one active position at any time.
- */
-PositionSchemaClass.index(
-    {
-        bot: 1,
-        isActive: 1,
-    },
-    {
-        unique: true,
-        partialFilterExpression: {
-            isActive: true,
-        },
-    },
-)
-
-/**
  * Protocol-specific metadata typings
  */
 export interface RaydiumPositionMetadata {
