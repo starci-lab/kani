@@ -3,7 +3,7 @@ import {
     OnApplicationBootstrap,
 } from "@nestjs/common"
 import {
-    ReservesWithFeesOrchestratorService,
+    ReservesWithFeesActionService,
 } from "@modules/blockchains"
 import {
     ActivePositionAssociateService,

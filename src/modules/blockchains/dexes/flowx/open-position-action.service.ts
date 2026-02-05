@@ -372,6 +372,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     signature: signatureWithBytes.signature,
                     options: {
                         showEvents: true,
+                        showEffects: true,
                     },
                 })
                 if (effects?.status?.status !== "success") {

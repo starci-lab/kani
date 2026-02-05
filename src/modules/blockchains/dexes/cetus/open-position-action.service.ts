@@ -430,6 +430,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         signature: signatureWithBytes.signature,
                         options: {
                             showEvents: true,
+                            showEffects: true,
                         }
                     }
                 )
