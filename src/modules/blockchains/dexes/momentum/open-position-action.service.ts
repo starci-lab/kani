@@ -31,7 +31,8 @@ import {
     BalanceSnapshotsNotFoundException,
     TransactionEventNotFoundException,
     TransactionNotPreparedException,
-    TransactionValidationFailedException,
+    TransactionStimulatedFailedException,
+    TransactionExecutionFailedException,
     PrivyPublicKeyNotFoundException,
     SuiObjectNotFoundException,
     ErrorSuiObjectName,
@@ -208,7 +209,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                                 sender: bot.accountAddress,
                             })
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException(
+                                throw new TransactionStimulatedFailedException(
                                     {
                                         botId: bot.id,
                                         txHash: devInspect.effects.transactionDigest,
@@ -346,7 +347,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         sender: bot.accountAddress,
                     })
                     if (devInspect.effects.status.status !== "success") {
-                        throw new TransactionValidationFailedException({
+                        throw new TransactionStimulatedFailedException({
                             botId: bot.id,
                             txHash: devInspect.effects.transactionDigest,
                             liquidityPoolId: _state.static.displayId,
@@ -372,13 +373,20 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         txHashes: [txHash],
                     }
                 }
-                const { digest, events } = await suiClient.executeTransactionBlock({
+                const { digest, events, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
                     options: {
                         showEvents: true,
                     }
                 })
+                if (effects?.status?.status !== "success") {
+                    throw new TransactionExecutionFailedException({
+                        botId: bot.id,
+                        txHash,
+                        liquidityPoolId: _state.static.displayId,
+                    })
+                }
                 await suiClient.waitForTransaction({
                     digest,
                 })

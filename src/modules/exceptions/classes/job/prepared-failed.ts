@@ -71,6 +71,7 @@ export class ReconcileBalanceJobPreparedFailedException extends AbstractExceptio
 export interface ClosePositionJobPreparedFailedExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     jobId: string
+    liquidityPoolId?: LiquidityPoolId
 }
 
 export class ClosePositionJobPreparedFailedException extends AbstractException {
@@ -79,6 +80,7 @@ export class ClosePositionJobPreparedFailedException extends AbstractException {
             originalError, 
             botId,
             jobId,
+            liquidityPoolId,
         }: ClosePositionJobPreparedFailedExceptionMetadata
     ) {
         super(
@@ -88,6 +90,7 @@ export class ClosePositionJobPreparedFailedException extends AbstractException {
                 originalError,
                 botId,
                 jobId,
+                liquidityPoolId,
             }   
         )
     }

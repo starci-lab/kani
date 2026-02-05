@@ -34,10 +34,21 @@ import {
 import {
     InjectSuperJson,
     DayjsService,
+    AsyncService,
 } from "@modules/mixin"
 import {
     SuperJSON 
 } from "superjson"
+import {
+    AbstractException,
+    ClosePositionJobExecutedFailedException,
+} from "@exceptions"
+import {
+    FatalError,
+} from "../fatal"
+import {
+    UnrecoverableError,
+} from "bullmq"
 
 @Injectable()
 export class ExecuteService {
@@ -49,6 +60,7 @@ export class ExecuteService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -98,19 +110,34 @@ export class ExecuteService {
             }
         }
         const { closePositionTransaction } = prepareResult
-        await this.closePositionActionService.execute(
-            {
-                bot,
-                prepareTxs: closePositionTransaction.prepareTxs,
-                state: {
-                    static: liquidityPool,
-                    dynamic: dynamicLiquidityPoolInfo,
-                },
-                txCheck: isRetry || (payload.isRetry ?? false),
-                stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
-            }
+        const [executeResult,
+            error] = await this.asyncService.resolveTuple(
+            this.closePositionActionService.execute(
+                {
+                    bot,
+                    prepareTxs: closePositionTransaction.prepareTxs,
+                    state: {
+                        static: liquidityPool,
+                        dynamic: dynamicLiquidityPoolInfo,
+                    },
+                    txCheck: isRetry || (payload.isRetry ?? false),
+                    stimulate: envConfig().executor.runtime.operation.closePosition.stimulate,
+                }
+            ),
         )
-        const txHashes = closePositionTransaction.prepareTxs.map((tx) => tx.txHash)
+        if (error) {
+            const failedError = new ClosePositionJobExecutedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+                liquidityPoolId: liquidityPool.displayId,
+            })
+            if (error instanceof AbstractException) {
+                throw new FatalError(failedError.toJSON())
+            }
+            throw new UnrecoverableError(failedError.toJSON())
+        }
+        const txHashes = executeResult.txHashes ?? closePositionTransaction.prepareTxs.map((tx) => tx.txHash)
         const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
             (txHash) => (
                 {

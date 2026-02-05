@@ -716,6 +716,16 @@ export interface ReconcileBalanceJobFailedUnrecoverableMessage {
 }
 
 /**
+ * Reconcile Balance Job Failed Fatal Message
+ */
+export interface ReconcileBalanceJobFailedFatalMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
  * Reconcile Balance Job Failed Permanent Failure Message
  */
 export interface ReconcileBalanceJobFailedPermanentFailureMessage {
@@ -740,6 +750,16 @@ export interface ReconcileBalanceJobFailedRetryableMessage {
  * Withdraw Job Failed Unrecoverable Message
  */
 export interface WithdrawJobFailedUnrecoverableMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
+ * Withdraw Job Failed Fatal Message
+ */
+export interface WithdrawJobFailedFatalMessage {
     botId: string
     jobId: string
     bullmqJobId?: string
@@ -1098,6 +1118,16 @@ export interface ClosePositionJobFailedUnrecoverableMessage {
 }
 
 /**
+ * Close Position Job Failed Fatal Message
+ */
+export interface ClosePositionJobFailedFatalMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
+}
+
+/**
  * Close Position Job Failed Permanent Failure Message
  */
 export interface ClosePositionJobFailedPermanentFailureMessage {
@@ -1146,6 +1176,16 @@ export interface OpenPositionJobFailedUnrecoverableMessage {
     bullmqJobId?: string
     error: string
     liquidityPoolId: LiquidityPoolId
+}
+
+/**
+ * Open Position Job Failed Fatal Message
+ */
+export interface OpenPositionJobFailedFatalMessage {
+    botId: string
+    jobId: string
+    bullmqJobId?: string
+    error: string
 }
 
 /**

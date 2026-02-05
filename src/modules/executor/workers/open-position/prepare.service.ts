@@ -38,11 +38,15 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    UnrecoverableError 
-} from "bullmq"
-import {
+    AbstractException,
     OpenPositionJobPreparedFailedException
 } from "@modules/exceptions"
+import {
+    FatalError 
+} from "../fatal"
+import {
+    UnrecoverableError 
+} from "bullmq"
 
 @Injectable()
 export class PrepareService {
@@ -122,16 +126,21 @@ export class PrepareService {
                 }
             )
         )
-        console.log(error)
         if (error) {
-            throw new UnrecoverableError(
-                new OpenPositionJobPreparedFailedException({
-                    originalError: error,
-                    botId: bot.id,
-                    jobId: job.id,
-                    liquidityPoolId: liquidityPool.displayId,
-                }).toJSON()
+            // create a failed error
+            const failedError =  new OpenPositionJobPreparedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+                liquidityPoolId: liquidityPool.displayId,
+            }
             )
+            // if the error is throw intentionally, throw a fatal error to stop the job
+            if (error instanceof AbstractException) {
+                throw new FatalError(failedError.toJSON())
+            }
+            // if the error is not throw intentionally, throw an unrecoverable error to let BullMQ handle the retry
+            throw new UnrecoverableError(failedError.toJSON())
         }
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {

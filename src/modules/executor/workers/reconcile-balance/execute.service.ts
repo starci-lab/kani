@@ -27,8 +27,19 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    DayjsService 
+    DayjsService,
+    AsyncService,
 } from "@modules/mixin"
+import {
+    AbstractException,
+    ReconcileBalanceJobExecutedFailedException,
+} from "@exceptions"
+import {
+    FatalError,
+} from "../fatal"
+import {
+    UnrecoverableError,
+} from "bullmq"
 
 @Injectable()
 export class ExecuteService {
@@ -38,6 +49,7 @@ export class ExecuteService {
         private readonly connection: Connection,
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     /**
@@ -79,13 +91,30 @@ export class ExecuteService {
         const transactionRecords: ReconcileBalanceJobData["transactionRecords"] = []
         const { reconcileBalanceTransaction } = prepareResult
 
-        const { txHashes } = await this.balanceActionService.executeReconcileBalanceTransaction({
-            bot,
-            prepareTxs: reconcileBalanceTransaction.prepareTxs,
-            isRetry: isRetry || (payload.isRetry ?? false),
-            stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
-        })
+        const [executeResult,
+            error] = await this.asyncService.resolveTuple(
+            this.balanceActionService.executeReconcileBalanceTransaction(
+                {
+                    bot,
+                    prepareTxs: reconcileBalanceTransaction.prepareTxs,
+                    isRetry: isRetry || (payload.isRetry ?? false),
+                    stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
+                }
+            ),
+        )
+        if (error) {
+            const failedError = new ReconcileBalanceJobExecutedFailedException({
+                originalError: error,
+                botId: bot.id,
+                jobId: job.id,
+            })
+            if (error instanceof AbstractException) {
+                throw new FatalError(failedError.toJSON())
+            }
+            throw new UnrecoverableError(failedError.toJSON())
+        }
 
+        const txHashes = executeResult?.txHashes ?? []
         for (const txHash of txHashes) {
             transactionRecords.push(
                 {
