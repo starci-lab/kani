@@ -11,7 +11,8 @@ import {
     sendAndConfirmTransactionFactory, signTransaction 
 } from "@solana/kit"
 import {
-    DynamicLiquidityPoolInfoCacheResult 
+    DynamicLiquidityPoolInfoCacheResult, 
+    WithdrawCacheResult
 } from "@modules/cache"
 
 // to ensure the amount is correct
@@ -65,6 +66,5 @@ export interface WithdrawTokenInput {
 }
 
 export interface WithdrawPayload extends BasePayload {
-    tokenInputs: Array<WithdrawTokenInput>
-    toUsdc?: boolean
+    payload: WithdrawCacheResult
 }

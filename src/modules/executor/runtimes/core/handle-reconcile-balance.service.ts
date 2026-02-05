@@ -67,13 +67,6 @@ export class HandleReconcileBalanceService {
     async process(
         bot: BotSchema,
     ) {
-        // Acquire lock authority; return if not acquired
-        const acquired = await this.lockAuthorityService.acquire(
-            {
-                botId: bot.id,
-            }
-        )
-        if (!acquired) return
         // Skip if bot is not running
         if (!bot.running) return
         // Skip if bot has an active position
@@ -102,6 +95,13 @@ export class HandleReconcileBalanceService {
             }
         )
         if (!noActiveJobFound) return
+        // Acquire lock authority; return if not acquired
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         const jobId = new Types.ObjectId().toString()
         // Enqueue the reconcile-balance job
         try {

@@ -26,6 +26,10 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    CacheKey,
+    CacheService,
+} from "@modules/cache"
 
 @Injectable()
 export class OnCompletedService {
@@ -35,6 +39,7 @@ export class OnCompletedService {
         private readonly dayjsService: DayjsService,
         private readonly lockAuthorityService: LockAuthorityService,
         private readonly winstonService: WinstonService,
+        private readonly cacheService: CacheService,
     ) {}
 
     /**
@@ -50,6 +55,13 @@ export class OnCompletedService {
             bullmqJob,
         }: OnCompletedParams
     ): Promise<void> {
+        // clear the cache
+        await this.cacheService.del(
+            {
+                key: CacheKey.Withdraw,
+                args: [bot.id],
+            }
+        )   
         const session = await this.connection.startSession()
         await session.withTransaction(
             async () => {
@@ -95,19 +107,19 @@ export class OnCompletedService {
                         session,
                     }
                 )
-                this.winstonService.log(
-                    WinstonLog.WithdrawJobCompleted,
-                    {
-                        botId: bot.id,
-                        jobId: job.id,
-                        bullmqJobId: bullmqJob.id,
-                    }
-                )
             }
         )
         await this.lockAuthorityService.release(
             {
                 botId: bot.id,
+            }
+        )
+        this.winstonService.log(
+            WinstonLog.WithdrawJobCompleted,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                bullmqJobId: bullmqJob.id,
             }
         )
     }

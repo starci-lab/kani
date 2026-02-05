@@ -14,7 +14,7 @@ import {
 } from "@nestjs/swagger"
 import {
     AddWithdrawJobRequestDto,
-    AddWithdrawJobResponseDataDto,
+    AddWithdrawJobResponseDto,
 } from "./add-withdraw-job.dto"
 import {
     AddWithdrawJobService,
@@ -55,7 +55,7 @@ export class AddWithdrawJobController {
     @ApiResponse({
         status: HttpStatus.ACCEPTED,
         description: "Job queued successfully.",
-        type: AddWithdrawJobResponseDataDto,
+        type: AddWithdrawJobResponseDto,
     })
     @ApiResponse({
         status: HttpStatus.BAD_REQUEST,
@@ -63,7 +63,7 @@ export class AddWithdrawJobController {
     })
     async addWithdrawJob(
         @Body() body: AddWithdrawJobRequestDto,
-    ): Promise<AddWithdrawJobResponseDataDto> {
+    ) {
         return this.addWithdrawJobService.addWithdrawJob(body)
     }
 }

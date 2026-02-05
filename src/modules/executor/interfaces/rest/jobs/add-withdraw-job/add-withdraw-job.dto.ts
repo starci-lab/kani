@@ -6,6 +6,7 @@ import {
 } from "@nestjs/swagger"
 import {
     IsMongoId, IsString, IsNumberString, IsObject,
+    IsBoolean,
 } from "class-validator"
 
 export class WithdrawTokenInputDto {
@@ -27,6 +28,13 @@ export class WithdrawTokenInputDto {
 }
 
 export class AddWithdrawJobRequestDto {
+    @IsMongoId()
+    @ApiProperty({
+        description: "Bot ID to withdraw from",
+        example: "ac95c751a75e2665d5c1faa9",
+    })
+    @IsString()
+        id: string
     @ApiProperty({
         description: "List of tokens and corresponding amounts to withdraw",
         type: WithdrawTokenInputDto,
@@ -34,18 +42,15 @@ export class AddWithdrawJobRequestDto {
     })
     @IsObject()
         tokenInputs: Array<WithdrawTokenInputDto>
-}
-
-export class AddWithdrawJobResponseDataDto {
     @ApiProperty({
-        description: "The ID of the job that was created",
-        example: "ac95c751a75e2665d5c1faa9",
+        description: "Whether to withdraw to USDC",
+        example: false,
     })
-    @IsString()
-        jobId: string
+    @IsBoolean()
+        toUsdc: boolean
 }
 
 export class AddWithdrawJobResponseDto
-    extends AbstractRestResponse<AddWithdrawJobResponseDataDto>
-    implements IAbstractRestResponse<AddWithdrawJobResponseDataDto> {
+    extends AbstractRestResponse<undefined>
+    implements IAbstractRestResponse {
 }

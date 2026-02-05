@@ -90,6 +90,7 @@ export enum WinstonLog {
     ReconcileBalanceJobFailedRetryable = "Reconcile.Balance.Job.Failed.Retryable",
     ReconcileBalanceJobCompleted = "Reconcile.Balance.Job.Completed",
     ReconcileBalanceProcessingStarted = "Reconcile.Balance.Processing.Started",
+    WithdrawJobScheduled = "Withdraw.Job.Scheduled",
     WithdrawJobEnqueued = "Withdraw.Job.Enqueued",
     WithdrawJobEnqueueFailed = "Withdraw.Job.Enqueue.Failed",
     WithdrawJobRequeued = "Withdraw.Job.Requeued",

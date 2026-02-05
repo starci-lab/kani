@@ -49,6 +49,7 @@ import SuperJSON from "superjson"
 import {
     ToStringObject 
 } from "@modules/typedefs"
+import BN from "bn.js"
 
 @Injectable()
 export class PrepareService {
@@ -87,8 +88,7 @@ export class PrepareService {
         job,
         bot, 
         payload: {
-            tokenInputs,
-            toUsdc,
+            payload: cacheResult,
         }
     }: PrepareParams): Promise<PrepareResult> {
         // Guard: if job already passed PENDING phase, do nothing
@@ -122,27 +122,39 @@ export class PrepareService {
         const tokens = this.primaryMemoryStorageService.tokenCollection.find(
             {
                 id: {
-                    $in: tokenInputs.map((tokenInput) => tokenInput.tokenId)
+                    $in: cacheResult.tokenInputs.map((tokenInput) => tokenInput.tokenId)
                 }
             }
         )
-        if (tokens.length !== tokenInputs.length) {
+        if (tokens.length !== cacheResult.tokenInputs.length) {
             throw new SomeTokensNotFoundException(
                 {
                     actualCount: tokens.length,
-                    expectedCount: tokenInputs.length
+                    expectedCount: cacheResult.tokenInputs.length
                 }
             )
         }
         const tokenBalances = await this.asyncService.allMustDone(
-            tokens.map((token) => this.balanceFetcherService.fetchBalance({
-                bot,
-                token,
-            }))
-        )
+            tokens.map(async (token) => {
+                const tokenBalance = await this.balanceFetcherService.fetchBalance({
+                    bot,
+                    token,
+                })
+                return [
+                    token.id, 
+                    tokenBalance.balanceAmount,
+                ] as [string, BN]
+            })
+        ) 
+        const tokenBalancesMap = new Map<string, BN>(tokenBalances)
         // we ensure the requested balance is not exceeded
-        for (const tokenInput of tokenInputs) {
-            const tokenBalance = tokenBalances[tokenInput.tokenId]
+        for (const tokenInput of cacheResult.tokenInputs) {
+            const tokenBalance = tokenBalancesMap.get(tokenInput.tokenId)
+            if (!tokenBalance) {
+                throw new TokenNotFoundException({
+                    id: tokenInput.tokenId,
+                })
+            }
             if (tokenBalance.lt(tokenInput.amount)) {
                 throw new TokenBalanceNotEnoughForWithdrawException(
                     {
@@ -154,7 +166,7 @@ export class PrepareService {
             }
         }
         // Convert tokenInputs from payload (with tokenId) to WithdrawTokenInput (with token)
-        const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = tokenInputs.map((tokenInput) => {
+        const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = cacheResult.tokenInputs.map((tokenInput) => {
             const token = tokens.find((token) => token.id.toString() === tokenInput.tokenId)
             if (!token) {
                 throw new TokenNotFoundException({
@@ -176,7 +188,7 @@ export class PrepareService {
             bot,
             tokenInputs: withdrawTokenInputs,
             toAddress: bot.withdrawalAddress,
-            toUsdc,
+            toUsdc: cacheResult.toUsdc,
         })
         // Persist job state transition:
         // PENDING → PREPARED
@@ -190,7 +202,7 @@ export class PrepareService {
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "data.withdrawTransaction": this.superJson.stringify(withdrawTransaction),
+                        "data.withdrawTransaction": this.superJson.stringify(withdrawTransaction)
                     },
                 }
             )

@@ -75,6 +75,12 @@ export class ActiveJobSchema extends AbstractSchema {
         type: Date,
     })
         queuedAt: Date
+
+    @Prop({
+        type: String,
+        required: false,
+    })
+        payload?: string
 }
 
 export const ActiveJobSchemaClass = SchemaFactory.createForClass(ActiveJobSchema)

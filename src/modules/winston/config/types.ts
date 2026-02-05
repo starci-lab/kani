@@ -634,6 +634,15 @@ export interface WithdrawJobEnqueueFailedMessage {
 }
 
 /**
+ * Withdraw Job Scheduled Message
+ */
+export interface WithdrawJobScheduledMessage {
+    botId: string
+    tokenInputs: Array<{ id: string; amount: string }>
+    toUsdc: boolean
+}
+
+/**
  * Withdraw Job Enqueued Message
  */
 export interface WithdrawJobEnqueuedMessage {

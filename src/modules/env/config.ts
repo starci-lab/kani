@@ -369,7 +369,7 @@ export const envConfig = () => ({
                 reconcileBalance: {
                     interval: {
                         poll: parseEnvMs("EXECUTOR_OPERATION_RECONCILE_BALANCE_INTERVAL_POLL",
-                            "30s"),
+                            "10s"),
                     },
                     cooldown: {
                         rescan: parseEnvMs(
@@ -385,6 +385,10 @@ export const envConfig = () => ({
                         false),
                 },
                 withdraw: {
+                    interval: {
+                        poll: parseEnvMs("EXECUTOR_OPERATION_WITHDRAW_INTERVAL_POLL",
+                            "10s"),
+                    },
                     requeue: {
                         interval: parseEnvMs("EXECUTOR_OPERATION_WITHDRAW_REQUEUE_INTERVAL",
                             "10s"),
@@ -471,6 +475,9 @@ export const envConfig = () => ({
             },
         },
         ttl: {
+            withdraw: parseEnvMs(
+                "CACHE_TTL_WITHDRAW",
+                "5m"),
             sendOtpCode: parseEnvMs(
                 "CACHE_TTL_SEND_OTP_CODE",
                 "10m"),

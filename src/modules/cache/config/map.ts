@@ -5,6 +5,7 @@ import {
     CacheKey
 } from "./enum"
 import {
+    WithdrawCacheResult,
     AggregatedTokenPriceCacheResult,
     DynamicClmmLiquidityPoolInfoCacheResult, 
     DynamicDlmmLiquidityPoolInfoCacheResult, 
@@ -15,6 +16,12 @@ import {
 } from "./types"
 
 export const configMap = {
+    [CacheKey.Withdraw]: {
+        ttl: envConfig().cache.ttl.withdraw,
+        cacheResult: {
+            tokenInputs: [],
+        } as WithdrawCacheResult
+    },
     [CacheKey.AggregatedTokenPrice]: {
         ttl: envConfig().cache.ttl.aggregatedTokenPrice,
         cacheResult: {    

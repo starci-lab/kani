@@ -100,13 +100,6 @@ export class HandleOpenPositionService {
             eventPayload,
         }: HandleOpenPositionParams
     ) {
-        // Acquire lock authority; return if not acquired
-        const acquired = await this.lockAuthorityService.acquire(
-            {
-                botId: bot.id,
-            }
-        )
-        if (!acquired) return
         // Skip if bot is not running
         if (!bot.running) {
             return
@@ -217,6 +210,13 @@ export class HandleOpenPositionService {
             }
         )
         if (!noActiveJobFound) return
+        // Acquire lock authority; return if not acquired
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         const jobId = new Types.ObjectId().toString()
         // Enqueue the open-position job
         try {

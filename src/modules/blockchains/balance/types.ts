@@ -14,6 +14,9 @@ import {
 import {
     ComputeSwapAmountsResult 
 } from "../math"
+import {
+    WithdrawCacheResult 
+} from "@modules/cache"
 
 export interface BalanceOptions {
     enable?: {
@@ -84,7 +87,7 @@ export interface IBalanceActionService {
     executeReconcileBalanceTransaction(params: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults>
     prepareWithdrawTransaction(params: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult>
     executeWithdrawTransaction(params: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult>
-    determineReconcileBalancePlan(params: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult>
+    // determineReconcileBalancePlan(params: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult>
 }
 
 /**
@@ -120,7 +123,7 @@ export interface EnqueueWithdrawParams {
     bot: BotSchema
     jobId: string
     isRetry?: boolean
-    tokenInputs: Array<BalanceWithdrawTokenInput>
+    payload: WithdrawCacheResult
 }
 
 export interface DetermineReconcileBalancePlanParams {

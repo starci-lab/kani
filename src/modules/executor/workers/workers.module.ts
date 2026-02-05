@@ -13,6 +13,9 @@ import {
 import {
     ClosePositionModule,
 } from "./close-position"
+import {
+    WithdrawModule,
+} from "./withdraw"
 @Module({
     imports: [
         ReconcileBalanceModule.register(
@@ -26,6 +29,11 @@ import {
             }
         ),
         ClosePositionModule.register(
+            {
+                isGlobal: true,
+            }
+        ),
+        WithdrawModule.register(
             {
                 isGlobal: true,
             }

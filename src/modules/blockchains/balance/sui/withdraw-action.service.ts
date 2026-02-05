@@ -54,10 +54,12 @@ import {
 import {
     TokenType,
 } from "@modules/typedefs"
-import BN from "bn.js"
 import {
     AsyncService,
 } from "@modules/mixin"
+import {
+    SignatureWithBytes,
+} from "@mysten/sui/cryptography"
 
 @Injectable()
 export class SuiWithdrawActionService {
@@ -100,7 +102,6 @@ export class SuiWithdrawActionService {
                         displayId: TokenId.SuiUsdc,
                     })
                 }
-
                 for (const tokenInput of tokenInputs) {
                     if (toUsdc) {
                         // Swap to USDC (if needed) then transfer USDC to receiver
@@ -158,55 +159,85 @@ export class SuiWithdrawActionService {
                                 owner: bot.accountAddress,
                                 coinType: tokenInput.token.tokenAddress,
                                 requiredAmount: tokenInput.amount,
-                                suiGasAmount: new BN(0),
-                            })
-                            const { spendCoin } = this.selectCoinsService.splitCoin({
-                                txb,
-                                sourceCoin,
-                                requiredAmount: tokenInput.amount,
-                            })
+                            })  
                             txb.transferObjects(
-                                [spendCoin.coinArg],
+                                [sourceCoin.coinArg],
                                 toAddress,
                             )
                         }
                         continue
                     }
-
-                    // No swap: transfer the token directly to receiver
-                    const transferToken = tokenInput.token
-                    const transferAmount = tokenInput.amount
-                    if (transferToken.type === TokenType.Native) {
-                        const [coin] = txb.splitCoins(
-                            txb.gas,
-                            [txb.pure.u64(transferAmount.toString())],
+                    // else mean to target token
+                    const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+                        id: {
+                            $eq: bot.targetToken.toString()
+                        },
+                    })
+                    if (!targetToken) {
+                        throw new TokenNotFoundException({
+                            displayId: tokenInput.token.displayId,
+                        }
                         )
-                        txb.transferObjects(
-                            [coin],
-                            toAddress,
-                        )
-                    } else {
+                    }
+                    if (tokenInput.token.displayId !== targetToken.displayId) {
                         const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
                             txb,
                             owner: bot.accountAddress,
-                            coinType: transferToken.tokenAddress,
-                            requiredAmount: transferAmount,
-                            suiGasAmount: new BN(0),
+                            coinType: tokenInput.token.tokenAddress,
+                            requiredAmount: tokenInput.amount,
                         })
-                        const { spendCoin } = this.selectCoinsService.splitCoin({
-                            txb,
-                            sourceCoin,
-                            requiredAmount: transferAmount,
+                        const { aggregatorId, response } =
+                        await this.suiAggregatorSelectorService.batchQuote({
+                            tokenIn: tokenInput.token,
+                            tokenOut: targetToken,
+                            amountIn: tokenInput.amount,
+                            senderAddress: bot.accountAddress,
                         })
+                        const { outputCoin, txb: swapTxb } =
+                        await this.suiAggregatorSelectorService.selectorSwap({
+                            base: {
+                                payload: response.payload,
+                                tokenIn: tokenInput.token,
+                                tokenOut: targetToken,
+                                accountAddress: bot.accountAddress,
+                                txb,
+                                inputCoin: sourceCoin.coinArg,
+                            },
+                            aggregatorId,
+                        })
+                        if (!swapTxb) {
+                            throw new TransactionNotFoundException({
+                            })
+                        }
+                        txb = swapTxb
+                        if (!outputCoin) {
+                            throw new OutputCoinNotFoundException({
+                                botId: bot.id,
+                                type: ErrorTransactionType.Withdraw,
+                            })
+                        }
                         txb.transferObjects(
-                            [spendCoin.coinArg],
+                            [outputCoin],
                             toAddress,
                         )
+                        continue
                     }
+                    // else mean transfer directly
+                    const { sourceCoin } = await this.selectCoinsService.fetchAndMergeCoins({
+                        txb,
+                        owner: bot.accountAddress,
+                        coinType: tokenInput.token.tokenAddress,
+                        requiredAmount: tokenInput.amount,
+                    })
+                    txb.transferObjects(
+                        [sourceCoin.coinArg],
+                        toAddress,
+                    )
+                    continue
                 }
 
                 let txHash: string
-                let signatureWithBytes: PrepareTx["signatureWithBytes"] | undefined
+                let signatureWithBytes: SignatureWithBytes | undefined
 
                 if (bot.version === AppVersion.V1) {
                     const bytes = await txb.build({

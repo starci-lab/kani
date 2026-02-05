@@ -5,8 +5,7 @@ import {
     BotSchema 
 } from "@modules/databases"
 import {
-    WithdrawEnqueueService,
-    BalanceWithdrawTokenInput,
+    WithdrawEnqueueService
 } from "@modules/blockchains"
 import {
     LockAuthorityService 
@@ -21,6 +20,10 @@ import {
 import {
     WaitService
 } from "@modules/mixin"
+import {
+    CacheService,
+    CacheKey,
+} from "@modules/cache"
 import {
     InjectQueue 
 } from "@nestjs/bullmq"
@@ -49,6 +52,7 @@ export class HandleWithdrawService {
         private readonly waitService: WaitService,
         @InjectQueue(bullData[BullQueueName.Withdraw].name)
         private readonly withdrawQueue: Queue<string>,
+        private readonly cacheService: CacheService,
     ) {}
 
     /**
@@ -61,16 +65,19 @@ export class HandleWithdrawService {
      * - Releases lock authority if enqueue fails
      */
     async process(
-        bot: BotSchema,
-        tokenInputs: Array<BalanceWithdrawTokenInput>,
+        bot: BotSchema
     ) {
-        // Acquire lock authority; return if not acquired
-        const acquired = await this.lockAuthorityService.acquire(
+        // Check if withdraw is already scheduled (cached tokenInputs for this bot)
+        const payload = await this.cacheService.get(
             {
-                botId: bot.id,
+                key: CacheKey.Withdraw,
+                args: [bot.id],
             }
         )
-        if (!acquired) return
+        if (!payload) {
+            return
+        }
+        
         // Skip if bot is running
         if (bot.running) return
         // Skip if bot has an active position
@@ -79,6 +86,7 @@ export class HandleWithdrawService {
         if (bot.activeJob) {
             return
         }
+
         // Wait to ensure no job for this bot is already in the queue
         const noActiveJobFound = await this.waitService.wait(
             {
@@ -89,6 +97,13 @@ export class HandleWithdrawService {
             }
         )
         if (!noActiveJobFound) return
+        // Acquire lock authority; return if not acquired
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         const jobId = new Types.ObjectId().toString()
         // Enqueue the withdraw job
         try {
@@ -96,7 +111,7 @@ export class HandleWithdrawService {
                 {
                     bot,
                     jobId,
-                    tokenInputs,
+                    payload,
                 }
             )
             this.winstonService.log(

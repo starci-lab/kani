@@ -94,20 +94,20 @@ export class OnCompletedService {
                         session,
                     }
                 )
-                this.winstonService.log(
-                    WinstonLog.OpenPositionJobCompleted,
-                    {
-                        botId: bot.id,
-                        jobId: job.id,
-                        bullmqJobId: bullmqJob.id,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
             }
         )
         await this.lockAuthorityService.release(
             {
                 botId: bot.id,
+            }
+        )
+        this.winstonService.log(
+            WinstonLog.OpenPositionJobCompleted,
+            {
+                botId: bot.id,
+                jobId: job.id,
+                bullmqJobId: bullmqJob.id,
+                liquidityPoolId: liquidityPool.displayId,
             }
         )
     }

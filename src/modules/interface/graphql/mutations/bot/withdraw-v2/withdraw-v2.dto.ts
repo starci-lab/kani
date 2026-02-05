@@ -39,21 +39,11 @@ export class WithdrawV2Request {
             description: "The tokens to withdraw.",
         })
         tokenInputs: Array<WithdrawV2TokenInput>
-}
-
-@ObjectType(
-    {
-        description: "Standard GraphQL response returned after withdrawing from a bot.",
-    }
-)
-export class WithdrawV2ResponseData {
-    @Field(
-        () => String,
+    @Field(() => Boolean,
         {
-            description: "The job ID of the withdrawal.",
-        }
-    )
-        jobId: string
+            description: "Whether to withdraw to USDC.",
+        })
+        toUsdc: boolean
 }
 
 @ObjectType(
@@ -63,11 +53,5 @@ export class WithdrawV2ResponseData {
 )
 export class WithdrawV2Response
     extends AbstractGraphQLResponse
-    implements IAbstractGraphQLResponse<WithdrawV2ResponseData> {
-        @Field(() => WithdrawV2ResponseData,
-            {
-                description: "The response data of the withdrawal.",
-            }
-        )
-            data: WithdrawV2ResponseData
+    implements IAbstractGraphQLResponse<undefined> {
 }

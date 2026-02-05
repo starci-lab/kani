@@ -72,3 +72,13 @@ export interface LiquidityPoolsSyncedDiagnosticReadinessResult extends SnapshotC
 export interface SendOtpCodeCacheResult {
     otp: string
 }
+
+export interface WithdrawCacheTokenInput {
+    tokenId: string
+    amount: BN
+}
+
+export interface WithdrawCacheResult {
+    tokenInputs: Array<WithdrawCacheTokenInput>
+    toUsdc?: boolean
+}

@@ -92,13 +92,6 @@ export class HandleClosePositionService {
             eventPayload,
         }: HandleClosePositionParams
     ) {
-        // Acquire lock authority; return if not acquired
-        const acquired = await this.lockAuthorityService.acquire(
-            {
-                botId: bot.id,
-            }
-        )
-        if (!acquired) return
         // Skip if bot has no active position to close
         if (!bot.activePosition) return
         if (bot.activeJob) {
@@ -138,6 +131,13 @@ export class HandleClosePositionService {
             }
         )
         if (!noActiveJobFound) return
+        // Acquire lock authority; return if not acquired
+        const acquired = await this.lockAuthorityService.acquire(
+            {
+                botId: bot.id,
+            }
+        )
+        if (!acquired) return
         // Enqueue the close-position job
         try {
             const bullmqJob = await this.closePositionEnqueueService.enqueue(

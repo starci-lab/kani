@@ -32,6 +32,7 @@ import {
     HandleReconcileBalanceService,
     HandleClmmPositionCloseRequestedEventService,
     HandleDlmmPositionCloseRequestedEventService,
+    HandleWithdrawService,
 } from "./core"
 
 @Injectable(
@@ -62,6 +63,7 @@ export class RuntimeContextService {
         private readonly handleReconcileBalanceService: HandleReconcileBalanceService,
         private readonly handleClmmPositionCloseRequestedEventService: HandleClmmPositionCloseRequestedEventService,
         private readonly handleDlmmPositionCloseRequestedEventService: HandleDlmmPositionCloseRequestedEventService,
+        private readonly handleWithdrawService: HandleWithdrawService,
     ) { }
 
     private readonly executorBotUpdatedHandler = (
@@ -195,6 +197,11 @@ export class RuntimeContextService {
                     this.invokeAndSchedule(
                         envConfig().executor.runtime.operation.reconcileBalance.interval.poll,
                         (bot) => this.handleReconcileBalanceService.process(bot),
+                    )
+                    // invoke and schedule the withdraw service
+                    this.invokeAndSchedule(
+                        envConfig().executor.runtime.operation.withdraw.interval.poll,
+                        (bot) => this.handleWithdrawService.process(bot),
                     )
                     // gradually load the initial executor state
                     setInterval(() => {

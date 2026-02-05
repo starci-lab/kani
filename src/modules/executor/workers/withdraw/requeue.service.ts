@@ -40,6 +40,15 @@ import {
 import {
     LockAuthorityService    
 } from "../../bussiness"
+import {
+    SuperJSON 
+} from "superjson"
+import {
+    InjectSuperJson 
+} from "@modules/mixin"
+import {
+    WithdrawCacheResult 
+} from "@modules/cache"
 
 @Injectable()
 export class RequeueService implements OnApplicationBootstrap {
@@ -52,6 +61,8 @@ export class RequeueService implements OnApplicationBootstrap {
         private readonly asyncService: AsyncService,
         private readonly withdrawEnqueueService: WithdrawEnqueueService,
         private readonly lockAuthorityService: LockAuthorityService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {
     }
 
@@ -85,12 +96,6 @@ export class RequeueService implements OnApplicationBootstrap {
                             )
                         }
                     },
-                    running: {
-                        $eq: true,
-                    },
-                    activePosition: {
-                        $eq: undefined,
-                    },
                 }
             ).data()
             /**
@@ -115,6 +120,7 @@ export class RequeueService implements OnApplicationBootstrap {
                                 bot,
                                 jobId: bot.activeJob?.job?.toString() ?? "",
                                 isRetry: true,
+                                payload: this.superJson.parse<WithdrawCacheResult>(bot.activeJob?.payload ?? ""),
                             }
                         )
                         this.winstonService.log(

@@ -33,7 +33,7 @@ import {
     AxiosResponse
 } from "axios"
 import {
-    AddWithdrawJobResponseDataDto, AddWithdrawJobRequestDto
+    AddWithdrawJobRequestDto
 } from "@modules/executor"
 
 @Injectable()
@@ -46,7 +46,7 @@ export class WithdrawV2Service implements OnModuleInit {
     ) { }
 
     onModuleInit() {
-        this.axiosInstance = this.axiosService.create("executor")
+        this.axiosInstance = this.axiosService.create("withdraw-v2")
     }
 
     async withdrawV2(
@@ -54,6 +54,7 @@ export class WithdrawV2Service implements OnModuleInit {
         {
             id,
             tokenInputs,
+            toUsdc,
         }: WithdrawV2Request,
     ) {
         const user = await this.connection
@@ -85,9 +86,9 @@ export class WithdrawV2Service implements OnModuleInit {
                 id,
             })
         }
-        const { data } = await this.axiosInstance.post<
-            AddWithdrawJobResponseDataDto,
-            AxiosResponse<AddWithdrawJobResponseDataDto>,
+        await this.axiosInstance.post<
+            undefined,
+            AxiosResponse<undefined>,
             AddWithdrawJobRequestDto
         >(
             buildExecutorFullEndpointPath(
@@ -98,12 +99,10 @@ export class WithdrawV2Service implements OnModuleInit {
                 }
             ),
             {
+                id,
                 tokenInputs,
+                toUsdc,
             },
         )
-        const { jobId } = data
-        return {
-            jobId,
-        }
     }
 }

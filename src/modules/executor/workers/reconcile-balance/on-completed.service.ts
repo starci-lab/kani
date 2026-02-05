@@ -98,17 +98,17 @@ export class OnCompletedService {
                 )
             }
         )
+        await this.lockAuthorityService.release(
+            {
+                botId: bot.id,
+            }
+        )
         this.winstonService.log(
             WinstonLog.ReconcileBalanceJobCompleted,
             {
                 botId: bot.id,
                 jobId: job.id,
                 bullmqJobId: bullmqJob.id,
-            }
-        )
-        await this.lockAuthorityService.release(
-            {
-                botId: bot.id,
             }
         )
     }

@@ -85,6 +85,7 @@ import {
     ReconcileBalanceJobFailedUnrecoverableMessage,
     ReconcileBalanceJobFailedRetryableMessage,
     WithdrawJobEnqueueFailedMessage,
+    WithdrawJobScheduledMessage,
     WithdrawJobEnqueuedMessage,
     WithdrawJobRequeuedMessage,
     WithdrawJobRequeueFailedMessage,
@@ -917,6 +918,14 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceJobRequeuedMessage,
+    },
+    // Withdraw Job Scheduled
+    [WinstonLog.WithdrawJobScheduled]: {
+        name: WinstonLog.WithdrawJobScheduled,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawJobScheduledMessage,
     },
     // Withdraw Job Enqueue Failed
     [WinstonLog.WithdrawJobEnqueueFailed]: {

@@ -2,7 +2,7 @@ import {
     Module,
 } from "@nestjs/common"
 import {
-    ReconcileBalanceWorker,
+    WithdrawWorker,
 } from "./withdraw.worker"
 import {
     PrepareService,
@@ -30,11 +30,11 @@ import {
 } from "./clear.service"
 import {
     ConfigurableModuleClass,
-} from "./reconcile-balance.module-definition"
+} from "./withdraw.module-definition"
 
 @Module({
     providers: [
-        ReconcileBalanceWorker,
+        WithdrawWorker,
         PrepareService,
         ExecuteService,
         SendHeartbeatService,
@@ -45,4 +45,4 @@ import {
         ClearService,
     ],
 })
-export class ReconcileBalanceModule extends ConfigurableModuleClass {}
+export class WithdrawModule extends ConfigurableModuleClass {}

@@ -62,9 +62,16 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
             bot,
             jobId,
             isRetry,
-            tokenInputs,
+            payload: cacheResult,
         }: EnqueueWithdrawParams,
     ): Promise<Job<string>> {
+        const payload: WithdrawPayload = {
+            jobId,
+            botId: bot.id,
+            isRetry,
+            payload: cacheResult,
+        }
+        const payloadString = this.superJson.stringify(payload)
         if (!isRetry) {
             const session = await this.connection.startSession()
             await session.withTransaction(
@@ -97,6 +104,7 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                                         job: job.id,
                                         queuedAt: this.dayjsService.now().toDate(),
                                         jobType: JobType.Withdraw,
+                                        payload: payloadString,
                                     },
                                 }
                             },
@@ -107,20 +115,9 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 }
             )
         }
-        const payload: WithdrawPayload = {
-            jobId,
-            botId: bot.id,
-            isRetry,
-            tokenInputs: tokenInputs.map((tokenInput) => ({
-                tokenId: tokenInput.token.id,
-                amount: tokenInput.amount,
-            })),
-        }
         return await this.withdrawQueue.add(
             v4(),
-            this.superJson.stringify(
-                payload
-            ),
+            payloadString,
             {
                 jobId: bot.id,
             }
