@@ -3,4 +3,5 @@ export interface KafkaOptions {
     topics?: Array<string>
     usePublish?: boolean
     useConsume?: boolean
+    clientId: string
 }

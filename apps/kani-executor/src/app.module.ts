@@ -195,6 +195,7 @@ import {
                     EventName.ClmmLiquidityPoolsSynced,
                     EventName.DlmmLiquidityPoolsSynced,
                 ],
+                clientId: `kani-executor-${envConfig().executor.id}`,
             },
             isGlobal: true,
         }),

@@ -65,6 +65,12 @@ import {
         EventEmitterModule.forRoot(),
         EventModule.register({
             isGlobal: true,
+            kafka: {
+                createTopicsIfNotExists: true,
+                useConsume: false,
+                usePublish: true,
+                clientId: "kani-coordinator",
+            },
         }),
         WinstonModule.register({
             isGlobal: true,
