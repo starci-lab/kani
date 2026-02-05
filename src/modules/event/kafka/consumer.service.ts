@@ -53,7 +53,7 @@ export class KafkaConsumerService implements OnModuleInit, OnApplicationShutdown
                     this.consumer = this.kafka.consumer(
                         { 
                             groupId: this.instanceIdService.getId(),
-                            allowAutoTopicCreation: false,
+                            allowAutoTopicCreation: true,
                             heartbeatInterval: envConfig().kafka.heartbeatInterval,
                             retry: {
                                 retries: envConfig().kafka.retry.retries,
