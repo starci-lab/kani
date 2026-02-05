@@ -128,7 +128,7 @@ export class PrepareService {
         )
         if (error) {
             // create a failed error
-            const failedError =  new OpenPositionJobPreparedFailedException({
+            const failedError = new OpenPositionJobPreparedFailedException({
                 originalError: error,
                 botId: bot.id,
                 jobId: job.id,

@@ -59,6 +59,9 @@ export class OnFailedService {
         const isPermanentFailure = bullmqJob.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError
         const isFatal = error instanceof FatalError
+        console.log(
+            `isFatal: ${isFatal}, isUnrecoverable: ${isUnrecoverable}`
+        )
         // if the error is a fatal error, log the error and update the database to mark the job as failed
         // and throw UnrecoverableError to stop the job
         if (isFatal) {

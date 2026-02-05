@@ -134,6 +134,9 @@ export class ExecuteService {
             )
         )
         if (error) {
+            console.log(
+                error
+            )
             // create a failed error
             const failedError = new OpenPositionJobExecutedFailedException({
                 originalError: error,
@@ -144,8 +147,14 @@ export class ExecuteService {
             )
             // if the error is throw intentionally, throw a fatal error to stop the job
             if (error instanceof AbstractException) {
+                console.log(
+                    `throwing fatal error: ${failedError.toJSON()}`
+                )
                 throw new FatalError(failedError.toJSON())
             }
+            console.log(
+                `throwing unrecoverable error: ${failedError.toJSON()}`
+            )
             // if the error is not throw intentionally, throw an unrecoverable error to let BullMQ handle the retry
             throw new UnrecoverableError(failedError.toJSON())
         }
