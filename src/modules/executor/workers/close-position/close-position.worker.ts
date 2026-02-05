@@ -84,6 +84,16 @@ import {
 import {
     AsyncService,
 } from "@modules/mixin"
+import {
+    OnEvent 
+} from "@nestjs/event-emitter"
+import {
+    EventName, LockAuthorityTimeoutEventPayload 
+} from "@modules/event"
+import {
+    WinstonLog,
+    WinstonService 
+} from "@modules/winston"
 
 @Worker(
     bullData[BullQueueName.ClosePosition].name,
@@ -110,9 +120,22 @@ export class ClosePositionWorker extends WorkerHost {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly clearService: ClearService,
         private readonly asyncService: AsyncService,
-        private readonly positionAssociateService: PositionAssociateService
+        private readonly positionAssociateService: PositionAssociateService,
+        private readonly winstonService: WinstonService,
     ) {
         super()
+    }
+
+    @OnEvent(EventName.LockAuthorityTimeout)
+    async onLockAuthorityReleased(
+        payload: LockAuthorityTimeoutEventPayload
+    ) {
+        this.winstonService.log(
+            WinstonLog.ClosePositionLockAuthorityReleased,
+            {
+                botId: payload.botId,
+            }
+        )
     }
 
     async process(bullmqJob: Job<string>): Promise<void> {

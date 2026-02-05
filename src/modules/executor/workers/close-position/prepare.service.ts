@@ -26,7 +26,8 @@ import {
 } from "@modules/blockchains"
 import {
     InjectSuperJson,
-    DayjsService
+    DayjsService,
+    AsyncService
 } from "@modules/mixin"
 import {
     SuperJSON 
@@ -34,6 +35,12 @@ import {
 import {
     ToStringObject 
 } from "@modules/typedefs"
+import {
+    UnrecoverableError 
+} from "bullmq"
+import {
+    ClosePositionJobPreparedFailedException 
+} from "@exceptions"
 
 @Injectable()
 export class PrepareService {
@@ -45,6 +52,7 @@ export class PrepareService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     // Phase: PREPARE
@@ -99,15 +107,29 @@ export class PrepareService {
                 }
             }
         }
-        const closePositionTransaction = await this.closePositionActionService.prepare(
-            {
-                bot,
-                state: {
-                    static: liquidityPool,
-                    dynamic: dynamicLiquidityPoolInfo,
-                },
-            }
+        const [closePositionTransaction,
+            error] = await this.asyncService.resolveTuple(
+            this.closePositionActionService.prepare(
+                {
+                    bot,
+                    state: {
+                        static: liquidityPool,
+                        dynamic: dynamicLiquidityPoolInfo,
+                    },
+                }
+            )
         )
+        if (error) {
+            throw new UnrecoverableError(
+                new ClosePositionJobPreparedFailedException(
+                    {
+                        originalError: error,
+                        botId: bot.id,
+                        jobId: job.id,
+                    }
+                ).toJSON()
+            )
+        }
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {
                 _id: {

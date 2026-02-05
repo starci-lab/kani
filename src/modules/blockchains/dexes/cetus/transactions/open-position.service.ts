@@ -17,7 +17,7 @@ import {
     InvalidPoolTokensException 
 } from "@modules/exceptions"
 import {
-    ActivePositionNotFoundException, TargetOperationalGasAmountNotFoundException 
+    TargetOperationalGasAmountNotFoundException 
 } from "@modules/exceptions"
 import {
     FeeService 
@@ -58,11 +58,6 @@ export class OpenPositionTxbService {
     ): Promise<CreateOpenPositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
-        if (!bot.activePosition || !bot.activePosition.associatedPosition) {
-            throw new ActivePositionNotFoundException({
-                botId: bot.id,
-            })
-        }
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
                 id: {

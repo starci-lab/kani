@@ -133,7 +133,12 @@ export class WithdrawWorker extends WorkerHost {
     async onLockAuthorityReleased(
         payload: LockAuthorityTimeoutEventPayload
     ) {
-        console.log(payload)
+        this.winstonService.log(
+            WinstonLog.WithdrawLockAuthorityReleased,
+            {
+                botId: payload.botId,
+            }
+        )
         //this.worker.cancelJob(payload.botId)
     }
     /**

@@ -172,10 +172,12 @@ export class SuiReconcileBalanceActionService {
                 }
             },
         })
-        const prepareTxs = [{
-            txHash: transaction.txHash,
-            signatureWithBytes: transaction.signatureWithBytes,
-        }]
+        const prepareTxs = [
+            {
+                txHash: transaction.txHash,
+                signatureWithBytes: transaction.signatureWithBytes,
+            }
+        ]
         return {
             prepareTxs,
         }

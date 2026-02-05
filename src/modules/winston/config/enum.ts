@@ -212,4 +212,8 @@ export enum WinstonLog {
     ReconcileBalanceTransactionExecuted = "Reconcile.Balance.Transaction.Executed",
     ReconcileBalanceTransactionStimulated = "Reconcile.Balance.Transaction.Stimulated",
     ReconcileBalanceJobPrepared = "Reconcile.Balance.Job.Prepared",
+    ReconcileBalanceLockAuthorityReleased = "Reconcile.Balance.Lock.Authority.Released",
+    OpenPositionLockAuthorityReleased = "Open.Position.Lock.Authority.Released",
+    ClosePositionLockAuthorityReleased = "Close.Position.Lock.Authority.Released",
+    WithdrawLockAuthorityReleased = "Withdraw.Lock.Authority.Released",
 }

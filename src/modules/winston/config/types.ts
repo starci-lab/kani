@@ -919,6 +919,12 @@ export interface ReconcileBalanceJobAlreadyPreparedMessage {
     botId: string
     jobId: string
     ageMs: number
+    quoteRatioResult: object
+    balanceAmounts: {
+        targetBalanceAmount: string
+        quoteBalanceAmount: string
+        gasBalanceAmount: string
+    }
 }
 
 /**
@@ -1696,6 +1702,12 @@ export interface ReconcileBalanceJobPreparedMessage {
     botId: string
     jobId: string
     txHashes: Array<string>
+    quoteRatioResult: object
+    balanceAmounts: {
+        targetBalanceAmount: string
+        quoteBalanceAmount: string
+        gasBalanceAmount: string
+    }
 }
 
 /**
@@ -1721,4 +1733,32 @@ export interface WithdrawTransactionFoundMessage {
 export interface ReconcileBalanceTransactionFoundMessage {
     botId: string
     txHash: string
+}
+
+/**
+ * Reconcile Balance Lock Authority Released Message
+ */
+export interface ReconcileBalanceLockAuthorityReleasedMessage {
+    botId: string
+}
+
+/**
+ * Open Position Lock Authority Released Message
+ */
+export interface OpenPositionLockAuthorityReleasedMessage {
+    botId: string
+}
+
+/**
+ * Close Position Lock Authority Released Message
+ */
+export interface ClosePositionLockAuthorityReleasedMessage {
+    botId: string
+}
+
+/**
+ * Withdraw Lock Authority Released Message
+ */
+export interface WithdrawLockAuthorityReleasedMessage {
+    botId: string
 }

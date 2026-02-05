@@ -205,7 +205,7 @@ export const envConfig = () => ({
             },
             openPosition: {
                 slippage: parseEnvFloat("DEXES_FLOWX_OPEN_POSITION_SLIPPAGE",
-                    0.05),
+                    0.5),
             },
         },
         momentum: {

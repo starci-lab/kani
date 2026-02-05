@@ -1,9 +1,10 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     PrepareParams,
     PrepareResult,
+    ReconcileBalanceBalanceAmounts,
     ReconcileBalanceJobData,
 } from "./types"
 import {
@@ -14,14 +15,18 @@ import {
 } from "@modules/databases"
 import BN from "bn.js"
 import {
-    TokenNotFoundException
+    TokenNotFoundException,
+    ReconcileBalanceJobPreparedFailedException
 } from "@modules/exceptions"
 import {
-    TokenType
+    TokenType,
+    ToStringObject
 } from "@modules/typedefs"
 import {
     SwapDirection,
-    BalanceFetcherService
+    BalanceFetcherService,
+    PrepareReconcileBalanceTransactionResult,
+    ComputeQuoteRatioResult
 } from "@modules/blockchains"
 import {
     BalanceActionService,
@@ -35,11 +40,17 @@ import {
     WinstonService
 } from "@modules/winston"
 import {
-    Connection 
+    Connection
 } from "mongoose"
 import {
-    DayjsService 
+    DayjsService,
+    InjectSuperJson,
+    AsyncService
 } from "@modules/mixin"
+import SuperJson from "superjson"
+import {
+    UnrecoverableError
+} from "bullmq"
 
 @Injectable()
 export class PrepareService {
@@ -48,10 +59,13 @@ export class PrepareService {
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly winstonService: WinstonService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJson,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         private readonly dayjsService: DayjsService,
-    ) {}
+        private readonly asyncService: AsyncService,
+    ) { }
 
     // Phase: PREPARE
     // Responsibility:
@@ -73,7 +87,7 @@ export class PrepareService {
      */
     async process({
         job,
-        bot, 
+        bot,
         payload: {
             gasBalanceAmount,
             quoteBalanceAmount,
@@ -85,6 +99,15 @@ export class PrepareService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Prepared)
         ) {
+            const jobData = job.data as unknown as ToStringObject<ReconcileBalanceJobData>
+            const { 
+                reconcileBalanceTransaction: stringifiedReconcileBalanceTransaction, 
+                quoteRatioResult: stringifiedQuoteRatioResult, 
+                balanceAmounts: stringifiedBalanceAmounts, 
+            } = jobData
+            const reconcileBalanceTransaction = this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction)
+            const quoteRatioResult = this.superJson.parse<ComputeQuoteRatioResult>(stringifiedQuoteRatioResult)
+            const balanceAmounts = this.superJson.parse<ReconcileBalanceBalanceAmounts>(stringifiedBalanceAmounts)
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyPrepared,
                 {
@@ -92,10 +115,16 @@ export class PrepareService {
                     jobId: job.id,
                     ageMs: this.dayjsService.now().diff(job.createdAt,
                         "millisecond"),
+                    quoteRatioResult,
+                    balanceAmounts,
                 }
             )
             return {
-                result: job.data as ReconcileBalanceJobData
+                result: {
+                    reconcileBalanceTransaction,
+                    quoteRatioResult,
+                    balanceAmounts,
+                }
             }
         }
         // Local normalized balance values (BN)
@@ -109,10 +138,10 @@ export class PrepareService {
         if (
             !gasBalanceAmount || !quoteBalanceAmount || !targetBalanceAmount
         ) {
-            const { 
-                targetBalanceAmount, 
-                quoteBalanceAmount, 
-                gasBalanceAmount 
+            const {
+                targetBalanceAmount,
+                quoteBalanceAmount,
+                gasBalanceAmount
             } = await this.balanceFetcherService.fetchBalances(
                 {
                     bot,
@@ -122,8 +151,8 @@ export class PrepareService {
             quoteBalanceAmountBN = quoteBalanceAmount
             targetBalanceAmountBN = targetBalanceAmount
         } else {
-        // Use balances provided by upstream step
-        // (e.g. retry resume or pre-fetched context)
+            // Use balances provided by upstream step
+            // (e.g. retry resume or pre-fetched context)
             gasBalanceAmountBN = gasBalanceAmount
             quoteBalanceAmountBN = quoteBalanceAmount
             targetBalanceAmountBN = targetBalanceAmount
@@ -132,13 +161,15 @@ export class PrepareService {
         // Compute reconcile plan:
         // - Determine required swaps
         // - No side effects (pure planning)
-        const { swapSteps } =
-        await this.balanceActionService.determineReconcileBalancePlan({
-            bot,
-            targetBalanceAmount: targetBalanceAmountBN,
-            quoteBalanceAmount: quoteBalanceAmountBN,
-            gasBalanceAmount: gasBalanceAmountBN,
-        })
+        const { swapSteps, quoteRatioResult } =
+            await this.balanceActionService.determineReconcileBalancePlan(
+                {
+                    bot,
+                    targetBalanceAmount: targetBalanceAmountBN,
+                    quoteBalanceAmount: quoteBalanceAmountBN,
+                    gasBalanceAmount: gasBalanceAmountBN,
+                }
+            )
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne(
             {
                 id: {
@@ -227,39 +258,67 @@ export class PrepareService {
             }
         }
         // Prepare reconcile balance transactions
-        const reconcileBalanceTransaction = await this.balanceActionService.prepareReconcileBalanceTransaction({
-            bot,
-            tokenInputs,
-        })
+        const [
+            reconcileBalanceTransaction,
+            error
+        ] = await this.asyncService.resolveTuple(
+            this.balanceActionService.prepareReconcileBalanceTransaction(
+                {
+                    bot,
+                    tokenInputs,
+                }
+            )
+        )
+        if (error) {
+            throw new UnrecoverableError(
+                new ReconcileBalanceJobPreparedFailedException({
+                    originalError: error,
+                    botId: bot.id,
+                    jobId: job.id,
+                }).toJSON()
+            )
+        }
 
         // Persist job state transition:
         // PENDING → PREPARED
         // This marks preparation as completed and enables execution phase
+        const balanceAmounts: ReconcileBalanceBalanceAmounts = {
+            targetBalanceAmount: targetBalanceAmountBN.toString(),
+            quoteBalanceAmount: quoteBalanceAmountBN.toString(),
+            gasBalanceAmount: gasBalanceAmountBN.toString(),
+        }
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
                 {
-                    _id: job.id 
+                    _id: job.id
                 },
                 {
                     $set: {
                         status: JobStatus.Prepared,
-                        "data.reconcileBalanceTransaction": reconcileBalanceTransaction,
+                        "data.reconcileBalanceTransaction": this.superJson.stringify(reconcileBalanceTransaction),
+                        "data.quoteRatioResult": this.superJson.stringify(quoteRatioResult),
+                        "data.balanceAmounts": this.superJson.stringify(balanceAmounts),
                     },
                 }
             )
+
         this.winstonService.log(
             WinstonLog.ReconcileBalanceJobPrepared,
             {
                 botId: bot.id,
                 jobId: job.id,
                 txHashes: reconcileBalanceTransaction.prepareTxs.map((prepareTx) => prepareTx.txHash),
+                quoteRatioResult,
+                balanceAmounts,
             }
         )
         // Return execution plan to next phase
         return {
             result: {
-                reconcileBalanceTransaction
+                reconcileBalanceTransaction,
+                quoteRatioResult,
+                balanceAmounts,
             }
         }
     }

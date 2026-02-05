@@ -133,7 +133,12 @@ export class ReconcileBalanceWorker extends WorkerHost {
     async onLockAuthorityReleased(
         payload: LockAuthorityTimeoutEventPayload
     ) {
-        console.log(payload)
+        this.winstonService.log(
+            WinstonLog.ReconcileBalanceLockAuthorityReleased,
+            {
+                botId: payload.botId,
+            }
+        )
         //this.worker.cancelJob(payload.botId)
     }
     /**
