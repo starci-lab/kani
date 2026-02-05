@@ -125,8 +125,6 @@ export class PrepareService {
             return {
                 result: {
                     reconcileBalanceTransaction,
-                    quoteRatioResult,
-                    balanceAmounts,
                 }
             }
         }
@@ -167,26 +165,22 @@ export class PrepareService {
         )
         if (!eligible) {
             this.winstonService.log(
-                WinstonLog.ReconcileBalanceJobAlreadyPrepared,
+                WinstonLog.ReconcileBalanceJobPrepared,
                 {
                     botId: bot.id,
                     jobId: job.id,
-                    ageMs: this.dayjsService.now().diff(job.createdAt,
-                        "millisecond"),
+                    txHashes: undefined,
+                    quoteRatioResult: undefined,
                     balanceAmounts: {
                         targetBalanceAmount: targetBalanceAmountBN.toString(),
                         quoteBalanceAmount: quoteBalanceAmountBN.toString(),
                         gasBalanceAmount: gasBalanceAmountBN.toString(),
-                    }
+                    },
                 }
             )
             return {
                 result: {
-                    balanceAmounts: {
-                        targetBalanceAmount: targetBalanceAmountBN.toString(),
-                        quoteBalanceAmount: quoteBalanceAmountBN.toString(),
-                        gasBalanceAmount: gasBalanceAmountBN.toString(),
-                    }
+                    reconcileBalanceTransaction: undefined,
                 }
             }
         }
@@ -349,8 +343,6 @@ export class PrepareService {
         return {
             result: {
                 reconcileBalanceTransaction,
-                quoteRatioResult,
-                balanceAmounts,
             }
         }
     }
