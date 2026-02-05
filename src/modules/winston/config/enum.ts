@@ -201,6 +201,7 @@ export enum WinstonLog {
     KeyWrittenSuccess = "Key.Written.Success",
     // Command Errors
     CommandError = "Command.Error",
+    EvalSnapshot = "Eval.Snapshot",
     ErrorGettingCache = "Error.Getting.Cache",
     ErrorSettingCache = "Error.Setting.Cache",
     ErrorDeletingCache = "Error.Deleting.Cache",

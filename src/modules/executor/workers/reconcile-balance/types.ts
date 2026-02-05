@@ -23,9 +23,9 @@ export interface ReconcileBalanceBalanceAmounts {
     gasBalanceAmount: string
 }
 export interface ReconcileBalanceJobData {
-    reconcileBalanceTransaction: PrepareReconcileBalanceTransactionResult
+    reconcileBalanceTransaction?: PrepareReconcileBalanceTransactionResult
     transactionRecords?: Array<AddTransactionRecordParams>
-    quoteRatioResult: ComputeQuoteRatioResult
+    quoteRatioResult?: ComputeQuoteRatioResult
     balanceAmounts: ReconcileBalanceBalanceAmounts
 }
 

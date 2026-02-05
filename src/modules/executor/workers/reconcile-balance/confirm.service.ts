@@ -80,10 +80,11 @@ export class ConfirmService {
                 targetBalanceAmount,
                 quoteBalanceAmount,
                 gasBalanceAmount,
-            } = await this.balanceFetcherService.fetchBalances({
-                bot 
-            })
-
+            } = await this.balanceFetcherService.fetchBalances(
+                {
+                    bot 
+                }
+            )
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {

@@ -17,6 +17,7 @@ import {
     Types 
 } from "mongoose"
 import {
+    EvalSnapshotService,
     OpenPositionEnqueueService 
 } from "@modules/blockchains"
 import {
@@ -82,6 +83,7 @@ export class HandleOpenPositionService {
         private readonly waitService: WaitService,
         @InjectQueue(bullData[BullQueueName.OpenPosition].name)
         private readonly openPositionQueue: Queue<string>,
+        private readonly evalSnapshotService: EvalSnapshotService,
     ) {}
 
     /**
@@ -112,6 +114,14 @@ export class HandleOpenPositionService {
         }
         // Skip if no balance snapshot (need reconciled balance before opening)
         if (!bot.balanceSnapshots) {
+            return
+        }
+        const { eligible } = await this.evalSnapshotService.eval(
+            {
+                bot,
+            }
+        )
+        if (!eligible) {
             return
         }
         // Skip if balance snapshot is too old (outside rescan cooldown)

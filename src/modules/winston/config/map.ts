@@ -186,6 +186,7 @@ import {
     KeyDecryptionCheckFailedMessage,
     KeyWrittenSuccessMessage,
     CommandErrorMessage,
+    EvalSnapshotMessage,
     ErrorGettingCacheMessage,
     ErrorSettingCacheMessage,
     ErrorDeletingCacheMessage,
@@ -1830,6 +1831,14 @@ export const configMap = {
         loki: false,
         messageType: {
         } as CommandErrorMessage,
+    },
+    // Eval Snapshot
+    [WinstonLog.EvalSnapshot]: {
+        name: WinstonLog.EvalSnapshot,
+        level: WinstonLevel.Info,
+        loki: true,
+        messageType: {
+        } as EvalSnapshotMessage,
     },
     // Error Getting Cache
     [WinstonLog.ErrorGettingCache]: {

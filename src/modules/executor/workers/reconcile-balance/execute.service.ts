@@ -4,17 +4,18 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
+    ReconcileBalanceBalanceAmounts,
     ReconcileBalanceJobData
 } from "./types"
 import {
-    BalanceActionService
+    BalanceActionService,
+    PrepareReconcileBalanceTransactionResult
 } from "@modules/blockchains/balance"
 import {
     getJobStatusOrder,
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
-    TransactionType,
 } from "@modules/databases"
 import {
     Connection
@@ -29,6 +30,7 @@ import {
 import {
     DayjsService,
     AsyncService,
+    InjectSuperJson,
 } from "@modules/mixin"
 import {
     AbstractException,
@@ -40,6 +42,15 @@ import {
 import {
     UnrecoverableError,
 } from "bullmq"
+import {
+    ToStringObject 
+} from "@modules/typedefs"
+import {
+    SuperJSON 
+} from "superjson"
+import {
+    AddTransactionRecordParams 
+} from "@modules/blockchains"
 
 @Injectable()
 export class ExecuteService {
@@ -50,6 +61,8 @@ export class ExecuteService {
         private readonly winstonService: WinstonService,
         private readonly dayjsService: DayjsService,
         private readonly asyncService: AsyncService,
+        @InjectSuperJson()
+        private readonly superJson: SuperJSON,
     ) {}
 
     /**
@@ -74,6 +87,14 @@ export class ExecuteService {
         if (
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
+            const { 
+                transactionRecords: stringifiedTransactionRecords,
+                reconcileBalanceTransaction: stringifiedReconcileBalanceTransaction,
+                balanceAmounts: stringifiedBalanceAmounts,
+            } = job.data as ToStringObject<ReconcileBalanceJobData>
+            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
+            const reconcileBalanceTransaction = stringifiedReconcileBalanceTransaction ? this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction) : undefined
+            const balanceAmounts = this.superJson.parse<ReconcileBalanceBalanceAmounts>(stringifiedBalanceAmounts)
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyExecuted,
                 {
@@ -84,19 +105,23 @@ export class ExecuteService {
                 }
             )
             return {
-                result: job.data as ReconcileBalanceJobData
+                result: {
+                    balanceAmounts,
+                    transactionRecords,
+                    reconcileBalanceTransaction,
+                }
             }
         }
 
-        const transactionRecords: ReconcileBalanceJobData["transactionRecords"] = []
         const { reconcileBalanceTransaction } = prepareResult
-
-        const [executeResult,
-            error] = await this.asyncService.resolveTuple(
+        const [
+            , 
+            error,
+        ] = await this.asyncService.resolveTuple(
             this.balanceActionService.executeReconcileBalanceTransaction(
                 {
                     bot,
-                    prepareTxs: reconcileBalanceTransaction.prepareTxs,
+                    prepareTxs: reconcileBalanceTransaction?.prepareTxs ?? [],
                     isRetry: isRetry || (payload.isRetry ?? false),
                     stimulate: envConfig().executor.runtime.operation.reconcileBalance.stimulate,
                 }
@@ -113,18 +138,6 @@ export class ExecuteService {
             }
             throw new UnrecoverableError(failedError.toJSON())
         }
-
-        const txHashes = executeResult?.txHashes ?? []
-        for (const txHash of txHashes) {
-            transactionRecords.push(
-                {
-                    bot,
-                    txHash,
-                    chainId: bot.chainId,
-                    type: TransactionType.ReconcileBalance,
-                }
-            )
-        }
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -140,7 +153,6 @@ export class ExecuteService {
         return {
             result: {
                 ...prepareResult,
-                transactionRecords,
             }
         }
     }
