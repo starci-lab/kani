@@ -43,7 +43,7 @@ export class KafkaProducerService implements OnModuleInit, OnApplicationShutdown
         await this.readinessWatcherFactoryService.waitUntilReady(KafkaAdminService.name)
         this.producer = this.kafka.producer(
             {
-                allowAutoTopicCreation: false,
+                allowAutoTopicCreation: true,
                 idempotent: false,
                 maxInFlightRequests: envConfig().kafka.maxInFlightRequests,
                 retry: {

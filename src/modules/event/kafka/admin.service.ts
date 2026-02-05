@@ -20,9 +20,6 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    DayjsService 
-} from "@modules/mixin"
-import {
     ReadinessWatcherFactoryService 
 } from "@modules/mixin"
 import {
@@ -61,13 +58,6 @@ export class KafkaAdminService implements OnModuleInit {
          * Winston logger for structured logging.
          */
         private readonly winstonService: WinstonService,
-
-        /**
-         * Dayjs wrapper service.
-         *
-         * Used for timeout calculations in polling loops.
-         */
-        private readonly dayjsService: DayjsService,
 
         /**
          * Readiness watcher factory.
