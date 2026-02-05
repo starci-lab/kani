@@ -356,7 +356,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 const { positionId } = this.parseAddLiquidityEvent({
                     state: _state,
                     bot,

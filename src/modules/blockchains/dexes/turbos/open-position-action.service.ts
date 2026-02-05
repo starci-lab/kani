@@ -344,7 +344,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 const { positionId } = this.parseMintEvents({
                     bot,
                     txHash,

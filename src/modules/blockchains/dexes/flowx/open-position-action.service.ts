@@ -300,7 +300,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
-            if (txBlock !== null && !txBlock.errors) {
+            if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 const { positionId } = this.parseIncreaseLiquidityEvent({
                     state: _state,
                     bot,

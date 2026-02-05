@@ -285,9 +285,11 @@ export class KafkaAdminService implements OnModuleInit {
          *
          * This call is asynchronous on the broker side.
          */
-        await this.admin.createTopics({
-            topics: topicConfigs,
-        })
+        await this.admin.createTopics(
+            {
+                topics: topicConfigs,
+            }
+        )
         this.winstonService.log(WinstonLog.KafkaTopicsCreated,
             {
                 topics: topicsToCreate.map(([topic]) => topic),
