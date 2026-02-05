@@ -35,17 +35,14 @@ import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
-
-// Retryable RPC error indicating a temporary failure that blocks progress
-// (e.g. request timeout, transient cluster issues, blockhash expiration,
-// or temporary on-chain execution failure).
-// Safe to retry with backoff; do not ban/eject the RPC endpoint.
-export class SolanaRpcRetryableError extends Error { }
-export class SolanaRpcFatalError extends Error { }
-export class SolanaRpcIgnorableError extends Error { }
-export class SuiRpcRetryableError extends Error { }
-export class SuiRpcFatalError extends Error { }
-export class SuiRpcIgnorableError extends Error { }
+import {
+    SolanaRpcRetryableException,
+    SolanaRpcFatalException,
+    SolanaRpcIgnorableException,
+    SuiRpcRetryableException,
+    SuiRpcFatalException,
+    SuiRpcIgnorableException,
+} from "@modules/exceptions"
 
 export enum RpcErrorType {
     Ignorable = "ignorable",
@@ -201,20 +198,20 @@ export class RpcExecutorService {
                                         const errorType = this.getSolanaRpcErrorType(error)
                                         switch (errorType) {
                                         case RpcErrorType.Fatal:
-                                            throw new AbortError(new SolanaRpcFatalError(error?.message))
+                                            throw new AbortError(new SolanaRpcFatalException(error?.message))
                                         case RpcErrorType.Retryable:
-                                            throw new SolanaRpcRetryableError(error?.message)
+                                            throw new SolanaRpcRetryableException(error?.message)
                                         case RpcErrorType.Ignorable:
-                                            throw new AbortError(new SolanaRpcIgnorableError(error?.message))
+                                            throw new AbortError(new SolanaRpcIgnorableException(error?.message))
                                         }
                                     }
                                     // if the error is not a solana error, throw the error
-                                    throw new AbortError(new SolanaRpcIgnorableError(error?.message))
+                                    throw new AbortError(new SolanaRpcIgnorableException(error?.message))
                                 },
                             },
                         )
                     } catch (error) {
-                        if (error instanceof SolanaRpcFatalError) {
+                        if (error instanceof SolanaRpcFatalException) {
                             this.winstonService.log(
                                 WinstonLog.EjectRpcFatalError,
                                 {
@@ -293,22 +290,22 @@ export class RpcExecutorService {
                                 return result
                             }
                             if (error === null) {
-                                throw new AbortError(new SuiRpcIgnorableError("Unknown error"))
+                                throw new AbortError(new SuiRpcIgnorableException("Unknown error"))
                             }
                             const errorType = this.getSuiRpcErrorType(error)
                             switch (errorType) {
                             case RpcErrorType.Fatal:
-                                throw new AbortError(new SuiRpcFatalError(error?.message))
+                                throw new AbortError(new SuiRpcFatalException(error?.message))
                             case RpcErrorType.Retryable:
-                                throw new SuiRpcRetryableError(error?.message)
+                                throw new SuiRpcRetryableException(error?.message)
                             case RpcErrorType.Ignorable:
-                                throw new AbortError(new SuiRpcIgnorableError(error?.message))
+                                throw new AbortError(new SuiRpcIgnorableException(error?.message))
                             }
                         },
                     })
                 } catch (error) {
                     // if the error is a fatal error, eject the rpc
-                    if (error instanceof SuiRpcFatalError) {
+                    if (error instanceof SuiRpcFatalException) {
                         this.winstonService.log(
                             WinstonLog.EjectRpcFatalError,
                             {
