@@ -19,10 +19,18 @@ export const createKafkaProvider = (): Provider => ({
     provide: KAFKA,
     inject: [InstanceIdService],
     useFactory: (instanceIdService: InstanceIdService): Kafka => {
+        console.log(`brokers: ${envConfig().kafka.host}:${envConfig().kafka.port}`)
+        console.log(`clientId: ${instanceIdService.getId()}`)
+        console.log(`logLevel: ${logLevel.DEBUG}`)
+        console.log(`sasl: ${envConfig().kafka.sasl.enabled ? {
+            mechanism: "scram-sha-256",
+            username: envConfig().kafka.sasl.username,
+            password: envConfig().kafka.sasl.password,
+        } : undefined}`)
         return new Kafka({
             brokers: [`${envConfig().kafka.host}:${envConfig().kafka.port}`],
             clientId: instanceIdService.getId(),
-            logLevel: logLevel.INFO,
+            logLevel: logLevel.DEBUG,
             sasl: envConfig().kafka.sasl.enabled ? {
                 mechanism: "scram-sha-256",
                 username: envConfig().kafka.sasl.username,
