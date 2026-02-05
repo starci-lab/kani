@@ -46,6 +46,7 @@ export interface ProcessParams {
     payload: ReconcileBalancePayload
 }
 
+
 export interface ProcessResult {
     result: Omit<ReconcileBalanceJobData, "balanceAmounts">
 }

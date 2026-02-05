@@ -4,7 +4,6 @@ import {
 import {
     ExecuteParams,
     ExecuteResult,
-    ReconcileBalanceBalanceAmounts,
     ReconcileBalanceJobData
 } from "./types"
 import {
@@ -48,9 +47,6 @@ import {
 import {
     SuperJSON 
 } from "superjson"
-import {
-    AddTransactionRecordParams 
-} from "@modules/blockchains"
 
 @Injectable()
 export class ExecuteService {
@@ -88,13 +84,9 @@ export class ExecuteService {
             getJobStatusOrder(job.status) >= getJobStatusOrder(JobStatus.Executed)
         ) {
             const { 
-                transactionRecords: stringifiedTransactionRecords,
                 reconcileBalanceTransaction: stringifiedReconcileBalanceTransaction,
-                balanceAmounts: stringifiedBalanceAmounts,
             } = job.data as ToStringObject<ReconcileBalanceJobData>
-            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
             const reconcileBalanceTransaction = stringifiedReconcileBalanceTransaction ? this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction) : undefined
-            const balanceAmounts = this.superJson.parse<ReconcileBalanceBalanceAmounts>(stringifiedBalanceAmounts)
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyExecuted,
                 {
@@ -106,8 +98,6 @@ export class ExecuteService {
             )
             return {
                 result: {
-                    balanceAmounts,
-                    transactionRecords,
                     reconcileBalanceTransaction,
                 }
             }
@@ -152,7 +142,7 @@ export class ExecuteService {
             )
         return {
             result: {
-                ...prepareResult,
+                reconcileBalanceTransaction,
             }
         }
     }
