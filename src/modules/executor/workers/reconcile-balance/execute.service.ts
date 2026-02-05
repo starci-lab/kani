@@ -15,6 +15,7 @@ import {
     InjectPrimaryMongoose,
     JobSchema,
     JobStatus,
+    TransactionType,
 } from "@modules/databases"
 import {
     Connection
@@ -47,6 +48,9 @@ import {
 import {
     SuperJSON 
 } from "superjson"
+import {
+    AddTransactionRecordParams 
+} from "@modules/blockchains"
 
 @Injectable()
 export class ExecuteService {
@@ -85,8 +89,10 @@ export class ExecuteService {
         ) {
             const { 
                 reconcileBalanceTransaction: stringifiedReconcileBalanceTransaction,
+                transactionRecords: stringifiedTransactionRecords,
             } = job.data as ToStringObject<ReconcileBalanceJobData>
             const reconcileBalanceTransaction = stringifiedReconcileBalanceTransaction ? this.superJson.parse<PrepareReconcileBalanceTransactionResult>(stringifiedReconcileBalanceTransaction) : undefined
+            const transactionRecords = stringifiedTransactionRecords ? this.superJson.parse<Array<AddTransactionRecordParams>>(stringifiedTransactionRecords) : undefined
             this.winstonService.log(
                 WinstonLog.ReconcileBalanceJobAlreadyExecuted,
                 {
@@ -99,13 +105,14 @@ export class ExecuteService {
             return {
                 result: {
                     reconcileBalanceTransaction,
+                    transactionRecords,
                 }
             }
         }
 
         const { reconcileBalanceTransaction } = prepareResult
         const [
-            , 
+            executeResult, 
             error,
         ] = await this.asyncService.resolveTuple(
             this.balanceActionService.executeReconcileBalanceTransaction(
@@ -128,6 +135,12 @@ export class ExecuteService {
             }
             throw new UnrecoverableError(failedError.toJSON())
         }
+        const transactionRecords: Array<AddTransactionRecordParams> = executeResult?.txHashes?.map((txHash) => ({
+            bot,
+            txHash,
+            chainId: bot.chainId,
+            type: TransactionType.ReconcileBalance,
+        })) ?? []
         await this.connection
             .model<JobSchema>(JobSchema.name)
             .updateOne(
@@ -137,12 +150,14 @@ export class ExecuteService {
                 {
                     $set: {
                         status: JobStatus.Executed,
+                        "data.transactionRecords": this.superJson.stringify(transactionRecords),
                     },
                 }
             )
         return {
             result: {
                 reconcileBalanceTransaction,
+                transactionRecords,
             }
         }
     }
