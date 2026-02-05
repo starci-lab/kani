@@ -20,7 +20,7 @@ export class HandleClmmPositionOpenRequestedEventService {
     /**
      * Adapter for CLMM "position open requested" events.
      *
-     * Responsibility:
+     * Responsibilities:
      * - Bridge the CLMM-specific event type into the shared `HandleOpenPositionService`.
      * - Keep this handler thin (no business logic here).
      */

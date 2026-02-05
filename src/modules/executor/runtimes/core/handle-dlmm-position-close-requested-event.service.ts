@@ -22,7 +22,7 @@ export class HandleDlmmPositionCloseRequestedEventService {
     /**
      * Adapter for DLMM "position close requested" events.
      *
-     * Responsibility:
+     * Responsibilities:
      * - Bridge the DLMM-specific event type into the shared `HandleClosePositionService`.
      * - Keep this handler thin (no business logic here).
      */

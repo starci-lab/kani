@@ -67,7 +67,7 @@ export class HandleOpenPositionService {
      * - Guard against invalid bot states (not running / already in position / already has active job)
      * - Acquire lock authority (single-writer) before enqueuing work
      * - Resolve the requested liquidity pool from memory storage
-     * - Enqueue a BullMQ `OpenPosition` job via `OpenPositionOrchestratorService`
+     * - Enqueue a BullMQ `OpenPosition` job via `OpenPositionEnqueueService`
      * - Log enqueue success/failure and release lock on enqueue failure
      */
     constructor(
@@ -100,25 +100,28 @@ export class HandleOpenPositionService {
             eventPayload,
         }: HandleOpenPositionParams
     ) {
-        // check if the bot has an active job
+        // Acquire lock authority; return if not acquired
         const acquired = await this.lockAuthorityService.acquire(
             {
                 botId: bot.id,
             }
         )
         if (!acquired) return
-        // we do nothing if the bot is not running
+        // Skip if bot is not running
         if (!bot.running) {
             return
         }
-        // we do nothing if the bot has an active position
+        // Skip if bot already has an active position
         if (bot.activePosition) return
+        // Skip if bot already has an active job
         if (bot.activeJob) {
             return
         }
+        // Skip if no balance snapshot (need reconciled balance before opening)
         if (!bot.balanceSnapshots) {
             return
         }
+        // Skip if balance snapshot is too old (outside rescan cooldown)
         const diffMs = this.dayjsService.now().diff(
             this.dayjsService.from(bot.balanceSnapshots.snapshotAt),
             "millisecond"
@@ -204,7 +207,7 @@ export class HandleOpenPositionService {
         } catch {
             return
         }
-        // we wait for ensure no active job for the bot
+        // Wait to ensure no job for this bot is already in the queue
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
@@ -215,7 +218,7 @@ export class HandleOpenPositionService {
         )
         if (!noActiveJobFound) return
         const jobId = new Types.ObjectId().toString()
-        // enqueue the balance rebalancing
+        // Enqueue the open-position job
         try {
             const bullmqJob = await this.openPositionEnqueueService.enqueue(
                 {

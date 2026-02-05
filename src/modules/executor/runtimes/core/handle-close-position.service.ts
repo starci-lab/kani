@@ -58,10 +58,10 @@ export class HandleClosePositionService {
      * that a position should be closed.
      *
      * Responsibilities:
-     * - Guard against invalid bot states (not running / already in position / already has active job)
+     * - Guard against invalid bot states (not running / no active position to close / already has active job)
      * - Acquire lock authority (single-writer) before enqueuing work
      * - Resolve the requested liquidity pool from memory storage
-     * - Enqueue a BullMQ `ClosePosition` job via `ClosePositionOrchestratorService`
+     * - Enqueue a BullMQ `ClosePosition` job via `ClosePositionEnqueueService`
      * - Log enqueue success/failure and release lock on enqueue failure
      */
     constructor(
@@ -77,7 +77,7 @@ export class HandleClosePositionService {
     ) {}
 
     /**
-     * Handles an close-position request for the given bot and event payload.
+     * Handles a close-position request for the given bot and event payload.
      *
      * Side effects:
      * - Acquires lock authority (Redis)
@@ -92,24 +92,21 @@ export class HandleClosePositionService {
             eventPayload,
         }: HandleClosePositionParams
     ) {
-        // check if the bot has an active job
+        // Acquire lock authority; return if not acquired
         const acquired = await this.lockAuthorityService.acquire(
             {
                 botId: bot.id,
             }
         )
         if (!acquired) return
-        // run even if the bot is not running
-        // // we do nothing if the bot is not running
-        // if (!bot.running) return
-        // we do nothing if the bot has an active position
+        // Skip if bot has no active position to close
         if (!bot.activePosition) return
         if (bot.activeJob) {
             return
         }
         await this.positionAssociateService.associateActivePosition(bot)
         const jobId = new Types.ObjectId().toString()
-        // settle the position
+        // Settle the position to determine if we should close
         const { settled, strategyResults } = await this.settlementService.settle(
             {
                 bot,
@@ -131,7 +128,7 @@ export class HandleClosePositionService {
             )
             return
         }
-        // we wait for ensure no active job for the bot
+        // Wait to ensure no job for this bot is already in the queue
         const noActiveJobFound = await this.waitService.wait(
             {
                 action: async () => {
@@ -141,8 +138,7 @@ export class HandleClosePositionService {
             }
         )
         if (!noActiveJobFound) return
-        // settle the position
-        // enqueue the close position
+        // Enqueue the close-position job
         try {
             const bullmqJob = await this.closePositionEnqueueService.enqueue(
                 {

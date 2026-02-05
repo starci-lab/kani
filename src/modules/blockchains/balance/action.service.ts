@@ -10,17 +10,32 @@ import {
     PrepareWithdrawTransactionResult,
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,
+    DetermineReconcileBalancePlanParams,
+    DetermineReconcileBalancePlanResult,
 } from "./types"
 import {
     SolanaBalanceService 
 } from "./solana"
 import {
-    ChainId 
+    ChainId,
+    TokenType
 } from "@modules/typedefs"
 import {
     SuiBalanceService 
 } from "./sui"
-
+import {
+    BalanceFetcherService
+} from "./fetcher.service"
+import {
+    SwapMathService
+} from "../math"
+import {
+    TokenNotFoundException
+} from "@modules/exceptions"
+import BN from "bn.js"
+import {
+    PrimaryMemoryStorageService
+} from "@modules/databases"
 import {
     IBalanceActionService
 } from "./types"
@@ -30,6 +45,9 @@ export class BalanceActionService implements IBalanceActionService {
     constructor(
         private readonly solanaBalanceService: SolanaBalanceService,
         private readonly suiBalanceService: SuiBalanceService,
+        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
+        private readonly balanceFetcherService: BalanceFetcherService,
+        private readonly swapMathService: SwapMathService,
     ) {}
 
     async prepareReconcileBalanceTransaction(
@@ -82,5 +100,80 @@ export class BalanceActionService implements IBalanceActionService {
         default:
             throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
         }
+    }
+
+    async determineReconcileBalancePlan({
+        bot,
+        targetBalanceAmount: _targetBalanceAmount,
+        quoteBalanceAmount: _quoteBalanceAmount,
+        gasBalanceAmount: _gasBalanceAmount,
+    }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
+        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.targetToken.toString()
+            }
+        })
+        if (!targetToken) {
+            throw new TokenNotFoundException({
+                id: bot.targetToken.toString(),
+            })
+        }
+        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            id: {
+                $eq: bot.quoteToken.toString()
+            }
+        })
+        if (!quoteToken) {
+            throw new TokenNotFoundException({
+                id: bot.quoteToken.toString(),
+            })
+        }
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            type: {
+                $eq: TokenType.Native
+            },
+            chainId: {
+                $eq: bot.chainId
+            }
+        })
+        if (!gasToken) {
+            throw new TokenNotFoundException({
+                conditions: {
+                    chainId: bot.chainId,
+                    type: TokenType.Native,
+                },
+            })
+        }
+        let targetBalanceAmount: BN
+        let quoteBalanceAmount: BN
+        let gasBalanceAmount: BN
+        if (
+            _targetBalanceAmount &&
+            _quoteBalanceAmount &&
+            _gasBalanceAmount
+        ) {
+            targetBalanceAmount = _targetBalanceAmount
+            quoteBalanceAmount = _quoteBalanceAmount
+            gasBalanceAmount = _gasBalanceAmount
+        } else {
+            const {
+                targetBalanceAmount: targetAmount,
+                quoteBalanceAmount: quoteAmount,
+                gasBalanceAmount: gasAmount,
+            } = await this.balanceFetcherService.fetchBalances({
+                bot,
+            })
+            targetBalanceAmount = targetAmount
+            quoteBalanceAmount = quoteAmount
+            gasBalanceAmount = gasAmount
+        }
+        return await this.swapMathService.computeSwapAmounts({
+            targetToken,
+            quoteToken,
+            gasToken,
+            targetBalanceAmount,
+            quoteBalanceAmount,
+            gasBalanceAmount
+        })
     }
 }

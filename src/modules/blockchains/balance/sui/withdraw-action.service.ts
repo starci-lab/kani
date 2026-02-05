@@ -245,15 +245,6 @@ export class SuiWithdrawActionService {
                         signatureWithBytes,
                     },
                 ]
-
-                this.winstonService.log(
-                    WinstonLog.WithdrawTransactionPrepared,
-                    {
-                        botId: bot.id,
-                        txHashes: prepareTxs.map((tx) => tx.txHash),
-                    },
-                )
-
                 return {
                     prepareTxs,
                 }

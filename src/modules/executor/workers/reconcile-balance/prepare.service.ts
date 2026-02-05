@@ -24,7 +24,6 @@ import {
     BalanceFetcherService
 } from "@modules/blockchains"
 import {
-    BalanceEnqueueService,
     BalanceActionService,
     BalanceReconcileBalanceTokenInput
 } from "@modules/blockchains"
@@ -45,7 +44,6 @@ import {
 @Injectable()
 export class PrepareService {
     constructor(
-        private readonly balanceEnqueueService: BalanceEnqueueService,
         private readonly balanceActionService: BalanceActionService,
         private readonly balanceFetcherService: BalanceFetcherService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
@@ -135,7 +133,7 @@ export class PrepareService {
         // - Determine required swaps
         // - No side effects (pure planning)
         const { swapSteps } =
-        await this.balanceEnqueueService.determineReconcileBalancePlan({
+        await this.balanceActionService.determineReconcileBalancePlan({
             bot,
             targetBalanceAmount: targetBalanceAmountBN,
             quoteBalanceAmount: quoteBalanceAmountBN,

@@ -5,8 +5,11 @@ import {
     ConfigurableModuleClass, OPTIONS_TYPE 
 } from "./balance.module-definition"
 import {
-    BalanceEnqueueService 
-} from "./enqueue.service"
+    ReconcileBalanceEnqueueService 
+} from "./reconcile-enqueue.service"
+import {
+    WithdrawEnqueueService 
+} from "./withdraw-enqueue.service"
 import {
     BalanceActionService 
 } from "./action.service"
@@ -74,7 +77,8 @@ export class BalanceModule extends ConfigurableModuleClass {
         // Add enqueue services if enabled
         if (options.enable?.enqueue !== false) {
             providers.push(
-                BalanceEnqueueService,
+                ReconcileBalanceEnqueueService,
+                WithdrawEnqueueService,
             )
         }
         

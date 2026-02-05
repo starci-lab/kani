@@ -21,7 +21,7 @@ export class HandleDlmmPositionOpenRequestedEventService {
     /**
      * Adapter for DLMM "position open requested" events.
      *
-     * Responsibility:
+     * Responsibilities:
      * - Bridge the DLMM-specific event type into the shared `HandleOpenPositionService`.
      * - Keep this handler thin (no business logic here).
      */

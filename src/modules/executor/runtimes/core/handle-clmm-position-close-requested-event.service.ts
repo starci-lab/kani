@@ -20,7 +20,7 @@ export class HandleClmmPositionCloseRequestedEventService {
     /**
      * Adapter for CLMM "position close requested" events.
      *
-     * Responsibility:
+     * Responsibilities:
      * - Bridge the CLMM-specific event type into the shared `HandleClosePositionService`.
      * - Keep this handler thin (no business logic here).
      */

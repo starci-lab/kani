@@ -68,9 +68,6 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
-    MountStorageService 
-} from "@modules/filesystem"
-import {
     WinstonLog,
     WinstonService 
 } from "@modules/winston"
@@ -84,7 +81,6 @@ export class SolanaWithdrawActionService {
         private readonly privySignService: PrivySignService,
         private readonly transferInstructionService: TransferInstructionService,
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly mountStorageService: MountStorageService,
         private readonly winstonService: WinstonService,
     ) { }
 
@@ -265,13 +261,6 @@ export class SolanaWithdrawActionService {
                 solanaTx: transaction.solanaTx,
             })
         }
-        this.winstonService.log(
-            WinstonLog.WithdrawTransactionPrepared,
-            {
-                botId: bot.id,
-                txHashes: prepareTxs.map(tx => tx.txHash),
-            }
-        )   
         return {
             prepareTxs,
         }

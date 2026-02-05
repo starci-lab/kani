@@ -99,12 +99,14 @@ export class ExecuteService {
         const transactionRecords: Array<AddTransactionRecordParams> = []
         const { withdrawTransaction } = prepareResult
 
-        const { txHashes } = await this.balanceActionService.executeWithdrawTransaction({
-            bot,
-            prepareTxs: withdrawTransaction.prepareTxs,
-            isRetry: isRetry || (payload.isRetry ?? false),
-            stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
-        })
+        const { txHashes } = await this.balanceActionService.executeWithdrawTransaction(
+            {
+                bot,
+                prepareTxs: withdrawTransaction.prepareTxs,
+                isRetry: isRetry || (payload.isRetry ?? false),
+                stimulate: envConfig().executor.runtime.operation.withdraw.stimulate,
+            }
+        )
 
         for (const txHash of txHashes) {
             transactionRecords.push(

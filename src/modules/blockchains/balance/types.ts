@@ -84,6 +84,7 @@ export interface IBalanceActionService {
     executeReconcileBalanceTransaction(params: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults>
     prepareWithdrawTransaction(params: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult>
     executeWithdrawTransaction(params: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult>
+    determineReconcileBalancePlan(params: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult>
 }
 
 /**
@@ -96,11 +97,30 @@ export interface IBalanceFetcherService {
 }
 
 /**
- * The core interface for balance enqueue operations.
+ * The core interface for reconcile-balance enqueue operations.
  */
-export interface IBalanceEnqueueService {
-    enqueue(params: EnqueueBalanceRebalancingParams): Promise<import("bullmq").Job<string>>
-    determineReconcileBalancePlan(params: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult>
+export interface IReconcileBalanceEnqueueService {
+    enqueue(params: EnqueueReconcileBalanceParams): Promise<import("bullmq").Job<string>>
+}
+
+/**
+ * The core interface for withdraw enqueue operations.
+ */
+export interface IWithdrawEnqueueService {
+    enqueue(params: EnqueueWithdrawParams): Promise<import("bullmq").Job<string>>
+}
+
+export interface EnqueueReconcileBalanceParams {
+    bot: BotSchema
+    jobId: string
+    isRetry?: boolean
+}
+
+export interface EnqueueWithdrawParams {
+    bot: BotSchema
+    jobId: string
+    isRetry?: boolean
+    tokenInputs: Array<BalanceWithdrawTokenInput>
 }
 
 export interface DetermineReconcileBalancePlanParams {
@@ -183,12 +203,6 @@ export interface ExecuteSwapTransactionParams {
     signatureWithBytes?: SignatureWithBytes
     txCheck: boolean
     stimulate?: boolean
-}
-
-export interface EnqueueBalanceRebalancingParams {
-    bot: BotSchema
-    jobId: string
-    isRetry?: boolean
 }
 
 export interface GetBalanceAmountInUsdParams {

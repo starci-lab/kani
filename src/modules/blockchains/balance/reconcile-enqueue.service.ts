@@ -2,34 +2,18 @@ import {
     Injectable
 } from "@nestjs/common"
 import {
-    EnqueueBalanceRebalancingParams,
-    DetermineReconcileBalancePlanParams,
-    DetermineReconcileBalancePlanResult,
+    EnqueueReconcileBalanceParams,
 } from "./types"
-import {
-    TokenType
-} from "@modules/typedefs"
-import {
-    BalanceFetcherService
-} from "./fetcher.service"
 import {
     JobType,
     JobStatus,
-    PrimaryMemoryStorageService,
     InjectPrimaryMongoose,
     JobSchema,
     BotSchema,
 } from "@modules/databases"
 import {
-    TokenNotFoundException,
-} from "@modules/exceptions"
-import {
     ReconcileBalancePayload
 } from "../types"
-import BN from "bn.js"
-import {
-    SwapMathService
-} from "../math"
 import {
     envConfig
 } from "@modules/env"
@@ -57,15 +41,12 @@ import {
     v4
 } from "uuid"
 import {
-    IBalanceEnqueueService
+    IReconcileBalanceEnqueueService
 } from "./types"
 
 @Injectable()
-export class BalanceEnqueueService implements IBalanceEnqueueService {
+export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        private readonly balanceFetcherService: BalanceFetcherService,
-        private readonly swapMathService: SwapMathService,
         @InjectPrimaryMongoose()
         private readonly connection: Connection,
         @InjectQueue(bullData[BullQueueName.ReconcileBalance].name)
@@ -81,7 +62,7 @@ export class BalanceEnqueueService implements IBalanceEnqueueService {
             bot,
             jobId,
             isRetry,
-        }: EnqueueBalanceRebalancingParams,
+        }: EnqueueReconcileBalanceParams,
     ): Promise<Job<string>> {
         /**
          * Add reconcile balance job to the queue
@@ -149,86 +130,6 @@ export class BalanceEnqueueService implements IBalanceEnqueueService {
             ),
             {
                 jobId: bot.id,
-            }
-        )
-    }
-
-    async determineReconcileBalancePlan({
-        bot,
-        targetBalanceAmount: _targetBalanceAmount,
-        quoteBalanceAmount: _quoteBalanceAmount,
-        gasBalanceAmount: _gasBalanceAmount,
-    }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
-        const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.targetToken.toString()
-            }
-        })
-        if (!targetToken) {
-            throw new TokenNotFoundException({
-                id: bot.targetToken.toString(),
-            })
-        }
-        const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            id: {
-                $eq: bot.quoteToken.toString()
-            }
-        })
-        if (!quoteToken) {
-            throw new TokenNotFoundException({
-                id: bot.quoteToken.toString(),
-            })
-        }
-        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-            type: {
-                $eq: TokenType.Native
-            },
-            chainId: {
-                $eq: bot.chainId
-            }
-        })
-        if (!gasToken) {
-            throw new TokenNotFoundException({
-                conditions: {
-                    chainId: bot.chainId,
-                    type: TokenType.Native,
-                },
-            })
-        }
-        // if you pass the snapshot balances, we will use them instead of fetching the balances from on-chain
-        let targetBalanceAmount: BN
-        let quoteBalanceAmount: BN
-        let gasBalanceAmount: BN
-        if (
-            _targetBalanceAmount &&
-            _quoteBalanceAmount &&
-            _gasBalanceAmount
-        ) {
-            targetBalanceAmount = _targetBalanceAmount
-            quoteBalanceAmount = _quoteBalanceAmount
-            gasBalanceAmount = _gasBalanceAmount
-        } else {
-            const {
-                targetBalanceAmount: _targetBalanceAmount,
-                quoteBalanceAmount: _quoteBalanceAmount,
-                gasBalanceAmount: _gasBalanceAmount,
-            } = await this.balanceFetcherService.fetchBalances(
-                {
-                    bot,
-                }
-            )
-            targetBalanceAmount = _targetBalanceAmount
-            quoteBalanceAmount = _quoteBalanceAmount
-            gasBalanceAmount = _gasBalanceAmount
-        }
-        return await this.swapMathService.computeSwapAmounts(
-            {
-                targetToken,
-                quoteToken,
-                gasToken,
-                targetBalanceAmount,
-                quoteBalanceAmount,
-                gasBalanceAmount
             }
         )
     }
