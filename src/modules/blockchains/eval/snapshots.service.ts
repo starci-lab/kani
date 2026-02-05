@@ -135,25 +135,15 @@ export class EvalSnapshotService {
             })
         }
         const eligible = totalBalanceAmountInUsd.gte(new Decimal(minRequiredAmountInUsd))
-        try {
-            this.winstonService.log(
-                WinstonLog.EvalSnapshot,
-                {
-                    botId: bot.id,
-                    totalBalanceAmountInUsd: totalBalanceAmountInUsd.toString(),
-                    minRequiredAmountInUsd: minRequiredAmountInUsd.toString(),
-                    eligible,
-                }
-            )
-        } catch (error) {
-            this.winstonService.log(
-                WinstonLog.CommandError,
-                {
-                    message: (error as Error).message,
-                }
-            )
-            throw error
-        }
+        this.winstonService.log(
+            WinstonLog.EvalSnapshotsChecked,
+            {
+                botId: bot.id,
+                totalBalanceAmountInUsd: totalBalanceAmountInUsd.toString(),
+                minRequiredAmountInUsd: minRequiredAmountInUsd.toString(),
+                eligible,
+            }
+        )
         return {
             eligible,
         }

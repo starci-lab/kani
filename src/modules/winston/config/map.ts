@@ -1833,9 +1833,9 @@ export const configMap = {
         } as CommandErrorMessage,
     },
     // Eval Snapshot
-    [WinstonLog.EvalSnapshot]: {
-        name: WinstonLog.EvalSnapshot,
-        level: WinstonLevel.Info,
+    [WinstonLog.EvalSnapshotsChecked]: {
+        name: WinstonLog.EvalSnapshotsChecked,
+        level: WinstonLevel.Verbose,
         loki: true,
         messageType: {
         } as EvalSnapshotMessage,
