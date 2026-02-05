@@ -1,13 +1,14 @@
-
 import {
-    Module 
+    Module,
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass, OPTIONS_TYPE
+    ConfigurableModuleClass,
+    OPTIONS_TYPE,
 } from "./core.module-definition"
 import {
-    DatabaseModule 
+    DatabaseModule,
 } from "./database"
+
 @Module({
 })
 export class CoreModule extends ConfigurableModuleClass {
@@ -19,10 +20,10 @@ export class CoreModule extends ConfigurableModuleClass {
             imports: [
                 DatabaseModule.register(
                     {
-                    isGlobal: options.isGlobal,
+                        isGlobal: options.isGlobal,
                     }
-                )
-            ]
+                ),
+            ],
         }
     }
 }
