@@ -264,6 +264,9 @@ export class SuiReconcileBalanceActionService {
                     const { digest } = await suiClient.executeTransactionBlock({
                         transactionBlock: signatureWithBytes.bytes,
                         signature: signatureWithBytes.signature,
+                        options: {
+                            showEffects: true,
+                        },
                     })
                     await suiClient.waitForTransaction(
                         {

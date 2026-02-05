@@ -144,9 +144,6 @@ export class ExecuteService {
             )
             // if the error is throw intentionally, throw a fatal error to stop the job
             if (error instanceof AbstractException) {
-                console.log(
-                    `throwing fatal error: ${failedError.toJSON()}`
-                )
                 throw new FatalError(failedError.toJSON())
             }
             // if the error is not throw intentionally, throw an unrecoverable error to let BullMQ handle the retry
@@ -154,12 +151,14 @@ export class ExecuteService {
         }
         const txHashes = executeResult.txHashes ?? []
         const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
-            (txHash) => ({
-                bot,
-                txHash,
-                chainId: bot.chainId,
-                type: TransactionType.OpenPosition,
-            }),
+            (txHash) => (
+                {
+                    bot,
+                    txHash,
+                    chainId: bot.chainId,
+                    type: TransactionType.OpenPosition,
+                }
+            ),
         )
         await this.connection
             .model<JobSchema>(JobSchema.name)

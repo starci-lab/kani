@@ -193,6 +193,9 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
+                            options: {
+                                showEffects: true,
+                            },
                         })
                     },
                 })
@@ -252,7 +255,10 @@ export class FlowXClosePositionActionService implements IClosePositionActionServ
                 }
                 const { digest, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
-                    signature: signatureWithBytes.signature
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEffects: true,
+                    },
                 })
                 if (effects?.status?.status !== "success") {
                     throw new TransactionExecutionFailedException({

@@ -342,6 +342,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
                             options: {
+                                showEffects: true,
                                 showEvents: true,
                             }
                         })
@@ -418,6 +419,7 @@ export class TurbosOpenPositionActionService implements IOpenActionService {
                     signature: signatureWithBytes.signature,
                     options: {
                         showEvents: true,
+                        showEffects: true,
                     }
                 })
                 if (effects?.status?.status !== "success") {

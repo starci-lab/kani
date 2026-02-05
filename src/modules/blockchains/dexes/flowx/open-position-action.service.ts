@@ -295,6 +295,7 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
                             options: {
+                                showEffects: true,
                                 showEvents: true,
                             }
                         })

@@ -302,6 +302,7 @@ export class MomentumOpenPositionActionService implements IOpenActionService {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
                             options: {
+                                showEffects: true,
                                 showEvents: true,
                             }
                         })

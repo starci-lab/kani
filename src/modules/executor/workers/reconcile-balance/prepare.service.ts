@@ -16,7 +16,6 @@ import {
 import BN from "bn.js"
 import {
     TokenNotFoundException,
-    AbstractException,
     ReconcileBalanceJobPreparedFailedException,
 } from "@modules/exceptions"
 import {
@@ -52,9 +51,6 @@ import SuperJson from "superjson"
 import {
     FatalError,
 } from "../fatal"
-import {
-    UnrecoverableError,
-} from "bullmq"
 
 @Injectable()
 export class PrepareService {
@@ -279,10 +275,8 @@ export class PrepareService {
                 botId: bot.id,
                 jobId: job.id,
             })
-            if (error instanceof AbstractException) {
-                throw new FatalError(failedError.toJSON())
-            }
-            throw new UnrecoverableError(failedError.toJSON())
+            // throw everything as a fatal error to stop the job
+            throw new FatalError(failedError.toJSON())
         }
 
         // Persist job state transition:

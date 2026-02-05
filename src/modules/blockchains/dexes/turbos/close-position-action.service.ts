@@ -172,6 +172,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                     callback: async ({ suiClient }) => {
                         return suiClient.getTransactionBlock({
                             digest: txHash,
+                            options: {
+                                showEffects: true,
+                            },
                         })
                     },
                 })
@@ -232,6 +235,9 @@ export class TurbosClosePositionActionService implements IClosePositionActionSer
                 const { digest, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
+                    options: {
+                        showEffects: true,
+                    },
                 })
                 if (effects?.status?.status !== "success") {
                     throw new TransactionExecutionFailedException({
