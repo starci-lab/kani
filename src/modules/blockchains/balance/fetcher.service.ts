@@ -39,6 +39,10 @@ import BN from "bn.js"
 import {
     IBalanceFetcherService
 } from "./types"
+import {
+    toRawAmount 
+} from "@modules/utils"
+import Decimal from "decimal.js"
 
 @Injectable()
 export class BalanceFetcherService implements IBalanceFetcherService {
@@ -123,11 +127,37 @@ export class BalanceFetcherService implements IBalanceFetcherService {
                 }
             )
         }
-        const targetOperationalGasAmountBN = new BN(targetOperationalGasAmount)
-        const minOperationalGasAmountBN = new BN(minOperationalGasAmount)
+        const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
+            type: {
+                $eq: TokenType.Native
+            },
+            chainId: {
+                $eq: bot.chainId
+            }
+        })
+        if (!gasToken) {
+            throw new TokenNotFoundException({
+                conditions: {
+                    chainId: bot.chainId,
+                    type: TokenType.Native,
+                },
+            })
+        }
+        const targetOperationalGasAmountBN = toRawAmount(
+            {
+                amount: new Decimal(targetOperationalGasAmount),
+                decimals: new Decimal(gasToken.decimals),
+            }
+        )
+        const minOperationalGasAmountBN = toRawAmount(
+            {
+                amount: new Decimal(minOperationalGasAmount),
+                decimals: new Decimal(gasToken.decimals),
+            }
+        )
         switch (gasStatus) {
         case GasStatus.IsTarget: {
-        // we use the possible maximum amount of gas that can be used
+            // we use the possible maximum amount of gas that can be used
             const effectiveGasAmountBN = BN.min(
                 targetOperationalGasAmountBN,
                 targetBalanceAmount,
@@ -163,22 +193,6 @@ export class BalanceFetcherService implements IBalanceFetcherService {
             }
         }
         default: {
-            const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
-                type: {
-                    $eq: TokenType.Native
-                },
-                chainId: {
-                    $eq: bot.chainId
-                }
-            })
-            if (!gasToken) {
-                throw new TokenNotFoundException({
-                    conditions: {
-                        chainId: bot.chainId,
-                        type: TokenType.Native,
-                    },
-                })
-            }
             const { balanceAmount: gasBalanceAmount } = await this.fetchBalance({
                 bot,
                 token: gasToken,

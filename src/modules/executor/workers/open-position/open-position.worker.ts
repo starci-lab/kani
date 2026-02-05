@@ -136,8 +136,12 @@ export class OpenPositionWorker extends WorkerHost {
     async onLockAuthorityReleased(
         payload: LockAuthorityTimeoutEventPayload
     ) {
-        console.log("onLockAuthorityReleased",
-            payload)
+        this.winstonService.log(
+            WinstonLog.OpenPositionLockAuthorityReleased,
+            {
+                botId: payload.botId,
+            }
+        )
     }
     /**
      * BullMQ entrypoint for the `open-position` queue.

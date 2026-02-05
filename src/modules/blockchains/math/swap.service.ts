@@ -82,6 +82,7 @@ export class SwapMathService {
             // Target (gas) and quote are already in balance
             return {
                 swapSteps: [],
+                quoteRatioResult,
             }
         }
 
@@ -111,6 +112,7 @@ export class SwapMathService {
 
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
 
@@ -140,6 +142,7 @@ export class SwapMathService {
 
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
         }
@@ -182,6 +185,7 @@ export class SwapMathService {
             // Target and quote (gas) are already in balance
             return {
                 swapSteps: [],
+                quoteRatioResult,
             }
         }
 
@@ -211,6 +215,7 @@ export class SwapMathService {
 
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
 
@@ -218,7 +223,6 @@ export class SwapMathService {
             // Case: Target is underweighted (too little target, too much quote/gas)
             // Strategy: Swap quote to target to increase target exposure
             const swapSteps: Array<SwapStep> = []
-
             // Compute how much quote to swap to target to reach target ratio
             const { swappedAmount, usedAmount } = this.computeRebalanceAmount(
                 {
@@ -231,15 +235,14 @@ export class SwapMathService {
                     relativePrice: quoteRatioResult.relativePrice,
                 }
             )
-
             swapSteps.push({
                 direction: SwapDirection.QuoteToTarget,
                 usedAmount: usedAmount,
                 swappedAmount: swappedAmount,
             })
-
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
         }
@@ -344,6 +347,7 @@ export class SwapMathService {
             if (!needsGasSwap) {
                 return {
                     swapSteps: [],
+                    quoteRatioResult,
                 }
             }
 
@@ -409,6 +413,7 @@ export class SwapMathService {
             
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
 
@@ -471,6 +476,7 @@ export class SwapMathService {
             
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
 
@@ -532,6 +538,7 @@ export class SwapMathService {
             
             return {
                 swapSteps,
+                quoteRatioResult,
             }
         }
         }
@@ -771,6 +778,7 @@ export interface SwapStep {
 }
 export interface ComputeSwapAmountsResult {
     swapSteps: Array<SwapStep>
+    quoteRatioResult: ComputeQuoteRatioResult
 }
 
 export interface ComputeQuoteRatioParams {

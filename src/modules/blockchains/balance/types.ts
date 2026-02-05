@@ -12,7 +12,8 @@ import {
     SignatureWithBytes 
 } from "@mysten/sui/cryptography"
 import {
-    ComputeSwapAmountsResult 
+    ComputeQuoteRatioResult,
+    SwapStep
 } from "../math"
 import {
     WithdrawCacheResult 
@@ -134,7 +135,10 @@ export interface DetermineReconcileBalancePlanParams {
     gasBalanceAmount?: BN
 }
 
-export type DetermineReconcileBalancePlanResult = ComputeSwapAmountsResult
+export interface DetermineReconcileBalancePlanResult {
+    swapSteps: Array<SwapStep>
+    quoteRatioResult: ComputeQuoteRatioResult
+}
 
 export interface FetchBalanceParams {
     bot: BotSchema

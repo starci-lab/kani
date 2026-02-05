@@ -50,6 +50,12 @@ import {
     ToStringObject 
 } from "@modules/typedefs"
 import BN from "bn.js"
+import {
+    UnrecoverableError 
+} from "bullmq"
+import {
+    WithdrawJobPreparedFailedException 
+} from "@exceptions"
 
 @Injectable()
 export class PrepareService {
@@ -166,30 +172,45 @@ export class PrepareService {
             }
         }
         // Convert tokenInputs from payload (with tokenId) to WithdrawTokenInput (with token)
-        const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = cacheResult.tokenInputs.map((tokenInput) => {
-            const token = tokens.find((token) => token.id.toString() === tokenInput.tokenId)
-            if (!token) {
-                throw new TokenNotFoundException({
-                    id: tokenInput.tokenId,
-                })
+        const withdrawTokenInputs: Array<BalanceWithdrawTokenInput> = cacheResult.tokenInputs.map(
+            (tokenInput) => {
+                const token = tokens.find((token) => token.id.toString() === tokenInput.tokenId)
+                if (!token) {
+                    throw new TokenNotFoundException({
+                        id: tokenInput.tokenId,
+                    })
+                }
+                return {
+                    token,
+                    amount: tokenInput.amount,
+                    tokenId: token.id.toString(),
+                }
             }
-            return {
-                token,
-                amount: tokenInput.amount,
-                tokenId: token.id.toString(),
-            }
-        })
-
+        )
         // Prepare withdraw transactions
         // Note: toAddress and toUsdc should come from payload or config
         // For now, we'll use bot.accountAddress as default toAddress
         // and toUsdc as false (can be made configurable)
-        const withdrawTransaction = await this.balanceActionService.prepareWithdrawTransaction({
-            bot,
-            tokenInputs: withdrawTokenInputs,
-            toAddress: bot.withdrawalAddress,
-            toUsdc: cacheResult.toUsdc,
-        })
+        const [
+            withdrawTransaction,
+            error
+        ] = await this.asyncService.resolveTuple(
+            this.balanceActionService.prepareWithdrawTransaction({
+                bot,
+                tokenInputs: withdrawTokenInputs,
+                toAddress: bot.withdrawalAddress,
+                toUsdc: cacheResult.toUsdc,
+            })
+        )
+        if (error) {
+            throw new UnrecoverableError(
+                new WithdrawJobPreparedFailedException({
+                    originalError: error,
+                    botId: bot.id,
+                    jobId: job.id,
+                }).toJSON()
+            )
+        }
         // Persist job state transition:
         // PENDING → PREPARED
         // This marks preparation as completed and enables execution phase

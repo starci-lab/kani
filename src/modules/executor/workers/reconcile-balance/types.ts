@@ -6,6 +6,7 @@ import {
 } from "@modules/databases"
 import {
     AddTransactionRecordParams,
+    ComputeQuoteRatioResult,
     PrepareReconcileBalanceTransactionResult,
     ReconcileBalancePayload,
 } from "@modules/blockchains"
@@ -16,9 +17,16 @@ import {
  * - `prepareTxs` is produced by PREPARE and persisted on the Job document.
  * - `transactionRecords` is produced by EXECUTE and consumed by CONFIRM for snapshot persistence.
  */
+export interface ReconcileBalanceBalanceAmounts {
+    targetBalanceAmount: string
+    quoteBalanceAmount: string
+    gasBalanceAmount: string
+}
 export interface ReconcileBalanceJobData {
     reconcileBalanceTransaction: PrepareReconcileBalanceTransactionResult
     transactionRecords?: Array<AddTransactionRecordParams>
+    quoteRatioResult: ComputeQuoteRatioResult
+    balanceAmounts: ReconcileBalanceBalanceAmounts
 }
 
 export interface ProcessParams {

@@ -203,6 +203,10 @@ import {
     ReconcileBalanceJobEnqueuedMessage,
     ReconcileBalanceJobRequeuedMessage,
     ReconcileBalanceJobRequeueFailedMessage,
+    ReconcileBalanceLockAuthorityReleasedMessage,
+    OpenPositionLockAuthorityReleasedMessage,
+    ClosePositionLockAuthorityReleasedMessage,
+    WithdrawLockAuthorityReleasedMessage,
 } from "./types"
 
 export const configMap = {
@@ -1878,5 +1882,37 @@ export const configMap = {
         loki: true,
         messageType: {
         } as ReconcileBalanceTransactionFoundMessage,
+    },
+    // Reconcile Balance Lock Authority Released
+    [WinstonLog.ReconcileBalanceLockAuthorityReleased]: {
+        name: WinstonLog.ReconcileBalanceLockAuthorityReleased,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ReconcileBalanceLockAuthorityReleasedMessage,
+    },
+    // Open Position Lock Authority Released
+    [WinstonLog.OpenPositionLockAuthorityReleased]: {
+        name: WinstonLog.OpenPositionLockAuthorityReleased,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as OpenPositionLockAuthorityReleasedMessage,
+    },
+    // Close Position Lock Authority Released
+    [WinstonLog.ClosePositionLockAuthorityReleased]: {
+        name: WinstonLog.ClosePositionLockAuthorityReleased,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as ClosePositionLockAuthorityReleasedMessage,
+    },
+    // Withdraw Lock Authority Released
+    [WinstonLog.WithdrawLockAuthorityReleased]: {
+        name: WinstonLog.WithdrawLockAuthorityReleased,
+        level: WinstonLevel.Verbose,
+        loki: true,
+        messageType: {
+        } as WithdrawLockAuthorityReleasedMessage,
     },
 }

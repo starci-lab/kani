@@ -22,6 +22,7 @@ import {
 import {
     UserNotFoundException,
     TokenNotFoundException,
+    MaxBotsPerAccountReachedException,
 } from "@modules/exceptions"
 import {
     PrivyCoreService 
@@ -175,7 +176,10 @@ export class CreateBotV2Service {
                                     signerPublicKey: keyPair.publicKey,
                                     walletPublicKey: wallet.public_key  
                                 },
-                                avatarUrl: this.primaryMemoryStorageService.avatarsConfig.avatarUrls[Math.floor(Math.random() * this.primaryMemoryStorageService.avatarsConfig.avatarUrls.length)],
+                                avatarUrl: this.primaryMemoryStorageService.avatarsConfig.avatarUrls[
+                                    Math.floor(
+                                        Math.random() * this.primaryMemoryStorageService.avatarsConfig.avatarUrls.length)
+                                ],
                                 version: AppVersion.V2,
                                 isExitToUsdc,
                                 withdrawalAddress,
@@ -188,7 +192,7 @@ export class CreateBotV2Service {
                     // return the bot
                 const bot = botRaw.toJSON()
                 // find the executor with the lowest bot count and update it
-                await this.connection
+                const executor = await this.connection
                     .model<ExecutorSchema>(ExecutorSchema.name)
                     .findOneAndUpdate(
                         {
@@ -231,7 +235,12 @@ export class CreateBotV2Service {
                             $expr: {
                                 $lt: [
                                     {
-                                        $size: "$ownedBots" 
+                                        $size: {
+                                            $ifNull: [
+                                                "$ownedBots",
+                                                []
+                                            ] 
+                                        } 
                                     },
                                     maxBotsPerAccount
                                 ]
@@ -247,8 +256,29 @@ export class CreateBotV2Service {
                         }
                     )
                 if (result.matchedCount === 0) {
-                    throw new Error("Max bots per account reached")
+                    throw new MaxBotsPerAccountReachedException(
+                        {
+                            userId: user.id,
+                            maxBotsPerAccount,
+                        }
+                    )
                 }
+                // update the bot with the executor id
+                await this.connection
+                    .model<BotSchema>(BotSchema.name)
+                    .updateOne(
+                        {
+                            _id: bot.id,
+                        },
+                        {
+                            $set: {
+                                executor: executor?._id,
+                            },
+                        },
+                        {
+                            session,
+                        }
+                    )
                 return {
                     bot,
                     id: bot.id,

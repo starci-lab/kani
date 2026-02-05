@@ -167,7 +167,7 @@ export class BalanceActionService implements IBalanceActionService {
             quoteBalanceAmount = quoteAmount
             gasBalanceAmount = gasAmount
         }
-        return await this.swapMathService.computeSwapAmounts({
+        const { swapSteps, quoteRatioResult } = await this.swapMathService.computeSwapAmounts({
             targetToken,
             quoteToken,
             gasToken,
@@ -175,5 +175,9 @@ export class BalanceActionService implements IBalanceActionService {
             quoteBalanceAmount,
             gasBalanceAmount
         })
+        return {
+            swapSteps,
+            quoteRatioResult,
+        }
     }
 }

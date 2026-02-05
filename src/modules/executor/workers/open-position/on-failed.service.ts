@@ -11,6 +11,9 @@ import {
 import {
     OnFailedParams,
 } from "./types"
+import {
+    AbstractException 
+} from "@exceptions"
 
 @Injectable()
 export class OnFailedService {
@@ -41,15 +44,15 @@ export class OnFailedService {
         const maxAttempts = bullmqJob.opts.attempts ?? 1
         const isPermanentFailure = bullmqJob.attemptsMade >= maxAttempts
         const isUnrecoverable = error instanceof UnrecoverableError
-
         if (isUnrecoverable) {
+            const originalError = AbstractException.fromJSON(error.message)
             this.winstonService.log(
                 WinstonLog.OpenPositionJobFailedUnrecoverable,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
-                    error: error.message,
+                    error: originalError.message,
                     liquidityPoolId: liquidityPool.displayId,
                 }
             )

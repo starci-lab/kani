@@ -34,6 +34,15 @@ import {
 import {
     ToStringObject 
 } from "@modules/typedefs"
+import {
+    AsyncService 
+} from "@modules/mixin"
+import {
+    UnrecoverableError 
+} from "bullmq"
+import {
+    OpenPositionJobPreparedFailedException
+} from "@modules/exceptions"
 
 @Injectable()
 export class PrepareService {
@@ -45,6 +54,7 @@ export class PrepareService {
         @InjectSuperJson()
         private readonly superJson: SuperJSON,
         private readonly dayjsService: DayjsService,
+        private readonly asyncService: AsyncService,
     ) {}
 
     // Phase: PREPARE
@@ -98,15 +108,31 @@ export class PrepareService {
                 }
             }
         }
-        const openPositionTransaction = await this.openPositionActionService.prepare(
-            {
-                bot,
-                state: {
-                    static: liquidityPool,
-                    dynamic: dynamicLiquidityPoolInfo,
-                },
-            }
+        const [
+            openPositionTransaction,
+            error
+        ] =  await this.asyncService.resolveTuple(
+            this.openPositionActionService.prepare(
+                {
+                    bot,
+                    state: {
+                        static: liquidityPool,
+                        dynamic: dynamicLiquidityPoolInfo,
+                    },
+                }
+            )
         )
+        console.log(error)
+        if (error) {
+            throw new UnrecoverableError(
+                new OpenPositionJobPreparedFailedException({
+                    originalError: error,
+                    botId: bot.id,
+                    jobId: job.id,
+                    liquidityPoolId: liquidityPool.displayId,
+                }).toJSON()
+            )
+        }
         await this.connection.model<JobSchema>(JobSchema.name).updateOne(
             {
                 _id: {

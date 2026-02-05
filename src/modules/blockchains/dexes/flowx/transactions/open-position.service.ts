@@ -180,7 +180,7 @@ export class OpenPositionTxbService {
             arguments: [
                 txb.object(positionRegistryObject),
                 txb.object(poolRegistryObject),
-                txb.pure.u64(decimalToBps(new Decimal(state.static.fee)).toNumber()),
+                txb.pure.u64(decimalToBps(new Decimal(state.static.fee).mul(100)).toNumber()),
                 tickLowerI32,
                 tickUpperI32,
                 txb.object(versionObject),

@@ -163,7 +163,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 60,
-            tickMultiplier: 5,
+            tickMultiplier: 30,
         },
         metadata: {
             packageId: "0xde2c47eb0da8c74e4d0f6a220c41619681221b9c2590518095f0f0c2d3f3c772",
@@ -231,7 +231,7 @@ export const data: Array<DeepPartial<LiquidityPoolSchema>> = [
         type: LiquidityPoolType.Clmm,
         clmmState: {
             tickSpacing: 40,
-            tickMultiplier: 8,
+            tickMultiplier: 30,
         },
         metadata: { 
             ticksId: "0x9f32239c50285ce8fbf9b97c52be85088d70fbcb01727c3fc0750185086ffc3c",

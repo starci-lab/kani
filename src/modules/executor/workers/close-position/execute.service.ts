@@ -112,12 +112,14 @@ export class ExecuteService {
         )
         const txHashes = closePositionTransaction.prepareTxs.map((tx) => tx.txHash)
         const transactionRecords: Array<AddTransactionRecordParams> = txHashes.map(
-            (txHash) => ({
-                bot,
-                txHash,
-                chainId: bot.chainId,
-                type: TransactionType.ClosePosition,
-            }),
+            (txHash) => (
+                {
+                    bot,
+                    txHash,
+                    chainId: bot.chainId,
+                    type: TransactionType.ClosePosition,
+                }
+            ),
         )
 
         await this.connection
