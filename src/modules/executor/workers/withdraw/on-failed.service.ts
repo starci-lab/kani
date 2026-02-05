@@ -60,13 +60,14 @@ export class OnFailedService {
         const isFatal = error instanceof FatalError
 
         if (isFatal) {
+            const originalError = AbstractException.fromJSON(error.message)
             this.winstonService.log(
                 WinstonLog.WithdrawJobFailedFatal,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
-                    error: error.message,
+                    error: originalError.message,
                 }
             )
             const session = await this.connection.startSession()

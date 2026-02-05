@@ -62,13 +62,14 @@ export class OnFailedService {
         // if the error is a fatal error, log the error and update the database to mark the job as failed
         // and throw UnrecoverableError to stop the job
         if (isFatal) {
+            const originalError = AbstractException.fromJSON(error.message)
             this.winstonService.log(
                 WinstonLog.OpenPositionJobFailedFatal,
                 {
                     botId: bot.id,
                     jobId: job.id,
                     bullmqJobId: bullmqJob.id,
-                    error: error.message,
+                    error: originalError.message,
                 }
             )
             // update the database to mark the job as failed
