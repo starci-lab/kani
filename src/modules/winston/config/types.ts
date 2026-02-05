@@ -933,19 +933,23 @@ export interface ReconcileBalanceJobRequeueFailedMessage {
 }
 
 /**
- * Reconcile Balance Job Already Prepared Message
+ * Balance amounts (target / quote / gas) used in reconcile-balance and related logs.
  */
-export interface ReconcileBalanceJobAlreadyPreparedMessageBalanceAmounts {
+export interface BalanceAmounts {
     targetBalanceAmount: string
     quoteBalanceAmount: string
     gasBalanceAmount: string
 }
+
+/**
+ * Reconcile Balance Job Already Prepared Message
+ */
 export interface ReconcileBalanceJobAlreadyPreparedMessage {
     botId: string
     jobId: string
     ageMs: number
     quoteRatioResult?: object
-    balanceAmounts: ReconcileBalanceJobAlreadyPreparedMessageBalanceAmounts
+    balanceAmounts: BalanceAmounts
     txHashes?: Array<string>
 }
 
@@ -1750,17 +1754,12 @@ export interface ReconcileBalanceTransactionStimulatedMessage {
 /**
  * Reconcile Balance Job Prepared Message
  */
-export interface ReconcileBalanceJobPreparedMessageBalanceAmounts {
-    targetBalanceAmount: string
-    quoteBalanceAmount: string
-    gasBalanceAmount: string
-}
 export interface ReconcileBalanceJobPreparedMessage {
     botId: string
     jobId: string
     txHashes?: Array<string>
     quoteRatioResult?: object
-    balanceAmounts: ReconcileBalanceJobPreparedMessageBalanceAmounts
+    balanceAmounts: BalanceAmounts
 }
 
 /**
