@@ -1,5 +1,5 @@
 import type {
-    MarketListingId 
+    MarketListingId,
 } from "@modules/databases"
 
 /** Params for setting aggregated token price in cache. */

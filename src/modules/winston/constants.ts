@@ -1,2 +1,0 @@
-export const CONSOLE_WINSTON = "CONSOLE_WINSTON"
-export const LOKI_WINSTON = "LOKI_WINSTON"

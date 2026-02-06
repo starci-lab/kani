@@ -1,3 +1,4 @@
+/** Log event names; each maps to a config entry in configMap (level, loki, messageType). */
 export enum WinstonLog {
     ReconcileBalanceTransactionFound = "Reconcile.Balance.Transaction.Found",
     WithdrawTransactionFound = "Withdraw.Transaction.Found",
@@ -16,7 +17,7 @@ export enum WinstonLog {
     KafkaProducerReady = "Kafka.Producer.Ready",
     KafkaConsumerReady = "Kafka.Consumer.Ready",
     ClosePositionTransactionExecuted = "Close.Position.Transaction.Executed",
-    ClosePositionTransactionFailed = "Close.Position.Transaction.Failed",  
+    ClosePositionTransactionFailed = "Close.Position.Transaction.Failed",
     LiquidityPoolFetchedError = "Liquidity.Pool.Fetched.Error",
     LiquidityPoolWsError = "Liquidity.Pool.Ws.Error",
     OpenPositionTransactionExecuted = "Open.Position.Transaction.Executed",
@@ -169,7 +170,6 @@ export enum WinstonLog {
     LiquidityPoolsBecameNotReady = "Liquidity.Pools.Became.Not.Ready",
     SocketIoClientConnected = "Socket.Io.Client.Connected",
     SocketIoClientDisconnected = "Socket.Io.Client.Disconnected",
-    // Database Commands
     MongoDumpCompleted = "Mongo.Dump.Completed",
     SevenZCompressionCompleted = "SevenZ.Compression.Completed",
     BackupCompleted = "Backup.Completed",
@@ -180,7 +180,6 @@ export enum WinstonLog {
     RestoreFailed = "Restore.Failed",
     SeedCompleted = "Seed.Completed",
     SeedFailed = "Seed.Failed",
-    // Migration Commands
     MigrationStarted = "Migration.Started",
     MigrationOpenSnapshotsUpdated = "Migration.Open.Snapshots.Updated",
     MigrationCloseSnapshotsUpdated = "Migration.Close.Snapshots.Updated",
@@ -192,14 +191,12 @@ export enum WinstonLog {
     MigrationUserTotpFailed = "Migration.User.Totp.Failed",
     MigrationBotExecutorCompleted = "Migration.Bot.Executor.Completed",
     MigrationBotExecutorFailed = "Migration.Bot.Executor.Failed",
-    // Key Generation Commands
     KeyGeneratedSuccess = "Key.Generated.Success",
     KeyGenerationFailed = "Key.Generation.Failed",
     KeyEncryptedSuccess = "Key.Encrypted.Success",
     KeyDecryptionCheckFailed = "Key.Decryption.Check.Failed",
     KeyDecryptionCheckSuccess = "Key.Decryption.Check.Success",
     KeyWrittenSuccess = "Key.Written.Success",
-    // Command Errors
     CommandError = "Command.Error",
     EvalSnapshotsChecked = "Eval.Snapshots.Checked",
     ErrorGettingCache = "Error.Getting.Cache",

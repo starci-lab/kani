@@ -8,9 +8,7 @@ export const isSuiCoin = (type: string): boolean => {
         "0x2::sui::SUI",
         "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
     ].map(value => value.toLowerCase())
-    if (
-        suiCoinTypes.includes(type.toLowerCase()),
-    ) {
+    if (suiCoinTypes.includes(type.toLowerCase())) {
         return true
     }
     return false

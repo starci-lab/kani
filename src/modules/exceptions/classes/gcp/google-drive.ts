@@ -21,6 +21,22 @@ export class GoogleDriveFolderIdNotFoundException extends AbstractException {
     }
 }
 
+/** Thrown when upload file has neither buffer nor path */
+export interface GoogleDriveUploadFileInvalidExceptionMetadata extends AbstractExceptionMetadata {
+    originalname?: string
+}
+export class GoogleDriveUploadFileInvalidException extends AbstractException {
+    constructor(
+        metadata?: GoogleDriveUploadFileInvalidExceptionMetadata
+    ) {
+        super(
+            "Google drive upload file has neither buffer nor path",
+            "GOOGLE_DRIVE_UPLOAD_FILE_INVALID_EXCEPTION",
+            metadata ?? {},
+        )
+    }
+}
+
 /** Thrown when Google drive file download fails */
 export interface GoogleDriveFileDownloadFailedExceptionMetadata extends AbstractExceptionMetadata {
     fileId: string

@@ -1,19 +1,22 @@
 import {
-    EventName
-} from "./enum"
+    EventName,
+} from "./enums"
 import {
-    ClmmLiquidityPoolsSyncedEventPayload, 
-    ClmmPositionCloseRequestedEventPayload, 
-    ClmmPositionOpenRequestedEventPayload, 
-    CoordinatorExecutorCreatedEventPayload, 
-    CoordinatorExecutorDeletedEventPayload, 
-    CoordinatorExecutorUpdatedEventPayload, 
-    DlmmLiquidityPoolsSyncedEventPayload, 
-    DlmmPositionCloseRequestedEventPayload, 
-    DlmmPositionOpenRequestedEventPayload, 
-    ExecutorBotCreatedEventPayload, 
-    ExecutorBotDeletedEventPayload, 
-    ExecutorBotUpdatedEventPayload, 
+    KafkaTopicConfig,
+} from "./types"
+import {
+    ClmmLiquidityPoolsSyncedEventPayload,
+    ClmmPositionCloseRequestedEventPayload,
+    ClmmPositionOpenRequestedEventPayload,
+    CoordinatorExecutorCreatedEventPayload,
+    CoordinatorExecutorDeletedEventPayload,
+    CoordinatorExecutorUpdatedEventPayload,
+    DlmmLiquidityPoolsSyncedEventPayload,
+    DlmmPositionCloseRequestedEventPayload,
+    DlmmPositionOpenRequestedEventPayload,
+    ExecutorBotCreatedEventPayload,
+    ExecutorBotDeletedEventPayload,
+    ExecutorBotUpdatedEventPayload,
     ReinitializeBalancersEventPayload,
     LockAuthorityTimeoutEventPayload,
     LiquidityPoolsBecameReadyEventPayload,
@@ -22,19 +25,17 @@ import {
     DlmmPositionOpenWithoutEventRequestedEventPayload,
     ClmmPositionCloseWithoutEventRequestedEventPayload,
     ClmmPositionOpenWithoutEventRequestedEventPayload,
-    TokenPriceUpdatedEventPayload
+    TokenPriceUpdatedEventPayload,
 } from "./types"
-import {
-    KafkaTopicConfig 
-} from "../types"
 
+/** Map of event names to Kafka/local usage and payload type. */
 export const configMap = {
     [EventName.ClmmLiquidityPoolsSynced]: {
         useKafka: true,
         useLocal: false,
         config: {
         } as Partial<KafkaTopicConfig>,
-        eventPayload: {    
+        eventPayload: {
         } as ClmmLiquidityPoolsSyncedEventPayload
     },
     [EventName.DlmmLiquidityPoolsSynced]: {

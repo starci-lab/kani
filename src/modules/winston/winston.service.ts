@@ -5,15 +5,21 @@ import {
     InjectConsoleWinston, InjectLokiWinston 
 } from "./winston.decorators"
 import {
-    configMap, WinstonLog 
+    configMap,
 } from "./config"
 import {
-    WinstonLevel 
+    WinstonLog,
+} from "./enums"
+import {
+    WinstonLevel,
 } from "./types"
 import {
     Logger 
 } from "winston"
 
+/**
+ * The service for the Winston.
+ */
 @Injectable()
 export class WinstonService {
     constructor(
@@ -23,7 +29,13 @@ export class WinstonService {
         private readonly lokiLogger: Logger,
     ) {}
 
-    log<TName extends WinstonLog>(
+    /**
+     * Log a message.
+     * @param name - The name of the log.
+     * @param message - The message to log.
+     * @returns void.
+     */
+    public log<TName extends WinstonLog>(
         name: TName,
         message: (typeof configMap)[TName]["messageType"],
     ) {

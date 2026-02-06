@@ -1,3 +1,4 @@
+/** Event names; each maps to a config entry (useKafka, useLocal, eventPayload type). */
 export enum EventName {
     TokenPriceUpdated = "token.price.updated",
     ClmmLiquidityPoolsSynced = "clmm.liquidity.pools.synced",

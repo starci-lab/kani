@@ -1,6 +1,6 @@
 import type {
     CacheKey,
-    CacheType 
+    CacheType,
 } from "../enums"
 import type {
     AggregatedTokenPriceCacheResult,
@@ -11,7 +11,7 @@ import type {
     SendOtpCodeCacheResult,
     SessionIdCacheResult,
     WithdrawCacheResult,
-} from "./cache-result"
+} from "./messages"
 
 /** Maps each cache key to its cache result type. */
 export interface CacheResultByKey {

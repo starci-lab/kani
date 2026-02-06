@@ -21,8 +21,11 @@ import {
     ModuleRef 
 } from "@nestjs/core"
 import {
-    EventName, configMap 
+    configMap,
 } from "./config"
+import {
+    EventName,
+} from "./enums"
 
 export interface EmitOptions {
     useKafka?: boolean

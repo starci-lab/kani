@@ -109,7 +109,9 @@ export class GoogleDriveService {
                             ? fs.createReadStream(file.path)
                             : undefined
                     if (!body) {
-                        throw new Error("GoogleDriveService.uploadFiles: file has neither buffer nor path")
+                        throw new GoogleDriveUploadFileInvalidException({
+                            originalname: file.originalname,
+                        })
                     }
                     const response = await this.drive.files.create({
                         requestBody: {

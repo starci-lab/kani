@@ -1,9 +1,9 @@
 import {
-    WinstonLevel
-} from "../types"
+    WinstonLog,
+} from "./enums"
 import {
-    WinstonLog
-} from "./enum"
+    WinstonLevel,
+} from "./types"
 import {
     ClosePositionTransactionExecutedMessage,
     ClosePositionTransactionFailedMessage,
@@ -214,8 +214,8 @@ import {
     WithdrawLockAuthorityReleasedMessage,
 } from "./types"
 
+/** Map of Winston log names to level, Loki flag, and message type. */
 export const configMap = {
-
     // Kafka Producer Ready
     [WinstonLog.KafkaProducerReady]: {
         name: WinstonLog.KafkaProducerReady,
