@@ -19,7 +19,8 @@ import {
 } from "./token-registry.service"
 import _ from "lodash"
 import {
-    CoingeckoTokenPriceData 
+    CoingeckoTokenPriceData,
+    CoingeckoTokenPriceResult
 } from "./types"
 import {
     AggregatedTokenPriceCacheService 
@@ -38,6 +39,14 @@ import {
 } from "@modules/event"
 import Decimal from "decimal.js"
 
+/**
+ * Service for fetching Coingecko token prices via REST API.
+ * Handles periodic price fetching and caching of price data.
+ *
+ * @example
+ * const service = new CoingeckoRestService(...)
+ * await service.fetchPrices()
+ */
 @Injectable()
 export class CoingeckoRestService implements OnApplicationBootstrap {
     private axios: AxiosInstance
@@ -51,38 +60,48 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         private readonly aggregatedTokenPriceCacheService: AggregatedTokenPriceCacheService,
         private readonly eventEmitterService: EventEmitterService,
     ) {
+        // Create Axios instance for Coingecko API
         const key = "coingecko"
-        this.axios = this.axiosService.create({ key })
+        this.axios = this.axiosService.create({
+            key
+        })
     }
 
     /**
-     * Fetch the prices and subscribe to the price updates
+     * Initializes price fetching on application bootstrap.
      */
     onApplicationBootstrap() {
+        // Start fetching prices immediately on bootstrap
         this.fetchPrices()
     }
 
     /**
-     * Fetch the prices interval
+     * Scheduled interval handler for fetching prices.
+     * Runs at configured interval to keep prices up to date.
      */
     @Interval(envConfig().priceFeeds.coingecko.interval.rest)
     async fetchPricesInterval() {
+        // Fetch prices on scheduled interval
         await this.fetchPrices()
     }
 
     /**
-     * Fetch the prices
+     * Fetches latest token prices from Coingecko API.
+     * Splits coin IDs into chunks, fetches prices, and caches results.
      */
     async fetchPrices() {
+        // Get all coin IDs that need price updates
         const symbols = this.coingeckoTokenRegistryService.getSymbols()
         if (!symbols.length) return
         try {  
-            // we split the coin ids into chunks
+            // Split coin IDs into chunks for batch processing
             const chunks = _.chunk(symbols,
                 envConfig().priceFeeds.coingecko.chunks.rest)
+            // Fetch prices for all chunks in parallel
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
+                        // Fetch latest prices from Coingecko API
                         const response = await this.axios.get<CoingeckoTokenPriceResult>(
                             "https://api.coingecko.com/api/v3/simple/price",
                             {
@@ -93,6 +112,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                             }
                         )
                         const prices = response.data
+                        // Transform API response to price data format
                         return Object.entries(prices).map(([coinId,
                             data]) => ({
                             coinId,
@@ -101,11 +121,13 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                     }
                 )
             )
+            // Map to internal price data format
             const priceData = prices.flat().map<CoingeckoTokenPriceData>(data => ({
                 coinId: data?.coinId ?? "",
                 price: data?.price ?? 0,
             }))
             if (!priceData.length) return
+            // Log successful price fetch
             this.winstonService.log(
                 WinstonLog.CoingeckoPricesFetched,
                 {
@@ -113,13 +135,15 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                     expectedCount: symbols.length,
                 }
             )
+            // Resolve price data to token prices
             const tokenPrices = this.coingeckoTokenRegistryService.resolveCoingeckoTokenPrices(priceData)
-            // cache the prices and emit the event
+            // Cache prices and emit update events
             await this.asyncService.allIgnoreError(
                 tokenPrices.map(
                     async (data) => {
                         return this.asyncService.allIgnoreError(
                             [
+                                // Update cache with new price
                                 this.aggregatedTokenPriceCacheService.set(
                                     {
                                         id: data.id,
@@ -127,6 +151,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                                         marketListingId: MarketListingId.Coingecko,
                                     }
                                 ),
+                                // Emit event for price update
                                 this.eventEmitterService.emit(
                                     {
                                         event: EventName.TokenPriceUpdated,
@@ -143,7 +168,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                 ),
             )
         } catch (error) {
-            // throw the error to prevent the application from crashing
+            // Log error to prevent application crash
             this.winstonService.log(
                 WinstonLog.CoingeckoPricesFetchFailed,
                 {
@@ -152,11 +177,5 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
                 }
             )
         }
-    }
-}
-
-export interface CoingeckoTokenPriceResult {
-    [coinId: string]: {
-        usd: number
     }
 }

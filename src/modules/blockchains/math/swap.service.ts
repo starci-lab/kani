@@ -5,8 +5,7 @@ import {
 } from "@modules/exceptions"
 import { 
     PrimaryMemoryStorageService, 
-    QuoteRatioStatus, 
-    TokenSchema
+    QuoteRatioStatus,
 } from "@modules/databases"
 import {
     Injectable 
@@ -28,15 +27,35 @@ import {
     QuoteRatioService 
 } from "./quote-ratio.service"
 import {
-    GasStatus 
-} from "../types"
-import {
     envConfig 
 } from "@modules/env"
 import {
     PriceService 
 } from "./price.service"
+import {
+    ComputeSwapAmountsParams,
+    ComputeSwapAmountsResult,
+    ExtendedComputeSwapAmountsParams,
+    SwapDirection,
+    SwapStep,
+    ComputeAmountOutByPriceParams,
+    RebalanceDirection,
+    ComputeRebalanceAmountParams,
+    ComputeRebalanceAmountResult
+} from "./types"
+import {
+    GasStatus 
+} from "../enums"
 
+/**
+ * Service responsible for computing swap amounts and strategies.
+ * Handles swap calculations for rebalancing portfolios and managing gas balances.
+ * Supports different scenarios based on which token is the gas token.
+ *
+ * @example
+ * const service = new SwapMathService(...)
+ * const result = await service.computeSwapAmounts({ targetToken, quoteToken, gasToken, targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount })
+ */
 @Injectable()
 export class SwapMathService {
     constructor(
@@ -544,16 +563,30 @@ export class SwapMathService {
         }
     }
 
-    public async computeSwapAmounts(
-        {
-            targetToken,    
-            quoteToken,
-            gasToken,
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            gasBalanceAmount,
-        }: ComputeSwapAmountsParams
-    ): Promise<ComputeSwapAmountsResult> {
+    /**
+     * Computes swap amounts and steps for portfolio rebalancing and gas management.
+     * Determines optimal swap strategy based on gas token type and quote ratio status.
+     *
+     * @param param - Parameters for computing swap amounts
+     * @param param.targetToken - Target token schema
+     * @param param.quoteToken - Quote token schema
+     * @param param.gasToken - Gas token schema
+     * @param param.targetBalanceAmount - Target token balance amount
+     * @param param.quoteBalanceAmount - Quote token balance amount
+     * @param param.gasBalanceAmount - Gas token balance amount
+     * @returns Swap steps and quote ratio result
+     *
+     * @example
+     * const result = await service.computeSwapAmounts({ targetToken, quoteToken, gasToken, targetBalanceAmount, quoteBalanceAmount, gasBalanceAmount })
+     */
+    public async computeSwapAmounts({
+        targetToken,    
+        quoteToken,
+        gasToken,
+        targetBalanceAmount,
+        quoteBalanceAmount,
+        gasBalanceAmount,
+    }: ComputeSwapAmountsParams): Promise<ComputeSwapAmountsResult> {
         let gasStatus = GasStatus.IsGas
         if (targetToken.type === TokenType.Native) {
             gasStatus = GasStatus.IsTarget
@@ -606,24 +639,28 @@ export class SwapMathService {
     }
     
     /**
- * Computes output amount from an input amount using a relative price.
- *
- * Formula:
- *   amountOut = amountIn / price
- *               × 10^outDecimals / 10^inDecimals
- *
- * Note:
- * - price must be denominated as tokenOut / tokenIn
- * - no AMM curve, no fee, no slippage
- */
-    private computeAmountOutByPrice(
-        {
-            amountIn,
-            tokenIn,
-            tokenOut,
-            relativePrice,
-        }: ComputeAmountOutByPriceParams
-    ) {
+     * Computes output amount from an input amount using a relative price.
+     *
+     * Formula:
+     *   amountOut = amountIn / price × 10^outDecimals / 10^inDecimals
+     *
+     * Note:
+     * - price must be denominated as tokenOut / tokenIn
+     * - no AMM curve, no fee, no slippage
+     *
+     * @param param - Parameters for computing amount out
+     * @param param.amountIn - Input amount
+     * @param param.tokenIn - Input token schema
+     * @param param.tokenOut - Output token schema
+     * @param param.relativePrice - Relative price (tokenOut / tokenIn)
+     * @returns Output amount in raw units
+     */
+    private computeAmountOutByPrice({
+        amountIn,
+        tokenIn,
+        tokenOut,
+        relativePrice,
+    }: ComputeAmountOutByPriceParams): BN {
         return bnDivDecimal({
             bn: amountIn,
             decimal: relativePrice,
@@ -641,29 +678,33 @@ export class SwapMathService {
     }
 
     /**
- * Compute how much token needs to be swapped to rebalance from currentRatio to targetRatio
- *
- * Definitions:
- * - amount: amount of the token being swapped (raw amount, before decimal normalization)
- * - currentRatio: current target allocation ratio (target / total)
- * - targetRatio: desired target allocation ratio
- * - relativePrice: price of targetToken denominated in quoteToken
- *
- * Returns:
- * - swappedAmount: amount of token being swapped (in source token unit)
- * - usedAmount: value spent/received in the opposite token
- */
-    private computeRebalanceAmount(
-        {
-            amount,
-            currentRatio,
-            targetRatio,
-            targetToken,
-            quoteToken,
-            direction,
-            relativePrice,
-        }: ComputeRebalanceAmountParams
-    ): ComputeRebalanceAmountResult {
+     * Computes how much token needs to be swapped to rebalance from currentRatio to targetRatio.
+     *
+     * Definitions:
+     * - amount: amount of the token being swapped (raw amount, before decimal normalization)
+     * - currentRatio: current target allocation ratio (target / total)
+     * - targetRatio: desired target allocation ratio
+     * - relativePrice: price of targetToken denominated in quoteToken
+     *
+     * @param param - Parameters for computing rebalance amount
+     * @param param.amount - Amount of token being swapped
+     * @param param.currentRatio - Current target allocation ratio
+     * @param param.targetRatio - Desired target allocation ratio
+     * @param param.targetToken - Target token schema
+     * @param param.quoteToken - Quote token schema
+     * @param param.direction - Rebalance direction
+     * @param param.relativePrice - Relative price (targetToken / quoteToken)
+     * @returns Rebalance amount result with swapped and used amounts
+     */
+    private computeRebalanceAmount({
+        amount,
+        currentRatio,
+        targetRatio,
+        targetToken,
+        quoteToken,
+        direction,
+        relativePrice,
+    }: ComputeRebalanceAmountParams): ComputeRebalanceAmountResult {
         /**
      * Case 1: Quote → Target (increase target exposure)
      *
@@ -753,80 +794,4 @@ export class SwapMathService {
             }
         }
     }
-}
-
-export interface ComputeSwapAmountsParams {
-    targetToken: TokenSchema
-    quoteToken: TokenSchema
-    gasToken: TokenSchema
-    targetBalanceAmount: BN
-    quoteBalanceAmount: BN
-    gasBalanceAmount: BN
-}
-
-export enum SwapDirection {
-    TargetToQuote = "targetToQuote",
-    QuoteToTarget = "quoteToTarget",
-    TargetToGas = "targetToGas",
-    QuoteToGas = "quoteToGas",
-}
-
-export interface SwapStep {
-    direction: SwapDirection
-    usedAmount: BN
-    swappedAmount: BN
-}
-export interface ComputeSwapAmountsResult {
-    swapSteps: Array<SwapStep>
-    quoteRatioResult: ComputeQuoteRatioResult
-}
-
-export interface ComputeQuoteRatioParams {
-    targetToken: TokenSchema
-    quoteToken: TokenSchema
-    targetBalanceAmount: BN
-    quoteBalanceAmount: BN
-}
-
-export interface ComputeQuoteRatioResult {
-    quoteRatio: Decimal
-    totalBalanceInTargetAmount: Decimal
-    targetBalanceInTargetAmount: Decimal
-    quoteBalanceInTargetAmount: Decimal
-    relativePrice: Decimal
-}
-
-export interface ExtendedComputeSwapAmountsParams extends ComputeSwapAmountsParams {
-    quoteRatioResult: ComputeQuoteRatioResult
-}
-
-export interface ComputeAmountOutByPriceParams {
-    amountIn: BN
-    tokenIn: TokenSchema
-    tokenOut: TokenSchema
-    relativePrice: Decimal
-}
-
-export interface ComputeAmountOutByPriceResult {
-    swapTargetToQuoteAmount: BN
-    swapQuoteToTargetAmount: BN
-}
-
-export enum RebalanceDirection {
-    QuoteToTarget = "quoteToTarget",
-    TargetToQuote = "targetToQuote",
-}
-export interface ComputeRebalanceAmountParams {
-    amount: BN
-    currentRatio: Decimal
-    targetRatio: Decimal
-    targetToken: TokenSchema
-    quoteToken: TokenSchema
-    direction: RebalanceDirection
-    relativePrice: Decimal
-}
-
-export interface ComputeRebalanceAmountResult {
-    swappedAmount: BN
-    usedAmount: BN
 }

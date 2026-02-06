@@ -77,7 +77,9 @@ export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstr
     async onModuleInit(): Promise<void> {
         // create axios instance for Cetus API
         const key = "cetus-analytics"
-        this.axios = this.axiosService.create({ key })
+        this.axios = this.axiosService.create({
+            key 
+        })
         
         // fetch all Cetus liquidity pools from primary memory storage
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection

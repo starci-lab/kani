@@ -1,6 +1,6 @@
 import {
     ClmmLiquidityPoolState 
-} from "../../../interfaces"
+} from "../../../types"
 import {
     BotSchema,
     MomentumLiquidityPoolMetadata,

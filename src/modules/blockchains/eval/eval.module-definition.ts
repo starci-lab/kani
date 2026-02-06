@@ -2,6 +2,10 @@ import {
     ConfigurableModuleBuilder 
 } from "@nestjs/common"
 
+/**
+ * Eval module definition.
+ * Configures the eval module with dynamic options.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder().setExtras(
       {

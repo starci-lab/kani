@@ -3,11 +3,7 @@ import {
     InvalidPoolTokensException, 
     TargetOperationalGasAmountNotFoundException
 } from "@modules/exceptions"
-import {
-    ClmmLiquidityPoolState 
-} from "../../../interfaces"
 import { 
-    BotSchema, 
     FlowXLiquidityPoolMetadata, 
     PrimaryMemoryStorageService
 } from "@modules/databases"

@@ -3,11 +3,16 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    Q64, Q96, Q128 
+    Q64
 } from "@modules/utils"
 import {
     ClmmTickFormulaService 
 } from "./clmm-tick.service"
+import {
+    ComputeLiquidityParams,
+    ComputeAmountsFromLiquidityParams,
+    ComputeAmountsFromLiquidityResult
+} from "./types"
 /**
  * CLMM Liquidity Formula Service
  *
@@ -84,13 +89,7 @@ export class ClmmLiquidityFormulaService {
         amountB,
         fixedPointScale = Q64,
     }: ComputeLiquidityParams): BN {
-        /**
-         * Step 1: Convert tick indices to sqrt prices (fixed-point representation)
-         * 
-         * sqrt(P) = 1.0001^(tick/2) * fixedPointScale
-         * 
-         * These sqrt prices are used in all subsequent calculations.
-         */
+        // Step 1: Convert tick indices to sqrt prices (fixed-point representation)
         const sqrtPriceLower = this.clmmTickFormulaService.tickToSqrtPrice({
             tickIndex: tickLower,
             fixedPointScale,
@@ -105,15 +104,8 @@ export class ClmmLiquidityFormulaService {
             tickIndex: tickCurrent,
             fixedPointScale,
         })
-        /**
-         * CASE 1: Current price is below or equal to the lower bound
-         * 
-         * When tickCurrent <= tickLower, the current price is below the position range.
-         * In this case, the entire position consists of token A (the lower-priced token).
-         * All token B has been swapped for token A.
-         * 
-         * → Liquidity is computed entirely from amountA using the full range [tickLower, tickUpper]
-         */
+
+        // Case 1: Current price is below or equal to the lower bound (only token A)
         if (tickCurrent.lte(tickLower)) {
             return this.getLiquidityFromAmountA(
                 amountA,
@@ -123,15 +115,7 @@ export class ClmmLiquidityFormulaService {
             )
         }
         
-        /**
-         * CASE 3: Current price is above or equal to the upper bound
-         * 
-         * When tickCurrent >= tickUpper, the current price is above the position range.
-         * In this case, the entire position consists of token B (the higher-priced token).
-         * All token A has been swapped for token B.
-         * 
-         * → Liquidity is computed entirely from amountB using the full range [tickLower, tickUpper]
-         */
+        // Case 3: Current price is above or equal to the upper bound (only token B)
         if (tickCurrent.gte(tickUpper)) {
             return this.getLiquidityFromAmountB(
                 amountB,
@@ -141,16 +125,7 @@ export class ClmmLiquidityFormulaService {
             )
         }
         
-        /**
-         * CASE 2: Current price is inside the position range
-         * 
-         * When tickLower < tickCurrent < tickUpper, the position contains both tokens.
-         * The liquidity is constrained by whichever token would run out first:
-         * - Liquidity from A: based on the range [tickCurrent, tickUpper] (token A portion)
-         * - Liquidity from B: based on the range [tickLower, tickCurrent] (token B portion)
-         * 
-         * → Take the minimum to ensure both tokens are sufficient for the position
-         */
+        // Case 2: Current price is inside the position range (both tokens)
         const liquidityFromA = this.getLiquidityFromAmountA(
             amountA,
             sqrtPriceCurrent,  // Use current price as lower bound for token A calculation
@@ -410,156 +385,4 @@ export class ClmmLiquidityFormulaService {
             amountB,
         }
     }
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Parameters for computing liquidity from token amounts.
- * 
- * Used by `computeLiquidity` to calculate the maximum liquidity that can be
- * minted from given token amounts for a concentrated liquidity position.
- */
-export interface ComputeLiquidityParams {
-    /**
-     * Lower tick boundary of the position (inclusive).
-     * 
-     * This defines the lower bound of the price range for the liquidity position.
-     * The tick represents a price point: price = 1.0001^tick
-     */
-    tickLower: BN
-
-    /**
-     * Upper tick boundary of the position (inclusive).
-     * 
-     * This defines the upper bound of the price range for the liquidity position.
-     * Must be greater than tickLower.
-     * The tick represents a price point: price = 1.0001^tick
-     */
-    tickUpper: BN
-
-    /**
-     * Current tick of the pool.
-     * 
-     * This represents the current price of the pool and determines which
-     * token(s) contribute to the liquidity calculation:
-     * - If tickCurrent <= tickLower: only token A is used
-     * - If tickLower < tickCurrent < tickUpper: both tokens are used
-     * - If tickCurrent >= tickUpper: only token B is used
-     */
-    tickCurrent: BN
-
-    /**
-     * Amount of token A available (raw BN, before decimal scaling).
-     * 
-     * This is the raw token amount without decimal places applied.
-     * For example, 1 USDC would be represented as 1_000_000 (6 decimals).
-     */
-    amountA: BN
-
-    /**
-     * Amount of token B available (raw BN, before decimal scaling).
-     * 
-     * This is the raw token amount without decimal places applied.
-     * For example, 1 USDC would be represented as 1_000_000 (6 decimals).
-     */
-    amountB: BN
-
-    /**
-     * Fixed-point precision used for sqrt prices.
-     * 
-     * Different blockchains use different fixed-point scales:
-     * - Q64 (2^64): Used by Solana/Raydium CLMM
-     * - Q96 (2^96): Used by Ethereum/Uniswap V3
-     * - Q128 (2^128): Extended precision option
-     * 
-     * Defaults to Q64 if not specified.
-     */
-    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
-}
-
-/**
- * Parameters for computing token amounts from liquidity.
- * 
- * Used by `computeAmountsFromLiquidity` to calculate the current token amounts
- * in a position given its liquidity value and the current pool price.
- */
-export interface ComputeAmountsFromLiquidityParams {
-    /**
-     * The liquidity value (L) of the position.
-     * 
-     * This is the liquidity amount that was minted or is currently in the position.
-     * It's a dimensionless value that represents the "size" of the position.
-     */
-    liquidity: BN
-    
-    /**
-     * Lower tick boundary of the position (inclusive).
-     * 
-     * This defines the lower bound of the price range for the liquidity position.
-     * The tick represents a price point: price = 1.0001^tick
-     */
-    tickLower: BN
-    
-    /**
-     * Upper tick boundary of the position (inclusive).
-     * 
-     * This defines the upper bound of the price range for the liquidity position.
-     * Must be greater than tickLower.
-     * The tick represents a price point: price = 1.0001^tick
-     */
-    tickUpper: BN
-    
-    /**
-     * Current tick of the pool.
-     * 
-     * This represents the current price of the pool and determines the distribution
-     * of tokens in the position:
-     * - If tickCurrent <= tickLower: position is entirely token A
-     * - If tickLower < tickCurrent < tickUpper: position contains both tokens
-     * - If tickCurrent >= tickUpper: position is entirely token B
-     */
-    tickCurrent: BN
-    
-    /**
-     * Fixed-point precision used for sqrt prices.
-     * 
-     * Different blockchains use different fixed-point scales:
-     * - Q64 (2^64): Used by Solana/Raydium CLMM
-     * - Q96 (2^96): Used by Ethereum/Uniswap V3
-     * - Q128 (2^128): Extended precision option
-     * 
-     * Defaults to Q64 if not specified.
-     */
-    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
-}
-
-/**
- * Result of computing token amounts from liquidity.
- * 
- * Contains the calculated amounts of both tokens in a position based on
- * the given liquidity value and current pool price.
- */
-export interface ComputeAmountsFromLiquidityResult {
-    /**
-     * Amount of token A in the position (raw BN, before decimal scaling).
-     * 
-     * This is the raw token amount without decimal places applied.
-     * For example, 1 USDC would be represented as 1_000_000 (6 decimals).
-     * 
-     * Will be zero if the current price is at or above the upper bound.
-     */
-    amountA: BN
-    
-    /**
-     * Amount of token B in the position (raw BN, before decimal scaling).
-     * 
-     * This is the raw token amount without decimal places applied.
-     * For example, 1 USDC would be represented as 1_000_000 (6 decimals).
-     * 
-     * Will be zero if the current price is at or below the lower bound.
-     */
-    amountB: BN
 }

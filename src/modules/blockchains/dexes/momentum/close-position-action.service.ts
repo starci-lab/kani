@@ -8,7 +8,7 @@ import {
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
-} from "../../interfaces"
+} from "../types"
 import {
     Transaction,
     TransactionDataBuilder 

@@ -1,7 +1,7 @@
 import {
     ClmmLiquidityPoolState,
     BotSchema
-} from "../../../interfaces"
+} from "../../../types"
 import {
     SuiEvent
 } from "@mysten/sui/client"

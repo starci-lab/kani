@@ -6,7 +6,7 @@ import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
     SolanaTx 
-} from "../../interfaces"
+} from "../../types"
 import {
     SignatureWithBytes 
 } from "@mysten/sui/cryptography"

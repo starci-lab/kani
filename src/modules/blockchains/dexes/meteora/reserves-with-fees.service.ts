@@ -3,7 +3,7 @@ import {
     ReservesWithFeesResult,
     IReservesWithFeesService,
     DlmmLiquidityPoolState,
-} from "../../interfaces"
+} from "../types"
 import {
     Injectable,
 } from "@nestjs/common"

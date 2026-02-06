@@ -3,7 +3,7 @@ import {
 } from "@modules/databases"
 import {
     PrepareTx
-} from "../../interfaces"
+} from "../../types"
 import {
     WithdrawCacheResult 
 } from "@modules/cache"

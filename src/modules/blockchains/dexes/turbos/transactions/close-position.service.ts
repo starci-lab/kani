@@ -1,8 +1,4 @@
 import {
-    ClmmLiquidityPoolState 
-} from "../../../interfaces"
-import { 
-    BotSchema, 
     PrimaryMemoryStorageService, 
     TurbosLiquidityPoolMetadata 
 } from "@modules/databases"
@@ -33,6 +29,9 @@ import {
 import {
     deprecatedPoolRewards 
 } from "turbos-clmm-sdk"
+import {
+    CreateClosePositionTxbParams, CreateClosePositionTxbResult 
+} from "../types"
 
 @Injectable()
 export class ClosePositionTxbService {

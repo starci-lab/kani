@@ -30,28 +30,25 @@ import {
  * @example
  * TurbosModule.register({ enabled: { observe: true, action: true, analytics: true } })
  */
-/**
- * Turbos DEX module.
- * Provides services for Turbos DEX integration including analytics, position management, and pool observation.
- *
- * @example
- * TurbosModule.register({ enabled: { observe: true, action: true, analytics: true } })
- */
 @Injectable()
 export class TurbosModule extends ConfigurableModuleClass {
     /**
-     * Registers the Turbos module with the specified options.
+     * Registers the Turbos module with conditional service providers based on enabled features.
      *
      * @param options - Module configuration options
-     * @returns Dynamic module configuration
+     * @returns Dynamic module with configured services
+     *
+     * @example
+     * const module = TurbosModule.register({ enabled: { observe: true, action: true } })
      */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {
         const dynamicModule = super.register(options)
-        const providers: Array<Provider> = [
-           
-        ]
+        
+        // register providers based on enabled features
+        const providers: Array<Provider> = []
+        // register observer service if enabled
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -59,6 +56,8 @@ export class TurbosModule extends ConfigurableModuleClass {
         ) {
             providers.push(TurbosObserverService)
         }
+        
+        // register action services if enabled
         if (typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
@@ -70,12 +69,16 @@ export class TurbosModule extends ConfigurableModuleClass {
                 TurbosClosePositionActionService    
             )
         }
+        
+        // register analytics service if enabled
         if (typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(TurbosAnalyticsService)
         }
+        
+        // register reserves with fees service if enabled
         if ((typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))

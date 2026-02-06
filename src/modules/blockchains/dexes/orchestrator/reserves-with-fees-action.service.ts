@@ -14,7 +14,7 @@ import {
 import {
     ReservesWithFeesResult,
     LiquidityPoolState,
-} from "../../interfaces"
+} from "../types"
 import {
     OrcaReservesWithFeesService,
 } from "../orca"

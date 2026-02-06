@@ -26,6 +26,13 @@ import {
     ClmmRewardsFormulaService 
 } from "./clmm-rewards.service"
 
+/**
+ * Formulas module.
+ * Provides services for CLMM and DLMM mathematical formulas.
+ *
+ * @example
+ * FormulasModule.register({ isGlobal: false })
+ */
 @Module({
     providers: [
         ClmmTickFormulaService,

@@ -27,7 +27,7 @@ import {
 import _ from "lodash"
 import {
     PythTokenPriceData 
-} from "./types"
+} from "./types/token-price"
 import {
     AggregatedTokenPriceCacheService 
 } from "@modules/cache"
@@ -43,6 +43,14 @@ import {
     EventEmitterService, EventName 
 } from "@modules/event"
 
+/**
+ * Service for fetching Pyth token prices via REST API.
+ * Handles periodic price fetching and caching of price data.
+ *
+ * @example
+ * const service = new PythRestService(...)
+ * await service.fetchPrices()
+ */
 @Injectable()
 export class PythRestService implements OnApplicationBootstrap {
     constructor(
@@ -56,33 +64,40 @@ export class PythRestService implements OnApplicationBootstrap {
     ) {}
 
     /**
-     * Fetch the prices and subscribe to the price updates
+     * Initializes price fetching on application bootstrap.
      */
     onApplicationBootstrap() {
+        // Start fetching prices immediately on bootstrap
         this.fetchPrices()
     }
 
     /**
-     * Fetch the prices interval
+     * Scheduled interval handler for fetching prices.
+     * Runs at configured interval to keep prices up to date.
      */
     @Interval(envConfig().priceFeeds.pyth.interval.rest)
     async fetchPricesInterval() {
+        // Fetch prices on scheduled interval
         await this.fetchPrices()
     }
 
     /**
-     * Fetch the prices
+     * Fetches latest token prices from Pyth network.
+     * Splits symbols into chunks, fetches prices, and caches results.
      */
     async fetchPrices() {
+        // Get all symbols that need price updates
         const symbols = this.pythTokenRegistryService.getSymbols()
         if (!symbols.length) return
         try {
-            // we split the symbols into chunks
+            // Split symbols into chunks for batch processing
             const chunks = _.chunk(symbols,
                 envConfig().priceFeeds.pyth.chunks.rest)
+            // Fetch prices for all chunks in parallel
             const prices = await this.asyncService.allIgnoreError(
                 chunks.map(
                     async (chunk) => {
+                        // Retry on failure to ensure reliability
                         const prices = await this.retryService.retry(
                             {
                                 action: () => this.hermesClient.getLatestPriceUpdates(chunk),
@@ -90,8 +105,10 @@ export class PythRestService implements OnApplicationBootstrap {
                         )
                         return prices.parsed
                     }))
+            // Transform API response to internal price data format
             const priceData = prices.flat().map<PythTokenPriceData>(
                 data => {
+                    // Convert price from BN with exponent to decimal
                     const price = toDecimalAmount({
                         amount: new BN(data?.ema_price?.price ?? 0),
                         decimals: new Decimal(data?.ema_price?.expo ?? 8),
@@ -102,6 +119,7 @@ export class PythRestService implements OnApplicationBootstrap {
                     }
                 }) 
             if (!priceData.length) return
+            // Log successful price fetch
             this.winstonService.log(
                 WinstonLog.PythRestPricesFetched,
                 {
@@ -109,12 +127,14 @@ export class PythRestService implements OnApplicationBootstrap {
                     expectedCount: symbols.length
                 }
             )
+            // Resolve price data to token prices
             const pythTokenPrices = this.pythTokenRegistryService.resolvePythTokenPrices(priceData)
-            // cache the prices and emit the event
+            // Cache prices and emit update events
             await this.asyncService.allIgnoreError(
                 pythTokenPrices.map(
                     async (data) => {
                         return this.asyncService.allIgnoreError([
+                            // Update cache with new price
                             this.aggregatedTokenPriceCacheService.set(
                                 {
                                     id: data.id,
@@ -122,6 +142,7 @@ export class PythRestService implements OnApplicationBootstrap {
                                     marketListingId: MarketListingId.Pyth,
                                 }
                             ),
+                            // Emit event for price update
                             this.eventEmitterService.emit(
                                 {
                                     event: EventName.TokenPriceUpdated,

@@ -7,7 +7,7 @@ import {
 } from "../types"
 import {
     PrepareTx
-} from "../../interfaces"
+} from "../../types"
 import {
     ExecuteWithdrawTransactionParams,
     ExecuteWithdrawTransactionResult,

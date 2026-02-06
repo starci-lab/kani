@@ -16,9 +16,18 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
+import {
+    CalculatePositionValueParams,
+    CalculatePositionValueResult
+} from "./types"
 
 /**
  * Service for calculating the value of a position based on balance changes.
+ * Computes position value differences and converts to USD using token prices.
+ *
+ * @example
+ * const service = new PositionValueService(...)
+ * const result = await service.calculatePositionValue({ before, after, targetToken, quoteToken, gasToken })
  */
 @Injectable()
 export class PositionValueService {
@@ -28,15 +37,29 @@ export class PositionValueService {
         private readonly asyncService: AsyncService,
     ) {}
 
-    async calculatePositionValue(
-        {
-            before,
-            after,
-            targetToken,
-            quoteToken,
-            gasToken,
-        }: CalculatePositionValueParams
-    ): Promise<CalculatePositionValueResult> {
+    /**
+     * Calculates the value of a position based on balance changes.
+     * Computes differences in target, quote, gas, and incentive token balances,
+     * converts all values to target token denomination, then to USD.
+     *
+     * @param param - Parameters for calculating position value
+     * @param param.before - Balance amounts before the position change
+     * @param param.after - Balance amounts after the position change
+     * @param param.targetToken - Target token schema
+     * @param param.quoteToken - Quote token schema
+     * @param param.gasToken - Gas token schema
+     * @returns Position value calculation result with values in target token and USD
+     *
+     * @example
+     * const result = await service.calculatePositionValue({ before, after, targetToken, quoteToken, gasToken })
+     */
+    async calculatePositionValue({
+        before,
+        after,
+        targetToken,
+        quoteToken,
+        gasToken,
+    }: CalculatePositionValueParams): Promise<CalculatePositionValueResult> {
         // Resolve relative prices
         const { price: relativeQuotePrice } =
             await this.priceService.resolveRelativePrice({
@@ -164,32 +187,4 @@ export class PositionValueService {
             balanceValueInUsd,
         }
     }
-}
-
-/** Parameters for calculating position value. */
-export interface CalculatePositionValueParams {
-    before: CalculatePositionValue,
-    after: CalculatePositionValue,
-    targetToken: TokenSchema,
-    quoteToken: TokenSchema,
-    gasToken: TokenSchema,
-}
-
-/** Result of position value calculation. */
-export interface CalculatePositionValueResult {
-    positionValue: Decimal,
-    positionValueInUsd: Decimal,
-    balanceValue: Decimal,
-    balanceValueInUsd: Decimal,
-}
-
-/**
- * Balance amounts for a specific point in time.
- * All amounts are in raw token units (not decimal-adjusted).
- */
-export interface CalculatePositionValue {
-    targetBalanceAmount: BN,
-    quoteBalanceAmount: BN,
-    gasBalanceAmount: BN,
-    incentiveBalanceAmounts?: Record<string, BN>,
 }

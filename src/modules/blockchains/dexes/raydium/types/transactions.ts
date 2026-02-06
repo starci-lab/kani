@@ -3,10 +3,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
-} from "../../../interfaces"
-import {
-    PublicKey
-} from "@solana/web3.js"
+} from "../../types/pool-state"
 import {
     Instruction
 } from "@solana/kit"
@@ -63,10 +60,6 @@ export interface CreateCloseInstructionsParams {
     /** CLMM liquidity pool state. */
     state: ClmmLiquidityPoolState
 }
-
-import {
-    Address
-} from "@solana/kit"
 
 /**
  * Parameters for getting personal position PDA.

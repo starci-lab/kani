@@ -9,7 +9,7 @@ import {
 } from "../types"
 import {
     PrepareTx,
-} from "../../interfaces"
+} from "../../types"
 import {
     PrivyPublicKeyNotFoundException,
     EncryptedPrivySignerPrivateKeyNotFoundException,

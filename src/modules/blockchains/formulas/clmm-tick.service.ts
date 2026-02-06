@@ -1,15 +1,19 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import {
-    BN, Decimal 
-} from "turbos-clmm-sdk"
+import BN from "bn.js"
+import Decimal from "decimal.js"
 import {
     TickMath 
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
-    Q128, Q64, Q96 
+    Q64
 } from "@modules/utils"
+import {
+    TickToSqrtPriceParams,
+    SqrtPriceToPriceParams,
+    TickToPriceParams
+} from "./types"
 
 /**
  * CLMM Tick / Price formula service
@@ -27,52 +31,33 @@ import {
 @Injectable()
 export class ClmmTickFormulaService {
     /**
-     * Convert tick index to sqrt price (Q64 fixed point)
+     * Converts tick index to sqrt price (Q64 fixed point).
      *
-     * tickIndex:
-     *  - Discrete price index used by CLMM
-     *  - Each tick represents a fixed price ratio step
-     *
-     * sqrtPriceX64:
-     *  - sqrt(price) represented in Q64 fixed-point format
-     *  - price = (sqrtPriceX64 / 2^64)^2
-     *
-     * Note:
-     *  - We rely on the imported TickMath implementation for correctness
-     *  - This is equivalent to Uniswap V3 tick -> sqrtPrice logic
+     * @param param - Parameters for tick to sqrt price conversion
+     * @returns Sqrt price in fixed-point format
      */
-    public tickToSqrtPrice(
-        {
-            tickIndex,
-            fixedPointScale = Q64,
-        }: TickToSqrtPriceParams
-    ): BN {
+    public tickToSqrtPrice({
+        tickIndex,
+        fixedPointScale = Q64,
+    }: TickToSqrtPriceParams): BN {
         // Use TickMath implementation to compute sqrtPrice
         const tickIndexX64 = TickMath.tickIndexToSqrtPriceX64(tickIndex.toNumber())
         return tickIndexX64.mul(fixedPointScale).div(Q64)
     }
 
     /**
-     * Convert sqrtPriceX64 to human-readable spot price
+     * Converts sqrtPriceX64 to human-readable spot price.
      *
-     * sqrtPriceX64:
-     *  - sqrt(price) in Q64 fixed-point
-     *
-     * decimalsA / decimalsB:
-     *  - Token A and Token B decimals
-     *  - Used to normalize raw price into human-readable value
-     *
-     * Returned price:
-     *  - price of token A in terms of token B
+     * @param param - Parameters for sqrt price to price conversion
+     * @returns Human-readable price (token A in terms of token B)
      */
-    public sqrtPriceToPrice(
-        {
-            sqrtPrice,
-            decimalsA,
-            decimalsB,
-            fixedPointScale = Q64,
-        }: SqrtPriceToPriceParams
-    ): Decimal {
+    public sqrtPriceToPrice({
+        sqrtPrice,
+        decimalsA,
+        decimalsB,
+        fixedPointScale = Q64,
+    }: SqrtPriceToPriceParams): Decimal {
+        // Convert to Q64 format for TickMath
         const sqrtPriceX64 = sqrtPrice.mul(Q64).div(fixedPointScale)
         return TickMath.sqrtPriceX64ToPrice(sqrtPriceX64,
             decimalsA,
@@ -80,103 +65,29 @@ export class ClmmTickFormulaService {
     }
 
     /**
-     * Convert tick index directly to spot price
+     * Converts tick index directly to spot price.
      *
-     * Internally equivalent to:
-     *  tickIndex -> sqrtPriceX64 -> price
-     *
-     * This helper is useful when:
-     *  - You don't need intermediate sqrt price
-     *  - You want a clean tick -> price conversion
+     * @param param - Parameters for tick to price conversion
+     * @returns Human-readable price (token A in terms of token B)
      */
-    public tickToPrice(
-        {
+    public tickToPrice({
+        tickIndex,
+        decimalsA,
+        decimalsB,
+        fixedPointScale = Q64,
+    }: TickToPriceParams): Decimal {
+        // Convert tick to sqrt price first
+        const sqrtPrice = this.tickToSqrtPrice({
             tickIndex,
+            fixedPointScale,
+        })
+
+        // Convert sqrt price to human-readable price
+        return this.sqrtPriceToPrice({
+            sqrtPrice,
             decimalsA,
             decimalsB,
-            fixedPointScale = Q64,
-        }: TickToPriceParams
-    ): Decimal {
-        const sqrtPrice = this.tickToSqrtPrice(
-            {
-                tickIndex,
-                fixedPointScale,
-            }
-        )
-        return this.sqrtPriceToPrice(
-            {
-                sqrtPrice,
-                decimalsA,
-                decimalsB,
-                fixedPointScale,
-            }
-        )
+            fixedPointScale,
+        })
     }
-}
-
-/**
- * Params for tick -> sqrtPriceX64 conversion
- */
-export interface TickToSqrtPriceParams {
-    /**
-     * CLMM tick index (discrete price step)
-     */
-    tickIndex: BN
-    /**
-     * Divisor for price calculations (default: Q64)
-     * Controls fixed-point scaling for sqrt price arithmetic
-     */
-    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
-}
-
-/**
- * Params for sqrtPriceX64 -> price conversion
- */
-export interface SqrtPriceToPriceParams {
-    /**
-     * sqrt(price) in Q64 fixed-point format
-     */
-    sqrtPrice: BN
-
-    /**
-     * Decimals of token A
-     */
-    decimalsA: number
-
-    /**
-     * Decimals of token B
-     */
-    decimalsB: number
-
-    /**
-     * Divisor for price calculations (default: Q64)
-     * Controls fixed-point scaling for sqrt price arithmetic
-     */
-    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
-}
-
-/**
- * Params for tick -> price conversion
- */
-export interface TickToPriceParams {
-    /**
-     * CLMM tick index
-     */
-    tickIndex: BN
-
-    /**
-     * Decimals of token A
-     */
-    decimalsA: number
-
-    /**
-     * Decimals of token B
-     */
-    decimalsB: number
-
-    /**
-     * Divisor for price calculations (default: Q64)
-     * Controls fixed-point scaling for sqrt price arithmetic
-     */
-    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
 }

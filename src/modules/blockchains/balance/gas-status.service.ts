@@ -1,6 +1,5 @@
 import {
     PrimaryMemoryStorageService,
-    TokenId,
 } from "@modules/databases"
 import {
     Injectable,
@@ -13,7 +12,7 @@ import {
 } from "@modules/exceptions"
 import {
     GasStatus,
-} from "../types"
+} from "../enums"
 import {
     GetGasStatusParams,
 } from "./types"

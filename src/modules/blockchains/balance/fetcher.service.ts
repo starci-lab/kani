@@ -33,7 +33,7 @@ import {
 } from "./gas-status.service"
 import {
     GasStatus
-} from "../types"
+} from "../enums"
 import BN from "bn.js"
 
 import {
@@ -110,7 +110,8 @@ export class BalanceFetcherService implements IBalanceFetcherService {
         })
         
         // fetch incentive token balances if provided
-        const incentiveBalanceAmounts: Record<string, BN> = {}
+        const incentiveBalanceAmounts: Record<string, BN> = {
+        }
         if (incentiveTokens) {
             for (const incentiveToken of incentiveTokens) {
                 const { balanceAmount: incentiveBalanceAmount } = await this.fetchBalance({
@@ -129,7 +130,8 @@ export class BalanceFetcherService implements IBalanceFetcherService {
         
         // get gas configuration for chain
         const { gasConfig: { gasAmountRequired } } = this.primaryMemoryStorageService
-        const { targetOperationalAmount: targetOperationalGasAmount, minOperationalAmount: minOperationalGasAmount } = gasAmountRequired?.[bot.chainId] || {}
+        const { targetOperationalAmount: targetOperationalGasAmount, minOperationalAmount: minOperationalGasAmount } = gasAmountRequired?.[bot.chainId] || {
+        }
         
         if (!targetOperationalGasAmount) {
             throw new TargetOperationalGasAmountNotFoundException({
@@ -235,9 +237,13 @@ export class BalanceFetcherService implements IBalanceFetcherService {
     public async fetchBalance({ bot, token }: FetchBalanceParams): Promise<FetchBalanceResult> {
         switch (bot.chainId) {
         case ChainId.Solana:
-            return this.solanaBalanceFetcherService.fetchBalance({ bot, token })
+            return this.solanaBalanceFetcherService.fetchBalance({
+                bot, token 
+            })
         case ChainId.Sui:
-            return this.suiBalanceFetcherService.fetchBalance({ bot, token })
+            return this.suiBalanceFetcherService.fetchBalance({
+                bot, token 
+            })
         default:
             throw new UnsupportedChainIdException(bot.chainId)
         }
@@ -255,9 +261,13 @@ export class BalanceFetcherService implements IBalanceFetcherService {
     public async fetchTokens({ bot }: FetchTokensParams): Promise<FetchTokensResult> {
         switch (bot.chainId) {
         case ChainId.Solana:
-            return this.solanaBalanceFetcherService.fetchTokens({ bot })
+            return this.solanaBalanceFetcherService.fetchTokens({
+                bot 
+            })
         case ChainId.Sui:
-            return this.suiBalanceFetcherService.fetchTokens({ bot })
+            return this.suiBalanceFetcherService.fetchTokens({
+                bot 
+            })
         default:
             throw new UnsupportedChainIdException(bot.chainId)
         }

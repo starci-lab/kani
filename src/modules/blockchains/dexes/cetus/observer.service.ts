@@ -125,7 +125,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (async () => {
-                    await this.fetchPoolInfo({ liquidityPool })
+                    await this.fetchPoolInfo(liquidityPool)
                 })()
             )
         }
@@ -137,10 +137,9 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
     /**
      * Fetches pool information from on-chain and updates cache.
      *
-     * @param param - Parameters for fetching pool info
-     * @param param.liquidityPool - Liquidity pool schema
+     * @param liquidityPool - The liquidity pool schema to fetch information for
      */
-    private async fetchPoolInfo({ liquidityPool }: { liquidityPool: LiquidityPoolSchema }): Promise<void> {
+    private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema): Promise<void> {
         try {
             // fetch pool object from on-chain
             const objectInfo = await this.rpcExecutorService.withSuiClient({
@@ -178,7 +177,7 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             // parse pool fields and update state
             const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
             const pool = parseCetusPool(fields)
-            return await this.handlePoolStateUpdate({
+            await this.handlePoolStateUpdate({
                 liquidityPool,
                 state: pool
             })

@@ -1,2 +1,0 @@
-export const SUI_SIGNERS = "SUI_SIGNERS"
-export const SOLANA_SIGNERS = "SOLANA_SIGNERS"

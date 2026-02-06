@@ -6,6 +6,11 @@ import BN from "bn.js"
 import {
     ClmmLiquidityFormulaService
 } from "../formulas"
+import {
+    FindOptimalTickRangeParams,
+    FindOptimalTickRangeResult,
+    CandidateRangeScore
+} from "./types"
 
 /**
  * Service for calculating optimal tick ranges in Concentrated Liquidity Market Maker (CLMM) pools.
@@ -21,31 +26,30 @@ export class TickMathService {
      * Finds the optimal tick range for providing liquidity in a CLMM pool.
      * 
      * This method:
-     * 1. Resolves the relative price between target and quote tokens
-     * 2. Calculates potential tick ranges based on current tick, spacing, and multiplier
-     * 3. Evaluates liquidity and amounts for each candidate range
+     * 1. Calculates potential tick ranges based on current tick, spacing, and multiplier
+     * 2. Evaluates liquidity and amounts for each candidate range
+     * 3. Selects the range with highest utilization percentage
      * 
-     * @param params - Parameters for finding optimal tick range
-     * @param params.targetBalanceAmount - Amount of target token available for liquidity
-     * @param params.quoteBalanceAmount - Amount of quote token available for liquidity
-     * @param params.targetToken - The target token schema
-     * @param params.quoteToken - The quote token schema
-     * @param params.tickCurrent - Current tick of the pool
-     * @param params.tickSpacing - Minimum tick spacing allowed by the pool
-     * @param params.tickMultiplier - Multiplier to determine how many tick ranges to evaluate
-     * @returns Promise resolving to the optimal tick range (currently returns placeholder values)
-     * @throws CacheStaleException if the price data is stale
+     * @param param - Parameters for finding optimal tick range
+     * @param param.targetBalanceAmount - Amount of target token available for liquidity
+     * @param param.quoteBalanceAmount - Amount of quote token available for liquidity
+     * @param param.tickCurrent - Current tick of the pool
+     * @param param.tickSpacing - Minimum tick spacing allowed by the pool
+     * @param param.tickMultiplier - Multiplier to determine how many tick ranges to evaluate
+     * @param param.targetIsA - Whether the target token is token A
+     * @returns Optimal tick range with utilization score
+     *
+     * @example
+     * const result = await service.findOptimalTickRange({ targetBalanceAmount, quoteBalanceAmount, tickCurrent, tickSpacing, tickMultiplier, targetIsA })
      */
-    public async findOptimalTickRange(
-        {
-            targetBalanceAmount,
-            quoteBalanceAmount,
-            tickCurrent,
-            tickSpacing,
-            tickMultiplier,
-            targetIsA,
-        }: FindOptimalTickRangeParams
-    ): Promise<FindOptimalTickRangeResult> {
+    public async findOptimalTickRange({
+        targetBalanceAmount,
+        quoteBalanceAmount,
+        tickCurrent,
+        tickSpacing,
+        tickMultiplier,
+        targetIsA,
+    }: FindOptimalTickRangeParams): Promise<FindOptimalTickRangeResult> {
         const _amountA = targetIsA ? targetBalanceAmount : quoteBalanceAmount
         const _amountB = targetIsA ? quoteBalanceAmount : targetBalanceAmount
         // Calculate the tick range width (span) based on spacing and multiplier
@@ -114,7 +118,7 @@ export class TickMathService {
                 }
             )
         }
-        // select the candidate range with the highest score
+        // select the candidate range with the highest utilization score
         return candidateRanges.sort(
             (
                 candidateRangeA, 
@@ -124,49 +128,4 @@ export class TickMathService {
                 .sub(candidateRangeA.utilizationPercentage)
                 .toNumber())[0]
     }
-}
-
-/**
- * Parameters for finding the optimal tick range for liquidity provision.
- */
-export interface FindOptimalTickRangeParams {
-    /** Amount of target token available to provide as liquidity */
-    targetBalanceAmount: BN
-    /** Amount of quote token available to provide as liquidity */
-    quoteBalanceAmount: BN
-    /** Current tick index of the pool */
-    tickCurrent: BN
-    /** Minimum tick spacing allowed by the pool (determines valid tick positions) */
-    tickSpacing: Decimal
-    /** Multiplier used to determine the number of tick range candidates to evaluate */
-    tickMultiplier: Decimal
-    /** Whether the target token is token A */
-    targetIsA: boolean
-}
-
-/**
- * Result containing the optimal tick range bounds.
- */
-export interface FindOptimalTickRangeResult {
-    /** Lower bound of the optimal tick range */
-    tickLower: BN
-    /** Upper bound of the optimal tick range */
-    tickUpper: BN
-    /** Score of the optimal tick range */
-    utilizationPercentage: Decimal
-    /** Amount of target token used */
-    amountA: BN
-    /** Amount of quote token used */
-    amountB: BN
-    /** Liquidity provided */
-    liquidity: BN
-}   
-
-export interface CandidateRangeScore {
-    tickLower: BN
-    tickUpper: BN
-    utilizationPercentage: Decimal
-    amountA: BN
-    amountB: BN
-    liquidity: BN
 }

@@ -4,7 +4,7 @@ import {
 } from "@modules/databases"
 import {
     LiquidityPoolState 
-} from "../interfaces"
+} from "../types"
 
 export interface ISettlementStrategyService {
     settle(params: SettleParams): Promise<SettleStrategyResult>

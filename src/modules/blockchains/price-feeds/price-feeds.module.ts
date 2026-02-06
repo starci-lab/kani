@@ -14,6 +14,10 @@ import {
     PythModule 
 } from "./pyth"
  
+/**
+ * Module for aggregating multiple price feed providers.
+ * Integrates Pyth, CoinMarketCap, and Coingecko price feeds.
+ */
 @Module({
     imports: [
         CoingeckoModule.register({

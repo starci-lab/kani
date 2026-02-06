@@ -5,7 +5,7 @@ import BN from "bn.js"
 import {
     ClmmLiquidityPoolState,
     BotSchema
-} from "../../../interfaces"
+} from "../../../types"
 
 /**
  * Parameters for creating open position transaction builder.

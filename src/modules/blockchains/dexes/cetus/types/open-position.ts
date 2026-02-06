@@ -3,7 +3,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState,
-} from "../../../interfaces"
+} from "../../types"
 import {
     SuiEvent
 } from "@mysten/sui/client"

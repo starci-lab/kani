@@ -6,7 +6,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
-} from "../../../interfaces"
+} from "../../../types"
 
 /**
  * Represents the AddLiquidity event emitted by Momentum.

@@ -1,8 +1,4 @@
-import {
-    ClmmLiquidityPoolState 
-} from "../../../interfaces"
 import { 
-    BotSchema,
     PrimaryMemoryStorageService, 
     TurbosLiquidityPoolMetadata 
 } from "@modules/databases"

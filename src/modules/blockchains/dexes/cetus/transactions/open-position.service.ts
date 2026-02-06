@@ -2,10 +2,7 @@ import {
     asUintN 
 } from "@cetusprotocol/cetus-sui-clmm-sdk"
 import {
-    ClmmLiquidityPoolState 
-} from "../../../interfaces"
-import {
-    BotSchema, CetusLiquidityPoolMetadata, PrimaryMemoryStorageService 
+    CetusLiquidityPoolMetadata, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     Transaction 

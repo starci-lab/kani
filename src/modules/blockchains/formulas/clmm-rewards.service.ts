@@ -6,12 +6,15 @@ import Decimal from "decimal.js"
 import {
     Q128,
     Q64,
-    Q96,
     toDecimalAmount,
 } from "@modules/utils"
 import {
     ClmmUtilsService,
 } from "./clmm-utils.service"
+import {
+    ComputeRewardGrowthInsideParams,
+    ComputeRewardParams
+} from "./types"
 
 /**
  * CLMM Rewards Service (Uniswap V3 style)
@@ -36,21 +39,10 @@ export class ClmmRewardsFormulaService {
     ) {}
 
     /**
-     * Compute reward growth inside a position range
+     * Computes reward growth inside a position range.
      *
-     * Formula (Uniswap V3 style):
-     *
-     * if current < lower:
-     *   inside = outsideLower - outsideUpper
-     *
-     * if current >= upper:
-     *   inside = outsideUpper - outsideLower
-     *
-     * else:
-     *   inside = global - outsideLower - outsideUpper
-     *
-     * Wrapping:
-     *  - Uses wrapping u128 arithmetic (wrapModulus, default Q128)
+     * @param param - Parameters for computing reward growth inside
+     * @returns Reward growth inside the position range
      */
     public computeRewardGrowthInside({
         rewardGrowthGlobal,
@@ -61,7 +53,7 @@ export class ClmmRewardsFormulaService {
         tickUpper,
         wrapModulus = Q128,
     }: ComputeRewardGrowthInsideParams): BN {
-        // current < lower
+        // Case: current price is below the position range
         if (tickCurrent.lt(tickLower)) {
             return this.clmmUtilsService.wrapSub(
                 rewardGrowthOutsideLower,
@@ -69,7 +61,7 @@ export class ClmmRewardsFormulaService {
                 wrapModulus,
             )
         }
-        // current >= upper
+        // Case: current price is above the position range
         if (tickCurrent.gte(tickUpper)) {
             return this.clmmUtilsService.wrapSub(
                 rewardGrowthOutsideUpper,
@@ -77,7 +69,7 @@ export class ClmmRewardsFormulaService {
                 wrapModulus,
             )
         }
-        // inside range: (global - outsideLower) - outsideUpper
+        // Case: current price is inside the position range
         return this.clmmUtilsService.wrapSub(
             this.clmmUtilsService.wrapSub(
                 rewardGrowthGlobal,
@@ -90,13 +82,10 @@ export class ClmmRewardsFormulaService {
     }
 
     /**
-     * Compute reward for a position (time-based emissions)
+     * Computes reward for a position (time-based emissions).
      *
-     * Flow:
-     *  1. Update rewardGrowthGlobal from last update to now (Δt * emissionsPerSecond / totalLiquidity)
-     *  2. Compute reward growth inside range
-     *  3. Compute delta growth (wrapping-safe), then rewardDelta = liquidity × deltaGrowth / Q64
-     *  4. Add already owned reward and convert to decimal
+     * @param param - Parameters for computing reward
+     * @returns Reward amount in decimal format
      */
     public computeReward({
         rewardGrowthGlobal,
@@ -116,7 +105,7 @@ export class ClmmRewardsFormulaService {
         resultDiv = Q64,
         decimals,
     }: ComputeRewardParams): Decimal {
-        // Step 1: update rewardGrowthGlobal (Δt * emissionsPerSecond / totalLiquidity)
+        // Step 1: Update rewardGrowthGlobal from last update to now
         const nowMs = new BN(Date.now())
         if (!nowMs.lte(lastUpdateMs) && !totalLiquidity.isZero()) {
             const deltaT = nowMs.sub(lastUpdateMs).div(new BN(1000))
@@ -132,7 +121,7 @@ export class ClmmRewardsFormulaService {
             }
         }
 
-        // Step 2: reward growth inside range
+        // Step 2: Compute reward growth inside range
         let growthInsideNow: BN
         if (tickCurrent.lt(tickLower)) {
             growthInsideNow = this.clmmUtilsService.wrapSub(
@@ -157,7 +146,8 @@ export class ClmmRewardsFormulaService {
                 outsideDeltaWrapModulus,
             )
         }
-        // Step 3: wrapping delta growth, then rewardDelta = liquidity × deltaGrowth / Q64
+
+        // Step 3: Compute delta growth (wrapping-safe), then rewardDelta = liquidity × deltaGrowth / Q64
         const deltaGrowthInside = this.clmmUtilsService.wrapSub(
             growthInsideNow,
             rewardGrowthInsideLast,
@@ -165,100 +155,10 @@ export class ClmmRewardsFormulaService {
         )
         const rewardDelta = liquidity.mul(deltaGrowthInside).div(resultDiv)
 
-        // Step 4: add already owned reward and convert to decimal
+        // Step 4: Add already owned reward and convert to decimal
         return toDecimalAmount({
             amount: rewardOwned.add(rewardDelta),
             decimals,
         })
     }
 }
-
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
-
-export interface ComputeNextTimeBasedRewardGrowthGlobalParams {
-    nowMs: BN
-    lastUpdateMs: BN
-    rewardGrowthGlobalLast: BN
-    /** raw tokens per second */
-    emissionsPerSecond: BN
-    /** total pool liquidity */
-    totalLiquidity: BN
-  }
-  
-export interface ComputeRewardGrowthInsideParams {
-    rewardGrowthGlobal: BN
-    rewardGrowthOutsideLower: BN
-    rewardGrowthOutsideUpper: BN
-    tickCurrent: BN
-    tickLower: BN
-    tickUpper: BN
-    wrapModulus?: typeof Q128 | typeof Q64
-  }
-  
-export interface ComputeRewardParams {
-    /**
-     * Reward growth global
-     */
-    rewardGrowthGlobal: BN
-    /**
-     * Reward growth outside lower
-     */
-    rewardGrowthOutsideLower: BN
-    /**
-     * Reward growth outside upper
-     */
-    rewardGrowthOutsideUpper: BN
-    /**
-     * Tick current
-     */
-    tickCurrent: BN
-    /**
-     * Tick lower
-     */
-    tickLower: BN
-    /**
-     * Tick upper
-     */
-    tickUpper: BN
-    /**
-     * Reward growth inside last
-     */
-    rewardGrowthInsideLast: BN
-    /**
-     * Liquidity
-     */
-    liquidity: BN
-    /**
-     * Reward owned
-     */
-    rewardOwned?: BN
-    /**
-     * Decimals
-     */
-    decimals: Decimal
-    /**
-     * Wrapping modulus for outside growth delta
-     */
-    outsideDeltaWrapModulus?: typeof Q128 | typeof Q64
-
-    /**
-     * Wrapping modulus for inside growth delta
-     */
-    insideDeltaWrapModulus?: typeof Q128 | typeof Q64
-    /**
-     * Divisor for reward result
-     */
-    resultDiv?: typeof Q64 | typeof Q96 | typeof Q128
-    /**
-     * Emissions per second
-     */
-    emissionsPerSecond: BN
-    /**
-     * Last update timestamp
-     */
-    lastUpdateMs: BN
-    /** total pool liquidity */
-    totalLiquidity: BN
-  }

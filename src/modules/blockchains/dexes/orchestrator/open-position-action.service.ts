@@ -31,7 +31,7 @@ import {
     LiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
-} from "../../interfaces"
+} from "../types"
 import {
     CetusOpenPositionActionService 
 } from "../cetus"

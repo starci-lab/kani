@@ -1,5 +1,4 @@
 import { 
-    BotSchema, 
     CetusLiquidityPoolMetadata, 
     PrimaryMemoryStorageService 
 } from "@modules/databases"
@@ -17,8 +16,9 @@ import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
 import {
-    ClmmLiquidityPoolState 
-} from "../../../interfaces"
+    CreateClosePositionTxbParams,
+    CreateClosePositionTxbResult
+} from "../types"
 
 @Injectable()
 export class ClosePositionTxbService {
@@ -39,10 +39,10 @@ export class ClosePositionTxbService {
      * const result = await service.createClosePositionTxb({ txb, bot, state })
      */
     async createClosePositionTxb({
-            txb,
-            bot,
-            state,
-        }: CreateClosePositionTxbParams
+        txb,
+        bot,
+        state,
+    }: CreateClosePositionTxbParams
     ): Promise<CreateClosePositionTxbResult> {
         txb = txb ?? new Transaction()
         txb.setSender(bot.accountAddress)
@@ -117,14 +117,4 @@ export class ClosePositionTxbService {
             txb,
         }
     }
-}
-
-export interface CreateClosePositionTxbParams {
-    txb?: Transaction
-    bot: BotSchema
-    state: ClmmLiquidityPoolState
-}
-
-export interface CreateClosePositionTxbResult {
-    txb: Transaction
 }

@@ -3,7 +3,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
-} from "../../../interfaces"
+} from "../../../types"
 import BN from "bn.js"
 import {
     Instruction

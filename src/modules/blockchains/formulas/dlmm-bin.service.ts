@@ -3,6 +3,12 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import Decimal from "decimal.js"
+import {
+    ActiveIdToPriceParams,
+    ActiveIdToPriceRawParams,
+    ActiveIdToPriceRawResult,
+    ActiveIdToPriceResult
+} from "./types"
 
 /**
  * DLMM Bin Formula Service
@@ -16,43 +22,26 @@ import Decimal from "decimal.js"
 export class DlmmBinFormulaService {
 
     /**
-     * Convert active bin id to human-readable price
+     * Converts active bin id to human-readable price.
      *
-     * Formula:
-     *   price =
-     *     (1 + binStep / basisPointMax) ^ activeId
-     *     × 10^(decimalsA - decimalsB)
-     *
-     * Where:
-     *  - activeId: current bin index
-     *  - binStep: price step per bin (in basis points)
-     *  - basisPointMax: 10_000 by default
-     *  - decimalsA / decimalsB: token decimals normalization
-     *
-     * Returned price:
-     *  - price of token A in terms of token B
+     * @param param - Parameters for converting active bin id to price
+     * @returns Human-readable price (token A in terms of token B)
      */
-    public activeIdToPrice(
-        { 
-            activeId, 
-            decimalsA, 
-            decimalsB, 
-            basisPointMax = 10000, 
-            binStep 
-        }: ActiveIdToPriceParams
-    ): ActiveIdToPriceResult {
-
-        // Step 1:
-        // Compute raw DLMM price without token decimal normalization
+    public activeIdToPrice({
+        activeId,
+        decimalsA,
+        decimalsB,
+        basisPointMax = 10000,
+        binStep
+    }: ActiveIdToPriceParams): ActiveIdToPriceResult {
+        // Step 1: Compute raw DLMM price without token decimal normalization
         const { price: rawPrice } = this.activeIdToPriceRaw({
             activeId,
             binStep,
             basisPointMax,
         })
 
-        // Step 2:
-        // Normalize price using token decimals
-        // price = rawPrice × 10^(decimalsA - decimalsB)
+        // Step 2: Normalize price using token decimals
         const price = rawPrice.mul(
             new Decimal(10).pow(
                 new Decimal(decimalsA).sub(decimalsB)
@@ -65,99 +54,25 @@ export class DlmmBinFormulaService {
     }
 
     /**
-     * Convert active bin id to raw DLMM price (without decimals)
+     * Converts active bin id to raw DLMM price (without decimals).
      *
-     * Raw formula:
-     *   rawPrice = (1 + binStep / basisPointMax) ^ activeId
-     *
-     * Notes:
-     *  - This price is purely mathematical
-     *  - Token decimals are NOT applied here
-     *  - Useful for internal math or comparison between bins
+     * @param param - Parameters for converting active bin id to raw price
+     * @returns Raw DLMM price (without token decimals)
      */
-    public activeIdToPriceRaw(
-        { 
-            activeId, 
-            binStep,
-            basisPointMax = 10000,
-        }: ActiveIdToPriceRawParams
-    ): ActiveIdToPriceRawResult {
-
+    public activeIdToPriceRaw({
+        activeId,
+        binStep,
+        basisPointMax = 10000,
+    }: ActiveIdToPriceRawParams): ActiveIdToPriceRawResult {
+        // Compute price ratio: (1 + binStep / basisPointMax)
         const ratio = new Decimal(1)
             .add(new Decimal(binStep).div(basisPointMax))
 
+        // Raise ratio to the power of activeId
         const price = ratio.pow(activeId.toNumber())
 
         return {
             price 
         }
     }
-}
-
-/**
- * Params for converting active bin id to price (with decimals)
- */
-export interface ActiveIdToPriceParams {
-
-    /**
-     * Active bin index (DLMM discrete price level)
-     */
-    activeId: BN
-
-    /**
-     * Decimals of token A
-     */
-    decimalsA: Decimal
-
-    /**
-     * Decimals of token B
-     */
-    decimalsB: Decimal
-
-    /**
-     * Basis points denominator (default: 10_000)
-     */
-    basisPointMax?: number
-
-    /**
-     * Bin step in basis points
-     * Example:
-     *  - binStep = 25  -> 0.25% per bin
-     */
-    binStep: number
-}
-
-/**
- * Params for converting active bin id to raw price
- */
-export interface ActiveIdToPriceRawParams {
-
-    /**
-     * Active bin index
-     */
-    activeId: BN
-
-    /**
-     * Bin step in basis points
-     */
-    binStep: number
-
-    /**
-     * Basis points denominator
-     */
-    basisPointMax?: number
-}
-
-export interface ActiveIdToPriceRawResult {
-    /**
-     * Raw DLMM price (without decimals)
-     */
-    price: Decimal
-}
-
-export interface ActiveIdToPriceResult {
-    /**
-     * Human-readable price (token A / token B)
-     */
-    price: Decimal
 }

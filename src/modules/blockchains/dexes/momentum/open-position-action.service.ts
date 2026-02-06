@@ -9,7 +9,8 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
-} from "../../interfaces"
+    ClmmLiquidityPoolState,
+} from "../types"
 import {
     Transaction, TransactionDataBuilder 
 } from "@mysten/sui/transactions"
@@ -62,9 +63,6 @@ import {
 import {
     PrivySignService 
 } from "@modules/privy"
-import {
-    ClmmLiquidityPoolState 
-} from "../../interfaces"
 import {
     Decimal 
 } from "decimal.js"

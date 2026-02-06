@@ -51,7 +51,7 @@ import {
 } from "@metaplex-foundation/beet"
 import {
     DlmmLiquidityPoolState 
-} from "../../../interfaces"
+} from "../../../types"
 import {
     TOKEN_2022_PROGRAM_ADDRESS 
 } from "@solana-program/token-2022"

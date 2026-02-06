@@ -22,7 +22,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState 
-} from "../../../interfaces"
+} from "../../types/pool-state"
 import {
     InvalidPoolTokensException, 
     LiquidityPoolClmmStateNotFoundException

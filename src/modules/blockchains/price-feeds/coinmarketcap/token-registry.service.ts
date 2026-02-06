@@ -5,9 +5,19 @@ import {
     MarketListingId, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
-    CoinMarketCapTokenPrice, CoinMarketCapTokenPriceData 
+    CoinMarketCapTokenPrice,
+    CoinMarketCapTokenPriceData 
 } from "./types"
 
+/**
+ * Service for managing CoinMarketCap token registry and price resolution.
+ * Maps CoinMarketCap numeric IDs to internal token identifiers.
+ *
+ * @example
+ * const service = new CoinMarketCapTokenRegistryService(...)
+ * const symbols = service.getSymbols()
+ * const prices = service.resolveCoinMarketCapTokenPrices(priceData)
+ */
 @Injectable()
 export class CoinMarketCapTokenRegistryService {
     constructor(
@@ -15,12 +25,18 @@ export class CoinMarketCapTokenRegistryService {
     ) {}
 
     /**
-     * Get all tokens that have a CoinMarketCap market listing
+     * Gets all CoinMarketCap numeric IDs for tokens with CoinMarketCap market listings.
      *
      * Note: for CoinMarketCap, `marketListings[].symbol` stores the CoinMarketCap numeric id
      * (e.g. `"3408"`).
+     *
+     * @returns Array of unique CoinMarketCap numeric IDs
+     *
+     * @example
+     * const symbols = service.getSymbols()
      */
     getSymbols(): Array<string> {
+        // Find all tokens with CoinMarketCap market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
                 $elemMatch: {
@@ -29,6 +45,7 @@ export class CoinMarketCapTokenRegistryService {
             }
         })
         if (!tokens.length) return []
+        // Extract unique symbols (numeric IDs) from market listings
         return [
             ...new Set(
                 tokens.map(
@@ -42,12 +59,18 @@ export class CoinMarketCapTokenRegistryService {
     }
 
     /**
-     * Map CoinMarketCap price data to internal token prices
+     * Maps CoinMarketCap price data to internal token prices.
+     *
+     * @param tokenPriceData - Array of CoinMarketCap price data
+     * @returns Array of resolved token prices
+     *
+     * @example
+     * const prices = service.resolveCoinMarketCapTokenPrices([{ symbol: "3408", price: 1.5 }])
      */
     resolveCoinMarketCapTokenPrices(
         tokenPriceData: Array<CoinMarketCapTokenPriceData>
     ): Array<CoinMarketCapTokenPrice> {
-        // retrieve the tokens from the primary memory storage service
+        // Find all tokens with CoinMarketCap market listings
         const tokens = this.primaryMemoryStorageService.tokenCollection.find({
             marketListings: {
                 $elemMatch: {
@@ -56,9 +79,10 @@ export class CoinMarketCapTokenRegistryService {
             }
         })
         if (!tokens.length) return []
-        // map the token prices to the CoinMarketCap token prices
+        // Map tokens to prices by matching symbols (numeric IDs)
         return tokens.map(
             token => {
+                // Find matching price data for this token
                 const tokenPrice = tokenPriceData.find(
                     tokenPriceData => tokenPriceData.symbol === token.marketListings
                         .find(
@@ -66,6 +90,7 @@ export class CoinMarketCapTokenRegistryService {
                         )?.symbol
                 )
                 if (!tokenPrice) return undefined
+                // Return resolved token price
                 return {
                     tokenId: token.displayId,
                     id: token.id,

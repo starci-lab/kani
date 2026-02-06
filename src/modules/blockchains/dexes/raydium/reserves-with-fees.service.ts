@@ -3,7 +3,7 @@ import {
     ReservesWithFeesResult,
     IReservesWithFeesService,
     ClmmLiquidityPoolState,
-} from "../../interfaces"
+} from "../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -23,7 +23,6 @@ import {
     SolanaAccountNotFoundException,
     ErrorSolanaAccountName,
     MissingActivePositionLiquidityException,
-    PositionClmmStateNotFoundException,
     LiquidityPoolClmmStateNotFoundException,
     TokenNotFoundException,
 } from "@modules/exceptions"
@@ -109,24 +108,21 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
             })
         }
 
-        // Extract position details
+        if (!bot.activePosition.associatedPosition?.clmmState) {
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
+        }
+        // Stage: state validation (position must have CLMM state recorded)
         const {
             positionId,
             clmmState: {
-                tickLower: tickLowerStr,
-                tickUpper: tickUpperStr
+                tickLower: tickLowerNumber,
+                tickUpper: tickUpperNumber,
             }
         } = bot.activePosition.associatedPosition
-        const tickLower = new BN(tickLowerStr)
-        const tickUpper = new BN(tickUpperStr)
-
-        // Stage: state validation (position must have CLMM state recorded)
-        if (!bot.activePosition.associatedPosition.clmmState) {
-            throw new PositionClmmStateNotFoundException({
-                positionId,
-                botId: bot.id,
-            })
-        }
+        const tickLower = new BN(tickLowerNumber)
+        const tickUpper = new BN(tickUpperNumber)
 
         const {
             programAddress

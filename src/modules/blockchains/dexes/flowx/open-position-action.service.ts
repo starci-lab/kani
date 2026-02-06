@@ -10,7 +10,7 @@ import {
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
     ClmmLiquidityPoolState,
-} from "../../interfaces"
+} from "../types"
 import {
     Transaction, TransactionDataBuilder 
 } from "@mysten/sui/transactions"
@@ -19,7 +19,7 @@ import {
 } from "../../signers"
 import BN from "bn.js"
 import {
-    AppVersion, BotSchema, DexId, PrimaryMemoryStorageService,
+    AppVersion, DexId, PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     OpenPositionTxbService,
@@ -56,9 +56,6 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
-import {
-    SuiEvent 
-} from "@mysten/sui/client"
 import {
     FlowXClmmPosition 
 } from "./struct"

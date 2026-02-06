@@ -10,7 +10,7 @@ import {
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
-} from "../../interfaces"
+} from "../../types"
 import {
     SignerService 
 } from "../../signers"

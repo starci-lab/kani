@@ -1,18 +1,18 @@
 import {
     Injectable 
 } from "@nestjs/common"
-import BN from "bn.js"
 import Decimal from "decimal.js"
 import {
-    Q128, Q64, Q96, 
+    Q64,
     toDecimalAmount
 } from "@modules/utils"
 import {
     ClmmTickFormulaService 
 } from "./clmm-tick.service"
 import {
-    ClmmLiquidityFormulaService 
-} from "./clmm-liquidity.service"
+    CalculateReservesParams,
+    CalculateReservesResult
+} from "./types"
 
 /**
  * CLMM Reserves Formula Service
@@ -52,20 +52,12 @@ import {
 export class ClmmReservesFormulaService {
     constructor(
         private readonly clmmTickFormulaService: ClmmTickFormulaService,
-        private readonly clmmLiquidityFormulaService: ClmmLiquidityFormulaService,
     ) {}
 
     /**
      * Computes token A and token B reserves for a CLMM position.
      *
-     * @param params.tickLower      Lower tick boundary of the position
-     * @param params.tickUpper      Upper tick boundary of the position
-     * @param params.tickCurrent    Current pool tick (price)
-     * @param params.liquidity      Liquidity amount (L)
-     * @param params.fixedPointScale Fixed-point scale used for sqrt prices (Q64/Q96/Q128)
-     * @param params.decimalsA      Decimals of token A
-     * @param params.decimalsB      Decimals of token B
-     *
+     * @param param - Parameters for computing reserves
      * @returns Human-readable reserves of token A and token B
      */
     public computeReserves({
@@ -77,13 +69,7 @@ export class ClmmReservesFormulaService {
         decimalsA,
         decimalsB,
     }: CalculateReservesParams): CalculateReservesResult {
-        /**
-         * Convert ticks to fixed-point sqrt prices:
-         *
-         *   sqrtPrice      = √P_current × Q
-         *   sqrtPriceLower = √P_lower   × Q
-         *   sqrtPriceUpper = √P_upper   × Q
-         */
+        // Convert ticks to fixed-point sqrt prices
         const sqrtPrice = this.clmmTickFormulaService.tickToSqrtPrice({
             tickIndex: tickCurrent,
             fixedPointScale,
@@ -99,11 +85,7 @@ export class ClmmReservesFormulaService {
             fixedPointScale,
         })
 
-        /**
-         * CASE 1:
-         * Current price is below the position range.
-         * Liquidity is entirely represented as token A.
-         */
+        // Case 1: Current price is below the position range (liquidity is entirely token A)
         if (tickCurrent.lt(tickLower)) {
             const tokenA = liquidity
                 .mul(sqrtPriceUpper.sub(sqrtPriceLower))
@@ -120,11 +102,7 @@ export class ClmmReservesFormulaService {
             }
         }
 
-        /**
-         * CASE 3:
-         * Current price is above the position range.
-         * Liquidity is entirely represented as token B.
-         */
+        // Case 3: Current price is above the position range (liquidity is entirely token B)
         if (tickCurrent.gt(tickUpper)) {
             const tokenB = liquidity
                 .mul(sqrtPriceUpper.sub(sqrtPriceLower))
@@ -139,11 +117,7 @@ export class ClmmReservesFormulaService {
             }
         }
 
-        /**
-         * CASE 2:
-         * Current price is inside the position range.
-         * Liquidity is split between token A and token B.
-         */
+        // Case 2: Current price is inside the position range (liquidity is split between tokens)
         const tokenA = liquidity
             .mul(sqrtPriceUpper.sub(sqrtPrice))
             .mul(fixedPointScale)
@@ -165,45 +139,4 @@ export class ClmmReservesFormulaService {
             }),
         }
     }
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
-/* -------------------------------------------------------------------------- */
-
-export interface CalculateReservesParams {
-    /**
-     * Lower tick of the position
-     */
-    tickLower: BN
-    /**
-     * Upper tick of the position
-     */
-    tickUpper: BN
-    /**
-     * Current sqrt price
-     */
-    tickCurrent: BN
-    /**
-     * Liquidity amount (unsigned)
-     */
-    liquidity: BN
-    /**
-     * Fixed point scale for sqrt price
-     * Controls fixed-point scaling for sqrt price arithmetic
-     */
-    fixedPointScale?: typeof Q64 | typeof Q96 | typeof Q128
-    /**
-     * Decimals of token A
-     */
-    decimalsA: Decimal
-    /**
-     * Decimals of token B
-     */
-    decimalsB: Decimal
-}
-
-export interface CalculateReservesResult {
-    reserveA: Decimal
-    reserveB: Decimal
 }

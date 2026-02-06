@@ -14,9 +14,22 @@ import {
     EvalSnapshotService 
 } from "./snapshots.service"
 
+/**
+ * Eval module.
+ * Provides services for evaluating bot balance and snapshot eligibility.
+ *
+ * @example
+ * EvalModule.register({ isGlobal: false })
+ */
 @Module({
 })
 export class EvalModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Eval module with the specified options.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module configuration
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

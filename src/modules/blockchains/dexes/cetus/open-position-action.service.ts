@@ -9,7 +9,7 @@ import {
     ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
-} from "../../interfaces"
+} from "../types"
 import {
     Transaction,
     TransactionDataBuilder 
@@ -49,7 +49,7 @@ import {
 import Decimal from "decimal.js"
 import {
     ExecuteOpenPositionParams 
-} from "../../interfaces"
+} from "../types"
 import {
     RpcExecutorService 
 } from "../../clients"

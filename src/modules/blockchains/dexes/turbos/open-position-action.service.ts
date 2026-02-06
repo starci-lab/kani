@@ -3,14 +3,16 @@ import {
 } from "@nestjs/common"
 import {
     IOpenActionService,
-    ClmmLiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
     ConfirmOpenPositionParams,
     ConfirmOpenPositionResult,
-} from "../../interfaces"
+} from "../types"
+import {
+    ClmmLiquidityPoolState
+} from "../types/pool-state"
 import {
     Transaction,
     TransactionDataBuilder 

@@ -10,7 +10,7 @@ import {
     AtaInstructionService, AnchorUtilsService, KeypairGeneratorsService 
 } from "../../../tx-builder"
 import {
-    BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
+    MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
 } from "@modules/databases"
 import {
     i32, BeetArgsStruct 
@@ -24,7 +24,7 @@ import {
 } from "@meteora-ag/dlmm"
 import {
     DlmmLiquidityPoolState 
-} from "../../../interfaces"
+} from "../../types"
 import Decimal from "decimal.js"
 import BN from "bn.js"
 import {
@@ -40,7 +40,7 @@ import {
     EventAuthorityService 
 } from "./event-authority.service"
 import {
-    createNoopSigner, KeyPairSigner 
+    createNoopSigner 
 } from "@solana/signers"
 import {
     MeteoraSdkService 

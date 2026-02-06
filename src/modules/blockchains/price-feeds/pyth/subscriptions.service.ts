@@ -43,6 +43,14 @@ import {
 } from "./constants"
 import Decimal from "decimal.js"
 
+/**
+ * Service for subscribing to Pyth price updates via WebSocket/SSE streams.
+ * Maintains persistent connections to receive real-time price updates.
+ *
+ * @example
+ * const service = new PythSubscriptionsService(...)
+ * await service.subscribe()
+ */
 @Injectable()
 export class PythSubscriptionsService implements OnApplicationBootstrap {
     constructor(
@@ -55,25 +63,37 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
         private readonly streamAsyncIteratorService: StreamAsyncIteratorService,
     ) { }
 
+    /**
+     * Initializes subscription on application bootstrap.
+     */
     onApplicationBootstrap() {
+        // Start subscriptions immediately on bootstrap
         this.subscribe()
     }
 
+    /**
+     * Subscribes to Pyth price update streams for all registered symbols.
+     * Creates separate stream connections for each batch of symbols.
+     */
     async subscribe() {
+        // Get all symbols that need subscriptions
         const symbols = this.pythTokenRegistryService.getSymbols()
         if (!symbols.length) return
-        // seperate into batches of 5
+        // Split symbols into batches for separate stream connections
         const batches = _.chunk(symbols,
             envConfig().priceFeeds.pyth.chunks.subscription)
+        // Create subscription for each batch
         for (const batch of batches) {
             this.retryService.retry({
                 action: async () => {
-                    // create the connection
+                    // Create EventSource connection for price updates stream
                     const connection = new EventSourceStreamConnection(
                         await this.hermesClient.getPriceUpdatesStream(batch)
                     )
+                    // Setup abort controller for connection timeout
                     const abortController = new AbortController()
                     let timeout: NodeJS.Timeout | undefined = undefined
+                    // Reset timeout on each message to keep connection alive
                     const resetTimeout = () => {
                         if (timeout) {
                             clearTimeout(timeout)
@@ -83,9 +103,11 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             envConfig().priceFeeds.pyth.interval.rest,
                         )
                     }
+                    // Create async iterator stream from connection
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         onOpen: () => {
+                            // Log successful connection
                             this.winstonService.log(
                                 WinstonLog.PythSubscriptionOpened,
                                 {
@@ -95,6 +117,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             )
                         },
                         onClose: () => {
+                            // Log connection closure
                             this.winstonService.log(
                                 WinstonLog.PythSubscriptionClosed,
                                 {
@@ -105,11 +128,15 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                             )
                         },
                     })
+                    // Process incoming price updates
                     for await (const data of stream) {
                         try {
+                            // Parse price update from stream data
                             const update: PriceUpdate = JSON.parse(data.data)
+                            // Transform price data to internal format
                             const priceData = update.parsed?.map<PythTokenPriceData>(
                                 data => {
+                                    // Convert price from BN with exponent to decimal
                                     const price = toDecimalAmount({
                                         amount: new BN(data?.ema_price?.price ?? 0),
                                         decimals: new Decimal(data?.ema_price?.expo ?? 8),
@@ -120,16 +147,19 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                     }
                                 }
                             ) 
+                            // Resolve price data to token prices
                             const pythTokenPrices = this.pythTokenRegistryService.resolvePythTokenPrices(priceData ?? [])
-                            // mark message received if there are token prices
+                            // Skip if no valid token prices found
                             if (!pythTokenPrices.length) {
                                 continue
                             }
+                            // Reset timeout to keep connection alive
                             resetTimeout()
-                            // cache the prices and emit the event
+                            // Cache prices for all tokens
                             await this.asyncService.allIgnoreError(
                                 pythTokenPrices.map(
                                     async (data) => {
+                                        // Update cache with new price
                                         await this.aggregatedTokenPriceCacheService.set(
                                             {
                                                 id: data.id,
@@ -141,6 +171,7 @@ export class PythSubscriptionsService implements OnApplicationBootstrap {
                                 ),
                             )
                         } catch (error) {
+                            // Log subscription errors
                             this.winstonService.log(
                                 WinstonLog.PythSubscriptionError,
                                 {

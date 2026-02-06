@@ -5,7 +5,6 @@ import {
     TokenNotFoundException 
 } from "@exceptions"
 import {
-    BotSchema,
     PrimaryMemoryStorageService, 
     QuoteRatioStatus
 } from "@modules/databases"
@@ -13,7 +12,6 @@ import {
     TokenType 
 } from "@modules/typedefs"
 import {
-    createEnumType,
     toDecimalAmount 
 } from "@modules/utils"
 import {
@@ -26,69 +24,21 @@ import {
     QuoteRatioService 
 } from "@modules/blockchains"
 import {
-    registerEnumType 
-} from "@nestjs/graphql"
+    EvalBalanceParams,
+    EvalBalanceResult
+} from "./types"
+import {
+    BalanceEvalStatus
+} from "./enums"
 
-export interface EvalBalanceParams {
-    bot: BotSchema,
-}
-
-export interface FundingSnapshot {
-    excludingGas: Decimal
-    includingGas: Decimal
-}   
-
-export enum BalanceEvalStatus {
-    Ok = "ok",
-    InPosition  = "inPosition",
-    InsufficientFunding = "insufficientFunding",
-    InsufficientGas = "insufficientGas",
-    TargetUnderweighted = "targetUnderweighted",
-    TargetOverweighted  = "targetOverweighted",
-}
-
-export const GraphQLTypeBalanceEvalStatus = createEnumType(
-    BalanceEvalStatus,
-)
-registerEnumType(
-    GraphQLTypeBalanceEvalStatus,
-    {
-        name: "BalanceEvalStatus",
-        description:
-            "Balance evaluation status returned by EvalBalanceService.",
-        valuesMap: {
-            [BalanceEvalStatus.Ok]: {
-                description: "The balance is sufficient",
-            },
-            [BalanceEvalStatus.InPosition]: {
-                description: "The bot is in a position",
-            },
-            [BalanceEvalStatus.InsufficientFunding]: {
-                description: "The balance is insufficient",
-            },
-            [BalanceEvalStatus.InsufficientGas]: {
-                description: "The gas is insufficient",
-            },
-            [BalanceEvalStatus.TargetUnderweighted]: {
-                description: "The target is underweighted",
-            },
-            [BalanceEvalStatus.TargetOverweighted]: {
-                description: "The target is overweighted",
-            },
-        }
-    }
-)
-
-
-export interface EvalBalanceResult {
-    // in target token
-    fundingSnapsot: FundingSnapshot,
-    // in usd
-    fundingSnapshotInUsd: FundingSnapshot,
-    // eligibility status
-    status: BalanceEvalStatus,
-}
-
+/**
+ * Service responsible for evaluating bot balance and determining operational status.
+ * Checks funding requirements, gas thresholds, and quote ratio balance.
+ *
+ * @example
+ * const service = new EvalBalanceService(...)
+ * const result = await service.eval({ bot })
+ */
 @Injectable()
 export class EvalBalanceService {
     constructor(
@@ -97,41 +47,48 @@ export class EvalBalanceService {
         private readonly quoteRatioService: QuoteRatioService,
     ) {}
 
-    async eval(
-        {
-            bot,
-        }: EvalBalanceParams
-    ): Promise<EvalBalanceResult> {
-        // Minimum overall funding requirement (USD) to be eligible to operate.
-        const minRequiredAmountInUsd = this.primaryMemoryStorageService.balanceConfig.balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd
+    /**
+     * Evaluates bot balance and determines operational status.
+     * Checks funding requirements, gas thresholds, and quote ratio balance.
+     *
+     * @param param - Parameters for evaluating balance
+     * @param param.bot - Bot schema with balance snapshots
+     * @returns Evaluation result with funding snapshots and status
+     * @throws {BalanceConfigNotFoundException} If balance configuration is missing for the chain
+     * @throws {MinOperationalGasAmountNotFoundException} If minimum operational gas amount is not configured
+     * @throws {TargetOperationalGasAmountNotFoundException} If target operational gas amount is not configured
+     * @throws {TokenNotFoundException} If target, quote, or gas token metadata is not found
+     */
+    async eval({ bot }: EvalBalanceParams): Promise<EvalBalanceResult> {
+        // Stage: config validation (minimum funding requirement must be configured)
+        const minRequiredAmountInUsd = this.primaryMemoryStorageService.balanceConfig
+            .balanceRequired?.[bot.chainId]?.minRequiredAmountInUsd
         if (!minRequiredAmountInUsd) {
-            throw new BalanceConfigNotFoundException(
-                {
-                    chainId: bot.chainId,
-                }
-            )
+            throw new BalanceConfigNotFoundException({
+                chainId: bot.chainId,
+            })
         }
 
+        // Stage: config validation (gas thresholds must be configured)
         // Gas thresholds are configured in human units (e.g. SUI, SOL),
         // so we compare them against the decimal-converted gas balance.
-        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[bot.chainId]?.minOperationalAmount
+        const minOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+            .gasAmountRequired?.[bot.chainId]?.minOperationalAmount
         if (!minOperationalGasAmount) {
-            throw new MinOperationalGasAmountNotFoundException(
-                {
-                    chainId: bot.chainId,
-                }
-            )
-        }
-        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig.gasAmountRequired?.[bot.chainId]?.targetOperationalAmount
-        if (!targetOperationalGasAmount) {
-            throw new TargetOperationalGasAmountNotFoundException(
-                {
-                    chainId: bot.chainId,
-                }
-            )
+            throw new MinOperationalGasAmountNotFoundException({
+                chainId: bot.chainId,
+            })
         }
 
-        // Resolve token metadata + prices.
+        const targetOperationalGasAmount = this.primaryMemoryStorageService.gasConfig
+            .gasAmountRequired?.[bot.chainId]?.targetOperationalAmount
+        if (!targetOperationalGasAmount) {
+            throw new TargetOperationalGasAmountNotFoundException({
+                chainId: bot.chainId,
+            })
+        }
+
+        // Resolve token metadata
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.targetToken.toString(),
@@ -142,9 +99,7 @@ export class EvalBalanceService {
                 id: bot.targetToken.toString(),
             })
         }
-        const { price: targetPrice } = await this.priceService.resolvePrice({
-            token: targetToken,
-        })
+
         const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.quoteToken.toString(),
@@ -155,9 +110,7 @@ export class EvalBalanceService {
                 id: bot.quoteToken.toString(),
             })
         }
-        const { price: quotePrice } = await this.priceService.resolvePrice({
-            token: quoteToken,
-        })
+
         const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             type: {
                 $eq: TokenType.Native,
@@ -174,17 +127,28 @@ export class EvalBalanceService {
                 },
             })
         }
+
+        // Resolve token prices
+        const { price: targetPrice } = await this.priceService.resolvePrice({
+            token: targetToken,
+        })
+
+        const { price: quotePrice } = await this.priceService.resolvePrice({
+            token: quoteToken,
+        })
+
         const { price: gasPrice } = await this.priceService.resolvePrice({
             token: gasToken,
         })
 
-        // Convert raw balances (integer strings) to decimal amounts using token decimals.
+        // Convert raw balances to decimal amounts using token decimals
         const targetBalanceAmountRaw = new BN(bot.balanceSnapshots?.targetBalanceAmount ?? "0")
         const targetBalanceAmount = toDecimalAmount({
             amount: targetBalanceAmountRaw,
             decimals: new Decimal(targetToken.decimals),
         })
         const targetBalanceAmountInUsd = targetBalanceAmount.mul(targetPrice)
+
         const quoteBalanceAmountRaw = new BN(bot.balanceSnapshots?.quoteBalanceAmount ?? "0")
         const quoteBalanceAmount = toDecimalAmount({
             amount: quoteBalanceAmountRaw,
@@ -192,6 +156,7 @@ export class EvalBalanceService {
         })
         const quoteBalanceAmountInTarget = quoteBalanceAmount.div(quotePrice).mul(targetPrice)
         const quoteBalanceAmountInUsd = quoteBalanceAmount.mul(quotePrice)
+
         const gasBalanceAmountRaw = new BN(bot.balanceSnapshots?.gasBalanceAmount ?? "0")
         const gasBalanceAmount = toDecimalAmount({
             amount: gasBalanceAmountRaw,
@@ -199,22 +164,26 @@ export class EvalBalanceService {
         })
         const gasBalanceAmountInTarget = gasBalanceAmount.div(gasPrice).mul(targetPrice)
         const gasBalanceAmountInUsd = gasBalanceAmount.mul(gasPrice)
+
+        // Calculate funding snapshots
         const fundingSnapshotExcludingGas = targetBalanceAmount.add(quoteBalanceAmountInTarget)
         const fundingSnapshotIncludingGas = fundingSnapshotExcludingGas.add(gasBalanceAmountInTarget)
         const fundingSnapshotInUsdExcludingGas = targetBalanceAmountInUsd.add(quoteBalanceAmountInUsd)
         const fundingSnapshotInUsdIncludingGas = fundingSnapshotInUsdExcludingGas.add(gasBalanceAmountInUsd)
+
+        // Determine status based on priority checks
         let status = BalanceEvalStatus.Ok
-        // Priority checks:
-        // 1) If the bot is in a position => in position.
+
+        // Priority 1: Check if bot is in a position
         if (bot.activePosition) {
             status = BalanceEvalStatus.InPosition
-        // 2) If non-gas funding is below minimum USD requirement => insufficient funding.
+        // Priority 2: Check if non-gas funding is below minimum USD requirement
         } else if (fundingSnapshotInUsdExcludingGas.lt(new Decimal(minRequiredAmountInUsd ?? 0))) {
             status = BalanceEvalStatus.InsufficientFunding
-        // 3) If gas balance is below minimum operational requirement => insufficient gas.
+        // Priority 3: Check if gas balance is below minimum operational requirement
         } else if (gasBalanceAmount.lt(new Decimal(minOperationalGasAmount))) {
             status = BalanceEvalStatus.InsufficientGas
-        // 4) Funding is sufficient and gas is OK => evaluate quote ratio imbalance status.
+        // Priority 4: Evaluate quote ratio imbalance status
         } else {
             const { quoteRatio } = await this.quoteRatioService.computeQuoteRatio({
                 targetToken,
@@ -222,15 +191,16 @@ export class EvalBalanceService {
                 targetBalanceAmount: targetBalanceAmountRaw,
                 quoteBalanceAmount: quoteBalanceAmountRaw,
             })
-            const _status = this.quoteRatioService.checkQuoteRatioStatus({
+            const quoteRatioStatus = this.quoteRatioService.checkQuoteRatioStatus({
                 quoteRatio,
             })
-            if (_status === QuoteRatioStatus.TargetUnderweighted) {
+            if (quoteRatioStatus === QuoteRatioStatus.TargetUnderweighted) {
                 status = BalanceEvalStatus.TargetUnderweighted
-            } else if (_status === QuoteRatioStatus.TargetOverweighted) {
+            } else if (quoteRatioStatus === QuoteRatioStatus.TargetOverweighted) {
                 status = BalanceEvalStatus.TargetOverweighted
             }
         }
+
         return {
             fundingSnapsot: {
                 excludingGas: fundingSnapshotExcludingGas,

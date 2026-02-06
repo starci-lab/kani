@@ -4,7 +4,7 @@ import {
 import BN from "bn.js"
 import {
     PrepareTx
-} from "../../interfaces"
+} from "../../types"
 import {
     SwapStep,
     ComputeQuoteRatioResult

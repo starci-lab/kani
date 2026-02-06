@@ -34,7 +34,7 @@ import {
 } from "@modules/utils"
 import {
     ClmmLiquidityPoolState 
-} from "../../../interfaces"
+} from "../../types"
 import {
     CreateClosePositionTxbParams,
     CreateClosePositionTxbResult

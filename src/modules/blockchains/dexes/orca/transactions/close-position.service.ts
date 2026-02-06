@@ -21,7 +21,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState 
-} from "../../../interfaces"
+} from "../../types"
 import {
     ActivePositionNotFoundException,
     InvalidPoolTokensException,

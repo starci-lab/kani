@@ -43,8 +43,17 @@ import {
     parseTurbosPool, TurbosPool, TurbosSuiObjectPoolFields 
 } from "./struct"
 
+/**
+ * Service responsible for observing Turbos pool state changes.
+ * Periodically fetches pool information from on-chain and updates cache.
+ *
+ * @example
+ * const service = new TurbosObserverService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
 export class TurbosObserverService implements OnApplicationBootstrap, OnModuleInit {
+    /** Array of liquidity pools to observe. */
     private liquidityPools: Array<LiquidityPoolSchema> = []
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
@@ -56,7 +65,11 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         private readonly dayjsService: DayjsService,
     ) {}
 
-    onModuleInit() {
+    /**
+     * Initializes the service by fetching all Turbos liquidity pools.
+     */
+    onModuleInit(): void {
+        // fetch all Turbos liquidity pools from primary memory storage
         this.liquidityPools = this.memoryStorageService.liquidityPoolCollection
             .chain()
             .find({
@@ -66,38 +79,61 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             })
             .data({
                 removeMeta: true 
-            }
-            )
+            })
     }
 
-    onApplicationBootstrap() {
+    /**
+     * Starts the pool state update interval on application bootstrap.
+     */
+    onApplicationBootstrap(): void {
         this.handlePoolStateUpdateInterval()
     }
     
+    /**
+     * Handles periodic pool state updates.
+     * Fetches pool information for all pools in parallel.
+     */
     @Interval(envConfig().dexes.turbos.interval.observer.fetch)
-    private async handlePoolStateUpdateInterval() {
+    private async handlePoolStateUpdateInterval(): Promise<void> {
+        // process all pools in parallel
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPools) {
             promises.push(
-                (
-                    async () => {
-                        await this.fetchPoolInfo(liquidityPool.displayId)
-                    })()
+                (async () => {
+                    await this.fetchPoolInfo({
+                        liquidityPoolId: liquidityPool.displayId
+                    })
+                })()
             )
         }
+        
+        // wait for all fetches to complete
         await this.asyncService.allIgnoreError(promises)
     }
 
-    private async fetchPoolInfo(
+    /**
+     * Fetches pool information from on-chain and updates cache.
+     *
+     * @param param - Parameters for fetching pool info
+     * @param param.liquidityPoolId - Liquidity pool display ID
+     */
+    private async fetchPoolInfo({
+        liquidityPoolId
+    }: {
         liquidityPoolId: LiquidityPoolId
-    ) {
+    }): Promise<void> {
         try {
+            // find liquidity pool by display ID
             const liquidityPool = this.liquidityPools.find(
                 liquidityPool => liquidityPool.displayId === liquidityPoolId,
             )
-            if (!liquidityPool) throw new LiquidityPoolNotFoundException({
-                displayId: liquidityPoolId,
-            })
+            if (!liquidityPool) {
+                throw new LiquidityPoolNotFoundException({
+                    displayId: liquidityPoolId,
+                })
+            }
+            
+            // fetch pool object from on-chain
             const objectInfo = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
@@ -109,6 +145,8 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                     })
                 },
             })
+            
+            // validate object exists
             if (objectInfo.error || !objectInfo.data) {
                 throw new SuiObjectNotFoundException({
                     name: ErrorSuiObjectName.Pool,
@@ -117,6 +155,8 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                     liquidityPoolId: liquidityPoolId,
                 })
             }
+            
+            // validate object type
             if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
                     name: ErrorSuiObjectName.Pool,
@@ -125,11 +165,16 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
                     liquidityPoolId: liquidityPoolId,
                 })
             }
+            
+            // parse pool fields and update state
             const fields = objectInfo.data.content.fields as unknown as TurbosSuiObjectPoolFields
             const pool = parseTurbosPool(fields)
-            await this.handlePoolStateUpdate(liquidityPool,
-                pool)
+            await this.handlePoolStateUpdate({
+                liquidityPool,
+                state: pool
+            })
         } catch (error) {
+            // log fetch errors
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
                 {
@@ -140,10 +185,22 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
         }
     }
 
-    private async handlePoolStateUpdate(
-        liquidityPool: LiquidityPoolSchema,
+    /**
+     * Handles pool state update by caching and emitting events.
+     *
+     * @param param - Parameters for handling pool state update
+     * @param param.liquidityPool - Liquidity pool schema
+     * @param param.state - Parsed pool state
+     * @returns Cache result
+     */
+    private async handlePoolStateUpdate({
+        liquidityPool,
+        state
+    }: {
+        liquidityPool: LiquidityPoolSchema
         state: TurbosPool
-    ) {
+    }): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
+        // build cache result from parsed pool state
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickCurrentIndex,
             liquidity: state.liquidity,
@@ -159,28 +216,25 @@ export class TurbosObserverService implements OnApplicationBootstrap, OnModuleIn
             snapshotAt: this.dayjsService.now(),
             rewardLastUpdatedTimeMs: state.rewardLastUpdatedTimeMs,
         }
-        await this.asyncService.allIgnoreError(
-            [
-                // store in cache
-                this.cacheService.set(
-                    {
-                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
-                        args: [liquidityPool.id],
-                        cacheResult: parsed,
-                    }
-                ),
-                // emit event through event emitter
-                this.eventEmitterService.emit(
-                    {
-                        event: EventName.ClmmLiquidityPoolsSynced,
-                        payload: {
-                            id: liquidityPool.id,
-                            ...parsed,
-                        },
-                    }
-                ),
-            ]
-        )
+        
+        // cache result and emit event in parallel
+        await this.asyncService.allIgnoreError([
+            // store in cache
+            this.cacheService.set({
+                key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                args: [liquidityPool.id],
+                cacheResult: parsed,
+            }),
+            // emit event through event emitter
+            this.eventEmitterService.emit({
+                event: EventName.ClmmLiquidityPoolsSynced,
+                payload: {
+                    id: liquidityPool.id,
+                    ...parsed,
+                },
+            })
+        ])
+        
         return parsed
     }
 }

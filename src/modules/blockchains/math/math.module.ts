@@ -25,6 +25,11 @@ import {
 import {
     PriceService 
 } from "./price.service"
+
+/**
+ * Math module.
+ * Provides mathematical services for blockchains.
+ */
 @Module({
     providers: [
         TickMathService,

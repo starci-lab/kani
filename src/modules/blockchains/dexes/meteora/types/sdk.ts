@@ -12,7 +12,7 @@ import {
 } from "@modules/databases"
 import {
     DlmmLiquidityPoolState
-} from "../../../interfaces"
+} from "../../../types"
 import {
     Address
 } from "@solana/kit"

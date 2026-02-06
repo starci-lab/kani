@@ -3,7 +3,6 @@ import {
     TokenSchema
 } from "@modules/databases"
 import BN from "bn.js"
-import Decimal from "decimal.js"
 import {
     TokenBalance
 } from "./balance"

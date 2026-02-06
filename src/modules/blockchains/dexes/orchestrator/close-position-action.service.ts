@@ -38,7 +38,7 @@ import {
     ExecuteClosePositionParams,
     PrepareClosePositionParams,
     ExecuteClosePositionResult, 
-} from "../../interfaces"
+} from "../types"
 
 /**
  * Service responsible for orchestrating the close position action across different DEXes.

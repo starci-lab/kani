@@ -61,7 +61,7 @@ import {
 } from "@modules/filesystem"
 import {
     ClmmLiquidityPoolState 
-} from "@modules/blockchains/interfaces"
+} from "../../types"
 import BN from "bn.js"
 import {
     CreateOpenPositionInstructionsParams,
