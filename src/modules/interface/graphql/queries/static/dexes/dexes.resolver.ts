@@ -12,7 +12,7 @@ import {
 } from "@modules/throttler"
 import {
     DexesResponse 
-} from "./dexes.dto"    
+} from "./graphql-types"    
 import {
     DexSchema 
 } from "@modules/databases"

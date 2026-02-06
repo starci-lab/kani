@@ -14,7 +14,7 @@ import {
     PortfolioValueV2Request,
     PortfolioValueV2Response,
     PortfolioValueV2ResponseData,
-} from "./portfolio-value-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

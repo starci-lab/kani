@@ -14,7 +14,7 @@ import {
 } from "@modules/passport"
 import { 
     RequestSend2FactorOtpResponse,
-} from "./request-send-2-factor-otp.dto"
+} from "./graphql-types"
 import {
     UseThrottler,
     ThrottlerConfig 

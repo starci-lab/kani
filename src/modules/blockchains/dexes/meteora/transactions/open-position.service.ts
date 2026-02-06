@@ -56,7 +56,7 @@ import {
 } from "@solana-program/token"
 import {
     TokenType 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     MountStorageService 
 } from "@modules/filesystem"
@@ -88,6 +88,14 @@ export class OpenPositionInstructionService {
         private readonly feeService: FeeService,
         private readonly mountStorageService: MountStorageService,
     ) { }
+    /**
+     * Creates open position instructions for Meteora.
+     * @param bot - The bot.
+     * @param state - The state.
+     * @param amountA - The amount of token A.
+     * @param amountB - The amount of token B.
+     * @returns The open position instructions.
+     */
     async createOpenPositionInstructions({
         bot,
         state,
@@ -305,9 +313,11 @@ export class OpenPositionInstructionService {
                 },
             ],
             data: this.anchorUtilsService.encodeAnchorIx(
-                "initialize_position",
-                openPositionArgs
-            ),  
+                {
+                    ixName: "initialize_position",
+                    data: openPositionArgs,
+                }
+            ),
         }
         instructions.push(initializePositionInstruction)
         const slippagePercentage = new Decimal(envConfig().dexes.meteora.openPosition.slippage)

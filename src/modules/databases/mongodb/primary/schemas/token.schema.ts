@@ -5,8 +5,8 @@ import {
     Field, Int, ObjectType 
 } from "@nestjs/graphql"
 import {
-    ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType 
-} from "@modules/blockchains"
+    ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType
+} from "@modules/common"
 import {
     AbstractSchema 
 } from "./abstract"

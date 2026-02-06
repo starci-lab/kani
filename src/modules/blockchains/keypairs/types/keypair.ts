@@ -1,7 +1,9 @@
 import {
-    EncryptedPayload,
+    EncryptedPayload
+} from "@modules/crypto"
+import {
     PlatformId
-} from "@modules/typedefs"
+} from "@modules/common"
 
 /**
  * Generated keypair with account address and encrypted private key.

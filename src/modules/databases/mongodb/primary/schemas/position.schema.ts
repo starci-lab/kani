@@ -28,7 +28,7 @@ import {
 import {
     ChainId,
     GraphQLTypeChainId,
-} from "@modules/blockchains"
+} from "@modules/common"
 import {
     GraphQLJSON,
 } from "graphql-type-json"

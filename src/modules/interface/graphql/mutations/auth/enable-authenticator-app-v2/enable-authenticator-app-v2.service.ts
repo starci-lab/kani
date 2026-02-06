@@ -11,7 +11,7 @@ import {
 } from "mongoose"
 import {
     EnableAuthenticatorAppV2Request
-} from "./enable-authenticator-app-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

@@ -27,7 +27,7 @@ import {
 } from "@modules/exceptions"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"

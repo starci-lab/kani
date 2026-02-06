@@ -12,7 +12,7 @@ import {
 } from "mongoose"
 import { 
     ToggleBotV2Request, 
-} from "./toggle-bot-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

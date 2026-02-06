@@ -13,7 +13,7 @@ import {
     TransactionsRequest,
     TransactionsResponse,
     TransactionsResponseData,
-} from "./transactions.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

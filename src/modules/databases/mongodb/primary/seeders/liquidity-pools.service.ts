@@ -9,7 +9,7 @@ import {
 } from "../schemas"
 import {
     ChainId 
-} from "@modules/blockchains"
+} from "@modules/common"
 import {
     DeepPartial,
     createObjectId 

@@ -5,8 +5,8 @@ import {
     AbstractSchema 
 } from "./abstract"
 import {
-    ChainId, GraphQLTypeChainId 
-} from "@modules/blockchains"
+    ChainId, GraphQLTypeChainId
+} from "@modules/common"
 import {
     TokenSchema 
 } from "./token.schema"

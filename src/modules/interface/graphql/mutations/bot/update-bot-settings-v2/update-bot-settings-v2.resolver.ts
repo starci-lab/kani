@@ -20,7 +20,7 @@ import {
 import { 
     UpdateBotSettingsV2Request, 
     UpdateBotSettingsV2Response,
-} from "./update-bot-settings-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

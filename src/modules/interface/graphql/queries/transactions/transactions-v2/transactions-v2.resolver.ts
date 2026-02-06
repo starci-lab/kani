@@ -14,7 +14,7 @@ import {
     TransactionsV2Request,
     TransactionsV2Response,
     TransactionsV2ResponseData,
-} from "./transactions-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

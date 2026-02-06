@@ -54,8 +54,8 @@ import {
     ExecutorSchema 
 } from "./executor.schema"
 import {
-    ChainId, GraphQLTypeChainId 
-} from "@modules/blockchains"
+    ChainId, GraphQLTypeChainId
+} from "@modules/common"
 
 @ObjectType({
     description: "Represents a bot",

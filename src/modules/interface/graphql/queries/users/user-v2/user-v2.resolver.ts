@@ -12,7 +12,7 @@ import {
 } from "@nestjs/common"
 import {
     UserV2Response 
-} from "./user-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

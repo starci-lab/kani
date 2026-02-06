@@ -12,7 +12,7 @@ import {
 } from "@modules/throttler"
 import {
     LiquidityPoolsRequest, LiquidityPoolsResponse, LiquidityPoolsResponseData 
-} from "./liquidity-pools.dto"    
+} from "./graphql-types"    
 import {
     GraphQLTransformInterceptor 
 } from "@modules/api"

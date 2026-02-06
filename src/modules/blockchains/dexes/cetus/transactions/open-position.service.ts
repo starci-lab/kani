@@ -25,7 +25,7 @@ import {
 import BN from "bn.js"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     CreateOpenPositionTxbParams,
     CreateOpenPositionTxbResult

@@ -7,7 +7,7 @@ import {
 } from "@modules/common"
 import {
     ChainId 
-} from "@modules/blockchains"
+} from "@modules/common"
 import {
     ConfigSchema 
 } from "../schemas"

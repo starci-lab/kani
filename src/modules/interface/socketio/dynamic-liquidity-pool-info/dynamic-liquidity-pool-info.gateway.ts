@@ -35,12 +35,14 @@ import {
     CacheService,
 } from "@modules/cache"
 import {
-    SubscribeDynamicLiquidityPoolsInfoEventPayload,
     PublicationEvent,
     SubscriptionEvent,
+} from "../enums"
+import {
     PublicationDynamicLiquidityPoolInfo,
     PublicationDynamicLiquidityPoolsInfoEventPayload,
-} from "../config"
+    SubscribeDynamicLiquidityPoolsInfoEventPayload,
+} from "../types"
 import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"

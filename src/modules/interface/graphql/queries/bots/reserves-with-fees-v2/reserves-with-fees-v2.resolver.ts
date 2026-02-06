@@ -15,7 +15,7 @@ import {
     ReservesWithFeesV2Request,
     ReservesWithFeesV2Response,
     ReservesWithFeesV2ResponseData,
-} from "./reserves-with-fees-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler,
     ThrottlerConfig,

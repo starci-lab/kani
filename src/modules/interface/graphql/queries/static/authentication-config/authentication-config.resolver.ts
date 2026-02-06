@@ -12,7 +12,7 @@ import {
 } from "@modules/throttler"
 import {
     AuthenticationConfigResponse 
-} from "./authentication-config.dto"    
+} from "./graphql-types"    
 import {
     GraphQLTransformInterceptor 
 } from "@modules/api"

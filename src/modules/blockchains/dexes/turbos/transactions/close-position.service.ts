@@ -18,12 +18,10 @@ import {
     TargetOperationalGasAmountNotFoundException 
 } from "@modules/exceptions"
 import {
-    ChainId 
-} from "@modules/typedefs"
-import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
 import {
+    ChainId,
     MAX_UINT_64 
 } from "@modules/common"
 import {

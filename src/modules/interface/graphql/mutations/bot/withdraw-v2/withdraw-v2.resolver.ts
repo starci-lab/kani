@@ -21,7 +21,7 @@ import {
 import {
     WithdrawV2Request,
     WithdrawV2Response,
-} from "./withdraw-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse
 } from "@privy-io/node"

@@ -9,7 +9,7 @@ import {
 } from "@modules/throttler"
 import {
     AccountLimitsResponse 
-} from "./account-limits.dto"    
+} from "./graphql-types"    
 import {
     AccountLimitsConfig 
 } from "@modules/databases"

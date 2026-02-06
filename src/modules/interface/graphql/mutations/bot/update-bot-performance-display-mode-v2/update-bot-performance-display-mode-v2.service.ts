@@ -12,7 +12,7 @@ import {
 } from "mongoose"
 import { 
     UpdateBotPerformanceDisplayModeV2Request, 
-} from "./update-bot-performance-display-mode-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

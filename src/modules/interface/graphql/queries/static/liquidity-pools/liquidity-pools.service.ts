@@ -8,7 +8,7 @@ import {
     LiquidityPoolsRequest,
     LiquidityPoolsResponseData,
     LiquidityPoolsSortBy,
-} from "./liquidity-pools.dto"
+} from "./graphql-types"
 import {
     envConfig 
 } from "@modules/env"

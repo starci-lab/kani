@@ -40,14 +40,12 @@ import {
     ClaimReward2Args
 } from "./sdk.service"
 import {
+    ChainId,
     convertWeb3MetaToKitMeta 
 } from "@modules/common"
 import {
     SYSTEM_PROGRAM_ADDRESS 
 } from "@solana-program/system"
-import {
-    ChainId 
-} from "@modules/typedefs"
 import {
     CreateCloseInstructionsParams
 } from "../types"
@@ -224,8 +222,12 @@ export class ClosePositionInstructionService {
                 },
                 ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("remove_liquidity_by_range2",
-                removeLiquidityByRange2Args),
+            data: this.anchorUtilsService.encodeAnchorIx(
+                {   
+                    ixName: "remove_liquidity_by_range2",
+                    data: removeLiquidityByRange2Args,
+                }
+            ),
         }
         instructions.push(removeLiquidityByRange2Instruction)
         const [claimFee2Args] = ClaimFee2Args.serialize({
@@ -296,8 +298,12 @@ export class ClosePositionInstructionService {
                 },
                 ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("claim_fee2",
-                claimFee2Args),
+            data: this.anchorUtilsService.encodeAnchorIx(
+                {
+                    ixName: "claim_fee2",
+                    data: claimFee2Args,
+                }
+            ),
         }
         instructions.push(claimFee2Instruction)
         for (let i = 0; i < 2; i++) {
@@ -383,8 +389,12 @@ export class ClosePositionInstructionService {
                     },
                     ...binArrayAccountsMeta.map((accountMeta) => convertWeb3MetaToKitMeta(accountMeta)),
                 ],
-                data: this.anchorUtilsService.encodeAnchorIx("claim_reward2",
-                    claimReward2Args),
+                data: this.anchorUtilsService.encodeAnchorIx(
+                    {
+                        ixName: "claim_reward2",
+                        data: claimReward2Args,
+                    }
+                ),
             }
             instructions.push(claimReward2Instruction)
         }
@@ -414,7 +424,11 @@ export class ClosePositionInstructionService {
                     role: AccountRole.READONLY,
                 },
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("close_position_if_empty"),
+            data: this.anchorUtilsService.encodeAnchorIx(
+                {
+                    ixName: "close_position_if_empty",
+                }
+            ),
         }
         instructions.push(closePositionIfEmptyInstruction,
             ...endInstructions)

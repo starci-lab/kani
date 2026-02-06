@@ -25,12 +25,10 @@ import {
 } from "../../../tx-builder"
 import BN from "bn.js"
 import {
-    ChainId 
-} from "@modules/typedefs"
-import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
 import {
+    ChainId,
     adjustSlippage 
 } from "@modules/common"
 import {

@@ -41,12 +41,14 @@ import {
     envConfig 
 } from "@modules/env"
 import {
-    SubscriptionEvent,
-    SubscribePricesEventPayload,
     PublicationEvent,
+    SubscriptionEvent,
+} from "../enums"
+import {
     PublicationPrice,
     PublicationPriceEventPayload,
-} from "../config"
+    SubscribePricesEventPayload,
+} from "../types"
 import {
     SomeTokensNotFoundException,
 } from "@exceptions"

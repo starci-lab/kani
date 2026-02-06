@@ -14,8 +14,8 @@ import {
     BotSchema 
 } from "./bot.schema"
 import {
-    ChainId, GraphQLTypeChainId 
-} from "@modules/blockchains"
+    ChainId, GraphQLTypeChainId
+} from "@modules/common"
 import {
     GraphQLTypeTransactionType, TokenId, TransactionType, PrimaryMongoDbCollectionRef
 } from "../enums"

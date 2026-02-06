@@ -15,7 +15,7 @@ import {
 } from "@modules/passport"
 import {
     UserResponse 
-} from "./user.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

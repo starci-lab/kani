@@ -21,7 +21,7 @@ import {
 } from "@privy-io/node"
 import {
     WithdrawV2Request
-} from "./withdraw-v2.dto"
+} from "./graphql-types"
 import {
     AxiosService
 } from "@modules/axios"

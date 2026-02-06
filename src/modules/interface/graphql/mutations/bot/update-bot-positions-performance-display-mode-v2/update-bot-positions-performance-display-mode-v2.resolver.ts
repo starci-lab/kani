@@ -20,7 +20,7 @@ import {
 import { 
     UpdateBotPositionsPerformanceDisplayModeV2Request,
     UpdateBotPositionsPerformanceDisplayModeV2Response,
-} from "./update-bot-positions-performance-display-mode-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

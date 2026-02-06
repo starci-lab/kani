@@ -13,7 +13,7 @@ import {
 import {
     TransactionsV2Request,
     TransactionsV2ResponseData,
-} from "./transactions-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

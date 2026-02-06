@@ -11,7 +11,7 @@ import {
 import {
     VerifySignInOtpRequest,
     VerifySignInOtpResponseData,
-} from "./verify-sign-in-otp.dto"
+} from "./graphql-types"
 import {
     JwtAuthService 
 } from "@modules/passport"

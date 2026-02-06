@@ -9,9 +9,7 @@ import {
     QuoteRatioStatus
 } from "@modules/databases"
 import {
-    TokenType 
-} from "@modules/typedefs"
-import {
+    TokenType,
     toDecimalAmount 
 } from "@modules/common"
 import {

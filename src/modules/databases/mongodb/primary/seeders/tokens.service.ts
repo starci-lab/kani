@@ -3,8 +3,8 @@ import {
     TokenId 
 } from "../enums"
 import {
-    ChainId, DeepPartial, TokenType 
-} from "@modules/typedefs"
+    ChainId, DeepPartial, TokenType
+} from "@modules/common"
 import {
     TokenSchema 
 } from "../schemas"

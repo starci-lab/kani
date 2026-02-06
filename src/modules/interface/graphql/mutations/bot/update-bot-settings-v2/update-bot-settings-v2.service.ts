@@ -18,7 +18,7 @@ import {
 } from "@modules/exceptions"
 import {
     UpdateBotSettingsV2Request 
-} from "./update-bot-settings-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

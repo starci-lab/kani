@@ -10,7 +10,7 @@ import {
 import { 
     RequestSignInOtpRequest, 
     RequestSignInOtpResponse,
-} from "./request-sign-in-otp.dto"
+} from "./graphql-types"
 import {
     ThrottlerConfig 
 } from "@modules/throttler"

@@ -12,7 +12,7 @@ import {
 } from "@modules/p2c-balancer"
 import {
     ChainId
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     AbortError
 } from "p-retry"

@@ -12,7 +12,7 @@ import {
 import {
     TransactionsRequest,
     TransactionsResponseData,
-} from "./transactions.dto"
+} from "./graphql-types"
 import {
     UserJwtLike 
 } from "@modules/passport"

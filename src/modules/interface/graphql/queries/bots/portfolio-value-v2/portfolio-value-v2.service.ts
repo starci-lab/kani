@@ -23,7 +23,7 @@ import {
     PortfolioValueV2Request,
     PortfolioValueV2ResponseData,
     PortfolioValueV2Snapshot,
-} from "./portfolio-value-v2.dto"
+} from "./graphql-types"
 import BN from "bn.js"
 import {
     EvalBalanceService,

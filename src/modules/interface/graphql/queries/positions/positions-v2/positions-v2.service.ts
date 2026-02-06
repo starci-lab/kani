@@ -13,7 +13,7 @@ import {
 import {
     PositionsV2Request,
     PositionsV2ResponseData,
-} from "./positions-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

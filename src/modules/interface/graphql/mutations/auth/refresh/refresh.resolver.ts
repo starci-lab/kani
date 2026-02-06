@@ -15,7 +15,7 @@ import {
 import { 
     RefreshResponse, 
     RefreshResponseData,
-} from "./refresh.dto"
+} from "./graphql-types"
 import {
     ThrottlerConfig 
 } from "@modules/throttler"

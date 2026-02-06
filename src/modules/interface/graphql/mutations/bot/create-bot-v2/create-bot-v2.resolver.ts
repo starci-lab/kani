@@ -21,7 +21,7 @@ import {
     CreateBotV2Request, 
     CreateBotV2ResponseData, 
     CreateBotV2Response, 
-} from "./create-bot-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

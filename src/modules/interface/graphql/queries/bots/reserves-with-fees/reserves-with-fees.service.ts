@@ -14,7 +14,7 @@ import {
 import {
     ReservesWithFeesRequest,
     ReservesWithFeesResponseData,
-} from "./reserves-with-fees.dto"
+} from "./graphql-types"
 import {
     UserJwtLike,
 } from "@modules/passport"

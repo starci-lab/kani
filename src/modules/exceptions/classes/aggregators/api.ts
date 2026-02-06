@@ -1,9 +1,9 @@
 import {
     AbstractException, AbstractExceptionMetadata 
 } from "../abstract"
-import {
+import type {
     AggregatorId 
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 
 /** Thrown when an aggregator quote error occurs */
 export interface AggregatorQuoteFailedExceptionMetadata extends AbstractExceptionMetadata {

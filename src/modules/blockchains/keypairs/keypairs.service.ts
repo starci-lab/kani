@@ -16,7 +16,7 @@ import {
 } from "./types/keypair"
 import {
     PlatformId 
-} from "@modules/typedefs"
+} from "../enums"
 import {
     Keypair as SolanaKeypair 
 } from "@solana/web3.js"

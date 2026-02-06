@@ -11,8 +11,8 @@ import {
     Field, ObjectType 
 } from "@nestjs/graphql"
 import {
-    ChainId, GraphQLTypeChainId 
-} from "@modules/blockchains"
+    ChainId, GraphQLTypeChainId
+} from "@modules/common"
 
 /**
  * Represents a decentralized exchange (DEX) supported by the platform.

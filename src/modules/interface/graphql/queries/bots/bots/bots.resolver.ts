@@ -13,7 +13,7 @@ import {
     BotsRequest,
     BotsResponse,
     BotsResponseData,
-} from "./bots.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

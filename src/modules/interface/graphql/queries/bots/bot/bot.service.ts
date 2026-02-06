@@ -11,7 +11,7 @@ import {
 } from "mongoose"
 import { 
     BotRequest,
-} from "./bot.dto"
+} from "./graphql-types"
 import {
     BotNotFoundException 
 } from "@modules/exceptions"

@@ -1,0 +1,9 @@
+/** Event payload for subscribing to dynamic liquidity pools info. */
+export interface SubscribeDynamicLiquidityPoolsInfoEventPayload {
+    ids: Array<string>
+}
+
+/** Event payload for subscribing to prices. */
+export interface SubscribePricesEventPayload {
+    ids: Array<string>
+}

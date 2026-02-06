@@ -13,7 +13,7 @@ import {
 } from "mongoose"
 import { 
     BotV2Request,
-} from "./bot-v2.dto"
+} from "./graphql-types"
 import {
     BotNotFoundException,
     UserNotFoundException,

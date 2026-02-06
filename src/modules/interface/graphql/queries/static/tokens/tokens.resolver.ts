@@ -12,7 +12,7 @@ import {
 } from "@modules/throttler"
 import {
     TokensResponse 
-} from "./tokens.dto"    
+} from "./graphql-types"    
 import {
     TokenSchema 
 } from "@modules/databases"

@@ -20,7 +20,7 @@ import {
     HistoryV2Request,
     HistoryV2RequestFilters,
     HistoryV2ResponseData,
-} from "./history-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

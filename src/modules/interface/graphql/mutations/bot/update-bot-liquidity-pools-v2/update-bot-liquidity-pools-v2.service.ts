@@ -20,7 +20,7 @@ import {
 } from "@modules/exceptions"
 import {
     UpdateBotLiquidityPoolsV2Request 
-} from "./update-bot-liquidity-pools-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

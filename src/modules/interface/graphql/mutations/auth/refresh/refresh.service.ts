@@ -11,7 +11,7 @@ import {
 } from "mongoose"
 import {
     RefreshResponseData 
-} from "./refresh.dto"
+} from "./graphql-types"
 import {
     JwtAuthService, UserJwtLike 
 } from "@modules/passport"

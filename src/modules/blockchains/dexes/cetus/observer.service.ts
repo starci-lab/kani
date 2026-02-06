@@ -8,7 +8,8 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 import {
-    PrimaryMemoryStorageService, DexId 
+    PrimaryMemoryStorageService, 
+    DexId 
 } from "@modules/databases"
 import {
     Injectable, OnApplicationBootstrap, OnModuleInit 
@@ -95,7 +96,9 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>({
             name: "cetus-observer-liquidity-pools",
             options: {
-                indices: ["poolAddress", "displayId", "id"],
+                indices: ["poolAddress",
+                    "displayId",
+                    "id"],
             },
         })
         

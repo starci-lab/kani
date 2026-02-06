@@ -20,7 +20,7 @@ import {
 import {
     DisableAuthenticatorAppV2Request,
     DisableAuthenticatorAppV2Response,
-} from "./disable-authenticator-app-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

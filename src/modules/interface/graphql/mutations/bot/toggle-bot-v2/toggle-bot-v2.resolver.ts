@@ -20,7 +20,7 @@ import {
 import { 
     ToggleBotV2Request,
     ToggleBotV2Response,
-} from "./toggle-bot-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse 
 } from "@privy-io/node"

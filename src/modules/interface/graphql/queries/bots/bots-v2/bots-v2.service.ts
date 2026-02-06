@@ -14,7 +14,7 @@ import {
 import {
     BotsV2Request,
     BotsV2ResponseData,
-} from "./bots-v2.dto"
+} from "./graphql-types"
 import Decimal from "decimal.js"
 import {
     PerformanceService 

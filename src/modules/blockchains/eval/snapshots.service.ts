@@ -16,10 +16,8 @@ import {
     TokenNotFoundException 
 } from "@exceptions"
 import {
-    TokenType 
-} from "@modules/typedefs"
-import {
-    toDecimalAmount 
+    TokenType,
+    toDecimalAmount
 } from "@modules/common"
 import Decimal from "decimal.js"
 import {

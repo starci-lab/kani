@@ -29,7 +29,7 @@ import {
 } from "../../../tx-builder"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     FeeService 
 } from "../../../math"

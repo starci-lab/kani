@@ -51,7 +51,7 @@ import {
 } from "../../../math"
 import {
     TokenType 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     MountStorageService 
 } from "@modules/filesystem"
@@ -368,8 +368,10 @@ export class OpenPositionInstructionService {
             ],
             data:
                 this.anchorUtilsService.encodeAnchorIx(
-                    "open_position_with_token22_nft", 
-                    openPositionArgs
+                    {
+                        ixName: "open_position_with_token22_nft",
+                        data: openPositionArgs,
+                    }
                 ),
         }
         instructions.push(openPositionWithToken22Instruction)

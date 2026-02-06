@@ -11,7 +11,7 @@ import {
     VerifySignInOtpRequest,
     VerifySignInOtpResponse,
     VerifySignInOtpResponseData,
-} from "./verify-sign-in-otp.dto"
+} from "./graphql-types"
 import {
     ThrottlerConfig 
 } from "@modules/throttler"

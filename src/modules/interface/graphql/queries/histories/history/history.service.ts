@@ -18,7 +18,7 @@ import {
     HistoryRequest,
     HistoryRequestFilters,
     HistoryResponseData,
-} from "./history.dto"
+} from "./graphql-types"
 import {
     UserJwtLike 
 } from "@modules/passport"

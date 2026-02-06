@@ -15,7 +15,7 @@ import {
 import {
     ReservesWithFeesV2Request,
     ReservesWithFeesV2ResponseData,
-} from "./reserves-with-fees-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse,
 } from "@privy-io/node"

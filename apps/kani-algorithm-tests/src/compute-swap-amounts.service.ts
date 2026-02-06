@@ -9,7 +9,7 @@ import {
 } from "@modules/databases"
 import {
     ChainId, TokenType 
-} from "@modules/typedefs"
+} from "@modules/common"
 import BN from "bn.js"
 
 @Injectable()

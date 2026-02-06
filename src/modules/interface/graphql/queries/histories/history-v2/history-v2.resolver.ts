@@ -14,7 +14,7 @@ import {
     HistoryV2Request,
     HistoryV2Response,
     HistoryV2ResponseData,
-} from "./history-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

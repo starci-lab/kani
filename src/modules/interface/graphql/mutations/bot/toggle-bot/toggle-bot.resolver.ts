@@ -25,7 +25,7 @@ import {
 import { 
     ToggleBotRequest,
     ToggleBotResponse,
-} from "./toggle-bot.dto"
+} from "./graphql-types"
 
 @Resolver()
 export class ToggleBotResolver {

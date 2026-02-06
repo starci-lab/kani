@@ -12,7 +12,7 @@ import {
 } from "@modules/throttler"
 import {
     GasConfigResponse 
-} from "./gas-config.dto"    
+} from "./graphql-types"    
 import {
     GasConfig 
 } from "@modules/databases"

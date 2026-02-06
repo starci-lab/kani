@@ -26,7 +26,7 @@ import {
     CreateBotRequest, 
     CreateBotResponseData, 
     CreateBotResponse, 
-} from "./create-bot.dto"
+} from "./graphql-types"
 
 @Resolver()
 export class CreateBotResolver {

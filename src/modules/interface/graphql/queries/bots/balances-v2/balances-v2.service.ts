@@ -13,7 +13,7 @@ import {
 import { 
     TokenBalanceV2,
     BalancesV2Request,
-} from "./balances-v2.dto"
+} from "./graphql-types"
 import {
     BotNotFoundException,
     UserNotFoundException,

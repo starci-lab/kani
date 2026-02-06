@@ -14,10 +14,8 @@ import {
 } from "@mysten/sui/transactions"
 import {
     InvalidPoolTokensException, 
-    LiquidityPoolClmmStateNotFoundException
-} from "@modules/exceptions"
-import {
-    ActivePositionNotFoundException 
+    LiquidityPoolClmmStateNotFoundException,
+    ActivePositionNotFoundException
 } from "@modules/exceptions"
 import {
     SUI_CLOCK_OBJECT_ID 

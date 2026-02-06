@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     RequestSignInOtpRequest 
-} from "./request-sign-in-otp.dto"
+} from "./graphql-types"
 import {
     SendSignInOtpMailService 
 } from "@modules/mail"

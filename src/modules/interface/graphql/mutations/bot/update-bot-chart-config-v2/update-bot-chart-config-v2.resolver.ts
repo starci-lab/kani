@@ -21,7 +21,7 @@ import {
 import {
     UpdateBotChartConfigV2Request,
     UpdateBotChartConfigV2Response,
-} from "./update-bot-chart-config-v2.dto"
+} from "./graphql-types"
 import {
     VerifyAccessTokenResponse
 } from "@privy-io/node"

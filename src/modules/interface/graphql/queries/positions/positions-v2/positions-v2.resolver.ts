@@ -14,7 +14,7 @@ import {
     PositionsV2Request,
     PositionsV2Response,
     PositionsV2ResponseData,
-} from "./positions-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

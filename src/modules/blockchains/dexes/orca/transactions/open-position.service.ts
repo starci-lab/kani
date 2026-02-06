@@ -49,7 +49,7 @@ import {
 } from "@solana-program/token"
 import {
     TokenType 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     FeeService 
 } from "../../../math"
@@ -324,8 +324,10 @@ export class OpenPositionInstructionService {
                 },
             ],
             data: this.anchorUtilsService.encodeAnchorIx(
-                "open_position_with_token_extensions",
-                openPositionArgs,
+                {
+                    ixName: "open_position_with_token_extensions",
+                    data: openPositionArgs,
+                }
             ),
         }
         instructions.push(openPositionInstruction)
@@ -383,8 +385,10 @@ export class OpenPositionInstructionService {
                 },
             ],
             data: this.anchorUtilsService.encodeAnchorIx(
-                "increase_liquidity",
-                increaseLiquidityArgs,
+                {
+                    ixName: "increase_liquidity",
+                    data: increaseLiquidityArgs,
+                }
             ),
         }
         instructions.push(increaseLiquidityInstruction)

@@ -11,7 +11,7 @@ import {
 import {
     BotsRequest,
     BotsResponseData,
-} from "./bots.dto"
+} from "./graphql-types"
 import {
     UserJwtLike 
 } from "@modules/passport"

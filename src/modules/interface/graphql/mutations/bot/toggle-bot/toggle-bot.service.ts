@@ -10,7 +10,7 @@ import {
 } from "mongoose"
 import { 
     ToggleBotRequest, 
-} from "./toggle-bot.dto"
+} from "./graphql-types"
 import {
     UserJwtLike 
 } from "@modules/passport"

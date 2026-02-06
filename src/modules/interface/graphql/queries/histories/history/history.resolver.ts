@@ -13,7 +13,7 @@ import {
     HistoryRequest,
     HistoryResponse,
     HistoryResponseData,
-} from "./history.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"

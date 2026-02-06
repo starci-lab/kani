@@ -14,7 +14,7 @@ import {
     BalancesV2Request,
     BalancesV2Response,
     TokenBalanceV2,
-} from "./balances-v2.dto"
+} from "./graphql-types"
 import {
     UseThrottler, ThrottlerConfig 
 } from "@modules/throttler"
