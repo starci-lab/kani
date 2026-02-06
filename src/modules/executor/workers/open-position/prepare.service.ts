@@ -33,7 +33,7 @@ import {
 } from "@modules/mixin"
 import {
     ToStringObject 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     AsyncService 
 } from "@modules/mixin"

@@ -3,7 +3,7 @@ import type {
 } from "./socket"
 import type {
     AbstractException
-} from "@exceptions"
+} from "@modules/exceptions"
 
 /** WebSocket response payload. */
 export interface WsResponse<T = unknown> {

@@ -30,7 +30,7 @@ import {
 } from "@modules/env"
 import {
     ToStringObject 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     InjectSuperJson,
     DayjsService,
@@ -42,7 +42,7 @@ import {
 import {
     AbstractException,
     ClosePositionJobExecutedFailedException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     FatalError,
 } from "../fatal"

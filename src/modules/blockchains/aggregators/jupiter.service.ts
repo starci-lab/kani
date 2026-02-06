@@ -21,7 +21,7 @@ import {
 } from "@modules/mixin"
 import {
     ChainId 
-} from "../enums"
+} from "@modules/common"
 import {
     address 
 } from "@solana/kit"

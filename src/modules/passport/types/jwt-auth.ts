@@ -1,6 +1,6 @@
 import type {
     EncryptedPayload
-} from "@modules/typedefs"
+} from "@modules/crypto"
 
 /** Params for generating access/refresh tokens. */
 export interface GenerateParams {

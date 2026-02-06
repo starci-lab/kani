@@ -13,7 +13,7 @@ import {
 } from "./types"
 import {
     AbstractException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     FatalError 
 } from "../fatal"

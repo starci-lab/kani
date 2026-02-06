@@ -14,10 +14,10 @@ import {
 } from "./solana/fetcher.service"
 import {
     TokenType, ChainId 
-} from "../enums"
+} from "@modules/common"
 import {
     SuiBalanceFetcherService 
-} from "./sui/fetcher.service"
+} from "./sui"
 import { 
     PrimaryMemoryStorageService, 
 } from "@modules/databases"
@@ -35,7 +35,6 @@ import {
     GasStatus
 } from "../enums"
 import BN from "bn.js"
-
 import {
     IBalanceFetcherService
 } from "./types"
@@ -245,7 +244,9 @@ export class BalanceFetcherService implements IBalanceFetcherService {
                 bot, token 
             })
         default:
-            throw new UnsupportedChainIdException(bot.chainId)
+            throw new UnsupportedChainIdException({
+                chainId: bot.chainId,
+            })
         }
     }
 

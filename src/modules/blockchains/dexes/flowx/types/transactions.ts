@@ -4,8 +4,10 @@ import {
 import BN from "bn.js"
 import {
     ClmmLiquidityPoolState,
-    BotSchema
 } from "../../../types"
+import {
+    BotSchema,
+} from "@modules/databases"
 
 /**
  * Parameters for creating open position transaction builder.

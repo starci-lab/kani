@@ -48,7 +48,7 @@ import {
 } from "@modules/databases"
 import {
     SomeLiquidityPoolsNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     UseInterceptors,
 } from "@nestjs/common"

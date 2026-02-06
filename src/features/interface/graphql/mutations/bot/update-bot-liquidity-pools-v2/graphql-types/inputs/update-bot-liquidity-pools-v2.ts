@@ -10,10 +10,10 @@ export class UpdateBotLiquidityPoolsV2Request {
         {
             description: "The ID of the bot whose liquidity pools will be updated.",
         })
-    id: string
+        id: string
     @Field(() => [ID],
         {
             description: "The display ids of the liquidity pools to update.",
         })
-    liquidityPoolIds: Array<string>
+        liquidityPoolIds: Array<string>
 }

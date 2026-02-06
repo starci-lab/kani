@@ -35,7 +35,7 @@ import {
 import {
     AbstractException,
     ReconcileBalanceJobExecutedFailedException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     FatalError,
 } from "../fatal"
@@ -44,7 +44,7 @@ import {
 } from "bullmq"
 import {
     ToStringObject 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     SuperJSON 
 } from "superjson"

@@ -21,7 +21,7 @@ import {
 } from "@modules/common"
 import {
     TokenType 
-} from "../enums"
+} from "@modules/common"
 import BN from "bn.js"
 import {
     QuoteRatioService 

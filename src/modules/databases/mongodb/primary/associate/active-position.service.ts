@@ -12,7 +12,7 @@ import {
 } from "../schemas"
 import {
     AssociatedPositionNotFoundException, LiquidityPoolNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     PrimaryMemoryStorageService
 } from "../memory"

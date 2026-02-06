@@ -28,10 +28,12 @@ import {
     DlmmLiquidityPoolState,
     ExecuteOpenPositionParams,
     ExecuteOpenPositionResult,
-    LiquidityPoolState,
     PrepareOpenPositionParams,
     PrepareOpenPositionResult
 } from "../types"
+import {
+    LiquidityPoolState 
+} from "../../types"
 import {
     CetusOpenPositionActionService 
 } from "../cetus"

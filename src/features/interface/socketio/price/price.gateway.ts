@@ -51,7 +51,7 @@ import {
 } from "../types"
 import {
     SomeTokensNotFoundException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     UseInterceptors,
 } from "@nestjs/common"

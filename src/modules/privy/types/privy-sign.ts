@@ -9,7 +9,7 @@ import type {
 } from "@mysten/sui/transactions"
 import type {
     EncryptedPayload
-} from "@modules/typedefs"
+} from "@modules/crypto"
 import type {
     TransactionBlockhashLifetime
 } from "@solana/kit"

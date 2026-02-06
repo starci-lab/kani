@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     P2cBalancer 
 } from "load-balancers"

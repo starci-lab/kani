@@ -28,7 +28,7 @@ import {
 } from "@modules/blockchains"
 import {
     chainIdToPlatformId 
-} from "@modules/typedefs"
+} from "@modules/common"
 import _ from "lodash"
 import {
     GoogleDriveService 
@@ -136,7 +136,9 @@ export class CreateBotService {
             )
         // create embedded wallet for the bot
         const platformId = chainIdToPlatformId(chainId)
-        const generatedKeypair = await this.keypairsService.generateKeypair(platformId)
+        const generatedKeypair = await this.keypairsService.generateKeypair({
+            platformId,
+        })
         // encrypt the private key
         const encryptedPrivateKeyPayload = generatedKeypair.encryptedPrivateKeyPayload
         const session = await this.connection.startSession()
@@ -228,23 +230,25 @@ export class CreateBotService {
             "utf8"
         )
         const fileName = `${result.bot.id}.json`
-        await this.googleDriveService.uploadFiles({
-            files: [
-                {
-                    buffer: content,
-                    originalname: fileName,
-                    mimetype: "application/octet-stream",
-                    fieldname: "",
-                    encoding: "utf8",
-                    size: content.length,
-                    stream: Readable.from(content),
-                    filename: fileName,
-                    path: "",
-                    destination: "",
-                }
-            ],
-            folderName: GoogleDriveFolderName.Keys,
-        })
+        await this.googleDriveService.uploadFiles(
+            {
+                files: [
+                    {
+                        buffer: content,
+                        originalname: fileName,
+                        mimetype: "application/octet-stream",
+                        path: "",
+                        size: content.length,
+                        stream: Readable.from(content),
+                        filename: fileName,
+                        destination: "",
+                        fieldname: "",
+                        encoding: "utf8",
+                    }
+                ],
+                folderName: GoogleDriveFolderName.Keys,
+            }
+        )
         return result
     }
 }

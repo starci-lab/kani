@@ -188,10 +188,10 @@ export class TickArrayService {
                         role: AccountRole.READONLY,
                     },
                 ],
-                data: this.anchorUtilsService.encodeAnchorIx(
-                    "initialize_tick_array", 
-                    initializeTickArrayArgs
-                ),
+                data: this.anchorUtilsService.encodeAnchorIx({
+                    ixName: "initialize_tick_array",
+                    data: initializeTickArrayArgs,
+                }),
             }
             instructions.push(initializeTickArrayInstruction)
             return {

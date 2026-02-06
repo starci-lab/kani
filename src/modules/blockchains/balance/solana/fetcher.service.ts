@@ -2,8 +2,8 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    TokenType 
-} from "../../enums"
+    TokenType,
+} from "@modules/common"
 import {
     FetchBalanceParams,
     FetchBalanceResult,

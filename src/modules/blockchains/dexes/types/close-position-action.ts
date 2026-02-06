@@ -3,7 +3,7 @@ import {
 } from "@modules/databases"
 import {
     LiquidityPoolState 
-} from "./pool-state"
+} from "../../types/pool-state"
 import {
     PrepareTx
 } from "../../types/transactions"

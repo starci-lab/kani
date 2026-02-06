@@ -6,7 +6,7 @@ import {
 } from "decimal.js"
 import {
     LiquidityPoolState 
-} from "./pool-state"
+} from "../../types/pool-state"
 import {
     Dayjs 
 } from "dayjs"

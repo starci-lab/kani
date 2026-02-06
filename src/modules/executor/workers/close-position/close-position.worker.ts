@@ -77,7 +77,7 @@ import {
 } from "./execute.service"
 import {
     TokenType,
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     ConfirmService,
 } from "./confirm.service"
@@ -157,7 +157,9 @@ export class ClosePositionWorker extends WorkerHost {
                     )
                 }
                 // associate the active position
-                await this.positionAssociateService.associateActivePosition({ bot })
+                await this.positionAssociateService.associateActivePosition({
+                    bot 
+                })
                 // get the job
                 const job = await this.connection
                     .model<JobSchema>(JobSchema.name)

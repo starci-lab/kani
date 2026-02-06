@@ -33,7 +33,7 @@ import {
 } from "@modules/common"
 import {
     TokenType,
-} from "@modules/typedefs"
+} from "@modules/common"
 import Decimal from "decimal.js"
 
 @Injectable()

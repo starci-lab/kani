@@ -38,8 +38,9 @@ export class GoogleDriveUploadFileInvalidException extends AbstractException {
         super(
             "Google drive upload file has neither buffer nor path",
             "GOOGLE_DRIVE_UPLOAD_FILE_INVALID_EXCEPTION",
-            metadata ?? {
-            },
+            {
+                metadata,
+            }
         )
     }
 }

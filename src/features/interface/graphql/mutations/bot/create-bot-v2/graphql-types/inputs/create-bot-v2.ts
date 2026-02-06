@@ -3,7 +3,7 @@ import {
 } from "@nestjs/graphql"
 import {
     GraphQLTypeChainId, ChainId
-} from "@modules/typedefs"
+} from "@modules/common"
 
 @InputType({
     description:
@@ -14,44 +14,44 @@ export class CreateBotV2Request {
         {
             description: "The new name of the bot.",
         })
-    name: string
+        name: string
 
     @Field(() => GraphQLTypeChainId,
         {
             description: "The blockchain network where the bot will operate",
         })
-    chainId: ChainId
+        chainId: ChainId
 
     @Field(() => ID,
         {
             description: "The token that the bot aims to accumulate as the primary outcome of its liquidity strategy.",
         })
-    targetTokenId: string
+        targetTokenId: string
 
     @Field(() => ID,
         {
             description: "The quote token ID",
         })
-    quoteTokenId: string
+        quoteTokenId: string
 
     @Field(() => [ID],
         {
             nullable: true,
             description: "List of liquidity pools where the bot will actively provide and manage liquidity. Must exist in the database.",
         })
-    liquidityPoolIds?: Array<string>
+        liquidityPoolIds?: Array<string>
 
     @Field(() => Boolean,
         {
             description: "Whether the bot is exiting to USDC",
             defaultValue: false,
         })
-    isExitToUsdc: boolean
+        isExitToUsdc: boolean
 
     @Field(() => String,
         {
             description: "The withdrawal address of the bot",
             nullable: true,
         })
-    withdrawalAddress?: string
+        withdrawalAddress?: string
 }

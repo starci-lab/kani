@@ -12,7 +12,8 @@ import {
 } from "./enums"
 import {
     GoogleDriveFileDownloadFailedException,
-    GoogleDriveFolderIdNotFoundException
+    GoogleDriveFolderIdNotFoundException,
+    GoogleDriveUploadFileInvalidException
 } from "@modules/exceptions"
 import {
     MountStorageService

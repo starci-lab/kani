@@ -1,10 +1,12 @@
 import BN from "bn.js"
 import {
-    parseSuiI128,
     SuiObject,
     SuiObjectID,
     SuiObjectI128,
-} from "../../../structs"
+} from "../../../types"
+import {
+    parseSuiI128,
+} from "../../../utils"
 
 /** ---------- TICK (RAW) ---------- */
 

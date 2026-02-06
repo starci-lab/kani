@@ -1,6 +1,6 @@
 import type {
     EncryptedPayload
-} from "@modules/typedefs"
+} from "@modules/crypto"
 
 /** User shape from Google OAuth. */
 export interface UserGoogleLike {

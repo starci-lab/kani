@@ -11,10 +11,7 @@ import {
     PositionSchema
 } from "../schemas"
 import {
-    ActivePositionNotFoundException, AssociatedPositionNotFoundException
-} from "@exceptions"
-import {
-    LiquidityPoolNotFoundException
+    ActivePositionNotFoundException, AssociatedPositionNotFoundException, LiquidityPoolNotFoundException
 } from "@modules/exceptions"
 import {
     PrimaryMemoryStorageService

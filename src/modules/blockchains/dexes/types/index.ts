@@ -10,5 +10,4 @@ export * from "./action-result"
 export * from "./open-position-action"
 export * from "./close-position-action"
 export * from "./reserves-with-fees"
-export * from "./pool-state"
-export * from "./pool"
+export * from "../../types/pool-state

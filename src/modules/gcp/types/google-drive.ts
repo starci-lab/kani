@@ -2,17 +2,9 @@ import type {
     GoogleDriveFolderName,
 } from "../enums"
 
-/** Single file item for upload (buffer or path). */
-export interface UploadFileItem {
-    buffer: Buffer
-    path: string
-    originalname?: string
-    mimetype?: string
-}
-
 /** Params for uploading files to a Drive folder. */
 export interface UploadFilesParams {
-    files: Array<UploadFileItem>
+    files: Array<Express.Multer.File>
     folderName: GoogleDriveFolderName
 }
 

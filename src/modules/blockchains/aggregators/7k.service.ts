@@ -17,7 +17,7 @@ import {
 } from "@mysten/sui/transactions"
 import {
     ChainId 
-} from "../enums"
+} from "@modules/common"
 import SevenK, {
     BluefinXTx, QuoteResponse as SevenKQuoteResponse 
 } from "@7kprotocol/sdk-ts"

@@ -1,6 +1,6 @@
 import type {
     ChainId
-} from "@modules/typedefs"
+} from "@modules/common"
 import type {
     KeyQuorum,
     P256KeyPair

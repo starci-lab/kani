@@ -19,7 +19,7 @@ import {
 import {
     ChainId,
     TokenType
-} from "../enums"
+} from "@modules/common"
 import {
     SuiBalanceService 
 } from "./sui"

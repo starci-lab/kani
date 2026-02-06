@@ -21,7 +21,7 @@ import {
 import {
     TokenType,
     ToStringObject
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     SwapDirection,
     BalanceFetcherService,

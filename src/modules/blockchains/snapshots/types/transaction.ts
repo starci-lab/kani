@@ -7,7 +7,7 @@ import type {
 } from "@modules/databases"
 import {
     ChainId 
-} from "../../enums"
+} from "@modules/common"
 
 /** Params for adding a transaction record to snapshot history. */
 export interface AddTransactionRecordParams {

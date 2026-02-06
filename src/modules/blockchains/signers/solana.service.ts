@@ -11,7 +11,7 @@ import {
 } from "@modules/derived"
 import {
     BotEncryptedPrivateKeyNotFoundException 
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     WithSolanaSignerParams 
 } from "./types/solana"

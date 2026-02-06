@@ -1,6 +1,6 @@
 import {
     ChainId
-} from "@modules/blockchains"
+} from "@modules/common"
 
 /** How the RPC can be accessed (http, ws, write). */
 export enum RpcAccessType {

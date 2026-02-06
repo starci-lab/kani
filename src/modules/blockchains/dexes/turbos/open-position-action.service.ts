@@ -12,7 +12,7 @@ import {
 } from "../types"
 import {
     ClmmLiquidityPoolState
-} from "../types/pool-state"
+} from "../../types/pool-state"
 import {
     Transaction,
     TransactionDataBuilder 

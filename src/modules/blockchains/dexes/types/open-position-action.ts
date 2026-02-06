@@ -10,7 +10,7 @@ import {
 } from "../../types/transactions"
 import {
     LiquidityPoolState 
-} from "./pool-state"
+} from "../../types/pool-state"
 
 /**
  * Parameters for preparing an open position transaction.

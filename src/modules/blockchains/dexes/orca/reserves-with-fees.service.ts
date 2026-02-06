@@ -2,6 +2,8 @@ import {
     ReservesWithFeesParams,
     ReservesWithFeesResult,
     IReservesWithFeesService,
+} from "../types"
+import {
     ClmmLiquidityPoolState,
 } from "../../types"
 import {
@@ -107,17 +109,23 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
             })
         }
 
+        if (!bot.activePosition.associatedPosition.clmmState) {
+            throw new PositionClmmStateNotFoundException({
+                positionId: bot.activePosition.associatedPosition.positionId,
+                botId: bot.id,
+            })
+        }
         // Extract position details
         const {
             positionId,
             clmmState: {
-                tickLower: tickLowerStr,
-                tickUpper: tickUpperStr,
+                tickLower: tickLowerNumber,
+                tickUpper: tickUpperNumber,
                 liquidity: liquidityStr
             }
         } = bot.activePosition.associatedPosition
-        const tickLower = new BN(tickLowerStr)
-        const tickUpper = new BN(tickUpperStr)
+        const tickLower = new BN(tickLowerNumber)
+        const tickUpper = new BN(tickUpperNumber)
 
         // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {

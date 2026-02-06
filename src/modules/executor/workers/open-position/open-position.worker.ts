@@ -90,7 +90,7 @@ import {
 } from "./execute.service"
 import {
     TokenType 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     ConfirmService 
 } from "./confirm.service"

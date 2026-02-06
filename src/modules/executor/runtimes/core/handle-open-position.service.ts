@@ -37,7 +37,7 @@ import {
     DynamicLiquidityPoolInfoDiagnosticNotReadyException,
     PriceDiagnosticNotReadyException,
     TokenNotFoundException
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     WaitService
 } from "@modules/mixin"

@@ -29,7 +29,7 @@ import {
 } from "@modules/mixin"
 import {
     ToStringObject 
-} from "@modules/typedefs"
+} from "@modules/common"
 import {
     PrepareWithdrawTransactionResult 
 } from "@modules/blockchains"

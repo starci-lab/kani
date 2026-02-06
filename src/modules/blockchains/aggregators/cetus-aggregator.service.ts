@@ -29,7 +29,7 @@ import {
 } from "@mysten/sui/transactions"
 import {
     ChainId 
-} from "../enums"
+} from "@modules/common"
 import {
     RpcAccessType 
 } from "@modules/filesystem"

@@ -204,10 +204,10 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
             ],
-            data: this.anchorUtilsService.encodeAnchorIx(
-                "decrease_liquidity",
-                decreaseLiquidityArgs,
-            ),
+            data: this.anchorUtilsService.encodeAnchorIx({
+                ixName: "decrease_liquidity",
+                data: decreaseLiquidityArgs,
+            }),
         }
         instructions.push(decreaseLiquidityInstruction)
         const collectFeesInstruction: Instruction = {
@@ -250,7 +250,9 @@ export class ClosePositionInstructionService {
                     role: AccountRole.READONLY,
                 },
             ],
-            data: this.anchorUtilsService.encodeAnchorIx("collect_fees"),
+            data: this.anchorUtilsService.encodeAnchorIx({
+                ixName: "collect_fees",
+            }),
         }
         instructions.push(collectFeesInstruction)
         const closePositionWithTokenExtensionsInstruction: Instruction = {
@@ -281,9 +283,9 @@ export class ClosePositionInstructionService {
                     role: AccountRole.WRITABLE,
                 },
             ],
-            data: this.anchorUtilsService.encodeAnchorIx(
-                "close_position_with_token_extensions",
-            ),
+            data: this.anchorUtilsService.encodeAnchorIx({
+                ixName: "close_position_with_token_extensions",
+            }),
         }
 
         instructions.push(closePositionWithTokenExtensionsInstruction)

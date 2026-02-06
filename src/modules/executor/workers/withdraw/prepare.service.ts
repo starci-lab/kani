@@ -48,11 +48,11 @@ import {
 import SuperJSON from "superjson"
 import {
     ToStringObject 
-} from "@modules/typedefs"
+} from "@modules/common"
 import BN from "bn.js"
 import {
     WithdrawJobPreparedFailedException,
-} from "@exceptions"
+} from "@modules/exceptions"
 import {
     FatalError,
 } from "../fatal"

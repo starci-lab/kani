@@ -3,7 +3,7 @@ import {
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState
-} from "../../../types"
+} from "../../types"
 import BN from "bn.js"
 import {
     Instruction
@@ -57,14 +57,9 @@ export interface CreateOpenPositionInstructionsResult {
 export interface CreateCloseInstructionsParams {
     /** Bot schema. */
     bot: BotSchema
-    /** DLMM liquidity pool state. */
-    state: DlmmLiquidityPoolState
+    /** Liquidity pool state. */
+    state: ClmmLiquidityPoolState
 }
-
-import {
-    Address
-} from "@solana/kit"
-import BN from "bn.js"
 
 /**
  * Parameters for getting position PDA.

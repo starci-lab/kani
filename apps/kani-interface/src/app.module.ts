@@ -41,7 +41,7 @@ import {
 } from "@modules/cache"
 import {
     InterfaceModule 
-} from "@modules/interface"
+} from "@features/interface"
 import {
     ThrottlerModule 
 } from "@modules/throttler"

@@ -4,10 +4,10 @@ import {
 import {
     ExecuteClosePositionParams,
     IClosePositionActionService,
-    ClmmLiquidityPoolState,
     PrepareClosePositionParams,
     PrepareClosePositionResult,
     ExecuteClosePositionResult,
+    ClmmLiquidityPoolState,
 } from "../types"
 import {
     SignerService 
@@ -95,7 +95,6 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
-
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -106,12 +105,12 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenA.toString(),
+                $eq: _state.static.tokenA.toString(),
             },
         })
         const tokenB = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
-                $eq: state.static.tokenB.toString(),
+                $eq: _state.static.tokenB.toString(),
             },
         })
         if (!tokenA || !tokenB) {

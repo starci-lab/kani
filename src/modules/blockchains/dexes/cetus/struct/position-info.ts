@@ -1,10 +1,11 @@
 import BN from "bn.js"
 import {
-    parseSuiI32,
     SuiObject,
     SuiObjectI32,
-} from "../../../structs"
-
+} from "../../../types"
+import {
+    parseSuiI32,
+} from "../../../utils"
 /**
  * Fields structure for Cetus position reward Sui object.
  * Represents reward information for a position.

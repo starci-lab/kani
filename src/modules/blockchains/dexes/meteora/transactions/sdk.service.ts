@@ -1,26 +1,22 @@
 import { 
-    ActionType,
     buildBitFlagAndNegateStrategyParameters,
     deriveBinArray,
     getBinArrayIndexesCoverage, 
     getSlippageMaxAmount, 
-    isOverflowDefaultBinArrayBitmap, 
-    LiquidityStrategyParameters, 
+    isOverflowDefaultBinArrayBitmap,  
     REBALANCE_POSITION_PADDING, 
-    RemainingAccountsInfoSlice, 
     resetUninvolvedLiquidityParams, 
     ShrinkMode, 
-    StrategyParameters,
     toAmountIntoBins,
 } from "@meteora-ag/dlmm"
 import {
-    BotSchema, PrimaryMemoryStorageService, MeteoraLiquidityPoolMetadata
+    PrimaryMemoryStorageService, MeteoraLiquidityPoolMetadata
 } from "@modules/databases"
 import {
     Injectable 
 } from "@nestjs/common"     
 import {
-    AccountMeta, AccountRole, address, Address, Instruction 
+    AccountRole, address, Address, Instruction 
 } from "@solana/kit"
 import {
     InvalidPoolTokensException, DLMMOverflowDefaultBinArrayBitmapException, LiquidityPoolDlmmStateNotFoundException 
@@ -50,9 +46,6 @@ import {
     coption
 } from "@metaplex-foundation/beet"
 import {
-    DlmmLiquidityPoolState 
-} from "../../../types"
-import {
     TOKEN_2022_PROGRAM_ADDRESS 
 } from "@solana-program/token-2022"
 import {
@@ -64,6 +57,9 @@ import {
 import {
     EventAuthorityService 
 } from "./event-authority.service"
+import {
+    DepositWithRebalanceEndpointParams
+} from "../types"
 
 export const DEFAULT_INIT_BIN_ARRAY_CU = 350_000
 export const DEFAULT_ADD_LIQUIDITY_CU = 1_000_000
@@ -162,10 +158,12 @@ export class MeteoraSdkService {
                     },
                 ],
                 data: this.anchorUtilsService.encodeAnchorIx(
-                    "initialize_bin_array",
-                    InitializeBinArrayArgs.serialize({
-                        binArrayIndex: binArrayIndexes[idx],
-                    })[0]
+                    {
+                        ixName: "initialize_bin_array",
+                        data: InitializeBinArrayArgs.serialize({
+                            binArrayIndex: binArrayIndexes[idx],
+                        })[0]
+                    }
                 ),
             }
             instructions.push(initBinArrayIx)
@@ -309,9 +307,9 @@ export class MeteoraSdkService {
                     role: AccountRole.WRITABLE,
                 })),
             ],
-            data: this.anchorUtilsService.encodeAnchorIx(
-                "rebalance_liquidity",
-                RebalanceLiquidityArgs.serialize({
+            data: this.anchorUtilsService.encodeAnchorIx({
+                ixName: "rebalance_liquidity",
+                data: RebalanceLiquidityArgs.serialize({
                     params: {
                         activeId: state.dynamic.activeId.toNumber(),
                         maxActiveBinSlippage,
@@ -330,7 +328,7 @@ export class MeteoraSdkService {
                         slices: []
                     },
                 })[0]
-            ),
+            }),
         }
         // group the instructions of this chunk
         instructions.push(rebalanceIx)
@@ -338,11 +336,6 @@ export class MeteoraSdkService {
     }
 }
 
-import {
-    GetPotentialToken2022IxDataAndAccountsParams,
-    GetPotentialToken2022IxDataAndAccountsResult,
-    DepositWithRebalanceEndpointParams
-} from "../types/sdk"
 
 export const InitializeBinArrayArgs = new BeetArgsStruct(
     [
@@ -477,34 +470,46 @@ export const RemainingAccountsInfoArgs =
 import {
     RemoveLiquidityByRange2ArgsType,
     ClaimFee2ArgsType,
-    ClaimReward2ArgsType
+    ClaimReward2ArgsType,
+    RemainingAccountsInfoType
 } from "../types/close-position"
 
 export const RemoveLiquidityByRange2Args = new FixableBeetArgsStruct<RemoveLiquidityByRange2ArgsType>(
     [
-        ["fromBinId", i32],
-        ["toBinId", i32],
-        ["bpsToRemove", u16],
-        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+        ["fromBinId",
+            i32],
+        ["toBinId",
+            i32],
+        ["bpsToRemove",
+            u16],
+        ["remainingAccountsInfo",
+            RemainingAccountsInfoArgs],
     ],
     "RemoveLiquidityByRange2Args"
 )
 
 export const ClaimFee2Args = new FixableBeetArgsStruct<ClaimFee2ArgsType>(
     [
-        ["minBinId", i32],
-        ["maxBinId", i32],
-        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+        ["minBinId",
+            i32],
+        ["maxBinId",
+            i32],
+        ["remainingAccountsInfo",
+            RemainingAccountsInfoArgs],
     ],
     "ClaimFee2Args"
 )
 
 export const ClaimReward2Args = new FixableBeetArgsStruct<ClaimReward2ArgsType>(
     [
-        ["rewardIndex", u64],
-        ["minBinId", i32],
-        ["maxBinId", i32],
-        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+        ["rewardIndex",
+            u64],
+        ["minBinId",
+            i32],
+        ["maxBinId",
+            i32],
+        ["remainingAccountsInfo",
+            RemainingAccountsInfoArgs],
     ],
     "ClaimReward2Args"
 )

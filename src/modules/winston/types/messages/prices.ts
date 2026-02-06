@@ -1,12 +1,9 @@
 import {
-    ChainId,
-} from "@modules/blockchains"
-import {
     RpcAccessType,
 } from "@modules/filesystem"
 import {
-    TokenId,
-} from "@modules/databases"
+    ChainId,
+} from "@modules/common"
 
 export interface PythPricesFetchedMessage {
     fetchedCount: number

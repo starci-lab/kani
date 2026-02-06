@@ -29,7 +29,7 @@ import {
 } from "@modules/blockchains"
 import {
     BalanceSnapshotsNotFoundException, 
-} from "@exceptions"
+} from "@modules/exceptions"
 import BN from "bn.js"
 import {
     envConfig 

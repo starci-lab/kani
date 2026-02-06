@@ -3,10 +3,14 @@ import {
     SuiObject,
     SuiObjectID,
     SuiObjectI32,
-    parseSuiI32
-} from "../../../structs"
+} from "../../../types"
+import {
+    parseSuiI32,
+} from "../../../utils"
 
-// ========== Reward Info Types ==========
+/**
+ * Represents the reward info fields of a Turbos Pool Sui object.
+ */
 export interface TurbosSuiObjectPoolRewardInfo {
     type: string
     fields: {
@@ -19,7 +23,9 @@ export interface TurbosSuiObjectPoolRewardInfo {
     }
 }
 
-// ========== RAW POOL STRUCT ==========
+/**
+ * Represents the raw fields of a Turbos Pool Sui object.
+ */
 export interface TurbosSuiObjectPoolFields {
     coin_a: string
     coin_b: string
@@ -46,7 +52,9 @@ export type TurbosSuiObjectPool = SuiObject<
     `${string}::pool::Pool`
 >
 
-// ========== PARSED POOL INTERFACE ==========
+/**
+ * Represents the parsed fields of a Turbos Pool.
+ */
 export interface TurbosPool {
     coinA: string
     coinB: string
@@ -75,7 +83,6 @@ export interface TurbosPool {
     unlocked: boolean
 }
 
-// ========== PARSER FUNCTION ==========
 /**
  * Parses a Turbos Pool Sui object into a TurbosPool interface
  */
