@@ -1,7 +1,8 @@
+
 import BN from "bn.js"
 import {
     SuiObjectI32, SuiObjectI64, SuiObjectI128 
-} from "../common"
+} from "../types"
 
 /**
  * Parses a Sui i32 object into a signed JavaScript number.

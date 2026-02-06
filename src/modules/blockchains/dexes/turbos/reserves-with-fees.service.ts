@@ -36,10 +36,12 @@ import {
     parseTurbosTick,
 } from "./struct"
 import {
-    serializeSuiI32,
     SuiMoveObjectData,
     SuiObject,
-} from "../../structs"
+} from "../../types"
+import {
+    serializeSuiI32,
+} from "../../utils"
 import {
     ClmmFeesFormulaService,
     ClmmRewardsFormulaService,

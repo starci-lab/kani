@@ -35,10 +35,12 @@ import {
     parseFlowXTickInfo,
 } from "./struct"
 import {
-    serializeSuiI32,
     SuiMoveObjectData,
-    SuiObject,
-} from "../../structs"
+    SuiObject,  
+} from "../../types"
+import {
+    serializeSuiI32,
+} from "../../utils"
 import {
     ClmmFeesFormulaService,
     ClmmRewardsFormulaService,

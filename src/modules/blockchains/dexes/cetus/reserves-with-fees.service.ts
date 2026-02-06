@@ -37,7 +37,7 @@ import {
 } from "./struct"
 import {
     SuiMoveObjectData,
-} from "../../structs"
+} from "../../types"
 import {
     ClmmFeesFormulaService,
     ClmmRewardsFormulaService,

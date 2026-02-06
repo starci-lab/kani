@@ -1,11 +1,7 @@
 import {
-    ClmmLiquidityPoolState 
-} from "../../../types"
-import {
-    BotSchema,
     MomentumLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
-} from "@modules/databases"
+} from "@modules/databases"  
 import {
     Transaction 
 } from "@mysten/sui/transactions"

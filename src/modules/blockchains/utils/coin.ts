@@ -1,6 +1,7 @@
 import {
-    CoinArgument, CoinAsset 
-} from "./types"
+    CoinArgument, 
+    CoinAsset 
+} from "../types"
 import {
     Transaction 
 } from "@mysten/sui/transactions"

@@ -1,11 +1,13 @@
 import BN from "bn.js"
 import {
-    parseSuiI32,
     SuiObject,
     SuiObjectID,
     SuiObjectI32,
     TypeName,
-} from "../../../structs"
+} from "../../../types"
+import {
+    parseSuiI32,
+} from "../../../utils"
 
 /**
  * Fields structure for Cetus position manager Sui object.

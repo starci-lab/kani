@@ -6,9 +6,11 @@ import {
     SuiObjectI64,
     TypeName,
     SuiObjectTable,
+} from "../../../types"
+import {
     parseSuiI32,
     parseSuiI64,
-} from "../../../structs"
+} from "../../../utils"
 
 /**
  * Represents the observation fields of a FlowX Pool Sui object.

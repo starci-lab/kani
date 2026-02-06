@@ -1,11 +1,13 @@
 import BN from "bn.js"
 import {
-    parseSuiI64,
-    parseSuiI128,
     SuiObject,
     SuiObjectI64,
     SuiObjectI128,
-} from "../../../structs"
+} from "../../../types"
+import {
+    parseSuiI64,
+    parseSuiI128,
+} from "../../../utils"
 
 /**
  * Represents the raw fields of a Momentum TickInfo Sui object.

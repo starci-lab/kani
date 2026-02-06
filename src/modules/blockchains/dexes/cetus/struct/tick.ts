@@ -1,11 +1,13 @@
 import BN from "bn.js"
 import { 
-    parseSuiI128, 
-    parseSuiI32, 
     SuiObject, 
     SuiObjectI128, 
     SuiObjectI32 
-} from "../../../structs"
+} from "../../../types"
+import {
+    parseSuiI128,
+    parseSuiI32,
+} from "../../../utils"
 
 /**
  * Fields structure for Cetus tick Sui object.

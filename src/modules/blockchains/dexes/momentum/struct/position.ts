@@ -4,10 +4,10 @@ import {
     SuiObjectID,
     SuiObjectI32,
     TypeName,
-} from "../../../structs"
+} from "../../../types"
 import {
-    parseSuiI32 
-} from "../../../structs"
+    parseSuiI32,
+} from "../../../utils"
 
 /**
  * Represents the reward info fields of a Momentum Position Sui object.

@@ -3,7 +3,7 @@ import {
     ReservesWithFeesResult,
     IReservesWithFeesService,
     ClmmLiquidityPoolState,
-} from "../../types"
+} from "../types"
 import {
     Injectable,
 } from "@nestjs/common"
@@ -36,9 +36,11 @@ import {
 } from "./struct"
 import {
     serializeSuiI32,
+} from "../../utils"
+import {
     SuiMoveObjectData,
     SuiObject,
-} from "../../structs"
+} from "../../types"
 import {
     ClmmFeesFormulaService,
     ClmmRewardsFormulaService,

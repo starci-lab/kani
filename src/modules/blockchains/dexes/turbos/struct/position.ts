@@ -2,8 +2,10 @@ import BN from "bn.js"
 import {
     SuiObject,
     SuiObjectI32,
+} from "../../../types"
+import {
     parseSuiI32
-} from "../../../structs"
+} from "../../../utils"
 
 // ========== Position Reward Info Types ==========
 export interface TurbosSuiObjectPositionRewardInfo {

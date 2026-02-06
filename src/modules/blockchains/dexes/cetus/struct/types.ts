@@ -1,6 +1,6 @@
 import {
     SuiMoveObjectContentFields, SuiObject, SuiObjectOptionU64 
-} from "../../../structs"
+} from "../../../types"
 
 /**
  * Fields structure for Cetus skip list node Sui object.

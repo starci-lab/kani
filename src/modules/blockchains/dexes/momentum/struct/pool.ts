@@ -5,9 +5,11 @@ import {
     SuiObjectI32,
     SuiObjectI64,
     TypeName,
-    parseSuiI32, 
-    parseSuiI64 
-} from "../../../structs"
+} from "../../../types"
+import {
+    parseSuiI32,
+    parseSuiI64,
+} from "../../../utils"
 
 /**
  * Represents the observation fields of a Momentum Pool Sui object.
