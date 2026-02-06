@@ -35,7 +35,19 @@ import {
 import {
     ClmmLiquidityPoolState 
 } from "../../../interfaces"
+import {
+    CreateClosePositionTxbParams,
+    CreateClosePositionTxbResult
+} from "../types"
 
+/**
+ * Service responsible for creating close position transaction builders for FlowX.
+ * Handles transaction construction for closing liquidity positions.
+ *
+ * @example
+ * const service = new ClosePositionTxbService(...)
+ * const result = await service.createClosePositionTxb({ bot, state })
+ */
 @Injectable()
 export class ClosePositionTxbService {
     constructor(
@@ -222,14 +234,4 @@ export class ClosePositionTxbService {
             )
         }
     }
-}
-
-export interface CreateClosePositionTxbParams {
-    txb?: Transaction
-    bot: BotSchema
-    state: ClmmLiquidityPoolState
-}
-
-export interface CreateClosePositionTxbResult {
-    txb: Transaction
 }

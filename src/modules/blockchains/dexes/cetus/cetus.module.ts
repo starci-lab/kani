@@ -23,13 +23,31 @@ import {
     CetusReservesWithFeesService,
 } from "./reserves-with-fees.service"
 
+/**
+ * NestJS module for Cetus DEX integration.
+ * Provides services for observing pools, opening/closing positions, analytics, and reserves with fees.
+ *
+ * @example
+ * CetusModule.register({ enabled: { observe: true, action: true } })
+ */
 @Injectable()
 export class CetusModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    /**
+     * Registers the Cetus module with conditional service providers based on enabled features.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module with configured services
+     *
+     * @example
+     * const module = CetusModule.register({ enabled: { observe: true, action: true } })
+     */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
+        
+        // register providers based on enabled features
         const providers: Array<Provider> = []
+        
+        // register observer service if enabled
         if (
             typeof options.enabled === "boolean" 
                 ? options.enabled
@@ -37,6 +55,8 @@ export class CetusModule extends ConfigurableModuleClass {
         ) {
             providers.push(CetusObserverService)
         }
+        
+        // register action services if enabled
         if (typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.action ?? true))
@@ -48,18 +68,23 @@ export class CetusModule extends ConfigurableModuleClass {
                 CetusClosePositionActionService
             )
         }
+        
+        // register analytics service if enabled
         if (typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.analytics ?? true))
         ) {
             providers.push(CetusAnalyticsService)
         }
+        
+        // register reserves with fees service if enabled
         if ((typeof options.enabled === "boolean" 
             ? options.enabled
             : (typeof options.enabled === "undefined" ? true : (options.enabled?.reservesWithFees ?? true)))
         ) {
             providers.push(CetusReservesWithFeesService)
         }
+        
         return {
             ...dynamicModule,
             providers: [

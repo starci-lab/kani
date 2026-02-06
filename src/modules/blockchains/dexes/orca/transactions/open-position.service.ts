@@ -5,18 +5,15 @@ import {
     AnchorUtilsService, AtaInstructionService 
 } from "../../../tx-builder"
 import {
-    BotSchema,
     OrcaLiquidityPoolMetadata,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
     AccountRole,
-    Address,
     address,
     createNoopSigner,
     generateKeyPairSigner,
     Instruction,
-    KeyPairSigner,
 } from "@solana/kit"
 import {
     InvalidPoolTokensException, 
@@ -66,7 +63,19 @@ import {
     ClmmLiquidityPoolState 
 } from "@modules/blockchains/interfaces"
 import BN from "bn.js"
+import {
+    CreateOpenPositionInstructionsParams,
+    CreateOpenPositionInstructionsResult
+} from "../types"
 
+/**
+ * Service responsible for creating open position instructions for Orca.
+ * Handles instruction construction for opening liquidity positions.
+ *
+ * @example
+ * const service = new OpenPositionInstructionService(...)
+ * const result = await service.createOpenPositionInstructions({ bot, state, tickLower, tickUpper, amountA, amountB })
+ */
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(
@@ -391,24 +400,6 @@ export class OpenPositionInstructionService {
     }
 }
 
-export interface CreateOpenPositionInstructionsParams {
-  bot: BotSchema;
-  state: ClmmLiquidityPoolState;
-  tickLower: BN;
-  tickUpper: BN;
-  liquidity: BN;
-  amountA: BN;
-  amountB: BN;
-}
-
-export interface CreateOpenPositionInstructionsResult {
-  instructions: Array<Instruction>;
-  mintKeyPair: KeyPairSigner;
-  personalPosition: Address;
-  ataAddress: Address;
-  feeAmountA: BN;
-  feeAmountB: BN;
-}
 
 export const OpenPositionWithTokenMetadataExtensionArgs = new BeetArgsStruct(
     [

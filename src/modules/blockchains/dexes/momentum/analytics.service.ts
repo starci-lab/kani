@@ -35,13 +35,20 @@ import {
 import {
     Collection 
 } from "lokijs"
+import {
+    LiquidityPoolsApiResult
+} from "./types"
 
-// Implement analytics for Momentum DEX
-// We use the API provided by Momentum to get the analytics data
+/**
+ * Service responsible for fetching and caching Momentum pool analytics data.
+ * Uses Momentum API to retrieve pool statistics and metrics.
+ *
+ * @example
+ * const service = new MomentumAnalyticsService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
-export class MomentumAnalyticsService
-implements OnModuleInit, OnApplicationBootstrap
-{
+export class MomentumAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly url = "https://api.mmt.finance/pools/v3"
     private axios: AxiosInstance
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
@@ -60,7 +67,9 @@ implements OnModuleInit, OnApplicationBootstrap
 
     async onModuleInit() {
         const key = "momentum-analytics"
-        this.axios = this.axiosService.create({ key })
+        this.axios = this.axiosService.create({
+            key 
+        })
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
             .chain()
             .find({
@@ -132,75 +141,3 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface LiquidityPoolsApiResult {
-  status: number;
-  message: string;
-  data: Array<LiquidityPool>;
-}
-
-export interface LiquidityPool {
-  poolId: string;
-
-  tokenXType: string;
-  tokenYType: string;
-
-  tickSpacing: number;
-  lpFeesPercent: string;
-  protocolFeesPercent: string;
-
-  isStable: boolean;
-  minTickRangeFactor: number;
-  isDeprecated: boolean;
-
-  currentSqrtPrice: string;
-  currentTickIndex: string;
-
-  liquidity: string;
-  liquidityHM: string;
-
-  tokenXReserve: string;
-  tokenYReserve: string;
-
-  tvl: string;
-  volume24h: string;
-  fees24h: string;
-  apy: string;
-
-  timestamp: string;
-
-  rewarders: Array<Rewarder>;
-
-  tokenX: TokenInfo;
-  tokenY: TokenInfo;
-
-  aprBreakdown: AprBreakdown;
-}
-
-export interface TokenInfo {
-  coinType: string;
-  name: string;
-  ticker: string;
-  iconUrl: string;
-  decimals: number;
-  description: string;
-  isVerified: boolean;
-  isMmtWhitelisted: boolean;
-  tokenType: string;
-  price: string;
-}
-
-export interface AprBreakdown {
-  total: string;
-  fee: string;
-  rewards: Array<RewardApr>;
-}
-
-export interface RewardApr {
-  rewarder: string;
-  apr: string;
-}
-
-export interface Rewarder {
-  rewarder: string;
-  apr: string;
-}

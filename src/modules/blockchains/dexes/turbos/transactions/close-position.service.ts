@@ -217,13 +217,3 @@ export class ClosePositionTxbService {
         }
     }
 }
-
-export interface CreateClosePositionTxbParams {
-    txb?: Transaction
-    bot: BotSchema
-    state: ClmmLiquidityPoolState
-}
-
-export interface CreateClosePositionTxbResult {
-    txb: Transaction
-}

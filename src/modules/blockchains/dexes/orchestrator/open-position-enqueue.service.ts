@@ -51,15 +51,18 @@ import {
 import {
     DynamicLiquidityPoolInfoCacheResult 
 } from "@modules/cache"
+import {
+    EnqueueOpenPositionParams
+} from "./types"
 
-export interface EnqueueOpenPositionParams {
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
-    jobId: string
-    isRetry?: boolean
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
-}
-
+/**
+ * Service responsible for enqueuing open position jobs.
+ * Validates preconditions and adds jobs to the queue.
+ *
+ * @example
+ * const service = new OpenPositionEnqueueService(...)
+ * const job = await service.enqueue({ bot, liquidityPool, jobId })
+ */
 @Injectable()
 export class OpenPositionEnqueueService {
     constructor(

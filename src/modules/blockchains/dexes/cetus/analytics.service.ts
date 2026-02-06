@@ -37,12 +37,20 @@ import Decimal from "decimal.js"
 import {
     Collection 
 } from "lokijs"
-// Implement analytics for Cetus DEX
-// We use the API provided by Cetus to get the analytics data
+import {
+    CetusPoolListResult
+} from "./types"
+
+/**
+ * Service responsible for fetching and caching Cetus DEX analytics data.
+ * Uses the Cetus API to retrieve pool statistics and updates cache periodically.
+ *
+ * @example
+ * const service = new CetusAnalyticsService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
-export class CetusAnalyticsService
-implements OnModuleInit, OnApplicationBootstrap
-{
+export class CetusAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly uri = "https://api-sui.cetus.zone/v3/sui/clmm/stats_pools"
     private axios: AxiosInstance
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
@@ -56,13 +64,22 @@ implements OnModuleInit, OnApplicationBootstrap
     private readonly lokiJSService: LokiJSService,
     ) {}
 
-    onApplicationBootstrap() {
+    /**
+     * Starts the analytics update interval on application bootstrap.
+     */
+    onApplicationBootstrap(): void {
         this.handleAnalyticsUpdateInterval()
     }
 
-    async onModuleInit() {
+    /**
+     * Initializes the service by creating axios instance and setting up liquidity pool collection.
+     */
+    async onModuleInit(): Promise<void> {
+        // create axios instance for Cetus API
         const key = "cetus-analytics"
         this.axios = this.axiosService.create({ key })
+        
+        // fetch all Cetus liquidity pools from primary memory storage
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
             .chain()
             .find({
@@ -73,23 +90,35 @@ implements OnModuleInit, OnApplicationBootstrap
             .data({
                 removeMeta: true 
             })
+        
+        // create local collection for analytics processing
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "cetus-analytics-liquidity-pools", 
             {
-                indices: ["poolAddress",
+                indices: [
+                    "poolAddress",
                     "displayId",
-                    "id"],
+                    "id"
+                ],
             })
+        
+        // insert pools into local collection
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
-    private async setBatchPoolAnalytics(
-        liquidityPools: Array<LiquidityPoolSchema>,
-    ) {
-        // Get the liquidity pool
+    /**
+     * Fetches and caches analytics data for a batch of liquidity pools.
+     *
+     * @param param - Parameters for setting batch pool analytics
+     * @param param.liquidityPools - Array of liquidity pools to process
+     */
+    private async setBatchPoolAnalytics({ liquidityPools }: { liquidityPools: Array<LiquidityPoolSchema> }): Promise<void> {
+        // skip if no pools to process
         if (!liquidityPools.length) {
             return
         }
+        
+        // fetch pool analytics from Cetus API
         const { data: { data: { list } } } = await this.axios.post<CetusPoolListResult>(
             this.uri,
             {
@@ -102,20 +131,29 @@ implements OnModuleInit, OnApplicationBootstrap
                 pools: liquidityPools.map((liquidityPool) => liquidityPool.poolAddress),
             },
         )
+        
+        // process each pool result and cache analytics
         const promises: Array<Promise<void>> = []
         const snapshotAt = this.dayjsService.now()
+        
         for (const item of list) {
             promises.push(
                 (async () => {
+                    // find matching liquidity pool
                     const liquidityPool = liquidityPools.find(
                         (liquidityPool) => liquidityPool.poolAddress === item.pool,
                     )
+                    
+                    // skip if pool not found or missing display ID
                     if (!liquidityPool || !liquidityPool.displayId) {
                         return
                     }
-                    const tvl = item.tvl
-                    const apr = item.totalApr
+                    
+                    // extract analytics data from API response
+                    const { tvl, totalApr: apr } = item
                     const { fee, vol } = item.stats[0]
+                    
+                    // build cache result
                     const poolAnalyticsCacheResult: PoolAnalyticsCacheResult = {
                         fee24H: new Decimal(fee).toString(),
                         volume24H: new Decimal(vol).toString(),
@@ -124,93 +162,51 @@ implements OnModuleInit, OnApplicationBootstrap
                         snapshotAt,
                         liquidity: new Decimal(tvl).toString(),
                     }
-                    await this.cacheService.set(
-                        {
-                            key: CacheKey.PoolAnalytics,
-                            args: [liquidityPool.id],
-                            cacheResult: poolAnalyticsCacheResult,
-                        }
-                    )
+                    
+                    // cache analytics result
+                    await this.cacheService.set({
+                        key: CacheKey.PoolAnalytics,
+                        args: [liquidityPool.id],
+                        cacheResult: poolAnalyticsCacheResult,
+                    })
                 })(),
             )
         }
+        
+        // wait for all cache operations to complete
         await this.asyncService.allIgnoreError(promises)
     }
 
-  @Interval(envConfig().dexes.cetus.interval.analytics)
-    async handleAnalyticsUpdateInterval() {
-        // split into chunks of 10
+    /**
+     * Handles periodic analytics updates.
+     * Splits pools into chunks and processes them in batches.
+     */
+    @Interval(envConfig().dexes.cetus.interval.analytics)
+    async handleAnalyticsUpdateInterval(): Promise<void> {
+        // split pools into chunks of 10 for batch processing
         const chunks = this.liquidityPoolCollection.find().reduce(
             (acc: Array<Array<LiquidityPoolSchema>>, liquidityPool, index) => {
                 const chunkIndex = new Decimal(index).div(10).floor().toNumber()
-                acc[chunkIndex] = [...(acc[chunkIndex] || []),
-                    liquidityPool]
+                acc[chunkIndex] = [
+                    ...(acc[chunkIndex] || []),
+                    liquidityPool
+                ]
                 return acc
             }, 
             [],
         )
+        
+        // process each chunk in parallel
         const promises: Array<Promise<void>> = []
         for (const chunk of chunks) {
             promises.push(
-                this.setBatchPoolAnalytics(
-                    chunk,
-                ),
+                this.setBatchPoolAnalytics({
+                    liquidityPools: chunk,
+                }),
             )
         }
+        
+        // wait for all batches to complete
         await this.asyncService.allIgnoreError(promises)
     }
-}
-
-export interface CetusPoolListResult {
-  code: number;
-  msg: string;
-  data: CetusPoolListData;
-}
-
-export interface CetusPoolListData {
-  total: number;
-  list: Array<CetusPoolInfo>;
-}
-
-export interface CetusPoolInfo {
-  pool: string;
-  feeRate: number;
-  showReverse: boolean;
-  coinA: CetusCoinInfo;
-  coinB: CetusCoinInfo;
-  tvl: string;
-  totalApr: string;
-  stats: Array<CetusPoolStat>;
-  miningRewarders: Array<CetusMiningRewarder>;
-  extensions: CetusPoolExtensions;
-}
-
-export interface CetusCoinInfo {
-  coinType: string;
-  symbol: string;
-  decimals: number;
-  isVerified: boolean;
-  logoURL: string;
-}
-
-export interface CetusPoolStat {
-  dateType: "24H" | "7D" | "30D";
-  vol: string;
-  fee: string;
-  apr: string;
-}
-
-export interface CetusMiningRewarder {
-  coinType: string;
-  symbol: string;
-  decimals: number;
-  logoURL: string;
-  display: boolean;
-  apr: string;
-  emissionsPerSecond: string;
-}
-
-export interface CetusPoolExtensions {
-  frozen: string;
-  pool_tag: string;
 }

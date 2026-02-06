@@ -6,6 +6,10 @@ import {
     DexOptions 
 } from "../types"
 
+/**
+ * Raydium module definition.
+ * Configures the Raydium DEX module with dynamic options.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder<DexOptions>().setExtras(
       {

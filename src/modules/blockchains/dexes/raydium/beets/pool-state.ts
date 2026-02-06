@@ -11,45 +11,87 @@ import {
     RewardInfo 
 } from "./reward-info"
 
+/**
+ * Raydium pool state structure.
+ * Represents the complete state of a Raydium CLMM liquidity pool.
+ */
 export class PoolState {
     constructor(
+      /** Bump seed for PDA derivation (u8). */
       readonly bump: number,
+      /** Public key of the AMM config. */
       readonly ammConfig: PublicKey,
+      /** Public key of the pool owner (creator). */
       readonly owner: PublicKey,
+      /** Public key of token A mint. */
       readonly mintA: PublicKey,
+      /** Public key of token B mint. */
       readonly mintB: PublicKey,
+      /** Public key of token A vault. */
       readonly vaultA: PublicKey,
+      /** Public key of token B vault. */
       readonly vaultB: PublicKey,
+      /** Public key of the observation account. */
       readonly observationId: PublicKey,
+      /** Decimals of token A (u8). */
       readonly mintDecimalsA: number,
+      /** Decimals of token B (u8). */
       readonly mintDecimalsB: number,
+      /** Tick spacing (u16). */
       readonly tickSpacing: number,
+      /** Total liquidity (u128). */
       readonly liquidity: bignum,
+      /** Square root price in Q64.64 format (u128). */
       readonly sqrtPriceX64: bignum,
+      /** Current tick index (i32). */
       readonly tickCurrent: number,
+      /** Fee growth global for token 0 in Q64.64 format (u128). */
       readonly feeGrowthGlobal0X64: bignum,
+      /** Fee growth global for token 1 in Q64.64 format (u128). */
       readonly feeGrowthGlobal1X64: bignum,
+      /** Protocol fees for token 0 (u64). */
       readonly protocolFeesToken0: bignum,
+      /** Protocol fees for token 1 (u64). */
       readonly protocolFeesToken1: bignum,
+      /** Swap in amount for token 0 (u128). */
       readonly swapInAmountToken0: bignum,
+      /** Swap out amount for token 1 (u128). */
       readonly swapOutAmountToken1: bignum,
+      /** Swap in amount for token 1 (u128). */
       readonly swapInAmountToken1: bignum,
+      /** Swap out amount for token 0 (u128). */
       readonly swapOutAmountToken0: bignum,
+      /** Tick array bitmap (16 * u64 = 128 bytes). */
       readonly tickArrayBitmap: Array<bignum>,
+      /** Total fees for token 0 (u64). */
       readonly totalFeesToken0: bignum,
+      /** Total fees claimed for token 0 (u64). */
       readonly totalFeesClaimedToken0: bignum,
+      /** Total fees for token 1 (u64). */
       readonly totalFeesToken1: bignum,
+      /** Total fees claimed for token 1 (u64). */
       readonly totalFeesClaimedToken1: bignum,
+      /** Fund fees for token 0 (u64). */
       readonly fundFeesToken0: bignum,
+      /** Fund fees for token 1 (u64). */
       readonly fundFeesToken1: bignum,
+      /** Pool start time (u64). */
       readonly startTime: bignum,
+      /** Recent epoch (u64). */
       readonly recentEpoch: bignum,
+      /** Array of reward information (max 3 rewards). */
       readonly rewardInfos: Array<RewardInfo>,
+      /** Pool status (u8). */
       readonly status: number,
+      /** Padding for future upgrades (7 bytes). */
       readonly padding: Array<bignum>,
+      /** Padding for future upgrades (24 * u64). */
       readonly padding1: Array<bignum>,
+      /** Padding for future upgrades (32 * u64). */
       readonly padding2: Array<bignum>,
+      /** Padding for future upgrades (u16). */
       readonly padding3: Array<bignum>,
+      /** Padding for future upgrades (u16). */
       readonly padding4: Array<bignum>,
     ) {}
   

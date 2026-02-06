@@ -57,9 +57,18 @@ import {
     Collection 
 } from "lokijs"
 
+/**
+ * Service responsible for observing and updating Meteora liquidity pool states.
+ * Fetches pool information at regular intervals and via WebSocket subscriptions, updating cache and emitting events.
+ *
+ * @example
+ * const service = new MeteoraObserverService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
 export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleInit {
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+
     constructor(
         private readonly winstonService: WinstonService,
         private readonly rpcExecutorService: RpcExecutorService,
@@ -72,7 +81,12 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         private readonly lokiJSService: LokiJSService,
     ) { }
 
+    /**
+     * Initializes the module by creating a snapshot of Meteora liquidity pools.
+     * This reduces computational complexity by working with a local collection.
+     */
     async onModuleInit() {
+        // Find Meteora liquidity pools from primary memory storage
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
             .chain()
             .find(
@@ -85,6 +99,8 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
             .data({
                 removeMeta: true 
             })
+
+        // Create a new LokiJS collection for Meteora liquidity pools
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "meteora-observer-liquidity-pools", 
             {
@@ -93,13 +109,20 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                     "dex"],
             }
         )
+
+        // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
-    // fetch the pool every 10s to ensure if no event from websocket
+    /**
+     * Handles the periodic update of pool states.
+     * Fetches information for all Meteora liquidity pools every configured interval.
+     * This ensures pool state is updated even if WebSocket events are missed.
+     */
     @Interval(envConfig().dexes.meteora.interval.observer.fetch)
     async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
+        // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (async () => {
@@ -107,30 +130,43 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                 })(),
             )
         }
+        // Execute all fetch operations concurrently, ignoring individual errors
         await this.asyncService.allIgnoreError(promises)
     }
-    // ============================================
-    // Main bootstrap
-    // ============================================
+
+    /**
+     * Called once the application has bootstrapped.
+     * Initiates periodic pool state updates and WebSocket subscriptions for all pools.
+     */
     onApplicationBootstrap() {
+        // Start periodic fetching
         this.handlePoolStateUpdateInterval()
+
+        // Start WebSocket subscriptions for each pool
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             this.observeDlmmPool(liquidityPool)
         }
     }
 
-    // ============================================
-    // Shared handler for new pool state
-    // ============================================
+    /**
+     * Handles the update of a liquidity pool's dynamic state.
+     * Stores the updated state in cache and emits a `DlmmLiquidityPoolsSynced` event.
+     *
+     * @param liquidityPool - The liquidity pool schema being updated
+     * @param state - The parsed LbPair state from on-chain data
+     * @returns The parsed pool state
+     */
     private async handlePoolStateUpdate(
         liquidityPool: LiquidityPoolSchema,
         state: ReturnType<(typeof LbPair.struct)["read"]>,
     ) {
+        // Parse dynamic DLMM liquidity pool information
         const dynamicDlmmLiquidityPoolInfo: DynamicDlmmLiquidityPoolInfoCacheResult =
         {
             activeId: new BN(state.active_id),
             rewards: state.reward_infos
-                .filter((reward) => reward.mint.toString() !== "11111111111111111111111111111111") // Filter out empty rewards
+                // Filter out empty rewards (mint address is all zeros)
+                .filter((reward) => reward.mint.toString() !== "11111111111111111111111111111111")
                 .map((reward) => ({
                     tokenAddress: `0x${reward.mint.toString()}`,
                     vault: reward.vault.toString(),
@@ -143,8 +179,10 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                 })),
             snapshotAt: this.dayjsService.now(),
         }
+
+        // Store in cache and emit event concurrently
         await this.asyncService.allIgnoreError([
-            // cache
+            // Store the parsed information in cache
             this.cacheService.set(
                 {
                     key: CacheKey.DynamicDlmmLiquidityPoolInfo,
@@ -152,7 +190,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                     cacheResult: dynamicDlmmLiquidityPoolInfo,
                 }
             ),
-            // event
+            // Emit an event indicating that DLMM liquidity pools have been synced
             this.eventEmitterService.emit(
                 {
                     event: EventName.DlmmLiquidityPoolsSynced,
@@ -166,11 +204,14 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         return state
     }
 
-    // ============================================
-    // Fetch once
-    // ============================================
+    /**
+     * Fetches the latest information for a given liquidity pool from the Solana blockchain.
+     *
+     * @param liquidityPool - The liquidity pool schema to fetch information for
+     */
     private async fetchPoolInfo(liquidityPool: LiquidityPoolSchema) {
         try {
+            // Fetch account info from Solana client
             const accountInfo = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
@@ -183,13 +224,18 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                     )
                 }
             })
-            if (!accountInfo || !accountInfo.exists)
+
+            // Validate if account info exists
+            if (!accountInfo || !accountInfo.exists) {
                 throw new SolanaAccountNotFoundException({
                     name: ErrorSolanaAccountName.Pool,
                     address: liquidityPool.poolAddress,
                     dexId: DexId.Meteora,
                     liquidityPoolId: liquidityPool.displayId,
                 })
+            }
+
+            // Parse pool state from account data (skip 8-byte discriminator)
             const state = LbPair.struct.read(Buffer.from(accountInfo.data),
                 8)
             return await this.handlePoolStateUpdate(
@@ -197,6 +243,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                 state
             )
         } catch (error) {
+            // Log any errors encountered during fetching pool info
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
                 {
@@ -207,27 +254,36 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
         }
     }
 
-    // ============================================
-    // Observe (subscribe)
-    // ============================================
+    /**
+     * Observes a DLMM pool via WebSocket subscription.
+     * Subscribes to account changes and updates pool state in real-time.
+     * Includes idle timeout mechanism to reconnect if no updates are received.
+     *
+     * @param liquidityPool - The liquidity pool schema to observe
+     */
     private async observeDlmmPool(liquidityPool: LiquidityPoolSchema) {
         try {
+            // Stage: state validation (WebSocket idle timeout must be configured)
             if (!liquidityPool.wsIdleTimeoutMs) {
                 throw new LiquidityPoolNoWsIdleTimeoutException({
                     displayId: liquidityPool.displayId,
                 })
             }
-            // infinite loop to observe the pool
+
+            // Set up abort controller and timeout mechanism for idle detection
             const abortController = new AbortController()
             let timeout: NodeJS.Timeout | undefined = undefined
             const resetTimeout = () => {
                 if (timeout) {
                     clearTimeout(timeout)
                 }
+                // Set timeout to abort connection if no updates received
                 timeout = setTimeout(() => abortController.abort(),
                     liquidityPool.wsIdleTimeoutMs
                 )
             }
+
+            // Retry subscription indefinitely on connection failures
             await this.retryService.retry({
                 options: {
                     retries: Infinity,
@@ -238,6 +294,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                             accessType: RpcAccessType.Ws,
                             callback: async ({ rpcSubscriptions }) => {
                                 const controller = new AbortController()
+                                // Subscribe to account notifications
                                 const accountNotifications = await rpcSubscriptions
                                     .accountNotifications(
                                         address(liquidityPool.poolAddress),
@@ -249,7 +306,10 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                                     .subscribe({
                                         abortSignal: controller.signal,
                                     })
+
+                                // Process each account update notification
                                 for await (const accountNotification of accountNotifications) {
+                                    // Parse pool state from notification data (skip 8-byte discriminator)
                                     const state = LbPair.struct.read(
                                         Buffer.from(
                                             accountNotification.value?.data.toString(),
@@ -257,7 +317,9 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
                                         ),
                                         8,
                                     )
+                                    // Reset idle timeout on each update
                                     resetTimeout()
+                                    // Handle the pool state update
                                     await this.handlePoolStateUpdate(liquidityPool,
                                         state)
                                 }
@@ -268,6 +330,7 @@ export class MeteoraObserverService implements OnApplicationBootstrap, OnModuleI
             }
             )
         } catch (error) {
+            // Log any errors encountered during WebSocket observation
             this.winstonService.log(WinstonLog.LiquidityPoolWsError,
                 {
                     liquidityPoolId: liquidityPool.displayId,

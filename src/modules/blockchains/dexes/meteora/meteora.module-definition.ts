@@ -1,4 +1,3 @@
-
 import {
     ConfigurableModuleBuilder 
 } from "@nestjs/common"
@@ -6,6 +5,10 @@ import {
     DexOptions 
 } from "../types"
 
+/**
+ * Meteora module definition.
+ * Configures the Meteora DEX module with dynamic options.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder<DexOptions>().setExtras(
       {

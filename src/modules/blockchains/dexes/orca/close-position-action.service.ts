@@ -59,6 +59,14 @@ import {
     PrivySignService 
 } from "@modules/privy"
 
+/**
+ * Service responsible for closing positions on Orca DEX.
+ * Handles position closure, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new OrcaClosePositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class OrcaClosePositionActionService implements IClosePositionActionService {
     constructor(
@@ -71,28 +79,31 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
     ) {}
 
     /**
-     * === Error-handling convention (DEX action services) ===
+     * Prepares a close position transaction.
+     * Validates state, builds transaction, and signs it.
      *
-     * Stages in this service:
-     * - Input validation: required params missing/invalid (throw immediately)
-     * - State validation: required bot/pool/position state missing (throw immediately)
-     * - On-chain fetch: RPC calls fail or return null (throws/bubbles)
-     * - Transaction building: instruction/message/signing validation fails (throw)
-     * - Execution: tx not executed / retry checks fail (throw)
-     *
-     * Business logic unchanged; comments + throw structure only.
+     * @param param - Parameters for preparing close position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @returns Prepared transaction with signature
+     * @throws {ActivePositionNotFoundException} If no active position is found for the bot
+     * @throws {InvalidPoolTokensException} If pool token metadata is missing
+     * @throws {PrivyMetadataNotFoundException} If Privy metadata is not found for V2 bots
+     * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
-
     async prepare(
         { bot, state }: PrepareClosePositionParams
     ): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
+
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
+
+        // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: state.static.tokenA.toString(),
@@ -103,20 +114,25 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                 $eq: state.static.tokenB.toString(),
             },
         })
-        // Stage: state validation (pool token metadata must exist)
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
             })
-        }   
+        }
+
+        // Create close position instructions
         const instructions = await this.closePositionInstructionService.createCloseInstructions({
             bot,
             state: _state,
         })
+
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
+                // Get latest blockhash for transaction lifetime
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+                // Build transaction message
                 const transactionMessage = pipe(
                     createTransactionMessage({
                         version: 0 
@@ -129,28 +145,30 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
+
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
+                            // Sign transaction with V1 signer
                             const signedTransaction = await signTransaction([signer.keyPair],
                                 transaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
+
+                            // Validate transaction before returning
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             return {
-                                prepareTxs: [
-                                    {
-                                        txHash,
-                                        solanaTx: signedTransaction,
-                                    },
-                                ],
+                                prepareTxs: [{
+                                    txHash,
+                                    solanaTx: signedTransaction,
+                                }],
                             }
                         },
                     })
                 } else {
-                    // Stage: state validation (privy signing prerequisites)
+                    // Stage: state validation (Privy signing prerequisites for V2 bots)
                     if (!bot.encryptedPrivySignerPrivateKeyPayload) {
                         throw new EncryptedPrivySignerPrivateKeyNotFoundException({
                             botId: bot.id,
@@ -161,6 +179,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             botId: bot.id,
                         })
                     }
+
+                    // Sign transaction using Privy service
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
                         lifetimeConstraint: {
                             blockhash: latestBlockhash.blockhash,
@@ -171,25 +191,48 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         walletId: bot.privyMetadata.walletId,
                     })
                     return {
-                        prepareTxs: [
-                            {
-                                txHash: signedTransaction.txHash,
-                                solanaTx: signedTransaction.signedTransaction,
-                            },
-                        ],
+                        prepareTxs: [{
+                            txHash: signedTransaction.txHash,
+                            solanaTx: signedTransaction.signedTransaction,
+                        }],
                     }
                 }
             },
         })
     }
 
-    async execute(
-        { bot, state, txCheck, stimulate, prepareTxs }: ExecuteClosePositionParams
-    ): Promise<ExecuteClosePositionResult> {
+    /**
+     * Executes a close position transaction.
+     * Handles transaction checking, stimulation, and execution.
+     *
+     * @param param - Parameters for executing close position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @param param.txCheck - Whether to check if transaction already exists
+     * @param param.prepareTxs - Array of prepared transactions
+     * @param param.stimulate - Whether to simulate transaction execution
+     * @returns Execution result with transaction hashes
+     * @throws {TransactionNotPreparedException} If the Solana transaction is missing
+     * @throws {MissingSolanaTxParamException} If the Solana transaction is missing during execution
+     * @throws {TransactionValidationFailedException} If transaction simulation fails
+     */
+    async execute({
+        bot,
+        state,
+        txCheck,
+        stimulate,
+        prepareTxs
+    }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
         const txHashes: Array<string> = []
+
+        // Process each prepared transaction
         for (const prepareTx of prepareTxs) {
-            const txHash = prepareTx.txHash
-            const solanaTx = prepareTx.solanaTx
+            const {
+                txHash,
+                solanaTx
+            } = prepareTx
+
+            // Stage: transaction validation (Solana transaction must exist)
             if (!solanaTx) {
                 throw new TransactionNotPreparedException({
                     botId: bot.id,
@@ -198,6 +241,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                     type: ErrorTransactionType.ClosePosition,
                 })
             }
+
+            // Stage: transaction checking (if txCheck is enabled and not stimulating)
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Http,
@@ -211,6 +256,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         ).send()
                     },
                 })
+
+                // If transaction already executed, log and continue
                 if (transaction) {
                     this.winstonService.log(
                         WinstonLog.ClosePositionTransactionFound,
@@ -224,16 +271,20 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                     continue
                 }
             }
+
+            // Stage: transaction validation (Solana transaction must exist for execution)
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
                     type: ErrorTransactionType.ClosePosition,
                 })
             }
+
             await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Write,
                 callback: async ({ rpc, rpcSubscriptions }) => {
                     if (stimulate) {
+                        // Simulate transaction execution
                         const transaction = await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
@@ -241,6 +292,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                                 commitment: "confirmed",
                             },
                         ).send()
+
+                        // Stage: transaction stimulation validation
                         if (transaction.value.err) {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
@@ -248,6 +301,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                                 type: ErrorTransactionType.ClosePosition,
                             })
                         }
+
+                        // Log successful simulation
                         this.winstonService.log(
                             WinstonLog.ClosePositionTransactionStimulated,
                             {
@@ -259,6 +314,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                         txHashes.push(txHash)
                         return
                     }
+
+                    // Execute transaction on-chain
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                         rpc,
                         rpcSubscriptions,
@@ -269,6 +326,8 @@ export class OrcaClosePositionActionService implements IClosePositionActionServi
                             commitment: "confirmed",
                         },
                     )
+
+                    // Log successful execution
                     this.winstonService.log(
                         WinstonLog.ClosePositionTransactionExecuted,
                         {

@@ -5,6 +5,10 @@ import {
     ConfigurableModuleBuilder 
 } from "@nestjs/common"
 
+/**
+ * Configurable module builder for CetusModule.
+ * Provides module options token and configuration type.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder<DexOptions>().setExtras(
       {

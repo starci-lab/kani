@@ -3,11 +3,24 @@ import {
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    getProgramDerivedAddress, getAddressEncoder, Address, address 
+    getProgramDerivedAddress, getAddressEncoder, address 
 } from "@solana/kit"
+import {
+    GetTickArrayPdaByStartIndexParams,
+    GetTickArrayPdaParams,
+    GetTickArrayPdaResult
+} from "../types"
 
 export const TICK_ARRAY_SIZE = 60
 
+/**
+ * Service responsible for deriving tick array PDAs for Raydium.
+ * Handles program derived address generation for tick arrays.
+ *
+ * @example
+ * const service = new TickArrayService()
+ * const result = await service.getPda({ poolStateAddress, tickIndex, tickSpacing, programAddress })
+ */
 @Injectable()
 export class TickArrayService {
 
@@ -143,31 +156,4 @@ export class TickArrayService {
         return this.getArrayStartIndex(new BN(tickIndex),
             tickSpacing)
     }
-}
-
-/* ---------------------------------------
- * Interfaces
- * -------------------------------------- */
-
-/**
- * Used internally for deriving PDA from startIndex.
- */
-export interface GetTickArrayPdaByStartIndexParams {
-    poolStateAddress: Address
-    startIndex: BN
-    programAddress: Address
-}
-
-/**
- * Public API: derive PDA using tickIndex.
- */
-export interface GetTickArrayPdaParams {
-    poolStateAddress: Address
-    tickIndex: BN
-    tickSpacing: BN
-    programAddress: Address
-}
-
-export interface GetTickArrayPdaResult {
-    pda: Address
 }

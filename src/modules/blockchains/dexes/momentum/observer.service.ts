@@ -56,9 +56,19 @@ import {
     Collection 
 } from "lokijs"
 
+/**
+ * Service responsible for observing and updating Momentum liquidity pool states.
+ * Fetches pool information at regular intervals and updates cache and emits events.
+ *
+ * @example
+ * const service = new MomentumObserverService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
 export class MomentumObserverService implements OnApplicationBootstrap, OnModuleInit {
+    // Snapshot here to reduce the computational complexity
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
+
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
         private readonly asyncService: AsyncService,
@@ -70,7 +80,12 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
         private readonly lokiJSService: LokiJSService,
     ) {}
 
+    /**
+     * Initializes the module by creating a snapshot of Momentum liquidity pools.
+     * This reduces computational complexity by working with a local collection.
+     */
     async onModuleInit() {
+        // Find Momentum liquidity pools from primary memory storage
         const liquidityPools = this.memoryStorageService.liquidityPoolCollection
             .chain()
             .find(
@@ -82,6 +97,8 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
             .data({
                 removeMeta: true 
             })
+
+        // Create a new LokiJS collection for Momentum liquidity pools
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "momentum-observer-liquidity-pools", 
             {
@@ -91,16 +108,27 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     "id"
                 ],
             })
+
+        // Insert the found liquidity pools into the new collection
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
+    /**
+     * Called once the application has bootstrapped.
+     * Initiates the periodic pool state update.
+     */
     onApplicationBootstrap() {
         this.handlePoolStateUpdateInterval()
     }
-    
+
+    /**
+     * Handles the periodic update of pool states.
+     * Fetches information for all Momentum liquidity pools.
+     */
     @Interval(envConfig().dexes.momentum.interval.observer.fetch)
     private async handlePoolStateUpdateInterval() {
         const promises: Array<Promise<void>> = []
+        // Iterate over each liquidity pool and fetch its info
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
                 (
@@ -109,13 +137,20 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     })()
             )
         }
+        // Execute all fetch operations concurrently, ignoring individual errors
         await this.asyncService.allIgnoreError(promises)
     }
 
+    /**
+     * Fetches the latest information for a given liquidity pool from the Sui blockchain.
+     *
+     * @param liquidityPool - The liquidity pool schema to fetch information for
+     */
     private async fetchPoolInfo(
         liquidityPool: LiquidityPoolSchema
     ) {
         try {
+            // Fetch object info from Sui client
             const objectInfo = await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
@@ -127,6 +162,8 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     })
                 },
             })
+
+            // Validate if object info exists
             if (objectInfo.error || !objectInfo.data) { 
                 throw new SuiObjectNotFoundException({
                     name: ErrorSuiObjectName.Pool,
@@ -135,6 +172,8 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     liquidityPoolId: liquidityPool.displayId,
                 })
             }
+
+            // Validate object data type
             if (objectInfo.data.content?.dataType !== "moveObject") {
                 throw new SuiObjectInvalidTypeException({
                     name: ErrorSuiObjectName.Pool,
@@ -143,11 +182,14 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                     liquidityPoolId: liquidityPool.displayId,
                 })
             }
+
+            // Parse pool fields and handle state update
             const fields = objectInfo.data.content.fields as unknown as MomentumSuiObjectPoolFields
             const pool = parseMomentumPool(fields)
-            await this.handlePoolStateUpdate(liquidityPool,
+            return await this.handlePoolStateUpdate(liquidityPool,
                 pool)
         } catch (error) {
+            // Log any errors encountered during fetching pool info
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError,
                 {
@@ -158,10 +200,19 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
         }
     }
 
+    /**
+     * Handles the update of a liquidity pool's dynamic state.
+     * Stores the updated state in cache and emits a `ClmmLiquidityPoolsSynced` event.
+     *
+     * @param liquidityPool - The liquidity pool schema being updated
+     * @param state - The parsed Momentum pool state
+     * @returns The parsed dynamic CLMM liquidity pool information
+     */
     private async handlePoolStateUpdate(
         liquidityPool: LiquidityPoolSchema,
         state: MomentumPool
     ) {
+        // Parse dynamic CLMM liquidity pool information
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.tickIndex,
             liquidity: state.liquidity,
@@ -176,9 +227,11 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
             feeGrowthGlobalB: state.feeGrowthGlobalY,
             snapshotAt: this.dayjsService.now(),
         }
+
+        // Store in cache and emit event concurrently
         await this.asyncService.allIgnoreError(
             [
-                // cache
+                // Store the parsed information in cache
                 this.cacheService.set(
                     {
                         key: CacheKey.DynamicClmmLiquidityPoolInfo,
@@ -186,7 +239,7 @@ export class MomentumObserverService implements OnApplicationBootstrap, OnModule
                         cacheResult: parsed,
                     }
                 ),
-                // emit event through event emitter
+                // Emit an event indicating that CLMM liquidity pools have been synced
                 this.eventEmitterService.emit(
                     {
                         event: EventName.ClmmLiquidityPoolsSynced,

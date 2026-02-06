@@ -35,8 +35,14 @@ import {
 import {
     Collection 
 } from "lokijs"
-// Implement analytics for Turbos DEX
-// We use the API provided by Turbos to get the analytics data
+import {
+    TurbosPool 
+} from "./types"
+
+/**
+ * Service responsible for fetching and caching analytics data for Turbos DEX.
+ * Uses the Turbos API to retrieve pool analytics information.
+ */
 @Injectable()
 export class TurbosAnalyticsService
 implements OnModuleInit, OnApplicationBootstrap {
@@ -52,13 +58,21 @@ implements OnModuleInit, OnApplicationBootstrap {
         private readonly dayjsService: DayjsService,
     ) { }
 
+    /**
+     * Starts the analytics update interval on application bootstrap.
+     */
     onApplicationBootstrap() {
         this.handleAnalyticsUpdateInterval()
     }
 
+    /**
+     * Initializes the analytics service by setting up collections and caches.
+     */
     async onModuleInit() {
         const key = "turbos-analytics"
-        this.axios = this.axiosService.create({ key })
+        this.axios = this.axiosService.create({
+            key 
+        })
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
             .chain()
             .find(
@@ -81,6 +95,10 @@ implements OnModuleInit, OnApplicationBootstrap {
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
+    /**
+     * Sets the analytics data for a batch of liquidity pools.
+     * @param liquidityPools - Array of liquidity pool schemas
+     */
     private async setBatchPoolAnalytics(
         liquidityPools: Array<LiquidityPoolSchema>,
     ) {
@@ -122,6 +140,10 @@ implements OnModuleInit, OnApplicationBootstrap {
         await this.asyncService.allIgnoreError(promises)
     }
 
+    /**
+     * Handles the analytics update interval.
+     * Splits pools into chunks and processes them in batches.
+     */
     @Interval(envConfig().dexes.turbos.interval.analytics)
     async handleAnalyticsUpdateInterval() {
         // split into chunks of 10
@@ -144,106 +166,4 @@ implements OnModuleInit, OnApplicationBootstrap {
         }
         await this.asyncService.allIgnoreError(promises)
     }
-}
-
-export interface TurbosObjectId {
-    id: string
-}
-export interface TurbosRewardInfoFields {
-    id: TurbosObjectId
-    vault: string
-    manager: string
-    growth_global: string
-    vault_coin_type: string
-    emissions_per_second: string
-}
-
-export interface TurbosRewardInfo {
-    id: TurbosObjectId
-    vault: string
-    manager: string
-    growth_global: string
-    vault_coin_type: string
-    emissions_per_second: string
-    fields?: TurbosRewardInfoFields // deprecated but still returned
-}
-export interface TurbosPool {
-    id: number
-
-    // raw liquidity values (on-chain, big number)
-    coin_a: string
-    coin_b: string
-    liquidity: string
-    max_liquidity_per_tick: string
-
-    liquidity_24h_avg: string
-    liquidity_7d_avg: string
-    liquidity_30d_avg: string
-
-    // fees
-    fee: string
-    fee_protocol: string
-    fee_growth_global_a: string
-    fee_growth_global_b: string
-    protocol_fees_a: string
-    protocol_fees_b: string
-
-    // price & tick
-    sqrt_price: string
-    tick_current_index: number
-    tick_spacing: string
-
-    // pool meta
-    pool_id: string
-    type: string
-    fee_type: string
-    unlocked: boolean
-    is_vault: boolean
-    auto_collect: boolean
-    flag: number
-    category: "stable" | string | null
-
-    // coin info
-    coin_symbol_a: string
-    coin_symbol_b: string
-    coin_type_a: string
-    coin_type_b: string
-
-    // depth (seems reserved, often zero)
-    add_2_percent_depth: string
-    reduce_2_percent_depth: string
-
-    // rewards
-    reward_infos: Array<TurbosRewardInfo>
-    reward_last_updated_time_ms: string
-
-    // APR
-    apr: number
-    apr_7d: number
-    apr_percent: number
-    fee_apr: number
-    reward_apr: number
-    fee_7d_apr: number
-    reward_7d_apr: number
-
-    // volume
-    volume_24h_usd: number
-    volume_7d_usd: number
-    volume_30d_usd: number
-
-    // liquidity usd
-    liquidity_usd: number
-    coin_a_liquidity_usd: number
-    coin_b_liquidity_usd: number
-
-    // fees usd
-    fee_24h_usd: number
-    fee_7d_usd: number
-
-    // misc
-    deploy_time_ms: string
-    ticks: Array<unknown>
-
-    created_at: string
-    updated_at: string
 }

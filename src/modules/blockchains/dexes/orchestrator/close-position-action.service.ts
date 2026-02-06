@@ -40,6 +40,22 @@ import {
     ExecuteClosePositionResult, 
 } from "../../interfaces"
 
+/**
+ * Service responsible for orchestrating the close position action across different DEXes.
+ * Routes and executes the close position action for a given liquidity pool state and bot.
+ *
+ * @example
+ * const service = new ClosePositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
+/**
+ * Orchestrator service for close position actions across multiple DEXes.
+ * Routes close position operations to DEX-specific services based on pool configuration.
+ *
+ * @example
+ * const service = new ClosePositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class ClosePositionActionService {
     constructor(
@@ -56,25 +72,21 @@ export class ClosePositionActionService {
     ) {}
 
     /**
-     * === Error-handling convention (DEX orchestrators) ===
+     * Resolves a DEX record from memory storage or throws an exception.
+     * Stage: state validation
      *
-     * Stages:
-     * - Input validation: required params are missing/invalid (throw immediately)
-     * - State validation: bot/pool/dex state is missing or inconsistent (throw immediately)
-     * - On-chain / data fetch: fetching required dynamic state fails (throws from called service)
-     * - Transaction building: DEX-specific builder throws (bubble up)
-     * - Execution: DEX-specific executor throws (bubble up)
+     * @param id - The DEX ID to look up
+     * @returns The DEX record
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
      */
-
-    /** State validation: resolve a DEX record from memory storage or throw `DexNotFoundException`. */
     private getDexOrThrow(id: string) {
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne(
-            {
-                id: {
-                    $eq: id,
-                },
-            }
-        )
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
+            id: {
+                $eq: id,
+            },
+        })
+
+        // Stage: state validation (DEX must exist)
         if (!dex) {
             throw new DexNotFoundException({
                 id 
@@ -84,8 +96,11 @@ export class ClosePositionActionService {
     }
 
     /**
-     * State/config validation: ensure the DEX is enabled for this executor instance.
-     * Throws `DexNotImplementedException` (existing behavior) when disabled.
+     * Ensures the DEX is enabled for this executor instance.
+     * Stage: state/config validation
+     *
+     * @param displayId - The DEX display ID to check
+     * @throws {DexNotImplementedException} When the DEX is not enabled in module options
      */
     private assertDexEnabledOrThrow(displayId: DexId) {
         if (!this.options.dexIds?.includes(displayId)) {
@@ -95,13 +110,36 @@ export class ClosePositionActionService {
         }
     }
 
-    async prepare(params: PrepareClosePositionParams,
-    ): Promise<PrepareClosePositionResult> {
-        const { bot, state } = params
+    /**
+     * Prepares the close position action for a given liquidity pool state and bot.
+     * Stage: state/config validation (DEX must exist and be enabled for transaction building)
+     *
+     * @param params - Parameters for preparing the close position action
+     * @param params.bot - The bot schema
+     * @param params.state - The liquidity pool state
+     * @returns The prepared close position action result
+     */
+    /**
+     * Prepares a close position transaction.
+     * Delegates preparation logic to DEX-specific service based on pool configuration.
+     *
+     * @param params - Parameters for preparing close position
+     * @returns Prepared transaction with signature
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not enabled or not supported
+     */
+    async prepare(params: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
+        const {
+            bot,
+            state
+        } = params
+
         // Stage: state/config validation (DEX must exist and be enabled for transaction building)
         const dexId = state.static.dex.toString()
         const dex = this.getDexOrThrow(dexId)
         this.assertDexEnabledOrThrow(dex.displayId)
+
+        // Route to DEX-specific prepare service
         switch (dex.displayId) {
         case DexId.FlowX: {
             return await this.flowXClosePositionActionService.prepare({
@@ -141,15 +179,27 @@ export class ClosePositionActionService {
         }
     }
 
+    /**
+     * Executes a close position transaction.
+     * Delegates execution logic to DEX-specific service based on pool configuration.
+     *
+     * @param params - Parameters for executing close position
+     * @returns Execution result with transaction hashes
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not supported
+     * @note `execute()` does not enforce `options.dexIds` (enabled DEX set).
+     *       This preserves existing behavior.
+     */
     async execute(
         params: ExecuteClosePositionParams,
     ): Promise<ExecuteClosePositionResult> {
         const { state } = params
+
         // Stage: state validation (DEX must exist for execution routing)
         const dexId = state.static.dex.toString()
         const dex = this.getDexOrThrow(dexId)
-        // NOTE: existing behavior: execute() does not enforce `options.dexIds` (enabled DEX set).
-        // We keep that behavior and document it here.
+
+        // Route to DEX-specific execute service
         switch (dex.displayId) {
         case DexId.Raydium: {
             return await this.raydiumClosePositionActionService.execute(params)

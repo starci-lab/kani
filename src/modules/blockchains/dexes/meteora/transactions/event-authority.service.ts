@@ -2,9 +2,21 @@ import {
     Injectable 
 } from "@nestjs/common"
 import {
-    getProgramDerivedAddress, Address, address 
+    getProgramDerivedAddress, address 
 } from "@solana/kit"
+import {
+    GetEventAuthorityPdaParams,
+    GetEventAuthorityPdaResult
+} from "../types"
 
+/**
+ * Service responsible for deriving event authority PDAs for Meteora.
+ * Handles program derived address generation for event authorities.
+ *
+ * @example
+ * const service = new EventAuthorityService()
+ * const result = await service.getPda({ programAddress })
+ */
 @Injectable()
 export class EventAuthorityService {
     /**
@@ -23,12 +35,4 @@ export class EventAuthorityService {
             pda: address(pda),
         }
     }
-}
-
-export interface GetEventAuthorityPdaParams {
-    programAddress: Address
-}
-
-export interface GetEventAuthorityPdaResult {
-    pda: Address
 }

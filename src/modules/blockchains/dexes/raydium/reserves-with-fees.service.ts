@@ -58,6 +58,15 @@ import {
     DynamicClmmRewardInfo,
 } from "@modules/cache"
 
+/**
+ * Service responsible for calculating reserves and fees for Raydium CLMM positions.
+ * Fetches on-chain data for position and tick arrays to compute current reserves,
+ * accumulated fees, and rewards.
+ *
+ * @example
+ * const service = new RaydiumReservesWithFeesService(...)
+ * const result = await service.reservesWithFees({ state, bot })
+ */
 @Injectable()
 export class RaydiumReservesWithFeesService implements IReservesWithFeesService {
     constructor(
@@ -69,8 +78,24 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
         private readonly clmmReservesFormulaService: ClmmReservesFormulaService,
     ) {}
 
+    /**
+     * Computes the current reserves, accumulated fees, and rewards for a Raydium CLMM position.
+     *
+     * @param param - Parameters for calculating reserves with fees
+     * @param param.state - The CLMM liquidity pool state
+     * @param param.bot - The bot schema containing active position details
+     * @returns The computed reserves, fees, and rewards
+     * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
+     * @throws {ActivePositionNotFoundException} If no active position is found for the bot
+     * @throws {PositionClmmStateNotFoundException} If CLMM state is missing for the active position
+     * @throws {InvalidPoolTokensException} If token A or B metadata is not found
+     * @throws {SolanaAccountNotFoundException} If position or tick array accounts are not found on-chain
+     * @throws {MissingActivePositionLiquidityException} If position has no liquidity
+     * @throws {TokenNotFoundException} If a reward token's metadata is not found
+     */
     async reservesWithFees({ bot, state }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
+
         // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
@@ -84,19 +109,28 @@ export class RaydiumReservesWithFeesService implements IReservesWithFeesService 
             })
         }
 
-        const positionId = bot.activePosition.associatedPosition.positionId
+        // Extract position details
+        const {
+            positionId,
+            clmmState: {
+                tickLower: tickLowerStr,
+                tickUpper: tickUpperStr
+            }
+        } = bot.activePosition.associatedPosition
+        const tickLower = new BN(tickLowerStr)
+        const tickUpper = new BN(tickUpperStr)
+
         // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new PositionClmmStateNotFoundException({
-                positionId: bot.activePosition.associatedPosition.positionId,
+                positionId,
                 botId: bot.id,
             })
         }
-        const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
-        const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
 
-        const { programAddress } =
-            _state.static.metadata as RaydiumLiquidityPoolMetadata
+        const {
+            programAddress
+        } = _state.static.metadata as RaydiumLiquidityPoolMetadata
 
         // ----------------------------
         // Token validation

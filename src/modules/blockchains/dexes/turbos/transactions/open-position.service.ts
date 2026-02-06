@@ -45,7 +45,19 @@ import Decimal from "decimal.js"
 import {
     envConfig 
 } from "@modules/env"
+import {
+    CreateOpenPositionTxbParams,
+    CreateOpenPositionTxbResult
+} from "../types"
 
+/**
+ * Service responsible for creating open position transaction builders for Turbos.
+ * Handles transaction construction for opening liquidity positions.
+ *
+ * @example
+ * const service = new OpenPositionTxbService(...)
+ * const result = await service.createOpenPositionTxb({ bot, state, tickLower, tickUpper, amountA, amountB })
+ */
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
@@ -231,21 +243,4 @@ export class OpenPositionTxbService {
             feeAmountB,
         }
     }
-}
-
-export interface CreateOpenPositionTxbParams {
-    txb?: Transaction
-    state: ClmmLiquidityPoolState
-    tickLower: BN
-    tickUpper: BN
-    amountAMax: BN
-    amountBMax: BN
-    bot: BotSchema
-    liquidity: BN
-}
-
-export interface CreateOpenPositionTxbResult {
-    txb: Transaction
-    feeAmountA: BN
-    feeAmountB: BN
 }

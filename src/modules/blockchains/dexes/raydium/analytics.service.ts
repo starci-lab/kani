@@ -35,13 +35,20 @@ import Decimal from "decimal.js"
 import {
     Collection 
 } from "lokijs"
+import {
+    PoolResult
+} from "./types"
 
-// Implement analytics for Raydium DEX
-// We use the API provided by Raydium to get the analytics data
+/**
+ * Service responsible for fetching and caching Raydium pool analytics data.
+ * Uses Raydium API to retrieve pool statistics and metrics.
+ *
+ * @example
+ * const service = new RaydiumAnalyticsService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
-export class RaydiumAnalyticsService
-implements OnModuleInit, OnApplicationBootstrap
-{
+export class RaydiumAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private url = "https://api-v3.raydium.io/pools/info/ids"
     private axios: AxiosInstance
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
@@ -144,77 +151,4 @@ implements OnModuleInit, OnApplicationBootstrap
         }
         await this.asyncService.allIgnoreError(promises)
     }
-}
-
-export interface PoolResult {
-  id: string;
-  success: boolean;
-  data: Array<RaydiumPool>;
-}
-
-export interface RaydiumPool {
-  type: string;
-  programId: string;
-  id: string;
-  mintA: TokenInfo;
-  mintB: TokenInfo;
-  rewardDefaultPoolInfos: string;
-  rewardDefaultInfos: Array<RewardInfo>;
-  price: number;
-  mintAmountA: number;
-  mintAmountB: number;
-  feeRate: number;
-  openTime: string;
-  tvl: number;
-  day: PeriodStats;
-  week: PeriodStats;
-  month: PeriodStats;
-  pooltype: Array<string>;
-  farmUpcomingCount: number;
-  farmOngoingCount: number;
-  farmFinishedCount: number;
-  config: PoolConfig;
-  burnPercent: number;
-  launchMigratePool: boolean;
-}
-
-export interface TokenInfo {
-  chainId: number;
-  address: string;
-  programId: string;
-  logoURI: string;
-  symbol: string;
-  name: string;
-  decimals: number;
-  tags: Array<string>;
-  extensions: Record<string, string>;
-}
-
-export interface RewardInfo {
-  mint: TokenInfo;
-  perSecond: string;
-  startTime: string;
-  endTime: string;
-}
-
-export interface PeriodStats {
-  volume: number;
-  volumeQuote: number;
-  volumeFee: number;
-  apr: number;
-  feeApr: number;
-  priceMin: number;
-  priceMax: number;
-  rewardApr: Array<number>;
-}
-
-export interface PoolConfig {
-  id: string;
-  index: number;
-  protocolFeeRate: number;
-  tradeFeeRate: number;
-  tickSpacing: number;
-  fundFeeRate: number;
-  defaultRange: number;
-  defaultRangePoint: Array<number>;
 }

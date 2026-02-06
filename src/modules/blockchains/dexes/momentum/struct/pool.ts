@@ -9,67 +9,114 @@ import {
     parseSuiI64 
 } from "../../../structs"
 
-/** ---------- OBSERVATION ---------- */
-
+/**
+ * Represents the observation fields of a Momentum Pool Sui object.
+ */
 export interface MomentumSuiObjectPoolObservation {
-    type: string // oracle::Observation
+    /** Type name of the observation object. */
+    type: string
+    /** Observation fields. */
     fields: {
+        /** Whether the observation is initialized. */
         initialized: boolean
+        /** Seconds per liquidity cumulative (u128 as string). */
         seconds_per_liquidity_cumulative: string
+        /** Tick cumulative (i64 object). */
         tick_cumulative: SuiObjectI64
+        /** Timestamp in seconds (u64 as string). */
         timestamp_s: string
     }
 }
 
-/** ---------- REWARD INFO ---------- */
-
+/**
+ * Represents the reward info fields of a Momentum Pool Sui object.
+ */
 export interface MomentumSuiObjectPoolRewardInfo {
+    /** Type name of the reward info object. */
     type: string
+    /** Reward info fields. */
     fields: {
+        /** Ended at seconds (u64 as string). */
         ended_at_seconds: string
+        /** Last update time (u64 as string). */
         last_update_time: string
+        /** Reward coin type. */
         reward_coin_type: TypeName
+        /** Reward growth global (u128 as string). */
         reward_growth_global: string
+        /** Reward per seconds (u64 as string). */
         reward_per_seconds: string
+        /** Total reward (u128 as string). */
         total_reward: string
+        /** Total reward allocated (u128 as string). */
         total_reward_allocated: string
     }
 }
 
-/** ---------- ROOT POOL INTERFACE ---------- */
-
+/**
+ * Represents the raw fields of a Momentum Pool Sui object.
+ * This interface matches the exact structure returned from Sui blockchain.
+ */
 export interface MomentumSuiObjectPoolFields {
+    /** Fee growth global X (u128 as string). */
     fee_growth_global_x: string
+    /** Fee growth global Y (u128 as string). */
     fee_growth_global_y: string
+    /** Flash loan fee rate (u64 as string). */
     flash_loan_fee_rate: string
+    /** Pool object ID. */
     id: SuiObjectID
+    /** Liquidity amount (u128 as string). */
     liquidity: string
+    /** Max liquidity per tick (u128 as string). */
     max_liquidity_per_tick: string
+    /** Observation cardinality (u16 as string). */
     observation_cardinality: string
+    /** Observation cardinality next (u16 as string). */
     observation_cardinality_next: string
+    /** Observation index (u16 as string). */
     observation_index: string
+    /** Array of observations. */
     observations: Array<MomentumSuiObjectPoolObservation>
+    /** Protocol fee share (u64 as string). */
     protocol_fee_share: string
+    /** Protocol fee X (u64 as string). */
     protocol_fee_x: string
+    /** Protocol fee Y (u64 as string). */
     protocol_fee_y: string
+    /** Protocol flash loan fee share (u64 as string). */
     protocol_flash_loan_fee_share: string
+    /** Reserve X (u64 as string). */
     reserve_x: string
+    /** Reserve Y (u64 as string). */
     reserve_y: string
+    /** Array of reward information. */
     reward_infos: Array<MomentumSuiObjectPoolRewardInfo>
+    /** Square root price (u128 as string). */
     sqrt_price: string
+    /** Swap fee rate (u64 as string). */
     swap_fee_rate: string
+    /** Current tick index (i32). */
     tick_index: SuiObjectI32
+    /** Tick spacing. */
     tick_spacing: number
+    /** Type X. */
     type_x: TypeName
+    /** Type Y. */
     type_y: TypeName
 }
 
+/**
+ * Type alias for Momentum Pool Sui object.
+ */
 export type MomentumSuiObjectPool = SuiObject<
     MomentumSuiObjectPoolFields,
     `${string}::pool::Pool`
 >
 
-// ========== PARSED POOL INTERFACE ==========
+/**
+ * Parsed Momentum pool interface with normalized field names and BN types.
+ */
 export interface MomentumPool {
     feeGrowthGlobalX: BN
     feeGrowthGlobalY: BN
@@ -109,9 +156,14 @@ export interface MomentumPool {
     typeY: string
 }
 
-// ========== PARSER FUNCTION ==========
 /**
- * Parses a Momentum Pool Sui object into a MomentumPool interface
+ * Parses a Momentum Pool Sui object into a normalized MomentumPool interface.
+ *
+ * @param target - The raw Momentum pool fields from Sui object
+ * @returns Parsed pool with normalized field names and BN types
+ *
+ * @example
+ * const pool = parseMomentumPool(suiObject.content.fields)
  */
 export const parseMomentumPool = (target: MomentumSuiObjectPoolFields): MomentumPool => {
     return {

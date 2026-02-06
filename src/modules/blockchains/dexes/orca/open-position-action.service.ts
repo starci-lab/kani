@@ -73,6 +73,14 @@ import {
     PrivySignService 
 } from "@modules/privy"
 
+/**
+ * Service responsible for opening positions on Orca DEX.
+ * Handles position creation, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new OrcaOpenPositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class OrcaOpenPositionActionService implements IOpenActionService {
     constructor(
@@ -86,19 +94,19 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
     ) { }
 
     /**
-     * === Error-handling convention (DEX action services) ===
+     * Prepares an open position transaction.
+     * Validates state, calculates amounts, builds transaction, and signs it.
      *
-     * Stages in this service:
-     * - Input validation: required params missing/invalid (throw immediately)
-     * - State validation: required bot/pool state missing (throw immediately)
-     * - On-chain fetch: RPC account fetch fails or returns null (throw)
-     * - Transaction building: instruction/message/signing validation fails (throw)
-     * - Execution: tx not executed / retry checks fail (throw)
-     * - Event parsing: required tx fields are missing (throw)
-     *
-     * Business logic unchanged; comments + throw structure only.
+     * @param param - Parameters for preparing open position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @returns Prepared transaction with position details
+     * @throws {BalanceSnapshotsNotFoundException} If balance snapshots are missing
+     * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
+     * @throws {InvalidPoolTokensException} If pool token metadata is missing
+     * @throws {PrivyMetadataNotFoundException} If Privy metadata is not found for V2 bots
+     * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
-
     async prepare(
         {
             state,
@@ -106,6 +114,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }: PrepareOpenPositionParams
     ): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
+
         // Stage: state validation (requires balance snapshots for sizing / tick math)
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
@@ -118,8 +127,16 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
+
+        // Extract balance amounts from snapshots
+        const {
+            targetBalanceAmount: snapshotTargetBalanceAmount,
+            quoteBalanceAmount: snapshotQuoteBalanceAmount
+        } = bot.balanceSnapshots
+        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
+
+        // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -132,21 +149,29 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
+
+        // Determine if target token is token A
         const targetIsA = bot.targetToken.toString() === tokenA.id
-        const { 
-            tickLower, 
+
+        // Find optimal tick range based on balance amounts
+        const {
+            tickLower,
             tickUpper,
             liquidity,
         } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.dynamic.tickCurrent,
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
-            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
-            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetBalanceAmount: snapshotTargetBalanceAmountBN,
+            quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
         })
-        const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
-        const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
+
+        // Calculate amounts based on target token
+        const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+
+        // Create open position instructions
         const {
             mintKeyPair,
             ataAddress,
@@ -154,21 +179,23 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
             feeAmountA,
             feeAmountB,
             personalPosition,
-        } = await this.openPositionInstructionService.createOpenPositionInstructions(
-            {
-                bot,
-                state: _state,
-                liquidity,
-                amountA,
-                amountB,
-                tickLower,
-                tickUpper,
-            }
-        )
+        } = await this.openPositionInstructionService.createOpenPositionInstructions({
+            bot,
+            state: _state,
+            liquidity,
+            amountA,
+            amountB,
+            tickLower,
+            tickUpper,
+        })
+
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
+                // Get latest blockhash for transaction lifetime
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+                // Build transaction message
                 const transactionMessage = pipe(
                     createTransactionMessage({
                         version: 0 
@@ -181,31 +208,34 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
+
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
+                            // Sign transaction with V1 signer and mint keypair
                             const signedTransaction = await signTransaction(
-                                [signer.keyPair, 
-                                    mintKeyPair.keyPair]
-                                , transaction
+                                [signer.keyPair,
+                                    mintKeyPair.keyPair],
+                                transaction
                             )
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
+
+                            // Validate transaction before returning
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             const txHash = transactionSignature.toString()
-                            // get the orca position metadata
+
+                            // Get the Orca position metadata
                             const metadata: OrcaPositionMetadata = {
                                 nftMintAddress: mintKeyPair.address.toString(),
                                 ataAddress: ataAddress.toString(),
                             }
                             return {
-                                prepareTxs: [
-                                    {
-                                        txHash,
-                                        solanaTx: signedTransaction,
-                                    },
-                                ],
+                                prepareTxs: [{
+                                    txHash,
+                                    solanaTx: signedTransaction,
+                                }],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
@@ -218,6 +248,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    // Stage: state validation (Privy signing prerequisites for V2 bots)
                     if (!bot.privyMetadata) {
                         throw new PrivyMetadataNotFoundException({
                             botId: bot.id,
@@ -228,7 +259,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                             botId: bot.id,
                         })
                     }
-                    // partial sign the transaction
+
+                    // Partially sign with mint keypair, then sign with Privy
                     const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
                         transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
@@ -240,17 +272,17 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })
+
+                    // Get the Orca position metadata
                     const metadata: OrcaPositionMetadata = {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
                     return {
-                        prepareTxs: [
-                            {
-                                txHash: signedTransaction.txHash,
-                                solanaTx: signedTransaction.signedTransaction,
-                            },
-                        ],
+                        prepareTxs: [{
+                            txHash: signedTransaction.txHash,
+                            solanaTx: signedTransaction.signedTransaction,
+                        }],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -265,6 +297,22 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         })
     }
 
+    /**
+     * Executes an open position transaction.
+     * Handles transaction checking, stimulation, and execution.
+     *
+     * @param param - Parameters for executing open position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @param param.txCheck - Whether to check if transaction already exists
+     * @param param.positionId - Position ID to confirm
+     * @param param.prepareTxs - Array of prepared transactions
+     * @param param.stimulate - Whether to simulate transaction execution
+     * @returns Execution result with position ID and transaction hashes
+     * @throws {MissingPositionIdParamException} If position ID is missing
+     * @throws {MissingSolanaTxParamException} If the Solana transaction is missing
+     * @throws {TransactionValidationFailedException} If transaction simulation fails
+     */
     async execute({
         bot,
         state,
@@ -273,6 +321,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         stimulate,
         prepareTxs,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // Stage: input validation (position ID must be provided)
         if (!positionId) {
             throw new MissingPositionIdParamException({
                 botId: bot.id,
@@ -281,7 +330,10 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }
         const _state = state as ClmmLiquidityPoolState
         const txHashes: Array<string> = []
+
+        // Process each prepared transaction
         for (const prepareTx of prepareTxs) {
+            // Stage: transaction checking (if txCheck is enabled and not stimulating)
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Http,
@@ -295,6 +347,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         ).send()
                     },
                 })
+
+                // If transaction already executed, log and continue
                 if (transaction) {
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionFound,
@@ -309,7 +363,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 }
             }
 
-            const solanaTx = prepareTx.solanaTx
+            // Stage: transaction validation (Solana transaction must exist)
+            const { solanaTx } = prepareTx
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
@@ -321,6 +376,7 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                 accessType: RpcAccessType.Write,
                 callback: async ({ rpc, rpcSubscriptions }) => {
                     if (stimulate) {
+                        // Simulate transaction execution
                         const transaction = await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
@@ -328,6 +384,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                                 commitment: "confirmed",
                             },
                         ).send()
+
+                        // Stage: transaction stimulation validation
                         if (transaction.value.err) {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
@@ -335,6 +393,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                                 type: ErrorTransactionType.OpenPosition,
                             })
                         }
+
+                        // Log successful simulation
                         this.winstonService.log(
                             WinstonLog.OpenPositionTransactionStimulated,
                             {
@@ -346,6 +406,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         txHashes.push(prepareTx.txHash)
                         return
                     }
+
+                    // Execute transaction on-chain
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                         rpc,
                         rpcSubscriptions,
@@ -356,6 +418,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                             commitment: "confirmed",
                         },
                     )
+
+                    // Log successful execution
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionExecuted,
                         {
@@ -374,21 +438,31 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
         }
     }
 
-    async confirm(
-        {
-            state,
-            positionId,
-        }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResult> {
+    /**
+     * Confirms an open position by fetching position account from chain.
+     *
+     * @param param - Parameters for confirming open position
+     * @param param.state - CLMM liquidity pool state
+     * @param param.positionId - Position account address
+     * @returns Confirmation result with position liquidity
+     * @throws {SolanaAccountNotFoundException} If position account is not found on-chain
+     */
+    async confirm({
+        state,
+        positionId,
+    }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
+                // Fetch position account from chain
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 
                     address(positionId),
                     {
                         commitment: "confirmed",
                     })
+
+                // Stage: on-chain fetch validation (position account must exist)
                 if (!positionInfo || !positionInfo.exists) {
                     throw new SolanaAccountNotFoundException({
                         name: ErrorSolanaAccountName.PersonalPosition,
@@ -397,6 +471,8 @@ export class OrcaOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: state.static.displayId,
                     })
                 }
+
+                // Deserialize position state (skip 8-byte discriminator)
                 const [positionState] = Position.struct.deserialize(Buffer.from(positionInfo.data),
                     8)
                 return {

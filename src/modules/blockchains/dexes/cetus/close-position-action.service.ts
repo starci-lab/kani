@@ -50,6 +50,14 @@ import {
     PrivySignService 
 } from "@modules/privy"
 
+/**
+ * Service responsible for closing positions on Cetus DEX.
+ * Handles position closure, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new CetusClosePositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class CetusClosePositionActionService implements IClosePositionActionService {
     constructor(
@@ -62,20 +70,18 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
     ) {}
 
     /**
-     * === Error-handling convention (DEX action services) ===
+     * Prepares a close position transaction.
+     * Validates state, builds transaction, and signs it.
      *
-     * Stages in this service:
-     * - Input validation: required params missing/invalid (throw immediately)
-     * - State validation: required bot/pool/position state missing (throw immediately)
-     * - Transaction building/validation: dev-inspect/build/sign failures (throw)
-     * - Execution: tx not executed / retry checks fail (throw)
+     * @param param - Parameters for preparing close position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @returns Prepared transaction with signature
      *
-     * Business logic unchanged; comments + throw structure only.
+     * @example
+     * const result = await service.prepare({ bot, state })
      */
-
-    async prepare(
-        { bot, state }: PrepareClosePositionParams
-    ): Promise<PrepareClosePositionResult> {
+    async prepare({ bot, state }: PrepareClosePositionParams): Promise<PrepareClosePositionResult> {
         const _state = state as ClmmLiquidityPoolState
         // Stage: state validation (close requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
@@ -162,26 +168,36 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
         })
     }
 
-    async execute(
-        {
-            bot,
-            state,
-            txCheck,
-            prepareTxs,
-            stimulate,
-        }: ExecuteClosePositionParams
-    ): Promise<ExecuteClosePositionResult> {
-        // sui require 1 tx only
+    /**
+     * Executes a close position transaction.
+     * Handles transaction checking, stimulation, and execution.
+     *
+     * @param param - Parameters for executing close position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @param param.txCheck - Whether to check if transaction already exists
+     * @param param.prepareTxs - Array of prepared transactions
+     * @param param.stimulate - Whether to simulate transaction execution
+     * @returns Execution result with transaction hashes
+     *
+     * @example
+     * const result = await service.execute({ bot, state, prepareTxs, txCheck, stimulate })
+     */
+    async execute({ bot, state, txCheck, prepareTxs, stimulate }: ExecuteClosePositionParams): Promise<ExecuteClosePositionResult> {
+        // Sui requires exactly 1 transaction
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
                 operation: ErrorSuiSingleTransactionRequiredOperation.ClosePosition,
                 numTxs: prepareTxs.length,
             })
         }
+        
+        // extract transaction details
         const [prepareTx] = prepareTxs
-        const txHash = prepareTx.txHash
-        const signatureWithBytes = prepareTx.signatureWithBytes
+        const { txHash, signatureWithBytes } = prepareTx
         const _state = state as ClmmLiquidityPoolState
+        
+        // check if transaction already exists on-chain
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -196,6 +212,8 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                     },
                 })
             )
+            
+            // return if transaction already executed successfully
             if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 this.winstonService.log(
                     WinstonLog.ClosePositionTransactionFound,
@@ -210,25 +228,29 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                 }
             }
         }
+        
+        // validate signature exists
         if (!signatureWithBytes) {
-            throw new TransactionNotPreparedException(
-                {
-                    botId: bot.id,
-                    txHash,
-                    liquidityPoolId: _state.static.displayId,
-                    type: ErrorTransactionType.ClosePosition,
-                }
-            )
+            throw new TransactionNotPreparedException({
+                botId: bot.id,
+                txHash,
+                liquidityPoolId: _state.static.displayId,
+                type: ErrorTransactionType.ClosePosition,
+            })
         }
+        
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (stimulate) {
+                    // simulate transaction execution
                     const transactionBlock = Transaction.from(signatureWithBytes.bytes)
                     const devInspect = await suiClient.devInspectTransactionBlock({
                         transactionBlock,
                         sender: bot.accountAddress,
                     })
+                    
+                    // validate simulation results
                     if (devInspect.effects.status.status !== "success") {
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
@@ -237,6 +259,8 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                             type: ErrorTransactionType.ClosePosition,
                         })
                     }
+                    
+                    // log successful simulation
                     this.winstonService.log(
                         WinstonLog.ClosePositionTransactionStimulated, 
                         {
@@ -249,6 +273,8 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         txHashes: [txHash],
                     }
                 }
+                
+                // execute transaction on-chain
                 const { digest, effects } = await suiClient.executeTransactionBlock({
                     transactionBlock: signatureWithBytes.bytes,
                     signature: signatureWithBytes.signature,
@@ -256,6 +282,8 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         showEffects: true,
                     },
                 })
+                
+                // validate execution results
                 if (effects?.status?.status !== "success") {
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
@@ -263,9 +291,13 @@ export class CetusClosePositionActionService implements IClosePositionActionServ
                         liquidityPoolId: _state.static.displayId,
                     })
                 }
+                
+                // wait for transaction confirmation
                 await suiClient.waitForTransaction({
                     digest,
                 })
+                
+                // log successful execution
                 this.winstonService.log(
                     WinstonLog.ClosePositionTransactionExecuted, 
                     {

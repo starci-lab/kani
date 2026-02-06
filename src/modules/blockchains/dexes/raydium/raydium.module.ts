@@ -26,8 +26,18 @@ import {
     RaydiumReservesWithFeesService,
 } from "./reserves-with-fees.service"
 
+/**
+ * Raydium module.
+ * Configures the Raydium DEX module with dynamic options.
+ */
 @Injectable()
 export class RaydiumModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Raydium module with dynamic options.
+     *
+     * @param options - Dynamic options for the Raydium module
+     * @returns Dynamic module with registered providers and exports
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

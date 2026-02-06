@@ -1,3 +1,7 @@
+/**
+ * Re-exports of DEX module components.
+ * Provides a unified entry point for DEX integrations.
+ */
 export * from "./cetus"
 export * from "./turbos"
 export * from "./momentum"

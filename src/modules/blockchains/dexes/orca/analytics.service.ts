@@ -35,13 +35,20 @@ import Decimal from "decimal.js"
 import {
     Collection 
 } from "lokijs"
+import {
+    WhirlpoolPoolResult
+} from "./types"
 
-// Implement analytics for Orca DEX
-// We use the API provided by Orca to get the analytics data
+/**
+ * Service responsible for fetching and caching Orca pool analytics data.
+ * Uses Orca API to retrieve pool statistics and metrics.
+ *
+ * @example
+ * const service = new OrcaAnalyticsService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
-export class OrcaAnalyticsService
-implements OnModuleInit, OnApplicationBootstrap
-{
+export class OrcaAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly url = "https://api.orca.so/v2/solana/pools"
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     private axios: AxiosInstance
@@ -142,103 +149,4 @@ implements OnModuleInit, OnApplicationBootstrap
         }
         await this.asyncService.allIgnoreError(promises)
     }
-}
-
-export interface WhirlpoolPoolResult {
-    data: Array<WhirlpoolPool>
-  }
-  
-export interface WhirlpoolPool {
-    address: string
-    whirlpoolsConfig: string
-    whirlpoolBump: Array<number>
-    tickSpacing: number
-    tickSpacingSeed: Array<number>
-    feeRate: number
-    protocolFeeRate: number
-    liquidity: string
-    sqrtPrice: string
-    tickCurrentIndex: number
-    protocolFeeOwedA: string
-    protocolFeeOwedB: string
-    tokenMintA: string
-    tokenVaultA: string
-    feeGrowthGlobalA: string
-    tokenMintB: string
-    tokenVaultB: string
-    feeGrowthGlobalB: string
-    rewardLastUpdatedTimestamp: string
-    updatedAt: string
-    updatedSlot: number
-    writeVersion: number
-    hasWarning: boolean
-    poolType: string
-    tokenA: TokenA
-    tokenB: TokenB
-    price: string
-    tvlUsdc: string
-    yieldOverTvl: string
-    tokenBalanceA: string
-    tokenBalanceB: string
-    stats: Stats
-    rewards: Array<Reward>
-    addressLookupTable: string
-    feeTierIndex: number
-    adaptiveFeeEnabled: boolean
-    tradeEnableTimestamp: string
-  }
-  
-export interface TokenA {
-    address: string
-    programId: string
-    imageUrl: string
-    name: string
-    symbol: string
-    decimals: number
-  }
-  
-export interface TokenB {
-    address: string
-    programId: string
-    imageUrl: string
-    name: string
-    symbol: string
-    decimals: number
-  }
-  
-export interface Stats {
-    "24h": Stats24h
-    "7d": Stats7d
-    "30d": Stats30d
-  }
-  
-export interface Stats24h {
-    volume: string
-    fees: string
-    rewards?: string
-    yieldOverTvl: string
-  }
-  
-export interface Stats7d {
-    volume: string
-    fees: string
-    rewards?: string
-    yieldOverTvl: string
-  }
-  
-export interface Stats30d {
-    volume: string
-    fees: string
-    rewards?: string
-    yieldOverTvl: string
-  }
-  
-export interface Reward {
-    mint: string
-    vault: string
-    authority: string
-    emissions_per_second_x64: string
-    growth_global_x64: string
-    active: boolean
-    emissionsPerSecond: string
 }

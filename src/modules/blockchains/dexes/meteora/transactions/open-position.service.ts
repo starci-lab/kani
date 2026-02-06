@@ -63,23 +63,19 @@ import {
 import {
     envConfig 
 } from "@modules/env"
- 
-export interface CreateOpenPositionInstructionsParams {
-    bot: BotSchema
-    state: DlmmLiquidityPoolState
-    amountA: BN
-    amountB: BN
-}
+import {
+    CreateOpenPositionInstructionsParams,
+    CreateOpenPositionInstructionsResult
+} from "../types"
 
-export interface CreateOpenPositionInstructionsResult {
-    instructions: Array<Instruction>
-    positionKeyPair: KeyPairSigner
-    minBinId: BN
-    maxBinId: BN
-    feeAmountA: BN
-    feeAmountB: BN
-}
-
+/**
+ * Service responsible for creating open position instructions for Meteora.
+ * Handles instruction construction for opening liquidity positions.
+ *
+ * @example
+ * const service = new OpenPositionInstructionService(...)
+ * const result = await service.createOpenPositionInstructions({ bot, state, amountA, amountB })
+ */
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(

@@ -26,8 +26,21 @@ import {
     OrcaReservesWithFeesService,
 } from "./reserves-with-fees.service"
 
+/**
+ * Orca DEX module.
+ * Provides services for Orca DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * OrcaModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
 @Injectable()
 export class OrcaModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Orca module with the specified options.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module configuration
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

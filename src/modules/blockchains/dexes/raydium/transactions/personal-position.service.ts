@@ -4,7 +4,20 @@ import {
 import {
     Address, address, getAddressEncoder, getProgramDerivedAddress 
 } from "@solana/kit"
+import {
+    GetPersonalPositionPdaParams,
+    GetPersonalPositionPdaResult,
+    VerifyPersonalPositionPdaParams
+} from "../types"
 
+/**
+ * Service responsible for deriving personal position PDAs for Raydium.
+ * Handles program derived address generation for personal positions.
+ *
+ * @example
+ * const service = new PersonalPositionService()
+ * const result = await service.getPda({ nftMintAddress, programAddress })
+ */
 @Injectable()
 export class PersonalPositionService {
 
@@ -39,19 +52,4 @@ export class PersonalPositionService {
             pda,
         }
     }
-}
-
-export interface GetPersonalPositionPdaParams {
-    nftMintAddress: Address
-    programAddress: Address
-}
-
-export interface GetPersonalPositionPdaResult {
-    pda: Address
-}
-
-export interface VerifyPersonalPositionPdaParams {
-    nftMintAddress: Address
-    programAddress: Address
-    candidate: Address
 }

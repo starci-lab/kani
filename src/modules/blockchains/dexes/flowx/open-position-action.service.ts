@@ -66,7 +66,20 @@ import {
     PrivySignService 
 } from "@modules/privy"
 import Decimal from "decimal.js"
+import {
+    IncreaseLiquidityEvent,
+    ParseIncreaseLiquidityEventParams,
+    ParseIncreaseLiquidityEventResult
+} from "./types"
 
+/**
+ * Service responsible for opening positions on FlowX DEX.
+ * Handles position creation, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new FlowXOpenPositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class FlowXOpenPositionActionService implements IOpenActionService {
     constructor(
@@ -434,24 +447,4 @@ export class FlowXOpenPositionActionService implements IOpenActionService {
             positionId: parsed.position_id,
         }
     }
-}
-
-interface IncreaseLiquidityEvent {
-    amount_x: string
-    amount_y: string
-    liquidity: string
-    pool_id: string
-    position_id: string
-    sender: string
-}
-
-interface ParseIncreaseLiquidityEventResult {
-    positionId: string
-}
-
-interface ParseIncreaseLiquidityEventParams {
-    state: ClmmLiquidityPoolState
-    events?: Array<SuiEvent>
-    bot: BotSchema
-    txHash: string
 }

@@ -15,7 +15,6 @@ import {
     AnchorUtilsService, AtaInstructionService 
 } from "../../../tx-builder"
 import {
-    BotSchema,
     PrimaryMemoryStorageService,
     RaydiumLiquidityPoolMetadata,
     OrcaPositionMetadata,
@@ -38,12 +37,18 @@ import {
 import {
     TickArrayService 
 } from "./tick-array.service"
+import {
+    CreateCloseInstructionsParams
+} from "../types"
 
-export interface CreateCloseInstructionsParams {
-  bot: BotSchema;
-  state: ClmmLiquidityPoolState;
-}
-
+/**
+ * Service responsible for creating close position instructions for Orca.
+ * Handles instruction construction for closing liquidity positions.
+ *
+ * @example
+ * const service = new ClosePositionInstructionService(...)
+ * const result = await service.createCloseInstructions({ bot, state })
+ */
 @Injectable()
 export class ClosePositionInstructionService {
     constructor(

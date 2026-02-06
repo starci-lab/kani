@@ -11,16 +11,27 @@ import {
     PublicKey 
 } from "@solana/web3.js"
   
-// ==================== RewardInfo ====================
+/**
+ * Reward information for Meteora DLMM liquidity pool.
+ * Represents reward token configuration and state.
+ */
 export class RewardInfo {
     constructor(
+      /** Public key of the reward token mint. */
       readonly mint: PublicKey,
+      /** Public key of the reward vault. */
       readonly vault: PublicKey,
+      /** Public key of the reward funder. */
       readonly funder: PublicKey,
+      /** Duration of the reward period. */
       readonly reward_duration: bignum,
+      /** End timestamp of the reward period. */
       readonly reward_duration_end: bignum,
+      /** Rate at which rewards are distributed. */
       readonly reward_rate: bignum,
+      /** Timestamp of last reward update. */
       readonly last_update_time: bignum,
+      /** Cumulative seconds with empty liquidity during reward period. */
       readonly cumulative_seconds_with_empty_liquidity_reward: bignum,
     ) {}
   

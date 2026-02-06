@@ -48,10 +48,21 @@ import {
 import {
     LiquidityPoolSchema 
 } from "@modules/databases"
+import {
+    Collection 
+} from "lokijs"
 
+/**
+ * Service responsible for observing Cetus pool state changes.
+ * Periodically fetches pool information from on-chain and updates cache.
+ *
+ * @example
+ * const service = new CetusObserverService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
 export class CetusObserverService implements OnApplicationBootstrap, OnModuleInit {
-    // snapshot here to reduce the computational complexity
+    /** Snapshot collection to reduce computational complexity. */
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
     constructor(
         private readonly memoryStorageService: PrimaryMemoryStorageService,
@@ -64,8 +75,11 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         private readonly lokiJSService: LokiJSService,
     ) {}
 
-    // snapshot here
-    async onModuleInit() {
+    /**
+     * Initializes the service by creating a snapshot collection of liquidity pools.
+     */
+    async onModuleInit(): Promise<void> {
+        // fetch all Cetus liquidity pools from primary memory storage
         const liquidityPools = this.memoryStorageService.liquidityPoolCollection
             .chain()
             .find({
@@ -76,78 +90,100 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             .data({
                 removeMeta: true 
             })
+        
+        // create local collection snapshot for efficient processing
         this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
             "cetus-observer-liquidity-pools", 
             {
-                indices: ["poolAddress",
+                indices: [
+                    "poolAddress",
                     "displayId",
-                    "id"],
+                    "id"
+                ],
             }
         )
+        
+        // insert pools into snapshot collection
         this.liquidityPoolCollection.insert(liquidityPools)
     }
 
-    onApplicationBootstrap() {
+    /**
+     * Starts the pool state update interval on application bootstrap.
+     */
+    onApplicationBootstrap(): void {
         this.handlePoolStateUpdateInterval()
     }
     
+    /**
+     * Handles periodic pool state updates.
+     * Fetches pool information for all pools in parallel.
+     */
     @Interval(envConfig().dexes.cetus.interval.observer.fetch)
-    private async handlePoolStateUpdateInterval() {
+    private async handlePoolStateUpdateInterval(): Promise<void> {
+        // process all pools in parallel
         const promises: Array<Promise<void>> = []
         for (const liquidityPool of this.liquidityPoolCollection.find()) {
             promises.push(
-                (
-                    async () => {
-                        await this.fetchPoolInfo(liquidityPool)
-                    })
-                ()
+                (async () => {
+                    await this.fetchPoolInfo({ liquidityPool })
+                })()
             )
         }
+        
+        // wait for all fetches to complete
         await this.asyncService.allIgnoreError(promises)
     }
 
-    private async fetchPoolInfo(
-        liquidityPool: LiquidityPoolSchema
-    ) {
+    /**
+     * Fetches pool information from on-chain and updates cache.
+     *
+     * @param param - Parameters for fetching pool info
+     * @param param.liquidityPool - Liquidity pool schema
+     */
+    private async fetchPoolInfo({ liquidityPool }: { liquidityPool: LiquidityPoolSchema }): Promise<void> {
         try {
-            const objectInfo = await this.rpcExecutorService.withSuiClient(
-                {
-                    accessType: RpcAccessType.Http,
-                    callback: async ({ suiClient }) => {
-                        return await suiClient.getObject({
-                            id: liquidityPool.poolAddress,
-                            options: {
-                                showContent: true,
-                            },
-                        })
-                    },
-                }
-            )
+            // fetch pool object from on-chain
+            const objectInfo = await this.rpcExecutorService.withSuiClient({
+                accessType: RpcAccessType.Http,
+                callback: async ({ suiClient }) => {
+                    return await suiClient.getObject({
+                        id: liquidityPool.poolAddress,
+                        options: {
+                            showContent: true,
+                        },
+                    })
+                },
+            })
+            
+            // validate object exists
             if (objectInfo.error || !objectInfo.data) {
-                throw new SuiObjectNotFoundException(
-                    {
-                        name: ErrorSuiObjectName.Pool,
-                        id: liquidityPool.poolAddress,
-                        dexId: DexId.Cetus,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
+                throw new SuiObjectNotFoundException({
+                    name: ErrorSuiObjectName.Pool,
+                    id: liquidityPool.poolAddress,
+                    dexId: DexId.Cetus,
+                    liquidityPoolId: liquidityPool.displayId,
+                })
             }
+            
+            // validate object type
             if (objectInfo.data.content?.dataType !== "moveObject") {
-                throw new SuiObjectInvalidTypeException(
-                    {
-                        name: ErrorSuiObjectName.Pool,
-                        id: liquidityPool.poolAddress,
-                        dexId: DexId.Cetus,
-                        liquidityPoolId: liquidityPool.displayId,
-                    }
-                )
+                throw new SuiObjectInvalidTypeException({
+                    name: ErrorSuiObjectName.Pool,
+                    id: liquidityPool.poolAddress,
+                    dexId: DexId.Cetus,
+                    liquidityPoolId: liquidityPool.displayId,
+                })
             }
+            
+            // parse pool fields and update state
             const fields = objectInfo.data.content.fields as unknown as CetusSuiObjectPoolFields
             const pool = parseCetusPool(fields)
-            return await this.handlePoolStateUpdate(liquidityPool,
-                pool)
+            return await this.handlePoolStateUpdate({
+                liquidityPool,
+                state: pool
+            })
         } catch (error) {
+            // log fetch errors
             this.winstonService.log(
                 WinstonLog.LiquidityPoolFetchedError, 
                 {
@@ -158,10 +194,16 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
         }
     }
 
-    private async handlePoolStateUpdate(
-        liquidityPool: LiquidityPoolSchema,
-        state: CetusPool
-    ) {
+    /**
+     * Handles pool state update by caching and emitting events.
+     *
+     * @param param - Parameters for handling pool state update
+     * @param param.liquidityPool - Liquidity pool schema
+     * @param param.state - Parsed pool state
+     * @returns Cache result
+     */
+    private async handlePoolStateUpdate({ liquidityPool, state }: { liquidityPool: LiquidityPoolSchema, state: CetusPool }): Promise<DynamicClmmLiquidityPoolInfoCacheResult> {
+        // build cache result from parsed pool state
         const parsed: DynamicClmmLiquidityPoolInfoCacheResult = {
             tickCurrent: state.currentTickIndex,
             liquidity: new BN(state.liquidity),
@@ -176,28 +218,25 @@ export class CetusObserverService implements OnApplicationBootstrap, OnModuleIni
             snapshotAt: this.dayjsService.now(),
             rewardLastUpdatedTimeMs: state.rewarderManager.lastUpdatedTime,
         }
-        await this.asyncService.allIgnoreError(
-            [
-                // store in cache
-                this.cacheService.set(
-                    {
-                        key: CacheKey.DynamicClmmLiquidityPoolInfo,
-                        args: [liquidityPool.id],
-                        cacheResult: parsed,
-                    }
-                ),
-                // emit event through event emitter
-                this.eventEmitterService.emit(
-                    {
-                        event: EventName.ClmmLiquidityPoolsSynced,
-                        payload: {
-                            id: liquidityPool.id,
-                            ...parsed,
-                        },
-                    }
-                )
-            ]
-        )
+        
+        // cache result and emit event in parallel
+        await this.asyncService.allIgnoreError([
+            // store in cache
+            this.cacheService.set({
+                key: CacheKey.DynamicClmmLiquidityPoolInfo,
+                args: [liquidityPool.id],
+                cacheResult: parsed,
+            }),
+            // emit event through event emitter
+            this.eventEmitterService.emit({
+                event: EventName.ClmmLiquidityPoolsSynced,
+                payload: {
+                    id: liquidityPool.id,
+                    ...parsed,
+                },
+            })
+        ])
+        
         return parsed
     }
 }

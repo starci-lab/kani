@@ -5,6 +5,10 @@ import {
     DexOptions 
 } from "../types"
 
+/**
+ * FlowX module definition.
+ * Configures the FlowX DEX module with dynamic options.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder<DexOptions>().setExtras(
       {

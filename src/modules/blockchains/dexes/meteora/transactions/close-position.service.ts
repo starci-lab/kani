@@ -10,11 +10,8 @@ import {
     AtaInstructionService, AnchorUtilsService, WSOL_MINT_ADDRESS 
 } from "../../../tx-builder"
 import {
-    BotSchema, MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
+    MeteoraLiquidityPoolMetadata, PrimaryMemoryStorageService 
 } from "@modules/databases"
-import {
-    DlmmLiquidityPoolState 
-} from "../../../interfaces"
 import {
     ActivePositionNotFoundException, InvalidPoolTokensException, PositionDlmmStateNotFoundException 
 } from "@modules/exceptions"
@@ -38,10 +35,9 @@ import {
     MEMO_PROGRAM_ADDRESS 
 } from "@solana-program/memo"
 import {
-    bignum, FixableBeetArgsStruct, i32, u16, u64 
-} from "@metaplex-foundation/beet"
-import {
-    RemainingAccountsInfoArgs, RemainingAccountsInfoType 
+    RemoveLiquidityByRange2Args,
+    ClaimFee2Args,
+    ClaimReward2Args
 } from "./sdk.service"
 import {
     convertWeb3MetaToKitMeta 
@@ -52,12 +48,18 @@ import {
 import {
     ChainId 
 } from "@modules/typedefs"
+import {
+    CreateCloseInstructionsParams
+} from "../types"
 
-export interface CreateCloseInstructionsParams {
-    bot: BotSchema
-    state: DlmmLiquidityPoolState
-}
-
+/**
+ * Service responsible for creating close position instructions for Meteora.
+ * Handles instruction construction for closing liquidity positions.
+ *
+ * @example
+ * const service = new ClosePositionInstructionService(...)
+ * const result = await service.createCloseInstructions({ bot, state })
+ */
 @Injectable()
 export class ClosePositionInstructionService {
     constructor(
@@ -419,61 +421,3 @@ export class ClosePositionInstructionService {
         return instructions
     }
 }
-
-export interface RemoveLiquidityByRange2ArgsType {
-    fromBinId: number
-    toBinId: number
-    bpsToRemove: number
-    remainingAccountsInfo: RemainingAccountsInfoType
-}
-export const RemoveLiquidityByRange2Args = new FixableBeetArgsStruct<RemoveLiquidityByRange2ArgsType>(
-    [
-        ["fromBinId",
-            i32],
-        ["toBinId",
-            i32],
-        ["bpsToRemove",
-            u16],
-        ["remainingAccountsInfo",
-            RemainingAccountsInfoArgs],
-    ],
-    "RemoveLiquidityByRange2Args"
-)
-
-
-export interface ClaimFee2ArgsType {
-    minBinId: number
-    maxBinId: number
-    remainingAccountsInfo: RemainingAccountsInfoType
-}
-export const ClaimFee2Args = new FixableBeetArgsStruct<ClaimFee2ArgsType>(
-    [
-        ["minBinId",
-            i32],
-        ["maxBinId",
-            i32],
-        ["remainingAccountsInfo",
-            RemainingAccountsInfoArgs],
-    ],
-    "ClaimFee2Args"
-)
-
-export interface ClaimReward2ArgsType {
-    rewardIndex: bignum
-    minBinId: number
-    maxBinId: number
-    remainingAccountsInfo: RemainingAccountsInfoType
-}
-export const ClaimReward2Args = new FixableBeetArgsStruct<ClaimReward2ArgsType>(
-    [
-        ["rewardIndex",
-            u64],
-        ["minBinId",
-            i32],
-        ["maxBinId",
-            i32],
-        ["remainingAccountsInfo",
-            RemainingAccountsInfoArgs],
-    ],
-    "ClaimReward2Args"
-)

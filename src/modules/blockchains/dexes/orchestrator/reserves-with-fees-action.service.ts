@@ -3,9 +3,7 @@ import {
     Injectable,
 } from "@nestjs/common"
 import {
-    BotSchema,
     DexId,
-    LiquidityPoolSchema,
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 import {
@@ -44,21 +42,18 @@ import {
 import {
     MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
 } from "../dexes.module-definition"
-
-export interface OrchestrateReservesWithFeesParams {
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
-}
+import {
+    OrchestrateReservesWithFeesParams
+} from "./types"
 
 /**
- * ReservesWithFeesActionService
- *
  * High-level orchestration layer for calculating reserves and fees together.
+ * Evaluates whether reserves and fees should be calculated, validates liquidity pool and DEX support,
+ * and calculates reserves and fees in a single call.
  *
- * Responsibilities:
- * - Evaluate whether reserves and fees SHOULD be calculated
- * - Validate liquidity pool and DEX support
- * - Calculate reserves and fees in a single call
+ * @example
+ * const service = new ReservesWithFeesActionService(...)
+ * const result = await service.reservesWithFees({ bot, liquidityPool })
  */
 @Injectable()
 export class ReservesWithFeesActionService {

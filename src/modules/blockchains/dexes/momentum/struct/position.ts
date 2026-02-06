@@ -9,65 +9,113 @@ import {
     parseSuiI32 
 } from "../../../structs"
 
-// ========== Position Reward Info Types ==========
+/**
+ * Represents the reward info fields of a Momentum Position Sui object.
+ */
 export interface MomentumSuiObjectPositionRewardInfo {
+    /** Fields containing reward information. */
     fields: {
+        /** Coins owed as reward (u64/u128 as string). */
         coins_owed_reward: string
+        /** Reward growth inside last (u128 as string). */
         reward_growth_inside_last: string
     }
+    /** Type name of the reward info object. */
     type: string
 }
 
-// ========== RAW POSITION STRUCT ==========
+/**
+ * Represents the raw fields of a Momentum Position Sui object.
+ * This interface matches the exact structure returned from Sui blockchain.
+ */
 export interface MomentumSuiObjectPositionFields {
+    /** Position object ID. */
     id: SuiObjectID
+    /** Pool ID. */
     pool_id: string
-    liquidity: string // u128 → string
-    fee_rate: string // u64 (bps)
-    fee_growth_inside_x_last: string // u128
-    fee_growth_inside_y_last: string // u128
-    owed_coin_x: string // u64 / u128
+    /** Liquidity amount (u128 as string). */
+    liquidity: string
+    /** Fee rate (u64 in bps as string). */
+    fee_rate: string
+    /** Fee growth inside X last (u128 as string). */
+    fee_growth_inside_x_last: string
+    /** Fee growth inside Y last (u128 as string). */
+    fee_growth_inside_y_last: string
+    /** Owed coin X (u64/u128 as string). */
+    owed_coin_x: string
+    /** Owed coin Y (u64/u128 as string). */
     owed_coin_y: string
+    /** Lower tick index (i32). */
     tick_lower_index: SuiObjectI32
+    /** Upper tick index (i32). */
     tick_upper_index: SuiObjectI32
+    /** Type X. */
     type_x: TypeName
+    /** Type Y. */
     type_y: TypeName
+    /** Array of reward information. */
     reward_infos: Array<MomentumSuiObjectPositionRewardInfo>
 }
 
+/**
+ * Type alias for Momentum Position Sui object.
+ */
 export type MomentumSuiObjectPosition = SuiObject<
     MomentumSuiObjectPositionFields,
     `${string}::position::Position`
 >
 
-// ========== POSITION INTERFACE (Raw Structure - matches Sui object fields) ==========
-// This interface matches the raw Sui object structure for direct field access
-// Alias to SuiObjectPositionFields for convenience
+/**
+ * Alias for MomentumSuiObjectPositionFields.
+ * Represents the raw position structure matching Sui object fields.
+ */
 export type MomentumClmmPosition = MomentumSuiObjectPositionFields
 
-// ========== PARSED POSITION INTERFACE ==========
+/**
+ * Parsed Momentum position interface with normalized field names and BN types.
+ */
 export interface MomentumPosition {
+    /** Position ID. */
     id: string
+    /** Pool ID. */
     poolId: string
+    /** Liquidity amount. */
     liquidity: BN
+    /** Fee rate. */
     feeRate: BN
+    /** Fee growth inside X last. */
     feeGrowthInsideXLast: BN
+    /** Fee growth inside Y last. */
     feeGrowthInsideYLast: BN
+    /** Owed coin X. */
     owedCoinX: BN
+    /** Owed coin Y. */
     owedCoinY: BN
+    /** Lower tick index. */
     tickLowerIndex: BN
+    /** Upper tick index. */
     tickUpperIndex: BN
+    /** Type X. */
     typeX: string
+    /** Type Y. */
     typeY: string
+    /** Array of reward information. */
     rewardInfos: Array<{
+        /** Coins owed as reward. */
         coinsOwedReward: BN
+        /** Reward growth inside last. */
         rewardGrowthInsideLast: BN
     }>
 }
 
-// ========== PARSER FUNCTION ==========
 /**
- * Parses a Momentum Position Sui object into a MomentumPosition interface
+ * Parses a Momentum Position Sui object into a normalized MomentumPosition interface.
+ *
+ * @param target - The raw Momentum position fields from Sui object
+ * @returns Parsed position with normalized field names and BN types
+ *
+ * @example
+ * const position = parseMomentumPosition(suiObject.content.fields)
  */
 export const parseMomentumPosition = (target: MomentumSuiObjectPositionFields): MomentumPosition => {
     return {

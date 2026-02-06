@@ -9,65 +9,113 @@ import {
     parseSuiI32 
 } from "../../../structs"
 
-// ========== Position Reward Info Types ==========
+/**
+ * Represents the reward info fields of a FlowX Position Sui object.
+ */
 export interface FlowXSuiObjectPositionRewardInfo {
+    /** Fields containing reward information. */
     fields: {
-        coins_owed_reward: string // u64 / u128 -> string
-        reward_growth_inside_last: string // u128 -> string
+        /** Coins owed as reward (u64/u128 as string). */
+        coins_owed_reward: string
+        /** Reward growth inside last (u128 as string). */
+        reward_growth_inside_last: string
     }
-    type: string // ::position::PositionRewardInfo
+    /** Type name of the reward info object. */
+    type: string
 }
 
-// ========== RAW POSITION STRUCT ==========
+/**
+ * Represents the raw fields of a FlowX Position Sui object.
+ * This interface matches the exact structure returned from Sui blockchain.
+ */
 export interface FlowXSuiObjectPositionFields {
+    /** Coin type X. */
     coin_type_x: TypeName
+    /** Coin type Y. */
     coin_type_y: TypeName
-    coins_owed_x: string // u64 / u128
+    /** Coins owed X (u64/u128 as string). */
+    coins_owed_x: string
+    /** Coins owed Y (u64/u128 as string). */
     coins_owed_y: string
-    fee_growth_inside_x_last: string // u128
-    fee_growth_inside_y_last: string // u128
-    fee_rate: string // u64 (bps)
+    /** Fee growth inside X last (u128 as string). */
+    fee_growth_inside_x_last: string
+    /** Fee growth inside Y last (u128 as string). */
+    fee_growth_inside_y_last: string
+    /** Fee rate (u64 in bps as string). */
+    fee_rate: string
+    /** Position object ID. */
     id: SuiObjectID
-    liquidity: string // u128
+    /** Liquidity amount (u128 as string). */
+    liquidity: string
+    /** Pool ID. */
     pool_id: string
+    /** Array of reward information. */
     reward_infos: Array<FlowXSuiObjectPositionRewardInfo>
+    /** Lower tick index (i32). */
     tick_lower_index: SuiObjectI32
+    /** Upper tick index (i32). */
     tick_upper_index: SuiObjectI32
 }
 
+/**
+ * Type alias for FlowX Position Sui object.
+ */
 export type FlowXSuiObjectPosition = SuiObject<
     FlowXSuiObjectPositionFields,
     `${string}::position::Position`
 >
 
-// ========== POSITION INTERFACE (Raw Structure - matches Sui object fields) ==========
-// This interface matches the raw Sui object structure for direct field access
-// Alias to SuiObjectPositionFields for convenience
+/**
+ * Alias for FlowXSuiObjectPositionFields.
+ * Represents the raw position structure matching Sui object fields.
+ */
 export type FlowXClmmPosition = FlowXSuiObjectPositionFields
 
-// ========== PARSED POSITION INTERFACE ==========
+/**
+ * Parsed FlowX position interface with normalized field names and BN types.
+ */
 export interface FlowXPosition {
+    /** Coin type X. */
     coinTypeX: string
+    /** Coin type Y. */
     coinTypeY: string
+    /** Coins owed X. */
     coinsOwedX: BN
+    /** Coins owed Y. */
     coinsOwedY: BN
+    /** Fee growth inside X last. */
     feeGrowthInsideXLast: BN
+    /** Fee growth inside Y last. */
     feeGrowthInsideYLast: BN
+    /** Fee rate. */
     feeRate: BN
+    /** Position ID. */
     id: string
+    /** Liquidity amount. */
     liquidity: BN
+    /** Pool ID. */
     poolId: string
+    /** Array of reward information. */
     rewardInfos: Array<{
+        /** Coins owed as reward. */
         coinsOwedReward: BN
+        /** Reward growth inside last. */
         rewardGrowthInsideLast: BN
     }>
+    /** Lower tick index. */
     tickLowerIndex: BN
+    /** Upper tick index. */
     tickUpperIndex: BN
 }
 
-// ========== PARSER FUNCTION ==========
 /**
- * Parses a FlowX Position Sui object into a FlowxPosition interface
+ * Parses a FlowX Position Sui object into a normalized FlowXPosition interface.
+ *
+ * @param target - The raw FlowX position fields from Sui object
+ * @returns Parsed position with normalized field names and BN types
+ *
+ * @example
+ * const position = parseFlowXPosition(suiObject.content.fields)
  */
 export const parseFlowXPosition = (target: FlowXSuiObjectPositionFields): FlowXPosition => {
     return {

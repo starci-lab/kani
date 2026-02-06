@@ -6,9 +6,11 @@ For every module, use the following folder layout:
 
 - **index.ts** at module root — public exports
 - **types/** — types and interfaces; one file per feature (group related types in one file to avoid many small files)
+  - **No nested interfaces:** Never define nested object types inline. Always extract nested objects into separate interfaces and reference them. For example, instead of `interface A { nested?: { prop: string } }`, create `interface Nested { prop: string }` and use `interface A { nested?: Nested }`.
 - **enums/** — enums; one file per feature
 - **classes/** — classes; one file per feature (domain classes, not GraphQL)
 - **constants/** — constants; one file per feature (e.g. `binance.ts`, `bybit.ts`, `gate.ts`)
+- **struct/** — struct types for blockchain-specific object structures (e.g. Sui objects, Solana accounts); one file per feature. All struct interfaces, types, and parser functions must have JSDoc comments explaining their purpose and usage.
 - **graphql-types/** — **inputs/** for `@InputType`, **object-types/** for `@ObjectType` (GraphQL modules)
 - **dtos/** — DTOs for REST API modules (one file per feature)
 

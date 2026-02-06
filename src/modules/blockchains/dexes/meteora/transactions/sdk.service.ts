@@ -338,28 +338,11 @@ export class MeteoraSdkService {
     }
 }
 
-export interface GetPotentialToken2022IxDataAndAccountsParams {
-    actionType: ActionType,
-    rewardIndex?: number,
-}
-
-export interface GetPotentialToken2022IxDataAndAccountsResult {
-    slices: Array<RemainingAccountsInfoSlice>,
-    accounts: Array<AccountMeta>,
-}
-export interface DepositWithRebalanceEndpointParams {
-    bot: BotSchema,
-    state: DlmmLiquidityPoolState,
-    strategy: StrategyParameters,
-    slippagePercentage: number,
-    maxActiveBinSlippage: number,
-    positionAddress: Address,
-    positionMinBinId: number,
-    positionMaxBinId: number,
-    liquidityStrategyParameters: LiquidityStrategyParameters,
-    ataAddressA: Address,
-    ataAddressB: Address,
-}
+import {
+    GetPotentialToken2022IxDataAndAccountsParams,
+    GetPotentialToken2022IxDataAndAccountsResult,
+    DepositWithRebalanceEndpointParams
+} from "../types/sdk"
 
 export const InitializeBinArrayArgs = new BeetArgsStruct(
     [
@@ -483,16 +466,48 @@ export const RebalanceLiquidityParams =
 /*                           RemainingAccountsInfo                            */
 /* -------------------------------------------------------------------------- */
   
-export interface RemainingAccountsInfoType {
-    slices: Array<number>;
-  }
-  
 export const RemainingAccountsInfoArgs =
     new FixableBeetArgsStruct<RemainingAccountsInfoType>(
         [["slices",
             array(u8)]],
         "remainingAccountsInfo"
     )
+
+// Export Beet structs for close position operations
+import {
+    RemoveLiquidityByRange2ArgsType,
+    ClaimFee2ArgsType,
+    ClaimReward2ArgsType
+} from "../types/close-position"
+
+export const RemoveLiquidityByRange2Args = new FixableBeetArgsStruct<RemoveLiquidityByRange2ArgsType>(
+    [
+        ["fromBinId", i32],
+        ["toBinId", i32],
+        ["bpsToRemove", u16],
+        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+    ],
+    "RemoveLiquidityByRange2Args"
+)
+
+export const ClaimFee2Args = new FixableBeetArgsStruct<ClaimFee2ArgsType>(
+    [
+        ["minBinId", i32],
+        ["maxBinId", i32],
+        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+    ],
+    "ClaimFee2Args"
+)
+
+export const ClaimReward2Args = new FixableBeetArgsStruct<ClaimReward2ArgsType>(
+    [
+        ["rewardIndex", u64],
+        ["minBinId", i32],
+        ["maxBinId", i32],
+        ["remainingAccountsInfo", RemainingAccountsInfoArgs],
+    ],
+    "ClaimReward2Args"
+)
   
 /* -------------------------------------------------------------------------- */
 /*                               RebalanceArgs                                */

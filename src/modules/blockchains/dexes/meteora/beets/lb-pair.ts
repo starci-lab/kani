@@ -30,41 +30,77 @@ import {
     RewardInfo 
 } from "./reward-info"
   
-// ==================== LbPair ====================
+/**
+ * Meteora DLMM liquidity pool (LbPair) structure.
+ * Represents the complete state of a Meteora Dynamic Liquidity Market Maker pool.
+ */
 export class LbPair {
     constructor(
+      /** Static parameters of the pool. */
       readonly parameters: StaticParameters,
+      /** Variable parameters of the pool. */
       readonly v_parameters: VariableParameters,
+      /** Bump seed for PDA derivation. */
       readonly bump_seed: Uint8Array,
+      /** Bin step seed. */
       readonly bin_step_seed: Uint8Array,
+      /** Type of the pair. */
       readonly pair_type: number,
+      /** Currently active bin ID. */
       readonly active_id: number,
+      /** Bin step size. */
       readonly bin_step: number,
+      /** Pool status. */
       readonly status: number,
+      /** Whether base factor seed is required. */
       readonly require_base_factor_seed: number,
+      /** Base factor seed. */
       readonly base_factor_seed: Uint8Array,
+      /** Activation type. */
       readonly activation_type: number,
+      /** Creator pool on/off control flag. */
       readonly creator_pool_on_off_control: number,
+      /** Public key of token X mint. */
       readonly token_x_mint: PublicKey,
+      /** Public key of token Y mint. */
       readonly token_y_mint: PublicKey,
+      /** Public key of token X reserve. */
       readonly reserve_x: PublicKey,
+      /** Public key of token Y reserve. */
       readonly reserve_y: PublicKey,
+      /** Protocol fee information. */
       readonly protocol_fee: ProtocolFee,
+      /** Padding bytes. */
       readonly _padding_1: Uint8Array,
+      /** Array of reward information. */
       readonly reward_infos: Array<RewardInfo>,
+      /** Public key of the oracle. */
       readonly oracle: PublicKey,
+      /** Bitmap of bin arrays. */
       readonly bin_array_bitmap: Array<bignum>,
+      /** Timestamp of last update. */
       readonly last_updated_at: bignum,
+      /** Additional padding bytes. */
       readonly _padding_2: Uint8Array,
+      /** Pre-activation swap address. */
       readonly pre_activation_swap_address: PublicKey,
+      /** Base key for the pool. */
       readonly base_key: PublicKey,
+      /** Activation point timestamp. */
       readonly activation_point: bignum,
+      /** Pre-activation duration. */
       readonly pre_activation_duration: bignum,
+      /** Additional padding bytes. */
       readonly _padding_3: Uint8Array,
+      /** Additional padding value. */
       readonly _padding_4: bignum,
+      /** Public key of the pool creator. */
       readonly creator: PublicKey,
+      /** Token mint X program flag. */
       readonly token_mint_x_program_flag: number,
+      /** Token mint Y program flag. */
       readonly token_mint_y_program_flag: number,
+      /** Reserved bytes. */
       readonly _reserved: Uint8Array,
     ) {}
   

@@ -7,14 +7,23 @@ import {
     bignum
 } from "@metaplex-foundation/beet"
   
-// ==================== VariableParameters ====================
+/**
+ * Variable parameters for Meteora DLMM liquidity pool.
+ * These parameters change dynamically based on pool activity.
+ */
 export class VariableParameters {
     constructor(
+      /** Current volatility accumulator value. */
       readonly volatility_accumulator: number,
+      /** Reference volatility value. */
       readonly volatility_reference: number,
+      /** Reference index value. */
       readonly index_reference: number,
+      /** Padding bytes. */
       readonly _padding: Uint8Array,
+      /** Timestamp of last update. */
       readonly last_update_timestamp: bignum,
+      /** Additional padding bytes. */
       readonly _padding_1: Uint8Array,
     ) {}
   

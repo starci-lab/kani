@@ -4,7 +4,19 @@ import {
 import {
     Address, address, getAddressEncoder, getProgramDerivedAddress 
 } from "@solana/kit"
+import {
+    GetPositionPdaParams,
+    GetPositionPdaResult
+} from "../types"
 
+/**
+ * Service responsible for deriving position PDAs for Orca.
+ * Handles program derived address generation for positions.
+ *
+ * @example
+ * const service = new PositionService()
+ * const result = await service.getPda({ nftMintAddress, programAddress })
+ */
 @Injectable()
 export class PositionService {
 
@@ -29,13 +41,4 @@ export class PositionService {
             pda,
         }
     }
-}
-
-export interface GetPositionPdaParams {
-    nftMintAddress: Address
-    programAddress: Address
-}
-
-export interface GetPositionPdaResult {
-    pda: Address
 }

@@ -19,7 +19,7 @@ import {
 } from "../../signers"
 import BN from "bn.js"
 import { 
-    AppVersion, BotSchema, DexId, PrimaryMemoryStorageService
+    AppVersion, DexId, PrimaryMemoryStorageService
 } from "@modules/databases"
 import {
     OpenPositionTxbService 
@@ -66,15 +66,25 @@ import {
     AsyncService 
 } from "@modules/mixin"
 import {
-    SuiEvent 
-} from "@mysten/sui/client"
-import {
     CetusLiquidityPosition 
 } from "./struct"
 import {
     PrivySignService 
 } from "@modules/privy"
+import {
+    AddLiquidityV2Event,
+    ParseAddLiquidityEventParams,
+    ParseAddLiquidityEventResult
+} from "./types"
 
+/**
+ * Service responsible for opening positions on Cetus DEX.
+ * Handles position creation, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new CetusOpenPositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class CetusOpenPositionActionService implements IOpenActionService {
     constructor(
@@ -102,42 +112,52 @@ export class CetusOpenPositionActionService implements IOpenActionService {
      * Business logic unchanged; comments + throw structure only.
      */
 
-    async confirm(
-        { positionId, state }: 
-        ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResult> {
+    /**
+     * Confirms an open position by fetching and validating position data.
+     *
+     * @param param - Parameters for confirming open position
+     * @param param.positionId - Position ID to confirm
+     * @param param.state - CLMM liquidity pool state
+     * @returns Confirmation result with liquidity
+     *
+     * @example
+     * const result = await service.confirm({ positionId, state })
+     */
+    async confirm({ positionId, state }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
+                // fetch position object from on-chain
                 const objectInfo = await suiClient.getObject({
                     id: positionId,
                     options: {
                         showContent: true,
                     }
                 })
-                // Stage: on-chain fetch validation (position object must exist)
+                
+                // validate position object exists
                 if (objectInfo.error || !objectInfo.data) {
-                    throw new SuiObjectNotFoundException(
-                        {
-                            name: ErrorSuiObjectName.Position,
-                            id: positionId,
-                            dexId: DexId.Cetus,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
+                    throw new SuiObjectNotFoundException({
+                        name: ErrorSuiObjectName.Position,
+                        id: positionId,
+                        dexId: DexId.Cetus,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 }
-                // Stage: on-chain fetch validation (object must be a Move object)
+                
+                // validate object is a Move object
                 if (objectInfo.data.content?.dataType !== "moveObject") {
-                    throw new SuiObjectInvalidTypeException(
-                        {
-                            name: ErrorSuiObjectName.Position,
-                            id: positionId,
-                            dexId: DexId.Cetus,
-                            liquidityPoolId: _state.static.displayId,
-                        }
-                    )
+                    throw new SuiObjectInvalidTypeException({
+                        name: ErrorSuiObjectName.Position,
+                        id: positionId,
+                        dexId: DexId.Cetus,
+                        liquidityPoolId: _state.static.displayId,
+                    })
                 }
+                
+                // extract and return liquidity
                 const fields = objectInfo.data.content.fields as unknown as CetusLiquidityPosition
                 return {
                     liquidity: new BN(fields.liquidity),
@@ -146,55 +166,74 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         })
     }
 
-    private parseAddLiquidityEvent(
-        {
-            state,
-            bot,
-            txHash,
-            events,
-        }: ParseAddLiquidityEventParams
-    ): ParseAddLiquidityEventResult {
+    /**
+     * Parses add liquidity event from transaction events.
+     *
+     * @param param - Parameters for parsing add liquidity event
+     * @param param.state - CLMM liquidity pool state
+     * @param param.bot - Bot schema
+     * @param param.txHash - Transaction hash
+     * @param param.events - Array of Sui events
+     * @returns Parsed event result with position ID
+     */
+    private parseAddLiquidityEvent({ state, bot, txHash, events }: ParseAddLiquidityEventParams): ParseAddLiquidityEventResult {
+        // find add liquidity event
         const eventType = "::pool::AddLiquidityV2Event"
         const event = events?.find(event =>
             event.type.includes(eventType),
         )
+        
+        // throw if event not found
         if (!event) {
-            throw new TransactionEventNotFoundException(
-                {
-                    botId: bot.id,
-                    txHash,
-                    eventType,
-                    liquidityPoolId: state.static.displayId,
-                }
-            )
+            throw new TransactionEventNotFoundException({
+                botId: bot.id,
+                txHash,
+                eventType,
+                liquidityPoolId: state.static.displayId,
+            })
         }
+        
+        // extract position ID from event
         const parsed = event.parsedJson as AddLiquidityV2Event 
         return {
             positionId: parsed.position.toString(),
         }
     }
 
-    async prepare(
-        {
-            bot,
-            state,
-        }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResult> {
+    /**
+     * Prepares an open position transaction.
+     * Calculates optimal tick range, builds transaction, and signs it.
+     *
+     * @param param - Parameters for preparing open position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @returns Prepared transaction with signature and fee amounts
+     *
+     * @example
+     * const result = await service.prepare({ bot, state })
+     */
+    async prepare({ bot, state }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
+        
+        // validate balance snapshots exist
         if (!bot.balanceSnapshots) {
             throw new BalanceSnapshotsNotFoundException({
                 botId: bot.id,
             })
         }
+        
+        // validate CLMM state exists
         if (!_state.static.clmmState) {
-            throw new LiquidityPoolClmmStateNotFoundException(
-                {
-                    liquidityPoolId: _state.static.displayId,
-                }
-            )
+            throw new LiquidityPoolClmmStateNotFoundException({
+                liquidityPoolId: _state.static.displayId,
+            })
         }
+        
+        // extract balance amounts
         const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
         const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
+        
+        // fetch pool token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -205,17 +244,19 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 $eq: _state.static.tokenB.toString(),
             }
         })
+        
+        // validate tokens exist
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
             })
-        }       
+        }
+        
+        // determine if target token is token A
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
-        const { 
-            tickLower, 
-            tickUpper,
-            utilizationPercentage,
-        } = await this.tickMathService.findOptimalTickRange({
+        
+        // find optimal tick range
+        const { tickLower, tickUpper, utilizationPercentage } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.dynamic.tickCurrent,
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
@@ -223,20 +264,21 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
             targetIsA,
         })
+        
+        // validate slippage tolerance
         const slippage = new Decimal(envConfig().dexes.cetus.openPosition.slippage)
         if (utilizationPercentage.lt(new Decimal(1).sub(slippage))) {
             throw new SlippageToleranceExceededException({
                 slippage: slippage.toNumber(),
             })
         }
+        
+        // calculate max amounts for each token
         const amountAMax = targetIsA ? snapshotTargetBalanceAmount : snapshotQuoteBalanceAmount
         const amountBMax = targetIsA ? snapshotQuoteBalanceAmount : snapshotTargetBalanceAmount
-        // create the open position txb
-        const { 
-            txb: openPositionTxb,
-            feeAmountA,
-            feeAmountB,
-        } = await this.openPositionTxbService.createOpenPositionTxb({
+        
+        // create open position transaction builder
+        const { txb: openPositionTxb, feeAmountA, feeAmountB } = await this.openPositionTxbService.createOpenPositionTxb({
             bot,
             amountAMax,
             amountBMax,
@@ -244,8 +286,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             tickLower,
             state: _state,
             tickUpper,
-        }
-        )
+        })
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
@@ -253,26 +294,29 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     return await this.signerService.withSuiSigner({
                         bot,
                         action: async (signer) => {
-                        // dev inspect the transaction block
+                            // dev inspect transaction for validation
                             const devInspect = await suiClient.devInspectTransactionBlock({
                                 transactionBlock: openPositionTxb,
                                 sender: bot.accountAddress,
                             })
+                            
+                            // validate transaction effects
                             if (devInspect.effects.status.status !== "success") {
-                                throw new TransactionValidationFailedException(
-                                    {
-                                        type: ErrorTransactionType.OpenPosition,
-                                        botId: bot.id,
-                                        txHash: devInspect.effects.transactionDigest,
-                                        liquidityPoolId: _state.static.displayId,
-                                    }
-                                )
+                                throw new TransactionValidationFailedException({
+                                    type: ErrorTransactionType.OpenPosition,
+                                    botId: bot.id,
+                                    txHash: devInspect.effects.transactionDigest,
+                                    liquidityPoolId: _state.static.displayId,
+                                })
                             }
+                            
+                            // build and sign transaction
                             const bytes = await openPositionTxb.build({
                                 client: suiClient,
                             })
                             const txHash = TransactionDataBuilder.getDigestFromBytes(bytes)
                             const signatureWithBytes = await signer.signTransaction(bytes)
+                            
                             return {
                                 prepareTxs: [{
                                     txHash,
@@ -286,36 +330,32 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    // validate privy signing prerequisites
                     if (!bot.privyMetadata?.walletPublicKey) {
-                        throw new PrivyPublicKeyNotFoundException(
-                            {
-                                botId: bot.id,
-                            }
-                        )
+                        throw new PrivyPublicKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
                     if (!bot.encryptedPrivySignerPrivateKeyPayload) {
-                        throw new EncryptedPrivySignerPrivateKeyNotFoundException(
-                            {
-                                botId: bot.id,
-                            }
-                        )
+                        throw new EncryptedPrivySignerPrivateKeyNotFoundException({
+                            botId: bot.id,
+                        })
                     }
-                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction(
-                        {
-                            publicKeyHex: bot.privyMetadata?.walletPublicKey,
-                            client: suiClient,
-                            walletId: bot.privyMetadata?.walletId,
-                            transaction: openPositionTxb,
-                            encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
-                        }
-                    )
+                    
+                    // sign transaction with Privy
+                    const { txHash, signatureWithBytes } = await this.privySignService.signSuiTransaction({
+                        publicKeyHex: bot.privyMetadata.walletPublicKey,
+                        client: suiClient,
+                        walletId: bot.privyMetadata.walletId,
+                        transaction: openPositionTxb,
+                        encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
+                    })
+                    
                     return {
-                        prepareTxs: [
-                            {
-                                txHash,
-                                signatureWithBytes,
-                            }
-                        ],
+                        prepareTxs: [{
+                            txHash,
+                            signatureWithBytes,
+                        }],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -326,24 +366,36 @@ export class CetusOpenPositionActionService implements IOpenActionService {
         })
     }
     
-    async execute({
-        bot,
-        state,
-        txCheck,
-        stimulate,
-        prepareTxs,
-    }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
-        // sui require 1 tx only
+    /**
+     * Executes an open position transaction.
+     * Handles transaction checking, stimulation, and execution.
+     *
+     * @param param - Parameters for executing open position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @param param.txCheck - Whether to check if transaction already exists
+     * @param param.prepareTxs - Array of prepared transactions
+     * @param param.stimulate - Whether to simulate transaction execution
+     * @returns Execution result with position ID and transaction hashes
+     *
+     * @example
+     * const result = await service.execute({ bot, state, prepareTxs, txCheck, stimulate })
+     */
+    async execute({ bot, state, txCheck, stimulate, prepareTxs }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // Sui requires exactly 1 transaction
         if (prepareTxs.length !== 1) {
             throw new SuiSingleTransactionRequiredException({
                 operation: ErrorSuiSingleTransactionRequiredOperation.OpenPosition,
                 numTxs: prepareTxs.length,
             })
         }
+        
+        // extract transaction details
         const [prepareTx] = prepareTxs
-        const txHash = prepareTx.txHash
-        const signatureWithBytes = prepareTx.signatureWithBytes
+        const { txHash, signatureWithBytes } = prepareTx
         const _state = state as ClmmLiquidityPoolState
+        
+        // check if transaction already exists on-chain
         if (txCheck && !stimulate) {
             const [txBlock] = await this.asyncService.resolveTuple(
                 this.rpcExecutorService.withSuiClient({
@@ -359,6 +411,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     },
                 })
             )
+            
+            // return if transaction already executed successfully
             if (txBlock !== null && txBlock.effects?.status?.status === "success") {
                 const { positionId } = this.parseAddLiquidityEvent({
                     state: _state,
@@ -366,6 +420,7 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                     txHash,
                     events: txBlock?.events || [],
                 })
+                
                 this.winstonService.log(
                     WinstonLog.OpenPositionTransactionFound,
                     {
@@ -380,6 +435,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 }
             }
         }
+        
+        // validate signature exists
         if (!signatureWithBytes) {
             throw new TransactionNotPreparedException({
                 type: ErrorTransactionType.OpenPosition,
@@ -388,15 +445,19 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        
         return await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Write,
             callback: async ({ suiClient }) => {
                 if (stimulate) {
+                    // simulate transaction execution
                     const transactionBlock = Transaction.from(signatureWithBytes.bytes)
                     const devInspect = await suiClient.devInspectTransactionBlock({
                         transactionBlock,
                         sender: bot.accountAddress,
                     })
+                    
+                    // validate simulation results
                     if (devInspect.effects.status.status !== "success") {
                         throw new TransactionStimulatedFailedException({
                             botId: bot.id,
@@ -405,12 +466,16 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                             type: ErrorTransactionType.OpenPosition,
                         })
                     }
+                    
+                    // parse position ID from events
                     const { positionId } = this.parseAddLiquidityEvent({
                         state: _state,
                         bot,
                         txHash,
                         events: devInspect.events || [],
                     })
+                    
+                    // log successful simulation
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionStimulated,
                         {
@@ -424,16 +489,18 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         txHashes: [txHash],
                     }
                 }
-                const { digest, events, effects } = await suiClient.executeTransactionBlock(
-                    {
-                        transactionBlock: signatureWithBytes.bytes,
-                        signature: signatureWithBytes.signature,
-                        options: {
-                            showEvents: true,
-                            showEffects: true,
-                        }
+                
+                // execute transaction on-chain
+                const { digest, events, effects } = await suiClient.executeTransactionBlock({
+                    transactionBlock: signatureWithBytes.bytes,
+                    signature: signatureWithBytes.signature,
+                    options: {
+                        showEvents: true,
+                        showEffects: true,
                     }
-                )
+                })
+                
+                // validate execution results
                 if (effects?.status?.status !== "success") {
                     throw new TransactionExecutionFailedException({
                         botId: bot.id,
@@ -441,9 +508,13 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: _state.static.displayId,
                     })
                 }
+                
+                // wait for transaction confirmation
                 await suiClient.waitForTransaction({
                     digest,
                 })
+                
+                // log successful execution
                 this.winstonService.log(
                     WinstonLog.OpenPositionTransactionExecuted,
                     {
@@ -452,7 +523,8 @@ export class CetusOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: _state.static.displayId,
                     }
                 )
-                // parse the add liquidity event
+                
+                // parse position ID from events
                 const { positionId } = this.parseAddLiquidityEvent({
                     state: _state,
                     bot,
@@ -466,25 +538,4 @@ export class CetusOpenPositionActionService implements IOpenActionService {
             },
         })
     }
-}
-
-export interface AddLiquidityV2Event {
-    after_liquidity: string,
-    amount_a: string,
-    amount_b: string,
-    current_sqrt_price: string,
-    liquidity: string,
-    pool: string,
-    position: string,
-}
-
-export interface ParseAddLiquidityEventResult {
-    positionId: string
-}
-
-export interface ParseAddLiquidityEventParams {
-    state: ClmmLiquidityPoolState
-    events?: Array<SuiEvent>
-    bot: BotSchema
-    txHash: string
 }

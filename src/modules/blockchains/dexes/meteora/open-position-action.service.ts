@@ -66,6 +66,14 @@ import {
     PrivySignService 
 } from "@modules/privy"
 
+/**
+ * Service responsible for opening positions on Meteora DEX.
+ * Handles position creation, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new MeteoraOpenPositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class MeteoraOpenPositionActionService implements IOpenActionService {
     constructor(
@@ -76,27 +84,28 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         private readonly privySignService: PrivySignService,
         private readonly winstonService: WinstonService,
     ) { }
-    
-    /**
-     * === Error-handling convention (DEX action services) ===
-     *
-     * Stages in this service:
-     * - Input validation: required params missing/invalid (throw immediately)
-     * - State validation: required bot/pool/position state missing (throw immediately)
-     * - On-chain fetch: RPC account fetch fails or returns null (throw)
-     * - Transaction building: instruction/message/signing validation fails (throw)
-     * - Execution: tx not executed / retry checks fail (throw)
-     * - Event parsing: required tx fields are missing (throw)
-     *
-     * Business logic unchanged; comments + throw structure only.
-     */
 
+    /**
+     * Prepares an open position transaction.
+     * Validates state, calculates amounts, builds transaction, and signs it.
+     *
+     * @param param - Parameters for preparing open position
+     * @param param.bot - Bot schema
+     * @param param.state - DLMM liquidity pool state
+     * @returns Prepared transaction with position details
+     * @throws {ActivePositionNotFoundException} If no active position context is found for the bot
+     * @throws {BalanceSnapshotsNotFoundException} If balance snapshots are missing
+     * @throws {InvalidPoolTokensException} If pool token metadata is missing
+     * @throws {PrivyMetadataNotFoundException} If Privy metadata is not found for V2 bots
+     * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
+     */
     async prepare({
         state,
         bot,
     }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as DlmmLiquidityPoolState
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+
         // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -109,8 +118,16 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
+
+        // Extract balance amounts from snapshots
+        const {
+            targetBalanceAmount: snapshotTargetBalanceAmount,
+            quoteBalanceAmount: snapshotQuoteBalanceAmount
+        } = bot.balanceSnapshots
+        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
+
+        // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -127,8 +144,12 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
-        const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
+
+        // Calculate amounts based on target token
+        const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+
+        // Create open position instructions
         const {
             instructions: openPositionInstructions,
             positionKeyPair,
@@ -142,10 +163,14 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
             amountA,
             amountB,
         })
+
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc }) => {
+                // Get latest blockhash for transaction lifetime
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+                // Build transaction message
                 const transactionMessage = pipe(
                     createTransactionMessage({
                         version: 0 
@@ -158,24 +183,26 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
+
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
+                            // Sign transaction with V1 signer and position keypair
                             const signedTransaction = await signTransaction([signer.keyPair,
                                 positionKeyPair.keyPair],
                             transaction)
+
+                            // Validate transaction before returning
                             assertIsSendableTransaction(signedTransaction)
                             assertIsTransactionWithinSizeLimit(signedTransaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
                             return {
-                                prepareTxs: [
-                                    {
-                                        txHash,
-                                        solanaTx: signedTransaction,
-                                    },
-                                ],
+                                prepareTxs: [{
+                                    txHash,
+                                    solanaTx: signedTransaction,
+                                }],
                                 feeAmountA,
                                 feeAmountB,
                                 amountA,
@@ -188,6 +215,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         },
                     })
                 } else {
+                    // Stage: state validation (Privy signing prerequisites for V2 bots)
                     if (!bot.privyMetadata) {
                         throw new PrivyMetadataNotFoundException({
                             botId: bot.id,
@@ -198,7 +226,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             botId: bot.id,
                         })
                     }
-                    // partial sign the transaction
+
+                    // Partially sign with position keypair, then sign with Privy
                     const partialSignedTransaction = await partiallySignTransaction([positionKeyPair.keyPair],
                         transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
@@ -211,12 +240,10 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         walletId: bot.privyMetadata.walletId,
                     })
                     return {
-                        prepareTxs: [
-                            {
-                                txHash: signedTransaction.txHash,
-                                solanaTx: signedTransaction.signedTransaction,
-                            },
-                        ],
+                        prepareTxs: [{
+                            txHash: signedTransaction.txHash,
+                            solanaTx: signedTransaction.signedTransaction,
+                        }],
                         feeAmountA,
                         feeAmountB,
                         amountA,
@@ -231,6 +258,22 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         })
     }
 
+    /**
+     * Executes an open position transaction.
+     * Handles transaction checking, stimulation, and execution.
+     *
+     * @param param - Parameters for executing open position
+     * @param param.bot - Bot schema
+     * @param param.state - DLMM liquidity pool state
+     * @param param.txCheck - Whether to check if transaction already exists
+     * @param param.positionId - Position ID to confirm
+     * @param param.prepareTxs - Array of prepared transactions
+     * @param param.stimulate - Whether to simulate transaction execution
+     * @returns Execution result with position ID and transaction hashes
+     * @throws {MissingPositionIdParamException} If position ID is missing
+     * @throws {MissingSolanaTxParamException} If the Solana transaction is missing
+     * @throws {TransactionValidationFailedException} If transaction simulation fails
+     */
     async execute({
         bot,
         state,
@@ -239,6 +282,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         stimulate,
         prepareTxs,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // Stage: input validation (position ID must be provided)
         if (!positionId) {
             throw new MissingPositionIdParamException({
                 botId: bot.id,
@@ -247,7 +291,10 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         }
         const _state = state as DlmmLiquidityPoolState
         const txHashes: Array<string> = []
+
+        // Process each prepared transaction
         for (const prepareTx of prepareTxs) {
+            // Stage: transaction checking (if txCheck is enabled and not stimulating)
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Http,
@@ -261,6 +308,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         ).send()
                     },
                 })
+
+                // If transaction already executed, log and continue
                 if (transaction) {
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionFound,
@@ -275,7 +324,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 }
             }
 
-            const solanaTx = prepareTx.solanaTx
+            // Stage: transaction validation (Solana transaction must exist)
+            const { solanaTx } = prepareTx
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
@@ -287,6 +337,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                 accessType: RpcAccessType.Write,
                 callback: async ({ rpc, rpcSubscriptions }) => {
                     if (stimulate) {
+                        // Simulate transaction execution
                         const transaction = await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
@@ -294,6 +345,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                                 commitment: "confirmed",
                             },
                         ).send()
+
+                        // Stage: transaction stimulation validation
                         if (transaction.value.err) {
                             throw new TransactionValidationFailedException({
                                 botId: bot.id,
@@ -301,6 +354,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                                 type: ErrorTransactionType.OpenPosition,
                             })
                         }
+
+                        // Log successful simulation
                         this.winstonService.log(
                             WinstonLog.OpenPositionTransactionStimulated,
                             {
@@ -312,6 +367,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                         txHashes.push(prepareTx.txHash)
                         return
                     }
+
+                    // Execute transaction on-chain
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                         rpc,
                         rpcSubscriptions,
@@ -322,6 +379,8 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                             commitment: "confirmed",
                         },
                     )
+
+                    // Log successful execution
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionExecuted,
                         {
@@ -341,21 +400,31 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
         }
     } 
 
-    async confirm(
-        {   
-            state,
-            positionId,
-        }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResult> {
+    /**
+     * Confirms an open position by fetching position account from chain.
+     *
+     * @param param - Parameters for confirming open position
+     * @param param.state - DLMM liquidity pool state
+     * @param param.positionId - Position account address
+     * @returns Confirmation result (currently empty, will need other logic to get liquidity)
+     * @throws {SolanaAccountNotFoundException} If position account is not found on-chain
+     */
+    async confirm({
+        state,
+        positionId,
+    }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
+                // Fetch position account from chain
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 
                     address(positionId),
                     {
                         commitment: "confirmed",
                     })
+
+                // Stage: on-chain fetch validation (position account must exist)
                 if (!positionInfo || !positionInfo.exists) {
                     throw new SolanaAccountNotFoundException({
                         name: ErrorSolanaAccountName.PersonalPosition,
@@ -365,7 +434,7 @@ export class MeteoraOpenPositionActionService implements IOpenActionService {
                     })
                 }
                 return {
-                    // temporary empty, will need other logic to get liquidity
+                    // Temporary empty, will need other logic to get liquidity
                 }
             },
         })

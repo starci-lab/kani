@@ -26,8 +26,19 @@ export class ClosePositionTxbService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
-    async createClosePositionTxb(
-        {
+    /**
+     * Creates a close position transaction builder for Cetus.
+     *
+     * @param param - Parameters for creating close position transaction
+     * @param param.txb - Optional transaction builder
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @returns Transaction builder result
+     *
+     * @example
+     * const result = await service.createClosePositionTxb({ txb, bot, state })
+     */
+    async createClosePositionTxb({
             txb,
             bot,
             state,

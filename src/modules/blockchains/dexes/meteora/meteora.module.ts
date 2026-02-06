@@ -26,8 +26,21 @@ import {
     MeteoraReservesWithFeesService,
 } from "./reserves-with-fees.service"
 
+/**
+ * Meteora DEX module.
+ * Provides services for Meteora DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * MeteoraModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
 @Injectable()
 export class MeteoraModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Meteora module with the specified options.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module configuration
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

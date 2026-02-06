@@ -22,8 +22,21 @@ import {
 import {
     MomentumReservesWithFeesService,
 } from "./reserves-with-fees.service"
+/**
+ * Momentum DEX module.
+ * Provides services for Momentum DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * MomentumModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
 @Injectable()
 export class MomentumModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Momentum module with the specified options.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module configuration
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

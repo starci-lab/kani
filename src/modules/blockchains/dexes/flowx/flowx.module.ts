@@ -23,8 +23,21 @@ import {
     FlowXReservesWithFeesService,
 } from "./reserves-with-fees.service"
 
+/**
+ * FlowX DEX module.
+ * Provides services for FlowX DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * FlowXModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
 @Injectable()
 export class FlowXModule extends ConfigurableModuleClass {
+    /**
+     * Registers the FlowX module with the specified options.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module configuration
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

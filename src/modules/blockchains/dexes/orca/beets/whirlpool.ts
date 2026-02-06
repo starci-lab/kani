@@ -18,26 +18,49 @@ import {
     WhirlpoolRewardInfo 
 } from "./whirlpool-reward-info"
 
+/**
+ * Orca Whirlpool structure.
+ * Represents the complete state of an Orca Whirlpool liquidity pool.
+ */
 export class Whirlpool {
     constructor(
+        /** Public key of the Whirlpools config. */
         readonly whirlpoolsConfig: PublicKey,
+        /** Bump seed for PDA derivation (1 byte). */
         readonly whirlpoolBump: Uint8Array,
+        /** Tick spacing (u16). */
         readonly tickSpacing: number,
+        /** Fee tier index seed (2 bytes). */
         readonly feeTierIndexSeed: Array<number>,
+        /** Fee rate (u16). */
         readonly feeRate: number,
+        /** Protocol fee rate (u16). */
         readonly protocolFeeRate: number,
+        /** Total liquidity (u128). */
         readonly liquidity: bignum,
+        /** Square root price (u128). */
         readonly sqrtPrice: bignum,
+        /** Current tick index (i32). */
         readonly tickCurrentIndex: number,
+        /** Protocol fee owed for token A (u64). */
         readonly protocolFeeOwedA: bignum,
+        /** Protocol fee owed for token B (u64). */
         readonly protocolFeeOwedB: bignum,
+        /** Public key of token A mint. */
         readonly tokenMintA: PublicKey,
+        /** Public key of token A vault. */
         readonly tokenVaultA: PublicKey,
+        /** Fee growth global for token A (u128). */
         readonly feeGrowthGlobalA: bignum,
+        /** Public key of token B mint. */
         readonly tokenMintB: PublicKey,
+        /** Public key of token B vault. */
         readonly tokenVaultB: PublicKey,
+        /** Fee growth global for token B (u128). */
         readonly feeGrowthGlobalB: bignum,
+        /** Timestamp of last reward update (u64). */
         readonly rewardLastUpdatedTimestamp: bignum,
+        /** Array of reward information (max 3 rewards). */
         readonly rewardInfos: Array<WhirlpoolRewardInfo>
     ) {}
 

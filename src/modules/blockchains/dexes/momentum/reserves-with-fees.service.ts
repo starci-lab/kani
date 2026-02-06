@@ -53,6 +53,15 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 
+/**
+ * Service responsible for calculating reserves and fees for Momentum CLMM positions.
+ * Fetches on-chain data for ticks and position info to compute current reserves,
+ * accumulated fees, and rewards.
+ *
+ * @example
+ * const service = new MomentumReservesWithFeesService(...)
+ * const result = await service.reservesWithFees({ state, bot })
+ */
 @Injectable()
 export class MomentumReservesWithFeesService implements IReservesWithFeesService {
     constructor(
@@ -63,8 +72,23 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) { }
 
+    /**
+     * Computes the current reserves, accumulated fees, and rewards for a Momentum CLMM position.
+     *
+     * @param param - Parameters for calculating reserves with fees
+     * @param param.state - The CLMM liquidity pool state
+     * @param param.bot - The bot schema containing active position details
+     * @returns The computed reserves, fees, and rewards
+     * @throws {ActivePositionNotFoundException} If no active position is found for the bot
+     * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the active position
+     * @throws {InvalidPoolTokensException} If token A or B metadata is not found
+     * @throws {SuiObjectNotFoundException} If tick lower, tick upper, or position objects are not found on-chain
+     * @throws {SuiObjectInvalidTypeException} If fetched objects are not of the expected Move object type
+     * @throws {TokenNotFoundException} If a reward token's metadata is not found
+     */
     async reservesWithFees({ state, bot }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
+
         // Stage: state validation (requires an active position)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -77,6 +101,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                 liquidityPoolId: _state.static.displayId,
             })
         }
+
         // Stage: state validation (pool token metadata must exist)
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
@@ -93,14 +118,28 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const positionId = bot.activePosition.associatedPosition.positionId
-        const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
-        const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
-        const { i32Type, ticksId } = _state.static.metadata as MomentumLiquidityPoolMetadata
+
+        // Extract position details and metadata
+        const {
+            positionId,
+            clmmState: {
+                tickLower: tickLowerStr,
+                tickUpper: tickUpperStr
+            }
+        } = bot.activePosition.associatedPosition
+        const tickLower = new BN(tickLowerStr)
+        const tickUpper = new BN(tickUpperStr)
+        const {
+            i32Type,
+            ticksId
+        } = _state.static.metadata as MomentumLiquidityPoolMetadata
+
+        // Serialize tick indices for dynamic field names
         const tickLowerName = serializeSuiI32(new BN(tickLower.toString()),
             i32Type)
         const tickUpperName = serializeSuiI32(new BN(tickUpper.toString()),
             i32Type)
+
         // Stage: on-chain fetch (tick lower dynamic field)
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -114,6 +153,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                 })
             },
         })
+        // Stage: on-chain fetch validation
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.TickLower,
@@ -127,6 +167,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
             `${string}::tick::TickInfo`
         >
         const tickLowerData = parseMomentumTickInfo(_tickLowerData.content.fields.value.fields)
+
         // Stage: on-chain fetch (tick upper dynamic field)
         const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -140,6 +181,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                 })
             },
         })
+        // Stage: on-chain fetch validation
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.TickUpper,
@@ -153,6 +195,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
             `${string}::tick::TickInfo`
         >
         const tickUpperData = parseMomentumTickInfo(_tickUpperData.content.fields.value.fields)
+
         // Stage: on-chain fetch (position)
         const objectInfo = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
@@ -165,6 +208,7 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
                 })
             },
         })
+        // Stage: on-chain fetch validation
         if (objectInfo.error || !objectInfo.data) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.Position,
@@ -203,7 +247,10 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         // ----------------------------
         // Fee calculation
         // ----------------------------
-        const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
+        const {
+            feeA,
+            feeB
+        } = this.clmmFeesFormulaService.computeFees({
             feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
             feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideX.toString()),
@@ -231,7 +278,9 @@ export class MomentumReservesWithFeesService implements IReservesWithFeesService
         const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
-                const tokenAddress = clmmReward.tokenAddress
+                const {
+                    tokenAddress
+                } = clmmReward
                 const token = this.primaryMemoryStorageService.tokenCollection.findOne({
                     tokenAddress: {
                         $eq: tokenAddress,

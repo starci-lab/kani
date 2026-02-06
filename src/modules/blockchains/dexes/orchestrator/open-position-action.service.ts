@@ -45,6 +45,14 @@ import {
     FlowXOpenPositionActionService 
 } from "../flowx"
 
+/**
+ * Orchestrator service for open position actions across multiple DEXes.
+ * Routes open position operations to DEX-specific services based on pool configuration.
+ *
+ * @example
+ * const service = new OpenPositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class OpenPositionActionService {
     constructor(
@@ -61,28 +69,21 @@ export class OpenPositionActionService {
     ) { }
 
     /**
-     * === Error-handling convention (DEX orchestrators) ===
+     * Resolves a DEX record from memory storage or throws an exception.
+     * Stage: state validation
      *
-     * This file follows a staged error pattern to make failures predictable:
-     * - Input validation: required params are missing/invalid (throw immediately)
-     * - State validation: bot/pool/dex state is missing or inconsistent (throw immediately)
-     * - On-chain / data fetch: fetching required dynamic state fails (throws from called service)
-     * - Transaction building: DEX-specific builder throws (bubble up)
-     * - Execution: DEX-specific executor throws (bubble up)
-     * - Event parsing / confirmation: DEX-specific confirm/parsers throw (bubble up)
-     *
-     * We do NOT change behavior here—only organize throws and document intent.
+     * @param dexId - The DEX ID to look up
+     * @returns The DEX record
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
      */
-
-    /** State validation: resolve a DEX record from memory storage or throw `DexNotFoundException`. */
     private getDexOrThrow(dexId: string) {
-        const dex = this.primaryMemoryStorageService.dexCollection.findOne(
-            {
-                id: {
-                    $eq: dexId,
-                },
-            }
-        )
+        const dex = this.primaryMemoryStorageService.dexCollection.findOne({
+            id: {
+                $eq: dexId,
+            },
+        })
+
+        // Stage: state validation (DEX must exist)
         if (!dex) {
             throw new DexNotFoundException({
                 id: dexId 
@@ -92,8 +93,12 @@ export class OpenPositionActionService {
     }
 
     /**
-     * State/config validation: ensure the DEX is enabled for this executor instance.
-     * Throws `DexNotImplementedException` (existing behavior) when disabled.
+     * Ensures the DEX is enabled for this executor instance.
+     * Stage: state/config validation
+     *
+     * @param dexId - The DEX ID (for error reporting)
+     * @param dexDisplayId - The DEX display ID to check
+     * @throws {DexNotImplementedException} When the DEX is not enabled in module options
      */
     private assertDexEnabledOrThrow(dexId: string, dexDisplayId: DexId) {
         if (!this.options.dexIds?.includes(dexDisplayId)) {
@@ -104,64 +109,80 @@ export class OpenPositionActionService {
     }
 
     /**
-     * Prepare open-position transaction.
-     * Delegates preparation logic to DEX-specific service.
+     * Prepares an open position transaction.
+     * Delegates preparation logic to DEX-specific service based on pool configuration.
+     *
+     * @param param - Parameters for preparing open position
+     * @param param.state - The liquidity pool state (CLMM or DLMM)
+     * @param param.bot - Bot schema
+     * @returns Prepared transaction with position details
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not supported
+     * @note `prepare()` does NOT enforce `options.dexIds` (enabled DEX set).
+     *       Execution/confirmation do enforce it. This preserves existing behavior.
      */
-    async prepare(
-        {
-            state,
-            bot,
-        }: PrepareOpenPositionParams,
-    ): Promise<PrepareOpenPositionResult> {
+    async prepare({
+        state,
+        bot,
+    }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         // Stage: state validation (DEX must exist for this pool)
         const _state = state as ClmmLiquidityPoolState | DlmmLiquidityPoolState
 
         const dexId = _state.static.dex.toString()
         const dex = this.getDexOrThrow(dexId)
 
-        // NOTE: existing behavior: `prepare()` does NOT enforce `options.dexIds` (enabled DEX set).
-        // Execution/confirmation do enforce it. We keep that behavior and document it here.
-
+        // Route to DEX-specific prepare service
         switch (dex.displayId) {
         case DexId.Raydium:
             return this.raydiumOpenPositionActionService.prepare({
-                state: _state, bot 
+                state: _state,
+                bot 
             })
         case DexId.Orca:
             return this.orcaOpenPositionActionService.prepare({
-                state: _state, bot 
+                state: _state,
+                bot 
             })
         case DexId.Meteora:
             return this.meteoraOpenPositionActionService.prepare({
-                state: _state, bot 
+                state: _state,
+                bot 
             })
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.prepare({
-                state, bot 
+                state,
+                bot 
             })
         case DexId.Cetus:
             return this.cetusOpenPositionActionService.prepare({
-                state, bot 
+                state,
+                bot 
             })
         case DexId.Turbos:
             return this.turbosOpenPositionActionService.prepare({
-                state, bot 
+                state,
+                bot 
             })
         case DexId.Momentum:
             return this.momentumOpenPositionActionService.prepare({
-                state, bot 
+                state,
+                bot 
             })
         default:
-            throw new DexNotImplementedException(
-                {
-                    id: _state.static.dex.toString(),
-                }
-            )
+            throw new DexNotImplementedException({
+                id: _state.static.dex.toString(),
+            })
         }
     }
 
     /**
-     * Execute on-chain open-position transaction.
+     * Executes an on-chain open position transaction.
+     * Delegates execution logic to DEX-specific service based on pool configuration.
+     *
+     * @param params - Parameters for executing open position
+     * @returns Execution result with position ID and transaction hashes
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not enabled or not supported
      */
     async execute(
         params: ExecuteOpenPositionParams,
@@ -174,6 +195,7 @@ export class OpenPositionActionService {
         this.assertDexEnabledOrThrow(dexId,
             dex.displayId)
 
+        // Route to DEX-specific execute service
         switch (dex.displayId) {
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.execute(params)
@@ -190,16 +212,20 @@ export class OpenPositionActionService {
         case DexId.Meteora:
             return this.meteoraOpenPositionActionService.execute(params)
         default:
-            throw new DexNotImplementedException(
-                {
-                    id: _state.static.dex.toString(),
-                }
-            )
+            throw new DexNotImplementedException({
+                id: _state.static.dex.toString(),
+            })
         }
     }
 
     /**
-     * Confirm open-position transaction result.
+     * Confirms an open position transaction result.
+     * Delegates confirmation logic to DEX-specific service based on pool configuration.
+     *
+     * @param params - Parameters for confirming open position
+     * @returns Confirmation result with position liquidity
+     * @throws {DexNotFoundException} If the DEX is not found in memory storage
+     * @throws {DexNotImplementedException} If the DEX is not enabled or not supported
      */
     async confirm(
         params: ConfirmOpenPositionParams,
@@ -212,6 +238,7 @@ export class OpenPositionActionService {
         this.assertDexEnabledOrThrow(dexId,
             dex.displayId)
 
+        // Route to DEX-specific confirm service
         switch (dex.displayId) {
         case DexId.FlowX:
             return this.flowxOpenPositionActionService.confirm(params)
@@ -228,11 +255,9 @@ export class OpenPositionActionService {
         case DexId.Meteora:
             return this.meteoraOpenPositionActionService.confirm(params)
         default:
-            throw new DexNotImplementedException(
-                {
-                    id: _state.static.dex.toString(),
-                }
-            )
+            throw new DexNotImplementedException({
+                id: _state.static.dex.toString(),
+            })
         }
     }
 }

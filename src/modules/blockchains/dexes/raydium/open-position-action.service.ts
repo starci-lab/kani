@@ -80,6 +80,14 @@ import {
     envConfig 
 } from "@modules/env"
 
+/**
+ * Service responsible for opening positions on Raydium DEX.
+ * Handles position creation, transaction preparation, validation, and execution.
+ *
+ * @example
+ * const service = new RaydiumOpenPositionActionService(...)
+ * const result = await service.prepare({ bot, state })
+ */
 @Injectable()
 export class RaydiumOpenPositionActionService implements IOpenActionService {
     constructor(
@@ -93,27 +101,30 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
     ) { }
 
     /**
-     * === Error-handling convention (DEX action services) ===
+     * Prepares an open position transaction.
+     * Validates state, calculates amounts, builds transaction, and signs it.
      *
-     * Stages in this service:
-     * - Input validation: required params missing/invalid (throw immediately)
-     * - State validation: required bot/pool/position state missing (throw immediately)
-     * - On-chain fetch: RPC account fetch fails or returns null (throw)
-     * - Transaction building: instruction/message/signing validation fails (throw)
-     * - Execution: tx not executed / retry checks fail (throw)
-     * - Event parsing: required tx fields are missing (throw)
-     *
-     * Business logic unchanged; comments + throw structure only.
+     * @param param - Parameters for preparing open position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @returns Prepared transaction with position details
+     * @throws {ActivePositionNotFoundException} If active position context is missing
+     * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
+     * @throws {PositionClmmStateNotFoundException} If CLMM state is missing for the active position
+     * @throws {BalanceSnapshotsNotFoundException} If balance snapshots are missing
+     * @throws {InvalidPoolTokensException} If pool token metadata is missing
+     * @throws {PrivyMetadataNotFoundException} If Privy metadata is not found for V2 bots
+     * @throws {EncryptedPrivySignerPrivateKeyNotFoundException} If encrypted Privy signer private key is not found for V2 bots
      */
-
-    async prepare(
-        {
-            state,
-            bot,
-        }: PrepareOpenPositionParams
-    ): Promise<PrepareOpenPositionResult> {
+    async prepare({
+        state,
+        bot,
+    }: PrepareOpenPositionParams): Promise<PrepareOpenPositionResult> {
         const _state = state as ClmmLiquidityPoolState
+
+        // Determine if target token is token A
         const targetIsA = bot.targetToken.toString() === _state.static.tokenA.toString()
+
         // Stage: state validation (open-position requires an active position context)
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
@@ -139,8 +150,16 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 botId: bot.id,
             })
         }
-        const snapshotTargetBalanceAmount = new BN(bot.balanceSnapshots.targetBalanceAmount)
-        const snapshotQuoteBalanceAmount = new BN(bot.balanceSnapshots.quoteBalanceAmount)
+
+        // Extract balance amounts from snapshots
+        const {
+            targetBalanceAmount: snapshotTargetBalanceAmount,
+            quoteBalanceAmount: snapshotQuoteBalanceAmount
+        } = bot.balanceSnapshots
+        const snapshotTargetBalanceAmountBN = new BN(snapshotTargetBalanceAmount)
+        const snapshotQuoteBalanceAmountBN = new BN(snapshotQuoteBalanceAmount)
+
+        // Find token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: _state.static.tokenA.toString(),
         })
@@ -153,28 +172,36 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const { 
-            tickLower, 
+
+        // Find optimal tick range based on balance amounts
+        const {
+            tickLower,
             tickUpper,
             liquidity,
         } = await this.tickMathService.findOptimalTickRange({
             tickCurrent: _state.dynamic.tickCurrent,
             tickSpacing: new Decimal(_state.static.clmmState.tickSpacing),
             tickMultiplier: new Decimal(_state.static.clmmState.tickMultiplier),
-            targetBalanceAmount: new BN(snapshotTargetBalanceAmount),
-            quoteBalanceAmount: new BN(snapshotQuoteBalanceAmount),
+            targetBalanceAmount: snapshotTargetBalanceAmountBN,
+            quoteBalanceAmount: snapshotQuoteBalanceAmountBN,
             targetIsA,
         })
-        const amountA = targetIsA ? new BN(snapshotTargetBalanceAmount) : new BN(snapshotQuoteBalanceAmount)
-        const amountB = targetIsA ? new BN(snapshotQuoteBalanceAmount) : new BN(snapshotTargetBalanceAmount)
+
+        // Calculate amounts based on target token
+        const amountA = targetIsA ? snapshotTargetBalanceAmountBN : snapshotQuoteBalanceAmountBN
+        const amountB = targetIsA ? snapshotQuoteBalanceAmountBN : snapshotTargetBalanceAmountBN
+
+        // Adjust liquidity for slippage
         const liquidityAdjusted = adjustSlippage({
             bn: liquidity,
             slippage: new Decimal(envConfig().dexes.raydium.openPosition.slippage),
             isRoundUp: false,
         })
+
+        // Create open position instructions
         const {
             instructions: openPositionInstructions,
-            mintKeyPair,
+            positionKeyPair: mintKeyPair,
             ataAddress,
             feeAmountA,
             feeAmountB,
@@ -188,10 +215,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             tickLower,
             tickUpper,
         })
+
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Write,
             callback: async ({ rpc }) => {
+                // Get latest blockhash for transaction lifetime
                 const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+                // Build transaction message
                 const transactionMessage = pipe(
                     createTransactionMessage({
                         version: 0 
@@ -204,40 +235,45 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         tx),
                 )
                 const transaction = compileTransaction(transactionMessage)
+
                 if (bot.version === AppVersion.V1) {
                     return await this.signerService.withSolanaSigner({
                         bot,
                         action: async (signer) => {
+                            // Sign transaction with V1 signer and mint keypair
                             const signedTransaction = await signTransaction([signer.keyPair,
                                 mintKeyPair.keyPair],
                             transaction)
                             const transactionSignature = getSignatureFromTransaction(signedTransaction)
                             const txHash = transactionSignature.toString()
+
+                            // Validate transaction before returning
                             assertIsSendableTransaction(signedTransaction)
-                            assertIsTransactionWithinSizeLimit(signedTransaction)   
+                            assertIsTransactionWithinSizeLimit(signedTransaction)
+
+                            // Get the Raydium position metadata
                             const metadata: RaydiumPositionMetadata = {
                                 nftMintAddress: mintKeyPair.address.toString(),
                                 ataAddress: ataAddress.toString(),
                             }
                             return {
-                                prepareTxs: [
-                                    {
-                                        txHash,
-                                        solanaTx: signedTransaction,  
-                                    }
-                                ],
+                                prepareTxs: [{
+                                    txHash,
+                                    solanaTx: signedTransaction,
+                                }],
                                 feeAmountA,
                                 feeAmountB,
                                 tickLower,
                                 tickUpper,
                                 amountA,
                                 amountB,
-                                metadata,  
+                                metadata,
                                 positionId: personalPosition.toString(),
                             }
                         },
                     })
                 } else {
+                    // Stage: state validation (Privy signing prerequisites for V2 bots)
                     if (!bot.privyMetadata) {
                         throw new PrivyMetadataNotFoundException({
                             botId: bot.id,
@@ -248,7 +284,8 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                             botId: bot.id,
                         })
                     }
-                    // partial sign the transaction
+
+                    // Partially sign with mint keypair, then sign with Privy
                     const partialSignedTransaction = await partiallySignTransaction([mintKeyPair.keyPair],
                         transaction)
                     const signedTransaction = await this.privySignService.signSolanaTransaction({
@@ -260,17 +297,17 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                         walletId: bot.privyMetadata.walletId,
                     })
+
+                    // Get the Raydium position metadata
                     const metadata: RaydiumPositionMetadata = {
                         nftMintAddress: mintKeyPair.address.toString(),
                         ataAddress: ataAddress.toString(),
                     }
                     return {
-                        prepareTxs: [
-                            {
-                                txHash: signedTransaction.txHash.toString(),
-                                solanaTx: signedTransaction.signedTransaction,
-                            }
-                        ],
+                        prepareTxs: [{
+                            txHash: signedTransaction.txHash.toString(),
+                            solanaTx: signedTransaction.signedTransaction,
+                        }],
                         feeAmountA,
                         feeAmountB,
                         tickLower,
@@ -281,10 +318,25 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         positionId: personalPosition.toString(),
                     }
                 }
-            },  
+            },
         })
     }
 
+    /**
+     * Executes an open position transaction.
+     * Handles transaction checking, stimulation, and execution.
+     *
+     * @param param - Parameters for executing open position
+     * @param param.bot - Bot schema
+     * @param param.state - CLMM liquidity pool state
+     * @param param.txCheck - Whether to check if transaction already exists
+     * @param param.positionId - Position ID to confirm
+     * @param param.prepareTxs - Array of prepared transactions
+     * @param param.stimulate - Whether to simulate transaction execution
+     * @returns Execution result with position ID and transaction hashes
+     * @throws {MissingPositionIdParamException} If position ID is missing
+     * @throws {MissingSolanaTxParamException} If the Solana transaction is missing
+     */
     async execute({
         txCheck,
         stimulate,
@@ -293,6 +345,7 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         bot,
         state,
     }: ExecuteOpenPositionParams): Promise<ExecuteOpenPositionResult> {
+        // Stage: input validation (position ID must be provided)
         if (!positionId) {
             throw new MissingPositionIdParamException({
                 botId: bot.id,
@@ -300,7 +353,10 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
             })
         }
         const txHashes: Array<string> = []
+
+        // Process each prepared transaction
         for (const prepareTx of prepareTxs) {
+            // Stage: transaction checking (if txCheck is enabled and not stimulating)
             if (txCheck && !stimulate) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Http,
@@ -308,11 +364,14 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         return await rpc.getTransaction(
                             signature(prepareTx.txHash), 
                             {
-                                commitment: "confirmed", encoding: "base58" 
+                                commitment: "confirmed",
+                                encoding: "base58" 
                             }
                         ).send()
                     },
                 })
+
+                // If transaction already executed, log and continue
                 if (transaction) {
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionFound,
@@ -326,23 +385,29 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                     continue
                 }
             }
-            const solanaTx = prepareTx.solanaTx
+
+            // Stage: transaction validation (Solana transaction must exist)
+            const { solanaTx } = prepareTx
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
                     type: ErrorTransactionType.OpenPosition,
-                })   
+                })
             }
+
             await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Write,
-                callback: async ({ rpc, rpcSubscriptions }) => { 
+                callback: async ({ rpc, rpcSubscriptions }) => {
                     if (stimulate) {
+                        // Simulate transaction execution
                         const transaction = await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
                                 encoding: "base64",
                                 commitment: "confirmed",
                             }).send()
+
+                        // If simulation succeeds, log and continue
                         if (!transaction.value.err) {
                             this.winstonService.log(
                                 WinstonLog.OpenPositionTransactionStimulated,
@@ -356,6 +421,8 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                             return
                         }
                     }
+
+                    // Execute transaction on-chain
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                         rpc,
                         rpcSubscriptions,
@@ -366,6 +433,8 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                             commitment: "confirmed",
                         }
                     )
+
+                    // Log successful execution
                     this.winstonService.log(
                         WinstonLog.OpenPositionTransactionExecuted,
                         {
@@ -384,21 +453,31 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
         }
     }
 
-    async confirm(
-        {
-            positionId,
-            state,
-        }: ConfirmOpenPositionParams
-    ): Promise<ConfirmOpenPositionResult> {
+    /**
+     * Confirms an open position by fetching position account from chain.
+     *
+     * @param param - Parameters for confirming open position
+     * @param param.state - CLMM liquidity pool state
+     * @param param.positionId - Position account address
+     * @returns Confirmation result with position liquidity
+     * @throws {SolanaAccountNotFoundException} If position account is not found on-chain
+     */
+    async confirm({
+        positionId,
+        state,
+    }: ConfirmOpenPositionParams): Promise<ConfirmOpenPositionResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
+                // Fetch position account from chain
                 const positionInfo = await fetchEncodedAccount(
                     rpc, 
                     address(positionId),
                     {
                         commitment: "confirmed",
                     })
+
+                // Stage: on-chain fetch validation (position account must exist)
                 if (!positionInfo || !positionInfo.exists) {
                     throw new SolanaAccountNotFoundException({
                         name: ErrorSolanaAccountName.PersonalPosition,
@@ -407,6 +486,8 @@ export class RaydiumOpenPositionActionService implements IOpenActionService {
                         liquidityPoolId: state.static.displayId,
                     })
                 }
+
+                // Deserialize position state (skip 8-byte discriminator)
                 const [personalPositionState] = PersonalPositionState.struct.deserialize(Buffer.from(positionInfo.data),
                     8)
                 return {

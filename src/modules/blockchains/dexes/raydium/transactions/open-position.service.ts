@@ -5,7 +5,6 @@ import {
     AccountRole,
     address,
     Instruction,
-    Address,
 } from "@solana/kit"
 import {
     getTransferSolInstruction, SYSTEM_PROGRAM_ADDRESS 
@@ -19,7 +18,7 @@ import {
     AnchorUtilsService, AtaInstructionService, WSOL_MINT_ADDRESS 
 } from "../../../tx-builder"
 import {
-    BotSchema, PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata 
+    PrimaryMemoryStorageService, RaydiumLiquidityPoolMetadata 
 } from "@modules/databases"
 import {
     ClmmLiquidityPoolState 
@@ -35,10 +34,10 @@ import {
     PersonalPositionService 
 } from "./personal-position.service"
 import {
-    createNoopSigner, generateKeyPairSigner, KeyPairSigner 
+    createNoopSigner, generateKeyPairSigner 
 } from "@solana/signers"
 import {
-    SYSVAR_RENT_ADDRESS 
+    SYSVAR_RENT_ADDRESS     
 } from "@solana/sysvars"
 import {
     TOKEN_PROGRAM_ADDRESS, getTransferInstruction 
@@ -56,17 +55,19 @@ import {
 import {
     MountStorageService 
 } from "@modules/filesystem"
- 
-export interface CreateOpenPositionInstructionsParams {
-    bot: BotSchema
-    state: ClmmLiquidityPoolState
-    liquidity: BN
-    amountAMax: BN
-    amountBMax: BN
-    tickLower: BN
-    tickUpper: BN
-}
+import {
+    CreateOpenPositionInstructionsParams,
+    CreateOpenPositionInstructionsResult
+} from "../types"
 
+/**
+ * Service responsible for creating open position instructions for Raydium.
+ * Handles instruction construction for opening liquidity positions.
+ *
+ * @example
+ * const service = new OpenPositionInstructionService(...)
+ * const result = await service.createOpenPositionInstructions({ bot, state, liquidity, amountAMax, amountBMax, tickLower, tickUpper })
+ */
 @Injectable()
 export class OpenPositionInstructionService {
     constructor(
@@ -375,7 +376,7 @@ export class OpenPositionInstructionService {
         instructions.push(...endInstructions)
         return {
             instructions,
-            mintKeyPair,
+            positionKeyPair: mintKeyPair,
             ataAddress,
             feeAmountA,
             feeAmountB,
@@ -384,14 +385,6 @@ export class OpenPositionInstructionService {
     }
 }
 
-export interface CreateOpenPositionInstructionsResult {
-    instructions: Array<Instruction>
-    mintKeyPair: KeyPairSigner
-    ataAddress: Address
-    feeAmountA: BN
-    feeAmountB: BN
-    personalPosition: Address
-}
 
 export const OpenPositionArgs = new BeetArgsStruct(
     [

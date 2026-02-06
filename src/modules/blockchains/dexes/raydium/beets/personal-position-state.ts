@@ -11,20 +11,37 @@ import {
     publicKey 
 } from "@metaplex-foundation/beet-solana"
 
+/**
+ * Raydium personal position state structure.
+ * Represents a liquidity position in a Raydium CLMM pool.
+ */
 export class PersonalPositionState {
     constructor(
+      /** Bump seed for PDA derivation (u8). */
       readonly bump: number,
+      /** Public key of the position NFT mint. */
       readonly nftMint: PublicKey,
+      /** Public key of the pool this position belongs to. */
       readonly poolId: PublicKey,
+      /** Lower tick index (i32). */
       readonly tickLowerIndex: number,
+      /** Upper tick index (i32). */
       readonly tickUpperIndex: number,
+      /** Liquidity amount (u128). */
       readonly liquidity: bignum,
+      /** Fee growth inside 0 last in Q64.64 format (u128). */
       readonly feeGrowthInside0LastX64: bignum,
+      /** Fee growth inside 1 last in Q64.64 format (u128). */
       readonly feeGrowthInside1LastX64: bignum,
+      /** Token fees owed 0 (u64). */
       readonly tokenFeesOwed0: bignum,
+      /** Token fees owed 1 (u64). */
       readonly tokenFeesOwed1: bignum,
+      /** Public key of the position owner. */
       readonly owner: PublicKey,
+      /** Array of reward information (max 3 rewards). */
       readonly rewardInfos: Array<PositionRewardInfo>,
+      /** Position status (u8). */
       readonly status: number,
     ) {}
   

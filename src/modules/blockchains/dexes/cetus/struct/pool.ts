@@ -7,114 +7,199 @@ import {
     TypeName,
 } from "../../../structs"
 
-// ========== Position Manager Types ==========
+/**
+ * Fields structure for Cetus position manager Sui object.
+ * Manages positions in a pool.
+ */
 export interface CetusSuiObjectPositionManagerFields {
-    position_index: string;
-    tick_spacing: number;
+    /** Position index. */
+    position_index: string
+    /** Tick spacing. */
+    tick_spacing: number
+    /** Linked table of positions. */
     positions: SuiObject<
         {
-            head: string;
-            tail: string;
-            size: string;
-            id: SuiObjectID;
+            /** Head of the linked table. */
+            head: string
+            /** Tail of the linked table. */
+            tail: string
+            /** Size of the linked table. */
+            size: string
+            /** Object ID. */
+            id: SuiObjectID
         },
         `${string}::linked_table::LinkedTable<${string}, ${string}>`
-    >;
+    >
 }
 
+/**
+ * Cetus position manager Sui object type.
+ */
 export type CetusSuiObjectPositionManager = SuiObject<
     CetusSuiObjectPositionManagerFields,
     `${string}::position::PositionManager`
->;
+>
 
-// ========== Rewarder Types ==========
+/**
+ * Fields structure for Cetus rewarder Sui object.
+ * Represents a reward mechanism for a pool.
+ */
 export interface CetusSuiObjectRewarderFields {
-    emissions_per_second: string;
-    growth_global: string;
-    reward_coin: TypeName;
+    /** Emissions per second. */
+    emissions_per_second: string
+    /** Global growth value. */
+    growth_global: string
+    /** Reward coin type. */
+    reward_coin: TypeName
 }
 
+/**
+ * Cetus rewarder Sui object type.
+ */
 export type CetusSuiObjectRewarder = SuiObject<
     CetusSuiObjectRewarderFields,
     `${string}::rewarder::Rewarder`
->;
+>
 
+/**
+ * Fields structure for Cetus rewarder manager Sui object.
+ * Manages multiple rewarders for a pool.
+ */
 export interface CetusSuiObjectRewarderManagerFields {
-    last_updated_time: string;
-    points_growth_global: string;
-    points_released: string;
-    rewarders: Array<CetusSuiObjectRewarder>;
+    /** Last updated timestamp. */
+    last_updated_time: string
+    /** Global points growth. */
+    points_growth_global: string
+    /** Points released. */
+    points_released: string
+    /** Array of rewarders. */
+    rewarders: Array<CetusSuiObjectRewarder>
 }
 
+/**
+ * Cetus rewarder manager Sui object type.
+ */
 export type CetusSuiObjectRewarderManager = SuiObject<
     CetusSuiObjectRewarderManagerFields,
     `${string}::rewarder::RewarderManager`
->;
+>
 
-// ========== Tick Manager Types ==========
+/**
+ * Fields structure for Cetus skip list Sui object.
+ * Used for efficient tick management in a pool.
+ */
 export interface CetusSuiObjectSkipListFields {
-    id: SuiObjectID;
-    level: string;
-    max_level: string;
-    list_p: string;
-    size: string;
+    /** Object ID. */
+    id: SuiObjectID
+    /** Current level. */
+    level: string
+    /** Maximum level. */
+    max_level: string
+    /** List pointer. */
+    list_p: string
+    /** Size of the skip list. */
+    size: string
+    /** Array of head nodes. */
     head: Array<{
-        v: string;
-        is_none: boolean;
-    }>;
+        /** Value. */
+        v: string
+        /** Whether the value is none. */
+        is_none: boolean
+    }>
+    /** Tail node. */
     tail: {
-        v: string;
-        is_none: boolean;
-    };
+        /** Value. */
+        v: string
+        /** Whether the value is none. */
+        is_none: boolean
+    }
+    /** Random number generator object. */
     random: SuiObject<
         {
-            seed: string;
+            /** Random seed. */
+            seed: string
         },
         `${string}::random::Random`
-    >;
+    >
 }
 
+/**
+ * Fields structure for Cetus tick manager Sui object.
+ * Manages ticks in a pool using a skip list.
+ */
 export interface CetusSuiObjectTickManagerFields {
-    tick_spacing: number;
+    /** Tick spacing. */
+    tick_spacing: number
+    /** Skip list of ticks. */
     ticks: SuiObject<
         CetusSuiObjectSkipListFields,
         `${string}::skip_list::SkipList<${string}::tick::Tick>`
-    >;
+    >
 }
 
+/**
+ * Cetus tick manager Sui object type.
+ */
 export type CetusSuiObjectTickManager = SuiObject<
     CetusSuiObjectTickManagerFields,
     `${string}::tick::TickManager`
->;
+>
 
-// ========== Pool Types ==========
+/**
+ * Fields structure for Cetus pool Sui object.
+ * Represents a complete liquidity pool with all its components.
+ */
 export interface CetusSuiObjectPoolFields {
-    coin_a: string;
-    coin_b: string;
-    current_sqrt_price: string;
-    current_tick_index: SuiObjectI32<`${string}::i32::I32`>;
-    fee_growth_global_a: string;
-    fee_growth_global_b: string;
-    fee_protocol_coin_a: string;
-    fee_protocol_coin_b: string;
-    fee_rate: string;
-    id: SuiObjectID;
-    index: string;
-    is_pause: boolean;
-    liquidity: string;
-    position_manager: CetusSuiObjectPositionManager;
-    rewarder_manager: CetusSuiObjectRewarderManager;
-    tick_manager: CetusSuiObjectTickManager;
-    tick_spacing: number;
-    url: string;
+    /** Coin type A. */
+    coin_a: string
+    /** Coin type B. */
+    coin_b: string
+    /** Current sqrt price. */
+    current_sqrt_price: string
+    /** Current tick index. */
+    current_tick_index: SuiObjectI32<`${string}::i32::I32`>
+    /** Global fee growth for token A. */
+    fee_growth_global_a: string
+    /** Global fee growth for token B. */
+    fee_growth_global_b: string
+    /** Protocol fee for token A. */
+    fee_protocol_coin_a: string
+    /** Protocol fee for token B. */
+    fee_protocol_coin_b: string
+    /** Fee rate. */
+    fee_rate: string
+    /** Pool object ID. */
+    id: SuiObjectID
+    /** Pool index. */
+    index: string
+    /** Whether the pool is paused. */
+    is_pause: boolean
+    /** Current liquidity. */
+    liquidity: string
+    /** Position manager. */
+    position_manager: CetusSuiObjectPositionManager
+    /** Rewarder manager. */
+    rewarder_manager: CetusSuiObjectRewarderManager
+    /** Tick manager. */
+    tick_manager: CetusSuiObjectTickManager
+    /** Tick spacing. */
+    tick_spacing: number
+    /** Pool URL. */
+    url: string
 }
 
+/**
+ * Cetus pool Sui object type.
+ */
 export type CetusSuiObjectPool = SuiObject<
     CetusSuiObjectPoolFields,
     `${string}::pool::Pool`
->;
+>
 
-// ========== Parsed Pool Interface ==========
+/**
+ * Parsed Cetus pool interface.
+ * Contains parsed pool information with converted types and nested structures.
+ */
 export interface CetusPool {
     coinA: string;
     coinB: string;
@@ -174,9 +259,14 @@ export interface CetusPool {
     url: string;
 }
 
-// ========== Parser Functions ==========
 /**
- * Parses a Cetus Pool Sui object into a CetusPool interface
+ * Parses Cetus pool Sui object fields into a parsed interface.
+ *
+ * @param target - Raw Sui object fields
+ * @returns Parsed pool
+ *
+ * @example
+ * const parsed = parseCetusPool(poolFields)
  */
 export const parseCetusPool = (target: CetusSuiObjectPoolFields): CetusPool => {
     return {

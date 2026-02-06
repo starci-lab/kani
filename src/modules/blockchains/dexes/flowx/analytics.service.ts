@@ -41,12 +41,20 @@ import {
 import {
     Collection 
 } from "lokijs"
-// Implement analytics for FlowX DEX
-// We use the API provided by FlowX to get the analytics data
+import {
+    GetClmmPoolDetailRootResult
+} from "./types"
+
+/**
+ * Service responsible for fetching and caching FlowX pool analytics data.
+ * Uses FlowX GraphQL API to retrieve pool statistics and metrics.
+ *
+ * @example
+ * const service = new FlowXAnalyticsService(...)
+ * await service.onModuleInit()
+ */
 @Injectable()
-export class FlowXAnalyticsService
-implements OnModuleInit, OnApplicationBootstrap
-{
+export class FlowXAnalyticsService implements OnModuleInit, OnApplicationBootstrap {
     private readonly uri = "https://api.flowx.finance/flowx-be/graphql"
     private apolloClient: ApolloClient
     private liquidityPoolCollection: Collection<LiquidityPoolSchema>
@@ -210,45 +218,3 @@ implements OnModuleInit, OnApplicationBootstrap
     }
 }
 
-export interface GetClmmPoolDetailRootResult {
-  getClmmPoolsDetail: {
-    items: Array<ClmmPoolDetail>;
-  };
-}
-
-export interface ClmmPoolDetail {
-  id: string;
-  feeRate: number;
-  coinYType: string;
-  coinXType: string;
-  lpObjectId: string;
-  reserveX: string;
-  reserveY: string;
-  stats: ClmmPoolStats;
-  coinXInfo: ClmmCoinInfo;
-  coinYInfo: ClmmCoinInfo;
-  __typename: string;
-}
-
-export interface ClmmPoolStats {
-  volume24H: string;
-  volume7D: string;
-  fee24H: string;
-  fee7D: string;
-  apr: string;
-  totalLiquidityInUSD: string;
-  liquidityUSDX: string;
-  liquidityUSDY: string;
-  averageLiquidity: string;
-  __typename: string;
-}
-
-export interface ClmmCoinInfo {
-  name: string;
-  symbol: string;
-  type: string;
-  decimals: number;
-  iconUrl: string;
-  derivedPriceInUSD: string;
-  __typename: string;
-}

@@ -7,7 +7,6 @@ import {
     JobSchema,
     JobStatus,
     JobType,
-    LiquidityPoolSchema,
 } from "@modules/databases"
 import {
     CannotClosePositionEnqueueJobReason,
@@ -46,17 +45,17 @@ import {
     WinstonService 
 } from "@modules/winston"
 import {
-    DynamicLiquidityPoolInfoCacheResult 
-} from "@modules/cache"
+    EnqueueClosePositionParams
+} from "./types"
 
-export interface EnqueueClosePositionParams {
-    bot: BotSchema
-    liquidityPool: LiquidityPoolSchema
-    jobId: string
-    isRetry?: boolean
-    dynamicLiquidityPoolInfo?: DynamicLiquidityPoolInfoCacheResult
-}
-
+/**
+ * Service responsible for enqueuing close position jobs.
+ * Validates preconditions and adds jobs to the queue.
+ *
+ * @example
+ * const service = new ClosePositionEnqueueService(...)
+ * const job = await service.enqueue({ bot, liquidityPool, jobId })
+ */
 @Injectable()
 export class ClosePositionEnqueueService {
     constructor(

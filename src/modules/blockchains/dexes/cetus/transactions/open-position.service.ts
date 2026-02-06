@@ -30,6 +30,10 @@ import {
     ChainId 
 } from "@modules/typedefs"
 import {
+    CreateOpenPositionTxbParams,
+    CreateOpenPositionTxbResult
+} from "../types"
+import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
 import {
@@ -180,21 +184,4 @@ export class OpenPositionTxbService {
             feeAmountB,
         }
     }
-}
-
-export interface CreateOpenPositionTxbParams {
-    txb?: Transaction
-    state: ClmmLiquidityPoolState
-    tickLower: BN
-    tickUpper: BN
-    amountAMax: BN
-    amountBMax: BN
-    bot: BotSchema
-    liquidity: BN
-}
-
-export interface CreateOpenPositionTxbResult {
-    txb: Transaction
-    feeAmountA: BN
-    feeAmountB: BN
 }

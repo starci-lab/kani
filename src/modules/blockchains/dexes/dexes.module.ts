@@ -42,6 +42,13 @@ import {
     DexId 
 } from "@modules/databases"
 
+/**
+ * DEXes module.
+ * Provides services for DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * DexesModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
 @Module({
 })
 export class DexesModule extends ConfigurableModuleClass {

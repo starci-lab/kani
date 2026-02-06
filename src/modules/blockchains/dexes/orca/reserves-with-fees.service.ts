@@ -57,6 +57,15 @@ import {
     DynamicClmmRewardInfo,
 } from "@modules/cache"
 
+/**
+ * Service responsible for calculating reserves and fees for Orca CLMM positions.
+ * Fetches on-chain data for position and tick arrays to compute current reserves,
+ * accumulated fees, and rewards.
+ *
+ * @example
+ * const service = new OrcaReservesWithFeesService(...)
+ * const result = await service.reservesWithFees({ state, bot })
+ */
 @Injectable()
 export class OrcaReservesWithFeesService implements IReservesWithFeesService {
     constructor(
@@ -68,8 +77,23 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         private readonly clmmReservesFormulaService: ClmmReservesFormulaService,
     ) {}
 
+    /**
+     * Computes the current reserves, accumulated fees, and rewards for an Orca CLMM position.
+     *
+     * @param param - Parameters for calculating reserves with fees
+     * @param param.state - The CLMM liquidity pool state
+     * @param param.bot - The bot schema containing active position details
+     * @returns The computed reserves, fees, and rewards
+     * @throws {LiquidityPoolClmmStateNotFoundException} If CLMM state is missing for the pool
+     * @throws {ActivePositionNotFoundException} If no active position is found for the bot
+     * @throws {PositionClmmStateNotFoundException} If CLMM state is missing for the active position
+     * @throws {InvalidPoolTokensException} If token A or B metadata is not found
+     * @throws {SolanaAccountNotFoundException} If position or tick array accounts are not found on-chain
+     * @throws {TokenNotFoundException} If a reward token's metadata is not found
+     */
     async reservesWithFees({ bot, state }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
+
         // Stage: state validation (pool must have CLMM static state)
         if (!_state.static.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
@@ -82,18 +106,30 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
                 botId: bot.id,
             })
         }
-        const positionId = bot.activePosition.associatedPosition.positionId
+
+        // Extract position details
+        const {
+            positionId,
+            clmmState: {
+                tickLower: tickLowerStr,
+                tickUpper: tickUpperStr,
+                liquidity: liquidityStr
+            }
+        } = bot.activePosition.associatedPosition
+        const tickLower = new BN(tickLowerStr)
+        const tickUpper = new BN(tickUpperStr)
+
         // Stage: state validation (position must have CLMM state recorded)
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new PositionClmmStateNotFoundException({
-                positionId: bot.activePosition.associatedPosition.positionId,
+                positionId,
                 botId: bot.id,
             })
         }
-        const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
-        const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
 
-        const { programAddress } = _state.static.metadata as OrcaLiquidityPoolMetadata
+        const {
+            programAddress
+        } = _state.static.metadata as OrcaLiquidityPoolMetadata
 
         // ----------------------------
         // Token validation
@@ -172,11 +208,13 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         // Decode accounts
         // ----------------------------
+        // Deserialize position state (skip 8-byte discriminator)
         const [positionState] = Position.struct.deserialize(
             Buffer.from(positionAccount.data),
             8,
         )
 
+        // Decode tick arrays
         const tickArrayLower = decodeTickArray(tickArrayLowerAccount)
         if (!tickArrayLower.exists) {
             throw new SolanaAccountNotFoundException({
@@ -202,6 +240,7 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         const lowerStart = new BN(tickArrayLower.data.startTickIndex)
         const upperStart = new BN(tickArrayUpper.data.startTickIndex)
 
+        // Calculate tick indices within their respective tick arrays
         const tickLowerIndex = tickLower
             .sub(lowerStart)
             .div(new BN(_state.static.clmmState.tickSpacing))
@@ -210,10 +249,11 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
             .sub(upperStart)
             .div(new BN(_state.static.clmmState.tickSpacing))
 
+        // Get tick data from arrays
         const tickLowerData = tickArrayLower.data.ticks[tickLowerIndex.toNumber()]
         const tickUpperData = tickArrayUpper.data.ticks[tickUpperIndex.toNumber()]
 
-        const liquidity = new BN(bot.activePosition.associatedPosition.clmmState.liquidity)
+        const liquidity = new BN(liquidityStr)
 
         // ----------------------------
         // Reserves calculation
@@ -234,7 +274,10 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         // ----------------------------
         // Fee calculation
         // ----------------------------
-        const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
+        const {
+            feeA,
+            feeB
+        } = this.clmmFeesFormulaService.computeFees({
             feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
             feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
             feeGrowthOutsideLowerA: new BN(tickLowerData.feeGrowthOutsideA.toString()),
@@ -262,7 +305,9 @@ export class OrcaReservesWithFeesService implements IReservesWithFeesService {
         const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
-                const tokenAddress = clmmReward.tokenAddress
+                const {
+                    tokenAddress
+                } = clmmReward
                 const token = this.primaryMemoryStorageService.tokenCollection.findOne({
                     tokenAddress: {
                         $eq: tokenAddress,

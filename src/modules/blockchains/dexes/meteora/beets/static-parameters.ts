@@ -7,19 +7,33 @@ import {
     fixedSizeUint8Array,
 } from "@metaplex-foundation/beet"
   
-// ==================== StaticParameters ====================
+/**
+ * Static parameters for Meteora DLMM liquidity pool.
+ * These parameters are fixed and do not change during pool operation.
+ */
 export class StaticParameters {
     constructor(
+      /** Base factor for fee calculation. */
       readonly base_factor: number,
+      /** Filter period for volatility calculation. */
       readonly filter_period: number,
+      /** Decay period for volatility calculation. */
       readonly decay_period: number,
+      /** Reduction factor for fee calculation. */
       readonly reduction_factor: number,
+      /** Variable fee control parameter. */
       readonly variable_fee_control: number,
+      /** Maximum volatility accumulator value. */
       readonly max_volatility_accumulator: number,
+      /** Minimum bin ID allowed in the pool. */
       readonly min_bin_id: number,
+      /** Maximum bin ID allowed in the pool. */
       readonly max_bin_id: number,
+      /** Protocol share percentage. */
       readonly protocol_share: number,
+      /** Base fee power factor. */
       readonly base_fee_power_factor: number,
+      /** Padding bytes. */
       readonly _padding: Uint8Array,
     ) {}
   

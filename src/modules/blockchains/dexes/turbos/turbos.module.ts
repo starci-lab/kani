@@ -23,8 +23,28 @@ import {
     TurbosReservesWithFeesService,
 } from "./reserves-with-fees.service"
 
+/**
+ * Turbos DEX module.
+ * Provides services for Turbos DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * TurbosModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
+/**
+ * Turbos DEX module.
+ * Provides services for Turbos DEX integration including analytics, position management, and pool observation.
+ *
+ * @example
+ * TurbosModule.register({ enabled: { observe: true, action: true, analytics: true } })
+ */
 @Injectable()
 export class TurbosModule extends ConfigurableModuleClass {
+    /**
+     * Registers the Turbos module with the specified options.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module configuration
+     */
     static register(
         options: typeof OPTIONS_TYPE
     ): DynamicModule {

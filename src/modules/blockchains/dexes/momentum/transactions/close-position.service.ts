@@ -1,5 +1,4 @@
 import { 
-    BotSchema, 
     MomentumLiquidityPoolMetadata, 
     PrimaryMemoryStorageService 
 } from "@modules/databases"
@@ -18,9 +17,18 @@ import {
     SUI_CLOCK_OBJECT_ID 
 } from "@mysten/sui/utils"
 import {
-    ClmmLiquidityPoolState 
-} from "../../../interfaces"
+    CreateClosePositionTxbParams,
+    CreateClosePositionTxbResult
+} from "../types"
 
+/**
+ * Service responsible for creating close position transaction builders for Momentum.
+ * Handles transaction construction for closing liquidity positions.
+ *
+ * @example
+ * const service = new ClosePositionTxbService(...)
+ * const result = await service.createClosePositionTxb({ bot, state })
+ */
 @Injectable()
 export class ClosePositionTxbService {
     constructor(
@@ -111,14 +119,4 @@ export class ClosePositionTxbService {
             txb,
         }
     }
-}
-
-export interface CreateClosePositionTxbParams {
-    txb?: Transaction
-    bot: BotSchema
-    state: ClmmLiquidityPoolState
-}
-
-export interface CreateClosePositionTxbResult {
-    txb: Transaction
 }

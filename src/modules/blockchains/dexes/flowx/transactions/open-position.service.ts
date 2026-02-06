@@ -43,7 +43,19 @@ import {
 import {
     envConfig 
 } from "@modules/env"
+import {
+    CreateOpenPositionTxbParams,
+    CreateOpenPositionTxbResult
+} from "../types"
 
+/**
+ * Service responsible for creating open position transaction builders for FlowX.
+ * Handles transaction construction for opening liquidity positions.
+ *
+ * @example
+ * const service = new OpenPositionTxbService(...)
+ * const result = await service.createOpenPositionTxb({ bot, state, tickLower, tickUpper, amountA, amountB })
+ */
 @Injectable()
 export class OpenPositionTxbService {
     constructor(
@@ -223,21 +235,4 @@ export class OpenPositionTxbService {
             feeAmountB,
         }
     }
-}
-
-export interface CreateOpenPositionTxbParams { 
-    txb?: Transaction 
-    bot: BotSchema,
-    state: ClmmLiquidityPoolState,
-    tickLower: BN,
-    tickUpper: BN,
-    liquidity: BN,
-    amountA: BN,
-    amountB: BN,
-}
-
-export interface CreateOpenPositionTxbResult {
-    txb: Transaction
-    feeAmountA: BN
-    feeAmountB: BN
 }

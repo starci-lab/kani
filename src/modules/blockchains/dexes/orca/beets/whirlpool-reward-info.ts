@@ -11,12 +11,21 @@ import {
     PublicKey 
 } from "@solana/web3.js"
 
+/**
+ * Reward information for an Orca Whirlpool.
+ * Represents reward token configuration and state.
+ */
 export class WhirlpoolRewardInfo {
     constructor(
+        /** Public key of the reward token mint. */
         readonly mint: PublicKey,
+        /** Public key of the reward vault. */
         readonly vault: PublicKey,
+        /** Extension bytes (32 bytes). */
         readonly extension: Uint8Array,
+        /** Emissions per second in Q64.64 format (u128). */
         readonly emissionsPerSecondX64: bignum,
+        /** Reward growth global in Q64.64 format (u128). */
         readonly growthGlobalX64: bignum
     ) {}
 

@@ -52,6 +52,14 @@ import {
     PrimaryMemoryStorageService,
 } from "@modules/databases"
 
+/**
+ * Service responsible for calculating reserves with fees for Cetus positions.
+ * Fetches on-chain data and computes reserves, fees, and rewards.
+ *
+ * @example
+ * const service = new CetusReservesWithFeesService(...)
+ * const result = await service.reservesWithFees({ state, bot })
+ */
 @Injectable()
 export class CetusReservesWithFeesService implements IReservesWithFeesService {
     constructor(
@@ -62,21 +70,36 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
+    /**
+     * Calculates reserves with fees for a position.
+     * Fetches on-chain tick and position info, then computes reserves, fees, and rewards.
+     *
+     * @param param - Parameters for calculating reserves with fees
+     * @param param.state - CLMM liquidity pool state
+     * @param param.bot - Bot schema
+     * @returns Calculated reserves, fees, and rewards
+     *
+     * @example
+     * const result = await service.reservesWithFees({ state, bot })
+     */
     async reservesWithFees({ state, bot }: ReservesWithFeesParams): Promise<ReservesWithFeesResult> {
         const _state = state as ClmmLiquidityPoolState
-        // Stage: state validation (requires an active position)
+        
+        // validate active position exists
         if (!bot.activePosition || !bot.activePosition.associatedPosition) {
             throw new ActivePositionNotFoundException({
                 botId: bot.id,
             })
         }
-        // Stage: state validation (position must have CLMM state recorded)
+        
+        // validate position has CLMM state
         if (!bot.activePosition.associatedPosition.clmmState) {
             throw new LiquidityPoolClmmStateNotFoundException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        // Stage: state validation (pool token metadata must exist)
+        
+        // fetch pool token metadata
         const tokenA = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: _state.static.tokenA.toString(),
@@ -87,18 +110,26 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 $eq: _state.static.tokenB.toString(),
             },
         })
+        
+        // validate tokens exist
         if (!tokenA || !tokenB) {
             throw new InvalidPoolTokensException({
                 liquidityPoolId: _state.static.displayId,
             })
         }
-        const positionId = bot.activePosition.associatedPosition.positionId
+        
+        // extract position and tick information
+        const { positionId } = bot.activePosition.associatedPosition
         const tickLower = new BN(bot.activePosition.associatedPosition.clmmState.tickLower)
         const tickUpper = new BN(bot.activePosition.associatedPosition.clmmState.tickUpper)
-        const lowerScore = this.tickScore(tickLower)
-        const upperScore = this.tickScore(tickUpper)
+        const lowerScore = this.tickScore({
+            tick: tickLower 
+        })
+        const upperScore = this.tickScore({
+            tick: tickUpper 
+        })
         const { tickManagerId, positionManagerId } = _state.static.metadata as CetusLiquidityPoolMetadata
-        // Stage: on-chain fetch (tick lower dynamic field)
+        // fetch tick lower dynamic field from on-chain
         const { data: tickLowerDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -111,6 +142,8 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 })
             },
         })
+        
+        // validate tick lower data exists
         if (!tickLowerDataRaw) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.TickLower,
@@ -119,11 +152,14 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        
+        // parse tick lower data
         const _tickLowerData = tickLowerDataRaw as unknown as SuiMoveObjectData<
             CetusSuiSkipListNodeFields<CetusSuiObjectTickFields, `${string}::tick::Tick`>
         >
         const tickLowerData = parseCetusTick(_tickLowerData.content.fields.value.fields.value.fields)
-        // Stage: on-chain fetch (tick upper dynamic field)
+        
+        // fetch tick upper dynamic field from on-chain
         const { data: tickUpperDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -136,6 +172,8 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 })
             },
         })
+        
+        // validate tick upper data exists
         if (!tickUpperDataRaw) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.TickUpper,
@@ -144,11 +182,14 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        
+        // parse tick upper data
         const _tickUpperData = tickUpperDataRaw as unknown as SuiMoveObjectData<
             CetusSuiSkipListNodeFields<CetusSuiObjectTickFields, `${string}::tick::Tick`>
         >
         const tickUpperData = parseCetusTick(_tickUpperData.content.fields.value.fields.value.fields)
-        // Stage: on-chain fetch (position info)
+        
+        // fetch position info dynamic field from on-chain
         const { data: positionInfoDataRaw } = await this.rpcExecutorService.withSuiClient({
             accessType: RpcAccessType.Http,
             callback: async ({ suiClient }) => {
@@ -161,6 +202,8 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 })
             },
         })
+        
+        // validate position info exists
         if (!positionInfoDataRaw) {
             throw new SuiObjectNotFoundException({
                 name: ErrorSuiObjectName.PositionInfo,
@@ -169,6 +212,8 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                 liquidityPoolId: _state.static.displayId,
             })
         }
+        
+        // parse position info data
         const _positionInfoData = positionInfoDataRaw as unknown as SuiMoveObjectData<
             CetusSuiSkipListNodeFields<CetusSuiObjectPositionInfoFields, `${string}::position::PositionInfo`>
         >
@@ -176,16 +221,12 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
             _positionInfoData.content.fields.value.fields.value.fields
         )
 
+        // convert ticks to BN for calculations
         const tickLowerBn = new BN(tickLower.toNumber())
         const tickUpperBn = new BN(tickUpper.toNumber())
 
-        // ----------------------------
-        // Reserves calculation
-        // ----------------------------
-        const {
-            reserveA,
-            reserveB,
-        } = this.clmmReservesFormulaService.computeReserves({
+        // calculate reserves
+        const { reserveA, reserveB } = this.clmmReservesFormulaService.computeReserves({
             tickLower: tickLowerBn,
             tickUpper: tickUpperBn,
             tickCurrent: _state.dynamic.tickCurrent,
@@ -195,9 +236,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
             fixedPointScale: Q64,
         })
 
-        // ----------------------------
-        // Fee calculation
-        // ----------------------------
+        // calculate fees
         const { feeA, feeB } = this.clmmFeesFormulaService.computeFees({
             feeGrowthGlobalA: _state.dynamic.feeGrowthGlobalA,
             feeGrowthGlobalB: _state.dynamic.feeGrowthGlobalB,
@@ -220,23 +259,26 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
             decimalsB: new Decimal(tokenB.decimals),
         })
 
-        // ----------------------------
-        // Rewards (CLMM time-based)
-        // ----------------------------
+        // calculate rewards (CLMM time-based)
         const clmmRewards = _state.dynamic.rewards as Array<DynamicClmmRewardInfo>
         const rewards = Object.fromEntries(
             clmmRewards.map((clmmReward, index) => {
-                const tokenAddress = clmmReward.tokenAddress
+                // fetch token metadata for reward
+                const { tokenAddress } = clmmReward
                 const token = this.primaryMemoryStorageService.tokenCollection.findOne({
                     tokenAddress: {
                         $eq: tokenAddress,
                     },
                 })
+                
+                // validate token exists
                 if (!token) {
                     throw new TokenNotFoundException({
                         tokenAddress,
                     })
                 }
+                
+                // compute reward amount
                 const posReward = positionInfoData.rewards[index]
                 const rewardAmount = this.clmmRewardsFormulaService.computeReward({
                     rewardGrowthGlobal: new BN(clmmReward.growthGlobal.toString()),
@@ -253,6 +295,7 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
                     lastUpdateMs: _state.dynamic.rewardLastUpdatedTimeMs ?? new BN(0),
                     totalLiquidity: new BN(_state.dynamic.liquidity.toString()),
                 })
+                
                 return [
                     token.id,
                     rewardAmount,
@@ -270,16 +313,32 @@ export class CetusReservesWithFeesService implements IReservesWithFeesService {
         }
     }
 
-    private tickScore(tick: BN): BN {
-        const tickScore = tick.add(this.tickBound())
-        if (tickScore.lt(new BN(0)) || tickScore.gt(this.tickBound().mul(new BN(2)))) {
+    /**
+     * Calculates tick score for dynamic field lookup.
+     *
+     * @param param - Parameters for calculating tick score
+     * @param param.tick - Tick value
+     * @returns Tick score
+     */
+    private tickScore({ tick }: { tick: BN }): BN {
+        const tickBound = this.tickBound()
+        const tickScore = tick.add(tickBound)
+        
+        // validate tick score is within bounds
+        if (tickScore.lt(new BN(0)) || tickScore.gt(tickBound.mul(new BN(2)))) {
             throw new InvalidTickScoreException({
                 tickScore: tickScore.toNumber(),
             })
         }
+        
         return tickScore
     }
 
+    /**
+     * Returns the tick bound constant used for score calculation.
+     *
+     * @returns Tick bound value
+     */
     private tickBound(): BN {
         return new BN(443636)
     }
