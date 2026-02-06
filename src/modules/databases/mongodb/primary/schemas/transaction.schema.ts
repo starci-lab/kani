@@ -15,13 +15,10 @@ import {
 } from "./bot.schema"
 import {
     ChainId, GraphQLTypeChainId 
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 import {
-    GraphQLTypeTransactionType, TokenId, TransactionType 
+    GraphQLTypeTransactionType, TokenId, TransactionType, PrimaryMongoDbCollectionRef
 } from "../enums"
-import {
-    PrimaryMongoDbCollectionRef,
-} from "../ref"
 
 @ObjectType({
     description: "Represents a transaction",

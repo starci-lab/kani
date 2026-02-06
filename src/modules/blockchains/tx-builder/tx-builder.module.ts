@@ -17,6 +17,12 @@ import {
     FetchCoinsService, SelectCoinsService 
 } from "./sui"
 
+/**
+ * Module responsible for managing the transaction builder services.
+ *
+ * @example
+ * TxBuilderModule.register({ enabled: true })
+ */
 @Module({
     providers: [
         AnchorUtilsService,

@@ -61,9 +61,11 @@ export class RefreshResolver {
             // simple check to ensure type-safety
             throw new Error("Refresh token not found")
         }
-        this.cookieService.attachHttpOnlyCookie(res,
-            "refresh_token",
-            refreshToken)
+        this.cookieService.attachHttpOnlyCookie({
+            res,
+            name: "refresh_token",
+            value: refreshToken,
+        })
         return {
             accessToken 
         }

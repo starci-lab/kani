@@ -23,10 +23,12 @@ import {
 import {
     AsyncService 
 } from "@modules/mixin"
-
-export interface AttachAssociatedLiquidityPoolToBotActivePositionsOptions {
-    withAnalytics: boolean
-}
+import type {
+    AttachAssociatedLiquidityPoolToBotActivePositionsParams,
+    AttachAssociatedLiquidityPoolToBotActivePositionsResult,
+    AttachAssociatedPositionsToBotActivePositionsParams,
+    AttachAssociatedPositionsToBotActivePositionsResult,
+} from "./types"
 
 @Injectable()
 export class ActivePositionAssociateService {
@@ -39,11 +41,12 @@ export class ActivePositionAssociateService {
     ) { }
 
     /**
-   * Attach associated Position data into each bot.activePosition.
-   */
+     * Attach associated Position data into each bot.activePosition.
+     */
     async attachAssociatedPositionsToBotActivePositions(
-        bots: Array<BotSchema>
-    ): Promise<void> {
+        params: AttachAssociatedPositionsToBotActivePositionsParams,
+    ): Promise<AttachAssociatedPositionsToBotActivePositionsResult> {
+        const { bots } = params
         const botsWithActivePosition = bots.filter(
             (
                 bot,
@@ -88,11 +91,12 @@ export class ActivePositionAssociateService {
     }
 
     /**
-   * Attach associated LiquidityPool data into each bot.activePosition.
-   */
+     * Attach associated LiquidityPool data into each bot.activePosition.
+     */
     async attachAssociatedLiquidityPoolToBotActivePositions(
-        bots: Array<BotSchema>
-    ): Promise<void> {
+        params: AttachAssociatedLiquidityPoolToBotActivePositionsParams,
+    ): Promise<AttachAssociatedLiquidityPoolToBotActivePositionsResult> {
+        const { bots, withAnalytics = true } = params
         const botsWithActivePosition = bots.filter(
             (
                 bot,
@@ -142,12 +146,13 @@ export class ActivePositionAssociateService {
                             id: liquidityPoolId,
                         })
                     }
-                    const analytics = await this.cacheService.get(
-                        {
-                            key: CacheKey.PoolAnalytics,
-                            args: [liquidityPoolId],
-                        }
-                    )
+                    const analytics =
+                        withAnalytics
+                            ? await this.cacheService.get({
+                                key: CacheKey.PoolAnalytics,
+                                args: [liquidityPoolId],
+                            })
+                            : undefined
                     if (analytics) {
                         liquidityPool.analytics = {
                             fees24H: analytics.fee24H,

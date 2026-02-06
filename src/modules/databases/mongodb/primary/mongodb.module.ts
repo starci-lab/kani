@@ -92,11 +92,16 @@ import {
     AssociateModule 
 } from "./associate"
 
+/**
+ * Primary MongoDB module for the primary MongoDB connection.
+ */
 @Module({
 })
 export class PrimaryMongoDbModule extends ConfigurableModuleClass {
-    public static register(options: typeof OPTIONS_TYPE = {
-    }): DynamicModule {
+    public static register(
+        options: typeof OPTIONS_TYPE = {
+        }
+    ): DynamicModule {
         const dynamicModule = super.register(options)
 
         const { dbName, host, password, port, username } =

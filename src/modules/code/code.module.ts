@@ -1,19 +1,20 @@
 import {
-    Module 
+    Module
 } from "@nestjs/common"
 import {
-    CodeGeneratorService,
+    CodeGeneratorService
 } from "./code-generator.service"
 import {
-    ConfigurableModuleClass 
+    ConfigurableModuleClass
 } from "./code.module-definition"
 
 @Module({
-    imports: [
-    ],
+    imports: [],
     providers: [
         CodeGeneratorService,
     ],
-    exports: [CodeGeneratorService],
+    exports: [
+        CodeGeneratorService,
+    ],
 })
 export class CodeModule extends ConfigurableModuleClass {}

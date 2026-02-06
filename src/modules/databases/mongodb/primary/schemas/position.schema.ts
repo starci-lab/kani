@@ -28,7 +28,7 @@ import {
 import {
     ChainId,
     GraphQLTypeChainId,
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 import {
     GraphQLJSON,
 } from "graphql-type-json"
@@ -39,7 +39,7 @@ import {
 } from "./position-settlement.schema"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 import {
     PositionClmmStateSchema,
     PositionClmmStateSchemaClass,

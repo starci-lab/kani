@@ -1,5 +1,2 @@
-export interface EncryptedPayload {
-    iv: string
-    ciphertext: string
-    authTag: string
-}
+/** Re-export for backward compatibility; prefer importing from @modules/crypto. */
+export type { EncryptedPayload } from "@modules/crypto"

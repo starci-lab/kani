@@ -1,32 +1,79 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    customAlphabet, nanoid 
+    customAlphabet,
+    nanoid
 } from "nanoid"
+import {
+    CODE_NANOID_LENGTH,
+    NUMBERS_ALPHABET,
+    OTP_CODE_LENGTH
+} from "./constants"
+import type {
+    GenerateCodeResult,
+    GenerateCodesParams,
+    GenerateCodesResult,
+    GenerateOtpCodeResult
+} from "./types"
 
-const numbers = "0123456789"
-const nanoidNumbers = customAlphabet(numbers,
-    6)
+const nanoidNumbers = customAlphabet(NUMBERS_ALPHABET,
+    OTP_CODE_LENGTH)
 
+/**
+ * Service for generating unique codes and OTP codes (nanoid-based).
+ *
+ * @example
+ * codeGeneratorService.generateCode("bot")
+ * codeGeneratorService.generateOtpCode()
+ */
 @Injectable()
 export class CodeGeneratorService {
     constructor() {}
 
-    generateCode(prefix: string): string {
-        // nanoid 10 characters
-        // chance to duplicate is 1/10^10 ~ very low
-        return `${prefix}-${nanoid(10)}`
+    /**
+     * Generates a unique code with prefix and nanoid suffix.
+     *
+     * @param prefix - Prefix (e.g. "bot", "session")
+     * @returns Code string like "prefix-xxxxxxxxxx"
+     *
+     * @example
+     * const code = codeGeneratorService.generateCode("bot")
+     */
+    generateCode(prefix: string): GenerateCodeResult {
+        return `${prefix}-${nanoid(CODE_NANOID_LENGTH)}`
     }
 
-    generateCodes(prefix: string, count: number): Array<string> {
-        return Array.from({
-            length: count 
-        },
-        () => this.generateCode(prefix))
+    /**
+     * Generates multiple codes with the same prefix.
+     *
+     * @param param - Prefix and count
+     * @returns Array of code strings
+     *
+     * @example
+     * const codes = codeGeneratorService.generateCodes({ prefix: "inv", count: 5 })
+     */
+    generateCodes({
+        prefix,
+        count,
+    }: GenerateCodesParams): GenerateCodesResult {
+        return Array.from(
+            {
+                length: count 
+            },
+            () => this.generateCode(prefix)
+        )
     }
 
-    generateOtpCode(): string {
+    /**
+     * Generates a numeric OTP code (digits only, fixed length).
+     *
+     * @returns OTP code string
+     *
+     * @example
+     * const otp = codeGeneratorService.generateOtpCode()
+     */
+    generateOtpCode(): GenerateOtpCodeResult {
         return nanoidNumbers()
     }
 }

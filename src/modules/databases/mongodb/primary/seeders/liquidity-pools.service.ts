@@ -8,14 +8,17 @@ import {
     LiquidityPoolSchema 
 } from "../schemas"
 import {
-    DeepPartial, ChainId 
+    DeepPartial 
 } from "@modules/typedefs"
+import {
+    ChainId 
+} from "@modules/blockchains"
 import {
     createObjectId 
 } from "@modules/utils"
 import {
     Seeder 
-} from "./seeder.interface"
+} from "./types"
 import {
     Connection 
 } from "mongoose"

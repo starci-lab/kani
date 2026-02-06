@@ -1,22 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
-    Schema, Document, 
+    Document, 
     Types
 } from "mongoose"
+import type {
+    NormalizeSchemaType 
+} from "./types"
 
-// Define types for the schema options
-interface NormalizeMongooseOptions {
-  normalizeId?: boolean;
-  removeVersion?: boolean;
-  removePrivatePaths?: boolean;
-  toJSON?: {
-    transform?: (doc: Document, returnValue: any, options: any) => any;
-  };
-}
-
-type SchemaType = Schema & { options: NormalizeMongooseOptions };
-
-export const normalizeMongoose = (schema: SchemaType): void => {
+export const normalizeMongoose = (schema: NormalizeSchemaType): void => {
     const {
         toJSON,
         normalizeId,

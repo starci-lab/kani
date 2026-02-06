@@ -1,43 +1,50 @@
 import {
-    Inject, Injectable, OnModuleInit 
+    Inject, Injectable, OnModuleInit
 } from "@nestjs/common"
 import {
-    DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema 
+    DexSchema, GasConfig, LiquidityPoolSchema, TokenSchema
 } from "../schemas"
 import {
-    InjectPrimaryMongoose 
+    InjectPrimaryMongoose
 } from "../mongodb.decorators"
 import {
-    Connection 
+    Connection
 } from "mongoose"
 import {
-    Collection 
+    Collection
 } from "lokijs"
 import {
-    AsyncService, LokiJSService, ReadinessWatcherFactoryService 
+    AsyncService, LokiJSService, ReadinessWatcherFactoryService
 } from "@modules/mixin"
 import {
-    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE 
+    MODULE_OPTIONS_TOKEN, OPTIONS_TYPE
 } from "./memory.module-definition"
 import {
-    AccountLimitsConfig, AuthenticationConfig, AvatarsConfig, BalanceConfig, ConfigRecord, ConfigSchema 
+    AccountLimitsConfig, AuthenticationConfig, AvatarsConfig, BalanceConfig, ConfigRecord, ConfigSchema
 } from "../schemas"
 import {
-    ConfigId 
+    ConfigId
 } from "../enums"
 import {
-    createObjectId 
+    createObjectId
 } from "@modules/utils"
-import { 
-    AccountLimitsConfigNotFoundException, 
+import {
+    AccountLimitsConfigNotFoundException,
     AuthenticationConfigNotFoundException,
-    AvatarsConfigNotFoundException, 
-    BalanceConfigNotFoundException, 
-    GasConfigNotFoundException 
+    AvatarsConfigNotFoundException,
+    BalanceConfigNotFoundException,
+    GasConfigNotFoundException
 } from "@modules/exceptions"
+import type {
+    LoadResult 
+} from "./types"
+
+/**
+ * In-memory cache of primary MongoDB data (tokens, liquidity pools, dexes, configs).
+ * Uses LokiJS collections and loads from DB on init (unless manualLoad) or when load() is called.
+ */
 @Injectable()
 export class PrimaryMemoryStorageService implements OnModuleInit {
-    // configs
     public gasConfig: GasConfig
     public balanceConfig: BalanceConfig
     public accountLimits: AccountLimitsConfig
@@ -47,7 +54,7 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
     public tokenCollection: Collection<TokenSchema>
     public liquidityPoolCollection: Collection<LiquidityPoolSchema>
     public dexCollection: Collection<DexSchema>
-    // constructor
+
     constructor(
         @Inject(MODULE_OPTIONS_TOKEN)
         private readonly options: typeof OPTIONS_TYPE,
@@ -58,56 +65,53 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         private readonly lokiJSService: LokiJSService,
     ) { }
 
-    private async process() {
+    /** Load all collections and configs from MongoDB in parallel. */
+    private async process(): Promise<void> {
         await this.asyncService.allMustDone([
             (async () => {
                 const tokens = await this.connection
                     .model<TokenSchema>(TokenSchema.name)
                     .find()
-                this.tokenCollection = await this.lokiJSService.createCollection<
-                        TokenSchema
-                        >(
-                            "tokens",
-                            {
-                                indices: 
-                                ["tokenAddress",
-                                    "displayId",
-                                    "id"]
-                            }
-                        )
+                this.tokenCollection = await this.lokiJSService.createCollection<TokenSchema>(
+                    TokenSchema.name,
+                    {
+                        indices: [
+                            "tokenAddress",
+                            "displayId",
+                            "id",
+                        ] 
+                    },
+                )
                 this.tokenCollection.insert(tokens.map(token => token.toJSON()))
             })(),
             (async () => {
                 const liquidityPools = await this.connection
                     .model<LiquidityPoolSchema>(LiquidityPoolSchema.name)
                     .find()
-                this.liquidityPoolCollection = await this.lokiJSService.createCollection<
-                        LiquidityPoolSchema
-                        >(
-                            "liquidity_pools",
-                            {
-                                indices: 
-                                ["poolAddress",
-                                    "displayId",
-                                    "id"]
-                            }
-                        )
+                this.liquidityPoolCollection = await this.lokiJSService.createCollection<LiquidityPoolSchema>(
+                    LiquidityPoolSchema.name,
+                    {
+                        indices: [
+                            "displayId",
+                            "id",
+                        ] 
+                    },
+                )
                 this.liquidityPoolCollection.insert(liquidityPools.map(liquidityPool => liquidityPool.toJSON()))
             })(),
             (async () => {
                 const dexes = await this.connection
                     .model<DexSchema>(DexSchema.name)
                     .find()
-                this.dexCollection = await this.lokiJSService.createCollection<
-                        DexSchema
-                        >(
-                            "dexes",
-                            {
-                                indices: 
-                                ["displayId",
-                                    "id"]
-                            }
-                        )
+                this.dexCollection = await this.lokiJSService.createCollection<DexSchema>(
+                    DexSchema.name,
+                    {
+                        indices: [
+                            "displayId",
+                            "id",
+                        ] 
+                    },
+                )
                 this.dexCollection.insert(dexes.map(dex => dex.toJSON()))
             })(),
             (async () => {
@@ -163,9 +167,10 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         ])
     }
 
-    // on module init, load all data from memory
-    async onModuleInit() {
-        // if manual load, do not load
+    /**
+     * On module init: if not manualLoad, loads all data from MongoDB and marks service ready.
+     */
+    async onModuleInit(): Promise<void> {
         if (this.options.manualLoad) {
             return
         }
@@ -174,8 +179,10 @@ export class PrimaryMemoryStorageService implements OnModuleInit {
         this.readinessWatcherFactoryService.setReady(PrimaryMemoryStorageService.name)
     }
 
-    // load all data from memory
-    async load() {
+    /**
+     * Load (or reload) all in-memory data from the database.
+     */
+    async load(): Promise<LoadResult> {
         await this.process()
     }
 }   

@@ -140,9 +140,11 @@ export class VerifySignInOtpService {
             encryptedTotpSecretPayload: user.encryptedTotpSecretPayload,
         })
         if (refreshToken) {
-            this.cookieService.attachHttpOnlyCookie(res,
-                "refresh_token",
-                refreshToken)
+            this.cookieService.attachHttpOnlyCookie({
+                res,
+                name: "refresh_token",
+                value: refreshToken,
+            })
         }
         // delete the sign in OTP from cache
         await this.cacheService.del(

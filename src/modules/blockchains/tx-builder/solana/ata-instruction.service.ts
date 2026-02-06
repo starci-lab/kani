@@ -1,9 +1,8 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
     Address,
-    Instruction,
     fetchEncodedAccount,
     createNoopSigner,
     getAddressEncoder,
@@ -27,32 +26,54 @@ import {
     getCloseAccountInstruction,
 } from "@solana-program/token"
 import {
-    getCreateAccountWithSeedInstruction 
+    getCreateAccountWithSeedInstruction
 } from "@solana-program/system"
 import BN from "bn.js"
 import {
-    sha256 
+    sha256
 } from "@noble/hashes/sha2"
 import {
-    PublicKey 
+    PublicKey
 } from "@solana/web3.js"
 import {
-    RpcExecutorService 
+    RpcExecutorService
 } from "@modules/blockchains"
 import {
-    RpcAccessType 
+    RpcAccessType
 } from "@modules/filesystem"
+import {
+    CreateWSolAccountInstructionsParams,
+    CreateWSolAccountInstructionsResult,
+    GeneratePubKeyParams,
+    GeneratePubKeyResult,
+    GetOrCreateAtaInstructionsParams,
+    GetOrCreateAtaInstructionsResult
+} from "../types"
+import {
+    WSOL_MINT_ADDRESS 
+} from "../constants"
 
-export const WSOL_MINT_ADDRESS = address(
-    "So11111111111111111111111111111111111111112",
-)
-
+/**
+ * Service for Solana associated token account (ATA) and wrapped SOL (WSOL) instructions.
+ *
+ * @example
+ * const result = await ataInstructionService.getOrCreateAtaInstructions({ ownerAddress, tokenMint })
+ */
 @Injectable()
 export class AtaInstructionService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
     ) {}
 
+    /**
+     * Returns ATA address and optional create/end instructions; creates WSOL account when tokenMint is omitted.
+     *
+     * @param param - Token mint (optional for WSOL), owner, token program variant, amount, pdaOnly
+     * @returns ATA address and optional instructions
+     *
+     * @example
+     * const { ataAddress, instructions } = await service.getOrCreateAtaInstructions({ ownerAddress, tokenMint })
+     */
     async getOrCreateAtaInstructions({
         tokenMint,
         ownerAddress,
@@ -68,23 +89,27 @@ export class AtaInstructionService {
                 pdaOnly,
             })
         }
+
         const tokenProgram = is2022Token
             ? TOKEN_2022_PROGRAM_ADDRESS
             : TOKEN_PROGRAM_ADDRESS
         const _findAssociatedTokenPda = is2022Token
             ? findToken2022AssociatedTokenPda
             : findAssociatedTokenPda
+
         const [ataAddress] = await _findAssociatedTokenPda({
             mint: tokenMint,
             owner: ownerAddress,
             tokenProgram,
         })
+
         if (pdaOnly) {
             return {
-                ataAddress,
+                ataAddress 
             }
         }
-        // we fetch the encoded account to check if it exists
+
+        // check if ATA already exists
         const encodedAccount = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
@@ -92,11 +117,13 @@ export class AtaInstructionService {
                     ataAddress)
             },
         })
+
         if (encodedAccount.exists) {
             return {
-                ataAddress,
+                ataAddress 
             }
         }
+
         const _getCreateAssociatedTokenInstruction = is2022Token
             ? getToken2022CreateAssociatedTokenInstruction
             : getCreateAssociatedTokenInstruction
@@ -107,6 +134,7 @@ export class AtaInstructionService {
             mint: tokenMint,
             tokenProgram,
         })
+
         return {
             ataAddress,
             instructions: [createInstruction],
@@ -114,6 +142,15 @@ export class AtaInstructionService {
         }
     }
 
+    /**
+     * Builds instructions to create a wrapped SOL account and optional close instruction for end.
+     *
+     * @param param - Owner, token program variant, amount, optional pdaOnly
+     * @returns Create + initialize instructions, end instructions, and ATA address
+     *
+     * @example
+     * const { instructions, endInstructions, ataAddress } = await service.createWSolAccountInstructions({ ownerAddress, amount })
+     */
     async createWSolAccountInstructions({
         ownerAddress,
         is2022Token = false,
@@ -123,6 +160,7 @@ export class AtaInstructionService {
             ? TOKEN_2022_PROGRAM_ADDRESS
             : TOKEN_PROGRAM_ADDRESS
         const space = is2022Token ? getToken2022Size() : getTokenSize()
+
         const balanceNeeded = await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
@@ -136,17 +174,21 @@ export class AtaInstructionService {
                     .send()
             },
         })
+
         const lamports = amount.add(new BN(balanceNeeded))
+
         const { publicKey: newAccount, seed } = await this.generatePubKey({
             fromAddress: ownerAddress,
             programAddress,
         })
+
         const _getInitializeAccountInstruction = is2022Token
             ? getToken2022InitializeAccountInstruction
             : getInitializeAccountInstruction
         const _getCloseAccountInstruction = is2022Token
             ? getToken2022CloseAccountInstruction
             : getCloseAccountInstruction
+
         return {
             instructions: [
                 getCreateAccountWithSeedInstruction({
@@ -175,6 +217,15 @@ export class AtaInstructionService {
         }
     }
 
+    /**
+     * Generates a program-derived keypair (with optional seed) for use as new account.
+     *
+     * @param param - Base address, program address, optional assign seed
+     * @returns Public key and seed used
+     *
+     * @example
+     * const { publicKey, seed } = await service.generatePubKey({ fromAddress, programAddress })
+     */
     async generatePubKey({
         fromAddress,
         programAddress,
@@ -207,42 +258,4 @@ export class AtaInstructionService {
         const publicKeyBytes = sha256(buffer)
         return address(new PublicKey(publicKeyBytes).toBase58())
     }
-}
-
-export interface GetOrCreateAtaInstructionsParams {
-  tokenMint?: Address;
-  ownerAddress: Address;
-  is2022Token?: boolean;
-  amount?: BN;
-  pdaOnly?: boolean;
-}
-
-export interface GetOrCreateAtaInstructionsResult {
-  ataAddress: Address;
-  instructions?: Array<Instruction>;
-  endInstructions?: Array<Instruction>;
-}
-
-export interface CreateWSolAccountInstructionsParams {
-  ownerAddress: Address;
-  is2022Token?: boolean;
-  amount: BN;
-  pdaOnly?: boolean;
-}
-
-export interface CreateWSolAccountInstructionsResult {
-  instructions: Array<Instruction>;
-  endInstructions: Array<Instruction>;
-  ataAddress: Address;
-}
-
-export interface GeneratePubKeyParams {
-  fromAddress: Address;
-  programAddress: Address;
-  assignSeed?: string;
-}
-
-export interface GeneratePubKeyResult {
-  publicKey: Address;
-  seed: string;
 }

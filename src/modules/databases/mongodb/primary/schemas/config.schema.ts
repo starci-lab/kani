@@ -13,7 +13,7 @@ import {
 } from "mongoose"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 
 @Schema({
     timestamps: true,

@@ -16,7 +16,7 @@ import {
 } from "./token.schema"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 import {
     Schema as MongooseSchema, Types 
 } from "mongoose"

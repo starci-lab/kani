@@ -1,24 +1,30 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    InjectPrimaryMongoose 
+    InjectPrimaryMongoose
 } from "../mongodb.decorators"
 import {
-    Connection 
+    Connection
 } from "mongoose"
 import {
-    BotSchema, PositionSchema 
+    PositionSchema
 } from "../schemas"
 import {
-    ActivePositionNotFoundException, AssociatedPositionNotFoundException 
+    ActivePositionNotFoundException, AssociatedPositionNotFoundException
 } from "@exceptions"
 import {
-    LiquidityPoolNotFoundException 
+    LiquidityPoolNotFoundException
 } from "@modules/exceptions"
 import {
-    PrimaryMemoryStorageService 
+    PrimaryMemoryStorageService
 } from "../memory"
+import type {
+    AssociateActivePositionParams,
+    AssociateActivePositionResult,
+    AssociateLiquidityPoolParams,
+    AssociateLiquidityPoolResult,
+} from "./types"
 
 @Injectable()
 export class PositionAssociateService {
@@ -28,9 +34,13 @@ export class PositionAssociateService {
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
     ) {}
 
+    /**
+     * Associate active position (and its associated position document) to the bot.
+     */
     async associateActivePosition(
-        bot: BotSchema
-    ) {
+        params: AssociateActivePositionParams,
+    ): Promise<AssociateActivePositionResult> {
+        const { bot } = params
         if (!bot.activePosition) {
             throw new ActivePositionNotFoundException(
                 {
@@ -48,10 +58,14 @@ export class PositionAssociateService {
         }
         bot.activePosition.associatedPosition = position.toJSON<PositionSchema>()
     }
-    
+
+    /**
+     * Associate liquidity pool to the position from memory storage.
+     */
     async associateLiquidityPool(
-        position: PositionSchema
-    ) {
+        params: AssociateLiquidityPoolParams,
+    ): Promise<AssociateLiquidityPoolResult> {
+        const { position } = params
         const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
             id: {
                 $eq: position.liquidityPool.toString(),

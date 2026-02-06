@@ -8,8 +8,8 @@ import {
     Field, Float, ID, ObjectType
 } from "@nestjs/graphql"
 import {
-    ChainId, EncryptedPayload, GraphQLTypeChainId
-} from "@modules/typedefs"
+    EncryptedPayload
+} from "@modules/crypto"
 import {
     Schema as MongooseSchema, Types
 } from "mongoose"
@@ -42,7 +42,7 @@ import {
 } from "./bot-snapshots.schema"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 import {
     ActiveJobSchema, ActiveJobSchemaClass
 } from "./active-job.schema"
@@ -53,6 +53,9 @@ import {
 import {
     ExecutorSchema 
 } from "./executor.schema"
+import {
+    ChainId, GraphQLTypeChainId 
+} from "@modules/blockchains"
 
 @ObjectType({
     description: "Represents a bot",

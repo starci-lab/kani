@@ -157,7 +157,7 @@ export class ClosePositionWorker extends WorkerHost {
                     )
                 }
                 // associate the active position
-                await this.positionAssociateService.associateActivePosition(bot)
+                await this.positionAssociateService.associateActivePosition({ bot })
                 // get the job
                 const job = await this.connection
                     .model<JobSchema>(JobSchema.name)

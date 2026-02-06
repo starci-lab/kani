@@ -15,7 +15,7 @@ import {
 } from "mongoose"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 
 @Schema({
     timestamps: true,

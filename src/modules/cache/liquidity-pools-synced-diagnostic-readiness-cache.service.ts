@@ -1,19 +1,27 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    LiquidityPoolsSyncedDiagnosticReadinessResult
-} from "./config"
+    CacheKey
+} from "./enums"
 import {
-    CacheService 
+    LiquidityPoolsSyncedDiagnosticReadinessResult,
+    SetLiquidityPoolsSyncedDiagnosticReadinessParams
+} from "./types"
+import {
+    CacheService
 } from "./cache.service"
-import {
-    CacheKey 
-} from "./config"
 
+/**
+ * Service for reading and writing liquidity pools synced diagnostic readiness cache.
+ *
+ * @example
+ * await liquidityPoolsSyncedDiagnosticReadinessCacheService.set({ id })
+ * const result = await liquidityPoolsSyncedDiagnosticReadinessCacheService.get()
+ */
 @Injectable()
 export class LiquidityPoolsSyncedDiagnosticReadinessCacheService {
     constructor(
@@ -21,18 +29,21 @@ export class LiquidityPoolsSyncedDiagnosticReadinessCacheService {
         private readonly dayjsService: DayjsService,
     ) {}
 
-    async set(
-        {
-            id,
-        }
-        : SetLiquidityPoolsSyncedDiagnosticReadinessParams
-    ): Promise<void> {
-        // try to get the cache result
-        let cacheResult = await this.cacheService.get(
-            {
-                key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
-            }
-        )
+    /**
+     * Sets or updates liquidity pools synced diagnostic readiness for an id.
+     *
+     * @param param - Id to mark as ready
+     *
+     * @example
+     * await service.set({ id: "pool-1" })
+     */
+    async set({
+        id,
+    }: SetLiquidityPoolsSyncedDiagnosticReadinessParams): Promise<void> {
+        let cacheResult = await this.cacheService.get({
+            key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
+        })
+
         if (!cacheResult) {
             cacheResult = {
                 results: {
@@ -40,21 +51,30 @@ export class LiquidityPoolsSyncedDiagnosticReadinessCacheService {
                 snapshotAt: this.dayjsService.now(),
             }
         }
-        // update the cache result
+
         cacheResult.results[id] = {
             snapshotAt: this.dayjsService.now(),
         }
-        // save the cache result
+
         await this.cacheService.set({
             key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
             cacheResult,
         })
     }
 
+    /**
+     * Gets liquidity pools synced diagnostic readiness cache result.
+     *
+     * @returns Cached result or default empty result
+     *
+     * @example
+     * const result = await service.get()
+     */
     async get(): Promise<LiquidityPoolsSyncedDiagnosticReadinessResult> {
         const cachedResult = await this.cacheService.get({
             key: CacheKey.LiquidityPoolsSyncedDiagnosticReadiness,
         })
+
         if (!cachedResult) {
             return {
                 results: {
@@ -62,10 +82,7 @@ export class LiquidityPoolsSyncedDiagnosticReadinessCacheService {
                 snapshotAt: this.dayjsService.now(),
             }
         }
-        return cachedResult
-    }   
-}
 
-export interface SetLiquidityPoolsSyncedDiagnosticReadinessParams {
-    id: string
+        return cachedResult
+    }
 }

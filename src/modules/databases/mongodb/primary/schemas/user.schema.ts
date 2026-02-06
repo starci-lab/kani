@@ -8,8 +8,8 @@ import {
     Field, ID, ObjectType 
 } from "@nestjs/graphql"
 import {
-    EncryptedPayload 
-} from "@modules/typedefs"
+    EncryptedPayload
+} from "@modules/crypto"
 import {
     Schema as MongooseSchema, 
     Types
@@ -23,7 +23,7 @@ import {
 } from "./bot.schema"
 import {
     PrimaryMongoDbCollectionRef 
-} from "../ref"
+} from "../enums"
 
 @Schema({
     timestamps: true,

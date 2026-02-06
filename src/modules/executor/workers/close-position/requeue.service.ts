@@ -100,7 +100,7 @@ export class RequeueService implements OnApplicationBootstrap {
              */
             const promises = bots.map(
                 async (bot) => {
-                    await this.positionAssociateService.associateActivePosition(bot)
+                    await this.positionAssociateService.associateActivePosition({ bot })
                     const liquidityPool = this.primaryMemoryStorageService.liquidityPoolCollection.findOne({
                         id: {
                             $eq: bot.activeJob?.liquidityPool?.toString() ?? "",

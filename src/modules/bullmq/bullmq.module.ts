@@ -1,35 +1,57 @@
-
 import {
-    BullModule as NestBullModule 
+    BullModule as NestBullModule
 } from "@nestjs/bullmq"
 import {
-    ConfigurableModuleClass, OPTIONS_TYPE 
+    ConfigurableModuleClass,
+    OPTIONS_TYPE
 } from "./bullmq.module-definition"
 import {
-    DynamicModule, Module 
+    DynamicModule,
+    Module
 } from "@nestjs/common"
 import {
-    BullQueueName, RegisterQueueOptions 
+    BullQueueName 
+} from "./enums"
+import {
+    RegisterQueueOptions
 } from "./types"
 import {
-    bullData 
-} from "./queue"
+    bullData
+} from "./constants"
 import {
-    envConfig 
+    envConfig
 } from "@modules/env/config"
 import {
-    createIoRedisKey, IoRedisInstanceKey, IoRedisModule, 
+    createIoRedisKey,
+    IoRedisInstanceKey,
+    IoRedisModule,
     RedisOrCluster
 } from "@modules/native"
 
+/**
+ * NestJS module for BullMQ queue registration and Redis connection.
+ * Registers queues by name and provides forRoot with async Redis.
+ *
+ * @example
+ * BullModule.forRoot()
+ * BullModule.registerQueue({ queueName: BullQueueName.OpenPosition, isGlobal: true })
+ */
 @Module({
 })
 export class BullModule extends ConfigurableModuleClass {
-    // register the queue
+    /**
+     * Registers a single BullMQ queue with name/prefix from bullData and env job options.
+     *
+     * @param options - Optional queue name and global flag (default: ReconcileBalance, non-global)
+     * @returns Dynamic module that imports/exports the registered queue
+     *
+     * @example
+     * BullModule.registerQueue({ queueName: BullQueueName.OpenPosition, isGlobal: true })
+     */
     public static registerQueue(options: RegisterQueueOptions = {
     }): DynamicModule {
-        const queueName = options.queueName || BullQueueName.ReconcileBalance
-        // register the queue
+        const queueName = options.queueName ?? BullQueueName.ReconcileBalance
+
         const registerQueueDynamicModule = NestBullModule.registerQueue({
             name: `${bullData[queueName].name}`,
             prefix: bullData[queueName].prefix,
@@ -41,21 +63,35 @@ export class BullModule extends ConfigurableModuleClass {
                     type: "exponential",
                     delay: envConfig().bullmq.delay,
                 },
-                
-            }
+            },
         })
+
         return {
             global: options.isGlobal,
             module: BullModule,
             imports: [registerQueueDynamicModule],
-            exports: [registerQueueDynamicModule]
+            exports: [registerQueueDynamicModule],
         }
     }
 
-    // for root
+    /**
+     * Configures the module at root with Redis connection and all queues registered globally.
+     *
+     * @param options - Module options (from configurable builder)
+     * @returns Dynamic module with forRootAsync Redis and one registered queue per BullQueueName
+     */
     public static forRoot(options: typeof OPTIONS_TYPE = {
-    }) {
+    }): DynamicModule {
         const dynamicModule = super.forRoot(options)
+
+        const queueModules: Array<DynamicModule> = Object.values(BullQueueName)
+            .map((name) =>
+                BullModule.registerQueue({
+                    isGlobal: true,
+                    queueName: name,
+                })
+            )
+
         return {
             ...dynamicModule,
             imports: [
@@ -63,23 +99,17 @@ export class BullModule extends ConfigurableModuleClass {
                     imports: [
                         IoRedisModule.register({
                             instanceKeys: [
-                                IoRedisInstanceKey.BullMQ
+                                IoRedisInstanceKey.BullMQ,
                             ],
                         }),
                     ],
                     inject: [createIoRedisKey(IoRedisInstanceKey.BullMQ)],
                     useFactory: async (redis: RedisOrCluster) => ({
-                        // connection to redis
                         connection: redis,
-                    })
+                    }),
                 }),
-                // register the queues
-                ...Object.values(BullQueueName)
-                    .map(queueName => BullModule.registerQueue({
-                        isGlobal: true,
-                        queueName,
-                    })),
-            ]
+                ...queueModules,
+            ],
         }
     }
 }

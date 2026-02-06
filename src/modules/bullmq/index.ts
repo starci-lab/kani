@@ -1,3 +1,4 @@
 export * from "./bullmq.module"
-export * from "./queue"
+export * from "./constants"
+export * from "./enums"
 export * from "./types"

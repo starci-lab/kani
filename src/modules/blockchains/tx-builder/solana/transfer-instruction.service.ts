@@ -1,52 +1,60 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    TokenType 
-} from "@modules/typedefs"
+    TokenType
+} from "../../enums"
 import {
-    address, Address, Instruction 
+    address,
+    Instruction
 } from "@solana/kit"
 import {
-    BN 
-} from "turbos-clmm-sdk"
-import {
-    PrimaryMemoryStorageService 
-} from "@modules/databases"
-import {
-    TokenSchema 
-} from "@modules/databases"
-import {
-    getTransferSolInstruction 
+    getTransferSolInstruction
 } from "@solana-program/system"
 import {
-    createNoopSigner 
+    createNoopSigner
 } from "@solana/signers"
 import {
-    getTransferInstruction as getTransferInstruction2022 
+    getTransferInstruction as getTransferInstruction2022
 } from "@solana-program/token-2022"
 import {
-    getTransferInstruction 
+    getTransferInstruction
 } from "@solana-program/token"
 import {
-    AtaInstructionService 
+    AtaInstructionService
 } from "./ata-instruction.service"
+import {
+    CreateTransferInstructionsParams,
+    CreateTransferInstructionsResult
+} from "../types"
 
+/**
+ * Service for building Solana transfer instructions (native SOL or SPL/Token-2022).
+ *
+ * @example
+ * const { instructions } = await transferInstructionService.createTransferInstructions({ fromAddress, toAddress, amount, token })
+ */
 @Injectable()
 export class TransferInstructionService {
     constructor(
-        private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
         private readonly ataInstructionService: AtaInstructionService,
-    ) { }
+    ) {}
 
-    async createTransferInstructions(
-        {
-            fromAddress,
-            toAddress,
-            amount,
-            token,
-        }: CreateTransferInstructionsParams
-    ): Promise<CreateTransferInstructionsResult> {
+    /**
+     * Builds instructions to transfer native SOL or token (creating ATAs if needed).
+     *
+     * @param param - From/to addresses, amount, and token (type, address, is2022)
+     * @returns List of instructions (create ATA if needed + transfer)
+     *
+     * @example
+     * const result = await service.createTransferInstructions({ fromAddress, toAddress, amount, token })
+     */
+    async createTransferInstructions({
+        fromAddress,
+        toAddress,
+        amount,
+        token,
+    }: CreateTransferInstructionsParams): Promise<CreateTransferInstructionsResult> {
         if (token.type === TokenType.Native) {
             return {
                 instructions: [
@@ -58,7 +66,9 @@ export class TransferInstructionService {
                 ],
             }
         }
+
         const instructions: Array<Instruction> = []
+
         const {
             ataAddress: sourceAtaAddress,
             instructions: createAtaInstructions,
@@ -70,6 +80,7 @@ export class TransferInstructionService {
         if (createAtaInstructions?.length) {
             instructions.push(...createAtaInstructions)
         }
+
         const {
             ataAddress: destinationAtaAddress,
             instructions: transferAtaInstructions,
@@ -81,8 +92,9 @@ export class TransferInstructionService {
         if (transferAtaInstructions?.length) {
             instructions.push(...transferAtaInstructions)
         }
-        const _getTransferInstruction = token.is2022Token 
-            ? getTransferInstruction2022 
+
+        const _getTransferInstruction = token.is2022Token
+            ? getTransferInstruction2022
             : getTransferInstruction
         instructions.push(
             _getTransferInstruction({
@@ -90,20 +102,11 @@ export class TransferInstructionService {
                 destination: destinationAtaAddress,
                 authority: createNoopSigner(fromAddress),
                 amount: BigInt(amount.toString()),
-            }))
+            })
+        )
+
         return {
-            instructions,
+            instructions 
         }
     }
-}
-
-export interface CreateTransferInstructionsParams {
-    fromAddress: Address
-    toAddress: Address
-    amount: BN
-    token: TokenSchema
-}
-
-export interface CreateTransferInstructionsResult {
-    instructions: Array<Instruction>
 }

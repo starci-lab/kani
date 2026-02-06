@@ -27,7 +27,7 @@ import {
 } from "./position.schema"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 
     @ObjectType({
         description: "Represents an active bot position",

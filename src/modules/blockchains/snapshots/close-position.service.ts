@@ -1,28 +1,35 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    Connection 
+    Connection
 } from "mongoose"
-import { 
-    PositionSchema, 
-    InjectPrimaryMongoose, 
+import {
+    PositionSchema,
+    InjectPrimaryMongoose,
     PositionSnapshotsSchema,
     PositionPerformanceSchema
 } from "@modules/databases"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    Decimal 
+    Decimal
 } from "decimal.js"
 import {
-    PositionValueService 
+    PositionValueService
 } from "../math"
 import {
-    UpdateClosePositionRecordParams
+    UpdateClosePositionRecordParams,
+    UpdateClosePositionRecordResult
 } from "./types"
 
+/**
+ * Service responsible for updating close-position snapshot records and performance.
+ *
+ * @example
+ * await closePositionSnapshotService.updateClosePositionRecord({ before, after, positionId, closeTxHashes, ... })
+ */
 @Injectable()
 export class ClosePositionSnapshotService {
     constructor(
@@ -32,6 +39,15 @@ export class ClosePositionSnapshotService {
         private readonly positionValueService: PositionValueService,
     ) {}
 
+    /**
+     * Updates a position with close snapshot, tx hashes, and ROI/PnL from open vs close.
+     *
+     * @param param - Close position params (before/after balances, positionId, tokens, etc.)
+     * @returns Resolves when the position document is updated
+     *
+     * @example
+     * await service.updateClosePositionRecord({ before, after, positionId, closeTxHashes, targetToken, quoteToken, gasToken })
+     */
     async updateClosePositionRecord(
         {
             before,
@@ -43,22 +59,24 @@ export class ClosePositionSnapshotService {
             gasToken,
             session,
         }: UpdateClosePositionRecordParams
-    ) {
+    ): Promise<UpdateClosePositionRecordResult> {
         const now = this.dayjsService.now().toDate()
-        
-        // Get the position to access openSnapshot for ROI/PnL calculation
+
+        // load position to read openSnapshot for ROI/PnL
         const position = await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).findById(positionId).session(session || null)
-        
+
         if (!position) {
             throw new Error(`Position with id ${positionId} not found`)
         }
-        const { 
-            positionValue, 
-            positionValueInUsd, 
-            balanceValue, 
-            balanceValueInUsd 
+
+        // compute position and balance values from before/after
+        const {
+            positionValue,
+            positionValueInUsd,
+            balanceValue,
+            balanceValueInUsd
         } = await this.positionValueService.calculatePositionValue(
             {
                 before,
@@ -67,7 +85,9 @@ export class ClosePositionSnapshotService {
                 quoteToken,
                 gasToken,
             }
-        )   
+        )
+
+        // build close snapshot from after-balance and computed values
         const closeSnapshot: Partial<PositionSnapshotsSchema> = {
             targetBalanceAmount: after.targetBalanceAmount.toString(),
             quoteBalanceAmount: after.quoteBalanceAmount.toString(),
@@ -78,24 +98,24 @@ export class ClosePositionSnapshotService {
             balanceValueInUsd: balanceValueInUsd.toNumber(),
             snapshotAt: now,
         }
-        // Calculate ROI and PnL from open and close snapshots
+
+        // compute ROI and PnL from open vs close snapshots
         const openPositionValue = new Decimal(position.openSnapshot?.positionValue ?? 0)
         const openPositionValueUsd = new Decimal(position.openSnapshot?.positionValueInUsd ?? 0)
-        // ROI = (closePositionValue - openPositionValue) / openPositionValue * 100
+
         const roi = positionValue.sub(openPositionValue).div(openPositionValue).mul(100).toNumber()
-        // PnL = closePositionValue - openPositionValue
         const pnl = positionValue.sub(openPositionValue).toNumber()
-        // ROI in USD = (closePositionValueUsd - openPositionValueUsd) / openPositionValueUsd * 100
         const roiUsd = positionValueInUsd.sub(openPositionValueUsd).div(openPositionValueUsd).mul(100).toNumber()
-        // PnL in USD = closePositionValueUsd - openPositionValueUsd
         const pnlUsd = positionValueInUsd.sub(openPositionValueUsd).toNumber()
-        // Calculate performance
+
         const performance: PositionPerformanceSchema = {
             roi,
             pnl,
             roiUsd,
             pnlUsd,
         }
+
+        // persist close snapshot, tx hashes, and performance to position
         await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).updateOne({

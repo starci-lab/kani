@@ -1,26 +1,33 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    Connection 
+    Connection
 } from "mongoose"
-import { 
-    BotSchema, 
-    InjectPrimaryMongoose, 
-    PositionFeesSchema, 
-    PositionSchema, 
+import {
+    BotSchema,
+    InjectPrimaryMongoose,
+    PositionFeesSchema,
+    PositionSchema,
     PositionSnapshotsSchema
 } from "@modules/databases"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    PositionValueService 
+    PositionValueService
 } from "../math"
 import {
-    AddOpenPositionRecordParams
+    AddOpenPositionRecordParams,
+    AddOpenPositionRecordResult
 } from "./types"
 
+/**
+ * Service responsible for creating open-position snapshot records.
+ *
+ * @example
+ * await openPositionSnapshotService.addOpenPositionRecord({ before, after, bot, liquidityPool, ... })
+ */
 @Injectable()
 export class OpenPositionSnapshotService {
     constructor(
@@ -30,6 +37,15 @@ export class OpenPositionSnapshotService {
         private readonly positionValueService: PositionValueService,
     ) {}
 
+    /**
+     * Adds an open-position record with balance snapshots and protocol state (CLMM/DLMM).
+     *
+     * @param param - Open position params (before/after balances, pool, tokens, fees, etc.)
+     * @returns Resolves when the position and bot activePosition are persisted
+     *
+     * @example
+     * await service.addOpenPositionRecord({ before, after, bot, liquidityPool, positionId, openTxHashes, ... })
+     */
     async addOpenPositionRecord(
         {
             before,
@@ -48,9 +64,10 @@ export class OpenPositionSnapshotService {
             quoteToken,
             gasToken,
         }: AddOpenPositionRecordParams
-    ) {
+    ): Promise<AddOpenPositionRecordResult> {
         const now = this.dayjsService.now().toDate()
-        // Build CLMM state if applicable
+
+        // build CLMM state when provided
         const clmmState = clmmParams
             ? {
                 liquidity: clmmParams.liquidity.toString(),
@@ -58,14 +75,16 @@ export class OpenPositionSnapshotService {
                 tickUpper: clmmParams.tickUpper.toString(),
             }
             : undefined
-        // Build DLMM state if applicable
+
+        // build DLMM state when provided
         const dlmmState = dlmmParams
             ? {
                 minBinId: dlmmParams.minBinId.toString(),
                 maxBinId: dlmmParams.maxBinId.toString(),
             }
             : undefined
-        // Build open snapshot using before snapshot (snapshot before opening position)
+
+        // compute position and balance values from before/after snapshots
         const { 
             positionValue, 
             positionValueInUsd, 
@@ -80,6 +99,8 @@ export class OpenPositionSnapshotService {
                 gasToken,
             }
         )
+
+        // build open snapshot from before-balance and computed values
         const openSnapshot: Partial<PositionSnapshotsSchema> = {
             targetBalanceAmount: before.targetBalanceAmount.toString(),
             quoteBalanceAmount: before.quoteBalanceAmount.toString(),
@@ -90,11 +111,14 @@ export class OpenPositionSnapshotService {
             balanceValueInUsd: balanceValueInUsd.toNumber(),
             snapshotAt: now,
         }
-        // Build fees object (required field)
+
+        // build fees object (required by schema)
         const fees: Partial<PositionFeesSchema> = {
             targetAmount: feeTargetAmount.toString(),
             quoteAmount: feeQuoteAmount.toString(),
         }
+
+        // create position document with open snapshot and protocol state
         const [positionRaw] = await this.connection.model<PositionSchema>(
             PositionSchema.name
         ).create(
@@ -117,7 +141,10 @@ export class OpenPositionSnapshotService {
                 session,
             }
         )
+
         const position = positionRaw.toJSON<PositionSchema>()
+
+        // set bot activePosition to new position
         await this.connection.model<BotSchema>(BotSchema.name).updateOne(
             {
                 _id: bot.id

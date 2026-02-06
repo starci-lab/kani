@@ -12,7 +12,7 @@ import {
 } from "@nestjs/graphql"
 import {
     ChainId, GraphQLTypeChainId 
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 
 /**
  * Represents a decentralized exchange (DEX) supported by the platform.

@@ -97,7 +97,7 @@ export class HandleClosePositionService {
         if (bot.activeJob) {
             return
         }
-        await this.positionAssociateService.associateActivePosition(bot)
+        await this.positionAssociateService.associateActivePosition({ bot })
         const jobId = new Types.ObjectId().toString()
         // Settle the position to determine if we should close
         const { settled, strategyResults } = await this.settlementService.settle(

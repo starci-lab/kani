@@ -12,7 +12,7 @@ import {
 } from "mongoose"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 import {
     JobSchema 
 } from "./job.schema"

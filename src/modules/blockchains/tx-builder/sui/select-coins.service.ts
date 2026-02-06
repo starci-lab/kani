@@ -1,29 +1,51 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import BN from "bn.js"
 import {
-    CoinAsset, CoinArgument 
+    CoinAsset,
+    CoinArgument
 } from "../../types"
 import {
-    Transaction 
+    Transaction
 } from "@mysten/sui/transactions"
 import {
-    FetchCoinsService 
+    FetchCoinsService
 } from "./fetch-coins.service"
 import {
-    isSuiCoin, ZERO_BN 
+    isSuiCoin,
+    ZERO_BN
 } from "@modules/utils"
 import {
-    toCoinArgument 
+    toCoinArgument
 } from "../../utils"
+import {
+    FetchAndMergeCoinsParams,
+    FetchAndMergeCoinsResult,
+    SelectCoinAssetGreaterThanOrEqualParams,
+    SelectCoinAssetGreaterThanOrEqualResult,
+    SplitCoinParams,
+    SplitCoinResult
+} from "../types"
 
+/**
+ * Service for selecting, splitting, and merging Sui coins for transactions.
+ *
+ * @example
+ * const { selectedCoins, remainingCoins } = selectCoinsService.selectCoinAssetGreaterThanOrEqual({ coins, amount, exclude: [] })
+ */
 @Injectable()
 export class SelectCoinsService {
     constructor(
         private readonly fetchCoinsService: FetchCoinsService,
     ) {}
 
+    /**
+     * Splits a source coin into a spend amount and updates source remainder.
+     *
+     * @param param - Transaction builder, source coin, required amount
+     * @returns The spend coin argument
+     */
     public splitCoin({
         requiredAmount,
         sourceCoin,
@@ -36,11 +58,13 @@ export class SelectCoinsService {
         if (sourceCoin.coinAmount.lt(requiredAmount)) {
             throw new Error("sourceCoin amount is less than requiredAmount")
         }
+
         const [spendCoin] = txb.splitCoins(
             sourceCoin.coinArg,
             [txb.pure.u64(requiredAmount.toString())]
         )
         sourceCoin.coinAmount = sourceCoin.coinAmount.sub(requiredAmount)
+
         return {
             spendCoin: {
                 coinAmount: requiredAmount,
@@ -49,6 +73,12 @@ export class SelectCoinsService {
         }
     }
 
+    /**
+     * Selects coins whose total balance is >= amount, with optional exclude list; returns selected and remaining.
+     *
+     * @param param - Coins, required amount, exclude coin IDs
+     * @returns Selected coins and remaining coins (each sorted descending by amount)
+     */
     public selectCoinAssetGreaterThanOrEqual({
         coins,
         amount,
@@ -57,11 +87,9 @@ export class SelectCoinsService {
         if (!coins) throw new Error("coins is required")
         if (!amount) throw new Error("amount is required")
 
-        // Exclude specific coin IDs
         const filtered = coins.filter(
             (c) => !exclude.includes(c.coinRef!.objectId)
         )
-        // Sort by descending balance
         const sorted = filtered.sort((a, b) =>
             new BN(b.coinAmount).cmp(new BN(a.coinAmount))
         )
@@ -72,7 +100,8 @@ export class SelectCoinsService {
         )
         if (total.lt(amount)) {
             return {
-                selectedCoins: [], remainingCoins: sorted 
+                selectedCoins: [],
+                remainingCoins: sorted
             }
         }
 
@@ -97,8 +126,11 @@ export class SelectCoinsService {
     }
 
     /**
-     * Merge multiple CoinArguments into a single CoinArgument.
-     * The first coin is the merge target, others are merged into it.
+     * Merges multiple coin arguments into one (first is target).
+     *
+     * @param txb - Transaction builder
+     * @param coins - Coin arguments to merge
+     * @returns Single coin argument with combined amount
      */
     public mergeCoins(
         txb: Transaction,
@@ -119,13 +151,16 @@ export class SelectCoinsService {
             new BN(0)
         )
         return {
-            coinAmount: totalAmount, coinArg: target.coinArg 
+            coinAmount: totalAmount,
+            coinArg: target.coinArg
         }
     }
 
     /**
-     * Fetch all coins of a type, merge them into one,
-     * and handle SUI specially for gas reservation.
+     * Fetches coins of a type, merges them, and handles SUI gas reservation when needed.
+     *
+     * @param param - Optional txb, owner, coin type, SUI gas reserve, required amount
+     * @returns Source coin argument and account balance
      */
     public async fetchAndMergeCoins({
         txb,
@@ -135,10 +170,13 @@ export class SelectCoinsService {
         requiredAmount,
     }: FetchAndMergeCoinsParams): Promise<FetchAndMergeCoinsResult> {
         txb = txb ?? new Transaction()
+
         const fetchedCoins = await this.fetchCoinsService.fetchCoins({
-            owner, coinType 
+            owner,
+            coinType
         })
         if (!fetchedCoins.coinAssets.length) throw new Error("No coin found")
+
         const coinAssets = fetchedCoins.coinAssets.map((coin) => ({
             coinAmount: coin.coinAmount,
             coinRef: {
@@ -149,7 +187,7 @@ export class SelectCoinsService {
         }))
         const userBalance = fetchedCoins.totalBalance
         requiredAmount = requiredAmount || userBalance
-        // Special handling for SUI gas
+
         if (isSuiCoin(coinType)) {
             suiGasAmount = suiGasAmount || ZERO_BN
             const coinAmount = BN.min(
@@ -169,13 +207,14 @@ export class SelectCoinsService {
                 balance: userBalance,
             }
         }
-        // If only one coin exists, return it directly
-        // Select coins to cover the required amount
-        const coinAmount = requiredAmount ? BN.min(userBalance,
-            requiredAmount) : userBalance
+
+        const coinAmount = requiredAmount
+            ? BN.min(userBalance,
+                requiredAmount)
+            : userBalance
 
         if (coinAssets.length === 1) {
-            const [ coin ] = coinAssets
+            const [coin] = coinAssets
             const spendCoin = txb.splitCoins(txb.object(coin.coinRef.objectId),
                 [
                     txb.pure.u64(coinAmount.toString()),
@@ -188,54 +227,20 @@ export class SelectCoinsService {
                 balance: userBalance,
             }
         }
-        // Merge into a single coin
-        const mergedCoin = this.mergeCoins(txb,
+
+        const mergedCoin = this.mergeCoins(
+            txb,
             coinAssets.map((coin) => toCoinArgument(coin,
-                txb)))
-        // Split out exactly the required amount
+                txb))
+        )
         const { spendCoin } = this.splitCoin({
             sourceCoin: mergedCoin,
             requiredAmount: coinAmount,
             txb,
         })
         return {
-            sourceCoin: spendCoin, balance: userBalance 
+            sourceCoin: spendCoin,
+            balance: userBalance
         }
     }
-}
-
-
-export interface SelectCoinAssetGreaterThanOrEqualParams {
-    coins: Array<CoinAsset>
-    amount: BN
-    exclude: Array<string>
-}
-
-export interface SelectCoinAssetGreaterThanOrEqualResult {
-    selectedCoins: Array<CoinAsset>
-    remainingCoins: Array<CoinAsset>
-}
-
-export interface FetchAndMergeCoinsParams {
-    txb?: Transaction
-    owner: string
-    coinType: string
-    suiGasAmount?: BN
-    // if not specified, will use the balance of the account
-    requiredAmount?: BN
-}
-
-export interface FetchAndMergeCoinsResult {
-    sourceCoin: CoinArgument
-    balance: BN
-}
-
-export interface SplitCoinParams {
-    txb?: Transaction
-    sourceCoin: CoinArgument
-    requiredAmount: BN
-}
-
-export interface SplitCoinResult {
-    spendCoin: CoinArgument
 }

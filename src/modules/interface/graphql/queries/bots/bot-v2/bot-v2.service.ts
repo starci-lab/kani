@@ -71,13 +71,11 @@ export class BotV2Service {
         // Optional associations for bot.activePosition.
         if (activePositionPositionAssociate) {
             await this.activePositionAssociateService
-                .attachAssociatedPositionsToBotActivePositions([botJson])
+                .attachAssociatedPositionsToBotActivePositions({ bots: [botJson] })
         }
         if (activePositionLiquidityPoolAssociate) {
             await this.activePositionAssociateService
-                .attachAssociatedLiquidityPoolToBotActivePositions(
-                    [botJson]
-                )
+                .attachAssociatedLiquidityPoolToBotActivePositions({ bots: [botJson] })
         }
         return botJson
     }

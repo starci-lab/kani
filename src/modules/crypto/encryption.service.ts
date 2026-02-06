@@ -1,45 +1,54 @@
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import crypto from "crypto"
 import {
-    EncryptedPayload 
-} from "@modules/typedefs"
+    IV_LENGTH
+} from "./constants"
+import type {
+    DecryptParams,
+    DecryptResult,
+    EncryptParams,
+    EncryptResult
+} from "./types"
 
+/**
+ * Service for AES-256-GCM encryption and decryption (authenticated encryption).
+ *
+ * @example
+ * const payload = encryptionService.encrypt({ plainText, key })
+ * const text = encryptionService.decrypt({ payload, key })
+ */
 @Injectable()
 export class EncryptionService {
-    // Recommended IV length for AES-GCM (12 bytes)
-    private readonly ivLength = 12
-
     constructor() {}
 
-
     /**
-     * Encrypt plaintext using AES-256-GCM.
+     * Encrypts plaintext using AES-256-GCM (random IV per call, auth tag for integrity).
      *
-     * - Generates a random IV per encryption
-     * - Provides authenticated encryption (confidentiality + integrity)
-     * - Output format (Base64 encoded):
-     *   iv:authTag:ciphertext
+     * @param param - Plaintext and key (Buffer)
+     * @returns Encrypted payload (iv, ciphertext, authTag as Base64)
+     *
+     * @example
+     * const payload = encryptionService.encrypt({ plainText: "secret", key })
      */
-    encrypt(plainText: string, key: Buffer<ArrayBufferLike>): EncryptedPayload {
-        // Generate a random IV
-        const iv = crypto.randomBytes(this.ivLength)
-        // Create AES-GCM cipher
+    encrypt({
+        plainText,
+        key,
+    }: EncryptParams): EncryptResult {
+        const iv = crypto.randomBytes(IV_LENGTH)
+
         const cipher = crypto.createCipheriv("aes-256-gcm",
             key,
             iv)
-        // Encrypt data
-        const encrypted = Buffer.concat(
-            [
-                cipher.update(plainText,
-                    "utf8"),
-                cipher.final(),
-            ]
-        )
-        // Authentication tag (integrity + authenticity)
+
+        const encrypted = Buffer.concat([
+            cipher.update(plainText,
+                "utf8"),
+            cipher.final(),
+        ])
         const authTag = cipher.getAuthTag()
-        // Return IV, auth tag, and ciphertext
+
         return {
             iv: iv.toString("base64"),
             authTag: authTag.toString("base64"),
@@ -48,16 +57,20 @@ export class EncryptionService {
     }
 
     /**
-     * Decrypt AES-256-GCM encrypted data.
+     * Decrypts AES-256-GCM payload; verifies integrity via auth tag (throws if tampered).
      *
-     * - Expects input format: iv:authTag:ciphertext
-     * - Automatically verifies integrity via auth tag
-     * - Throws if data was tampered with
+     * @param param - Payload (iv, authTag, ciphertext) and key
+     * @returns Decrypted plaintext
+     *
+     * @example
+     * const text = encryptionService.decrypt({ payload, key })
      */
-    decrypt(
-        { iv, authTag, ciphertext }: EncryptedPayload, 
-        key: Buffer<ArrayBufferLike>
-    ): string {
+    decrypt({
+        payload,
+        key,
+    }: DecryptParams): DecryptResult {
+        const { iv, authTag, ciphertext } = payload
+
         try {
             const ivBuffer = Buffer.from(iv,
                 "base64")
@@ -66,18 +79,18 @@ export class EncryptionService {
             const encryptedBuffer = Buffer.from(ciphertext,
                 "base64")
 
-            if (ivBuffer.length !== this.ivLength) {
+            if (ivBuffer.length !== IV_LENGTH) {
                 throw new Error("Invalid IV length")
             }
-            // Create AES-GCM decipher
+
             const decipher = crypto.createDecipheriv("aes-256-gcm",
                 key,
                 ivBuffer)
             decipher.setAuthTag(authTagBuffer)
-            // Decrypt and verify integrity
+
             const decryptedBuffer = Buffer.concat([
                 decipher.update(encryptedBuffer),
-                decipher.final(), // throws if auth tag is invalid
+                decipher.final(),
             ])
             return decryptedBuffer.toString("utf8")
         } catch (error) {

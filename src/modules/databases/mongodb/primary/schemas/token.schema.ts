@@ -6,7 +6,7 @@ import {
 } from "@nestjs/graphql"
 import {
     ChainId, GraphQLTypeChainId, GraphQLTypeTokenType, TokenType 
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 import {
     AbstractSchema 
 } from "./abstract"

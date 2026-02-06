@@ -17,6 +17,12 @@ import {
     ClosePositionSnapshotService 
 } from "./close-position.service"
 
+/**
+ * Module responsible for managing snapshot services and configuration.
+ *
+ * @example
+ * SnapshotsModule.register({ enabled: true })
+ */
 @Injectable()
 export class SnapshotsModule extends ConfigurableModuleClass {
     static register(

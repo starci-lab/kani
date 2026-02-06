@@ -1,34 +1,53 @@
 import {
-    envConfig 
-} from "@modules/env"
-import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
-import {
-    CookieOptions, Response 
+import type {
+    CookieOptions
 } from "express"
+import {
+    envConfig
+} from "@modules/env"
+import type {
+    AttachHttpOnlyCookieParams,
+    AttachHttpOnlyCookieResult,
+    ClearCookieParams,
+    ClearCookieResult
+} from "./types"
 
+/**
+ * Service for attaching and clearing HttpOnly cookies on Express response.
+ * Used for refresh tokens and logout.
+ *
+ * @example
+ * cookieService.attachHttpOnlyCookie({ res, name: "refreshToken", value: token })
+ * cookieService.clearCookie({ res, name: "refreshToken" })
+ */
 @Injectable()
 export class CookieService {
-    constructor(
-    ) {}
+    constructor() {}
 
     /**
-     * Attach a secure HttpOnly cookie to the response.
-     * Typically used to store refresh tokens so they are not accessible via JavaScript.
+     * Attaches a secure HttpOnly cookie to the response.
+     * Typically used for refresh tokens (not accessible via JavaScript).
+     *
+     * @param param - Response, cookie name, value, optional cookie options
+     * @returns void
+     *
+     * @example
+     * cookieService.attachHttpOnlyCookie({ res, name: "refreshToken", value: token })
      */
-    attachHttpOnlyCookie(
-        res: Response,
-        name: string,
-        value: string,
-        options?: CookieOptions
-    ): void {
+    attachHttpOnlyCookie({
+        res,
+        name,
+        value,
+        options,
+    }: AttachHttpOnlyCookieParams): AttachHttpOnlyCookieResult {
         const defaultOptions: CookieOptions = {
-            httpOnly: true,                                // Prevents client-side JS from accessing the cookie
-            secure: process.env.NODE_ENV === "production", // Only send over HTTPS in production
-            sameSite: "strict",                            // Protects against CSRF
-            path: "/",                                     // Cookie is valid for the entire site
-            maxAge: envConfig().jwt.refreshToken.expiration,      // 30 days
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+            maxAge: envConfig().jwt.refreshToken.expiration,
         }
 
         res.cookie(name,
@@ -40,9 +59,19 @@ export class CookieService {
     }
 
     /**
-     * Clear a cookie by name. Commonly used on logout.
+     * Clears a cookie by name (e.g. on logout).
+     *
+     * @param param - Response, cookie name, optional options
+     * @returns void
+     *
+     * @example
+     * cookieService.clearCookie({ res, name: "refreshToken" })
      */
-    clearCookie(res: Response, name: string, options?: CookieOptions): void {
+    clearCookie({
+        res,
+        name,
+        options,
+    }: ClearCookieParams): ClearCookieResult {
         res.clearCookie(name,
             {
                 httpOnly: true,

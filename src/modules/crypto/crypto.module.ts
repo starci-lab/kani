@@ -1,17 +1,19 @@
-
 import {
-    Module 
+    Module
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass,
+    ConfigurableModuleClass
 } from "./crypto.module-definition"
 import {
     EncryptionService
 } from "./encryption.service"
 
 @Module({
-    providers: [EncryptionService],
-    exports: [EncryptionService],
+    providers: [
+        EncryptionService,
+    ],
+    exports: [
+        EncryptionService,
+    ],
 })
-export class CryptoModule extends ConfigurableModuleClass {
-}
+export class CryptoModule extends ConfigurableModuleClass {}

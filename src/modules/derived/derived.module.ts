@@ -1,14 +1,14 @@
 import {
-    Module 
+    Module
 } from "@nestjs/common"
 import {
-    ConfigurableModuleClass 
+    ConfigurableModuleClass
 } from "./derived.module-definition"
 import {
-    DerivedAesKeyService 
+    DerivedAesKeyService
 } from "./derived-aes-key-service.service"
 import {
-    DerivedJwtSecretService 
+    DerivedJwtSecretService
 } from "./derived-jwt-secret-service.service"
 
 @Module({

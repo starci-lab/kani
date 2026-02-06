@@ -6,7 +6,7 @@ import {
 } from "./abstract"
 import {
     ChainId, GraphQLTypeChainId 
-} from "@modules/typedefs"
+} from "@modules/blockchains"
 import {
     TokenSchema 
 } from "./token.schema"
@@ -33,7 +33,7 @@ import {
 } from "graphql-type-json"
 import {
     PrimaryMongoDbCollectionRef,
-} from "../ref"
+} from "../enums"
 import {
     LiquidityPoolClmmStateSchema, LiquidityPoolClmmStateSchemaClass 
 } from "./liquidity-pool-clmm-state.schema"

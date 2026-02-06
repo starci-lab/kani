@@ -3,6 +3,10 @@ import {
     ConfigurableModuleBuilder 
 } from "@nestjs/common"
 
+/**
+ * TxBuilder module definition.
+ * Configures the tx-builder module with dynamic options.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder().setExtras(
       {

@@ -10,7 +10,7 @@ import {
 } from "../schemas"
 import {
     Seeder 
-} from "./seeder.interface"
+} from "./types"
 import {
     InjectPrimaryMongoose 
 } from "../mongodb.decorators"

@@ -1,20 +1,27 @@
-import { 
-    InjectPrimaryMongoose, 
-    TransactionSchema, 
+import {
+    InjectPrimaryMongoose,
+    TransactionSchema,
 } from "@modules/databases"
 import {
-    Injectable 
+    Injectable
 } from "@nestjs/common"
 import {
-    DayjsService 
+    DayjsService
 } from "@modules/mixin"
 import {
-    AddTransactionRecordParams
+    AddTransactionRecordParams,
+    AddTransactionRecordResult
 } from "./types"
 import {
-    Connection 
+    Connection
 } from "mongoose"
 
+/**
+ * Service responsible for appending transaction records to snapshot history.
+ *
+ * @example
+ * await transactionSnapshotService.addTransactionRecord({ bot, txHash, chainId, type })
+ */
 @Injectable()
 export class TransactionSnapshotService {
     constructor(
@@ -23,15 +30,23 @@ export class TransactionSnapshotService {
         private readonly dayjsService: DayjsService,
     ) {}
 
-    public async addTransactionRecord(
-        {
-            txHash,
-            bot,
-            chainId,
-            type,
-            session,
-        }: AddTransactionRecordParams
-    ): Promise<void> {
+    /**
+     * Adds a transaction record (txHash, chainId, type) for a bot.
+     *
+     * @param param - Transaction params (bot, txHash, chainId, type, optional session)
+     * @returns Resolves when the record is created
+     *
+     * @example
+     * await service.addTransactionRecord({ bot, txHash, chainId, type })
+     */
+    public async addTransactionRecord({
+        txHash,
+        bot,
+        chainId,
+        type,
+        session,
+    }: AddTransactionRecordParams): Promise<AddTransactionRecordResult> {
+        // persist transaction record with timestamp
         await this.connection.model<TransactionSchema>(TransactionSchema.name)
             .create(
                 [
