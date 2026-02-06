@@ -72,7 +72,7 @@ user/
 Files like `*.service.ts`, `*.controller.ts`, `*.module.ts`, etc. must only **import** types, enums, and classes from `types/`, `enums/`, `classes/`, or `graphql-types/`. Do not declare interfaces, enums, or classes inside NestJS framework files; put them in the correct folder and import.
 
 **GraphQL schema:**  
-Put `@InputType` classes in **graphql-types/inputs/** and `@ObjectType` classes in **graphql-types/object-types/** (one file per feature). Use **graphql-types/index.ts** to re-export inputs and object-types. Keep `isAbstract: true` and a clear `description` in the decorator when the type is used as a base (e.g. extended by other DTOs). Do not add backward-compat folders that only re-export from graphql-types.
+Put `@InputType` classes in **graphql-types/inputs/** and `@ObjectType` classes in **graphql-types/object-types/** (one file per feature). Use **graphql-types/index.ts** to re-export inputs and object-types. Keep `isAbstract: true` and a clear `description` in the decorator when the type is used as a base (e.g. extended by other DTOs).
 
 ---
 
