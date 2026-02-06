@@ -1,9 +1,14 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata
+    AbstractException 
 } from "../abstract"
 
-/** Thrown when account limit config is not found */
+/** Metadata when account limits config is not found. */
 export type AccountLimitsConfigNotFoundExceptionMetadata = AbstractExceptionMetadata
+
+/** Thrown when account limits config is not found. */
 export class AccountLimitsConfigNotFoundException extends AbstractException {
     constructor(
         { originalError }: AccountLimitsConfigNotFoundExceptionMetadata

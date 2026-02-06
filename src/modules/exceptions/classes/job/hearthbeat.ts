@@ -1,16 +1,18 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
-/**
- * Heartbeat timeout exception
- */
+/** Metadata when heartbeat times out. */
 export interface HeartbeatTimeoutExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     jobId: string
     bullmqJobId?: string
 }
 
+/** Thrown when heartbeat times out. */
 export class HeartbeatTimeoutException extends AbstractException {
     constructor(
         {

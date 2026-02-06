@@ -1,11 +1,14 @@
-import {
-    AbstractException, AbstractExceptionMetadata 
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     ErrorSuiObjectName 
 } from "./types"
 
-/** Thrown when Sui object is not found */
+/** Metadata when Sui object is not found. */
 export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSuiObjectName
     parentId?: string
@@ -14,6 +17,7 @@ export interface SuiObjectNotFoundExceptionMetadata extends AbstractExceptionMet
     liquidityPoolId: string
 }
 
+/** Thrown when Sui object cannot be found. */
 export class SuiObjectNotFoundException extends AbstractException {
     constructor(
         { name, parentId, id, originalError }: SuiObjectNotFoundExceptionMetadata

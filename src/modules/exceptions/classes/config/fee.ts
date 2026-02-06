@@ -1,11 +1,16 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
-/** Thrown when fee to address is not found */
+/** Metadata when fee to address or rate is not found. */
 export interface FeeToAddressNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     feeToAddress: string
 }
+
+/** Thrown when fee to address is not found. */
 export class FeeToAddressNotFoundException extends AbstractException {
     constructor(
         { feeToAddress, originalError }: FeeToAddressNotFoundExceptionMetadata
@@ -19,8 +24,10 @@ export class FeeToAddressNotFoundException extends AbstractException {
     }
 }
 
-/** Thrown when fee rate is not found */
+/** Metadata when fee rate is not found. */
 export type FeeRateNotFoundExceptionMetadata = AbstractExceptionMetadata
+
+/** Thrown when fee rate is not found. */
 export class FeeRateNotFoundException extends AbstractException {
     constructor(
         { originalError }: FeeRateNotFoundExceptionMetadata
@@ -33,8 +40,10 @@ export class FeeRateNotFoundException extends AbstractException {
     }
 }
 
-/** Thrown when fee to address is not found */
+/** Metadata when fee rate is not set. */
 export type FeeRateNotSetExceptionMetadata = AbstractExceptionMetadata
+
+/** Thrown when fee rate is not set. */
 export class FeeRateNotSetException extends AbstractException {
     constructor(
         { originalError }: FeeRateNotSetExceptionMetadata

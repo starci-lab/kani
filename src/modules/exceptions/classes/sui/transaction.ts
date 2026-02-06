@@ -5,9 +5,11 @@
  * Rule: keep `index.ts` as a barrel only (no classes/imports), put exceptions in intent-named files.
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 import BN from "bn.js"
 
@@ -16,6 +18,7 @@ export interface CoinArgumentNotFoundExceptionMetadata extends AbstractException
     message?: string
 }
 
+/** Thrown when coin argument is not found in transaction. */
 export class CoinArgumentNotFoundException extends AbstractException {
     constructor(
         {
@@ -58,6 +61,7 @@ export interface QuoteNotFoundExceptionMetadata extends AbstractExceptionMetadat
     amount: BN
 }
 
+/** Thrown when quote cannot be found. */
 export class QuoteNotFoundException extends AbstractException {
     constructor(
         {
@@ -210,7 +214,7 @@ export interface SuiSingleTransactionRequiredExceptionMetadata extends AbstractE
     numTxs: number
 }
 
-
+/** Thrown when Sui operation expects exactly one prepared transaction. */
 export class SuiSingleTransactionRequiredException extends AbstractException {
     constructor(
         {

@@ -1,13 +1,19 @@
-import {
-    AbstractException, AbstractExceptionMetadata 
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     LiquidityPoolId 
 } from "@modules/databases"
-/** Thrown when pool tokens are invalid */
+
+/** Metadata when pool tokens are invalid. */
 export interface InvalidPoolTokensExceptionMetadata extends AbstractExceptionMetadata {
     liquidityPoolId: LiquidityPoolId
 }
+
+/** Thrown when pool tokens are invalid. */
 export class InvalidPoolTokensException extends AbstractException {
     constructor(
         { liquidityPoolId, originalError }: InvalidPoolTokensExceptionMetadata

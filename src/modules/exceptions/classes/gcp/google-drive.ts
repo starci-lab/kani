@@ -1,14 +1,18 @@
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    GoogleDriveFolderName,
+    AbstractException 
+} from "../abstract"
+import type {
+    GoogleDriveFolderName 
 } from "@modules/gcp"
 /** Thrown when Google drive folder id not found */
 export interface GoogleDriveFolderIdNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     folderName: GoogleDriveFolderName
 }
+
+/** Thrown when Google Drive folder ID is not found. */
 export class GoogleDriveFolderIdNotFoundException extends AbstractException {
     constructor(
         { folderName }: GoogleDriveFolderIdNotFoundExceptionMetadata
@@ -25,6 +29,8 @@ export class GoogleDriveFolderIdNotFoundException extends AbstractException {
 export interface GoogleDriveUploadFileInvalidExceptionMetadata extends AbstractExceptionMetadata {
     originalname?: string
 }
+
+/** Thrown when upload file has neither buffer nor path. */
 export class GoogleDriveUploadFileInvalidException extends AbstractException {
     constructor(
         metadata?: GoogleDriveUploadFileInvalidExceptionMetadata
@@ -32,7 +38,8 @@ export class GoogleDriveUploadFileInvalidException extends AbstractException {
         super(
             "Google drive upload file has neither buffer nor path",
             "GOOGLE_DRIVE_UPLOAD_FILE_INVALID_EXCEPTION",
-            metadata ?? {},
+            metadata ?? {
+            },
         )
     }
 }
@@ -42,6 +49,8 @@ export interface GoogleDriveFileDownloadFailedExceptionMetadata extends Abstract
     fileId: string
     outputPath: string
 }
+
+/** Thrown when Google Drive file download fails. */
 export class GoogleDriveFileDownloadFailedException extends AbstractException {
     constructor(
         { fileId, outputPath, originalError }: GoogleDriveFileDownloadFailedExceptionMetadata

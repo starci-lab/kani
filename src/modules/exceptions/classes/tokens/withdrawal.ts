@@ -1,5 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 /** Thrown when token balance is not enough for withdrawal */
 export interface TokenBalanceNotEnoughForWithdrawExceptionMetadata extends AbstractExceptionMetadata {

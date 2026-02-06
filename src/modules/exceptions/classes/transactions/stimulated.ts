@@ -1,17 +1,19 @@
 /**
- * Transaction Stimulated Exceptions
- * Errors related to transaction devInspect / stimulation
+ * Transaction stimulated exceptions.
+ * Errors related to transaction devInspect / stimulation.
  */
 
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    LiquidityPoolId,
+    AbstractException 
+} from "../abstract"
+import type {
+    LiquidityPoolId 
 } from "@modules/databases"
-import {
-    ErrorTransactionType,
+import type {
+    ErrorTransactionType 
 } from "./types"
 
 /** Thrown when transaction stimulation (devInspect) fails */
@@ -22,6 +24,7 @@ export interface TransactionStimulatedFailedExceptionMetadata extends AbstractEx
     type: ErrorTransactionType
 }
 
+/** Thrown when transaction stimulation (devInspect) fails. */
 export class TransactionStimulatedFailedException extends AbstractException {
     constructor(
         {

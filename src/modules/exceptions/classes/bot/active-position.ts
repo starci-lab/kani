@@ -1,6 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when active position cannot be found for bot */
@@ -8,6 +10,7 @@ export interface ActivePositionNotFoundExceptionMetadata extends AbstractExcepti
     botId: string
 }
 
+/** Thrown when active position cannot be found. */
 export class ActivePositionNotFoundException extends AbstractException {
     constructor(
         { botId, originalError }: ActivePositionNotFoundExceptionMetadata,
@@ -27,6 +30,7 @@ export interface AssociatedPositionNotFoundExceptionMetadata extends AbstractExc
     botId: string
 }
 
+/** Thrown when associated position cannot be found. */
 export class AssociatedPositionNotFoundException extends AbstractException {
     constructor(
         { botId, originalError }: AssociatedPositionNotFoundExceptionMetadata,

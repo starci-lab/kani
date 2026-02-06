@@ -1,11 +1,15 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 /** Thrown when dependency not found */
 export interface DependencyNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     dependencyName: string
 }
+
+/** Thrown when healthcheck dependency is not found. */
 export class DependencyNotFoundException extends AbstractException {
     constructor(
         { dependencyName }: DependencyNotFoundExceptionMetadata

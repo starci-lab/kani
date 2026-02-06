@@ -3,9 +3,11 @@
  * Errors related to Privy authentication operations
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when Privy auth token is invalid */
@@ -13,6 +15,7 @@ export interface InvalidPrivyAuthTokenExceptionMetadata extends AbstractExceptio
     token?: string
 }
 
+/** Thrown when Privy auth token is invalid. */
 export class InvalidPrivyAuthTokenException extends AbstractException {
     constructor(
         {

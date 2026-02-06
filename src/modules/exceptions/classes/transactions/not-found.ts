@@ -1,17 +1,19 @@
 /**
- * Transaction Not Found Exceptions
- * Errors related to missing transaction events
+ * Transaction not-found exceptions.
+ * Errors related to missing transaction events.
  */
 
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    LiquidityPoolId,
+    AbstractException 
+} from "../abstract"
+import type {
+    LiquidityPoolId 
 } from "@modules/databases"
-import {
-    ErrorTransactionType,
+import type {
+    ErrorTransactionType 
 } from "./types"
 
 /** Thrown when transaction event is not found */
@@ -22,6 +24,7 @@ export interface TransactionEventNotFoundExceptionMetadata extends AbstractExcep
     liquidityPoolId: LiquidityPoolId
 }
 
+/** Thrown when transaction event is not found. */
 export class TransactionEventNotFoundException extends AbstractException {
     constructor(
         {
@@ -50,6 +53,7 @@ export interface OutputCoinNotFoundExceptionMetadata extends AbstractExceptionMe
     type: ErrorTransactionType
 }
 
+/** Thrown when output coin is not found after swap. */
 export class OutputCoinNotFoundException extends AbstractException {
     constructor({
         botId,

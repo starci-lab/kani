@@ -1,5 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when the maximum number of bots per account has been reached */

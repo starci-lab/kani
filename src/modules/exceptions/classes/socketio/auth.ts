@@ -3,9 +3,11 @@
  * Errors related to Socket.IO connections and authentication.
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when Socket.IO access token is missing */
@@ -44,6 +46,8 @@ export class SocketIoAccessTokenInvalidException extends AbstractException {
 export interface SocketIoAccessTokenExpiredExceptionMetadata extends AbstractExceptionMetadata {
     token: string
 }
+
+/** Thrown when Socket.IO access token is expired. */
 export class SocketIoAccessTokenExpiredException extends AbstractException {
     constructor(
         { token, originalError }: SocketIoAccessTokenExpiredExceptionMetadata

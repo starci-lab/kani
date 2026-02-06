@@ -1,15 +1,18 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
-/**
- * Thrown when the limit of the pagination is out of range
- */
+/** Metadata when pagination limit is out of range. */
 export interface PaginationLimitOutOfRangeExceptionMetadata extends AbstractExceptionMetadata {
     limit: number
     min: number
     max: number
 }
+
+/** Thrown when pagination limit is out of range. */
 export class PaginationLimitOutOfRangeException extends AbstractException {
     constructor(
         { limit, min, max, originalError }: PaginationLimitOutOfRangeExceptionMetadata
@@ -27,13 +30,13 @@ export class PaginationLimitOutOfRangeException extends AbstractException {
     }
 }
 
-/**
- * Thrown when the page number of the pagination is out of range
- */
+/** Metadata when pagination page number is out of range. */
 export interface PaginationPageNumberOutOfRangeExceptionMetadata extends AbstractExceptionMetadata {
     pageNumber: number
     max: number
 }
+
+/** Thrown when pagination page number is out of range. */
 export class PaginationPageNumberOutOfRangeException extends AbstractException {
     constructor(
         { pageNumber, max, originalError }: PaginationPageNumberOutOfRangeExceptionMetadata

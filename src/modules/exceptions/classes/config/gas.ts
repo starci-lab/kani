@@ -1,14 +1,19 @@
-import {
-    ChainId
-} from "@modules/typedefs"
-import {
-    AbstractException, AbstractExceptionMetadata
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
+import {
+    AbstractException 
+} from "../abstract"
+import type {
+    ChainId 
+} from "@modules/common"
 
-/** Thrown when target operational gas amount config is not found */
+/** Metadata for target operational gas amount not found. */
 export interface TargetOperationalGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId?: ChainId
 }
+
+/** Thrown when target operational gas amount config is not found. */
 export class TargetOperationalGasAmountNotFoundException extends AbstractException {
     constructor(
         { chainId, originalError }: TargetOperationalGasAmountNotFoundExceptionMetadata
@@ -24,10 +29,12 @@ export class TargetOperationalGasAmountNotFoundException extends AbstractExcepti
     }
 }
 
-/** Thrown when minimum operational gas amount config is not found */
+/** Metadata for minimum operational gas amount not found. */
 export interface MinOperationalGasAmountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId?: ChainId
 }
+
+/** Thrown when minimum operational gas amount config is not found. */
 export class MinOperationalGasAmountNotFoundException extends AbstractException {
     constructor(
         { chainId, originalError }: MinOperationalGasAmountNotFoundExceptionMetadata
@@ -43,10 +50,12 @@ export class MinOperationalGasAmountNotFoundException extends AbstractException 
     }
 }
 
-/** Thrown when additional swap amount gas config is not found */
+/** Metadata for swap amount gas not found. */
 export interface SwapAmountGasNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
+
+/** Thrown when additional swap amount gas config is not found. */
 export class SwapAmountGasNotFoundException extends AbstractException {
     constructor(
         { chainId, originalError }: SwapAmountGasNotFoundExceptionMetadata
@@ -62,8 +71,10 @@ export class SwapAmountGasNotFoundException extends AbstractException {
     }
 }
 
-/** Thrown when gas config is not found */
+/** Metadata when gas config is not found. */
 export type GasConfigNotFoundExceptionMetadata = AbstractExceptionMetadata
+
+/** Thrown when gas config is not found. */
 export class GasConfigNotFoundException extends AbstractException {
     constructor(
         { originalError }: GasConfigNotFoundExceptionMetadata

@@ -3,9 +3,11 @@
  * Errors related to Google Cloud Secret Manager operations
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when secret cannot be found in Secret Manager */
@@ -13,6 +15,7 @@ export interface SecretNotFoundExceptionMetadata extends AbstractExceptionMetada
     secretName?: string
 }
 
+/** Thrown when secret is not found. */
 export class SecretNotFoundException extends AbstractException {
     constructor(
         {
@@ -36,6 +39,8 @@ export class SecretNotFoundException extends AbstractException {
 export interface SecretCreationFailedExceptionMetadata extends AbstractExceptionMetadata {
     secretName?: string
 }
+
+/** Thrown when secret creation fails. */
 export class SecretCreationFailedException extends AbstractException {
     constructor(
         { secretName, originalError }: SecretCreationFailedExceptionMetadata

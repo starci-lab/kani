@@ -1,13 +1,17 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    ErrorTransactionType 
-} from "./types"
-import {
+    AbstractException 
+} from "../abstract"
+import type {
     LiquidityPoolId 
 } from "@modules/databases"
-import {
-    AbstractException, AbstractExceptionMetadata 
-} from "../abstract"
+import type {
+    ErrorTransactionType 
+} from "./types"
 
+/** Metadata when transaction is not found in blockchain. */
 export interface TransactionNotFoundInBlockchainExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     txHash: string
@@ -15,6 +19,7 @@ export interface TransactionNotFoundInBlockchainExceptionMetadata extends Abstra
     type: ErrorTransactionType
 }
 
+/** Thrown when transaction is not found in blockchain. */
 export class TransactionNotFoundInBlockchainException extends AbstractException {
     constructor(
         { botId, txHash, liquidityPoolId, type }: TransactionNotFoundInBlockchainExceptionMetadata

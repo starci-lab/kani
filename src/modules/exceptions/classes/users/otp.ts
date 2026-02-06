@@ -3,9 +3,11 @@
  * Errors related to sign-in OTP operations
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when sign-in OTP is not found */
@@ -13,6 +15,7 @@ export interface SignInOtpNotFoundExceptionMetadata extends AbstractExceptionMet
     email: string
 }
 
+/** Thrown when sign-in OTP is not found. */
 export class SignInOtpNotFoundException extends AbstractException {
     constructor(
         {
@@ -36,6 +39,7 @@ export interface SignInOtpMismatchExceptionMetadata extends AbstractExceptionMet
     email: string
 }
 
+/** Thrown when sign-in OTP does not match. */
 export class SignInOtpMismatchException extends AbstractException {
     constructor(
         {

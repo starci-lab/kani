@@ -1,16 +1,22 @@
-import {
-    AbstractException, AbstractExceptionMetadata 
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     TokenId 
 } from "@modules/databases"
-/** Thrown when token cannot be found */
+
+/** Metadata when token cannot be found. */
 export interface TokenNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     id?: string
     displayId?: TokenId
     conditions?: unknown
     tokenAddress?: string
 }
+
+/** Thrown when token cannot be found. */
 export class TokenNotFoundException extends AbstractException {
     constructor(
         { id, displayId, conditions, originalError, tokenAddress }: TokenNotFoundExceptionMetadata
@@ -34,6 +40,8 @@ export interface SomeTokensNotFoundExceptionMetadata extends AbstractExceptionMe
     actualCount: number
     expectedCount: number
 }
+
+/** Thrown when one or more tokens cannot be found. */
 export class SomeTokensNotFoundException extends AbstractException {
     constructor(
         { actualCount, expectedCount, originalError }: SomeTokensNotFoundExceptionMetadata

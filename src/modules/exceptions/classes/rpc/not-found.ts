@@ -1,21 +1,24 @@
 /**
- * RPC Not Found Exceptions
- * Errors related to missing RPC configuration or cache
+ * RPC not-found exceptions.
+ * Errors related to missing RPC configuration or cache.
  */
 
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    ChainId,
-} from "@modules/typedefs"
+    AbstractException 
+} from "../abstract"
+import type {
+    ChainId 
+} from "@modules/common"
 
-/** Thrown when load balancer name is not found */
+/** Metadata when load balancer name is not found. */
 export interface LoadBalancerNameNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
 
+/** Thrown when load balancer name is not found. */
 export class LoadBalancerNameNotFoundException extends AbstractException {
     constructor(
         {
@@ -34,11 +37,12 @@ export class LoadBalancerNameNotFoundException extends AbstractException {
     }
 }
 
-/** Thrown when ejected RPCs cache result is not found */
+/** Metadata when ejected RPCs cache result is not found. */
 export interface EjectedRpcsCacheResultNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
 
+/** Thrown when ejected RPCs cache result is not found. */
 export class EjectedRpcsCacheResultNotFoundException extends AbstractException {
     constructor(
         {

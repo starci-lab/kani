@@ -1,6 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 export interface LiquidityPoolNotOwnedByBotExceptionParams extends AbstractExceptionMetadata {
@@ -8,6 +10,7 @@ export interface LiquidityPoolNotOwnedByBotExceptionParams extends AbstractExcep
     liquidityPoolId: string
 }
 
+/** Thrown when liquidity pool is not owned by bot. */
 export class LiquidityPoolNotOwnedByBotException extends AbstractException {
     constructor(
         {

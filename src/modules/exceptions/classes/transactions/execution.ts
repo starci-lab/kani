@@ -1,14 +1,16 @@
 /**
- * Transaction Execution Exceptions
- * Errors related to transaction execution on-chain
+ * Transaction execution exceptions.
+ * Errors related to transaction execution on-chain.
  */
 
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    LiquidityPoolId,
+    AbstractException 
+} from "../abstract"
+import type {
+    LiquidityPoolId 
 } from "@modules/databases"
 
 /** Thrown when transaction execution fails on-chain */
@@ -18,6 +20,7 @@ export interface TransactionExecutionFailedExceptionMetadata extends AbstractExc
     liquidityPoolId?: LiquidityPoolId
 }
 
+/** Thrown when transaction execution fails on-chain. */
 export class TransactionExecutionFailedException extends AbstractException {
     constructor(
         {

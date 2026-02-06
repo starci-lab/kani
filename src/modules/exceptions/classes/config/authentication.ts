@@ -1,9 +1,14 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
-/** Thrown when authentication config is not found */
+/** Metadata when authentication config is not found. */
 export type AuthenticationConfigNotFoundExceptionMetadata = AbstractExceptionMetadata
+
+/** Thrown when authentication config is not found. */
 export class AuthenticationConfigNotFoundException extends AbstractException {
     constructor(
         { originalError }: AuthenticationConfigNotFoundExceptionMetadata

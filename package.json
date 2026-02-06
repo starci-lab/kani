@@ -230,6 +230,7 @@
     "moduleNameMapper": {
       "^@exceptions": "<rootDir>/src/exceptions",
       "^@modules/(.*)$": "<rootDir>/src/modules/$1",
+      "^@features/(.*)$": "<rootDir>/src/features/$1",
       "^@utils": "<rootDir>/src/utils",
       "^@typedefs": "<rootDir>/src/typedefs"
     },

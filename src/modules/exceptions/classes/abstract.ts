@@ -46,7 +46,7 @@ export class AbstractException extends Error {
 }
 
 
-/** Additional metadata for the exception */
+/** Additional metadata for exception instances (e.g. originalError). */
 export interface AbstractExceptionMetadata {
     originalError?: Error
 }

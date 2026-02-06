@@ -1,15 +1,20 @@
-import {
-    AbstractException, AbstractExceptionMetadata
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     LiquidityPoolId 
 } from "@modules/databases"
-/** Thrown when multiple DLMM positions are not supported */
+
+/** Metadata when multiple DLMM positions are not supported. */
 export interface MeteoraMultipleDlmmPositionsNotSupportedExceptionMetadata extends AbstractExceptionMetadata {
     liquidityPoolId: LiquidityPoolId
     positionCount: number
 }
 
+/** Thrown when multiple Meteora DLMM positions are not supported. */
 export class MeteoraMultipleDlmmPositionsNotSupportedException extends AbstractException {
     constructor(
         { liquidityPoolId, positionCount, originalError }: MeteoraMultipleDlmmPositionsNotSupportedExceptionMetadata

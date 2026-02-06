@@ -3,9 +3,11 @@
  * Used by RpcExecutorService to classify and propagate retryable / fatal / ignorable errors.
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Solana RPC: temporary failure, safe to retry with backoff */

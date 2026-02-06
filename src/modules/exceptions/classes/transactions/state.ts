@@ -1,16 +1,18 @@
 /**
- * Transaction State Exceptions
- * Errors related to transaction execution and preparation state
+ * Transaction state exceptions.
+ * Errors related to transaction execution and preparation state.
  */
 
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     ErrorTransactionType 
 } from "./types"
-import {
+import type {
     LiquidityPoolId 
 } from "@modules/databases"
 /** Thrown when transaction has not been executed */
@@ -21,6 +23,7 @@ export interface TransactionNotExecutedExceptionMetadata extends AbstractExcepti
     type: ErrorTransactionType
 }
 
+/** Thrown when transaction has not been executed. */
 export class TransactionNotExecutedException extends AbstractException {
     constructor(
         {
@@ -53,6 +56,7 @@ export interface TransactionNotPreparedExceptionMetadata extends AbstractExcepti
     type: ErrorTransactionType
 }
 
+/** Thrown when transaction has not been prepared. */
 export class TransactionNotPreparedException extends AbstractException {
     constructor(
         {

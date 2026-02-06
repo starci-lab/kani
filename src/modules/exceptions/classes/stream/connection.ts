@@ -3,9 +3,11 @@
  * Errors related to stream connection operations
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when stream connection is aborted */
@@ -13,6 +15,7 @@ export interface StreamConnectionAbortedExceptionMetadata extends AbstractExcept
     reason: string
 }
 
+/** Thrown when stream connection is aborted. */
 export class StreamConnectionAbortedException extends AbstractException {
     constructor(
         {
@@ -34,6 +37,7 @@ export class StreamConnectionAbortedException extends AbstractException {
 /** Thrown when stream connection is closed */
 export type StreamConnectionClosedExceptionMetadata = AbstractExceptionMetadata
 
+/** Thrown when stream connection is closed. */
 export class StreamConnectionClosedException extends AbstractException {
     constructor(
         {

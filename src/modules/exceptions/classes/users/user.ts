@@ -3,9 +3,11 @@
  * Errors related to user operations
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when user cannot be found */
@@ -14,6 +16,7 @@ export interface UserNotFoundExceptionMetadata extends AbstractExceptionMetadata
     privyUserId?: string
 }
 
+/** Thrown when user cannot be found. */
 export class UserNotFoundException extends AbstractException {
     constructor(
         {
@@ -39,6 +42,7 @@ export interface UserTotpSecretNotFoundExceptionMetadata extends AbstractExcepti
     id: string
 }
 
+/** Thrown when user TOTP secret is not found. */
 export class UserTotpSecretNotFoundException extends AbstractException {
     constructor(
         {
@@ -62,6 +66,7 @@ export interface InvalidTOTPCodeExceptionMetadata extends AbstractExceptionMetad
     id?: string
 }
 
+/** Thrown when TOTP code is invalid. */
 export class InvalidTOTPCodeException extends AbstractException {
     constructor(
         {
@@ -85,6 +90,7 @@ export interface UserMfaAlreadyEnabledExceptionMetadata extends AbstractExceptio
     id: string
 }
 
+/** Thrown when user MFA is already enabled. */
 export class UserMfaAlreadyEnabledException extends AbstractException {
     constructor(
         {
@@ -108,6 +114,7 @@ export interface UserAuthenticatorAppEnabledExceptionMetadata extends AbstractEx
     id: string
 }
 
+/** Thrown when user authenticator app is already enabled. */
 export class UserAuthenticatorAppEnabledException extends AbstractException {
     constructor(
         {
@@ -131,6 +138,7 @@ export interface UserAuthenticatorAppNotEnabledExceptionMetadata extends Abstrac
     id: string
 }
 
+/** Thrown when user authenticator app is not enabled. */
 export class UserAuthenticatorAppNotEnabledException extends AbstractException {
     constructor(
         {
@@ -154,6 +162,7 @@ export interface FailedToGenerateReferralCodeExceptionMetadata extends AbstractE
     email: string
 }
 
+/** Thrown when failed to generate referral code. */
 export class FailedToGenerateReferralCodeException extends AbstractException {
     constructor(
         {
@@ -177,6 +186,7 @@ export interface EmailNotFoundExceptionMetadata extends AbstractExceptionMetadat
     privyUserId: string
 }
 
+/** Thrown when email is not found for a user. */
 export class EmailNotFoundException extends AbstractException {
     constructor(
         {

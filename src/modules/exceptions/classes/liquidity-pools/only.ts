@@ -1,5 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
 export interface ExactlyTwoTokensRequiredExceptionMetadata extends AbstractExceptionMetadata {

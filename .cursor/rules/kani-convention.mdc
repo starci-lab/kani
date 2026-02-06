@@ -148,6 +148,19 @@ actionName(param: ActionNameParams): Promise<ActionNameResult>
 
 ---
 
+## Imports
+
+- **Use `import type` for type-only imports:** When importing only interfaces, type aliases, or enums that are used solely in type positions (e.g. in type annotations, `extends`, or `implements`), use `import type`. This keeps runtime bundles smaller and makes intent clear.
+- **Use value import for classes and runtime values:** Keep regular `import` for classes (e.g. base exception classes) and for enums/constants when their values are used at runtime (e.g. `MyEnum.Value`).
+- **Group and order:** Group type-only imports together; group value imports together. Prefer one source per line or logical grouping.
+
+```ts
+import type { AbstractExceptionMetadata, ChainId } from "@modules/common"
+import { AbstractException } from "../abstract"
+```
+
+---
+
 ## Unified Comment Pattern (Types, Enums, Classes, Functions)
 
 Types, enums, and classes must have comments (JSDoc or brief description). Functions use the pattern below.

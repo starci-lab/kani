@@ -3,9 +3,11 @@
  * Errors related to JWT authentication and token operations
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when user ID is missing for access token generation */
@@ -13,6 +15,7 @@ export interface UserIdRequiredToGenerateAccessTokenExceptionMetadata extends Ab
     userId?: string
 }
 
+/** Thrown when user ID is required to generate access token but is missing. */
 export class UserIdRequiredToGenerateAccessTokenException extends AbstractException {
     constructor(
         {
@@ -55,6 +58,7 @@ export interface InvalidAuthenticationTokenExceptionMetadata extends AbstractExc
     token?: string
 }
 
+/** Thrown when authentication token is invalid. */
 export class InvalidAuthenticationTokenException extends AbstractException {
     constructor(
         {
@@ -79,6 +83,7 @@ export interface UserHasNotCompletedMFAAuthenticationExceptionMetadata extends A
     userId?: string
 }
 
+/** Thrown when user has not completed MFA authentication. */
 export class UserHasNotCompletedMFAAuthenticationException extends AbstractException {
     constructor(
         {

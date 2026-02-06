@@ -1,17 +1,22 @@
 /**
- * Cache Exceptions
- * Errors related to cache operations
+ * Cache exceptions.
+ * Errors related to cache operations.
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
-/** Thrown when executor cannot be found by ID */
+/** Metadata when cache is stale. */
 export interface CacheStaleExceptionMetadata extends AbstractExceptionMetadata {
     key: string
     args: Record<string, unknown>
 }
+
+/** Thrown when cache entry is stale. */
 export class CacheStaleException extends AbstractException {
     constructor(
         { key, originalError }: CacheStaleExceptionMetadata

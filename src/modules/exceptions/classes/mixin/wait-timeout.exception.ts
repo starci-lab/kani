@@ -1,6 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when wait condition is not met after all retries */
@@ -8,6 +10,7 @@ export interface WaitTimeoutExceptionMetadata extends AbstractExceptionMetadata 
     maxAttempts: number
 }
 
+/** Thrown when wait operation times out. */
 export class WaitTimeoutException extends AbstractException {
     constructor(
         {

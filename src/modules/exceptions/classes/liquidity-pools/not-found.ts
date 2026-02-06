@@ -1,14 +1,20 @@
-import {
-    AbstractException, AbstractExceptionMetadata 
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     LiquidityPoolId 
 } from "@modules/databases"
-/** Thrown when liquidity pool cannot be found */
+
+/** Metadata when liquidity pool cannot be found. */
 export interface LiquidityPoolNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     displayId?: LiquidityPoolId
     id?: string
 }
+
+/** Thrown when liquidity pool cannot be found. */
 export class LiquidityPoolNotFoundException extends AbstractException {
     constructor(
         { displayId, id, originalError }: LiquidityPoolNotFoundExceptionMetadata
@@ -27,6 +33,8 @@ export class LiquidityPoolNotFoundException extends AbstractException {
 export interface LiquidityPoolNoWsIdleTimeoutExceptionMetadata extends AbstractExceptionMetadata {
     displayId: LiquidityPoolId
 }
+
+/** Thrown when liquidity pool WebSocket idle timeout occurs. */
 export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
     constructor(
         { displayId, originalError }: LiquidityPoolNoWsIdleTimeoutExceptionMetadata
@@ -45,6 +53,8 @@ export class LiquidityPoolNoWsIdleTimeoutException extends AbstractException {
 export interface LiquidityPoolClmmStateNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     liquidityPoolId: LiquidityPoolId
 }
+
+/** Thrown when liquidity pool CLMM state cannot be found. */
 export class LiquidityPoolClmmStateNotFoundException extends AbstractException {
     constructor(
         { liquidityPoolId, originalError }: LiquidityPoolClmmStateNotFoundExceptionMetadata
@@ -63,6 +73,8 @@ export class LiquidityPoolClmmStateNotFoundException extends AbstractException {
 export interface LiquidityPoolDlmmStateNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     liquidityPoolId: LiquidityPoolId
 }
+
+/** Thrown when liquidity pool DLMM state cannot be found. */
 export class LiquidityPoolDlmmStateNotFoundException extends AbstractException {
     constructor(
         { liquidityPoolId, originalError }: LiquidityPoolDlmmStateNotFoundExceptionMetadata
@@ -82,6 +94,8 @@ export interface SomeLiquidityPoolsNotFoundExceptionMetadata extends AbstractExc
     actualCount: number
     expectedCount: number
 }
+
+/** Thrown when one or more liquidity pools cannot be found. */
 export class SomeLiquidityPoolsNotFoundException extends AbstractException {
     constructor(
         { actualCount, expectedCount, originalError }: SomeLiquidityPoolsNotFoundExceptionMetadata

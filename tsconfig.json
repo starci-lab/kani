@@ -23,17 +23,8 @@
       "@apps/*": [
         "./apps/*"
       ],
-      "@exceptions": [
-        "src/modules/exceptions"
-      ],
-      "@modules/*": [
-        "./src/modules/*"
-      ],
-      "@typedefs": [
-        "src/modules/typedefs"
-      ],
-      "@utils": [
-        "src/modules/utils"
+      "@features/*": [
+        "./src/features/*"
       ]
     }
   }

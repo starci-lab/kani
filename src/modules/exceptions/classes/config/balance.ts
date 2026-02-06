@@ -1,14 +1,19 @@
-import {
-    ChainId 
-} from "@modules/typedefs"
-import {
-    AbstractException, AbstractExceptionMetadata
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
+import {
+    AbstractException 
+} from "../abstract"
+import type {
+    ChainId 
+} from "@modules/common"
 
-/** Thrown when balance config is not found */
+/** Metadata when balance config is not found. */
 export interface BalanceConfigNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     chainId?: ChainId
 }
+
+/** Thrown when balance config is not found. */
 export class BalanceConfigNotFoundException extends AbstractException {
     constructor(
         { originalError, chainId }: BalanceConfigNotFoundExceptionMetadata

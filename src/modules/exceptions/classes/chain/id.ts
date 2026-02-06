@@ -1,15 +1,19 @@
-import {
-    AbstractException, AbstractExceptionMetadata 
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     ChainId 
-} from "@modules/typedefs"
+} from "@modules/common"
 
-/** Thrown when unsupported chain ID is used */
+/** Metadata when unsupported chain ID is used. */
 export interface UnsupportedChainIdExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
 
+/** Thrown when unsupported chain ID is used. */
 export class UnsupportedChainIdException extends AbstractException {
     constructor(
         { chainId, originalError }: UnsupportedChainIdExceptionMetadata

@@ -1,20 +1,25 @@
 /**
- * DEX Exceptions
- * Errors related to decentralized exchange operations
+ * DEX exceptions.
+ * Errors related to decentralized exchange operations.
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
+    AbstractException 
+} from "../abstract"
+import type {
     DexId 
 } from "@modules/databases"
-import {
-    AbstractException, AbstractExceptionMetadata 
-} from "../abstract"
 
-/** Thrown when DEX cannot be found */
+/** Metadata when DEX cannot be found. */
 export interface DexNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     id?: string
     displayId?: DexId
 }
+
+/** Thrown when DEX cannot be found. */
 export class DexNotFoundException extends AbstractException {
     constructor(
         { id, displayId, originalError }: DexNotFoundExceptionMetadata

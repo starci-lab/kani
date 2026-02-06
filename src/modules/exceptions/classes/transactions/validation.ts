@@ -1,17 +1,19 @@
 /**
- * Transaction Validation Exceptions
- * Errors related to transaction validation
+ * Transaction validation exceptions.
+ * Errors related to transaction validation.
  */
 
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    LiquidityPoolId,
+    AbstractException 
+} from "../abstract"
+import type {
+    LiquidityPoolId 
 } from "@modules/databases"
-import {
-    ErrorTransactionType,
+import type {
+    ErrorTransactionType 
 } from "./types"
 
 /** Thrown when transaction validation fails */
@@ -22,6 +24,7 @@ export interface TransactionValidationFailedExceptionMetadata extends AbstractEx
     type: ErrorTransactionType
 }
 
+/** Thrown when transaction validation fails. */
 export class TransactionValidationFailedException extends AbstractException {
     constructor(
         {

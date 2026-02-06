@@ -1,6 +1,8 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when wait condition is not met (used to trigger retry) */
@@ -8,6 +10,7 @@ export type WaitConditionNotMetExceptionMetadata = AbstractExceptionMetadata & {
     reason?: string
 }
 
+/** Thrown when wait condition is not met. */
 export class WaitConditionNotMetException extends AbstractException {
     constructor(
         {

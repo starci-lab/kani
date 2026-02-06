@@ -3,9 +3,11 @@
  * Errors related to user sessions
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException,
-    AbstractExceptionMetadata,
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when session cannot be found */
@@ -13,6 +15,7 @@ export interface SessionNotFoundExceptionMetadata extends AbstractExceptionMetad
     userId: string
 }
 
+/** Thrown when session cannot be found. */
 export class SessionNotFoundException extends AbstractException {
     constructor(
         {

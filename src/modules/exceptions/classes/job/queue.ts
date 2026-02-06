@@ -1,9 +1,9 @@
 import {
-    LiquidityPoolId 
-} from "@modules/databases"
-import {
     AbstractException 
 } from "../abstract"
+import type {
+    LiquidityPoolId 
+} from "@modules/databases"
 
 /**
  * Cannot Enqueue Job Exception Metadata
@@ -19,6 +19,8 @@ export interface CannotOpenPositionEnqueueJobExceptionMetadata {
     reason: CannotOpenPositionEnqueueJobReason
     error?: string
 }
+
+/** Thrown when open position job cannot be enqueued. */
 export class CannotEnqueueOpenPositionJobException extends AbstractException {
     constructor(
         { jobId, botId, liquidityPoolId, reason, error }: CannotOpenPositionEnqueueJobExceptionMetadata
@@ -54,6 +56,8 @@ export interface CannotReconcileBalanceEnqueueJobExceptionMetadata {
     /** Original error stack (for debugging) */
     errorStack?: string
 }
+
+/** Thrown when reconcile balance job cannot be enqueued. */
 export class CannotEnqueueReconcileBalanceJobException extends AbstractException {
     constructor(
         {
@@ -96,6 +100,8 @@ export interface CannotClosePositionEnqueueJobExceptionMetadata {
     error?: string
     settleReason?: string
 }
+
+/** Thrown when close position job cannot be enqueued. */
 export class CannotEnqueueClosePositionJobException extends AbstractException {
     constructor(
         { jobId, botId, liquidityPoolId, reason, error, settleReason }: CannotClosePositionEnqueueJobExceptionMetadata

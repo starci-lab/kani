@@ -1,14 +1,19 @@
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 import type {
     AggregatorId 
-} from "@modules/blockchains"
+} from "@modules/common"
 
-/** Thrown when an aggregator quote error occurs */
+/** Metadata when an aggregator quote error occurs. */
 export interface AggregatorQuoteFailedExceptionMetadata extends AbstractExceptionMetadata {
     aggregatorId: AggregatorId
 }
+
+/** Thrown when an aggregator quote error occurs. */
 export class AggregatorQuoteFailedException extends AbstractException {
     constructor(
         { aggregatorId, originalError }: AggregatorQuoteFailedExceptionMetadata
@@ -23,10 +28,12 @@ export class AggregatorQuoteFailedException extends AbstractException {
     }
 }
 
-/** Thrown when an aggregator swap error occurs */
+/** Metadata when an aggregator swap error occurs. */
 export interface AggregatorSwapFailedExceptionMetadata extends AbstractExceptionMetadata {
     aggregatorId: AggregatorId
 }
+
+/** Thrown when an aggregator swap error occurs. */
 export class AggregatorSwapFailedException extends AbstractException {
     constructor(
         { aggregatorId, originalError }: AggregatorSwapFailedExceptionMetadata

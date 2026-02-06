@@ -1,12 +1,14 @@
-import {
-    LiquidityPoolId 
-} from "@modules/databases"
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    ErrorTransactionType,
+    AbstractException 
+} from "../abstract"
+import type {
+    LiquidityPoolId 
+} from "@modules/databases"
+import type {
+    ErrorTransactionType 
 } from "./types"
 
 /** Thrown when transaction is not found in params */
@@ -16,6 +18,7 @@ export interface MissingSolanaTxParamExceptionMetadata
   botId: string
 }
 
+/** Thrown when Solana transaction parameter is missing. */
 export class MissingSolanaTxParamException extends AbstractException {
     constructor({
         type,
@@ -41,6 +44,7 @@ export interface MissingSuiMessageWithBytesParamExceptionMetadata
   botId: string
 }
 
+/** Thrown when Sui transaction message with bytes parameter is missing. */
 export class MissingSuiMessageWithBytesParamException extends AbstractException {
     constructor({
         type,
@@ -63,6 +67,8 @@ export interface MissingPositionIdParamExceptionMetadata extends AbstractExcepti
     botId: string
     liquidityPoolId: LiquidityPoolId
 }
+
+/** Thrown when position ID parameter is missing. */
 export class MissingPositionIdParamException extends AbstractException {
     constructor({
         botId,
@@ -83,6 +89,8 @@ export class MissingPositionIdParamException extends AbstractException {
 
 /** Thrown when bot parameters are missing */
 export type MissingBotParametersExceptionMetadata = AbstractExceptionMetadata
+
+/** Thrown when bot parameters are missing. */
 export class MissingBotParametersException extends AbstractException {
     constructor({
         originalError,
@@ -101,6 +109,8 @@ export class MissingBotParametersException extends AbstractException {
 export interface MissingActivePositionLiquidityExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
 }
+
+/** Thrown when active position liquidity is missing. */
 export class MissingActivePositionLiquidityException extends AbstractException {
     constructor({
         botId,

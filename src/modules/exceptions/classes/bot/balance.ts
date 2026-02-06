@@ -1,17 +1,22 @@
-import {
-    AbstractException, AbstractExceptionMetadata
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    ChainId
-} from "@modules/typedefs"
+    AbstractException 
+} from "../abstract"
+import type {
+    ChainId 
+} from "@modules/common"
 
-/** Thrown when the gas balance amount is insufficient */
+/** Metadata when the gas balance amount is insufficient. */
 export interface InsufficientMinGasBalanceAmountExceptionMetadata extends AbstractExceptionMetadata {
     gasBalanceAmount: string
     minOperationalGasAmount: string
     chainId: ChainId
     botId: string
 }
+
+/** Thrown when the gas balance amount is insufficient. */
 export class InsufficientMinGasBalanceAmountException extends AbstractException {
     constructor(
         { 
@@ -33,15 +38,17 @@ export class InsufficientMinGasBalanceAmountException extends AbstractException 
                 originalError,
             }
         )
-    }  
+    }
 }
 
-/** Thrown when the quote ratio is not good */
+/** Metadata when the quote ratio is not good. */
 export interface QuoteRatioNotGoodExceptionMetadata extends AbstractExceptionMetadata {
     botId: string
     liquidityPoolId: string
     quoteRatio: number
 }
+
+/** Thrown when the quote ratio is not good. */
 export class QuoteRatioNotGoodException extends AbstractException {
     constructor(
         {

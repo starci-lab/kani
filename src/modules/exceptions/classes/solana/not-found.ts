@@ -1,22 +1,25 @@
-import {
-    AbstractException, AbstractExceptionMetadata
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    ErrorSolanaAccountName
+    AbstractException 
+} from "../abstract"
+import type {
+    DexId, LiquidityPoolId 
+} from "@modules/databases"
+import type {
+    ErrorSolanaAccountName 
 } from "./types"
-import {
-    DexId 
-} from "@modules/databases"
-import {
-    LiquidityPoolId 
-} from "@modules/databases"
-/** Thrown when Sui object is not found */
+
+/** Metadata when Solana account is not found. */
 export interface SolanaAccountNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     name: ErrorSolanaAccountName
     address: string
     dexId: DexId
     liquidityPoolId: LiquidityPoolId
 }
+
+/** Thrown when Solana account cannot be found. */
 export class SolanaAccountNotFoundException extends AbstractException {
     constructor(
         { name, address, dexId, liquidityPoolId, originalError }: SolanaAccountNotFoundExceptionMetadata

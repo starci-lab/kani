@@ -1,7 +1,10 @@
 import BN from "bn.js"
 import Decimal from "decimal.js"
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
 /** Thrown when value is not in between expected */

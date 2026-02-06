@@ -1,10 +1,12 @@
-import {
-    LiquidityPoolId,
-} from "@modules/databases"
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
+import {
+    AbstractException 
+} from "../abstract"
+import type {
+    LiquidityPoolId 
+} from "@modules/databases"
 
 /**
  * Open Position Job Executed Failed Exception Metadata
@@ -15,6 +17,7 @@ export interface OpenPositionJobExecutedFailedExceptionMetadata extends Abstract
     liquidityPoolId: LiquidityPoolId
 }
 
+/** Thrown when open position job execution fails. */
 export class OpenPositionJobExecutedFailedException extends AbstractException {
     constructor(
         {
@@ -46,6 +49,7 @@ export interface ClosePositionJobExecutedFailedExceptionMetadata extends Abstrac
     liquidityPoolId: LiquidityPoolId
 }
 
+/** Thrown when close position job execution fails. */
 export class ClosePositionJobExecutedFailedException extends AbstractException {
     constructor(
         {
@@ -76,6 +80,7 @@ export interface WithdrawJobExecutedFailedExceptionMetadata extends AbstractExce
     jobId: string
 }
 
+/** Thrown when withdraw job execution fails. */
 export class WithdrawJobExecutedFailedException extends AbstractException {
     constructor(
         {
@@ -104,6 +109,7 @@ export interface ReconcileBalanceJobExecutedFailedExceptionMetadata extends Abst
     jobId: string
 }
 
+/** Thrown when reconcile balance job execution fails. */
 export class ReconcileBalanceJobExecutedFailedException extends AbstractException {
     constructor(
         {

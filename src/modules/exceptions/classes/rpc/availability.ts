@@ -1,24 +1,27 @@
 /**
- * RPC Availability Exceptions
- * Errors related to RPC availability and ejection
+ * RPC availability exceptions.
+ * Errors related to RPC availability and ejection.
  */
 
-import {
-    RpcAccessType 
-} from "@modules/filesystem"
-import {
-    AbstractException,
-    AbstractExceptionMetadata,
+import type {
+    AbstractExceptionMetadata 
 } from "../abstract"
 import {
-    ChainId,
-} from "@modules/typedefs"
+    AbstractException 
+} from "../abstract"
+import type {
+    ChainId 
+} from "@modules/common"
+import type {
+    RpcAccessType 
+} from "@modules/filesystem"
 
-/** Thrown when all RPCs have been ejected for a chain */
+/** Metadata when all RPCs have been ejected for a chain. */
 export interface AllRpcsEjectedExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
 }
 
+/** Thrown when all RPCs have been ejected for a chain. */
 export class AllRpcsEjectedException extends AbstractException {
     constructor(
         {
@@ -37,12 +40,13 @@ export class AllRpcsEjectedException extends AbstractException {
     }
 }
 
-/** Thrown when no RPC is available for a chain */
+/** Metadata when no RPC is available for a chain. */
 export interface NoAvailableRpcExceptionMetadata extends AbstractExceptionMetadata {
     chainId: ChainId
     accessType: RpcAccessType
 }
 
+/** Thrown when no RPC is available for a chain. */
 export class NoAvailableRpcException extends AbstractException {
     constructor(
         {

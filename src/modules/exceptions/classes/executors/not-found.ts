@@ -1,16 +1,21 @@
 /**
- * Executor Exceptions
- * Errors related to executor service operations
+ * Executor exceptions.
+ * Errors related to executor service operations.
  */
 
+import type {
+    AbstractExceptionMetadata 
+} from "../abstract"
 import {
-    AbstractException, AbstractExceptionMetadata 
+    AbstractException 
 } from "../abstract"
 
-/** Thrown when executor cannot be found by ID */
+/** Metadata when executor cannot be found by ID. */
 export interface ExecutorNotFoundExceptionMetadata extends AbstractExceptionMetadata {
     id: string
 }
+
+/** Thrown when executor cannot be found by ID. */
 export class ExecutorNotFoundException extends AbstractException {
     constructor(
         { id, originalError }: ExecutorNotFoundExceptionMetadata
