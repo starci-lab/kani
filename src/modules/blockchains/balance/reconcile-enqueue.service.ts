@@ -44,6 +44,14 @@ import {
     IReconcileBalanceEnqueueService
 } from "./types"
 
+/**
+ * Service responsible for enqueuing reconcile balance jobs.
+ * Handles job creation and queue management for reconcile balance operations.
+ *
+ * @example
+ * const service = new ReconcileBalanceEnqueueService(...)
+ * const job = await service.enqueue({ bot, jobId })
+ */
 @Injectable()
 export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueService {
     constructor(
@@ -57,23 +65,22 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
     ) {
     }
 
-    async enqueue(
-        {
-            bot,
-            jobId,
-            isRetry,
-        }: EnqueueReconcileBalanceParams,
-    ): Promise<Job<string>> {
-        /**
-         * Add reconcile balance job to the queue
-         */
+    /**
+     * Enqueues a reconcile balance job.
+     *
+     * @param param - Parameters for enqueuing reconcile balance job
+     * @returns BullMQ job instance
+     *
+     * @example
+     * const job = await service.enqueue({ bot, jobId })
+     */
+    async enqueue({ bot, jobId, isRetry }: EnqueueReconcileBalanceParams): Promise<Job<string>> {
+        // create job record if not a retry
         if (!isRetry) {
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {
-                    /**
-                 * Persist job record.
-                 */
+                    // persist job record in database
                     const [jobRaw] = await this.connection.model<JobSchema>(
                         JobSchema.name
                     ).create(
@@ -91,9 +98,8 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                             session
                         })
                     const job = jobRaw.toJSON<JobSchema>()
-                    /**
-                    * Update the bot with the active job id.
-                    */
+                    
+                    // update bot with active job reference
                     await this.connection.model<BotSchema>(BotSchema.name)
                         .updateOne(
                             {
@@ -115,9 +121,8 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
                 }
             )
         }
-        /**
-        * Enqueue reconcile balance job.
-        */
+        
+        // build payload and enqueue job
         const payload: ReconcileBalancePayload = {
             jobId,
             botId: bot.id,
@@ -125,9 +130,7 @@ export class ReconcileBalanceEnqueueService implements IReconcileBalanceEnqueueS
         }
         return await this.reconcileBalanceQueue.add(
             v4(),
-            this.superJson.stringify(
-                payload
-            ),
+            this.superJson.stringify(payload),
             {
                 jobId: bot.id,
             }

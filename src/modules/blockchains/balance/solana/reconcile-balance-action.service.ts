@@ -58,11 +58,13 @@ import {
 } from "@modules/winston"
 
 /**
- * SolanaReconcileBalanceActionService
- * 
  * Service for handling balance reconciliation on Solana.
- * This service orchestrates swap transactions to reconcile balances,
- * reusing the swap logic from SolanaOpenPositionActionService.
+ * Orchestrates swap transactions to reconcile balances between tokens.
+ *
+ * @example
+ * const service = new SolanaReconcileBalanceActionService(...)
+ * const prepareTxs = await service.prepare({ bot, tokenInputs })
+ * const txHashes = await service.execute({ bot, prepareTxs })
  */
 @Injectable()
 export class SolanaReconcileBalanceActionService {
@@ -75,36 +77,38 @@ export class SolanaReconcileBalanceActionService {
     ) { }
 
     /**
-     * Prepare a swap transaction for balance reconciliation.
+     * Prepares swap transactions for balance reconciliation.
      * Swaps from tokenIn to tokenOut for each tokenInput.
+     *
+     * @param param - Parameters for preparing reconcile balance transaction
+     * @returns Prepared transactions ready for execution
+     *
+     * @example
+     * const prepareTxs = await service.prepare({ bot, tokenInputs })
      */
-    public async prepare(
-        {
-            bot,
-            tokenInputs,
-        }: PrepareReconcileBalanceTransactionParams
-    ): Promise<PrepareReconcileBalanceTransactionResult> {
+    public async prepare({ bot, tokenInputs }: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult> {
         const prepareTxs: Array<PrepareTx> = []
         for (const tokenInput of tokenInputs) {
-            // if tokenIn and tokenOut are the same, skip swap
+            // skip swap if tokenIn and tokenOut are the same
             if (tokenInput.tokenIn.displayId === tokenInput.tokenOut.displayId) {
                 continue
             }
-            const {
-                response: {
-                    payload: serializedTransaction
-                }
-            } = await this.solanaAggregatorSelectorService.batchQuote({
+            
+            // get best quote from aggregator
+            const { response: { payload: serializedTransaction } } = await this.solanaAggregatorSelectorService.batchQuote({
                 tokenIn: tokenInput.tokenIn,
                 tokenOut: tokenInput.tokenOut,
                 amountIn: tokenInput.amount,
                 senderAddress: bot.accountAddress,
             })
+            // decode serialized transaction from aggregator
             const swapTransactionBytes = getBase64Encoder().encode(serializedTransaction as string)
             const swapTransaction = getTransactionDecoder().decode(swapTransactionBytes)
             const compiledSwapTransactionMessage = getCompiledTransactionMessageDecoder().decode(
                 swapTransaction.messageBytes,
             )
+            
+            // decompile transaction message to get instructions
             const swapTransactionMessage = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
@@ -114,40 +118,52 @@ export class SolanaReconcileBalanceActionService {
                     )
                 },
             })
-            // we get the swap instructions
+            
+            // extract swap instructions from transaction message
             const swapInstructions = swapTransactionMessage.instructions
-            // we get the latest blockhash
+            
+            // build and sign transaction
             const transaction = await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Http,
                 callback: async ({ rpc }) => {
+                    // get latest blockhash for transaction lifetime
                     const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+                    // build transaction message with swap instructions
                     const transactionMessage = pipe(
                         createTransactionMessage({
                             version: 0 
                         }),
                         (tx) => setTransactionMessageFeePayerSigner(
                             createNoopSigner(address(bot.accountAddress)),
-                            tx),
-                        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash,
                             tx
                         ),
-                        (tx) => appendTransactionMessageInstructions(swapInstructions,
+                        (tx) => setTransactionMessageLifetimeUsingBlockhash(
+                            latestBlockhash,
+                            tx
+                        ),
+                        (tx) => appendTransactionMessageInstructions(
+                            swapInstructions,
                             tx
                         ),
                     )
-                    const transaction = compileTransaction(transactionMessage)
+                    const compiledTransaction = compileTransaction(transactionMessage)
+                    
+                    // sign transaction based on bot version
                     if (bot.version === AppVersion.V1) {
                         return await this.signerService.withSolanaSigner({
                             bot,
                             action: async (signer) => {
                                 const signedTransaction = await signTransaction(
                                     [signer.keyPair],
-                                    transaction,
+                                    compiledTransaction,
                                 ) 
                                 const transactionSignature = getSignatureFromTransaction(signedTransaction)
                                 const txHash = transactionSignature.toString()
+                                
+                                // validate transaction before returning
                                 assertIsSendableTransaction(signedTransaction)
                                 assertIsTransactionWithinSizeLimit(signedTransaction)
+                                
                                 return {
                                     txHash,
                                     solanaTx: signedTransaction,
@@ -155,6 +171,7 @@ export class SolanaReconcileBalanceActionService {
                             },
                         })
                     } else {
+                        // validate privy metadata for V2 bots
                         if (!bot.privyMetadata) {
                             throw new PrivyMetadataNotFoundException({
                                 botId: bot.id,
@@ -165,13 +182,14 @@ export class SolanaReconcileBalanceActionService {
                                 botId: bot.id,
                             })
                         }
-                        // partial sign the transaction with the gas sponsor
+                        
+                        // sign transaction with Privy gas sponsor
                         const signedTransaction = await this.privySignService.signSolanaTransaction({
                             lifetimeConstraint: {
                                 blockhash: latestBlockhash.blockhash,
                                 lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
                             },
-                            transaction,
+                            transaction: compiledTransaction,
                             encryptedPrivySignerPrivateKey: bot.encryptedPrivySignerPrivateKeyPayload,
                             walletId: bot.privyMetadata.walletId,
                         })
@@ -194,32 +212,33 @@ export class SolanaReconcileBalanceActionService {
     }
 
     /**
-     * Execute a swap transaction for balance reconciliation.
-     * Reuses the open position action service's execute method.
+     * Executes swap transactions for balance reconciliation.
+     *
+     * @param param - Parameters for executing reconcile balance transaction
+     * @returns Array of transaction hashes
+     *
+     * @example
+     * const txHashes = await service.execute({ bot, prepareTxs })
      */
-    public async execute(
-        {
-            bot,
-            prepareTxs,
-            isRetry = false,
-            stimulate = false,
-        }: ExecuteReconcileBalanceTransactionParams
-    ): Promise<ExecuteReconcileBalanceTransactionResults> {
+    public async execute({ bot, prepareTxs, isRetry = false, stimulate = false }: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults> {
         const txHashes: Array<string> = []
         for (const prepareTx of prepareTxs) {
-            // if isRetry, check if transaction has already been executed
+            // check if transaction already exists on chain (for retries)
             if (isRetry) {
                 const transaction = await this.rpcExecutorService.withSolanaRpc({
                     accessType: RpcAccessType.Http,
                     callback: async ({ rpc }) => {
-                        return await rpc.getTransaction(signature(prepareTx.txHash),
+                        return await rpc.getTransaction(
+                            signature(prepareTx.txHash),
                             {
                                 commitment: "confirmed", 
                                 encoding: "base58" 
-                            }).send()
+                            }
+                        ).send()
                     },
                 })
-                // if transaction already exists on chain, skip it
+                
+                // skip if transaction already exists
                 if (transaction) {
                     this.winstonService.log(
                         WinstonLog.ReconcileBalanceTransactionFound,
@@ -232,18 +251,22 @@ export class SolanaReconcileBalanceActionService {
                     continue
                 }
             }   
-            const solanaTx = prepareTx.solanaTx
+            
+            // validate transaction exists
+            const { solanaTx } = prepareTx
             if (!solanaTx) {
                 throw new MissingSolanaTxParamException({
                     botId: bot.id,
                     type: ErrorTransactionType.ReconcileBalance,
                 })
             }
-            // execute the transaction
+            
+            // execute or simulate transaction
             await this.rpcExecutorService.withSolanaRpc({
                 accessType: RpcAccessType.Write,
                 callback: async ({ rpc, rpcSubscriptions }) => {
                     if (stimulate) {
+                        // simulate transaction without sending
                         const simulateTransactionResult = await rpc.simulateTransaction(
                             getBase64EncodedWireTransaction(solanaTx),
                             {
@@ -267,6 +290,8 @@ export class SolanaReconcileBalanceActionService {
                         txHashes.push(prepareTx.txHash)
                         return
                     }
+                    
+                    // send and confirm transaction
                     const sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
                         rpc,
                         rpcSubscriptions,
@@ -276,7 +301,8 @@ export class SolanaReconcileBalanceActionService {
                         solanaTx,
                         {
                             commitment: "confirmed",
-                        })
+                        }
+                    )
                     this.winstonService.log(
                         WinstonLog.ReconcileBalanceTransactionExecuted,
                         {

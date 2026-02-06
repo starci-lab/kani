@@ -13,7 +13,7 @@ import {
 } from "@modules/mixin"
 import {
     OrderBook 
-} from "../types"
+} from "../../types"
 import {
     envConfig 
 } from "@modules/env"
@@ -121,7 +121,7 @@ export class BybitOrderBookService implements OnApplicationBootstrap {
                             continue
                         }
 
-                        const tokenId = this.bybitTokenRegistryService.getTokenIdBySymbol(parsed.data.s)
+                        const tokenId = this.bybitTokenRegistryService.getTokenIdBySymbol({ symbol: parsed.data.s })
                         if (!tokenId) continue
 
                         const bestBid = parsed.data.b?.[0]

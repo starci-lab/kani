@@ -46,7 +46,7 @@ export class WithdrawV2Service implements OnModuleInit {
     ) { }
 
     onModuleInit() {
-        this.axiosInstance = this.axiosService.create("withdraw-v2")
+        this.axiosInstance = this.axiosService.create({ key: "withdraw-v2" })
     }
 
     async withdrawV2(

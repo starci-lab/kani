@@ -1,3 +1,8 @@
+/**
+ * Re-exports of blockchain module components.
+ * Provides a unified entry point for blockchain utilities.
+ */
+export * from "./enums"
 export * from "./cexes"
 export * from "./keypairs"
 export * from "./clients"

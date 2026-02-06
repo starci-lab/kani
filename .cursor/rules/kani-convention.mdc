@@ -8,12 +8,14 @@ For every module, use the following folder layout:
 - **types/** — types and interfaces; one file per feature (group related types in one file to avoid many small files)
 - **enums/** — enums; one file per feature
 - **classes/** — classes; one file per feature (domain classes, not GraphQL)
-- **graphql-types/** — **inputs/** for `@InputType`, **object-types/** for `@ObjectType`
+- **constants/** — constants; one file per feature (e.g. `binance.ts`, `bybit.ts`, `gate.ts`)
+- **graphql-types/** — **inputs/** for `@InputType`, **object-types/** for `@ObjectType` (GraphQL modules)
+- **dtos/** — DTOs for REST API modules (one file per feature)
 
 **File naming rule (non-NestJS files):**  
 Name files by the **function or feature** they cover (e.g. **user.ts**, **auth.ts**, **client.ts**). Group related types in one file (e.g. all pagination types in `types/pagination.ts`). Types, enums, and classes each go in their folder with these feature-based filenames. All types, enums, and classes must have comments (JSDoc or inline as appropriate). Names like "abc", "cde" in docs are placeholders only; use real names by concern.
 
-Example:
+Example (GraphQL module):
 
 ```
 user/
@@ -31,6 +33,41 @@ user/
     inputs/          // @InputType classes
     object-types/    // @ObjectType classes
     index.ts         // export * from ./inputs, ./object-types
+```
+
+Example (REST API module):
+
+```
+api/
+  index.ts
+  types/base.ts
+  types/index.ts    // export * from ./base
+  classes/base.ts
+  classes/index.ts  // export * from ./base
+  dtos/
+    rest-transform.ts
+    index.ts         // export * from ./rest-transform
+```
+
+Example (CEX module with constants in subdirectories):
+
+```
+cexes/
+  index.ts
+  types/order-book.ts
+  types/index.ts     // export * from ./order-book
+  binance/
+    constants.ts      // all Binance constants in one file
+    last-price.service.ts
+    ...
+  bybit/
+    constants.ts      // all Bybit constants in one file
+    last-price.service.ts
+    ...
+  gate/
+    constants.ts      // all Gate constants in one file
+    last-price.service.ts
+    ...
 ```
 
 ## NestJS File Naming (Exception)
@@ -68,11 +105,17 @@ user/
 
 **Rule:** Framework-level files use NestJS naming; domain-level files (types/enums/classes) are named by **function/feature** (e.g. user.ts, auth.ts) and must be commented.
 
+**Allowed folders in module root:**  
+Only these folders are allowed at module root: `types/`, `enums/`, `classes/`, `constants/`, `dtos/` (for REST API), `graphql-types/` (for GraphQL), and NestJS framework folders (e.g. `interceptors/`, `guards/`, `pipes/`). **Remove any other folders** (e.g. `abstracts/`, `utils/`, etc.) and move their contents to the appropriate standard folders. Constants can be placed in a `constants/` folder at module root (organized by feature, e.g. `constants/binance.ts`) or directly in subdirectories as `constants.ts` files (multiple constants in one file is allowed).
+
 **NestJS files must not define types, enums, or classes:**  
-Files like `*.service.ts`, `*.controller.ts`, `*.module.ts`, etc. must only **import** types, enums, and classes from `types/`, `enums/`, `classes/`, or `graphql-types/`. Do not declare interfaces, enums, or classes inside NestJS framework files; put them in the correct folder and import.
+Files like `*.service.ts`, `*.controller.ts`, `*.module.ts`, etc. must only **import** types, enums, and classes from `types/`, `enums/`, `classes/`, `dtos/`, or `graphql-types/`. Do not declare interfaces, enums, or classes inside NestJS framework files; put them in the correct folder and import.
 
 **GraphQL schema:**  
 Put `@InputType` classes in **graphql-types/inputs/** and `@ObjectType` classes in **graphql-types/object-types/** (one file per feature). Use **graphql-types/index.ts** to re-export inputs and object-types. Keep `isAbstract: true` and a clear `description` in the decorator when the type is used as a base (e.g. extended by other DTOs).
+
+**REST API DTOs:**  
+Put REST API DTO classes (e.g. classes with `@ApiProperty` decorators for Swagger) in **dtos/** (one file per feature). Use **dtos/index.ts** to re-export all DTOs. DTOs should be documented with JSDoc comments.
 
 ---
 
@@ -97,7 +140,9 @@ actionName(param: ActionNameParams): Promise<ActionNameResult>
 - Use a **params object** when the function has **2 or more arguments**.
 - If the function has **only one primitive argument**, pass it directly.
 - The return type must always be `{ActionName}Result`.
-- **Destructuring when needed:** You may destructure the params object in the function signature if it keeps the code clear (e.g. `getUser({ id }: GetUserParams)`).
+- **Destructure as much as possible:** Always destructure params objects directly in the function signature (e.g. `create({ key, config }: CreateParams)` instead of `create(param: CreateParams)` then `const { key, config } = param`). Also destructure nested objects and arrays when accessing their properties multiple times to improve readability and reduce repetition.
+- **No inline type definitions:** Never define parameter types inline in function signatures. Always export the parameter type from `types/` folder with the naming pattern `{ActionName}Params` (e.g. `AxiosCreateParams`, `CreateUserParams`). Import and use the exported type.
+- **Use Array<T> instead of T[]:** Always use `Array<T>` syntax for array types instead of `T[]` syntax for consistency and readability.
 
 ---
 

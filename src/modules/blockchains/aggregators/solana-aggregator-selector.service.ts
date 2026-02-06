@@ -12,18 +12,26 @@ import {
 } from "@modules/exceptions"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "../enums"
 import {
     AggregatorId 
-} from "@modules/typedefs"
+} from "./enums"
 import { 
     BatchQuoteParams, 
     BatchQuoteResult, 
     IAggregatorSelectorService, 
     SelectorSwapParams, 
     SelectorSwapResult 
-} from "./aggregator-selector.interface"
+} from "./types"
 
+/**
+ * Service responsible for selecting and coordinating Solana aggregators.
+ * Handles batch quote requests and routes swaps to appropriate aggregators.
+ *
+ * @example
+ * const service = new SolanaAggregatorSelectorService(...)
+ * const quote = await service.batchQuote({ tokenIn, tokenOut, amountIn, senderAddress })
+ */
 @Injectable()
 export class SolanaAggregatorSelectorService implements IAggregatorSelectorService {
     constructor(
@@ -31,10 +39,19 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
         private readonly asyncService: AsyncService,
     ) { }
 
+    /**
+     * Requests quotes from all supported Solana aggregators in parallel and returns the fastest result.
+     *
+     * @param param - Batch quote parameters
+     * @returns Fastest quote result from available aggregators
+     *
+     * @example
+     * const quote = await service.batchQuote({ tokenIn, tokenOut, amountIn, senderAddress })
+     */
     async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResult> {
         const promises: Array<Promise<BatchQuoteResult>> = []
 
-        // Jupiter
+        // add Jupiter quote request if supported
         if (this.jupiterService.supportedChains().includes(ChainId.Solana)) {
             promises.push(
                 (async () => ({
@@ -43,20 +60,28 @@ export class SolanaAggregatorSelectorService implements IAggregatorSelectorServi
                 }))()
             )
         }
-        // Race the promises
+        
+        // race all promises and return fastest result
         return await this.asyncService.raceValue(promises)      
     }
 
-    async selectorSwap(
-        params: SelectorSwapParams
-    ): Promise<SelectorSwapResult> {
-        switch (params.aggregatorId) {
+    /**
+     * Executes a swap using the specified aggregator.
+     *
+     * @param param - Selector swap parameters
+     * @returns Swap result from the selected aggregator
+     *
+     * @example
+     * const result = await service.selectorSwap({ aggregatorId: AggregatorId.Jupiter, base: swapParams })
+     */
+    async selectorSwap({ aggregatorId, base }: SelectorSwapParams): Promise<SelectorSwapResult> {
+        switch (aggregatorId) {
         case AggregatorId.Jupiter: {
-            return await this.jupiterService.swap(params.base)
+            return await this.jupiterService.swap(base)
         }
         default: {
             throw new AggregatorNotImplementedException({
-                aggregatorId: params.aggregatorId,
+                aggregatorId,
             })
         }
         }

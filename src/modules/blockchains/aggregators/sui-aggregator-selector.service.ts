@@ -9,17 +9,17 @@ import {
 } from "@modules/exceptions"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "../enums"
 import {
     AggregatorId 
-} from "@modules/typedefs"
+} from "./enums"
 import { 
     BatchQuoteParams, 
     BatchQuoteResult, 
     IAggregatorSelectorService, 
     SelectorSwapParams, 
     SelectorSwapResult 
-} from "./aggregator-selector.interface"
+} from "./types"
 import {
     SevenKAggregatorService 
 } from "./7k.service"
@@ -27,6 +27,14 @@ import {
     CetusAggregatorService 
 } from "./cetus-aggregator.service"
 
+/**
+ * Service responsible for selecting and coordinating Sui aggregators.
+ * Handles batch quote requests and routes swaps to appropriate aggregators.
+ *
+ * @example
+ * const service = new SuiAggregatorSelectorService(...)
+ * const quote = await service.batchQuote({ tokenIn, tokenOut, amountIn, senderAddress })
+ */
 @Injectable()
 export class SuiAggregatorSelectorService implements IAggregatorSelectorService {
     constructor(
@@ -35,9 +43,19 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
         private readonly asyncService: AsyncService,
     ) { }
 
+    /**
+     * Requests quotes from all supported Sui aggregators in parallel and returns the fastest result.
+     *
+     * @param param - Batch quote parameters
+     * @returns Fastest quote result from available aggregators
+     *
+     * @example
+     * const quote = await service.batchQuote({ tokenIn, tokenOut, amountIn, senderAddress })
+     */
     async batchQuote(params: BatchQuoteParams): Promise<BatchQuoteResult> {
         const promises: Array<Promise<BatchQuoteResult>> = []
-        // Cetus Aggregator
+        
+        // add Cetus Aggregator quote request if supported
         if (this.cetusAggregatorService.supportedChains().includes(ChainId.Sui)) {
             promises.push(
                 (async () => ({
@@ -46,7 +64,8 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
                 }))()
             )
         }
-        // SevenK
+        
+        // add SevenK quote request if supported
         if (this.sevenKService.supportedChains().includes(ChainId.Sui)) {
             promises.push(
                 (async () => ({
@@ -55,24 +74,34 @@ export class SuiAggregatorSelectorService implements IAggregatorSelectorService 
                 }))()
             )
         }
-        // Race the promises
+        
+        // race all promises and return fastest result
         return await this.asyncService.raceValue(promises)
     }
 
-    async selectorSwap(
-        params: SelectorSwapParams
-    ): Promise<SelectorSwapResult> {
-        switch (params.aggregatorId) {
+    /**
+     * Executes a swap using the specified aggregator.
+     *
+     * @param param - Selector swap parameters
+     * @returns Swap result from the selected aggregator
+     *
+     * @example
+     * const result = await service.selectorSwap({ aggregatorId: AggregatorId.SevenK, base: swapParams })
+     */
+    async selectorSwap({ aggregatorId, base }: SelectorSwapParams): Promise<SelectorSwapResult> {
+        switch (aggregatorId) {
         case AggregatorId.CetusAggregator: {
-            return await this.cetusAggregatorService.swap(params.base)
+            return await this.cetusAggregatorService.swap(base)
         }
         case AggregatorId.SevenK: {
-            return await this.sevenKService.swap(params.base)
+            return await this.sevenKService.swap(base)
         }
         default: {
-            throw new AggregatorNotImplementedException({
-                aggregatorId: params.aggregatorId,
-            })
+            throw new AggregatorNotImplementedException(
+                {
+                    aggregatorId,
+                }
+            )
         }
         }
     }

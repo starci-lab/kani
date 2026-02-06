@@ -19,7 +19,7 @@ import {
 import {
     ChainId,
     TokenType
-} from "@modules/typedefs"
+} from "../enums"
 import {
     SuiBalanceService 
 } from "./sui"
@@ -40,6 +40,14 @@ import {
     IBalanceActionService
 } from "./types"
 
+/**
+ * Service responsible for balance action operations.
+ * Handles transaction preparation and execution for reconcile balance and withdraw operations.
+ *
+ * @example
+ * const service = new BalanceActionService(...)
+ * const result = await service.prepareReconcileBalanceTransaction({ bot, tokenInputs })
+ */
 @Injectable()
 export class BalanceActionService implements IBalanceActionService {
     constructor(
@@ -50,64 +58,106 @@ export class BalanceActionService implements IBalanceActionService {
         private readonly swapMathService: SwapMathService,
     ) {}
 
-    async prepareReconcileBalanceTransaction(
-        params: PrepareReconcileBalanceTransactionParams,
-    ): Promise<PrepareReconcileBalanceTransactionResult> {
-        switch (params.bot.chainId) {
+    /**
+     * Prepares a reconcile balance transaction.
+     *
+     * @param param - Parameters for preparing reconcile balance transaction
+     * @returns Prepared transactions
+     *
+     * @example
+     * const result = await service.prepareReconcileBalanceTransaction({ bot, tokenInputs })
+     */
+    async prepareReconcileBalanceTransaction(param: PrepareReconcileBalanceTransactionParams): Promise<PrepareReconcileBalanceTransactionResult> {
+        const { bot } = param
+        switch (bot.chainId) {
         case ChainId.Solana:
-            return this.solanaBalanceService.prepareReconcileBalanceTransaction(params)
+            return this.solanaBalanceService.prepareReconcileBalanceTransaction(param)
         case ChainId.Sui:
-            return this.suiBalanceService.prepareReconcileBalanceTransaction(params)
+            return this.suiBalanceService.prepareReconcileBalanceTransaction(param)
         default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
+            throw new Error(`Unsupported chain id: ${bot.chainId}`)
         }
     }
 
-    async executeReconcileBalanceTransaction(
-        params: ExecuteReconcileBalanceTransactionParams,
-    ): Promise<ExecuteReconcileBalanceTransactionResults> {
-        switch (params.bot.chainId) {
+    /**
+     * Executes a reconcile balance transaction.
+     *
+     * @param param - Parameters for executing reconcile balance transaction
+     * @returns Transaction hashes
+     *
+     * @example
+     * const result = await service.executeReconcileBalanceTransaction({ bot, prepareTxs })
+     */
+    async executeReconcileBalanceTransaction(param: ExecuteReconcileBalanceTransactionParams): Promise<ExecuteReconcileBalanceTransactionResults> {
+        const { bot } = param
+        switch (bot.chainId) {
         case ChainId.Solana:
-            return this.solanaBalanceService.executeReconcileBalanceTransaction(params)
+            return this.solanaBalanceService.executeReconcileBalanceTransaction(param)
         case ChainId.Sui:
-            return this.suiBalanceService.executeReconcileBalanceTransaction(params)
+            return this.suiBalanceService.executeReconcileBalanceTransaction(param)
         default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
+            throw new Error(`Unsupported chain id: ${bot.chainId}`)
         }
     }
 
-    async prepareWithdrawTransaction(
-        params: PrepareWithdrawTransactionParams,
-    ): Promise<PrepareWithdrawTransactionResult> {
-        switch (params.bot.chainId) {
+    /**
+     * Prepares a withdraw transaction.
+     *
+     * @param param - Parameters for preparing withdraw transaction
+     * @returns Prepared transactions
+     *
+     * @example
+     * const result = await service.prepareWithdrawTransaction({ bot, tokenInputs, toAddress })
+     */
+    async prepareWithdrawTransaction(param: PrepareWithdrawTransactionParams): Promise<PrepareWithdrawTransactionResult> {
+        const { bot } = param
+        switch (bot.chainId) {
         case ChainId.Solana:
-            return this.solanaBalanceService.prepareWithdrawTransaction(params)
+            return this.solanaBalanceService.prepareWithdrawTransaction(param)
         case ChainId.Sui:
-            return this.suiBalanceService.prepareWithdrawTransaction(params)
+            return this.suiBalanceService.prepareWithdrawTransaction(param)
         default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
+            throw new Error(`Unsupported chain id: ${bot.chainId}`)
         }
     }
 
-    async executeWithdrawTransaction(
-        params: ExecuteWithdrawTransactionParams,
-    ): Promise<ExecuteWithdrawTransactionResult> {
-        switch (params.bot.chainId) {
+    /**
+     * Executes a withdraw transaction.
+     *
+     * @param param - Parameters for executing withdraw transaction
+     * @returns Transaction hashes
+     *
+     * @example
+     * const result = await service.executeWithdrawTransaction({ bot, prepareTxs })
+     */
+    async executeWithdrawTransaction(param: ExecuteWithdrawTransactionParams): Promise<ExecuteWithdrawTransactionResult> {
+        const { bot } = param
+        switch (bot.chainId) {
         case ChainId.Solana:
-            return this.solanaBalanceService.executeWithdrawTransaction(params)
+            return this.solanaBalanceService.executeWithdrawTransaction(param)
         case ChainId.Sui:
-            return this.suiBalanceService.executeWithdrawTransaction(params)
+            return this.suiBalanceService.executeWithdrawTransaction(param)
         default:
-            throw new Error(`Unsupported chain id: ${params.bot.chainId}`)
+            throw new Error(`Unsupported chain id: ${bot.chainId}`)
         }
     }
 
+    /**
+     * Determines a reconcile balance plan with swap steps.
+     *
+     * @param param - Parameters for determining reconcile balance plan
+     * @returns Swap steps and quote ratio result
+     *
+     * @example
+     * const plan = await service.determineReconcileBalancePlan({ bot })
+     */
     async determineReconcileBalancePlan({
         bot,
         targetBalanceAmount: _targetBalanceAmount,
         quoteBalanceAmount: _quoteBalanceAmount,
         gasBalanceAmount: _gasBalanceAmount,
     }: DetermineReconcileBalancePlanParams): Promise<DetermineReconcileBalancePlanResult> {
+        // find target token from storage
         const targetToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.targetToken.toString()
@@ -118,6 +168,8 @@ export class BalanceActionService implements IBalanceActionService {
                 id: bot.targetToken.toString(),
             })
         }
+        
+        // find quote token from storage
         const quoteToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             id: {
                 $eq: bot.quoteToken.toString()
@@ -128,6 +180,8 @@ export class BalanceActionService implements IBalanceActionService {
                 id: bot.quoteToken.toString(),
             })
         }
+        
+        // find native gas token for chain
         const gasToken = this.primaryMemoryStorageService.tokenCollection.findOne({
             type: {
                 $eq: TokenType.Native
@@ -144,6 +198,8 @@ export class BalanceActionService implements IBalanceActionService {
                 },
             })
         }
+        
+        // use provided balances or fetch from chain
         let targetBalanceAmount: BN
         let quoteBalanceAmount: BN
         let gasBalanceAmount: BN
@@ -156,6 +212,7 @@ export class BalanceActionService implements IBalanceActionService {
             quoteBalanceAmount = _quoteBalanceAmount
             gasBalanceAmount = _gasBalanceAmount
         } else {
+            // fetch balances from chain
             const {
                 targetBalanceAmount: targetAmount,
                 quoteBalanceAmount: quoteAmount,
@@ -167,6 +224,8 @@ export class BalanceActionService implements IBalanceActionService {
             quoteBalanceAmount = quoteAmount
             gasBalanceAmount = gasAmount
         }
+        
+        // compute swap amounts and steps
         const { swapSteps, quoteRatioResult } = await this.swapMathService.computeSwapAmounts({
             targetToken,
             quoteToken,
@@ -175,6 +234,7 @@ export class BalanceActionService implements IBalanceActionService {
             quoteBalanceAmount,
             gasBalanceAmount
         })
+        
         return {
             swapSteps,
             quoteRatioResult,

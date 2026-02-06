@@ -14,18 +14,35 @@ import {
     BybitTokenRegistryService 
 } from "./token-registry.service"
 
+/**
+ * Module for Bybit exchange integration.
+ * Provides services for token price tracking and order book management.
+ *
+ * @example
+ * BybitModule.register({ isGlobal: true })
+ */
 @Module({
 })
 export class BybitModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    /**
+     * Registers the Bybit module with all required services.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module with Bybit services
+     *
+     * @example
+     * const module = BybitModule.register({ isGlobal: true })
+     */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
+        
+        // register all Bybit services
         const providers = [
             BybitLastPriceService,
             BybitOrderBookService,
             BybitTokenRegistryService,
         ]
+        
         return {
             ...dynamicModule,
             providers: [

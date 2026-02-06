@@ -9,47 +9,15 @@ import {
     Reflector,
 } from "@nestjs/core"
 import {
-    ApiPropertyOptional,
-} from "@nestjs/swagger"
-import {
     Observable,
 } from "rxjs"
 import {
     map,
     catchError,
 } from "rxjs/operators"
-
-/**
- * Response shape returned by ApiTransformInterceptor.
- * Documented for Swagger so all controller responses show success/message/data/error.
- */
-export class RestTransformResponseDto<T = unknown> {
-    @ApiPropertyOptional({
-        description: "Response payload when the request succeeded.",
-        example: {
-            id: "123", status: "created" 
-        },
-    })
-        data?: T
-
-    @ApiPropertyOptional({
-        description: "Success or status message.",
-        example: "Resource created successfully",
-    })
-        message?: string
-
-    @ApiPropertyOptional({
-        description: "True when the request succeeded, false on exception.",
-        example: true,
-    })
-        success?: boolean
-
-    @ApiPropertyOptional({
-        description: "Error name or code when success is false.",
-        example: "ValidationError",
-    })
-        error?: string
-}
+import {
+    RestTransformResponseDto,
+} from "../dtos/rest-transform"
 
 /** Metadata key for custom success message per handler or controller. */
 const SUCCESS_MESSAGE_METADATA = "restSuccessMessage"
@@ -84,12 +52,14 @@ implements NestInterceptor<T, RestTransformResponseDto<T>>
         context: ExecutionContext,
         next: CallHandler<T>,
     ): Observable<RestTransformResponseDto<T>> {
+        // get custom message from metadata (handler-level overrides class-level)
         const message =
             this.reflector.get<string>(SUCCESS_MESSAGE_METADATA,
                 context.getHandler()) ??
             this.reflector.get<string>(SUCCESS_MESSAGE_METADATA,
                 context.getClass())
 
+        // transform successful responses to consistent shape
         return next.handle().pipe(
             map(
                 (data): RestTransformResponseDto<T> => ({
@@ -98,6 +68,7 @@ implements NestInterceptor<T, RestTransformResponseDto<T>>
                     success: true,
                 }),
             ),
+            // handle errors and wrap in consistent error shape
             catchError((err) => {
                 return new Observable<RestTransformResponseDto<T>>((observer) => {
                     observer.next({

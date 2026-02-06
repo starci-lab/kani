@@ -7,18 +7,48 @@ import {
 import {
     RpcExecutorService 
 } from "./rpc-executor.service"
+import {
+    SolanaClientService,
+    SolanaGetErrorTypesService
+} from "./solana"
+import {
+    SuiClientService,
+    SuiGetErrorTypesService
+} from "./sui"
 
+/**
+ * Module for managing blockchain RPC clients.
+ * Provides services for executing RPC calls with retry logic and error handling.
+ *
+ * @example
+ * ClientsModule.register({ isGlobal: true })
+ */
 @Module({
 })
 export class ClientsModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    /**
+     * Registers the clients module with all required services.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module with client services
+     *
+     * @example
+     * const module = ClientsModule.register({ isGlobal: true })
+     */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
 
+        // register all client services
         const providers: Array<Provider> = [
+            // chain-specific services
+            SolanaClientService,
+            SolanaGetErrorTypesService,
+            SuiClientService,
+            SuiGetErrorTypesService,
+            // main executor service
             RpcExecutorService,
         ]
+        
         return {
             ...dynamicModule,
             providers: [

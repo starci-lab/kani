@@ -1,3 +1,7 @@
+/**
+ * Re-exports of Sui balance services.
+ * Provides a unified entry point for Sui balance utilities.
+ */
 export * from "./sui.service"
 export * from "./fetcher.service"
 export * from "./withdraw-action.service"

@@ -1,4 +1,3 @@
-// app.module.ts
 import {
     DynamicModule, Module 
 } from "@nestjs/common"
@@ -15,18 +14,35 @@ import {
     BinanceTokenRegistryService 
 } from "./token-registry.service"
 
+/**
+ * Module for Binance exchange integration.
+ * Provides services for token price tracking and order book management.
+ *
+ * @example
+ * BinanceModule.register({ isGlobal: true })
+ */
 @Module({
 })
 export class BinanceModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    /**
+     * Registers the Binance module with all required services.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module with Binance services
+     *
+     * @example
+     * const module = BinanceModule.register({ isGlobal: true })
+     */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
+        
+        // register all Binance services
         const providers = [
             BinanceLastPriceService,
             BinanceOrderBookService,
             BinanceTokenRegistryService,
         ]
+        
         return {
             ...dynamicModule,
             providers: [

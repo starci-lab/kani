@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult 
-} from "./aggregator.interface"
+} from "./types"
 import {
     AggregatorClient, RouterDataV3 
 } from "@cetusprotocol/aggregator-sdk"
@@ -29,7 +29,7 @@ import {
 } from "@mysten/sui/transactions"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "../enums"
 import {
     RpcAccessType 
 } from "@modules/filesystem"
@@ -38,8 +38,16 @@ import {
 } from "@modules/env"
 import {
     AggregatorId 
-} from "@modules/typedefs"
+} from "./enums"
 
+/**
+ * Service responsible for Cetus Aggregator operations.
+ * Handles quote requests and swap execution for Sui blockchain.
+ *
+ * @example
+ * const service = new CetusAggregatorService(...)
+ * const quote = await service.quote({ tokenIn, tokenOut, amountIn, senderAddress })
+ */
 @Injectable()
 export class CetusAggregatorService implements IAggregatorService {
     constructor(
@@ -61,29 +69,30 @@ export class CetusAggregatorService implements IAggregatorService {
     /**
      * Requests a swap quote from Cetus Aggregator.
      *
-     * This method:
-     * - Finds token metadata from in-memory storage
-     * - Calls Cetus Aggregator's findRouters endpoint
-     * - Returns the best route with amount out
+     * @param param - Quote parameters
+     * @returns Quote result with amount out and payload
+     *
+     * @example
+     * const quote = await service.quote({ tokenIn, tokenOut, amountIn, senderAddress })
      */
-    async quote(
-        {
-            tokenIn,
-            amountIn,
-            tokenOut,
-        }: QuoteParams
-    ): Promise<QuoteResult> {
+    async quote({ tokenIn, amountIn, tokenOut }: QuoteParams): Promise<QuoteResult> {
         try {
+            // execute quote request with Sui client
             return await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
+                    // create Cetus aggregator client
                     const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
+                    
+                    // find best routing path
                     const quote = await cetusAggregatorClient.findRouters({
                         from: tokenIn.tokenAddress,
                         target: tokenOut.tokenAddress,
                         amount: amountIn,
                         byAmountIn: true,
                     })
+                    
+                    // validate quote exists
                     if (!quote) {
                         throw new QuoteNotFoundException({
                             from: tokenIn.tokenAddress,
@@ -91,6 +100,8 @@ export class CetusAggregatorService implements IAggregatorService {
                             amount: amountIn,
                         })
                     }
+                    
+                    // return formatted quote result
                     return {
                         amountOut: quote.amountOut,
                         payload: quote,
@@ -98,7 +109,7 @@ export class CetusAggregatorService implements IAggregatorService {
                 },
             })
         } catch (error) {
-            console.log(error)
+            // wrap error with aggregator context
             throw new AggregatorQuoteFailedException({
                 aggregatorId: AggregatorId.CetusAggregator,
                 originalError: error,
@@ -108,46 +119,53 @@ export class CetusAggregatorService implements IAggregatorService {
     /**
      * Executes a swap transaction using Cetus Aggregator.
      *
-     * This method:
-     * - Creates a Cetus Aggregator client
-     * - Builds swap transaction from router data
-     * - Handles both with and without input coin scenarios
-     * - Wraps the request inside a retry mechanism
+     * @param param - Swap parameters
+     * @returns Swap result with output coin and transaction
+     *
+     * @example
+     * const result = await service.swap({ payload, tokenIn, tokenOut, accountAddress, txb, inputCoin })
      */
-    async swap(
-        {
-            payload,
-            txb,
-            inputCoin,
-            accountAddress,
-        }: SwapParams
-    ): Promise<SwapResult> {
+    async swap({ payload, txb, inputCoin, accountAddress }: SwapParams): Promise<SwapResult> {
         try {
+            // cast payload to router data type
             const _payload = payload as unknown as RouterDataV3 
+            
+            // execute swap with Sui client
             return await this.rpcExecutorService.withSuiClient({
                 accessType: RpcAccessType.Http,
                 callback: async ({ suiClient }) => {
+                    // create Cetus aggregator client
                     const cetusAggregatorClient = this.createCetusAggregatorClient(suiClient)
                     const _txb = txb || new Transaction()
                     _txb.setSender(accountAddress)
+                    
+                    // get slippage configuration
+                    const { transaction: { swap: { slippage } } } = envConfig()
+                    
+                    // execute swap with retry mechanism
                     const outputCoin = await this.retryService.retry({
                         action: async () => {
+                            // use fast swap if no input coin provided
                             if (!inputCoin) {
                                 await cetusAggregatorClient.fastRouterSwap({
                                     router: _payload,
-                                    slippage: envConfig().transaction.swap.slippage,
+                                    slippage,
                                     txb: _txb,
                                 })
                                 return undefined
                             }
+                            
+                            // use standard swap with input coin
                             return await cetusAggregatorClient.routerSwap({
                                 router: _payload,
-                                slippage: envConfig().transaction.swap.slippage,
+                                slippage,
                                 txb: _txb,
                                 inputCoin,
                             })
                         }
                     })
+                    
+                    // return swap result
                     return {
                         outputCoin,
                         payload: null,
@@ -156,6 +174,7 @@ export class CetusAggregatorService implements IAggregatorService {
                 },
             })
         } catch (error) {
+            // wrap error with aggregator context
             throw new AggregatorSwapFailedException({
                 aggregatorId: AggregatorId.CetusAggregator,
                 originalError: error,

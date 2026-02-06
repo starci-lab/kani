@@ -52,7 +52,7 @@ export class CoingeckoRestService implements OnApplicationBootstrap {
         private readonly eventEmitterService: EventEmitterService,
     ) {
         const key = "coingecko"
-        this.axios = this.axiosService.create(key)
+        this.axios = this.axiosService.create({ key })
     }
 
     /**

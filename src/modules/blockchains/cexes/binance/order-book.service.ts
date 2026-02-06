@@ -11,7 +11,7 @@ import {
 } from "@modules/mixin"
 import {
     OrderBook 
-} from "../types"
+} from "../../types"
 import {
     envConfig 
 } from "@modules/env"
@@ -30,6 +30,15 @@ import {
 } from "dayjs"
 
 const ORDER_BOOK_STREAM_NAME = "binance-order-book"
+
+/**
+ * Service responsible for subscribing to Binance WebSocket streams for order book data.
+ * Handles connection management, retry logic, and order book updates.
+ *
+ * @example
+ * const service = new BinanceOrderBookService(...)
+ * // Service automatically starts on application bootstrap
+ */
 @Injectable()
 export class BinanceOrderBookService implements OnApplicationBootstrap {
     constructor(
@@ -40,21 +49,37 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
         private readonly dayjsService: DayjsService,
     ) {}
 
-    onApplicationBootstrap() {
+    /**
+     * Initializes WebSocket subscriptions for Binance order book data on application bootstrap.
+     * Splits symbols into batches and creates retryable connections for each batch.
+     */
+    onApplicationBootstrap(): void {
+        // get all Binance symbols
         const symbols = this.binanceTokenRegistryService.getBinanceSymbols()
+        
+        // split symbols into batches based on configuration
         const batches = _.chunk(
             symbols,
             envConfig().cexes.binance.chunks.orderBook
         )
+        
+        // create WebSocket connection for each batch
         for (const batch of batches) {
             this.retryService.retry({
                 options: {
                     retries: Infinity,
                 },
                 action: async () => {
+                    // create WebSocket connection
                     const connection = new WebSocketStreamConnection(BINANCE_WS_URL)
+                    
+                    // create abort controller for connection management
                     const abortController = new AbortController()
+                    
+                    // create timeout for connection idle detection
                     let timeout: NodeJS.Timeout | undefined = undefined
+                    
+                    // reset timeout function to keep connection alive
                     const resetTimeout = () => {
                         if (timeout) {
                             clearTimeout(timeout)
@@ -66,33 +91,44 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                     }
 
                     let startTime: Dayjs | null = null
+                    
+                    // create WebSocket stream
                     const stream = await this.streamAsyncIteratorService.createStream({
                         connection,
                         signal: abortController.signal,
                         onOpen: (connection: WebSocketStreamConnection) => {
-                            this.winstonService.log(WinstonLog.WebsocketSubscriptionOpened,
+                            // log connection opened
+                            this.winstonService.log(
+                                WinstonLog.WebsocketSubscriptionOpened,
                                 {
                                     streamName: ORDER_BOOK_STREAM_NAME,
                                     symbols,
-                                })
+                                }
+                            )
                             startTime = this.dayjsService.now()
+                            
+                            // subscribe to order book stream
                             connection.ws.send(
                                 JSON.stringify({
                                     method: "SUBSCRIBE",
                                     params: symbols,
                                     id: 1,
-                                }))
+                                })
+                            )
                         },
                         onError: (error: Error) => {
+                            // log connection error
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionError,
                                 {
                                     error: error.message,
                                     streamName: ORDER_BOOK_STREAM_NAME,
                                     symbols,
-                                })
+                                }
+                            )
                         },
                         onClose: () => {
+                            // log connection closed
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionClosed,
                                 {
@@ -107,29 +143,40 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                         }
                     })
 
+                    // process incoming stream data
                     for await (const data of stream) {
                         try {
+                            // parse incoming message
                             const parsed = JSON.parse(data.toString()) as OrderBookStream | NullOrderBookStream
-                            // Subscription ACK: { result: null, id: 1 }
+                            
+                            // skip subscription acknowledgment
                             if ("result" in parsed && parsed.result === null) {
                                 continue
                             }
+                            
+                            // skip if data field is missing
                             if (!("data" in parsed)) {
                                 continue
                             }
+                            
+                            // extract symbol from stream name
                             const streamSymbol = parsed.stream.split("@")[0]
                             if (!symbols.includes(streamSymbol)) continue
 
+                            // extract best bid and ask
                             const bestBid = parsed.data.bids[0]
                             const bestAsk = parsed.data.asks[0]
                             if (!bestBid || !bestAsk) continue
 
+                            // build order book structure
                             const orderBook: OrderBook = {
                                 bidPrice: parseFloat(bestBid[0]),
                                 bidQty: parseFloat(bestBid[1]),
                                 askPrice: parseFloat(bestAsk[0]),
                                 askQty: parseFloat(bestAsk[1]),
                             }
+                            
+                            // validate order book data
                             if (
                                 !Number.isFinite(orderBook.bidPrice) ||
                                 !Number.isFinite(orderBook.bidQty) ||
@@ -139,8 +186,10 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
                                 continue
                             }
 
+                            // reset timeout to keep connection alive
                             resetTimeout()
                         } catch (error) {
+                            // log processing error
                             this.winstonService.log(
                                 WinstonLog.WebsocketSubscriptionError,
                                 {
@@ -157,21 +206,36 @@ export class BinanceOrderBookService implements OnApplicationBootstrap {
     }
 }
 
-/** Interfaces **/
-
+/**
+ * Represents an order book event from Binance WebSocket stream.
+ */
 interface OrderBookEvent {
-    symbol: string;             // Symbol e.g., "SUIUSDT"
-    lastUpdateId: number;       // Last update id
-    bids: Array<[string, string]>;   // [[price, quantity]]
-    asks: Array<[string, string]>;   // [[price, quantity]]
+    /** Symbol, e.g., "SUIUSDT". */
+    symbol: string
+    /** Last update ID. */
+    lastUpdateId: number
+    /** Bid orders as [price, quantity] tuples. */
+    bids: Array<[string, string]>
+    /** Ask orders as [price, quantity] tuples. */
+    asks: Array<[string, string]>
 }
 
+/**
+ * Represents an order book stream message from Binance WebSocket.
+ */
 interface OrderBookStream {
-    stream: string;             // e.g., "suiusdt@depth5@100ms"
-    data: OrderBookEvent;
+    /** Stream name, e.g., "suiusdt@depth5@100ms". */
+    stream: string
+    /** Order book event data. */
+    data: OrderBookEvent
 }
 
+/**
+ * Represents a null response from Binance WebSocket (subscription acknowledgment).
+ */
 interface NullOrderBookStream {
-   result: null
-   id: number
+    /** Null result indicating subscription acknowledgment. */
+    result: null
+    /** Request ID. */
+    id: number
 }

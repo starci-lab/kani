@@ -14,13 +14,29 @@ import {
     BybitModule 
 } from "./bybit"
 
+/**
+ * Module for managing centralized exchange (CEX) integrations.
+ * Registers and configures Binance, Gate, and Bybit modules.
+ *
+ * @example
+ * CexesModule.register({ isGlobal: true })
+ */
 @Module({
 })
 export class CexesModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    /**
+     * Registers the CEX module with all exchange submodules.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module with all CEX integrations
+     *
+     * @example
+     * const module = CexesModule.register({ isGlobal: true })
+     */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
+        
+        // register all exchange modules
         const modules = [
             BinanceModule.register({
                 isGlobal: options.isGlobal
@@ -32,6 +48,7 @@ export class CexesModule extends ConfigurableModuleClass {
                 isGlobal: options.isGlobal
             }),
         ]
+        
         return {
             ...dynamicModule,
             imports: [

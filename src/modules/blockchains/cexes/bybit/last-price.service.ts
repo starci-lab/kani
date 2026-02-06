@@ -136,12 +136,14 @@ export class BybitLastPriceService implements OnApplicationBootstrap {
                                     continue
                                 }
 
-                                const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices([
-                                    {
-                                        symbol: parsed.data.symbol,
-                                        price: parseFloat(parsed.data.lastPrice),
-                                    }
-                                ])
+                                const tokenPrices = this.bybitTokenRegistryService.resolveTokenPrices({
+                                    tokenPriceDataArray: [
+                                        {
+                                            symbol: parsed.data.symbol,
+                                            price: parseFloat(parsed.data.lastPrice),
+                                        }
+                                    ]
+                                })
 
                                 if (!tokenPrices.length) {
                                     continue

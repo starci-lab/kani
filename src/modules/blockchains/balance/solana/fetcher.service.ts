@@ -3,7 +3,7 @@ import {
 } from "@nestjs/common"
 import {
     TokenType 
-} from "@modules/typedefs"
+} from "../../enums"
 import {
     FetchBalanceParams,
     FetchBalanceResult,
@@ -32,64 +32,75 @@ import {
     RpcAccessType 
 } from "@modules/filesystem"
 
+/**
+ * Service responsible for fetching Solana balance information.
+ * Handles balance fetching for native SOL and SPL tokens.
+ *
+ * @example
+ * const service = new SolanaBalanceFetcherService(...)
+ * const balance = await service.fetchBalance({ bot, token })
+ */
 @Injectable()
 export class SolanaBalanceFetcherService {
     constructor(
         private readonly rpcExecutorService: RpcExecutorService,
     ) { }
 
-    public async fetchBalance(
-        {
-            bot,
-            token,
-        }: FetchBalanceParams
-    ): Promise<FetchBalanceResult> {
+    /**
+     * Fetches balance for a specific token on Solana.
+     *
+     * @param param - Parameters for fetching balance
+     * @returns Balance amount for the token
+     *
+     * @example
+     * const balance = await service.fetchBalance({ bot, token })
+     */
+    public async fetchBalance({ bot, token }: FetchBalanceParams): Promise<FetchBalanceResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                // return the native token balance
+                // handle native SOL balance
                 if (token.type === TokenType.Native) {
                     const balance = await rpc.getBalance(address(bot.accountAddress)).send()
                     return {
                         balanceAmount: new BN(balance.value.toString()),
                     }
                 }
-                // return the token balance
+                
+                // derive associated token account (ATA) address
                 const mintAddress = address(token.tokenAddress)
                 const ownerAddress = address(bot.accountAddress)
-                // Derive the user's associated token account (ATA)
-                // This is required because balances are stored in ATA, not in the owner wallet directly.
-                const [
-                    ataAddress
-                ] = await findAssociatedTokenPda(
-                    {
-                        mint: mintAddress,
-                        owner: ownerAddress,
-                        tokenProgram:
-                    token.is2022Token
+                const [ataAddress] = await findAssociatedTokenPda({
+                    mint: mintAddress,
+                    owner: ownerAddress,
+                    tokenProgram: token.is2022Token
                         ? TOKEN_2022_PROGRAM_ADDRESS
                         : TOKEN_PROGRAM_ADDRESS,
-                    }
-                )
+                })
 
-                // Token-2022 accounts are handled by the newer token-2022 program.
+                // fetch token balance from ATA
                 try {
                     if (token.is2022Token) {
-                        const token2022 = await fetchToken2022(rpc,
-                            ataAddress)
+                        // use token-2022 program for newer tokens
+                        const token2022 = await fetchToken2022(
+                            rpc,
+                            ataAddress
+                        )
                         return {
                             balanceAmount: new BN(token2022.data.amount.toString()),
                         }
                     } else {
-                        // Standard SPL token account
-                        const tokenAccount = await fetchToken(rpc,
-                            ataAddress)
+                        // use standard SPL token program
+                        const tokenAccount = await fetchToken(
+                            rpc,
+                            ataAddress
+                        )
                         return {
                             balanceAmount: new BN(tokenAccount.data.amount.toString()),
                         }
                     }
                 } catch {
-                    // we dont find the ata address, so the balance is 0
+                    // ATA not found, balance is zero
                     return {
                         balanceAmount: new BN(0),
                     }
@@ -98,30 +109,36 @@ export class SolanaBalanceFetcherService {
         })
     }
 
-    async fetchTokens(
-        {
-            bot,
-        }: FetchTokensParams
-    ): Promise<FetchTokensResult> {
+    /**
+     * Fetches all tokens with balances for a bot on Solana.
+     *
+     * @param param - Parameters for fetching tokens
+     * @returns Array of tokens with their balances
+     *
+     * @example
+     * const tokens = await service.fetchTokens({ bot })
+     */
+    async fetchTokens({ bot }: FetchTokensParams): Promise<FetchTokensResult> {
         return await this.rpcExecutorService.withSolanaRpc({
             accessType: RpcAccessType.Http,
             callback: async ({ rpc }) => {
-                const tokenAccounts = await rpc.getTokenAccountsByOwner(
+                // fetch token accounts from standard token program
+                await rpc.getTokenAccountsByOwner(
                     address(bot.accountAddress), 
                     {
                         programId: TOKEN_PROGRAM_ADDRESS,
                     }
                 ).send()
-                const token2022Accounts = await rpc.getTokenAccountsByOwner(
+                
+                // fetch token accounts from token-2022 program
+                await rpc.getTokenAccountsByOwner(
                     address(bot.accountAddress), 
                     {
                         programId: TOKEN_2022_PROGRAM_ADDRESS,
                     }
                 ).send()
-                console.log(
-                    tokenAccounts,
-                    token2022Accounts
-                )
+                
+                // TODO: implement token mapping and balance calculation
                 return {
                     tokens: [],
                 }

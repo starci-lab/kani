@@ -2,6 +2,10 @@ import {
     ConfigurableModuleBuilder 
 } from "@nestjs/common"
 
+/**
+ * Configurable module builder for Binance module.
+ * Provides module options token and configuration type.
+ */
 export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
   new ConfigurableModuleBuilder().setExtras(
       {

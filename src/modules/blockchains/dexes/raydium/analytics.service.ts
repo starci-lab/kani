@@ -60,7 +60,7 @@ implements OnModuleInit, OnApplicationBootstrap
 
     async onModuleInit() {
         const key = "raydium-analytics"
-        this.axios = this.axiosService.create(key)
+        this.axios = this.axiosService.create({ key })
         const liquidityPools = this.primaryMemoryStorageService.liquidityPoolCollection
             .chain()
             .find({

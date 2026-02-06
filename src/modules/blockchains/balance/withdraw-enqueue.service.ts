@@ -44,6 +44,14 @@ import {
     IWithdrawEnqueueService
 } from "./types"
 
+/**
+ * Service responsible for enqueuing withdraw jobs.
+ * Handles job creation and queue management for withdraw operations.
+ *
+ * @example
+ * const service = new WithdrawEnqueueService(...)
+ * const job = await service.enqueue({ bot, jobId, payload })
+ */
 @Injectable()
 export class WithdrawEnqueueService implements IWithdrawEnqueueService {
     constructor(
@@ -57,14 +65,17 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
     ) {
     }
 
-    async enqueue(
-        {
-            bot,
-            jobId,
-            isRetry,
-            payload: cacheResult,
-        }: EnqueueWithdrawParams,
-    ): Promise<Job<string>> {
+    /**
+     * Enqueues a withdraw job.
+     *
+     * @param param - Parameters for enqueuing withdraw job
+     * @returns BullMQ job instance
+     *
+     * @example
+     * const job = await service.enqueue({ bot, jobId, payload })
+     */
+    async enqueue({ bot, jobId, isRetry, payload: cacheResult }: EnqueueWithdrawParams): Promise<Job<string>> {
+        // build withdraw payload
         const payload: WithdrawPayload = {
             jobId,
             botId: bot.id,
@@ -72,10 +83,13 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
             payload: cacheResult,
         }
         const payloadString = this.superJson.stringify(payload)
+        
+        // create job record if not a retry
         if (!isRetry) {
             const session = await this.connection.startSession()
             await session.withTransaction(
                 async () => {
+                    // persist job record in database
                     const [jobRaw] = await this.connection.model<JobSchema>(
                         JobSchema.name
                     ).create(
@@ -93,6 +107,8 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                             session
                         })
                     const job = jobRaw.toJSON<JobSchema>()
+                    
+                    // update bot with active job reference
                     await this.connection.model<BotSchema>(BotSchema.name)
                         .updateOne(
                             {
@@ -115,6 +131,8 @@ export class WithdrawEnqueueService implements IWithdrawEnqueueService {
                 }
             )
         }
+        
+        // enqueue job to queue
         return await this.withdrawQueue.add(
             v4(),
             payloadString,

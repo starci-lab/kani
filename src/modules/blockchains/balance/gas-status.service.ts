@@ -7,14 +7,25 @@ import {
 } from "@nestjs/common"
 import {
     TokenType,
-} from "@modules/typedefs"
+} from "../enums"
 import {
     TokenNotFoundException,
 } from "@modules/exceptions"
 import {
     GasStatus,
 } from "../types"
+import {
+    GetGasStatusParams,
+} from "./types"
 
+/**
+ * Service responsible for determining gas status based on token types.
+ * Determines whether gas is paid by target, quote, or separate gas token.
+ *
+ * @example
+ * const service = new GasStatusService(...)
+ * const status = service.getGasStatus({ targetTokenId, quoteTokenId })
+ */
 @Injectable()
 export class GasStatusService {
     constructor(
@@ -82,12 +93,4 @@ export class GasStatusService {
 
         return GasStatus.IsGas
     }
-}
-
-export interface GetGasStatusParams {
-    /** Token being traded / bought */
-    targetTokenId: TokenId
-
-    /** Token used to quote the price */
-    quoteTokenId: TokenId
 }

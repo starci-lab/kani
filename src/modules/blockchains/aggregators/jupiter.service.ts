@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common"
 import {
     IAggregatorService, QuoteParams, QuoteResult, SwapParams, SwapResult 
-} from "./aggregator.interface"
+} from "./types"
 import {
     PrimaryMemoryStorageService 
 } from "@modules/databases"
@@ -21,7 +21,7 @@ import {
 } from "@modules/mixin"
 import {
     ChainId 
-} from "@modules/typedefs"
+} from "../enums"
 import {
     address 
 } from "@solana/kit"
@@ -30,7 +30,7 @@ import {
 } from "@modules/filesystem"
 import {
     AggregatorId 
-} from "@modules/typedefs"
+} from "./enums"
 import {
     envConfig 
 } from "@modules/env"
@@ -38,11 +38,18 @@ import Decimal from "decimal.js"
 
 const SOLANA_NATIVE_TOKEN_ADDRESS = address("So11111111111111111111111111111111111111112")
 
+/**
+ * Service responsible for Jupiter aggregator operations.
+ * Handles quote requests and swap execution for Solana blockchain.
+ *
+ * @example
+ * const service = new JupiterService(...)
+ * const quote = await service.quote({ tokenIn, tokenOut, amountIn, senderAddress })
+ */
 @Injectable()
 export class JupiterService implements IAggregatorService {
     constructor(
         private readonly primaryMemoryStorageService: PrimaryMemoryStorageService,
-        // Generic retry helper to re-run any async action with backoff
         private readonly retryService: RetryService,    
         private readonly mountStorageService: MountStorageService,
     ) { }
@@ -60,26 +67,18 @@ export class JupiterService implements IAggregatorService {
     /**
      * Requests a swap quote from Jupiter.
      *
-     * This method:
-     * - Finds token metadata (mint address) from in-memory storage
-     * - Calls Jupiter's quote endpoint
-     * - Wraps the request inside a retry mechanism (max 10 attempts)
+     * @param param - Quote parameters
+     * @returns Quote result with amount out and payload
      *
-     * Reasons for retrying:
-     * Jupiter's API may temporarily fail during high TPS windows or RPC congestion.
+     * @example
+     * const quote = await service.quote({ tokenIn, tokenOut, amountIn, senderAddress })
      */
-    async quote(
-        {
-            tokenIn,
-            tokenOut,
-            amountIn,
-        }: QuoteParams
-    ): Promise<QuoteResult> {
-        // We wrap the whole quote flow inside the retry service
+    async quote({ tokenIn, tokenOut, amountIn }: QuoteParams): Promise<QuoteResult> {
         try {
+            // execute quote request with retry mechanism
             return await this.retryService.retry({
                 action: async () => {
-                // Resolve token metadata from internal storage
+                    // find token instances from storage
                     const tokenInInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
                         displayId: {
                             $eq: tokenIn,
@@ -90,6 +89,7 @@ export class JupiterService implements IAggregatorService {
                             displayId: tokenIn.displayId,
                         })
                     }
+                    
                     const tokenOutInstance = this.primaryMemoryStorageService.tokenCollection.findOne({
                         displayId: {
                             $eq: tokenOut.displayId,
@@ -100,15 +100,24 @@ export class JupiterService implements IAggregatorService {
                             displayId: tokenOut.displayId,
                         })
                     }
+                    
+                    // create Jupiter client
                     const client = this.createJupiterClient()
-                    // Call Jupiter to fetch the best quote route
+                    
+                    // get fee and slippage configuration
+                    const { fees: { swapReferral: { solana: { bps } } } } = this.mountStorageService.appConfig
+                    const { transaction: { swap: { slippage } } } = envConfig()
+                    
+                    // request quote from Jupiter API
                     const quote = await client.quoteGet({
                         inputMint: tokenInInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         outputMint: tokenOutInstance.tokenAddress || SOLANA_NATIVE_TOKEN_ADDRESS,
                         amount: amountIn.toNumber(),
-                        platformFeeBps: this.mountStorageService.appConfig.fees.swapReferral.solana.bps,
-                        slippageBps: new Decimal(envConfig().transaction.swap.slippage).mul(10000).toNumber(),
+                        platformFeeBps: bps,
+                        slippageBps: new Decimal(slippage).mul(10000).toNumber(),
                     })
+                    
+                    // return formatted quote result
                     return {
                         amountOut: new BN(quote.outAmount),
                         payload: quote,
@@ -116,6 +125,7 @@ export class JupiterService implements IAggregatorService {
                 },
             })
         } catch (error) {
+            // wrap error with aggregator context
             throw new AggregatorQuoteFailedException({
                 aggregatorId: AggregatorId.Jupiter,
                 originalError: error,
@@ -126,26 +136,25 @@ export class JupiterService implements IAggregatorService {
     /**
      * Executes a swap transaction using Jupiter.
      *
-     * This method:
-     * - Creates a Jupiter client
-     * - Builds swap transaction from quote response
-     * - Includes referral fee configuration
-     * - Wraps the request inside a retry mechanism
+     * @param param - Swap parameters
+     * @returns Swap result with transaction payload
+     *
+     * @example
+     * const result = await service.swap({ payload, accountAddress })
      */
-    async swap(
-        {
-            payload,
-            accountAddress,
-        }: SwapParams
-    ): Promise<SwapResult> {
+    async swap({ payload, accountAddress }: SwapParams): Promise<SwapResult> {
         try {
+            // get referral token account address
             const referralTokenAccount = this.jupiterReferralTokenAccountAddress()
+            
+            // execute swap with retry mechanism
             return await this.retryService.retry({
                 action: async () => {
+                    // create Jupiter client
                     const client = this.createJupiterClient()
-                    const { 
-                        swapTransaction
-                    } = await client.swapPost({
+                    
+                    // build swap transaction
+                    const { swapTransaction } = await client.swapPost({
                         swapRequest: {
                             quoteResponse: payload as JupiterQuoteResponse,
                             userPublicKey: accountAddress,
@@ -154,12 +163,15 @@ export class JupiterService implements IAggregatorService {
                             feeAccount: referralTokenAccount,   
                         } 
                     })
+                    
+                    // return swap transaction
                     return {
                         payload: swapTransaction,
                     }
                 },
             })
         } catch (error) {
+            // wrap error with aggregator context
             throw new AggregatorSwapFailedException({
                 aggregatorId: AggregatorId.Jupiter,
                 originalError: error,

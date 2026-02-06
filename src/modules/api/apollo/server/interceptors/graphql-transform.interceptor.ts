@@ -16,7 +16,7 @@ import {
     catchError,
 } from "rxjs/operators"
 
-/** Shape of the transformed GraphQL response (data, message, success, error). */
+/** Internal shape of the transformed GraphQL response (data, message, success, error). */
 interface GraphQLResponse<T = unknown> {
     data?: T
     message: string

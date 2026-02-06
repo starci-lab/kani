@@ -14,18 +14,35 @@ import {
     GateTokenRegistryService 
 } from "./token-registry.service"
 
+/**
+ * Module for Gate.io exchange integration.
+ * Provides services for token price tracking and order book management.
+ *
+ * @example
+ * GateModule.register({ isGlobal: true })
+ */
 @Module({
 })
 export class GateModule extends ConfigurableModuleClass {
-    static register(
-        options: typeof OPTIONS_TYPE
-    ): DynamicModule {
+    /**
+     * Registers the Gate.io module with all required services.
+     *
+     * @param options - Module configuration options
+     * @returns Dynamic module with Gate.io services
+     *
+     * @example
+     * const module = GateModule.register({ isGlobal: true })
+     */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const dynamicModule = super.register(options)
+        
+        // register all Gate.io services
         const providers = [
             GateLastPriceService,
             GateOrderBookService,
             GateTokenRegistryService,
         ]
+        
         return {
             ...dynamicModule,
             providers: [

@@ -58,12 +58,12 @@ export class CoinMarketCapRestService implements OnApplicationBootstrap, OnModul
 
     onModuleInit() {
         const key = "coinmarketcap"
-        this.axios = this.axiosService.create(
+        this.axios = this.axiosService.create({
             key,
-            {
+            config: {
                 baseURL: "https://pro-api.coinmarketcap.com",
-            }
-        )
+            },
+        })
         this.axios.defaults.headers.common["X-CMC_PRO_API_KEY"] = this.mountStorageService.coinMarketCapApiKey
     }
 

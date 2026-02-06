@@ -127,12 +127,14 @@ export class GateLastPriceService implements OnApplicationBootstrap {
                             for await (const data of stream) {
                                 try {
                                     const parsed = JSON.parse(data.toString()) as GateTickerUpdate
-                                    const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices([
-                                        {
-                                            symbol: parsed.result.currency_pair,
-                                            price: parseFloat(parsed.result.last),
-                                        }
-                                    ])
+                                    const tokenPrices = this.gateTokenRegistryService.resolveTokenPrices({
+                                        tokenPriceDataArray: [
+                                            {
+                                                symbol: parsed.result.currency_pair,
+                                                price: parseFloat(parsed.result.last),
+                                            }
+                                        ]
+                                    })
                                     if (!tokenPrices.length) {
                                         continue
                                     }
